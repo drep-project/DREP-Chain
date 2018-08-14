@@ -33,9 +33,9 @@ func (n *Network) Start() int {
             time.Sleep(1 * time.Second)
             switch msg {
             case common.MSG_BLOCK:
-                n.channel <- &common.Message{common.MSG_BLOCK, common.Block{rand.Intn(1000), "Block"}}
+                n.channel <- &common.Message{common.MSG_BLOCK, common.Block{}}
             case common.MSG_TRANSACTION:
-                n.channel <- &common.Message{common.MSG_TRANSACTION, common.Transaction{rand.Intn(1000), "Transaction"}}
+                n.channel <- &common.Message{common.MSG_TRANSACTION, common.Transaction{}}
             }
         }
     }()
