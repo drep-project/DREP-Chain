@@ -11,6 +11,8 @@ type Message struct {
     Body interface{}
 }
 
+type Address big.Int
+
 type BlockHeader struct {
     Version      int32
     PreviousHash []byte

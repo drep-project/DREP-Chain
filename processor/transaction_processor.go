@@ -17,6 +17,8 @@ func checkTransaction(t *common.Transaction) bool {
 func (p *transactionProcessor) process(msg interface{})  {
     if transaction, ok := msg.(common.Transaction); ok {
         fmt.Println(transaction)
-        pool.AddTransaction(&transaction)
+        if checkTransaction(&transaction) {
+            pool.AddTransaction(&transaction)
+        }
     }
 }
