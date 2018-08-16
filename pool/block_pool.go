@@ -26,6 +26,7 @@ func AddBlock(block *common.Block) {
     blockLock.Unlock()
 }
 
+// won't use
 func GetBlocks(from int32) []*common.Block {
     result := make([]*common.Block, 10)
     blockLock.Lock()
