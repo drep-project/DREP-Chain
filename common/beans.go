@@ -11,7 +11,7 @@ type Message struct {
     Body interface{}
 }
 
-type Address big.Int
+type Address string
 
 type BlockHeader struct {
     Version      int32
