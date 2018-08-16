@@ -1,4 +1,4 @@
-package state
+package storage
 
 import "sync"
 
@@ -21,9 +21,11 @@ var (
 type State struct {
     role int
     miningState int
+    miners [][]byte
+
 }
 
-func GetInstance() *State {
+func GetState() *State {
     once.Do(func() {
         singleton = new(State)
     })
@@ -36,7 +38,7 @@ func (s *State) ChangeRole(role int) {
     lock.Unlock()
 }
 
-func (s *State) getRole() int {
+func (s *State) GetRole() int {
     return s.role
 }
 
@@ -46,6 +48,10 @@ func (s *State) ChangeMiningState(state int) {
     lock.Unlock()
 }
 
-func (s *State) getMiningState() int {
+func (s *State) GetMiningState() int {
     return s.miningState
+}
+
+func (s *State) GetMiners() [][]byte {
+    return s.miners
 }

@@ -23,7 +23,7 @@ type Processor struct {
 func (p *Processor) init(channel chan *common.Message)  {
     p.channel = channel
     p.processors = make(map[int]processor)
-    p.processors[common.MSG_BLOCK] = &blockProcessor{}
+    p.processors[common.MSG_BLOCK] = &confirmedBlockProcessor{}
     p.processors[common.MSG_TRANSACTION] = &transactionProcessor{}
 
 }
