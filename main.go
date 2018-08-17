@@ -1,11 +1,10 @@
 package main
-
 import (
-	"fmt"
-	"time"
-	"BlockChainTest/common"
 	"BlockChainTest/network"
+	"BlockChainTest/common"
+	"fmt"
 	"BlockChainTest/processor"
+	"time"
 )
 
 func main()  {
@@ -20,4 +19,5 @@ func main()  {
 	for i := 0; i < 1000; i++{
 		time.Sleep(1 * time.Second)
 	}
+	//network.ExecuteMultiSign()
 }
