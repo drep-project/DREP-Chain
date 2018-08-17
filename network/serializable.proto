@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package network;
+
+enum message_header {
+	ACCOUNT = 0;
+	BLOCK_HEADER = 1;
+	BLOCK_DATA = 2;
+	BLOCK = 3;
+	TRANSACTION = 4;
+	TIMESTAMP = 5;
+	POINT = 6;
+	PRIVATE_KEY = 7;
+	SIGNATURE = 8;
+	COMMAND_OF_WORD = 9;
+	TICKET = 10;
+	SIGNAL_OF_START = 11;
+	COMMITMENT = 12;
+	CHALLENGE = 13;
+	RESPONSE = 14;
+}
+
+message serializable {
+	message_header header = 1;
+	bytes body = 2;
+}
