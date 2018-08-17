@@ -4,6 +4,7 @@ import (
     "sync"
     "fmt"
     "time"
+    "errors"
 )
 
 /*
@@ -47,8 +48,11 @@ var local = "127.0.0.1"
 var LeaderPort = 15287
 var MinorPort = 15872
 var curve = InitCurve()
+var CheckFrequency = 50 * time.Nanosecond
+var MaximumWaitTime = 500 * time.Nanosecond
 var p *Peer
-var once sync.Once
+var key *PrivateKey
+var once0, once1 sync.Once
 
 type Network struct {
     BroadcastQueue    chan *Sender
@@ -63,7 +67,7 @@ type Peer struct {
 }
 
 func GetPeer() *Peer {
-    once.Do(func() {
+    once0.Do(func() {
         p = &Peer{}
         p.PrvKey = GetPrvKey()
         p.Net = GetNetwork()
@@ -72,8 +76,16 @@ func GetPeer() *Peer {
 }
 
 func GetPrvKey() *PrivateKey {
-    prvKey, _ := GenerateKey(curve)
-    return prvKey
+    once1.Do(func() {
+        var prvKey *PrivateKey = nil
+        err := errors.New("fail to generate key pair")
+        for err != nil {
+            prvKey, err = GenerateKey(curve)
+            key = prvKey
+            time.Sleep(100 * time.Millisecond)
+        }
+    })
+    return key
 }
 
 func GetNetwork() *Network {
@@ -132,10 +144,10 @@ func ExecuteMultiSign() {
     peer.InitMinor()
     leader := peer.AsLeader
     minor := peer.AsMinor
-    go leader.Listen()
-    leader.Process()
-    go minor.Listen()
-    minor.Process()
+    leader.Listen()
+    leader.Work()
+    minor.Listen()
+    minor.Work()
 
     // step 1
     // leader request ticket
@@ -144,7 +156,19 @@ func ExecuteMultiSign() {
     fmt.Println("leader request ticket")
     fmt.Println("error: ", err)
     fmt.Println()
-    time.Sleep(5 * time.Second)
+
+    var wait int64 = 0
+    for wait < MaximumWaitTime.Nanoseconds() {
+        wait += 1
+        time.Sleep(time.Nanosecond)
+    }
+
+    if b := leader.ValidateTicket(); b {
+        fmt.Println("leader validate ticket: ", b)
+        fmt.Println()
+    } else {
+        return
+    }
 
     // step 2
     // leader request commitment
@@ -153,12 +177,31 @@ func ExecuteMultiSign() {
     fmt.Println("leader request commitment")
     fmt.Println("error: ", err)
     fmt.Println()
-    time.Sleep(5 * time.Second)
 
-    // validate
-    fmt.Println("validate")
-    fmt.Println("ticket: ", leader.ValidateTicket())
-    fmt.Println("response: ", leader.ValidateResponses())
+    wait = 0
+    for wait < MaximumWaitTime.Nanoseconds() {
+        wait += 1
+        time.Sleep(time.Nanosecond)
+    }
+
+    // step 3
+    // leader propose challenge
+    err = leader.ProposeChallenge()
+    fmt.Println("step 3:")
+    fmt.Println("leader propose challenge")
+    fmt.Println("error: ", err)
     fmt.Println()
-    time.Sleep(5 * time.Second)
+
+    wait = 0
+    for wait < MaximumWaitTime.Nanoseconds() {
+        wait += 1
+        time.Sleep(time.Nanosecond)
+    }
+
+    if b := leader.ValidateResponses(); b {
+        fmt.Println("leader validate response: ", b)
+        fmt.Println()
+    } else {
+        return
+    }
 }

@@ -78,7 +78,6 @@ func SpreadMessages(task MultiSendTask) error {
 	for _, ip := range task.RemoteIPs() {
 		sender := NewSender(ip, task.RemotePort(), task.Message())
 		task.BroadcastQueue() <- sender
-		fmt.Println("broadcast queue: ", len(task.BroadcastQueue()))
 	}
 	return nil
 }
@@ -120,42 +119,43 @@ type BroadcastReceiver interface {
     NotificationQueue() chan *Notification
 }
 
-func Listen(receiver BroadcastReceiver) error {
-    addr := &net.TCPAddr{Port: receiver.ListeningPort()}
-    listener, err := net.ListenTCP("tcp", addr)
-    if err != nil {
-        return err
-    }
-    fmt.Println("addr: ", addr)
-    for {
-        // fmt.Println("listening: ")
-        conn, err := listener.AcceptTCP()
+func Listen(receiver BroadcastReceiver) {
+    go func() {
+        addr := &net.TCPAddr{Port: receiver.ListeningPort()}
+        listener, err := net.ListenTCP("tcp", addr)
         if err != nil {
-            continue
+            return
         }
-        fromAddr := conn.RemoteAddr().String()
-        ip := fromAddr[: strings.LastIndex(fromAddr, ":")]
-        go func() {
-            b := make([]byte, 1024 * 1024)
-            buffer := b
-            offset := 0
-            for {
-                n, err := conn.Read(buffer)
-                if err != nil {
-                    break
-                } else {
-                    buffer = b[n:]
-                    offset += n
-                }
-            }
-            msg, err := Deserialize(b[:offset])
+        for {
+            conn, err := listener.AcceptTCP()
             if err != nil {
-                return
+                continue
             }
-            notification := &Notification{receiver.ListeningRole(), msg, ip}
-            receiver.NotificationQueue() <- notification
-        } ()
-    }
+            fromAddr := conn.RemoteAddr().String()
+            ip := fromAddr[: strings.LastIndex(fromAddr, ":")]
+            go func() {
+                b := make([]byte, 1024)
+                buffer := b
+                offset := 0
+                for {
+                    n, err := conn.Read(buffer)
+                    if err != nil {
+                        break
+                    } else {
+                        buffer = b[n:]
+                        offset += n
+                    }
+                }
+                msg, err := Deserialize(b[:offset])
+                if err != nil {
+                    return
+                }
+                notification := &Notification{receiver.ListeningRole(), msg, ip}
+                receiver.NotificationQueue() <- notification
+            } ()
+            time.Sleep(CheckFrequency)
+        }
+    }()
 }
 
 type Notification struct {
@@ -172,10 +172,16 @@ func (notification *Notification) Process() error {
     case *Leader:
         switch msg.(type) {
         case *Ticket:
+            fmt.Println("leader process ticket")
+            fmt.Println()
             role.(*Leader).CollectTicket(msg.(*Ticket), ip)
         case *Commitment:
+            fmt.Println("leader process commitment")
+            fmt.Println()
             role.(*Leader).CollectCommitment(msg.(*Commitment), ip)
         case *Response:
+            fmt.Println("leader process response")
+            fmt.Println()
             role.(*Leader).CollectResponse(msg.(*Response), ip)
         default:
             return errors.New("message type not found")
@@ -183,10 +189,16 @@ func (notification *Notification) Process() error {
     case *Minor:
         switch msg.(type) {
         case *CommandOfWord:
+            fmt.Println("minor process command of word")
+            fmt.Println()
             role.(*Minor).ReturnTicket(msg.(*CommandOfWord), ip)
         case *SignalOfStart:
+            fmt.Println("minor process signal of start")
+            fmt.Println()
             role.(*Minor).ReturnCommitment(msg.(*SignalOfStart), ip)
         case *Challenge:
+            fmt.Println("minor process challenge")
+            fmt.Println()
             role.(*Minor).ReturnResponse(msg.(*Challenge), ip)
         default:
             return errors.New("message type not found")
@@ -206,36 +218,32 @@ func Process(elem interface{}) error {
     switch elem.(type) {
     case *Sender:
         err := elem.(*Sender).Send()
-        wait()
         return err
     case *Notification:
         err := elem.(*Notification).Process()
-        wait()
         return err
     default:
         return errors.New("wrong queue element type")
     }
 }
 
-func Run(processor Processor) {
+func Work(processor Processor) {
     go func() {
         for {
-            // fmt.Println("processing s: ", len(processor.BroadcastQueue()))
             if len(processor.BroadcastQueue()) > 0 {
-                fmt.Println("access broadcast")
                 broadcast := <- processor.BroadcastQueue()
                 Process(broadcast)
             }
+            time.Sleep(CheckFrequency)
         }
     }()
     go func() {
         for {
-            // fmt.Println("processing n: ", len(processor.NotificationQueue()))
             if len(processor.NotificationQueue()) > 0 {
-                fmt.Println("access notification")
                 notification := <- processor.NotificationQueue()
                 Process(notification)
             }
+            time.Sleep(CheckFrequency)
         }
     } ()
 }
@@ -361,11 +369,12 @@ func (leader *Leader) NotificationQueue() chan *Notification {
 }
 
 func (leader *Leader) Listen() error {
-    return Listen(leader)
+    Listen(leader)
+    return nil
 }
 
-func (leader *Leader) Process() error {
-    Run(leader)
+func (leader *Leader) Work() error {
+    Work(leader)
     return nil
 }
 
@@ -432,14 +441,11 @@ func (minor *Minor) NotificationQueue() chan *Notification {
 }
 
 func (minor *Minor) Listen() error {
-    return Listen(minor)
-}
-
-func (minor *Minor) Process() error {
-    Run(minor)
+    Listen(minor)
     return nil
 }
 
-func wait() {
-    time.Sleep(1 * time.Second)
+func (minor *Minor) Work() error {
+    Work(minor)
+    return nil
 }

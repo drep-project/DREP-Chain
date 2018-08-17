@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package network;
+
+import "network/crypto_types.proto";
+import "network/transaction_types.proto";
+
+message block_header {
+	int32 version = 1;
+	bytes previous_hash = 2;
+	bytes gas_limit = 3;
+	bytes gas_used = 4;
+	bytes height = 5;
+	int64 timestamp = 6;
+	bytes merkle_root = 7;
+	repeated bytes tx_hashes = 8;
+	point leader_pub_key = 9;
+	repeated point minor_pub_keys = 10;
+}
+
+message block_data {
+	int32 tx_count = 1;
+	repeated transaction tx_list = 2;
+}
+
+message block {
+	block_header header = 2;
+	block_data data = 3;
+	signature multi_sig = 4;
+}
