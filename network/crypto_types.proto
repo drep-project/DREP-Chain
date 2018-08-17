@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package network;
+
+message point {
+	bytes x = 1;
+	bytes y = 2;
+}
+
+message private_key {
+	bytes prv = 1;
+	point pub_key = 2;
+}
+
+message signature {
+	bytes r = 1;
+	bytes s = 2;
+}
+
+message command_of_word {
+	bytes msg = 1;
+}
+
+message ticket {
+	point pub_key = 1;
+	signature sig_of_word = 2;
+}
+
+message signal_of_start {
+	int32 mark = 1;
+}
+
+message commitment {
+	point pub_key = 1;
+	point q = 2;
+}
+
+message challenge {
+	point group_pub_key = 1;
+	point group_q = 2;
+	bytes msg = 3;
+	bytes r = 4;
+}
+
+message response {
+	point pub_key = 1;
+	bytes s = 2;
+}
