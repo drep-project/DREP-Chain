@@ -230,20 +230,16 @@ func Process(elem interface{}) error {
 func Work(processor Processor) {
     go func() {
         for {
-            if len(processor.BroadcastQueue()) > 0 {
-                broadcast := <- processor.BroadcastQueue()
+            if broadcast, ok := <- processor.BroadcastQueue(); ok {
                 Process(broadcast)
             }
-            time.Sleep(CheckFrequency)
         }
     }()
     go func() {
         for {
-            if len(processor.NotificationQueue()) > 0 {
-                notification := <- processor.NotificationQueue()
+            if notification, ok := <- processor.NotificationQueue(); ok {
                 Process(notification)
             }
-            time.Sleep(CheckFrequency)
         }
     } ()
 }
