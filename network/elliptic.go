@@ -51,6 +51,12 @@ func (curveParams *CurveParams) IsOnCurve(point *Point) bool {
 	return ySquare.Cmp(xPolynomial) == 0
 }
 
+func (curveParams *CurveParams) Negative(point *Point) *Point {
+    y := new(big.Int).SetBytes(point.Y)
+    y.Sub(curveParams.P, y)
+    return &Point{X: point.X, Y: y.Bytes()}
+}
+
 func JacobiAffine(point *Point) *JacobiCoordinate {
 	x, y, z := new(big.Int).SetBytes(point.X), new(big.Int).SetBytes(point.Y), new(big.Int)
 	if x.Sign() != 0 || y.Sign() != 0 {
@@ -358,6 +364,17 @@ func Verify(curve Curve, sig *Signature, pubKey *Point, msg []byte) bool {
 		return false
 	}
 }
+
+//func BytesToPoint(curve Curve, msg []byte) *Point {
+//
+//}
+//
+//func Encrypt(curve Curve, plaintext []byte, pubKey *Point) ([]byte, error) {
+//	k, err := RandomSample(curve)
+//	if err != nil {
+//		return nil, err
+//	}
+//}
 
 func InitCurve() (curveParams *CurveParams) {
 	curveParams = &CurveParams{}
