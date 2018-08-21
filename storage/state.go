@@ -1,10 +1,14 @@
 package storage
 
-import "sync"
+import (
+    "sync"
+    "BlockChainTest/util"
+    "BlockChainTest/network"
+)
 
 const (
     Lead        int = 0
-    Miner       int = 1
+    MINER       int = 1
     NonMiner    int = 2
 )
 
@@ -18,11 +22,16 @@ var (
     lock sync.Locker
 )
 
+type Miner struct {
+    PubKey []byte
+    Address string
+}
+
 type State struct {
     role int
     miningState int
-    miners [][]byte
-
+    miners []*Miner
+    peers []*network.Peer
 }
 
 func GetState() *State {
@@ -52,6 +61,19 @@ func (s *State) GetMiningState() int {
     return s.miningState
 }
 
-func (s *State) GetMiners() [][]byte {
+func (s *State) GetMiners() []*Miner {
     return s.miners
+}
+
+func (s *State) ContainsMiner(pubKey []byte) bool {
+    for _, v:= range s.miners {
+        if util.SliceEqual(v.PubKey, pubKey) {
+            return true
+        }
+    }
+    return false
+}
+
+func (s *State) GetPeers() []*network.Peer {
+    return s.peers
 }

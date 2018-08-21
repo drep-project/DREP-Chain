@@ -3,8 +3,18 @@ package common
 import "math/big"
 
 const (
-    MSG_BLOCK = 1
-    MSG_TRANSACTION = 2
+    MSG_SETUP1 = 1 // miner send, MS
+    MSG_BLOCK1_COMMIT = 3 // MS
+    MSG_BLOCK1_CHALLENGE = 4 // LS,
+    MSG_BLOCK1_RESPONSE = 5 // MS
+
+    MSG_SETUP2 = 6
+    MSG_BLOCK2_COMMIT = 7 // MS
+    MSG_BLOCK2_CHALLENGE = 8 // LS,
+    MSG_BLOCK2_RESPONSE = 9 // MS
+
+    MSG_BLOCK = 9
+    MSG_TRANSACTION = 10
 )
 type Message struct {
     Type int
@@ -56,4 +66,5 @@ func (t *Transaction) GetId() string {
 type BlockChain struct {
     Blocks []Block
 }
+
 
