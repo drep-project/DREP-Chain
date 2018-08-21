@@ -3,13 +3,29 @@ package network
 import (
     "strconv"
     "net"
-    "BlockChainTest/database"
+    "errors"
 )
 
 var serverIP = "127.0.0.1"
 var portPort = 14767
 var serverPubKey *Point
 var requestNeighboursWord = "please send me my neighbours' ips"
+
+func Read(conn *net.TCPConn, size int) ([]byte, error) {
+    buffer := make([]byte, size)
+    offset := 0
+    for offset < size {
+        n, err := conn.Read(buffer[offset:])
+        offset += n
+        if err != nil {
+            break
+        }
+    }
+    if offset < size {
+        return nil, errors.New("read insufficient bytes")
+    }
+    return buffer, nil
+}
 
 type Link interface {
     LinkingIP() string
@@ -35,8 +51,9 @@ func GetConn(link Link) (*net.TCPConn, error) {
 type NonMinor struct {
     IP string
     Port int
-    PrvKey PrivateKey
-    Local *database.Database
+    PrvKey *PrivateKey
+    TargetPubKey *Point
+    //DB *database.Database
 }
 
 func (nom *NonMinor) Connect() (*net.TCPConn, error) {
@@ -49,6 +66,15 @@ func (nom *NonMinor) RequestNeighbours() error {
         return err
     }
     defer conn.Close()
+    cipher := Encrypt(curve, nom.TargetPubKey, []byte("please send me my neighbours"));
+    if cipher == nil {
+        return errors.New("encryption error")
+    }
+    // sig, err := Sign(curve, nom.PrvKey, cipher)
+    if err != nil {
+        return err
+    }
+    conn.Read(make([]byte, 4))
     // cip, err := Sign(curve, )
     // sig, err := Sign(curve, serverPubKey)
     return nil

@@ -3,6 +3,7 @@ package network
 import (
 	"math/big"
 	"crypto/rand"
+	"bytes"
 )
 
 var zero = new(big.Int)
@@ -306,8 +307,8 @@ func ConcatEncode(Q, pubKey *Point, msg []byte) []byte {
 	plainText = append(plainText, pubKey.X...)
 	plainText = append(plainText, pubKey.Y...)
 	plainText = append(plainText, msg...)
-	cipherText := HashEnc(plainText)
-	return cipherText
+	hash := Hash256(plainText)
+	return hash
 }
 
 func GenerateKey(curve Curve) (prvKey *PrivateKey, err error) {
@@ -365,16 +366,56 @@ func Verify(curve Curve, sig *Signature, pubKey *Point, msg []byte) bool {
 	}
 }
 
-//func BytesToPoint(curve Curve, msg []byte) *Point {
-//
-//}
-//
-//func Encrypt(curve Curve, plaintext []byte, pubKey *Point) ([]byte, error) {
-//	k, err := RandomSample(curve)
-//	if err != nil {
-//		return nil, err
-//	}
-//}
+func (point *Point) Bytes() []byte {
+	j := make([]byte, 64)
+	copy(j[:len(point.X)], point.X)
+	copy(j[64 - len(point.Y):], point.Y)
+	return j
+}
+
+func Encrypt(curve Curve, pubKey *Point, msg []byte) []byte {
+	k, _ := RandomSample(curve)
+	p1 := curve.ScalarBaseMultiply(k)
+	c1 := p1.Bytes()
+	p2 := curve.ScalarMultiply(pubKey, k)
+	j2 := p2.Bytes()
+	t := new(big.Int).SetBytes(KDF(j2))
+	m := new(big.Int).SetBytes(msg)
+	c2 := new(big.Int).Xor(m, t).Bytes()
+	b := make([]byte, len(j2) + len(msg))
+	copy(b[:len(j2)], j2)
+	copy(b[len(j2):], msg)
+	c3 := Hash256(b)
+	cipher := make([]byte, len(c1) + len(c2) + len(c3))
+	copy(cipher[:64], c1)
+	copy(cipher[64: 96], c3)
+	copy(cipher[96:], c2)
+	return cipher
+}
+
+func Decrypt(curve Curve, prvKey *PrivateKey, cipher []byte) []byte {
+	p1 := &Point{X: cipher[:32], Y: cipher[32: 64]}
+	if !curve.IsOnCurve(p1) {
+		return nil
+	}
+	p2 := curve.ScalarMultiply(p1, prvKey.Prv)
+	j2 := p2.Bytes()
+	t := new(big.Int).SetBytes(KDF(j2))
+	c2 := cipher[96:]
+	c := new(big.Int).SetBytes(c2)
+	m := new(big.Int).Xor(c, t)
+	msg := m.Bytes()
+	b := make([]byte, len(j2) + len(msg))
+	copy(b[:len(j2)], j2)
+	copy(b[len(j2):], msg)
+	u := Hash256(b)
+	c3 := cipher[64: 96]
+	if bytes.Equal(u, c3) {
+		return msg
+	} else {
+		return nil
+	}
+}
 
 func InitCurve() (curveParams *CurveParams) {
 	curveParams = &CurveParams{}
