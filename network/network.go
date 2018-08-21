@@ -42,9 +42,12 @@ import (
 //    return 0
 //}
 
-var local = "127.0.0.1"
+//var local = "127.0.0.1"
+var local = "124.78.94.72"
+var LeaderIP = "124.78.94.72"
+var MinorIP = "192.168.3.73"
 var LeaderPort = 15287
-var MinorPort = 15872
+var MinorPort = 56595
 var NonMinorPort = 17263
 var curve = InitCurve()
 var CheckFrequency = 50 * time.Nanosecond
@@ -127,9 +130,9 @@ func GetNetwork() *Network {
 }
 
 func GetRoster() ([]string, map[string] *Point) {
-   rosterIPs := []string{local}
+   rosterIPs := []string{MinorIP}
    roster := make(map[string] *Point)
-   roster[local] = GetPrvKey().PubKey
+   roster[MinorIP] = GetPrvKey().PubKey
    return rosterIPs, roster
 }
 
@@ -174,11 +177,11 @@ func ExecuteMultiSign() {
    peer.InitLeader()
    peer.InitMinor()
    leader := peer.AsLeader
-   minor := peer.AsMinor
+   //minor := peer.AsMinor
    leader.Listen()
    leader.Work()
-   minor.Listen()
-   minor.Work()
+   //minor.Listen()
+   //minor.Work()
 
    // step 1
    // leader request ticket
@@ -190,15 +193,15 @@ func ExecuteMultiSign() {
 
    var wait int64 = 0
    for wait < MaximumWaitTime.Nanoseconds() {
-       wait += 1
-       time.Sleep(time.Nanosecond)
+      wait += 1
+      time.Sleep(time.Nanosecond)
    }
 
    if b := leader.ValidateTicket(); b {
-       fmt.Println("leader validate ticket: ", b)
-       fmt.Println()
+      fmt.Println("leader validate ticket: ", b)
+      fmt.Println()
    } else {
-       return
+      return
    }
 
    // step 2
@@ -211,8 +214,8 @@ func ExecuteMultiSign() {
 
    wait = 0
    for wait < MaximumWaitTime.Nanoseconds() {
-       wait += 1
-       time.Sleep(time.Nanosecond)
+      wait += 1
+      time.Sleep(time.Nanosecond)
    }
 
    // step 3
@@ -225,14 +228,14 @@ func ExecuteMultiSign() {
 
    wait = 0
    for wait < MaximumWaitTime.Nanoseconds() {
-       wait += 1
-       time.Sleep(time.Nanosecond)
+      wait += 1
+      time.Sleep(time.Nanosecond)
    }
 
    if b := leader.ValidateResponses(); b {
-       fmt.Println("leader validate response: ", b)
-       fmt.Println()
+      fmt.Println("leader validate response: ", b)
+      fmt.Println()
    } else {
-       return
+      return
    }
 }

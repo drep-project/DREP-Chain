@@ -7,7 +7,6 @@ import (
 	"math/big"
 	"math"
     "strconv"
-    "time"
     "fmt"
 )
 
@@ -17,8 +16,12 @@ type SendUnit interface {
 	Message() interface{}
 }
 
-func Address(unit SendUnit) string {
+func RemoteAddress(unit SendUnit) string {
     return unit.RemoteIP() + ":" + strconv.Itoa(unit.RemotePort())
+}
+
+func LocalAddress() string {
+    return local
 }
 
 func SendMessage(unit SendUnit) error {
@@ -26,18 +29,23 @@ func SendMessage(unit SendUnit) error {
 	if err != nil {
 		return err
 	}
-	addr, err := net.ResolveTCPAddr("tcp", Address(unit))
+	fmt.Println("1")
+	addr, err := net.ResolveTCPAddr("tcp", RemoteAddress(unit))
 	if err != nil {
 	    return nil
     }
-	conn, err := net.DialTCP("tcp", nil, addr);
+    fmt.Println("2: ", addr)
+	conn, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
+	    fmt.Println("err: ", err)
 		return err
 	}
+    fmt.Println("3: ", err)
 	defer conn.Close()
 	if _, err := conn.Write(msg); err != nil {
 		return err
 	}
+    fmt.Println("4")
 	return nil
 }
 
@@ -121,6 +129,7 @@ type BroadcastReceiver interface {
 
 func Listen(receiver BroadcastReceiver) {
     go func() {
+        // addr := &net.TCPAddr{IP: net.ParseIP("172.20.10.6"), Port: receiver.ListeningPort()}
         addr := &net.TCPAddr{Port: receiver.ListeningPort()}
         listener, err := net.ListenTCP("tcp", addr)
         if err != nil {
@@ -153,7 +162,6 @@ func Listen(receiver BroadcastReceiver) {
                 notification := &Notification{receiver.ListeningRole(), msg, ip}
                 receiver.NotificationQueue() <- notification
             } ()
-            time.Sleep(CheckFrequency)
         }
     }()
 }
