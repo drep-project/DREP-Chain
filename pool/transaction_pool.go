@@ -14,8 +14,13 @@ var (
 func init()  {
     transactions = make(map[string]*common.Transaction)
 }
-func AddTransaction(transaction *common.Transaction) {
-    id := transaction.GetId()
+
+func Contains(id string) bool {
+    _, exists := transactions[id]
+    return exists
+}
+
+func AddTransaction(id string, transaction *common.Transaction) {
     tranLock.Lock()
     if _, exists := transactions[id]; exists {
         log.Fatalf("Transaction %s exists", id)
