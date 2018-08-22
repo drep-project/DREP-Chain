@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package network;
 
-import "network/crypto_types.proto";
+import "crypto/crypto_types.proto";
 
 message transaction {
 	int32 version = 1;

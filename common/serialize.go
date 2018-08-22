@@ -1,4 +1,4 @@
-package network
+package common
 
 import (
 	"github.com/golang/protobuf/proto"
@@ -22,12 +22,10 @@ func Serialize(message interface{}) ([]byte, error) {
 		serializable.Header = MessageHeader_PRIVATE_KEY
 	case *Signature:
 		serializable.Header = MessageHeader_SIGNATURE
-	case *CommandOfWord:
+	case *Word:
 		serializable.Header = MessageHeader_COMMAND_OF_WORD
 	case *Ticket:
 		serializable.Header = MessageHeader_TICKET
-	case *SignalOfStart:
-		serializable.Header = MessageHeader_SIGNAL_OF_START
 	case *Commitment:
 		serializable.Header = MessageHeader_COMMITMENT
 	case *Challenge:
@@ -68,8 +66,8 @@ func Deserialize(b []byte) (interface{}, error) {
 		} else {
 			return nil, err
 		}
-	case MessageHeader_COMMAND_OF_WORD:
-		word := &CommandOfWord{}
+	case MessageHeader_WORD:
+		word := &Word{}
 		if err := proto.Unmarshal(body, word); err == nil {
 			return word, nil
 		} else {
@@ -79,13 +77,6 @@ func Deserialize(b []byte) (interface{}, error) {
 		ticket := &Ticket{}
 		if err := proto.Unmarshal(body, ticket); err == nil {
 			return ticket, nil
-		} else {
-			return nil, err
-		}
-	case MessageHeader_SIGNAL_OF_START:
-		signal := &SignalOfStart{}
-		if err := proto.Unmarshal(body, signal); err == nil {
-			return signal, nil
 		} else {
 			return nil, err
 		}
@@ -114,4 +105,3 @@ func Deserialize(b []byte) (interface{}, error) {
 		return nil, errors.New("message header not found")
 	}
 }
-

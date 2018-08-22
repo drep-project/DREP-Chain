@@ -12,7 +12,7 @@ var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
 
-// This is a compile-time assertion to ensure that this generated file
+// This is aa compile-time assertion to ensure that this generated file
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
@@ -237,7 +237,7 @@ func init() {
 func init() { proto.RegisterFile("block_types.proto", fileDescriptor_block_types_6ab120560a854c01) }
 
 var fileDescriptor_block_types_6ab120560a854c01 = []byte{
-	// 423 bytes of a gzipped FileDescriptorProto
+	// 423 bytes of aa gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x6c, 0x52, 0x4d, 0x8f, 0xd3, 0x30,
 	0x10, 0x55, 0xda, 0x6d, 0xd3, 0x4e, 0xca, 0x4a, 0x98, 0x2f, 0xb3, 0x20, 0x11, 0x95, 0x03, 0xbd,
 	0x6c, 0x91, 0x0a, 0xff, 0x80, 0xcb, 0x4a, 0xec, 0x01, 0x19, 0xc1, 0xd5, 0x72, 0x5b, 0x2b, 0xb1,

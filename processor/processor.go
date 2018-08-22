@@ -47,6 +47,7 @@ func (p *Processor) Start() {
 }
 
 func (p *Processor) dispatch(msg common.Message) {
+    // TODO something
     if processor := p.processors[msg.Type]; processor != nil {
         processor.process(msg.Body)
     } else {
