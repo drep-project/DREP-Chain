@@ -4,6 +4,9 @@ import (
     "strconv"
     "net"
     "errors"
+    "time"
+    "math/big"
+    "fmt"
 )
 
 var serverIP = "127.0.0.1"
@@ -11,20 +14,91 @@ var portPort = 14767
 var serverPubKey *Point
 var requestNeighboursWord = "please send me my neighbours' ips"
 
+var ReadFrequency = 100 * time.Nanosecond
+var ReadTimeout = 10000 * time.Nanosecond
+var Room = 10
+
 func Read(conn *net.TCPConn, size int) ([]byte, error) {
     buffer := make([]byte, size)
     offset := 0
+    var dur time.Duration = 0
     for offset < size {
         n, err := conn.Read(buffer[offset:])
         offset += n
         if err != nil {
             break
         }
+        time.Sleep(ReadFrequency)
+        dur += ReadFrequency
+        if dur > ReadTimeout {
+            return nil, errors.New("read time out")
+        }
     }
     if offset < size {
         return nil, errors.New("read insufficient bytes")
     }
     return buffer, nil
+}
+
+func Write(conn *net.TCPConn, object interface{}) error {
+    defer conn.CloseWrite()
+    b, err := Serialize(object)
+    if err != nil {
+        return err
+    }
+    size := len(b)
+    buffer := make([]byte, size + 4)
+    if _, err := conn.Write(buffer); err != nil {
+        return err
+    }
+    if _, err := conn.Write(b); err != nil {
+        return err
+    }
+    return nil
+}
+
+func OrderedRead(conn *net.TCPConn) []interface{} {
+   defer conn.CloseRead()
+   list := make([]interface{}, Room)
+   num := 0
+   var err error = nil
+   var objectSize []byte
+   var objectBytes []byte
+   for err == nil {
+       if len(list) == num {
+           list = append(list, make([]interface{}, Room))
+           objectSize, err = Read(conn, 4)
+           if err != nil {
+               break
+           }
+           size := int(new(big.Int).SetBytes(objectSize).Int64())
+           if size == 0 {
+               break
+           }
+           objectBytes, err = Read(conn, size)
+           if err != nil {
+               break
+           }
+           object, err := Deserialize(objectBytes)
+           if err != nil {
+               break
+           }
+           list[num] = object
+           num ++
+       }
+   }
+   return list
+}
+
+func OrderedWrite(conn *net.TCPConn, objects []interface{}) error {
+    defer conn.CloseWrite()
+    for _, object := range objects {
+        err := Write(conn, object)
+        if err != nil {
+            fmt.Println("error: ", err)
+        }
+    }
+    return nil
 }
 
 type Link interface {
@@ -60,24 +134,60 @@ func (nom *NonMinor) Connect() (*net.TCPConn, error) {
     return GetConn(nom)
 }
 
-func (nom *NonMinor) RequestNeighbours() error {
+func (nom *NonMinor) Fetch() {
     conn, err := nom.Connect()
     if err != nil {
-        return err
+        return
     }
     defer conn.Close()
     cipher := Encrypt(curve, nom.TargetPubKey, []byte("please send me my neighbours"));
     if cipher == nil {
-        return errors.New("encryption error")
+        return
     }
-    // sig, err := Sign(curve, nom.PrvKey, cipher)
+    sig, err := Sign(curve, nom.PrvKey, cipher)
+    if err != nil {
+        return
+    }
+    fetchRequest := &FetchRequest{FetchWhat: cipher, Sig: sig}
+    b, err := Serialize(fetchRequest)
+    if err != nil {
+        return
+    }
+    n, err := conn.Write(b)
+    fmt.Println("n: ", n)
+    if err != nil {
+        return
+    }
+    list := OrderedRead(conn)
+    // process list
+    fmt.Println("list: ", list)
+    return
+}
+
+func (nom *NonMinor) AssignNeighbours() error {
+    return nil
+}
+
+func (nom *NonMinor) SendBlocks(height int) error {
+    conn, err := nom.Connect()
     if err != nil {
         return err
     }
-    conn.Read(make([]byte, 4))
-    // cip, err := Sign(curve, )
-    // sig, err := Sign(curve, serverPubKey)
+    ch := height
+    var block *Block
+    blockKey := "block_" + strconv.Itoa(height)
+    block = nom.GetBlock(blockKey)
+    for block != nil {
+        Write(conn, block)
+        ch += 1
+        blockKey = "block_" + strconv.Itoa(ch)
+        block = nom.GetBlock(blockKey)
+    }
     return nil
+}
+
+func (nom *NonMinor) GetBlock(blockKey string) *Block {
+    return &Block{}
 }
 
 func (nom *NonMinor) LinkingIP() string {

@@ -5,6 +5,9 @@ import (
     "sync"
     "fmt"
     "errors"
+    "net"
+    "BlockChainTest/common"
+   "strconv"
 )
 
 //var (
@@ -61,6 +64,59 @@ type Network struct {
    NotificationQueue chan *Notification
 }
 
+type Task struct {
+
+}
+
+type IP string
+
+func (ip IP) String() string {
+   return string(ip)
+}
+
+type PORT int
+
+func (port PORT) String() string {
+   return strconv.Itoa(int(port))
+}
+
+func Address(ip IP, port PORT) string {
+   return ip.String() + ":" + port.String()
+}
+
+type Sender struct {
+   RemoteIP   IP
+   RemotePort PORT
+   Msg        interface{}
+}
+
+func (sender *Sender) Send() error {
+   msg, err := common.Serialize(sender.Msg)
+   if err != nil {
+   		return err
+   }
+   addr, err := net.ResolveTCPAddr("tcp", Address(sender.RemoteIP, sender.RemotePort))
+   if err != nil {
+     return nil
+   }
+   conn, err := net.DialTCP("tcp", nil, addr)
+   if err != nil {
+     return err
+   }
+   defer conn.Close()
+   if _, err := conn.Write(msg); err != nil {
+      return err
+   }
+   return nil
+}
+
+func SendMessage(peers []*Peer, msg interface{}, queue chan *Sender) {
+   for _, peer := range peers {
+      sender := &Sender{peer.LocalIP, peer.LocalPort, msg}
+      queue <- sender
+   }
+}
+
 //type NonMinor struct {
 //    DB  *database.Database
 //    Net *Network
@@ -93,6 +149,8 @@ type Network struct {
 //}
 
 type Peer struct {
+   LocalIP IP
+   LocalPort PORT
    PrvKey       *PrivateKey
    Net          *Network
    AsLeader     *Leader

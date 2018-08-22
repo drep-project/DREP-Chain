@@ -1,0 +1,109 @@
+syntax = "proto3";
+
+package common;
+
+enum message_header {
+	ACCOUNT = 0;
+	BLOCK_HEADER = 1;
+	BLOCK_DATA = 2;
+	BLOCK = 3;
+	TRANSACTION = 4;
+	TIMESTAMP = 5;
+	POINT = 6;
+	PRIVATE_KEY = 7;
+	SIGNATURE = 8;
+	WORD = 9;
+	TICKET = 10;
+	COMMITMENT = 11;
+	CHALLENGE = 12;
+	RESPONSE = 13;
+}
+
+message serializable {
+	message_header header = 1;
+	bytes body = 2;
+}
+
+message point {
+	bytes x = 1;
+	bytes y = 2;
+}
+
+message private_key {
+	bytes prv = 1;
+	point pub_key = 2;
+}
+
+message signature {
+	bytes r = 1;
+	bytes s = 2;
+}
+
+message word {
+	bytes msg = 1;
+}
+
+message ticket {
+	point pub_key = 1;
+	signature sig_of_word = 2;
+}
+
+message commitment {
+	point pub_key = 1;
+	point q = 2;
+}
+
+message challenge {
+	point group_pub_key = 1;
+	point group_q = 2;
+	bytes msg = 3;
+	bytes r = 4;
+}
+
+message response {
+	point pub_key = 1;
+	bytes s = 2;
+}
+
+message block_header {
+	int32 version = 1;
+	bytes previous_hash = 2;
+	bytes gas_limit = 3;
+	bytes gas_used = 4;
+	bytes height = 5;
+	int64 timestamp = 6;
+	bytes merkle_root = 7;
+	repeated bytes tx_hashes = 8;
+	point leader_pub_key = 9;
+	repeated point minor_pub_keys = 10;
+}
+
+message block_data {
+	int32 tx_count = 1;
+	repeated transaction tx_list = 2;
+}
+
+message block {
+	block_header header = 2;
+	block_data data = 3;
+	signature multi_sig = 4;
+}
+
+message transaction {
+	int32 version = 1;
+	int64 nonce = 2;
+	bytes to_address = 3;
+	bytes amount = 4;
+	bytes gas_price = 5;
+	bytes gas_limit = 6;
+	int64 timestamp = 7;
+	point pub_key = 8;
+	signature sig = 9;
+}
+
+message account {
+	private_key prv_key = 1;
+	bytes address = 2;
+	bytes balance = 3;
+	int64 tx_count = 4;
+}
