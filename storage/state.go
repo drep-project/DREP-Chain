@@ -4,12 +4,13 @@ import (
     "sync"
     "BlockChainTest/util"
     "BlockChainTest/network"
+    "BlockChainTest/common"
 )
 
 const (
-    Lead        int = 0
-    MINER       int = 1
-    NonMiner    int = 2
+    LEADER    int = 0
+    MINER     int = 1
+    NON_MINER int = 2
 )
 
 const (
@@ -24,7 +25,8 @@ var (
 
 type Miner struct {
     PubKey []byte
-    Address string
+    Address common.Address
+    Peer *network.Peer
 }
 
 type State struct {
@@ -32,6 +34,8 @@ type State struct {
     miningState int
     miners []*Miner
     peers []*network.Peer
+    blockHeight int
+    block *common.Block
 }
 
 func GetState() *State {
@@ -74,6 +78,39 @@ func (s *State) ContainsMiner(pubKey []byte) bool {
     return false
 }
 
+func (s *State) GetMiner(pubKey []byte) *Miner {
+    for _, v:= range s.miners {
+        if util.SliceEqual(v.PubKey, pubKey) {
+            return v
+        }
+    }
+    return nil
+}
+
 func (s *State) GetPeers() []*network.Peer {
     return s.peers
+}
+
+func (s *State) GetBlockHeight() int {
+    return s.blockHeight
+}
+
+func (s *State) CheckState(role int, miningState int) bool {
+    return s.role == role && s.miningState == miningState
+}
+
+func (s *State) MoveToState(miningState int) {
+    s.miningState = miningState
+}
+
+func (s *State) GetLeader() *Miner {
+    return nil
+}
+
+func (s *State) GetBlock() *common.Block {
+    return s.block
+}
+
+func (s *State) SetBlock(block *common.Block) {
+    s.block = block
 }

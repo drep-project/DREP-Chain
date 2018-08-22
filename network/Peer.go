@@ -1,5 +1,8 @@
 package network
 
-type Peer struct {
+import "net"
 
+type Peer struct {
+    net.IP
+    //port
 }
