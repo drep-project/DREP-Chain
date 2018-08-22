@@ -24,6 +24,7 @@ type Block1ResponseMessage struct {
 }
 
 type SetUp2Message struct {
+    bitmap []bool
     PubKey []byte
     Sig []byte
 }
