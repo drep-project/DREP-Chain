@@ -8,9 +8,9 @@ import (
 )
 
 const (
-    LEADER    int = 0
-    MINER     int = 1
-    NON_MINER int = 2
+    LEADER     = 0
+    MINER      = 1
+    NON_MINER  = 2
 )
 
 const (

@@ -11,15 +11,15 @@ import (
 )
 
 //WAITING = 0
-//MSG_SETUP1 = 1 // LS ->CHA MR received then commit
-//MSG_BLOCK1_COMMIT = 3 // MS  MS->RESPONSE
-//MSG_BLOCK1_CHALLENGE = 4 // LS ->SETUP2
-//MSG_BLOCK1_RESPONSE = 5 // MS -> COMMIT
+//MSG_SETUP1 = 1 // LS ->CHA MR WAITING received then commit
+//MSG_BLOCK1_COMMIT = 3 // MS  ->RESPONSE LR CHAN
+//MSG_BLOCK1_CHALLENGE = 4 // LS ->SETUP2 MR RESP
+//MSG_BLOCK1_RESPONSE = 5 // MS -> COMMIT LR SETUP2
 //
-//MSG_SETUP2 = 6 // LS -> CHA
-//MSG_BLOCK2_COMMIT = 7 // MS -> RESP
-//MSG_BLOCK2_CHALLENGE = 8 // LS -> BLOCK
-//MSG_BLOCK2_RESPONSE = 9 // MS -> BLOCK
+//MSG_SETUP2 = 6 // LS -> CHA MR COMMIT
+//MSG_BLOCK2_COMMIT = 7 // MS -> RESP LR CHA
+//MSG_BLOCK2_CHALLENGE = 8 // LS -> BLOCK MR RESP
+//MSG_BLOCK2_RESPONSE = 9 // MS -> BLOCK LR BLOCK
 //
 //MSG_BLOCK = 9 // LS -> WAITING M -> WAITING
 
@@ -41,7 +41,7 @@ func (p *setup1Processor) process(msg interface{}) {
             return
         }
         storage.GetState().SetBlock(setup1Msg.Block)
-        storage.GetState().MoveToState(common.MSG_BLOCK1_COMMIT)
+        storage.GetState().MoveToState(common.MSG_BLOCK1_RESPONSE)
         // TODO clear block1CommitProcessor and Start countdown
         // TODO Get Qi
         //q := crypto.GetQ()
@@ -142,17 +142,7 @@ func (p *block1ResponseProcessor) process(msg interface{}) {
         if miner == nil {
             return
         }
-        // TODO p.pubKey += pubKey
-        // TODO p.q += q
-        p.bitmap[miner.Address] = true
-        p.count++
-        if p.count == len(storage.GetState().GetMiners()) {
-            storage.GetState().MoveToState(common.MSG_BLOCK2_COMMIT)
-            block := storage.GetState().GetBlock()
-            // TODO calculate r
-            miners := storage.GetState().GetMiners()
-            // TODO delete itself from miners
-            // TODO Send r, q, pk to miners  common.Block1ChallengeMessage
-        }
+        // TODO calculate s
+        // TODO send s to leader
     }
 }
