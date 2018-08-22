@@ -3,8 +3,19 @@ package common
 import "math/big"
 
 const (
-    MSG_BLOCK = 1
-    MSG_TRANSACTION = 2
+    WAITING = 0
+    MSG_SETUP1 = 1 // LS ->CHA M received then commit
+    MSG_BLOCK1_COMMIT = 3 // MS  MS->RESPONSE
+    MSG_BLOCK1_CHALLENGE = 4 // LS ->SETUP2
+    MSG_BLOCK1_RESPONSE = 5 // MS -> COMMIT
+
+    MSG_SETUP2 = 6 // LS -> CHA
+    MSG_BLOCK2_COMMIT = 7 // MS -> RESP
+    MSG_BLOCK2_CHALLENGE = 8 // LS -> BLOCK
+    MSG_BLOCK2_RESPONSE = 9 // MS -> BLOCK
+
+    MSG_BLOCK = 9 // LS -> WAITING M -> WAITING
+    MSG_TRANSACTION = 10
 )
 type Message struct {
     Type int
@@ -56,4 +67,5 @@ func (t *Transaction) GetId() string {
 type BlockChain struct {
     Blocks []Block
 }
+
 
