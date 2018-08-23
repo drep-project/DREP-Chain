@@ -85,34 +85,34 @@ package network
 //	return nil
 //}
 //
-//type Broadcast struct {
+//type Sender struct {
 //	IPs  []string
 //	Port int
 //	Msg  interface{}
 //	Que  chan *Sender
 //}
 //
-//func NewBroadcast(ips []string, port int, msg interface{}, que chan *Sender) *Broadcast {
-//	return &Broadcast{ips, port, msg, que}
+//func NewBroadcast(ips []string, port int, msg interface{}, que chan *Sender) *Sender {
+//	return &Sender{ips, port, msg, que}
 //}
 //
-//func (broadcast *Broadcast) RemoteIPs() []string {
+//func (broadcast *Sender) RemoteIPs() []string {
 //	return broadcast.IPs
 //}
 //
-//func (broadcast *Broadcast) RemotePort() int {
+//func (broadcast *Sender) RemotePort() int {
 //	return broadcast.Port
 //}
 //
-//func (broadcast *Broadcast) Message() interface{} {
+//func (broadcast *Sender) Message() interface{} {
 //	return broadcast.Msg
 //}
 //
-//func (broadcast *Broadcast) BroadcastQueue() chan *Sender {
+//func (broadcast *Sender) BroadcastQueue() chan *Sender {
 //   return broadcast.Que
 //}
 //
-//func (broadcast *Broadcast) Spread() error {
+//func (broadcast *Sender) Spread() error {
 //	return SpreadMessages(broadcast)
 //}
 //
