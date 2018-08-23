@@ -81,7 +81,7 @@ message block_header {
 
 message block_data {
 	int32 tx_count = 1;
-	repeated transaction tx_list = 2;
+	repeated transactiontttt tx_list = 2;
 }
 
 message block {
@@ -101,7 +101,7 @@ message transaction_data {
 	point pub_key = 8;
 }
 
-message transaction {
+message transactiontttt {
 	transaction_data data = 1;
 	signature sig = 2;
 }
