@@ -1,7 +1,6 @@
 package network
 
 import (
-    "fmt"
     "BlockChainTest/common"
     "net"
     "sync"
@@ -13,10 +12,12 @@ var once sync.Once
 
 type P2PComm struct {
     IPs  []string
-    port int
     msg  interface{}
-    que  chan *Peer
+    queue  chan *Peer
 }
+
+
+//	RemotePort() int
 
 var sharedInstance *P2PComm
 
@@ -58,8 +59,8 @@ func (p *P2PComm) SendMessageCore(peer *Peer, bytes []byte) error {
 
 func (p *P2PComm) Spread() error {
     for _, ip := range p.IPs {
-        peer := Peer{ip, p.port, p.msg}
-        task.BroadcastQueue() <- peer
+        peer := Peer{ip, p.msg}
+        p.queue <- &peer
     }
     return nil
 }
