@@ -1,19 +1,19 @@
-package network
+package crypto
 
 import (
 	"math/big"
-	"crypto/rand"
+    "BlockChainTest/common"
 )
 
-var zero = new(big.Int)
+var Zero = new(big.Int)
 
 type Curve interface {
 	Params() *CurveParams
-	IsOnCurve(*Point) bool
-	Add(*Point, *Point) *Point
-	Double(*Point) *Point
-	ScalarMultiply(*Point, []byte) *Point
-	ScalarBaseMultiply([]byte) *Point
+	IsOnCurve(*common.Point) bool
+	Add(*common.Point, *common.Point) *common.Point
+	Double(*common.Point) *common.Point
+	ScalarMultiply(*common.Point, []byte) *common.Point
+	ScalarBaseMultiply([]byte) *common.Point
 }
 
 // Y^2 == X^3 + AX + B (mod p), with a == 0
@@ -21,7 +21,7 @@ type CurveParams struct {
 	P *big.Int
 	N *big.Int
 	B *big.Int
-	G *Point
+	G *common.Point
 	BitSize int
 	Name string
 }
@@ -37,7 +37,7 @@ func (curveParams *CurveParams) Params() *CurveParams {
 }
 
 // Y^2 == X^3 + 7 (mod p)
-func (curveParams *CurveParams) IsOnCurve(point *Point) bool {
+func (curveParams *CurveParams) IsOnCurve(point *common.Point) bool {
 	x, y := new(big.Int).SetBytes(point.X), new(big.Int).SetBytes(point.Y)
 	P := curveParams.P
 	B := curveParams.B
@@ -51,7 +51,7 @@ func (curveParams *CurveParams) IsOnCurve(point *Point) bool {
 	return ySquare.Cmp(xPolynomial) == 0
 }
 
-func JacobiAffine(point *Point) *JacobiCoordinate {
+func JacobiAffine(point *common.Point) *JacobiCoordinate {
 	x, y, z := new(big.Int).SetBytes(point.X), new(big.Int).SetBytes(point.Y), new(big.Int)
 	if x.Sign() != 0 || y.Sign() != 0 {
 		z.SetInt64(1)
@@ -59,10 +59,10 @@ func JacobiAffine(point *Point) *JacobiCoordinate {
 	return &JacobiCoordinate{x, y, z}
 }
 
-func (curveParams *CurveParams) InverseJacobiAffine(jc *JacobiCoordinate) *Point {
+func (curveParams *CurveParams) InverseJacobiAffine(jc *JacobiCoordinate) *common.Point {
 	x, y, z := jc.X, jc.Y, jc.Z
 	if z.Sign() == 0 {
-		return &Point{X: new(big.Int).Bytes(), Y: new(big.Int).Bytes()}
+		return &common.Point{X: new(big.Int).Bytes(), Y: new(big.Int).Bytes()}
 	}
 	P := curveParams.P
 	zInv := new(big.Int).ModInverse(z, P)
@@ -74,7 +74,7 @@ func (curveParams *CurveParams) InverseJacobiAffine(jc *JacobiCoordinate) *Point
 	xOut.Mod(xOut, P)
 	yOut := new(big.Int).Mul(y, zInvCube)
 	yOut.Mod(yOut, P)
-	return &Point{X: xOut.Bytes(), Y: yOut.Bytes()}
+	return &common.Point{X: xOut.Bytes(), Y: yOut.Bytes()}
 }
 
 // add-2007-bl addition
@@ -210,18 +210,18 @@ func (curveParams *CurveParams) JacobiDoubling(jc *JacobiCoordinate) *JacobiCoor
 	return &JacobiCoordinate{x2, y2, z2}
 }
 
-func (curveParams *CurveParams) Add(pt1, pt2 *Point) *Point {
+func (curveParams *CurveParams) Add(pt1, pt2 *common.Point) *common.Point {
 	jc1 := JacobiAffine(pt1)
 	jc2 := JacobiAffine(pt2)
 	return curveParams.InverseJacobiAffine(curveParams.JacobiAddition(jc1, jc2))
 }
 
-func (curveParams *CurveParams) Double(point *Point) *Point {
+func (curveParams *CurveParams) Double(point *common.Point) *common.Point {
 	jc := JacobiAffine(point)
 	return curveParams.InverseJacobiAffine(curveParams.JacobiDoubling(jc))
 }
 
-func (curveParams *CurveParams) ScalarMultiply(point *Point, k []byte) *Point {
+func (curveParams *CurveParams) ScalarMultiply(point *common.Point, k []byte) *common.Point {
 	jc0 := JacobiAffine(point)
 	jc := &JacobiCoordinate{new(big.Int), new(big.Int), new(big.Int)}
 	for _, byt := range k {
@@ -236,11 +236,11 @@ func (curveParams *CurveParams) ScalarMultiply(point *Point, k []byte) *Point {
 	return curveParams.InverseJacobiAffine(jc)
 }
 
-func (curveParams *CurveParams) ScalarBaseMultiply(k []byte) *Point {
+func (curveParams *CurveParams) ScalarBaseMultiply(k []byte) *common.Point {
 	return curveParams.ScalarMultiply(curveParams.G, k)
 }
 
-func (curveParams *CurveParams) ScalarBaseMultiplyByFormula(k int) *Point {
+func (curveParams *CurveParams) ScalarBaseMultiplyByFormula(k int) *common.Point {
 	Gx, Gy := new(big.Int).SetBytes(curveParams.G.X), new(big.Int).SetBytes(curveParams.G.Y)
 	Fx, Fy := new(big.Int).Set(Gx), new(big.Int).Set(Gy)
 	P := curveParams.P
@@ -270,143 +270,5 @@ func (curveParams *CurveParams) ScalarBaseMultiplyByFormula(k int) *Point {
 		Fx.Set(u)
 		Fy.Set(v)
 	}
-	return &Point{X: Fx.Bytes(), Y:Fy.Bytes()}
-}
-
-func RandomSample(curve Curve) (k []byte, err error) {
-	mask := []byte{0xff, 0x1, 0x3, 0x7, 0xf, 0x1f, 0x3f, 0x7f}
-	N := curve.Params().N
-	BitSize := curve.Params().BitSize
-	byteLen := (BitSize + 7) >> 3
-	ok := false
-	for !ok {
-		k = make([]byte, byteLen)
-		if _, err = rand.Read(k); err != nil {
-			return
-		}
-		k[0] &= mask[BitSize % 8]
-		kInt := new(big.Int).SetBytes(k)
-		if kInt.Cmp(zero) > 0 || kInt.Cmp(N) < 0 {
-			ok = true
-		}
-	}
-	return
-}
-
-func ConcatEncode(Q, pubKey *Point, msg []byte) []byte {
-	QxBytes := Q.X;
-	plainText := make([]byte, len(QxBytes))
-	plainText = append(plainText, Q.Y...)
-	plainText = append(plainText, pubKey.X...)
-	plainText = append(plainText, pubKey.Y...)
-	plainText = append(plainText, msg...)
-	cipherText := HashEnc(plainText)
-	return cipherText
-}
-
-func GenerateKey(curve Curve) (prvKey *PrivateKey, err error) {
-	prv, err := RandomSample(curve)
-	if err != nil {
-		return
-	}
-	pubKey := curve.ScalarBaseMultiply(prv)
-	prvKey = &PrivateKey{Prv: prv, PubKey: pubKey}
-	return
-}
-
-func Sign(curve Curve, prvKey *PrivateKey, msg []byte) (*Signature, error) {
-	r, s := new(big.Int), new(big.Int)
-	prvInt := new(big.Int).SetBytes(prvKey.Prv)
-	for r.Cmp(zero) == 0 || s.Cmp(zero) == 0 {
-		k, err := RandomSample(curve)
-		if err != nil {
-			return nil, err
-		}
-		N := curve.Params().N
-		Q := curve.ScalarBaseMultiply(k)
-		r = new(big.Int).SetBytes(ConcatEncode(Q, prvKey.PubKey, msg))
-		r.Mod(r, N)
-		s = new(big.Int).Mul(r, prvInt)
-		s.Mod(s, N)
-		s.Sub(new(big.Int).SetBytes(k), s)
-		s.Mod(s, N)
-	}
-	sig := &Signature{}
-	sig.R = r.Bytes()
-	sig.S = s.Bytes()
-	return sig, nil
-}
-
-func Verify(curve Curve, sig *Signature, pubKey *Point, msg []byte) bool {
-	r, s := new(big.Int).SetBytes(sig.R), new(big.Int).SetBytes(sig.S)
-	if r.Cmp(zero) <= 0 || r.Cmp(curve.Params().N) >= 0 || s.Cmp(zero) <=0 || s.Cmp(curve.Params().N) >=0 {
-		return false
-	}
-	N := curve.Params().N
-	sG := curve.ScalarBaseMultiply(sig.S)
-	rP := curve.ScalarMultiply(pubKey, sig.R)
-	Q:= curve.Add(sG, rP)
-	Qx, Qy := new(big.Int).SetBytes(Q.X), new(big.Int).SetBytes(Q.Y)
-	if Qx.Cmp(zero) == 0 && Qy.Cmp(zero) == 0 {
-		return false
-	}
-	v := new(big.Int).SetBytes(ConcatEncode(Q, pubKey, msg))
-	v.Mod(v, N)
-	if v.Cmp(r) == 0{
-		return true
-	} else {
-		return false
-	}
-}
-
-func InitCurve() (curveParams *CurveParams) {
-	curveParams = &CurveParams{}
-	curveParams.P = new(big.Int).SetBytes([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE, 0xFF, 0xFF, 0xFC, 0x2F})
-	curveParams.N = new(big.Int).SetBytes([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-		0xFF, 0xFF, 0xFF, 0xFE, 0xBA, 0xAE, 0xDC, 0xE6, 0xAF, 0x48, 0xA0, 0x3B, 0xBF, 0xD2, 0x5E, 0x8C, 0xD0, 0x36, 0x41, 0x41})
-	curveParams.B = new(big.Int).SetBytes([]byte{0x07})
-	Gx := []byte{0x79, 0xBE, 0x66, 0x7E, 0xF9, 0xDC, 0xBB, 0xAC, 0x55, 0xA0, 0x62, 0x95, 0xCE, 0x87, 0x0B, 0x07, 0x02, 0x9B, 0xFC,
-					0xDB, 0x2D, 0xCE, 0x28, 0xD9, 0x59, 0xF2, 0x81, 0x5B, 0x16, 0xF8, 0x17, 0x98}
-	Gy := []byte{0x48, 0x3A, 0xDA, 0x77, 0x26, 0xA3, 0xC4, 0x65, 0x5D, 0xA4, 0xFB, 0xFC, 0x0E, 0x11, 0x08, 0xA8, 0xFD, 0x17, 0xB4,
-					0x48, 0xA6, 0x85, 0x54, 0x19, 0x9C, 0x47, 0xD0, 0x8F, 0xFB, 0x10, 0xD4, 0xB8}
-	curveParams.G = &Point{X: Gx, Y: Gy}
-	curveParams.BitSize = 256
-	curveParams.Name = "Secp256-k1"
-	return
-}
-
-func InitCurveByString() (curveParams *CurveParams) {
-	curveParams = &CurveParams{}
-	curveParams.P, _ = new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F", 16)
-	curveParams.N, _ = new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", 16)
-	curveParams.B = new(big.Int).SetBytes([]byte{0x07})
-	Gx, _ := new(big.Int).SetString("79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798", 16)
-	Gy, _ := new(big.Int).SetString("483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8", 16)
-	curveParams.G = &Point{X: Gx.Bytes(), Y: Gy.Bytes()}
-	curveParams.BitSize = 256
-	curveParams.Name = "Secp256-k1"
-	return
-}
-
-func InitMiniCurve() (curveParams *CurveParams) {
-	curveParams = &CurveParams{}
-	curveParams.P = new(big.Int).SetInt64(int64(71))
-	curveParams.N = new(big.Int).SetInt64(int64(70))
-	curveParams.B = new(big.Int).SetInt64(int64(7))
-	Gx := new(big.Int).SetInt64(int64(2))
-	Gy := new(big.Int).SetInt64(int64(21))
-	curveParams.G = &Point{X: Gx.Bytes(), Y: Gy.Bytes()}
-	curveParams.BitSize = 7
-	curveParams.Name = "MiniCurve71"
-	return
-}
-
-func PointEqual(p0, p1 *Point) bool {
-	x0, y0 := new(big.Int).SetBytes(p0.X), new(big.Int).SetBytes(p0.Y)
-	x1, y1 := new(big.Int).SetBytes(p1.X), new(big.Int).SetBytes(p1.Y)
-	if x0.Cmp(x1) != 0 || y0.Cmp(y1) != 0 {
-		return false
-	}
-	return true
+	return &common.Point{X: Fx.Bytes(), Y:Fy.Bytes()}
 }
