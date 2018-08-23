@@ -57,7 +57,7 @@ func (leader *Leader) ValidateTicket() bool {
            return false
        } else if !PointEqual(p, q.PubKey) {
            return false
-       } else if !Verify(curve, q.SigOfWord, q.PubKey, leader.Command.Msg) {
+       } else if !Verify(CurveInstance, q.SigOfWord, q.PubKey, leader.Command.Msg) {
            return false
        }
    }
@@ -85,10 +85,10 @@ func (leader *Leader) ProposeChallenge() error {
    ips := make([]string, 0)
    for ip, commitment := range leader.CommitOK {
        ips = append(ips, ip)
-       groupPubKey = curve.Add(groupPubKey, commitment.PubKey)
-       groupQ = curve.Add(groupQ, commitment.Q)
+       groupPubKey = CurveInstance.Add(groupPubKey, commitment.PubKey)
+       groupQ = CurveInstance.Add(groupQ, commitment.Q)
    }
-   r := ConcatHash(groupQ, groupPubKey, msg)
+   r := common.ConcatHash256(groupQ, groupPubKey, msg)
    challenge := &Challenge{GroupPubKey: groupPubKey, GroupQ: groupQ, Msg: msg, R: r}
    leader.Challenge = challenge
    return NewBroadcast(ips, MinorPort, challenge, leader.Net.BroadcastQueue).Spread()
@@ -116,16 +116,16 @@ func (leader *Leader) ValidateResponses() bool {
        } else if !PointEqual(response.PubKey, q.PubKey) {
            return false
        }
-       groupPubKey = curve.Add(groupPubKey, response.PubKey)
+       groupPubKey = CurveInstance.Add(groupPubKey, response.PubKey)
        groupS.Add(groupS, new(big.Int).SetBytes(response.S))
    }
-   groupS.Mod(groupS, curve.N)
+   groupS.Mod(groupS, CurveInstance.N)
    sig := &Signature{R: leader.Challenge.R, S: groupS.Bytes()}
    msg, err := Serialize(leader.Object)
    if err != nil {
        return false
    }
-   return Verify(curve, sig, groupPubKey, msg)
+   return Verify(CurveInstance, sig, groupPubKey, msg)
 }
 
 func (leader *Leader) ListeningPort() int {
@@ -162,7 +162,7 @@ type Minor struct {
 
 func (minor *Minor) ReturnTicket(word *CommandOfWord, ip string) error {
    ips := append(make([]string, 0), ip)
-   sigOfWord, err := Sign(curve, minor.PrvKey, []byte(word.Msg))
+   sigOfWord, err := Sign(CurveInstance, minor.PrvKey, []byte(word.Msg))
    if err != nil {
        return err
    }
@@ -173,18 +173,18 @@ func (minor *Minor) ReturnTicket(word *CommandOfWord, ip string) error {
 }
 
 func (minor *Minor) ReturnCommitment(signal *SignalOfStart, ip string) error {
-   k, err := GetRandomKQ(curve)
+   k, err := GetRandomKQ(CurveInstance)
    if err != nil {
        return err
    }
    minor.K = k
    ips := append(make([]string, 0), ip)
-   commitment := &Commitment{PubKey: minor.PrvKey.PubKey, Q: curve.ScalarBaseMultiply(k)}
+   commitment := &Commitment{PubKey: minor.PrvKey.PubKey, Q: CurveInstance.ScalarBaseMultiply(k)}
    return NewBroadcast(ips, LeaderPort, commitment, minor.Net.BroadcastQueue).Spread()
 }
 
 func (minor *Minor) ReturnResponse(challenge *Challenge, ip string) error {
-   r := ConcatHash(challenge.GroupQ, challenge.GroupPubKey, challenge.Msg)
+   r := common.ConcatHash256(challenge.GroupQ, challenge.GroupPubKey, challenge.Msg)
    r0 := new(big.Int).SetBytes(challenge.R)
    r1 := new(big.Int).SetBytes(r)
    if r0.Cmp(r1) != 0 {
@@ -194,7 +194,7 @@ func (minor *Minor) ReturnResponse(challenge *Challenge, ip string) error {
    prvInt := new(big.Int).SetBytes(minor.PrvKey.Prv)
    s := new(big.Int).Mul(r1, prvInt)
    s.Sub(kInt, s)
-   s.Mod(s, curve.N)
+   s.Mod(s, CurveInstance.N)
    response := &Response{PubKey: minor.PrvKey.PubKey, S: s.Bytes()}
    ips := append(make([]string, 0), ip)
    return NewBroadcast(ips, LeaderPort, response, minor.Net.BroadcastQueue).Spread()

@@ -8,6 +8,8 @@ import (
     "net"
     "BlockChainTest/common"
    "strconv"
+   "proj/crypto"
+   "strings"
 )
 
 //var (
@@ -65,8 +67,11 @@ type Network struct {
 }
 
 type Task struct {
-
 }
+
+var once0, once1 sync.Once
+var SenderQueue chan *Sender
+var ReceiverQueue chan *Receiver
 
 type IP string
 
@@ -74,20 +79,37 @@ func (ip IP) String() string {
    return string(ip)
 }
 
-type PORT int
+type Port int
 
-func (port PORT) String() string {
+func (port Port) String() string {
    return strconv.Itoa(int(port))
 }
 
-func Address(ip IP, port PORT) string {
+func URL(ip IP, port Port) string {
    return ip.String() + ":" + port.String()
+}
+
+type Address string
+
+func (addr Address) String() string {
+   return string(addr)
+}
+
+func (addr Address) LocalKey() string {
+   return ADDRESS_SUFFIX + addr.String()
 }
 
 type Sender struct {
    RemoteIP   IP
-   RemotePort PORT
+   RemotePort Port
    Msg        interface{}
+}
+
+func GetSenderQueue() chan *Sender {
+   once0.Do(func() {
+      SenderQueue = make(chan *Sender,  10)
+   })
+   return SenderQueue
 }
 
 func (sender *Sender) Send() error {
@@ -95,7 +117,7 @@ func (sender *Sender) Send() error {
    if err != nil {
    		return err
    }
-   addr, err := net.ResolveTCPAddr("tcp", Address(sender.RemoteIP, sender.RemotePort))
+   addr, err := net.ResolveTCPAddr("tcp", URL(sender.RemoteIP, sender.RemotePort))
    if err != nil {
      return nil
    }
@@ -110,11 +132,56 @@ func (sender *Sender) Send() error {
    return nil
 }
 
-func SendMessage(peers []*Peer, msg interface{}, queue chan *Sender) {
-   for _, peer := range peers {
-      sender := &Sender{peer.LocalIP, peer.LocalPort, msg}
+func SendMessage(peers []Peer, msg interface{}) {
+   queue := GetSenderQueue()
+   for _, addr := range addresses {
+      sender := &Sender{Addr, msg}
       queue <- sender
    }
+}
+
+type Receiver struct {
+   Addr Address
+   Msg interface{}
+}
+
+func Listen() {
+  go func() {
+     //room for modification addr := &net.TCPAddr{IP: net.ParseIP("x.x.x.x"), Port: receiver.ListeningPort()}
+     addr := &net.TCPAddr{Port: ListeningPort}
+     listener, err := net.ListenTCP("tcp", addr)
+     if err != nil {
+        return
+     }
+     for {
+        conn, err := listener.AcceptTCP()
+        if err != nil {
+           continue
+        }
+        fromAddr := conn.RemoteAddr().String()
+        ip := fromAddr[: strings.LastIndex(fromAddr, ":")]
+        go func() {
+           b := make([]byte, BufferSize)
+           buffer := b
+           offset := 0
+           for {
+              n, err := conn.Read(buffer)
+              if err != nil {
+                 break
+              } else {
+                 buffer = b[n:]
+                 offset += n
+              }
+              }
+              msg, err := Deserialize(b[:offset])
+              if err != nil {
+                  return
+              }
+              notification := &Notification{receiver.ListeningRole(), msg, ip}
+              receiver.NotificationQueue() <- notification
+          } ()
+      }
+  }()
 }
 
 //type NonMinor struct {
@@ -149,12 +216,8 @@ func SendMessage(peers []*Peer, msg interface{}, queue chan *Sender) {
 //}
 
 type Peer struct {
-   LocalIP IP
-   LocalPort PORT
-   PrvKey       *PrivateKey
-   Net          *Network
-   AsLeader     *Leader
-   AsMinor      *Minor
+   Addr Address
+
    //AsNonMinor   *NonMinor
 }
 

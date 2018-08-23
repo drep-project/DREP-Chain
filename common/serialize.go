@@ -5,6 +5,10 @@ import (
 	"errors"
 )
 
+func (s *Serializable) IsValid() bool {
+	if
+}
+
 func Serialize(message interface{}) ([]byte, error) {
 	msg, ok := message.(proto.Message);
 	if !ok {
@@ -23,7 +27,7 @@ func Serialize(message interface{}) ([]byte, error) {
 	case *Signature:
 		serializable.Header = MessageHeader_SIGNATURE
 	case *Word:
-		serializable.Header = MessageHeader_COMMAND_OF_WORD
+		serializable.Header = MessageHeader_WORD
 	case *Ticket:
 		serializable.Header = MessageHeader_TICKET
 	case *Commitment:

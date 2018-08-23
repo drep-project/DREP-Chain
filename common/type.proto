@@ -22,6 +22,9 @@ enum message_header {
 message serializable {
 	message_header header = 1;
 	bytes body = 2;
+	string address = 3;
+	point pub_key = 4;
+	signature sig = 5;
 }
 
 message point {
@@ -44,13 +47,11 @@ message word {
 }
 
 message ticket {
-	point pub_key = 1;
-	signature sig_of_word = 2;
+	signature sig_of_word = 1;
 }
 
 message commitment {
-	point pub_key = 1;
-	point q = 2;
+	point q = 1;
 }
 
 message challenge {
@@ -61,8 +62,7 @@ message challenge {
 }
 
 message response {
-	point pub_key = 1;
-	bytes s = 2;
+	bytes s = 1;
 }
 
 message block_header {
