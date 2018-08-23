@@ -1,22 +1,11 @@
 package util
 
-func SliceEqual(a, b []byte) bool {
-    if len(a) != len(b) {
-        return false
-    }
-    length := len(a)
-    for i := 0; i < length; i++ {
-        if a[i] != b[i] {
-            return false
-        }
-    }
-    return true
-}
+import "bytes"
 
 func Contains(a []byte, b [][]byte) bool {
     length := len(b)
     for i := 0; i < length; i++ {
-        if SliceEqual(a, b[i]) {
+        if bytes.Equal(a, b[i]) {
             return true
         }
     }
