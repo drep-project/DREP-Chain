@@ -66,7 +66,7 @@ message response {
 	bytes s = 1;
 }
 
-message block_header {
+message block_headertttt {
 	int32 version = 1;
 	bytes previous_hash = 2;
 	bytes gas_limit = 3;
@@ -79,14 +79,14 @@ message block_header {
 	repeated point minor_pub_keys = 10;
 }
 
-message block_data {
+message block_datatttt {
 	int32 tx_count = 1;
 	repeated transactiontttt tx_list = 2;
 }
 
-message block {
-	block_header header = 2;
-	block_data data = 3;
+message blocktttt {
+	block_headertttt header = 2;
+	block_datatttt data = 3;
 	signature multi_sig = 4;
 }
 
