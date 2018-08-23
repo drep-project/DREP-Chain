@@ -15,7 +15,7 @@ type P2PComm struct {
 
 var sharedInstance *P2PComm
 
-func (P2PComm) SharedP2pComm() *P2PComm {
+func SharedP2pComm() *P2PComm {
     once.Do(func() {
         sharedInstance = new(P2PComm)
     })
@@ -38,8 +38,7 @@ func (p *P2PComm) SendMessageCore(peer *Peer, msg interface{})  {
     //func NewBroadcast(peer.Net.channel, port int, msg interface{}, que chan *Sender) *Broadcast {
     //return &Broadcast{ips, peer.po, msg, que}
     //}
-    peer.initLeader()
-    leader := peer.AsLeader
+    leader := NewLeader(peer)
     leader.Listen()
     leader.Work()
 
@@ -61,7 +60,7 @@ func (p *P2PComm) SendMessageCore(peer *Peer, msg interface{})  {
 func (p *P2PComm) Spread() error {
     for _, ip := range p.IPs {
         peer := Peer{ip, p.port, p.msg}
-        task.BroadcastQueue() <- p
+        task.BroadcastQueue() <- peer
     }
     return nil
 }

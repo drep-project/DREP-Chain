@@ -18,6 +18,24 @@ type Leader struct {
     Net             *Network
 }
 
+func NewLeader(peer *Peer) *Leader {
+    /*
+    if peer.AsLeader != nil || peer.AsMinor != nil {
+        return errors.New("fail to setup leader, currently involved in another signing protocol")
+    }
+    */
+    leader := &Leader{}
+    leader.Word = &CommandOfWord{Msg: []byte("please send your ticket to me")}
+    leader.Signal = &SignalOfStart{Mark: 1}
+    leader.Plaintext = GetPlaintext()
+    leader.RosterIPs, leader.Roster = GetRoster()
+    leader.EnterOK = make(map[string] *Ticket)
+    leader.CommitOK = make(map[string] *Commitment)
+    leader.RespondOK = make(map[string] *Response)
+    leader.Net = peer.Net
+    return leader
+}
+
 func (leader *Leader) RequestTicket() error {
     return NewBroadcast(leader.RosterIPs, MinorPort, leader.Word, leader.Net.BroadcastQueue).Spread()
 }
@@ -133,4 +151,15 @@ func (leader *Leader) Listen() error {
 func (leader *Leader) Work() error {
     Work(leader)
     return nil
+}
+
+func GetRoster() ([]string, map[string] *Point) {
+    rosterIPs := []string{local}
+    roster := make(map[string] *Point)
+    roster[local] = GetPrvKey().PubKey
+    return rosterIPs, roster
+}
+
+func GetPlaintext() interface{} {
+    return &CommandOfWord{Msg: []byte("please confirm this block")}
 }

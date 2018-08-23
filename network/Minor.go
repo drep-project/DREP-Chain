@@ -11,6 +11,18 @@ type Minor struct {
     Net    *Network
 }
 
+func NewMinor (peer *Peer) *Minor {
+    /*
+    if peer.AsLeader != nil || peer.AsMinor != nil {
+        return errors.New("fail to setup minor, currently involved in another signing protocol")
+    }
+    */
+    minor := &Minor{}
+    //minor.PrvKey = peer.PrvKey
+    //minor.Net = peer.Net
+    return minor
+}
+
 func (minor *Minor) ReturnTicket(word *CommandOfWord, ip string) error {
     ips := append(make([]string, 0), ip)
     sigOfWord, err := Sign(curve, minor.PrvKey, []byte(word.Msg))
