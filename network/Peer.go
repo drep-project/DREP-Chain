@@ -14,12 +14,11 @@ var once0, once1 sync.Once
 
 type Peer struct {
     IP       string
-    Port     int
     msg      interface{}
 }
 
 
-func (peer *Peer) Address() string{
+func (peer *Peer) String() string{
     return peer.IP + ":" + strconv.Itoa(peer.Port)
 }
 
