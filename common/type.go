@@ -3,8 +3,6 @@ package common
 import (
     "bytes"
     "encoding/hex"
-    "errors"
-    "math/big"
 )
 
 func (p *Point) Bytes() []byte {
@@ -31,63 +29,29 @@ func (pubKey *Point) Addr() string {
     return str
 }
 
-func (sig *Signature) Bytes() []byte {
-    j := make([]byte, 2 * ByteLen)
-    copy(j[ByteLen - len(sig.R): ByteLen], sig.R)
-    copy(j[2 * ByteLen - len(sig.S):], sig.S)
-    return j
-}
-
-func (tx *Transaction) TxConcat() ([]byte, error) {
-    if tx.ToAddress == nil {
-        return nil, errors.New("to address is nil")
-    }
-    len0 := len(tx.ToAddress)
-    if tx.Amount == nil {
-        return nil, errors.New("amount is nil")
-    }
-    len1 := len0 + len(tx.Amount)
-    if tx.GasPrice == nil {
-        return nil, errors.New("gas price is nil")
-    }
-    len2 := len1 + len(tx.GasPrice)
-    if tx.GasLimit == nil {
-        return nil, errors.New("gas limit is nil")
-    }
-    len3 := len2 + len(tx.GasLimit)
-    bVersion := new(big.Int).SetInt64(int64(tx.Version)).Bytes()
-    len4 := len3 + len(bVersion)
-    bNonce := new(big.Int).SetInt64(tx.Nonce).Bytes()
-    len5 := len4 + len(bNonce)
-    bTimestamp := new(big.Int).SetInt64(tx.Timestamp).Bytes()
-    len6 := len5 + len(bTimestamp)
-    bPubKey := tx.PubKey.Bytes()
-    len7 := len6 + len(bPubKey)
-    concat := make([]byte, len7)
-    copy(concat[:], tx.ToAddress)
-    copy(concat[len0:], tx.Amount)
-    copy(concat[len1:], tx.GasPrice)
-    copy(concat[len2:], tx.GasLimit)
-    copy(concat[len3:], bVersion)
-    copy(concat[len4:], bNonce)
-    copy(concat[len5:], bTimestamp)
-    copy(concat[len6:], bPubKey)
-    return concat, nil
-}
-
 func (tx *Transaction) TxID() (string, error) {
-    concat, err := tx.TxConcat()
+    b, err := Serialize(tx.Data)
     if err != nil {
-        return "", errors.New("concat transaction wrong")
+        return "", err
     }
-    id := hex.EncodeToString(Hash256(concat))
+    id := hex.EncodeToString(Hash256(b))
     return id, nil
 }
 
-func (tx *Transaction) TxHash() (*Transaction, error) {
-    concat, err := tx.TxConcat()
+func (tx *Transaction) TxHash() ([]byte, error) {
+    b, err := Serialize(tx)
     if err != nil {
         return nil, err
     }
-    buf :=
+    hash := Hash256(b)
+    return hash, nil
+}
+
+func (block *Block) BlockID() (string, error) {
+    b, err := Serialize(block.Header)
+    if err != nil {
+        return "", err
+    }
+    id := hex.EncodeToString(Hash256(b))
+    return id, nil
 }
