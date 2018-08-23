@@ -216,9 +216,8 @@ func Listen() {
 //}
 
 type Peer struct {
-   Addr Address
-
-   //AsNonMinor   *NonMinor
+   RemoteIP IP
+   RemotePort Port
 }
 
 func GetPeer() *Peer {

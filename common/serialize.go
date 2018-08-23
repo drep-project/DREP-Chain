@@ -5,10 +5,6 @@ import (
 	"errors"
 )
 
-func (s *Serializable) IsValid() bool {
-	if
-}
-
 func Serialize(message interface{}) ([]byte, error) {
 	msg, ok := message.(proto.Message);
 	if !ok {
@@ -36,6 +32,10 @@ func Serialize(message interface{}) ([]byte, error) {
 		serializable.Header = MessageHeader_CHALLENGE
 	case *Response:
 		serializable.Header = MessageHeader_RESPONSE
+	case *BlockHeader:
+		serializable.Header = MessageHeader_BLOCK_HEADER
+	case *TransactionData:
+		serializable.Header = MessageHeader_TRANSACTION_DATA
 	default:
 		return nil, errors.New("bad message type")
 	}
@@ -102,6 +102,20 @@ func Deserialize(b []byte) (interface{}, error) {
 		response := &Response{}
 		if err := proto.Unmarshal(body, response); err == nil {
 			return response, nil
+		} else {
+			return nil, err
+		}
+	case MessageHeader_BLOCK_HEADER:
+		blockHeader := &BlockHeader{}
+		if err := proto.Unmarshal(body, blockHeader); err == nil {
+			return blockHeader, nil
+		} else {
+			return nil, err
+		}
+	case MessageHeader_TRANSACTION_DATA:
+		transactionData := &TransactionData{}
+		if err := proto.Unmarshal(body, transactionData); err == nil {
+			return transactionData, nil
 		} else {
 			return nil, err
 		}
