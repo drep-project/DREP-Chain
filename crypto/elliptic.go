@@ -2,18 +2,18 @@ package crypto
 
 import (
 	"math/big"
-    "BlockChainTest/common"
+	"BlockChainTest/bean"
 )
 
 var Zero = new(big.Int)
 
 type Curve interface {
 	Params() *CurveParams
-	IsOnCurve(*common.Point) bool
-	Add(*common.Point, *common.Point) *common.Point
-	Double(*common.Point) *common.Point
-	ScalarMultiply(*common.Point, []byte) *common.Point
-	ScalarBaseMultiply([]byte) *common.Point
+	IsOnCurve(*bean.Point) bool
+	Add(*bean.Point, *bean.Point) *bean.Point
+	Double(*bean.Point) *bean.Point
+	ScalarMultiply(*bean.Point, []byte) *bean.Point
+	ScalarBaseMultiply([]byte) *bean.Point
 }
 
 // Y^2 == X^3 + AX + B (mod p), with a == 0
@@ -21,7 +21,7 @@ type CurveParams struct {
 	P *big.Int
 	N *big.Int
 	B *big.Int
-	G *common.Point
+	G *bean.Point
 	BitSize int
 	Name string
 }
@@ -37,8 +37,8 @@ func (curveParams *CurveParams) Params() *CurveParams {
 }
 
 // Y^2 == X^3 + 7 (mod p)
-func (curveParams *CurveParams) IsOnCurve(point *common.Point) bool {
-	x, y := new(big.Int).SetBytes(point.X), new(big.Int).SetBytes(point.Y)
+func (curveParams *CurveParams) IsOnCurve(point *bean.Point) bool {
+	x, y := point.Int()
 	P := curveParams.P
 	B := curveParams.B
 	ySquare := new(big.Int).Mul(y, y)
@@ -51,18 +51,19 @@ func (curveParams *CurveParams) IsOnCurve(point *common.Point) bool {
 	return ySquare.Cmp(xPolynomial) == 0
 }
 
-func JacobiAffine(point *common.Point) *JacobiCoordinate {
-	x, y, z := new(big.Int).SetBytes(point.X), new(big.Int).SetBytes(point.Y), new(big.Int)
+func JacobiAffine(point *bean.Point) *JacobiCoordinate {
+	x, y := point.Int()
+	z := new(big.Int)
 	if x.Sign() != 0 || y.Sign() != 0 {
 		z.SetInt64(1)
 	}
 	return &JacobiCoordinate{x, y, z}
 }
 
-func (curveParams *CurveParams) InverseJacobiAffine(jc *JacobiCoordinate) *common.Point {
+func (curveParams *CurveParams) InverseJacobiAffine(jc *JacobiCoordinate) *bean.Point {
 	x, y, z := jc.X, jc.Y, jc.Z
 	if z.Sign() == 0 {
-		return &common.Point{X: new(big.Int).Bytes(), Y: new(big.Int).Bytes()}
+		return &bean.Point{X: new(big.Int).Bytes(), Y: new(big.Int).Bytes()}
 	}
 	P := curveParams.P
 	zInv := new(big.Int).ModInverse(z, P)
@@ -74,7 +75,7 @@ func (curveParams *CurveParams) InverseJacobiAffine(jc *JacobiCoordinate) *commo
 	xOut.Mod(xOut, P)
 	yOut := new(big.Int).Mul(y, zInvCube)
 	yOut.Mod(yOut, P)
-	return &common.Point{X: xOut.Bytes(), Y: yOut.Bytes()}
+	return &bean.Point{X: xOut.Bytes(), Y: yOut.Bytes()}
 }
 
 // add-2007-bl addition
@@ -210,18 +211,18 @@ func (curveParams *CurveParams) JacobiDoubling(jc *JacobiCoordinate) *JacobiCoor
 	return &JacobiCoordinate{x2, y2, z2}
 }
 
-func (curveParams *CurveParams) Add(pt1, pt2 *common.Point) *common.Point {
+func (curveParams *CurveParams) Add(pt1, pt2 *bean.Point) *bean.Point {
 	jc1 := JacobiAffine(pt1)
 	jc2 := JacobiAffine(pt2)
 	return curveParams.InverseJacobiAffine(curveParams.JacobiAddition(jc1, jc2))
 }
 
-func (curveParams *CurveParams) Double(point *common.Point) *common.Point {
+func (curveParams *CurveParams) Double(point *bean.Point) *bean.Point {
 	jc := JacobiAffine(point)
 	return curveParams.InverseJacobiAffine(curveParams.JacobiDoubling(jc))
 }
 
-func (curveParams *CurveParams) ScalarMultiply(point *common.Point, k []byte) *common.Point {
+func (curveParams *CurveParams) ScalarMultiply(point *bean.Point, k []byte) *bean.Point {
 	jc0 := JacobiAffine(point)
 	jc := &JacobiCoordinate{new(big.Int), new(big.Int), new(big.Int)}
 	for _, byt := range k {
@@ -236,12 +237,12 @@ func (curveParams *CurveParams) ScalarMultiply(point *common.Point, k []byte) *c
 	return curveParams.InverseJacobiAffine(jc)
 }
 
-func (curveParams *CurveParams) ScalarBaseMultiply(k []byte) *common.Point {
+func (curveParams *CurveParams) ScalarBaseMultiply(k []byte) *bean.Point {
 	return curveParams.ScalarMultiply(curveParams.G, k)
 }
 
-func (curveParams *CurveParams) ScalarBaseMultiplyByFormula(k int) *common.Point {
-	Gx, Gy := new(big.Int).SetBytes(curveParams.G.X), new(big.Int).SetBytes(curveParams.G.Y)
+func (curveParams *CurveParams) ScalarBaseMultiplyByFormula(k int) *bean.Point {
+	Gx, Gy := curveParams.G.Int()
 	Fx, Fy := new(big.Int).Set(Gx), new(big.Int).Set(Gy)
 	P := curveParams.P
 	for i := 1; i < k; i ++ {
@@ -270,5 +271,5 @@ func (curveParams *CurveParams) ScalarBaseMultiplyByFormula(k int) *common.Point
 		Fx.Set(u)
 		Fy.Set(v)
 	}
-	return &common.Point{X: Fx.Bytes(), Y:Fy.Bytes()}
+	return &bean.Point{X: Fx.Bytes(), Y:Fy.Bytes()}
 }

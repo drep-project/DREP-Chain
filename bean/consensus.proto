@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package bean;
+
+import "key.proto";
+
+message word {
+	string msg = 1;
+}
+
+message ticket {
+	point pub_key = 1;
+	signature sig_of_word = 2;
+}
+
+message commitment {
+	point pub_key = 1;
+	point q = 2;
+}
+
+message challenge {
+	point group_pub_key = 1;
+	point group_q = 2;
+	bytes msg = 3;
+	bytes r = 4;
+}
+
+message response {
+	point pub_key = 1;
+	bytes s = 2;
+}
