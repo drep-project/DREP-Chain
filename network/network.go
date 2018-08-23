@@ -3,9 +3,9 @@ package network
 import (
    "sync"
    "strconv"
-   "BlockChainTest/common"
    "net"
    "strings"
+   "BlockChainTest/bean"
 )
 
 var onceSender, onceReceiver sync.Once
@@ -31,7 +31,7 @@ func (addr Address) String() string {
 }
 
 func (addr Address) LocalKey() string {
-   return ADDRESS_SUFFIX + addr.String()
+   return AddressSuffix + addr.String()
 }
 
 type Peer struct {
@@ -63,7 +63,7 @@ func GetReceiverQueue() chan *Message {
 }
 
 func (m *Message) Send() error {
-   msg, err := common.Serialize(m.Msg)
+   msg, err := bean.Serialize(m.Msg)
    if err != nil {
    		return err
    }
@@ -118,7 +118,7 @@ func Listen() {
                  buffer = b[n:]
                  offset += n
               }
-              msg, err := common.Deserialize(b[:offset])
+              msg, err := bean.Deserialize(b[:offset])
               if err != nil {
                  return
               }

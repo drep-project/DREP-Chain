@@ -1,4 +1,4 @@
-package common
+package bean
 
 import (
 	"github.com/golang/protobuf/proto"
