@@ -2,7 +2,15 @@ package network
 
 import (
     "strconv"
+    "errors"
+    "time"
+    "sync"
 )
+
+var local = "127.0.0.1"
+var curve = InitCurve()
+var key *PrivateKey
+var once0, once1 sync.Once
 
 type Peer struct {
     IP       string
@@ -10,42 +18,20 @@ type Peer struct {
     msg      interface{}
 }
 
-//func (sender *Sender) Send() error {
-//    return SendMessage(sender)
-//}
 
 func (peer *Peer) Address() string{
     return peer.IP + ":" + strconv.Itoa(peer.Port)
 }
 
-
-
-func (peer *Peer) initLeader() *Leader {
-    /*
-    if peer.AsLeader != nil || peer.AsMinor != nil {
-        return errors.New("fail to setup leader, currently involved in another signing protocol")
-    }
-    */
-    leader := &Leader{}
-    leader.Word = &CommandOfWord{Msg: []byte("please send your ticket to me")}
-    leader.Signal = &SignalOfStart{Mark: 1}
-    leader.Plaintext = GetPlaintext()
-    leader.RosterIPs, leader.Roster = GetRoster()
-    leader.EnterOK = make(map[string] *Ticket)
-    leader.CommitOK = make(map[string] *Commitment)
-    leader.RespondOK = make(map[string] *Response)
-    //leader.Net = peer.Net
-    return leader
-}
-
-func (peer *Peer) initMinor() *Minor {
-    /*
-    if peer.AsLeader != nil || peer.AsMinor != nil {
-        return errors.New("fail to setup minor, currently involved in another signing protocol")
-    }
-    */
-    minor := &Minor{}
-    //minor.PrvKey = peer.PrvKey
-    //minor.Net = peer.Net
-    return minor
+func GetPrvKey() *PrivateKey {
+   once1.Do(func() {
+       var prvKey *PrivateKey = nil
+       err := errors.New("fail to generate key pair")
+       for err != nil {
+           prvKey, err = GenerateKey(curve)
+           key = prvKey
+           time.Sleep(100 * time.Millisecond)
+       }
+   })
+   return key
 }
