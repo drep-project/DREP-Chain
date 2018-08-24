@@ -1,8 +1,12 @@
-package common
+package crypto
 
 import (
     "math/big"
     "crypto/sha256"
+)
+
+const (
+    ByteLen = 32
 )
 
 func Hash256(text []byte) []byte {
@@ -14,11 +18,17 @@ func Hash256(text []byte) []byte {
     return hash
 }
 
-func ConcatHash256(p0, p1 *Point, b []byte) []byte {
-    concat := make([]byte, 4 * ByteLen + len(b))
-    copy(concat[:2 * ByteLen], p0.Bytes())
-    copy(concat[2 * ByteLen:], p1.Bytes())
-    copy(concat[4 * ByteLen:], b)
+func ConcatHash256(args ...[]byte) []byte {
+    totalLen := 0
+    for _, bytes := range args {
+        totalLen += len(bytes)
+    }
+    concat := make([]byte, totalLen)
+    i := 0
+    for _, bytes := range args {
+        copy(concat[i: ], bytes)
+        i += len(bytes)
+    }
     hash := Hash256(concat)
     return hash
 }
