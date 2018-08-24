@@ -15,17 +15,15 @@ enum message_header {
 	POINT = 7;
 	PRIVATE_KEY = 8;
 	SIGNATURE = 9;
-	WORD = 10;
-	TICKET = 11;
-	COMMITMENT = 12;
-	CHALLENGE = 13;
-	RESPONSE = 14;
+	ANNOUNCEMENT = 10;
+	COMMITMENT = 11;
+	CHALLENGE = 12;
+	RESPONSE = 13;
 }
 
 message serializable {
 	message_header header = 1;
 	bytes body = 2;
-	string address = 3;
-	point pub_key = 4;
-	signature sig = 5;
+	point pub_key = 3;
+	signature sig = 4;
 }

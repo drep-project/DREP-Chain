@@ -5,7 +5,7 @@ import (
 	"errors"
 )
 
-func Serialize(message interface{}) ([]byte, error) {
+func Serialize(message interface{}) (*Serializable, error) {
 	msg, ok := message.(proto.Message);
 	if !ok {
 		return nil, errors.New("bad message type")
@@ -22,10 +22,8 @@ func Serialize(message interface{}) ([]byte, error) {
 		serializable.Header = MessageHeader_PRIVATE_KEY
 	case *Signature:
 		serializable.Header = MessageHeader_SIGNATURE
-	case *Word:
-		serializable.Header = MessageHeader_WORD
-	case *Ticket:
-		serializable.Header = MessageHeader_TICKET
+	case *Announcement:
+		serializable.Header = MessageHeader_ANNOUNCEMENT
 	case *Commitment:
 		serializable.Header = MessageHeader_COMMITMENT
 	case *Challenge:
@@ -39,87 +37,80 @@ func Serialize(message interface{}) ([]byte, error) {
 	default:
 		return nil, errors.New("bad message type")
 	}
-	return proto.Marshal(serializable)
+	return serializable, nil
 }
 
-func Deserialize(b []byte) (interface{}, error) {
+func Deserialize(msg []byte) (*Serializable, interface{}, error) {
 	serializable := &Serializable{}
-	if err := proto.Unmarshal(b, serializable); err != nil {
-		return nil, err
+	if err := proto.Unmarshal(msg, serializable); err != nil {
+		return nil, nil, err
 	}
 	body := serializable.GetBody()
 	switch serializable.GetHeader() {
 	case MessageHeader_POINT:
 		point := &Point{}
 		if err := proto.Unmarshal(body, point); err == nil {
-			return point, nil
+			return serializable, point, nil
 		} else {
-			return nil, err
+			return nil, nil, err
 		}
 	case MessageHeader_PRIVATE_KEY:
 		prvKey := &PrivateKey{}
 		if err := proto.Unmarshal(body, prvKey); err == nil {
-			return prvKey, nil
+			return serializable, prvKey, nil
 		} else {
-			return nil, err
+			return nil, nil, err
 		}
 	case MessageHeader_SIGNATURE:
 		sig := &Signature{}
 		if err := proto.Unmarshal(body, sig); err == nil {
-			return sig, nil
+			return serializable, sig, nil
 		} else {
-			return nil, err
+			return nil, nil, err
 		}
-	case MessageHeader_WORD:
-		word := &Word{}
-		if err := proto.Unmarshal(body, word); err == nil {
-			return word, nil
+	case MessageHeader_ANNOUNCEMENT:
+		announcement := &Announcement{}
+		if err := proto.Unmarshal(body, announcement); err == nil {
+			return serializable, announcement, nil
 		} else {
-			return nil, err
-		}
-	case MessageHeader_TICKET:
-		ticket := &Ticket{}
-		if err := proto.Unmarshal(body, ticket); err == nil {
-			return ticket, nil
-		} else {
-			return nil, err
+			return nil, nil, err
 		}
 	case MessageHeader_COMMITMENT:
 		commitment := &Commitment{}
 		if err := proto.Unmarshal(body, commitment); err == nil {
-			return commitment, nil
+			return serializable, commitment, nil
 		} else {
-			return nil, err
+			return nil, nil, err
 		}
 	case MessageHeader_CHALLENGE:
 		challenge := &Challenge{}
 		if err := proto.Unmarshal(body, challenge); err == nil {
-			return challenge, nil
+			return serializable, challenge, nil
 		} else {
-			return nil, err
+			return nil, nil, err
 		}
 	case MessageHeader_RESPONSE:
 		response := &Response{}
 		if err := proto.Unmarshal(body, response); err == nil {
-			return response, nil
+			return serializable, response, nil
 		} else {
-			return nil, err
+			return nil, nil, err
 		}
 	case MessageHeader_BLOCK_HEADER:
 		blockHeader := &BlockHeader{}
 		if err := proto.Unmarshal(body, blockHeader); err == nil {
-			return blockHeader, nil
+			return serializable, blockHeader, nil
 		} else {
-			return nil, err
+			return nil, nil, err
 		}
 	case MessageHeader_TRANSACTION_DATA:
 		transactionData := &TransactionData{}
 		if err := proto.Unmarshal(body, transactionData); err == nil {
-			return transactionData, nil
+			return serializable, transactionData, nil
 		} else {
-			return nil, err
+			return nil, nil, err
 		}
 	default:
-		return nil, errors.New("message header not found")
+		return nil, nil, errors.New("message header not found")
 	}
 }
