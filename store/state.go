@@ -17,6 +17,9 @@ var (
     blockHeight int
     block *common.Block
     lock sync.Locker
+    priKey []byte
+    pubKey []byte
+    address common.Address
 )
 
 func init()  {
@@ -91,4 +94,16 @@ func GetBlock() *common.Block {
 
 func SetBlock(b *common.Block) {
     block = b
+}
+
+func GetPubKey() []byte {
+    return pubKey
+}
+
+func GetAddress() common.Address {
+    return address
+}
+
+func GetPriKey() []byte {
+    return priKey
 }
