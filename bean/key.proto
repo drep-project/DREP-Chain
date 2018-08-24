@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package bean;
+
+message point {
+	bytes x = 1;
+	bytes y = 2;
+}
+
+message private_key {
+	bytes prv = 1;
+	point pub_key = 2;
+}
+
+message signature {
+	bytes r = 1;
+	bytes s = 2;
+}

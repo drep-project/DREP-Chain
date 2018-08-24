@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package bean;
+
+import "bean/key.proto";
+
+enum message_header {
+	ACCOUNT = 0;
+	BLOCK_HEADER = 1;
+	BLOCK_DATA = 2;
+	BLOCK = 3;
+	TRANSACTION_DATA = 4;
+	TRANSACTION = 5;
+	TIMESTAMP = 6;
+	POINT = 7;
+	PRIVATE_KEY = 8;
+	SIGNATURE = 9;
+	ANNOUNCEMENT = 10;
+	COMMITMENT = 11;
+	CHALLENGE = 12;
+	RESPONSE = 13;
+}
+
+message serializable {
+	message_header header = 1;
+	bytes body = 2;
+	point pub_key = 3;
+	signature sig = 4;
+}

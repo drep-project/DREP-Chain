@@ -1,9 +1,8 @@
 syntax = "proto3";
 
-package network;
+package bean;
 
-import "crypto/crypto_types.proto";
-import "network/transaction_types.proto";
+import "bean/key.proto";
 
 message block_header {
 	int32 version = 1;
@@ -27,4 +26,20 @@ message block {
 	block_header header = 2;
 	block_data data = 3;
 	signature multi_sig = 4;
+}
+
+message transaction_data {
+	int32 version = 1;
+	int64 nonce = 2;
+	string to = 3;
+	bytes amount = 4;
+	bytes gas_price = 5;
+	bytes gas_limit = 6;
+	int64 timestamp = 7;
+	point pub_key = 8;
+}
+
+message transaction {
+	transaction_data data = 1;
+	signature sig = 2;
 }
