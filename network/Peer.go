@@ -2,11 +2,7 @@ package network
 
 import (
     "strconv"
-    "errors"
-    "time"
-    "sync"
-    "BlockChainTest/crypto"
-    "BlockChainTest/common"
+    "BlockChainTest/bean"
 )
 
 //var local = "127.0.0.1"
@@ -15,8 +11,9 @@ import (
 //var once0, once1 sync.Once
 
 type Peer struct {
-    IP       string
-    msg      interface{}
+    IP           string
+    RemotePubKey *bean.Point
+    Port         int
 }
 
 func (peer *Peer) String() string{
