@@ -4,41 +4,45 @@ import (
     "BlockChainTest/common"
     "BlockChainTest/store"
     "BlockChainTest/node"
-    "fmt"
-    "bytes"
     "BlockChainTest/network"
     "sync"
+    "BlockChainTest/bean"
+    "BlockChainTest/crypto"
+    "math/big"
 )
 
 const (
     waiting              = 0
-    setUp               = 1 // LS ->CHA M received then commit
-    waitingForCommit     = 3 // MS  MS->RESPONSE
-    CHALLENGE            = 4 // LS ->SETUP2
-    WAITING_FOR_RESPONSE = 5 // MS -> COMMIT
+    setUp               = 1
+    challenge            = 2
 )
 type Leader struct {
-    msg interface{}
     miners []*node.Miner
-    sigFunc func(interface{}, []byte) []byte
-    wrapFunc func(interface{}, []byte, []byte) interface{}
+    peers []*network.Peer
     state int
+
     commitWg sync.WaitGroup
-    commitBitmap map[common.Address]bool
+    commitBitmap map[*bean.Point]bool
+    sigmaPubKey *bean.Point
+    sigmaQ *bean.Point
+    r []byte
+
+    sigmaS *big.Int
     responseWg sync.WaitGroup
-    responseBitmap map[common.Address]bool
+    responseBitmap map[*bean.Point]bool
+
     sigs map[common.Address][]byte
+
 }
 
 func NewLeader() *Leader {
     l := &Leader{}
-    l.msg = msg
     miners := store.GetMiners()
     l.miners = make([]*node.Miner, len(miners) - 1)
     last := 0
     pubKey := store.GetPubKey()
     for _, miner := range miners {
-        if !bytes.Equal(miner.PubKey, pubKey) {
+        if !miner.PubKey.Equal(pubKey) {
             l.miners[last] = miner
             last++
         }
@@ -47,152 +51,72 @@ func NewLeader() *Leader {
     return l
 }
 
-func (l *Leader) processConsensus(msg interface{},
-                                  sigFunc func(interface{}, []byte) []byte,
-                                  wrapFunc func(interface{}, []byte, []byte) interface{}) map[common.Address][]byte {
-    priKey := store.GetPriKey()
-    sig := sigFunc(msg, priKey)
-    msg
-    w := sync.WaitGroup{}
-    w.Add()
-}
-func (l *Leader) setUp() {
-    miner
+func (l *Leader) processConsensus(msg []byte) *bean.Signature {
+    //priKey := store.GetPriKey()
 
-}
-//WAITING = 0
-//MSG_SETUP1 = 1 // LS ->CHA MR WAITING received then commit
-//MSG_BLOCK1_COMMIT = 3 // MS  ->RESPONSE LR CHAN
-//MSG_BLOCK1_CHALLENGE = 4 // LS ->SETUP2 MR RESP
-//MSG_BLOCK1_RESPONSE = 5 // MS -> COMMIT LR SETUP2
-//
-//MSG_SETUP2 = 6 // LS -> CHA MR COMMIT
-//MSG_BLOCK2_COMMIT = 7 // MS -> RESP LR CHA
-//MSG_BLOCK2_CHALLENGE = 8 // LS -> BLOCK MR RESP
-//MSG_BLOCK2_RESPONSE = 9 // MS -> BLOCK LR BLOCK
-//
-//MSG_BLOCK = 9 // LS -> WAITING M -> WAITING
+    l.commitWg = sync.WaitGroup{}
+    l.commitWg.Add(len(l.peers))
+    l.state = setUp
+    l.setUp(msg, store.GetPubKey())
+    l.commitWg.Wait()
 
-type setup1Processor struct {
+    l.responseWg = sync.WaitGroup{}
+    l.responseWg.Add(len(l.commitBitmap))
+    l.state = challenge
+    l.challenge(msg)
+    l.responseWg.Wait()
 
+    return &bean.Signature{R: l.r, S: l.sigmaS.Bytes()}
 }
 
-func (p *setup1Processor) process(msg interface{})  {
-    if !store.CheckState(node.MINER, common.WAITING) {
+func (l *Leader) setUp(msg []byte, pubKey *bean.Point) {
+    setup := &bean.Setup{Msg: msg, PubKey: pubKey}
+    network.SendMessage(l.peers, setup)
+}
+
+func (l *Leader) getR(msg []byte) []byte {
+    curve := crypto.GetCurve()
+    r := crypto.ConcatHash256(l.sigmaQ.Bytes(), l.sigmaPubKey.Bytes(), msg)
+    rInt := new(big.Int).SetBytes(r)
+    rInt.Mod(rInt, curve.N)
+    return rInt.Bytes()
+}
+
+func (l *Leader) challenge(msg []byte)  {
+    l.r = l.getR(msg)
+    challenge := &bean.Challenge{SigmaPubKey: l.sigmaPubKey, SigmaQ: l.sigmaQ, R: l.r}
+    network.SendMessage(l.peers, challenge)
+}
+
+func (l *Leader) processCommit(commit bean.Commitment) {
+    if l.state != setUp {
         return
     }
-    if setup1Msg, ok := msg.(common.SetUp1Message); ok {
-        fmt.Println(setup1Msg)
-        // TODO Check sig
-        if !bytes.Equal(store.GetLeader().PubKey, setup1Msg.PubKey) {
-            return
-        }
-        if setup1Msg.BlockHeight != store.GetBlockHeight() + 1 {
-            return
-        }
-        store.SetBlock(setup1Msg.Block)
-        store.MoveToState(common.MSG_BLOCK1_RESPONSE)
-        // TODO clear block1CommitProcessor and Start countdown
-        // TODO Get Qi
-        //q := crypto.GetQ()
-        peer := store.GetLeader().Peer
-        // TODO Send Qi to the leader
-        // TODO Generate the block
-        //network.SendMessage(peer, block1CommitMsg{q, pubKey})
-    }
-}
-
-type block1CommitProcessor struct {
-    bitmap map[common.Address]bool
-    count int
-    //pubKey
-    //q
-}
-
-func (p *block1CommitProcessor) clear() {
-    p.bitmap = make(map[common.Address]bool)
-    p.count = 0
-}
-
-func (p *block1CommitProcessor) process(msg interface{}) {
-    if !store.CheckState(node.LEADER, common.MSG_BLOCK1_CHALLENGE) {
+    if !store.CheckRole(node.LEADER) {
         return
     }
-    if block1CommitMsg, ok := msg.(common.Block1CommitMessage); ok {
-        fmt.Println(block1CommitMsg)
-        miner := store.GetMiner(block1CommitMsg.PubKey)
-        if miner == nil {
-            return
-        }
-        // TODO p.pubKey += pubKey
-        // TODO p.q += q
-        p.bitmap[miner.Address] = true
-        p.count++
-        if p.count == len(store.GetMiners()) {
-            store.MoveToState(common.MSG_SETUP2)
-            block := store.GetBlock()
-            // TODO calculate r
-            miners := store.GetMiners()
-            // TODO delete itself from miners
-            // TODO Send r, q, pk to miners  common.Block1ChallengeMessage
-        }
-    }
-}
-
-type block1ChallengeProcessor struct {
-    bitmap map[common.Address]bool
-    count int
-    //pubKey
-    //q
-}
-
-func (p *block1ChallengeProcessor) clear() {
-    p.bitmap = make(map[common.Address]bool)
-    p.count = 0
-}
-
-func (p *block1ChallengeProcessor) process(msg interface{}) {
-    if !store.CheckState(node.LEADER, common.MSG_BLOCK1_RESPONSE) {
+    if l.commitBitmap[commit.PubKey] {
         return
     }
-    if block1ChallengeMsg, ok := msg.(common.Block1ChallengeMessage); ok {
-        fmt.Println(block1ChallengeMsg)
-        miner := store.GetMiner(block1ChallengeMsg.PubKey)
-        if miner == nil {
-            return
-        }
-        // TODO p.pubKey += pubKey
-        // TODO p.q += q
-        p.bitmap[miner.Address] = true
-        p.count++
-        if p.count == len(store.GetMiners()) {
-            store.MoveToState(common.MSG_BLOCK2_COMMIT)
-            // TODO calculate r
-            miners := store.GetMiners()
-            // TODO delete itself from miners
-            // TODO Send r, q, pk to miners
-        }
-    }
+    l.commitBitmap[commit.PubKey] = true
+    l.commitWg.Done()
+    curve := crypto.GetCurve()
+    l.sigmaPubKey = curve.Add(l.sigmaPubKey, commit.PubKey)
+    l.sigmaQ = curve.Add(l.sigmaQ, commit.Q)
 }
 
-type block1ResponseProcessor struct {
-    bitmap map[common.Address]bool
-    count int
-    //pubKey
-    //q
-}
-
-func (p *block1ResponseProcessor) process(msg interface{}) {
-    if !store.CheckState(node.MINER, common.MSG_BLOCK1_RESPONSE) {
+func (l *Leader) processResponse(response bean.Response) {
+    if l.state != challenge {
         return
     }
-    if block1ResponseMsg, ok := msg.(common.Block1ResponseMessage); ok {
-        fmt.Println(block1ResponseMsg)
-        miner := store.GetMiner(block1ResponseMsg.PubKey)
-        if miner == nil {
-            return
-        }
-        // TODO calculate s
-        // TODO send s to leader
+    if !store.CheckRole(node.LEADER) {
+        return
     }
+    if l.responseBitmap[response.PubKey] {
+        return
+    }
+    l.responseBitmap[response.PubKey] = true
+    l.responseWg.Done()
+    s := new(big.Int).SetBytes(response.S)
+    l.sigmaS = l.sigmaS.Add(l.sigmaS, s)
 }

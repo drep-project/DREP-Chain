@@ -6,6 +6,7 @@ import (
     "BlockChainTest/common"
     "BlockChainTest/node"
     "bytes"
+    "BlockChainTest/bean"
 )
 
 
@@ -17,8 +18,8 @@ var (
     blockHeight int
     block *common.Block
     lock sync.Locker
-    priKey []byte
-    pubKey []byte
+    priKey *bean.Point
+    pubKey *bean.Point
     address common.Address
 )
 
@@ -80,6 +81,10 @@ func CheckState(r int, ms int) bool {
     return role == r && miningState == ms
 }
 
+func CheckRole(r int) bool {
+    return role == r
+}
+
 func MoveToState(ms int) {
     miningState = ms
 }
@@ -96,7 +101,7 @@ func SetBlock(b *common.Block) {
     block = b
 }
 
-func GetPubKey() []byte {
+func GetPubKey() *bean.Point {
     return pubKey
 }
 
@@ -104,6 +109,6 @@ func GetAddress() common.Address {
     return address
 }
 
-func GetPriKey() []byte {
+func GetPriKey() *bean.Point {
     return priKey
 }
