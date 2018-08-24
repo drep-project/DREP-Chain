@@ -6,6 +6,9 @@ import (
    "net"
    "strings"
    "BlockChainTest/bean"
+   "github.com/golang/protobuf/proto"
+   "BlockChainTest/crypto"
+   "errors"
 )
 
 var onceSender, onceReceiver sync.Once
@@ -37,6 +40,7 @@ func (addr Address) LocalKey() string {
 type Peer struct {
    RemoteIP IP
    RemotePort Port
+   RemotePubKey *bean.Point
 }
 
 func (peer *Peer) String() string {
@@ -62,21 +66,47 @@ func GetReceiverQueue() chan *Message {
    return ReceiverQueue
 }
 
-func (m *Message) Send() error {
-   msg, err := bean.Serialize(m.Msg)
+func (m *Message) Cipher() ([]byte, error) {
+   serializable, err := bean.Serialize(m.Msg)
    if err != nil {
-   		return err
+      return nil, err
+   }
+   sig, err := crypto.Sign(serializable.Body)
+   if err != nil {
+      return nil, err
+   }
+   serializable.Sig = sig
+   pubKey, err := crypto.GetPubKey()
+   if err != nil {
+      return nil, err
+   }
+   serializable.PubKey = pubKey
+   plaintext, err := proto.Marshal(serializable)
+   if err != nil {
+      return nil, err
+   }
+   cipher, err := crypto.Encrypt(m.RemotePeer.RemotePubKey, plaintext)
+   if err != nil {
+      return nil, err
+   }
+   return cipher, nil
+}
+
+func (m *Message) Send() error {
+   cipher, err := m.Cipher()
+   if err != nil {
+      return err
    }
    addr, err := net.ResolveTCPAddr("tcp", m.RemotePeer.String())
    if err != nil {
-     return nil
+     return err
    }
    conn, err := net.DialTCP("tcp", nil, addr)
    if err != nil {
      return err
    }
    defer conn.Close()
-   if _, err := conn.Write(msg); err != nil {
+   if _, err := conn.Write(cipher); err != nil {
       return err
    }
    return nil
@@ -88,6 +118,23 @@ func SendMessage(peers []*Peer, msg interface{}) {
       message := &Message{peer, msg}
       queue <- message
    }
+}
+
+func DecryptIntoMessage(cipher []byte) (*Message, error) {
+   plaintext, err := crypto.Decrypt(cipher)
+   if err != nil {
+      return nil, err
+   }
+   serializable, msg, err := bean.Deserialize(plaintext)
+   if err != nil {
+      return nil, err
+   }
+   if !crypto.Verify(serializable.Sig, serializable.PubKey, serializable.Body) {
+      return nil, errors.New("decrypt fail")
+   }
+   peer := &Peer{RemotePubKey: serializable.PubKey}
+   message := &Message{RemotePeer: peer, Msg: msg}
+   return message, nil
 }
 
 func Listen() {
@@ -103,30 +150,27 @@ func Listen() {
         if err != nil {
            continue
         }
-        fromAddr := conn.RemoteAddr().String()
-        ip := fromAddr[:strings.LastIndex(fromAddr, ":")]
-        peer := &Peer{RemoteIP: IP(ip), RemotePort: ListeningPort}
-        go func() {
-           b := make([]byte, BufferSize)
-           buffer := b
-           offset := 0
-           for {
-              n, err := conn.Read(buffer)
-              if err != nil {
-                 break
-              } else {
-                 buffer = b[n:]
-                 offset += n
-              }
-              msg, err := bean.Deserialize(b[:offset])
-              if err != nil {
-                 return
-              }
-              message := &Message{peer, msg}
-              queue := GetReceiverQueue()
-              queue <- message
+        b := make([]byte, BufferSize)
+        cipher := b
+        offset := 0
+        for {
+           n, err := conn.Read(cipher)
+           if err != nil {
+              break
+           } else {
+              cipher = b[n:]
+              offset += n
            }
-        }()
+           message, err := DecryptIntoMessage(cipher)
+           if err != nil {
+              return
+           }
+           fromAddr := conn.RemoteAddr().String()
+           ip := fromAddr[:strings.LastIndex(fromAddr, ":")]
+           message.RemotePeer.RemoteIP = IP(ip)
+           queue := GetReceiverQueue()
+           queue <- message
+        }
      }
   }()
 }

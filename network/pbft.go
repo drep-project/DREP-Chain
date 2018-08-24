@@ -344,7 +344,7 @@ package network
 //       groupS.Add(groupS, new(big.Int).SetBytes(response.S))
 //   }
 //   groupS.Mod(groupS, curve.N)
-//   sig := &Signature{R: leader.Challenge.R, S: groupS.Bytes()}
+//   sig := &Signature{R: leader.Challenge.R, S: groupS.Cipher()}
 //   msg, err := Serialize(leader.Object)
 //   if err != nil {
 //       return false
@@ -419,7 +419,7 @@ package network
 //   s := new(big.Int).Mul(r1, prvInt)
 //   s.Sub(kInt, s)
 //   s.Mod(s, curve.N)
-//   response := &Response{PubKey: minor.PrvKey.PubKey, S: s.Bytes()}
+//   response := &Response{PubKey: minor.PrvKey.PubKey, S: s.Cipher()}
 //   ips := append(make([]string, 0), ip)
 //   return NewBroadcast(ips, LeaderPort, response, minor.Net.BroadcastQueue).Spread()
 //}
