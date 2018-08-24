@@ -15,10 +15,12 @@ import (
 )
 
 type Miner struct {
-    leader *node.Miner
+    Leader *node.Miner
     state int
+    PrvKey *bean.PrivateKey
+    Msg []byte
 
-    k []byte
+    K []byte
     sigmaS *big.Int
     responseWg sync.WaitGroup
     responseBitmap map[*bean.Point]bool
@@ -83,22 +85,28 @@ func (m *Miner) processSetUp(setupMsg *bean.Setup) {
         return
     }
     pubKey := store.GetPubKey()
-    m.k = k
+    m.K = k
     commitment := &bean.Commitment{PubKey: pubKey, Q: q}
-    network.SendMessage([]*network.Peer{m.leader.Peer}, commitment)
+    network.SendMessage([]*network.Peer{m.Leader.Peer}, commitment)
 }
 
-func (m *Miner) processChallenge(msg interface{}) {
-    if !store.CheckState(node.MINER, common.MSG_BLOCK1_RESPONSE) {
-        return
+func (m *Miner) processChallenge(challenge *bean.Challenge) error {
+    curve := crypto.GetCurve()
+    prvKey := m.PrvKey
+    r := crypto.ConcatHash256(challenge.SigmaQ.Bytes(), challenge.SigmaPubKey.Bytes(), m.Msg)
+    r0 := new(big.Int).SetBytes(challenge.R)
+    r1 := new(big.Int).SetBytes(r)
+    if r0.Cmp(r1) != 0 {
+        return errors.New("wrong hash value")
     }
-    if block1ResponseMsg, ok := msg.(common.Block1ResponseMessage); ok {
-        fmt.Println(block1ResponseMsg)
-        miner := store.GetMiner(block1ResponseMsg.PubKey)
-        if miner == nil {
-            return
-        }
-        // TODO calculate s
-        // TODO send s to leader
-    }
+    k := new(big.Int).SetBytes(m.K)
+    prvInt := new(big.Int).SetBytes(prvKey.Prv)
+    s := new(big.Int).Mul(r1, prvInt)
+    s.Sub(k, s)
+    s.Mod(s, curve.N)
+    response := &bean.Response{PubKey: prvKey.PubKey, S: s.Bytes()}
+    peers := make([]*network.Peer, 1)
+    peers[0] = m.Leader.Peer
+    network.SendMessage(peers, response)
+    return nil
 }
