@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package bean;
 
-import "bean/key.proto";
+import "key.proto";
 
 enum message_header {
 	ACCOUNT = 0;

@@ -2,23 +2,23 @@ syntax = "proto3";
 
 package bean;
 
-import "bean/key.proto";
+import "key.proto";
 
-message announcement {
-	string test = 1;
+message setup {
+	bytes msg = 1;
+	point pub_key = 2;
+    signature sig = 3;
 }
 
 message commitment {
 	point pub_key = 1;
 	point q = 2;
-	signature test_sig = 3;
 }
 
 message challenge {
-	point group_pub_key = 1;
-	point group_q = 2;
-	bytes object = 3;
-	bytes r = 4;
+	point sigma_pub_key = 1;
+	point sigma_q = 2;
+	bytes r = 3;
 }
 
 message response {
