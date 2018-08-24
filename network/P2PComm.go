@@ -1,9 +1,9 @@
 package network
 
 import (
-    "BlockChainTest/common"
     "net"
     "sync"
+    "BlockChainTest/bean"
 )
 //const START_BYTE_NORMAL = 0x11
 //const START_BYTE_BROADCAST = 0x22
@@ -29,11 +29,11 @@ func SharedP2pComm() *P2PComm {
 func (p *P2PComm) SendMessage(peers []*Peer, msg interface{}) error {
     for _, peer := range peers  {
         // 利用proto buffer序列化
-        bytes, err := common.Serialize(msg)
+        serializable, err := bean.Serialize(msg)
         if err != nil {
             return err
         }
-        p.SendMessageCore(peer, bytes)
+        p.SendMessageCore(peer, serializable.Body)
     }
     return nil
 }
