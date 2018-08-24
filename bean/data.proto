@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package bean;
 
-import "bean/key.proto";
+import "key.proto";
 
 message block_header {
 	int32 version = 1;
