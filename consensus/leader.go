@@ -20,6 +20,7 @@ type Leader struct {
     miners []*node.Miner
     peers []*network.Peer
     state int
+    LeaderPeer *network.Peer
 
     commitWg sync.WaitGroup
     commitBitmap map[*bean.Point]bool

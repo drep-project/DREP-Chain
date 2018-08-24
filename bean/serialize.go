@@ -114,3 +114,14 @@ func Deserialize(msg []byte) (*Serializable, interface{}, error) {
 		return nil, nil, errors.New("message header not found")
 	}
 }
+
+func Marshal(msg interface{}) ([]byte, error) {
+	switch msg.(type) {
+	case *BlockHeader:
+		return proto.Marshal(msg.(*BlockHeader))
+	case *TransactionData:
+		return proto.Marshal(msg.(*TransactionData))
+	default:
+		return nil, errors.New("bad message type")
+	}
+}
