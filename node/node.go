@@ -3,6 +3,7 @@ package node
 import (
     "BlockChainTest/network"
     "BlockChainTest/common"
+    "BlockChainTest/bean"
 )
 
 const (
@@ -12,7 +13,7 @@ const (
 )
 
 type Miner struct {
-    PubKey []byte
+    PubKey *bean.Point
     Address common.Address
     Peer *network.Peer
 }
