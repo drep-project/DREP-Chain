@@ -7,11 +7,12 @@ import (
     "time"
     "math/big"
     "fmt"
+    "BlockChainTest/bean"
 )
 
 var serverIP = "127.0.0.1"
 var portPort = 14767
-var serverPubKey *Point
+var serverPubKey *bean.Point
 var requestNeighboursWord = "please send me my neighbours' ips"
 
 var ReadFrequency = 100 * time.Nanosecond
@@ -42,12 +43,13 @@ func Read(conn *net.TCPConn, size int) ([]byte, error) {
 
 func Write(conn *net.TCPConn, object interface{}) error {
     defer conn.CloseWrite()
-    b, err := Serialize(object)
+    b, err := bean.Marshal(object)
     if err != nil {
         return err
     }
     size := len(b)
-    buffer := make([]byte, size + 4)
+    buffer := make([]byte, 4)
+    copy(buffer, new(big.Int).SetInt64(int64(size)).Bytes())
     if _, err := conn.Write(buffer); err != nil {
         return err
     }
