@@ -15,8 +15,6 @@ type P2PComm struct {
     msg  interface{}
     queue  chan *Peer
 }
-
-
 //	RemotePort() int
 
 var sharedInstance *P2PComm
@@ -57,7 +55,7 @@ func (p *P2PComm) SendMessageCore(peer *Peer, bytes []byte) error {
     return nil
 }
 
-func (p *P2PComm) Spread() error {
+func (p *P2PComm) SpreadMessage() error {
     for _, ip := range p.IPs {
         peer := Peer{ip, p.msg}
         p.queue <- &peer
