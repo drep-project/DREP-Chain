@@ -17,24 +17,24 @@ func Serialize(message interface{}) (*Serializable, error) {
 	}
 	serializable := &Serializable{Body: body}
 	switch message.(type) {
-	case *Point:
-		serializable.Header = MessageHeader_POINT
-	case *PrivateKey:
-		serializable.Header = MessageHeader_PRIVATE_KEY
-	case *Signature:
-		serializable.Header = MessageHeader_SIGNATURE
+	//case *Point:
+	//	serializable.Header = MessageHeader_POINT
+	//case *PrivateKey:
+	//	serializable.Header = MessageHeader_PRIVATE_KEY
+	//case *Signature:
+	//	serializable.Header = MessageHeader_SIGNATURE
 	case *Setup:
-		serializable.Header = MessageHeader_ANNOUNCEMENT
+		serializable.Header = MsgTypeSetUp
 	case *Commitment:
-		serializable.Header = MessageHeader_COMMITMENT
+		serializable.Header = MsgTypeCommitment
 	case *Challenge:
-		serializable.Header = MessageHeader_CHALLENGE
+		serializable.Header = MsgTypeChallenge
 	case *Response:
-		serializable.Header = MessageHeader_RESPONSE
+		serializable.Header = MsgTypeResponse
 	case *BlockHeader:
-		serializable.Header = MessageHeader_BLOCK_HEADER
+		serializable.Header = MsgTypeBlockHeader
 	case *TransactionData:
-		serializable.Header = MessageHeader_TRANSACTION_DATA
+		serializable.Header = MsgTypeTransaction
 	default:
 		return nil, errors.New("bad message type")
 	}
@@ -48,63 +48,63 @@ func Deserialize(msg []byte) (*Serializable, interface{}, error) {
 	}
 	body := serializable.GetBody()
 	switch serializable.GetHeader() {
-	case MessageHeader_POINT:
-		point := &Point{}
-		if err := proto.Unmarshal(body, point); err == nil {
-			return serializable, point, nil
-		} else {
-			return nil, nil, err
-		}
-	case MessageHeader_PRIVATE_KEY:
-		prvKey := &PrivateKey{}
-		if err := proto.Unmarshal(body, prvKey); err == nil {
-			return serializable, prvKey, nil
-		} else {
-			return nil, nil, err
-		}
-	case MessageHeader_SIGNATURE:
-		sig := &Signature{}
-		if err := proto.Unmarshal(body, sig); err == nil {
-			return serializable, sig, nil
-		} else {
-			return nil, nil, err
-		}
-	case MessageHeader_ANNOUNCEMENT:
+	//case MessageHeader_POINT:
+	//	point := &Point{}
+	//	if err := proto.Unmarshal(body, point); err == nil {
+	//		return serializable, point, nil
+	//	} else {
+	//		return nil, nil, err
+	//	}
+	//case MessageHeader_PRIVATE_KEY:
+	//	prvKey := &PrivateKey{}
+	//	if err := proto.Unmarshal(body, prvKey); err == nil {
+	//		return serializable, prvKey, nil
+	//	} else {
+	//		return nil, nil, err
+	//	}
+	//case MessageHeader_SIGNATURE:
+	//	sig := &Signature{}
+	//	if err := proto.Unmarshal(body, sig); err == nil {
+	//		return serializable, sig, nil
+	//	} else {
+	//		return nil, nil, err
+	//	}
+	case MsgTypeSetUp:
 		setup := &Setup{}
 		if err := proto.Unmarshal(body, setup); err == nil {
 			return serializable, setup, nil
 		} else {
 			return nil, nil, err
 		}
-	case MessageHeader_COMMITMENT:
+	case MsgTypeCommitment:
 		commitment := &Commitment{}
 		if err := proto.Unmarshal(body, commitment); err == nil {
 			return serializable, commitment, nil
 		} else {
 			return nil, nil, err
 		}
-	case MessageHeader_CHALLENGE:
+	case MsgTypeChallenge:
 		challenge := &Challenge{}
 		if err := proto.Unmarshal(body, challenge); err == nil {
 			return serializable, challenge, nil
 		} else {
 			return nil, nil, err
 		}
-	case MessageHeader_RESPONSE:
+	case MsgTypeResponse:
 		response := &Response{}
 		if err := proto.Unmarshal(body, response); err == nil {
 			return serializable, response, nil
 		} else {
 			return nil, nil, err
 		}
-	case MessageHeader_BLOCK_HEADER:
+	case MsgTypeBlockHeader:
 		blockHeader := &BlockHeader{}
 		if err := proto.Unmarshal(body, blockHeader); err == nil {
 			return serializable, blockHeader, nil
 		} else {
 			return nil, nil, err
 		}
-	case MessageHeader_TRANSACTION_DATA:
+	case MsgTypeTransaction:
 		transactionData := &TransactionData{}
 		if err := proto.Unmarshal(body, transactionData); err == nil {
 			return serializable, transactionData, nil
@@ -131,13 +131,13 @@ func IdentifyMessage(message *network.Message) (int, interface{}) {
 	msg := message.Msg
 	switch msg.(type) {
 	case *Setup:
-		return int(MessageHeader_ANNOUNCEMENT), msg.(*Setup)
+		return MsgTypeSetUp, msg.(*Setup)
 	case *Commitment:
-		return int(MessageHeader_COMMITMENT), msg.(*Commitment)
+		return MsgTypeCommitment, msg.(*Commitment)
 	case *Challenge:
-		return int(MessageHeader_CHALLENGE), msg.(*Challenge)
+		return MsgTypeChallenge, msg.(*Challenge)
 	case *Response:
-		return int(MessageHeader_RESPONSE), msg.(*Response)
+		return MsgTypeResponse, msg.(*Response)
 	default:
 		return -1, nil
 	}
