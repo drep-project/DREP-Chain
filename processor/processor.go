@@ -2,7 +2,6 @@ package processor
 
 import (
     "sync"
-    "BlockChainTest/common"
     "fmt"
 )
 
