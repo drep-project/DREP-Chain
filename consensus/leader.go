@@ -1,7 +1,6 @@
-package processor
+package consensus
 
 import (
-    "BlockChainTest/common"
     "BlockChainTest/store"
     "BlockChainTest/node"
     "BlockChainTest/network"
@@ -35,7 +34,7 @@ type Leader struct {
     responseWg sync.WaitGroup
     responseBitmap map[*bean.Point]bool
 
-    sigs map[common.Address][]byte
+    sigs map[bean.Address][]byte
 
 }
 

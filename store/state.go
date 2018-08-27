@@ -5,22 +5,24 @@ import (
     "BlockChainTest/network"
     "BlockChainTest/common"
     "BlockChainTest/node"
-    "bytes"
     "BlockChainTest/bean"
+    "BlockChainTest/consensus"
 )
 
 
 var (
     role int
+    leader *consensus.Leader
+    member *consensus.Member
     miningState int
     miners []*node.Miner
     peers []*network.Peer
     blockHeight int
-    block *common.Block
+    block *bean.Block
     lock sync.Locker
-    priKey *bean.Point
+    prvKey *bean.PrivateKey
     pubKey *bean.Point
-    address common.Address
+    address bean.Address
 )
 
 func init()  {
@@ -30,6 +32,13 @@ func init()  {
 func ChangeRole(r int) {
     lock.Lock()
     role = r
+    if r == node.LEADER {
+        leader = consensus.NewLeader()
+        member = nil
+    } else {
+        leader = nil
+        member = consensus.NewMember()
+    }
     lock.Unlock()
 }
 
@@ -51,18 +60,18 @@ func GetMiners() []*node.Miner {
     return miners
 }
 
-func ContainsMiner(pubKey []byte) bool {
+func ContainsMiner(pubKey *bean.Point) bool {
     for _, v:= range miners {
-        if bytes.Equal(v.PubKey, pubKey) {
+        if v.PubKey.Equal(pubKey) {
             return true
         }
     }
     return false
 }
 
-func GetMiner(pubKey []byte) *node.Miner {
+func GetMiner(pubKey *bean.Point) *node.Miner {
     for _, v:= range miners {
-        if bytes.Equal(v.PubKey, pubKey) {
+        if v.PubKey.Equal(pubKey) {
             return v
         }
     }
@@ -93,11 +102,11 @@ func GetLeader() *node.Miner {
     return nil
 }
 
-func GetBlock() *common.Block {
+func GetBlock() *bean.Block {
     return block
 }
 
-func SetBlock(b *common.Block) {
+func SetBlock(b *bean.Block) {
     block = b
 }
 
@@ -105,10 +114,18 @@ func GetPubKey() *bean.Point {
     return pubKey
 }
 
-func GetAddress() common.Address {
+func GetAddress() bean.Address {
     return address
 }
 
-func GetPriKey() *bean.Point {
-    return priKey
+func GetPriKey() *bean.PrivateKey {
+    return prvKey
+}
+
+func GetItSelfOnLeader() *consensus.Leader {
+    return leader
+}
+
+func GetItSelfOnMember() *consensus.Member {
+    return member
 }
