@@ -32,11 +32,11 @@ func ChangeRole(r int) {
     lock.Lock()
     role = r
     if r == node.LEADER {
-        leader = consensus.NewLeader()
+        leader = consensus.NewLeader(pubKey, miners)
         member = nil
     } else {
         leader = nil
-        member = consensus.NewMember()
+        member = consensus.NewMember(GetLeader(), prvKey, pubKey)
     }
     lock.Unlock()
 }
@@ -117,7 +117,7 @@ func GetAddress() bean.Address {
     return address
 }
 
-func GetPriKey() *bean.PrivateKey {
+func GetPrvKey() *bean.PrivateKey {
     return prvKey
 }
 

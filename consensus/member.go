@@ -1,19 +1,20 @@
 package consensus
 
 import (
-    "BlockChainTest/store"
     "BlockChainTest/node"
     "BlockChainTest/network"
     "sync"
     "BlockChainTest/bean"
     "BlockChainTest/crypto"
     "math/big"
+    "BlockChainTest/hash"
 )
 
 type Member struct {
     leader *node.Miner
     state int
     prvKey *bean.PrivateKey
+    pubKey *bean.Point
     msg []byte
 
     k []byte
@@ -24,11 +25,12 @@ type Member struct {
 
 }
 
-func NewMember() *Member {
+func NewMember(leader *node.Miner, prvKey *bean.PrivateKey, pubKey *bean.Point) *Member {
     m := &Member{}
     m.state = waiting
-    m.leader = store.GetLeader()
-    m.prvKey = store.GetPriKey()
+    m.leader = leader
+    m.prvKey = prvKey
+    m.pubKey = pubKey
     return m
 }
 func (m *Member) ProcessConsensus() {
@@ -46,10 +48,10 @@ func (m *Member) ProcessConsensus() {
 }
 
 func (m *Member) ProcessSetUp(setupMsg *bean.Setup) {
-    if !store.CheckRole(node.MINER) {
-        return
-    }
-    if !store.GetLeader().PubKey.Equal(setupMsg.PubKey) {
+    //if !store.CheckRole(node.MINER) {
+    //    return
+    //}
+    if !m.leader.PubKey.Equal(setupMsg.PubKey) {
         return
     }
     if m.state != waiting {
@@ -64,14 +66,14 @@ func (m *Member) commit()  {
     if err != nil {
         return
     }
-    pubKey := store.GetPubKey()
+    pubKey := m.pubKey
     m.k = k
     commitment := &bean.Commitment{PubKey: pubKey, Q: q}
     network.SendMessage([]*network.Peer{m.leader.Peer}, commitment)
 }
 
 func (m *Member) ProcessChallenge(challenge *bean.Challenge) {
-    r := crypto.ConcatHash256(challenge.SigmaQ.Bytes(), challenge.SigmaPubKey.Bytes(), m.msg)
+    r := hash.ConcatHash256(challenge.SigmaQ.Bytes(), challenge.SigmaPubKey.Bytes(), m.msg)
     r0 := new(big.Int).SetBytes(challenge.R)
     m.r = new(big.Int).SetBytes(r)
     if r0.Cmp(m.r) != 0 {

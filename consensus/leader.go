@@ -1,13 +1,13 @@
 package consensus
 
 import (
-    "BlockChainTest/store"
     "BlockChainTest/node"
     "BlockChainTest/network"
     "sync"
     "BlockChainTest/bean"
     "BlockChainTest/crypto"
     "math/big"
+    "BlockChainTest/hash"
 )
 
 const (
@@ -18,6 +18,7 @@ const (
 type Leader struct {
     miners []*node.Miner
     peers []*network.Peer
+    pubKey *bean.Point
     state int
     LeaderPeer *network.Peer
 
@@ -35,12 +36,11 @@ type Leader struct {
 
 }
 
-func NewLeader() *Leader {
+func NewLeader(pubKey *bean.Point, miners []*node.Miner) *Leader {
     l := &Leader{}
-    miners := store.GetMiners()
+    l.pubKey = pubKey
     l.miners = make([]*node.Miner, len(miners) - 1)
     last := 0
-    pubKey := store.GetPubKey()
     for _, miner := range miners {
         if !miner.PubKey.Equal(pubKey) {
             l.miners[last] = miner
@@ -55,7 +55,7 @@ func (l *Leader) ProcessConsensus(msg []byte) *bean.Signature {
     l.commitWg = sync.WaitGroup{}
     l.commitWg.Add(len(l.peers))
     l.state = setUp
-    l.setUp(msg, store.GetPubKey())
+    l.setUp(msg, l.pubKey)
     l.commitWg.Wait()
 
     l.responseWg = sync.WaitGroup{}
@@ -74,7 +74,7 @@ func (l *Leader) setUp(msg []byte, pubKey *bean.Point) {
 
 func (l *Leader) getR(msg []byte) []byte {
     curve := crypto.GetCurve()
-    r := crypto.ConcatHash256(l.sigmaQ.Bytes(), l.sigmaPubKey.Bytes(), msg)
+    r := hash.ConcatHash256(l.sigmaQ.Bytes(), l.sigmaPubKey.Bytes(), msg)
     rInt := new(big.Int).SetBytes(r)
     rInt.Mod(rInt, curve.N)
     return rInt.Bytes()
@@ -90,9 +90,9 @@ func (l *Leader) ProcessCommit(commit *bean.Commitment) {
     if l.state != setUp {
         return
     }
-    if !store.CheckRole(node.LEADER) {
-        return
-    }
+    //if !store.CheckRole(node.LEADER) {
+    //    return
+    //}
     addr := commit.PubKey.Addr()
     if l.commitBitmap[addr] {
        return
@@ -108,9 +108,9 @@ func (l *Leader) ProcessResponse(response *bean.Response) {
     if l.state != challenge {
         return
     }
-    if !store.CheckRole(node.LEADER) {
-        return
-    }
+    //if !store.CheckRole(node.LEADER) {
+    //    return
+    //}
     addr := response.PubKey.Addr()
     if l.responseBitmap[addr] {
        return
