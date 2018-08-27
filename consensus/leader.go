@@ -14,9 +14,6 @@ const (
     waiting              = 0
     setUp               = 1
     challenge            = 2
-
-    commit = 3
-    response = 4
 )
 type Leader struct {
     miners []*node.Miner
@@ -25,14 +22,14 @@ type Leader struct {
     LeaderPeer *network.Peer
 
     commitWg sync.WaitGroup
-    commitBitmap map[string] *bean.Commitment
+    commitBitmap map[string] bool
     sigmaPubKey *bean.Point
     sigmaQ *bean.Point
     r []byte
 
     sigmaS *big.Int
     responseWg sync.WaitGroup
-    responseBitmap map[string] *bean.Response
+    responseBitmap map[string] bool
 
     sigs map[bean.Address][]byte
 
@@ -89,7 +86,7 @@ func (l *Leader) challenge(msg []byte)  {
     network.SendMessage(l.peers, challenge)
 }
 
-func (l *Leader) processCommit(commit *bean.Commitment) {
+func (l *Leader) ProcessCommit(commit *bean.Commitment) {
     if l.state != setUp {
         return
     }
@@ -97,18 +94,17 @@ func (l *Leader) processCommit(commit *bean.Commitment) {
         return
     }
     addr := commit.PubKey.Addr()
-    l.commitBitmap[addr] = commit
-    //if l.commitBitmap[commit.PubKey] {
-    //    return
-    //}
-    //l.commitBitmap[commit.PubKey] = true
+    if l.commitBitmap[addr] {
+       return
+    }
+    l.commitBitmap[addr] = true
     l.commitWg.Done()
     curve := crypto.GetCurve()
     l.sigmaPubKey = curve.Add(l.sigmaPubKey, commit.PubKey)
     l.sigmaQ = curve.Add(l.sigmaQ, commit.Q)
 }
 
-func (l *Leader) processResponse(response *bean.Response) {
+func (l *Leader) ProcessResponse(response *bean.Response) {
     if l.state != challenge {
         return
     }
@@ -116,14 +112,10 @@ func (l *Leader) processResponse(response *bean.Response) {
         return
     }
     addr := response.PubKey.Addr()
-    if _, existed := l.responseBitmap[addr]; existed {
-        return
+    if l.responseBitmap[addr] {
+       return
     }
-    l.responseBitmap[addr] = response
-    //if l.responseBitmap[response.PubKey] {
-    //    return
-    //}
-    //l.responseBitmap[response.PubKey] = true
+    l.responseBitmap[addr] = true
     l.responseWg.Done()
     s := new(big.Int).SetBytes(response.S)
     l.sigmaS = l.sigmaS.Add(l.sigmaS, s)
