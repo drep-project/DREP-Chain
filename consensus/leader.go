@@ -25,14 +25,14 @@ type Leader struct {
     LeaderPeer *network.Peer
 
     commitWg sync.WaitGroup
-    commitBitmap map[*bean.Point]bool
+    commitBitmap map[string] *bean.Commitment
     sigmaPubKey *bean.Point
     sigmaQ *bean.Point
     r []byte
 
     sigmaS *big.Int
     responseWg sync.WaitGroup
-    responseBitmap map[*bean.Point]bool
+    responseBitmap map[string] *bean.Response
 
     sigs map[bean.Address][]byte
 
@@ -89,34 +89,41 @@ func (l *Leader) challenge(msg []byte)  {
     network.SendMessage(l.peers, challenge)
 }
 
-func (l *Leader) processCommit(commit bean.Commitment) {
+func (l *Leader) processCommit(commit *bean.Commitment) {
     if l.state != setUp {
         return
     }
     if !store.CheckRole(node.LEADER) {
         return
     }
-    if l.commitBitmap[commit.PubKey] {
-        return
-    }
-    l.commitBitmap[commit.PubKey] = true
+    addr := commit.PubKey.Addr()
+    l.commitBitmap[addr] = commit
+    //if l.commitBitmap[commit.PubKey] {
+    //    return
+    //}
+    //l.commitBitmap[commit.PubKey] = true
     l.commitWg.Done()
     curve := crypto.GetCurve()
     l.sigmaPubKey = curve.Add(l.sigmaPubKey, commit.PubKey)
     l.sigmaQ = curve.Add(l.sigmaQ, commit.Q)
 }
 
-func (l *Leader) processResponse(response bean.Response) {
+func (l *Leader) processResponse(response *bean.Response) {
     if l.state != challenge {
         return
     }
     if !store.CheckRole(node.LEADER) {
         return
     }
-    if l.responseBitmap[response.PubKey] {
+    addr := response.PubKey.Addr()
+    if _, existed := l.responseBitmap[addr]; existed {
         return
     }
-    l.responseBitmap[response.PubKey] = true
+    l.responseBitmap[addr] = response
+    //if l.responseBitmap[response.PubKey] {
+    //    return
+    //}
+    //l.responseBitmap[response.PubKey] = true
     l.responseWg.Done()
     s := new(big.Int).SetBytes(response.S)
     l.sigmaS = l.sigmaS.Add(l.sigmaS, s)
