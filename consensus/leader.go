@@ -15,6 +15,9 @@ const (
     waiting              = 0
     setUp               = 1
     challenge            = 2
+
+    commit = 3
+    response = 4
 )
 type Leader struct {
     miners []*node.Miner
@@ -53,8 +56,6 @@ func NewLeader() *Leader {
 }
 
 func (l *Leader) processConsensus(msg []byte) *bean.Signature {
-    //priKey := store.GetPriKey()
-
     l.commitWg = sync.WaitGroup{}
     l.commitWg.Add(len(l.peers))
     l.state = setUp
