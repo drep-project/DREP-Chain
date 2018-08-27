@@ -2,32 +2,33 @@ package bean
 
 import (
     "encoding/hex"
-    "BlockChainTest/crypto"
+    "BlockChainTest/hash"
+    "github.com/golang/protobuf/proto"
 )
 
 func (tx *Transaction) GetId() (string, error) {
-    b, err := Serialize(tx.Data)
+    b, err := proto.Marshal(tx.Data)
     if err != nil {
         return "", err
     }
-    id := hex.EncodeToString(crypto.Hash256(b))
+    id := hex.EncodeToString(hash.Hash256(b))
     return id, nil
 }
 
 func (tx *Transaction) GetHash() ([]byte, error) {
-    b, err := Serialize(tx)
+    b, err := proto.Marshal(tx)
     if err != nil {
         return nil, err
     }
-    hash := crypto.Hash256(b)
-    return hash, nil
+    h := hash.Hash256(b)
+    return h, nil
 }
 
 func (block *Block) BlockID() (string, error) {
-    b, err := Serialize(block.Header)
+    b, err := proto.Marshal(block.Header)
     if err != nil {
         return "", err
     }
-    id := hex.EncodeToString(crypto.Hash256(b))
+    id := hex.EncodeToString(hash.Hash256(b))
     return id, nil
 }
