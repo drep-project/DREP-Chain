@@ -14,9 +14,6 @@ const (
     waiting              = 0
     setUp               = 1
     challenge            = 2
-
-    commit = 3
-    response = 4
 )
 type Leader struct {
     miners []*node.Miner
