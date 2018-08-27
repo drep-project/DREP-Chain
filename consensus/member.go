@@ -31,7 +31,7 @@ func NewMember() *Member {
     m.prvKey = store.GetPriKey()
     return m
 }
-func (m *Member) processConsensus() {
+func (m *Member) ProcessConsensus() {
     m.setUpWg = sync.WaitGroup{}
     m.setUpWg.Add(1)
     m.setUpWg.Wait()

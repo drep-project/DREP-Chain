@@ -51,7 +51,7 @@ func NewLeader() *Leader {
     return l
 }
 
-func (l *Leader) processConsensus(msg []byte) *bean.Signature {
+func (l *Leader) ProcessConsensus(msg []byte) *bean.Signature {
     l.commitWg = sync.WaitGroup{}
     l.commitWg.Add(len(l.peers))
     l.state = setUp
