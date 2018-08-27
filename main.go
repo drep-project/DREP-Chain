@@ -2,7 +2,6 @@ package main
 
 import (
 	"time"
-	"BlockChainTest/test"
 )
 
 func main()  {
@@ -30,6 +29,6 @@ func main()  {
 	//	fmt.Println("plain: ", nil)
 	//}
 
-	test.RemoteConnect(1)
+	//test.RemoteConnect(1)
 	time.Sleep(3600 * time.Second)
 }

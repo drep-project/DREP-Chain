@@ -5,7 +5,7 @@ import (
     "BlockChainTest/crypto"
 )
 
-func (tx *Transaction) TxID() (string, error) {
+func (tx *Transaction) GetId() (string, error) {
     b, err := Serialize(tx.Data)
     if err != nil {
         return "", err
@@ -14,7 +14,7 @@ func (tx *Transaction) TxID() (string, error) {
     return id, nil
 }
 
-func (tx *Transaction) TxHash() ([]byte, error) {
+func (tx *Transaction) GetHash() ([]byte, error) {
     b, err := Serialize(tx)
     if err != nil {
         return nil, err
