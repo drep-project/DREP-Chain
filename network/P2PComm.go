@@ -27,7 +27,7 @@ func SharedP2pComm() *P2PComm {
 
 func (p *P2PComm) SendMessage(peers []*Peer, msg interface{}) error {
     for _, peer := range peers  {
-        // 利用proto buffer序列化
+        //use proto buffer serialize
         serializable, err := bean.Serialize(msg)
         if err != nil {
             return err
