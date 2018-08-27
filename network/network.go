@@ -52,6 +52,22 @@ type Message struct {
    Msg interface{}
 }
 
+func IdentifyMessage(message *Message) (int, interface{}) {
+   msg := message.Msg
+   switch msg.(type) {
+   case *bean.Setup:
+      return bean.MsgTypeSetUp, msg.(*bean.Setup)
+   case *bean.Commitment:
+      return bean.MsgTypeCommitment, msg.(*bean.Commitment)
+   case *bean.Challenge:
+      return bean.MsgTypeChallenge, msg.(*bean.Challenge)
+   case *bean.Response:
+      return bean.MsgTypeResponse, msg.(*bean.Response)
+   default:
+      return -1, nil
+   }
+}
+
 func GetSenderQueue() chan *Message {
    onceSender.Do(func() {
       SenderQueue = make(chan *Message,  10)
@@ -171,7 +187,7 @@ func Listen(process func(int, interface{})) {
            //queue := GetReceiverQueue()
            //queue <- message
            //p := processor.GetInstance()
-           t, msg := bean.IdentifyMessage(message)
+           t, msg := IdentifyMessage(message)
            if msg != nil {
               process(t, msg)
            }

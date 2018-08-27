@@ -3,7 +3,6 @@ package bean
 import (
 	"github.com/golang/protobuf/proto"
 	"errors"
-	"BlockChainTest/network"
 )
 
 func Serialize(message interface{}) (*Serializable, error) {
@@ -127,18 +126,3 @@ func Marshal(msg interface{}) ([]byte, error) {
 	}
 }
 
-func IdentifyMessage(message *network.Message) (int, interface{}) {
-	msg := message.Msg
-	switch msg.(type) {
-	case *Setup:
-		return MsgTypeSetUp, msg.(*Setup)
-	case *Commitment:
-		return MsgTypeCommitment, msg.(*Commitment)
-	case *Challenge:
-		return MsgTypeChallenge, msg.(*Challenge)
-	case *Response:
-		return MsgTypeResponse, msg.(*Response)
-	default:
-		return -1, nil
-	}
-}
