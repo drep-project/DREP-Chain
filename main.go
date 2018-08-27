@@ -1,10 +1,17 @@
 package main
 
 import (
-	"time"
+	"BlockChainTest/node"
+	"BlockChainTest/store"
+	"BlockChainTest/processor"
+	"BlockChainTest/network"
 )
 
+var (
+	role = node.LEADER
+)
 func main()  {
+
 	//messages := make(chan *common.Message, 100)
 	//net := network.GetInstance(messages)
 	//if net.Start() != 0 {
@@ -30,5 +37,13 @@ func main()  {
 	//}
 
 	//test.RemoteConnect(1)
-	time.Sleep(3600 * time.Second)
+	network.Listen()
+	network.Work()
+	store.ChangeRole(role)
+	processor.GetInstance().Start()
+	if role == node.LEADER {
+		store.GetItSelfOnLeader().ProcessConsensus([]byte{100, 200, 300})
+	} else {
+		store.GetItSelfOnMember().ProcessConsensus()
+	}
 }
