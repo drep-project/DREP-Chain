@@ -180,3 +180,14 @@ func Listen() {
      }
   }()
 }
+
+func Work() {
+   go func() {
+      sender := GetSenderQueue()
+      for {
+         if message, ok := <-sender; ok {
+            message.Send()
+         }
+      }
+   }()
+}
