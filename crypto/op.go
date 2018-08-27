@@ -7,6 +7,7 @@ import (
     "errors"
     "sync"
     "BlockChainTest/bean"
+    "BlockChainTest/hash"
 )
 
 const (
@@ -109,7 +110,7 @@ func Sign(b []byte) (*bean.Signature, error) {
             return nil, err
         }
         N := curve.Params().N
-        r = new(big.Int).SetBytes(ConcatHash256(Q.Bytes(), prvKey.PubKey.Bytes(), b))
+        r = new(big.Int).SetBytes(hash.ConcatHash256(Q.Bytes(), prvKey.PubKey.Bytes(), b))
         r.Mod(r, N)
         s = new(big.Int).Mul(r, prvInt)
         s.Mod(s, N)
@@ -136,7 +137,7 @@ func Verify(sig *bean.Signature, pubKey *bean.Point, b []byte) bool {
     if Qx.Cmp(Zero) == 0 && Qy.Cmp(Zero) == 0 {
         return false
     }
-    v := new(big.Int).SetBytes(ConcatHash256(Q.Bytes(), pubKey.Bytes(), b))
+    v := new(big.Int).SetBytes(hash.ConcatHash256(Q.Bytes(), pubKey.Bytes(), b))
     v.Mod(v, N)
     if v.Cmp(r) == 0{
         return true
@@ -154,17 +155,17 @@ func Encrypt(pubKey *bean.Point, b []byte) ([]byte, error) {
     c1 := p1.Bytes()
     p2 := curve.ScalarMultiply(pubKey, k)
     j2 := p2.Bytes()
-    t := new(big.Int).SetBytes(KDF(j2))
+    t := new(big.Int).SetBytes(hash.KDF(j2))
     m := new(big.Int).SetBytes(b)
     c2 := new(big.Int).Xor(m, t).Bytes()
     buf := make([]byte, len(j2) + len(b))
     copy(buf[:len(j2)], j2)
     copy(buf[len(j2):], b)
-    c3 := Hash256(buf)
-    cipher := make([]byte, 3 * ByteLen + len(c2))
-    copy(cipher[: 2 * ByteLen], c1)
-    copy(cipher[2 * ByteLen: 3 * ByteLen], c3)
-    copy(cipher[3 * ByteLen:], c2)
+    c3 := hash.Hash256(buf)
+    cipher := make([]byte, 3 * hash.ByteLen + len(c2))
+    copy(cipher[: 2 * hash.ByteLen], c1)
+    copy(cipher[2 * hash.ByteLen: 3 * hash.ByteLen], c3)
+    copy(cipher[3 * hash.ByteLen:], c2)
     return cipher, nil
 }
 
@@ -174,22 +175,22 @@ func Decrypt(cipher []byte) ([]byte, error) {
     if err != nil {
         return nil, err
     }
-    p1 := &bean.Point{X: cipher[:ByteLen], Y: cipher[ByteLen: 2 * ByteLen]}
+    p1 := &bean.Point{X: cipher[:hash.ByteLen], Y: cipher[hash.ByteLen: 2 * hash.ByteLen]}
     if !curve.IsOnCurve(p1) {
         return nil, errors.New("point not on CurveInstance")
     }
     p2 := curve.ScalarMultiply(p1, prvKey.Prv)
     j2 := p2.Bytes()
-    t := new(big.Int).SetBytes(KDF(j2))
-    c2 := cipher[3 * ByteLen:]
+    t := new(big.Int).SetBytes(hash.KDF(j2))
+    c2 := cipher[3 * hash.ByteLen:]
     c := new(big.Int).SetBytes(c2)
     m := new(big.Int).Xor(c, t)
     msg := m.Bytes()
     b := make([]byte, len(j2) + len(msg))
     copy(b[:len(j2)], j2)
     copy(b[len(j2):], msg)
-    u := Hash256(b)
-    c3 := cipher[2 * ByteLen: 3 * ByteLen]
+    u := hash.Hash256(b)
+    c3 := cipher[2 * hash.ByteLen: 3 * hash.ByteLen]
     if bytes.Equal(u, c3) {
         return msg, nil
     } else {
