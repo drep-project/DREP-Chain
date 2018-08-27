@@ -9,6 +9,7 @@ import (
    "github.com/golang/protobuf/proto"
    "BlockChainTest/crypto"
    "errors"
+   "BlockChainTest/processor"
 )
 
 var onceSender, onceReceiver sync.Once
@@ -168,8 +169,13 @@ func Listen() {
            fromAddr := conn.RemoteAddr().String()
            ip := fromAddr[:strings.LastIndex(fromAddr, ":")]
            message.RemotePeer.RemoteIP = IP(ip)
-           queue := GetReceiverQueue()
-           queue <- message
+           //queue := GetReceiverQueue()
+           //queue <- message
+           p := processor.GetInstance()
+           t, msg := bean.IdentifyMessage(message)
+           if msg != nil {
+              p.Process(t, msg)
+           }
         }
      }
   }()
