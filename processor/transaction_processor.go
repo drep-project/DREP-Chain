@@ -2,11 +2,12 @@ package processor
 
 import (
     "fmt"
-    "BlockChainTest/pool"
     "BlockChainTest/network"
+    "BlockChainTest/crypto"
+    "BlockChainTest/bean"
 )
 
-var curve = network.InitCurve()
+var curve = crypto.InitCurve()
 
 type transactionProcessor struct {
 
@@ -16,15 +17,15 @@ type transactionProcessor struct {
     // TODO Check sig
     // TODO Check nonce
 
-func checkTransaction(t *network.Transaction) bool {
+func checkTransaction(t *bean.Transaction) bool {
     // Check sig
-    merge, err := t.GetTransactionMerge()
-    if err != nil {
-        return false
-    }
-    if !network.Verify(curve, t.Sig, t.PubKey, merge) {
-        return false
-    }
+    //merge, err := t.()
+    //if err != nil {
+    //    return false
+    //}
+    //if !network.Verify(curve, t.Sig, t.PubKey, merge) {
+    //    return false
+    //}
     return true
 }
 
@@ -33,7 +34,7 @@ func transactionExistsInPreviousBlocks(id string) bool {
 }
 
 func (p *transactionProcessor) process(msg interface{})  {
-    if transaction, ok := msg.(*network.Transaction); ok {
+    if transaction, ok := msg.(*bean.Transaction); ok {
         fmt.Println(transaction)
         id := transaction.GetId()
         if transactionExistsInPreviousBlocks(id) || pool.Contains(id) {

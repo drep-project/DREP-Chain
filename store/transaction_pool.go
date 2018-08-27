@@ -3,16 +3,16 @@ package store
 import (
     "sync"
     "log"
-    "BlockChainTest/network"
+    "BlockChainTest/bean"
 )
 
 var (
-    transactions map[string] *network.Transaction
+    transactions map[string] *bean.Transaction
     tranLock     sync.Mutex
 )
 
 func init()  {
-    transactions = make(map[string] *network.Transaction)
+    transactions = make(map[string] *bean.Transaction)
 }
 
 
@@ -22,8 +22,8 @@ func Contains(id string) bool {
 }
 
 //func AddTransaction(id string, transaction *common.Transaction) {
-func AddTransaction(transaction *network.Transaction) error {
-    id, err := transaction.GetTransactionID()
+func AddTransaction(transaction *bean.Transaction) error {
+    id, err := transaction.GetId()
     if err != nil {
         return err
     }
@@ -38,10 +38,10 @@ func AddTransaction(transaction *network.Transaction) error {
     return nil
 }
 
-func RemoveTransactions(trans []*network.Transaction) error {
+func RemoveTransactions(trans []*bean.Transaction) error {
     tranLock.Lock()
     for _, t := range trans {
-        id, err := t.GetTransactionID()
+        id, err := t.GetId()
         if err != nil {
             return err
         }

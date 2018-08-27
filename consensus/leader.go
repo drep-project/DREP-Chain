@@ -1,7 +1,6 @@
-package processor
+package consensus
 
 import (
-    "BlockChainTest/common"
     "BlockChainTest/store"
     "BlockChainTest/node"
     "BlockChainTest/network"
@@ -15,6 +14,9 @@ const (
     waiting              = 0
     setUp               = 1
     challenge            = 2
+
+    commit = 3
+    response = 4
 )
 type Leader struct {
     miners []*node.Miner
@@ -32,7 +34,7 @@ type Leader struct {
     responseWg sync.WaitGroup
     responseBitmap map[*bean.Point]bool
 
-    sigs map[common.Address][]byte
+    sigs map[bean.Address][]byte
 
 }
 
@@ -53,8 +55,6 @@ func NewLeader() *Leader {
 }
 
 func (l *Leader) processConsensus(msg []byte) *bean.Signature {
-    //priKey := store.GetPriKey()
-
     l.commitWg = sync.WaitGroup{}
     l.commitWg.Add(len(l.peers))
     l.state = setUp
