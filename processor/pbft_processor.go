@@ -6,30 +6,16 @@ import (
     "BlockChainTest/crypto"
     "errors"
     "math/big"
+    "BlockChainTest/store"
 )
 
 type SetUpProcessor struct {
-    PrvKey *bean.PrivateKey
-    K []byte
-    Leader *network.Peer
 }
 
 func (p *SetUpProcessor) Process(msg interface{}) {
     if setUp, ok := msg.(*bean.Setup); ok {
-        testSig, err := crypto.Sign([]byte(announcement.Test))
-        if err != nil {
-            return err
-        }
-        k, q, err := crypto.GetRandomKQ()
-        if err != nil {
-            return nil
-        }
-        pubKey := p.PrvKey.PubKey
-        copy(p.K, k)
-        commitment := &bean.Commitment{PubKey: pubKey, Q: q, TestSig: testSig}
-        peers := make([]*network.Peer, 1)
-        peers[0] = p.Leader
-        network.SendMessage(peers, commitment)
+        leader := store.GetItSelfOnLeader()
+        leader
     }
 }
 

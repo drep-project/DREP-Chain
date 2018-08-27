@@ -70,7 +70,7 @@ func (m *Member) commit()  {
     network.SendMessage([]*network.Peer{m.leader.Peer}, commitment)
 }
 
-func (m *Member) processChallenge(challenge *bean.Challenge) {
+func (m *Member) ProcessChallenge(challenge *bean.Challenge) {
     r := crypto.ConcatHash256(challenge.SigmaQ.Bytes(), challenge.SigmaPubKey.Bytes(), m.msg)
     r0 := new(big.Int).SetBytes(challenge.R)
     m.r = new(big.Int).SetBytes(r)
