@@ -27,47 +27,28 @@ type Miner struct {
 
     sigs map[common.Address][]byte
 
+    setUpWg sync.WaitGroup
 }
 
-func NewMiner() *Leader {
-    l := &Leader{}
-    miners := store.GetMiners()
-    l.miners = make([]*node.Miner, len(miners) - 1)
-    last := 0
-    pubKey := store.GetPubKey()
-    for _, miner := range miners {
-        if !miner.PubKey.Equal(pubKey) {
-            l.miners[last] = miner
-            last++
-        }
-    }
-    l.state = waiting
-    return l
+func NewMiner() *Miner {
+    m := &Miner{}
+    m.state = waiting
+    return m
 }
-func (m *Miner) processConsensus(msg interface{},
-                                 sigFunc func([]byte, *bean.Point) *bean.Signature)  {
-    if !store.CheckState(node.MINER, common.WAITING) {
-        return
-    }
-    if setup1Msg, ok := msg.(common.SetUp1Message); ok {
-        fmt.Println(setup1Msg)
-        // TODO Check sig
-        if !bytes.Equal(store.GetLeader().PubKey, setup1Msg.PubKey) {
-            return
-        }
-        if setup1Msg.BlockHeight != store.GetBlockHeight() + 1 {
-            return
-        }
-        store.SetBlock(setup1Msg.Block)
-        store.MoveToState(common.MSG_BLOCK1_RESPONSE)
-        // TODO clear block1CommitProcessor and Start countdown
-        // TODO Get Qi
-        //q := crypto.GetQ()
-        peer := store.GetLeader().Peer
-        // TODO Send Qi to the leader
-        // TODO Generate the block
-        //network.SendMessage(peer, block1CommitMsg{q, pubKey})
-    }
+func (m *Miner) processConsensus() {
+    m.commitWg = sync.WaitGroup{}
+    l.commitWg.Add(len(l.peers))
+    l.state = setUp
+    l.setUp(msg, store.GetPubKey())
+    l.commitWg.Wait()
+
+    l.responseWg = sync.WaitGroup{}
+    l.responseWg.Add(len(l.commitBitmap))
+    l.state = challenge
+    l.challenge(msg)
+    l.responseWg.Wait()
+
+    return &bean.Signature{R: l.r, S: l.sigmaS.Bytes()}
 }
 
 func (m *Miner) processSetUp(setupMsg *bean.Setup) {
