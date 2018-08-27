@@ -3,6 +3,7 @@ package bean
 import (
 	"github.com/golang/protobuf/proto"
 	"errors"
+	"BlockChainTest/network"
 )
 
 func Serialize(message interface{}) (*Serializable, error) {
@@ -22,7 +23,7 @@ func Serialize(message interface{}) (*Serializable, error) {
 		serializable.Header = MessageHeader_PRIVATE_KEY
 	case *Signature:
 		serializable.Header = MessageHeader_SIGNATURE
-	case *Announcement:
+	case *Setup:
 		serializable.Header = MessageHeader_ANNOUNCEMENT
 	case *Commitment:
 		serializable.Header = MessageHeader_COMMITMENT
@@ -69,9 +70,9 @@ func Deserialize(msg []byte) (*Serializable, interface{}, error) {
 			return nil, nil, err
 		}
 	case MessageHeader_ANNOUNCEMENT:
-		announcement := &Announcement{}
-		if err := proto.Unmarshal(body, announcement); err == nil {
-			return serializable, announcement, nil
+		setup := &Setup{}
+		if err := proto.Unmarshal(body, setup); err == nil {
+			return serializable, setup, nil
 		} else {
 			return nil, nil, err
 		}
@@ -123,5 +124,21 @@ func Marshal(msg interface{}) ([]byte, error) {
 		return proto.Marshal(msg.(*TransactionData))
 	default:
 		return nil, errors.New("bad message type")
+	}
+}
+
+func IdentifyMessage(message *network.Message) (int, interface{}) {
+	msg := message.Msg
+	switch msg.(type) {
+	case *Setup:
+		return int(MessageHeader_ANNOUNCEMENT), msg.(*Setup)
+	case *Commitment:
+		return int(MessageHeader_COMMITMENT), msg.(*Commitment)
+	case *Challenge:
+		return int(MessageHeader_CHALLENGE), msg.(*Challenge)
+	case *Response:
+		return int(MessageHeader_RESPONSE), msg.(*Response)
+	default:
+		return -1, nil
 	}
 }
