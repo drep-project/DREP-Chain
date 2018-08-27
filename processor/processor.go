@@ -3,6 +3,7 @@ package processor
 import (
     "sync"
     "fmt"
+    "BlockChainTest/bean"
 )
 
 type processor interface {
@@ -27,10 +28,10 @@ type Processor struct {
 func (p *Processor) init()  {
     p.channel = make(chan *message)
     p.processors = make(map[int]processor)
-    //p.processors[common.MSG_BLOCK] = &confirmedBlockProcessor{}
-    //p.processors[common.MSG_TRANSACTION] = &transactionProcessor{}
-    
-
+    p.processors[bean.MsgTypeSetUp] = &SetUpProcessor{}
+    p.processors[bean.MsgTypeChallenge] = &ChallengeProcessor{}
+    p.processors[bean.MsgTypeCommitment] = &CommitProcessor{}
+    p.processors[bean.MsgTypeResponse] = &ResponseProcessor{}
 }
 
 func GetInstance() *Processor {
@@ -56,7 +57,6 @@ func (p *Processor) Process(t int, msg interface{}) {
 }
 
 func (p *Processor) dispatch(msg *message) {
-    // TODO something
     if processor := p.processors[msg.t]; processor != nil {
         processor.process(msg.msg)
     } else {

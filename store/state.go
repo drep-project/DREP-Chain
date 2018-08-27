@@ -3,7 +3,6 @@ package store
 import (
     "sync"
     "BlockChainTest/network"
-    "BlockChainTest/common"
     "BlockChainTest/node"
     "BlockChainTest/bean"
     "BlockChainTest/consensus"
