@@ -11,8 +11,8 @@ import (
 var once sync.Once
 
 type P2PComm struct {
-    IPs  []string
-    queue  chan *Peer
+    IPs  []IP
+    queue  chan *Message
 }
 //	RemotePort() int
 
@@ -54,10 +54,10 @@ func (p *P2PComm) SendMessageCore(peer *Peer, bytes []byte) error {
     return nil
 }
 
-func (p *P2PComm) SpreadMessage() error {
+func (p *P2PComm) SpreadMessage(msg interface{}) error {
     for _, ip := range p.IPs {
         peer := Peer{ip, ListeningPort,ListeningPort}
-        message := Message{peer,p.msg}
+        message := Message{&peer,msg}
         p.queue <- &message
     }
     return nil
