@@ -9,7 +9,6 @@ import (
    "github.com/golang/protobuf/proto"
    "BlockChainTest/crypto"
    "errors"
-   "BlockChainTest/processor"
 )
 
 var onceSender, onceReceiver sync.Once
@@ -138,7 +137,7 @@ func DecryptIntoMessage(cipher []byte) (*Message, error) {
    return message, nil
 }
 
-func Listen() {
+func Listen(process func(int, interface{})) {
   go func() {
      //room for modification addr := &net.TCPAddr{IP: net.ParseIP("x.x.x.x"), Port: receiver.ListeningPort()}
      addr := &net.TCPAddr{Port: ListeningPort}
@@ -171,10 +170,10 @@ func Listen() {
            message.RemotePeer.RemoteIP = IP(ip)
            //queue := GetReceiverQueue()
            //queue <- message
-           p := processor.GetInstance()
+           //p := processor.GetInstance()
            t, msg := bean.IdentifyMessage(message)
            if msg != nil {
-              p.Process(t, msg)
+              process(t, msg)
            }
         }
      }
