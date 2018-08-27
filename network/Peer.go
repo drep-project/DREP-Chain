@@ -5,10 +5,7 @@ import (
     "strconv"
 )
 
-//var local = "127.0.0.1"
-//var curve = crypto.InitCurve()
 //var key *common.PrivateKey
-//var once0, once1 sync.Once
 
 type IP string
 
