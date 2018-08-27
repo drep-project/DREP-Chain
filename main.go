@@ -47,7 +47,7 @@ func main()  {
 	store.ChangeRole(role)
 	processor.GetInstance().Start()
 	if role == node.LEADER {
-		store.GetItSelfOnLeader().ProcessConsensus([]byte{100, 200, 300})
+		store.GetItSelfOnLeader().ProcessConsensus([]byte{100, 200, 234})
 	} else {
 		store.GetItSelfOnMember().ProcessConsensus()
 	}
