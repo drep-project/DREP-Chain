@@ -4,7 +4,7 @@ import (
     "bytes"
     "math/big"
     "encoding/hex"
-    "BlockChainTest/crypto"
+    "BlockChainTest/hash"
 )
 
 const (
@@ -35,7 +35,7 @@ func (p *Point) Int() (*big.Int, *big.Int) {
 
 func (pubKey *Point) Addr() string {
     j := pubKey.Bytes()
-    h := crypto.Hash256(j)
+    h := hash.Hash256(j)
     str := hex.EncodeToString(h[len(h) - AddressLen:])
     return str
 }
