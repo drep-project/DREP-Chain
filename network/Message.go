@@ -10,7 +10,7 @@ import (
 
 type Message struct {
     RemotePeer *Peer
-    Msg interface{}
+    Msg        interface{}
 }
 
 func (m *Message) Cipher() ([]byte, error) {
@@ -57,14 +57,6 @@ func (m *Message) Send() error {
         return err
     }
     return nil
-}
-
-func SendMessage(peers []*Peer, msg interface{}) {
-    queue := GetSenderQueue()
-    for _, peer := range peers {
-        message := &Message{peer, msg}
-        queue <- message
-    }
 }
 
 func DecryptIntoMessage(cipher []byte) (*Message, error) {

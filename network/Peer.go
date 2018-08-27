@@ -1,8 +1,8 @@
 package network
 
 import (
-    "strconv"
     "BlockChainTest/bean"
+    "strconv"
 )
 
 //var local = "127.0.0.1"
@@ -10,14 +10,26 @@ import (
 //var key *common.PrivateKey
 //var once0, once1 sync.Once
 
-type Peer struct {
-    IP           string
-    RemotePubKey *bean.Point
-    Port         int
+type IP string
+
+func (ip IP) String() string {
+    return string(ip)
 }
 
-func (peer *Peer) String() string{
-    return peer.IP + ":" + strconv.Itoa(peer.Port)
+type Port int
+
+func (port Port) String() string {
+    return strconv.Itoa(int(port))
+}
+
+type Peer struct {
+    RemoteIP IP
+    RemotePort Port
+    RemotePubKey *bean.Point
+}
+
+func (peer *Peer) String() string {
+    return peer.RemoteIP.String() + ":" + peer.RemotePort.String()
 }
 
 //func GetPrvKey() *PrivateKey {
