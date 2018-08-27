@@ -2,9 +2,9 @@ package processor
 
 import (
     "fmt"
-    "BlockChainTest/network"
     "BlockChainTest/crypto"
     "BlockChainTest/bean"
+    "BlockChainTest/store"
 )
 
 var curve = crypto.InitCurve()
@@ -36,8 +36,8 @@ func transactionExistsInPreviousBlocks(id string) bool {
 func (p *transactionProcessor) process(msg interface{})  {
     if transaction, ok := msg.(*bean.Transaction); ok {
         fmt.Println(transaction)
-        id := transaction.GetId()
-        if transactionExistsInPreviousBlocks(id) || pool.Contains(id) {
+        id, _ := transaction.GetId()
+        if transactionExistsInPreviousBlocks(id) || store.Contains(id) {
             return
         }
         //if checkTransaction(&transaction) {
@@ -45,7 +45,7 @@ func (p *transactionProcessor) process(msg interface{})  {
             // TODO Send the transaction to all peers
 
         if checkTransaction(transaction) {
-            pool.AddTransaction(transaction)
+            store.AddTransaction(transaction)
         }
     }
 }
