@@ -2,10 +2,6 @@ package processor
 
 import (
     "BlockChainTest/bean"
-    "BlockChainTest/network"
-    "BlockChainTest/crypto"
-    "errors"
-    "math/big"
     "BlockChainTest/store"
 )
 
@@ -14,70 +10,41 @@ type SetUpProcessor struct {
 
 func (p *SetUpProcessor) Process(msg interface{}) {
     if setUp, ok := msg.(*bean.Setup); ok {
-        leader := store.GetItSelfOnLeader()
-        leader
+        if member := store.GetItSelfOnMember(); member != nil {
+            member.ProcessSetUp(setUp)
+        }
     }
 }
 
-type CommitmentProcessor struct {
-    Test string
-    MinorCommitmentMap map[string] *bean.Commitment
+type CommitProcessor struct {
 }
 
-func (p *CommitmentProcessor) Process(msg interface{}) error {
-    commitment, ok := msg.(*bean.Commitment)
-    if !ok {
-        return errors.New("wrong message type: not commitment")
+func (p *CommitProcessor) Process(msg interface{}) {
+    if commitment, ok := msg.(*bean.Commitment); ok {
+        if leader := store.GetItSelfOnLeader(); leader != nil {
+            leader.ProcessCommit(commitment)
+        }
     }
-    if !crypto.Verify(commitment.TestSig, commitment.PubKey, []byte(p.Test)) {
-        return errors.New("invalid test")
-    }
-    addr := commitment.PubKey.Addr()
-    p.MinorCommitmentMap[addr] = commitment
-    return nil
 }
 
 type ChallengeProcessor struct {
-    PrvKey *bean.PrivateKey
-    K []byte
-    Leader *network.Peer
 }
 
-func (p *ChallengeProcessor) Process(msg interface{}) error {
-    challenge, ok := msg.(*bean.Challenge)
-    if !ok {
-        return errors.New("wrong message type: not challenge")
+func (p *ChallengeProcessor) Process(msg interface{}) {
+    if challenge, ok := msg.(*bean.Challenge); ok {
+        if member := store.GetItSelfOnMember(); member != nil {
+            member.ProcessChallenge(challenge)
+        }
     }
-    curve := crypto.GetCurve()
-    prvKey := p.PrvKey
-    r := crypto.ConcatHash256(challenge.GroupQ.Bytes(), challenge.GroupPubKey.Bytes(), challenge.Object)
-    r0 := new(big.Int).SetBytes(challenge.R)
-    r1 := new(big.Int).SetBytes(r)
-    if r0.Cmp(r1) != 0 {
-        return errors.New("wrong hash value")
-    }
-    k := new(big.Int).SetBytes(p.K)
-    prvInt := new(big.Int).SetBytes(prvKey.Prv)
-    s := new(big.Int).Mul(r1, prvInt)
-    s.Sub(k, s)
-    s.Mod(s, curve.N)
-    response := &bean.Response{PubKey: prvKey.PubKey, S: s.Bytes()}
-    peers := make([]*network.Peer, 1)
-    peers[0] = p.Leader
-    network.SendMessage(peers, response)
-    return nil
 }
 
 type ResponseProcessor struct {
-    MinorResponseMap map[string] *bean.Response
 }
 
-func (p *ResponseProcessor) Process(msg interface{}) error {
-    response, ok := msg.(*bean.Response)
-    if !ok {
-        return errors.New("wrong message type: not response")
+func (p *ResponseProcessor) Process(msg interface{}) {
+    if response, ok := msg.(*bean.Response); ok {
+        if leader := store.GetItSelfOnLeader(); leader != nil {
+            leader.ProcessResponse(response)
+        }
     }
-    addr := response.PubKey.Addr()
-    p.MinorResponseMap[addr] = response
-    return nil
 }

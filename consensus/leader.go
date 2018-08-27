@@ -86,7 +86,7 @@ func (l *Leader) challenge(msg []byte)  {
     network.SendMessage(l.peers, challenge)
 }
 
-func (l *Leader) processCommit(commit *bean.Commitment) {
+func (l *Leader) ProcessCommit(commit *bean.Commitment) {
     if l.state != setUp {
         return
     }
@@ -104,7 +104,7 @@ func (l *Leader) processCommit(commit *bean.Commitment) {
     l.sigmaQ = curve.Add(l.sigmaQ, commit.Q)
 }
 
-func (l *Leader) processResponse(response *bean.Response) {
+func (l *Leader) ProcessResponse(response *bean.Response) {
     if l.state != challenge {
         return
     }

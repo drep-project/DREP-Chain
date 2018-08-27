@@ -45,7 +45,7 @@ func (m *Member) processConsensus() {
     m.response()
 }
 
-func (m *Member) processSetUp(setupMsg *bean.Setup) {
+func (m *Member) ProcessSetUp(setupMsg *bean.Setup) {
     if !store.CheckRole(node.MINER) {
         return
     }
