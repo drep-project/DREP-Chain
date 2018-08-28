@@ -39,7 +39,7 @@ func (p *P2PComm) SendMessage(peers []*Peer, msg interface{}) error {
 
 func (p *P2PComm) SendMessageCore(peer *Peer, bytes []byte) error {
 
-    addr, err := net.ResolveTCPAddr("tcp", peer.String())
+    addr, err := net.ResolveTCPAddr("tcp", peer.ToString())
     if err != nil {
         return err
     }
@@ -50,15 +50,6 @@ func (p *P2PComm) SendMessageCore(peer *Peer, bytes []byte) error {
     defer conn.Close()
     if _, err := conn.Write(bytes); err != nil {
         return err
-    }
-    return nil
-}
-
-func (p *P2PComm) SpreadMessage(msg interface{}) error {
-    for _, ip := range p.IPs {
-        peer := Peer{ip, ListeningPort,ListeningPort}
-        message := Message{&peer,msg}
-        p.queue <- &message
     }
     return nil
 }
