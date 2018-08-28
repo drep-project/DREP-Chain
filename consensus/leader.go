@@ -73,7 +73,10 @@ func (l *Leader) ProcessConsensus(msg []byte) *bean.Signature {
     fmt.Println("Leader wait for response")
     l.responseWg.Wait()
     fmt.Println("Leader finish")
-    return &bean.Signature{R: l.r, S: l.sigmaS.Bytes()}
+    sig := &bean.Signature{R: l.r, S: l.sigmaS.Bytes()}
+    valid := l.Validate(sig)
+    fmt.Println("valid? ", valid)
+    return sig
 }
 
 func (l *Leader) setUp(msg []byte, pubKey *bean.Point) {
