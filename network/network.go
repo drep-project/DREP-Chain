@@ -33,7 +33,7 @@ type Peer struct {
    Address bean.Address
 }
 
-func (peer *Peer) String() string {
+func (peer *Peer) ToString() string {
    return peer.IP.String() + ":" + peer.Port.String()
 }
 
@@ -96,7 +96,7 @@ func (m *Message) Send() error {
    if err != nil {
       return err
    }
-   addr, err := net.ResolveTCPAddr("tcp", m.Peer.String())
+   addr, err := net.ResolveTCPAddr("tcp", m.Peer.ToString())
    if err != nil {
      return err
    }

@@ -2,7 +2,7 @@ package node
 
 const (
     LEADER     = 0
-    MINER      = 1
+    MEMBER      = 1
     NON_MINER  = 2
 )
 
