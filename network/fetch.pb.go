@@ -27,7 +27,7 @@ package network
 //}
 //
 //func (m *FetchRequest) Reset()         { *m = FetchRequest{} }
-//func (m *FetchRequest) String() string { return proto.CompactTextString(m) }
+//func (m *FetchRequest) ToString() string { return proto.CompactTextString(m) }
 //func (*FetchRequest) ProtoMessage()    {}
 //func (*FetchRequest) Descriptor() ([]byte, []int) {
 //	return fileDescriptor_fetch_bd7ff4de52789751, []int{0}
