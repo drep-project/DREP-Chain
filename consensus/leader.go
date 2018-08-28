@@ -70,7 +70,7 @@ func (l *Leader) ProcessConsensus(msg []byte) *bean.Signature {
     l.challenge(msg)
     fmt.Println("Leader wait for response")
     l.responseWg.Wait()
-
+    fmt.Println("Leader finish")
     return &bean.Signature{R: l.r, S: l.sigmaS.Bytes()}
 }
 
