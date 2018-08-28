@@ -1,7 +1,6 @@
 package consensus
 
 import (
-    "BlockChainTest/node"
     "BlockChainTest/network"
     "sync"
     "BlockChainTest/bean"
@@ -11,7 +10,7 @@ import (
 )
 
 type Member struct {
-    leader *node.Miner
+    leader *network.Peer
     state int
     prvKey *bean.PrivateKey
     pubKey *bean.Point
@@ -25,7 +24,7 @@ type Member struct {
 
 }
 
-func NewMember(leader *node.Miner, prvKey *bean.PrivateKey, pubKey *bean.Point) *Member {
+func NewMember(leader *network.Peer, prvKey *bean.PrivateKey, pubKey *bean.Point) *Member {
     m := &Member{}
     m.state = waiting
     m.leader = leader
@@ -69,7 +68,7 @@ func (m *Member) commit()  {
     pubKey := m.pubKey
     m.k = k
     commitment := &bean.Commitment{PubKey: pubKey, Q: q}
-    network.SendMessage([]*network.Peer{m.leader.Peer}, commitment)
+    network.SendMessage([]*network.Peer{m.leader}, commitment)
 }
 
 func (m *Member) ProcessChallenge(challenge *bean.Challenge) {
@@ -91,6 +90,6 @@ func (m *Member) response()  {
     s.Mod(s, curve.N)
     response := &bean.Response{PubKey: prvKey.PubKey, S: s.Bytes()}
     peers := make([]*network.Peer, 1)
-    peers[0] = m.leader.Peer
+    peers[0] = m.leader
     network.SendMessage(peers, response)
 }

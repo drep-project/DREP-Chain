@@ -14,7 +14,7 @@ var (
     leader *consensus.Leader
     member *consensus.Member
     miningState int
-    miners []*node.Miner
+    miners []*network.Peer
     peers []*network.Peer
     blockHeight int
     block *bean.Block
@@ -55,7 +55,7 @@ func GetMiningState() int {
     return miningState
 }
 
-func GetMiners() []*node.Miner {
+func GetMiners() []*network.Peer {
     return miners
 }
 
@@ -68,7 +68,7 @@ func ContainsMiner(pubKey *bean.Point) bool {
     return false
 }
 
-func GetMiner(pubKey *bean.Point) *node.Miner {
+func GetMiner(pubKey *bean.Point) *network.Peer {
     for _, v:= range miners {
         if v.PubKey.Equal(pubKey) {
             return v
@@ -97,7 +97,7 @@ func MoveToState(ms int) {
     miningState = ms
 }
 
-func GetLeader() *node.Miner {
+func GetLeader() *network.Peer {
     return nil
 }
 

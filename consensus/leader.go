@@ -1,7 +1,6 @@
 package consensus
 
 import (
-    "BlockChainTest/node"
     "BlockChainTest/network"
     "sync"
     "BlockChainTest/bean"
@@ -16,10 +15,9 @@ const (
     challenge            = 2
 )
 type Leader struct {
-    miners []*node.Miner
-    peers []*network.Peer
-    pubKey *bean.Point
-    state int
+    members    []*network.Peer
+    pubKey     *bean.Point
+    state      int
     LeaderPeer *network.Peer
 
     commitWg sync.WaitGroup
@@ -36,14 +34,14 @@ type Leader struct {
 
 }
 
-func NewLeader(pubKey *bean.Point, miners []*node.Miner) *Leader {
+func NewLeader(pubKey *bean.Point, peers []*network.Peer) *Leader {
     l := &Leader{}
     l.pubKey = pubKey
-    l.miners = make([]*node.Miner, len(miners) - 1)
+    l.members = make([]*network.Peer, len(peers) - 1)
     last := 0
-    for _, miner := range miners {
-        if !miner.PubKey.Equal(pubKey) {
-            l.miners[last] = miner
+    for _, peer := range peers {
+        if !peer.PubKey.Equal(pubKey) {
+            l.members[last] = peer
             last++
         }
     }
@@ -53,7 +51,7 @@ func NewLeader(pubKey *bean.Point, miners []*node.Miner) *Leader {
 
 func (l *Leader) ProcessConsensus(msg []byte) *bean.Signature {
     l.commitWg = sync.WaitGroup{}
-    l.commitWg.Add(len(l.peers))
+    l.commitWg.Add(len(l.members))
     l.state = setUp
     l.setUp(msg, l.pubKey)
     l.commitWg.Wait()
@@ -69,7 +67,7 @@ func (l *Leader) ProcessConsensus(msg []byte) *bean.Signature {
 
 func (l *Leader) setUp(msg []byte, pubKey *bean.Point) {
     setup := &bean.Setup{Msg: msg, PubKey: pubKey}
-    network.SendMessage(l.peers, setup)
+    network.SendMessage(l.members, setup)
 }
 
 func (l *Leader) getR(msg []byte) []byte {
@@ -83,7 +81,7 @@ func (l *Leader) getR(msg []byte) []byte {
 func (l *Leader) challenge(msg []byte)  {
     l.r = l.getR(msg)
     challenge := &bean.Challenge{SigmaPubKey: l.sigmaPubKey, SigmaQ: l.sigmaQ, R: l.r}
-    network.SendMessage(l.peers, challenge)
+    network.SendMessage(l.members, challenge)
 }
 
 func (l *Leader) ProcessCommit(commit *bean.Commitment) {

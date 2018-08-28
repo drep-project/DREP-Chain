@@ -1,8 +1,7 @@
 package network
 
 const (
-    ListeningPort = 55555
-    BufferSize = 1024 * 1024
-    AddressSuffix = "address_"
-
+    listeningPort = 55555
+    bufferSize    = 1024 * 1024
+    addressSuffix = "address_"
 )
