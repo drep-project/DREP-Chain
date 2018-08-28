@@ -137,17 +137,12 @@ func (l *Leader) ProcessResponse(response *bean.Response) {
     l.sigmaS = l.sigmaS.Add(l.sigmaS, s)
 }
 
-func (l *Leader) Validate(sig *bean.Signature) bool {
+func (l *Leader) Validate(sig *bean.Signature, msg []byte) bool {
     if len(l.responseBitmap) < len(l.commitBitmap) {
         return false
     }
     if float64(len(l.responseBitmap)) < math.Ceil(float64(len(l.members)*2.0/3.0)+1) {
         return false
     }
-    challenge := &bean.Challenge{SigmaPubKey: l.sigmaPubKey, SigmaQ: l.sigmaQ, R: l.r}
-    b, err := proto.Marshal(challenge)
-    if err != nil {
-        return false
-    }
-    return crypto.Verify(sig, l.sigmaPubKey, b)
+    return crypto.Verify(sig, l.sigmaPubKey, msg)
 }
