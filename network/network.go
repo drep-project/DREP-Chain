@@ -106,6 +106,7 @@ func (m *Message) Send() error {
      return err
    }
    defer conn.Close()
+   fmt.Println("Send msg:", cipher)
    if _, err := conn.Write(cipher); err != nil {
       return err
    }
@@ -143,6 +144,7 @@ func startListen(process func(int, interface{})) {
      addr := &net.TCPAddr{Port: listeningPort}
      listener, err := net.ListenTCP("tcp", addr)
      if err != nil {
+        fmt.Println("error", err)
         return
      }
      for {
@@ -162,8 +164,9 @@ func startListen(process func(int, interface{})) {
               cipher = b[n:]
               offset += n
            }
+           fmt.Println("Receive before decrypt", cipher)
            message, err := DecryptIntoMessage(cipher)
-           fmt.Println("Receive ", message)
+           fmt.Println("Receive after decrypt", cipher)
            if err != nil {
               return
            }

@@ -5,6 +5,7 @@ import (
 	"BlockChainTest/network"
 	"BlockChainTest/processor"
 	"BlockChainTest/store"
+	"time"
 )
 
 var (
@@ -51,4 +52,5 @@ func main()  {
 	} else {
 		store.GetItSelfOnMember().ProcessConsensus()
 	}
+	time.Sleep(4000 * time.Second)
 }
