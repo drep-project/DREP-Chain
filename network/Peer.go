@@ -26,7 +26,7 @@ type Peer struct {
     Address bean.Address
 }
 
-func (peer *Peer) String() string {
+func (peer *Peer) ToString() string {
     return peer.IP.String() + ":" + peer.Port.String()
 }
 
