@@ -84,6 +84,7 @@ func (m *Member) ProcessChallenge(challenge *bean.Challenge) {
     if r0.Cmp(m.r) != 0 {
         return// errors.New("wrong hash value")
     }
+    m.challengeWg.Done()
 }
 
 func (m *Member) response()  {
