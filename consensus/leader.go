@@ -46,6 +46,7 @@ func NewLeader(pubKey *bean.Point, peers []*network.Peer) *Leader {
         }
     }
     l.state = waiting
+    l.sigmaPubKey = &bean.Point{X: []byte{0x00}, Y: []byte{0x00}}
     l.sigmaQ = &bean.Point{X: []byte{0x00}, Y: []byte{0x00}}
     l.sigmaS = new(big.Int)
     l.commitBitmap = make(map[string]bool)

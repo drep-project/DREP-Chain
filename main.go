@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	role = node.LEADER
+	role = node.MEMBER
 )
 func main()  {
 
