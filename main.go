@@ -37,13 +37,12 @@ func main()  {
 	//}
 
 	//test.RemoteConnect(1)
-	network.Listen(func(t int, msg interface{}) {
+	network.Start(func(t int, msg interface{}) {
 		p := processor.GetInstance()
 		if msg != nil {
 			p.Process(t, msg)
 		}
 	})
-	network.Work()
 	store.ChangeRole(role)
 	processor.GetInstance().Start()
 	if role == node.LEADER {
