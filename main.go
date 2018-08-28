@@ -43,11 +43,16 @@ func main()  {
 			p.Process(t, msg)
 		}
 	})
-	store.ChangeRole(role)
+	//store.ChangeRole(role)
+	//processor.GetInstance().Start()
+	//if role == node.LEADER {
+	//	store.GetItSelfOnLeader().ProcessConsensus([]byte{100, 200, 234})
+	//} else {
+	//	store.GetItSelfOnMember().ProcessConsensus()
+	//}
+	store.ChangeRole(node.LEADER)
 	processor.GetInstance().Start()
-	if role == node.LEADER {
-		store.GetItSelfOnLeader().ProcessConsensus([]byte{100, 200, 234})
-	} else {
-		store.GetItSelfOnMember().ProcessConsensus()
-	}
+	store.GetItSelfOnLeader().ProcessConsensus([]byte{100, 200, 234})
+	store.ChangeRole(node.MEMBER)
+	store.GetItSelfOnMember().ProcessConsensus()
 }
