@@ -2,9 +2,9 @@ package main
 
 import (
 	"BlockChainTest/node"
-	"BlockChainTest/store"
-	"BlockChainTest/processor"
 	"BlockChainTest/network"
+	"BlockChainTest/processor"
+	"BlockChainTest/store"
 )
 
 var (
@@ -37,6 +37,7 @@ func main()  {
 	//}
 
 	//test.RemoteConnect(1)
+
 	network.Start(func(t int, msg interface{}) {
 		p := processor.GetInstance()
 		if msg != nil {

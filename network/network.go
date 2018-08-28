@@ -9,6 +9,7 @@ import (
    "github.com/golang/protobuf/proto"
    "BlockChainTest/crypto"
    "errors"
+   "fmt"
 )
 
 var onceSender sync.Once
@@ -42,7 +43,7 @@ type Message struct {
    Msg  interface{}
 }
 
-func IdentifyMessage(message *Message) (int, interface{}) {
+func identifyMessage(message *Message) (int, interface{}) {
    msg := message.Msg
    switch msg.(type) {
    case *bean.Setup:
@@ -146,6 +147,7 @@ func startListen(process func(int, interface{})) {
      }
      for {
         conn, err := listener.AcceptTCP()
+        fmt.Println("listen from ", conn.RemoteAddr())
         if err != nil {
            continue
         }
@@ -161,6 +163,7 @@ func startListen(process func(int, interface{})) {
               offset += n
            }
            message, err := DecryptIntoMessage(cipher)
+           fmt.Println("Receive ", message)
            if err != nil {
               return
            }
@@ -170,7 +173,7 @@ func startListen(process func(int, interface{})) {
            //queue := GetReceiverQueue()
            //queue <- message
            //p := processor.GetInstance()
-           t, msg := IdentifyMessage(message)
+           t, msg := identifyMessage(message)
            if msg != nil {
               process(t, msg)
            }
