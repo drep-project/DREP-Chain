@@ -9,7 +9,6 @@ import (
     "BlockChainTest/hash"
     "fmt"
     "math"
-    "github.com/golang/protobuf/proto"
 )
 
 const (
@@ -74,7 +73,7 @@ func (l *Leader) ProcessConsensus(msg []byte) *bean.Signature {
     l.responseWg.Wait()
     fmt.Println("Leader finish")
     sig := &bean.Signature{R: l.r, S: l.sigmaS.Bytes()}
-    valid := l.Validate(sig)
+    valid := l.Validate(sig, msg)
     fmt.Println("valid? ", valid)
     return sig
 }
