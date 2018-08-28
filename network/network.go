@@ -11,9 +11,8 @@ import (
    "errors"
 )
 
-var onceSender, onceReceiver sync.Once
+var onceSender sync.Once
 var SenderQueue chan *Message
-var ReceiverQueue chan *Message
 
 type IP string
 
@@ -25,16 +24,6 @@ type Port int
 
 func (port Port) String() string {
    return strconv.Itoa(int(port))
-}
-
-type Address string
-
-func (addr Address) String() string {
-   return string(addr)
-}
-
-func (addr Address) LocalKey() string {
-   return addressSuffix + addr.String()
 }
 
 type Peer struct {
@@ -49,8 +38,8 @@ func (peer *Peer) String() string {
 }
 
 type Message struct {
-   RemotePeer *Peer
-   Msg interface{}
+   Peer *Peer
+   Msg  interface{}
 }
 
 func IdentifyMessage(message *Message) (int, interface{}) {
@@ -76,13 +65,6 @@ func GetSenderQueue() chan *Message {
    return SenderQueue
 }
 
-func GetReceiverQueue() chan *Message {
-   onceReceiver.Do(func() {
-      ReceiverQueue = make(chan *Message, 10)
-   })
-   return ReceiverQueue
-}
-
 func (m *Message) Cipher() ([]byte, error) {
    serializable, err := bean.Serialize(m.Msg)
    if err != nil {
@@ -102,7 +84,7 @@ func (m *Message) Cipher() ([]byte, error) {
    if err != nil {
       return nil, err
    }
-   cipher, err := crypto.Encrypt(m.RemotePeer.PubKey, plaintext)
+   cipher, err := crypto.Encrypt(m.Peer.PubKey, plaintext)
    if err != nil {
       return nil, err
    }
@@ -114,7 +96,7 @@ func (m *Message) Send() error {
    if err != nil {
       return err
    }
-   addr, err := net.ResolveTCPAddr("tcp", m.RemotePeer.String())
+   addr, err := net.ResolveTCPAddr("tcp", m.Peer.String())
    if err != nil {
      return err
    }
@@ -150,11 +132,11 @@ func DecryptIntoMessage(cipher []byte) (*Message, error) {
       return nil, errors.New("decrypt fail")
    }
    peer := &Peer{PubKey: serializable.PubKey}
-   message := &Message{RemotePeer: peer, Msg: msg}
+   message := &Message{Peer: peer, Msg: msg}
    return message, nil
 }
 
-func Listen(process func(int, interface{})) {
+func startListen(process func(int, interface{})) {
   go func() {
      //room for modification addr := &net.TCPAddr{IP: net.ParseIP("x.x.x.x"), Port: receiver.listeningPort()}
      addr := &net.TCPAddr{Port: listeningPort}
@@ -184,7 +166,7 @@ func Listen(process func(int, interface{})) {
            }
            fromAddr := conn.RemoteAddr().String()
            ip := fromAddr[:strings.LastIndex(fromAddr, ":")]
-           message.RemotePeer.IP = IP(ip)
+           message.Peer.IP = IP(ip)
            //queue := GetReceiverQueue()
            //queue <- message
            //p := processor.GetInstance()
@@ -197,7 +179,7 @@ func Listen(process func(int, interface{})) {
   }()
 }
 
-func Work() {
+func startSend() {
    go func() {
       sender := GetSenderQueue()
       for {
@@ -206,4 +188,9 @@ func Work() {
          }
       }
    }()
+}
+
+func Start(process func(int, interface{})) {
+   startListen(process)
+   startSend()
 }
