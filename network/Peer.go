@@ -20,13 +20,14 @@ func (port Port) String() string {
 }
 
 type Peer struct {
-    RemoteIP IP
-    RemotePort Port
-    RemotePubKey *bean.Point
+    IP      IP
+    Port    Port
+    PubKey  *bean.Point
+    Address bean.Address
 }
 
 func (peer *Peer) String() string {
-    return peer.RemoteIP.String() + ":" + peer.RemotePort.String()
+    return peer.IP.String() + ":" + peer.Port.String()
 }
 
 //func GetPrvKey() *PrivateKey {

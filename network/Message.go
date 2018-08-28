@@ -75,3 +75,19 @@ func DecryptIntoMessage(cipher []byte) (*Message, error) {
     message := &Message{RemotePeer: peer, Msg: msg}
     return message, nil
 }
+
+func IdentifyMessage(message *Message) (int, interface{}) {
+    msg := message.Msg
+    switch msg.(type) {
+    case *bean.Setup:
+        return bean.MsgTypeSetUp, msg.(*bean.Setup)
+    case *bean.Commitment:
+        return bean.MsgTypeCommitment, msg.(*bean.Commitment)
+    case *bean.Challenge:
+        return bean.MsgTypeChallenge, msg.(*bean.Challenge)
+    case *bean.Response:
+        return bean.MsgTypeResponse, msg.(*bean.Response)
+    default:
+        return -1, nil
+    }
+}
