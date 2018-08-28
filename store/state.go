@@ -81,8 +81,8 @@ func GetMiners() []*network.Peer {
     port1 = network.Port(2)
     peer0 = &network.Peer{ip0, port0, pub0}
     peer1 = &network.Peer{ip1, port1, pub1}
-    miner0 = &node.Miner{Peer: peer0}
-    miner1 = &node.Miner{Peer: peer1}
+    miner0 = &node.Miner{PubKey: pub0, Peer: peer0}
+    miner1 = &node.Miner{PubKey: pub1, Peer: peer1}
     miners = make([]*node.Miner, 2)
     miners[0] = miner0
     miners[1] = miner1

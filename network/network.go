@@ -33,8 +33,8 @@ type Peer struct {
    Address bean.Address
 }
 
-func (peer *Peer) String() string {
-   return peer.IP.String() + ":" + peer.Port.String()
+func (peer *Peer) ToString() string {
+   return peer.RemoteIP.String() + ":" + peer.RemotePort.String()
 }
 
 type Message struct {
