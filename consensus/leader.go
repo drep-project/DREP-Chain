@@ -31,7 +31,6 @@ type Leader struct {
     responseBitmap map[string] bool
 
     sigs map[bean.Address][]byte
-
 }
 
 func NewLeader(pubKey *bean.Point, peers []*network.Peer) *Leader {
@@ -46,6 +45,8 @@ func NewLeader(pubKey *bean.Point, peers []*network.Peer) *Leader {
         }
     }
     l.state = waiting
+    l.sigmaQ = &bean.Point{X: []byte{0x00}, Y: []byte{0x00}}
+    l.sigmaS = new(big.Int)
     return l
 }
 

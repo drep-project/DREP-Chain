@@ -6,6 +6,7 @@ import (
     "BlockChainTest/node"
     "BlockChainTest/bean"
     "BlockChainTest/consensus"
+    "BlockChainTest/crypto"
 )
 
 
@@ -22,21 +23,32 @@ var (
     prvKey *bean.PrivateKey
     pubKey *bean.Point
     address bean.Address
+    k0, k1 []byte
+    pub0, pub1 *bean.Point
+    prv0, prv1 *bean.PrivateKey
+    miner0, miner1 *network.Peer
+    ip0, ip1 network.IP
+    port0, port1 network.Port
+    peer0, peer1 *network.Peer
 )
 
 func init()  {
-
+    lock = &sync.Mutex{}
+    prvKey, _ = crypto.GetPrivateKey()
+    pubKey = GetPubKey()
 }
 
 func ChangeRole(r int) {
     lock.Lock()
     role = r
+    miners = GetMiners()
     if r == node.LEADER {
-        leader = consensus.NewLeader(pubKey, miners)
+        leader = consensus.NewLeader(pub0, miners)
         member = nil
     } else {
+        l := peer0
+        member = consensus.NewMember(l, prv1, pub1)
         leader = nil
-        member = consensus.NewMember(GetLeader(), prvKey, pubKey)
     }
     lock.Unlock()
 }
@@ -56,6 +68,24 @@ func GetMiningState() int {
 }
 
 func GetMiners() []*network.Peer {
+    curve := crypto.GetCurve()
+    k0 = []byte{0x22, 0x11}
+    k1 = []byte{0x14, 0x44}
+    pub0 = curve.ScalarBaseMultiply(k0)
+    pub1 = curve.ScalarBaseMultiply(k1)
+    prv0 = &bean.PrivateKey{Prv: k0, PubKey: pub0}
+    prv1 = &bean.PrivateKey{Prv: k1, PubKey: pub1}
+    ip0 = network.IP("192.168.x.x")
+    ip1 = network.IP("192.168.x.x")
+    port0 = network.Port(1)
+    port1 = network.Port(2)
+    peer0 = &network.Peer{IP: ip0, Port: port0, PubKey: pub0}
+    peer1 = &network.Peer{IP: ip1, Port: port1, PubKey: pub1}
+    miner0 = peer0
+    miner1 = peer1
+    miners = make([]*network.Peer, 2)
+    miners[0] = miner0
+    miners[1] = miner1
     return miners
 }
 
