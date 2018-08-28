@@ -7,6 +7,7 @@ import (
     "BlockChainTest/crypto"
     "math/big"
     "BlockChainTest/hash"
+    "fmt"
 )
 
 const (
@@ -54,13 +55,17 @@ func (l *Leader) ProcessConsensus(msg []byte) *bean.Signature {
     l.commitWg = sync.WaitGroup{}
     l.commitWg.Add(len(l.members))
     l.state = setUp
+    fmt.Println("Leader is going to setup")
     l.setUp(msg, l.pubKey)
+    fmt.Println("Leader wait for commit")
     l.commitWg.Wait()
 
     l.responseWg = sync.WaitGroup{}
     l.responseWg.Add(len(l.commitBitmap))
     l.state = challenge
+    fmt.Println("Leader is going to challenge")
     l.challenge(msg)
+    fmt.Println("Leader wait for response")
     l.responseWg.Wait()
 
     return &bean.Signature{R: l.r, S: l.sigmaS.Bytes()}
@@ -68,6 +73,7 @@ func (l *Leader) ProcessConsensus(msg []byte) *bean.Signature {
 
 func (l *Leader) setUp(msg []byte, pubKey *bean.Point) {
     setup := &bean.Setup{Msg: msg, PubKey: pubKey}
+    fmt.Println("Leader setup ", *setup)
     network.SendMessage(l.members, setup)
 }
 
@@ -82,10 +88,12 @@ func (l *Leader) getR(msg []byte) []byte {
 func (l *Leader) challenge(msg []byte)  {
     l.r = l.getR(msg)
     challenge := &bean.Challenge{SigmaPubKey: l.sigmaPubKey, SigmaQ: l.sigmaQ, R: l.r}
+    fmt.Println("Leader challenge ", *challenge)
     network.SendMessage(l.members, challenge)
 }
 
 func (l *Leader) ProcessCommit(commit *bean.Commitment) {
+    fmt.Println("Leader process commit ", *commit)
     if l.state != setUp {
         return
     }
@@ -104,6 +112,7 @@ func (l *Leader) ProcessCommit(commit *bean.Commitment) {
 }
 
 func (l *Leader) ProcessResponse(response *bean.Response) {
+    fmt.Println("Leader process response ", *response)
     if l.state != challenge {
         return
     }
