@@ -34,17 +34,18 @@ func (addr Address) String() string {
 }
 
 func (addr Address) LocalKey() string {
-   return AddressSuffix + addr.String()
+   return addressSuffix + addr.String()
 }
 
 type Peer struct {
-   RemoteIP IP
-   RemotePort Port
-   RemotePubKey *bean.Point
+   IP      IP
+   Port    Port
+   PubKey  *bean.Point
+   Address bean.Address
 }
 
 func (peer *Peer) String() string {
-   return peer.RemoteIP.String() + ":" + peer.RemotePort.String()
+   return peer.IP.String() + ":" + peer.Port.String()
 }
 
 type Message struct {
@@ -101,7 +102,7 @@ func (m *Message) Cipher() ([]byte, error) {
    if err != nil {
       return nil, err
    }
-   cipher, err := crypto.Encrypt(m.RemotePeer.RemotePubKey, plaintext)
+   cipher, err := crypto.Encrypt(m.RemotePeer.PubKey, plaintext)
    if err != nil {
       return nil, err
    }
@@ -148,15 +149,15 @@ func DecryptIntoMessage(cipher []byte) (*Message, error) {
    if !crypto.Verify(serializable.Sig, serializable.PubKey, serializable.Body) {
       return nil, errors.New("decrypt fail")
    }
-   peer := &Peer{RemotePubKey: serializable.PubKey}
+   peer := &Peer{PubKey: serializable.PubKey}
    message := &Message{RemotePeer: peer, Msg: msg}
    return message, nil
 }
 
 func Listen(process func(int, interface{})) {
   go func() {
-     //room for modification addr := &net.TCPAddr{IP: net.ParseIP("x.x.x.x"), Port: receiver.ListeningPort()}
-     addr := &net.TCPAddr{Port: ListeningPort}
+     //room for modification addr := &net.TCPAddr{IP: net.ParseIP("x.x.x.x"), Port: receiver.listeningPort()}
+     addr := &net.TCPAddr{Port: listeningPort}
      listener, err := net.ListenTCP("tcp", addr)
      if err != nil {
         return
@@ -166,7 +167,7 @@ func Listen(process func(int, interface{})) {
         if err != nil {
            continue
         }
-        b := make([]byte, BufferSize)
+        b := make([]byte, bufferSize)
         cipher := b
         offset := 0
         for {
@@ -183,7 +184,7 @@ func Listen(process func(int, interface{})) {
            }
            fromAddr := conn.RemoteAddr().String()
            ip := fromAddr[:strings.LastIndex(fromAddr, ":")]
-           message.RemotePeer.RemoteIP = IP(ip)
+           message.RemotePeer.IP = IP(ip)
            //queue := GetReceiverQueue()
            //queue <- message
            //p := processor.GetInstance()
