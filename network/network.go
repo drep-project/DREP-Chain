@@ -4,11 +4,12 @@ import (
    "sync"
    "strconv"
    "net"
-   "strings"
    "BlockChainTest/bean"
    "github.com/golang/protobuf/proto"
    "BlockChainTest/crypto"
    "errors"
+   "fmt"
+   "strings"
 )
 
 var onceSender sync.Once
@@ -42,7 +43,7 @@ type Message struct {
    Msg  interface{}
 }
 
-func IdentifyMessage(message *Message) (int, interface{}) {
+func identifyMessage(message *Message) (int, interface{}) {
    msg := message.Msg
    switch msg.(type) {
    case *bean.Setup:
@@ -105,6 +106,7 @@ func (m *Message) Send() error {
      return err
    }
    defer conn.Close()
+   fmt.Println("Send msg:", cipher)
    if _, err := conn.Write(cipher); err != nil {
       return err
    }
@@ -142,38 +144,42 @@ func startListen(process func(int, interface{})) {
      addr := &net.TCPAddr{Port: listeningPort}
      listener, err := net.ListenTCP("tcp", addr)
      if err != nil {
+        fmt.Println("error", err)
         return
      }
      for {
         conn, err := listener.AcceptTCP()
+        fmt.Println("listen from ", conn.RemoteAddr())
         if err != nil {
            continue
         }
-        b := make([]byte, bufferSize)
-        cipher := b
+        cipher := make([]byte, bufferSize)
+        b := cipher
         offset := 0
         for {
-           n, err := conn.Read(cipher)
+           n, err := conn.Read(b)
            if err != nil {
               break
            } else {
-              cipher = b[n:]
               offset += n
+              b = cipher[offset:]
            }
-           message, err := DecryptIntoMessage(cipher)
-           if err != nil {
-              return
-           }
-           fromAddr := conn.RemoteAddr().String()
-           ip := fromAddr[:strings.LastIndex(fromAddr, ":")]
-           message.Peer.IP = IP(ip)
-           //queue := GetReceiverQueue()
-           //queue <- message
-           //p := processor.GetInstance()
-           t, msg := IdentifyMessage(message)
-           if msg != nil {
-              process(t, msg)
-           }
+        }
+        fmt.Println("Receive before decrypt", cipher)
+        message, err := DecryptIntoMessage(cipher[:offset])
+        fmt.Println("Receive after decrypt", message)
+        if err != nil {
+           return
+        }
+        fromAddr := conn.RemoteAddr().String()
+        ip := fromAddr[:strings.LastIndex(fromAddr, ":")]
+        message.Peer.IP = IP(ip)
+        //queue := GetReceiverQueue()
+        //queue <- message
+        //p := processor.GetInstance()
+        t, msg := identifyMessage(message)
+        if msg != nil {
+           process(t, msg)
         }
      }
   }()
