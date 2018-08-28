@@ -6,10 +6,11 @@ import (
     "github.com/golang/protobuf/proto"
     "net"
     "errors"
+    "fmt"
 )
 
 type Message struct {
-    RemotePeer *Peer
+    Peer *Peer
     Msg        interface{}
 }
 
@@ -32,7 +33,7 @@ func (m *Message) Cipher() ([]byte, error) {
     if err != nil {
         return nil, err
     }
-    cipher, err := crypto.Encrypt(m.RemotePeer.RemotePubKey, plaintext)
+    cipher, err := crypto.Encrypt(m.Peer.PubKey, plaintext)
     if err != nil {
         return nil, err
     }
@@ -44,7 +45,7 @@ func (m *Message) Send() error {
     if err != nil {
         return err
     }
-    addr, err := net.ResolveTCPAddr("tcp", m.RemotePeer.String())
+    addr, err := net.ResolveTCPAddr("tcp", m.Peer.ToString())
     if err != nil {
         return err
     }
@@ -53,6 +54,7 @@ func (m *Message) Send() error {
         return err
     }
     defer conn.Close()
+    fmt.Println("Send msg:", cipher)
     if _, err := conn.Write(cipher); err != nil {
         return err
     }
@@ -71,12 +73,12 @@ func DecryptIntoMessage(cipher []byte) (*Message, error) {
     if !crypto.Verify(serializable.Sig, serializable.PubKey, serializable.Body) {
         return nil, errors.New("decrypt fail")
     }
-    peer := &Peer{RemotePubKey: serializable.PubKey}
-    message := &Message{RemotePeer: peer, Msg: msg}
+    peer := &Peer{PubKey: serializable.PubKey}
+    message := &Message{Peer: peer, Msg: msg}
     return message, nil
 }
 
-func IdentifyMessage(message *Message) (int, interface{}) {
+func identifyMessage(message *Message) (int, interface{}) {
     msg := message.Msg
     switch msg.(type) {
     case *bean.Setup:
