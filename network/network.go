@@ -34,7 +34,7 @@ type Peer struct {
 }
 
 func (peer *Peer) ToString() string {
-   return peer.RemoteIP.String() + ":" + peer.RemotePort.String()
+   return peer.IP.String() + ":" + peer.Port.String()
 }
 
 type Message struct {
@@ -96,7 +96,7 @@ func (m *Message) Send() error {
    if err != nil {
       return err
    }
-   addr, err := net.ResolveTCPAddr("tcp", m.Peer.String())
+   addr, err := net.ResolveTCPAddr("tcp", m.Peer.ToString())
    if err != nil {
      return err
    }

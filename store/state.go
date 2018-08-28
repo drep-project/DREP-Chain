@@ -46,7 +46,7 @@ func ChangeRole(r int) {
         leader = consensus.NewLeader(pub0, miners)
         member = nil
     } else {
-        l := &node.Miner{PubKey: pub0, Peer: peer0}
+        l := peer0
         member = consensus.NewMember(l, prv1, pub1)
         leader = nil
     }
@@ -79,11 +79,11 @@ func GetMiners() []*network.Peer {
     ip1 = network.IP("192.168.x.x")
     port0 = network.Port(1)
     port1 = network.Port(2)
-    peer0 = &network.Peer{ip0, port0, pub0}
-    peer1 = &network.Peer{ip1, port1, pub1}
-    miner0 = &node.Miner{PubKey: pub0, Peer: peer0}
-    miner1 = &node.Miner{PubKey: pub1, Peer: peer1}
-    miners = make([]*node.Miner, 2)
+    peer0 = &network.Peer{IP: ip0, Port: port0, PubKey: pub0}
+    peer1 = &network.Peer{IP: ip1, Port: port1, PubKey: pub1}
+    miner0 = peer0
+    miner1 = peer1
+    miners = make([]*network.Peer, 2)
     miners[0] = miner0
     miners[1] = miner1
     return miners
