@@ -7,6 +7,9 @@ import (
     "BlockChainTest/crypto"
     "math/big"
     "BlockChainTest/hash"
+    "fmt"
+    "math"
+    "github.com/golang/protobuf/proto"
 )
 
 const (
@@ -45,8 +48,11 @@ func NewLeader(pubKey *bean.Point, peers []*network.Peer) *Leader {
         }
     }
     l.state = waiting
+    l.sigmaPubKey = &bean.Point{X: []byte{0x00}, Y: []byte{0x00}}
     l.sigmaQ = &bean.Point{X: []byte{0x00}, Y: []byte{0x00}}
     l.sigmaS = new(big.Int)
+    l.commitBitmap = make(map[string]bool)
+    l.responseBitmap = make(map[string]bool)
     return l
 }
 
@@ -54,20 +60,28 @@ func (l *Leader) ProcessConsensus(msg []byte) *bean.Signature {
     l.commitWg = sync.WaitGroup{}
     l.commitWg.Add(len(l.members))
     l.state = setUp
+    fmt.Println("Leader is going to setup")
     l.setUp(msg, l.pubKey)
+    fmt.Println("Leader wait for commit")
     l.commitWg.Wait()
 
     l.responseWg = sync.WaitGroup{}
     l.responseWg.Add(len(l.commitBitmap))
     l.state = challenge
+    fmt.Println("Leader is going to challenge")
     l.challenge(msg)
+    fmt.Println("Leader wait for response")
     l.responseWg.Wait()
-
-    return &bean.Signature{R: l.r, S: l.sigmaS.Bytes()}
+    fmt.Println("Leader finish")
+    sig := &bean.Signature{R: l.r, S: l.sigmaS.Bytes()}
+    valid := l.Validate(sig)
+    fmt.Println("valid? ", valid)
+    return sig
 }
 
 func (l *Leader) setUp(msg []byte, pubKey *bean.Point) {
     setup := &bean.Setup{Msg: msg, PubKey: pubKey}
+    fmt.Println("Leader setup ", *setup)
     network.SendMessage(l.members, setup)
 }
 
@@ -82,10 +96,12 @@ func (l *Leader) getR(msg []byte) []byte {
 func (l *Leader) challenge(msg []byte)  {
     l.r = l.getR(msg)
     challenge := &bean.Challenge{SigmaPubKey: l.sigmaPubKey, SigmaQ: l.sigmaQ, R: l.r}
+    fmt.Println("Leader challenge ", *challenge)
     network.SendMessage(l.members, challenge)
 }
 
 func (l *Leader) ProcessCommit(commit *bean.Commitment) {
+    fmt.Println("Leader process commit ", *commit)
     if l.state != setUp {
         return
     }
@@ -104,6 +120,7 @@ func (l *Leader) ProcessCommit(commit *bean.Commitment) {
 }
 
 func (l *Leader) ProcessResponse(response *bean.Response) {
+    fmt.Println("Leader process response ", *response)
     if l.state != challenge {
         return
     }
@@ -118,4 +135,19 @@ func (l *Leader) ProcessResponse(response *bean.Response) {
     l.responseWg.Done()
     s := new(big.Int).SetBytes(response.S)
     l.sigmaS = l.sigmaS.Add(l.sigmaS, s)
+}
+
+func (l *Leader) Validate(sig *bean.Signature) bool {
+    if len(l.responseBitmap) < len(l.commitBitmap) {
+        return false
+    }
+    if float64(len(l.responseBitmap)) < math.Ceil(float64(len(l.members)*2.0/3.0)+1) {
+        return false
+    }
+    challenge := &bean.Challenge{SigmaPubKey: l.sigmaPubKey, SigmaQ: l.sigmaQ, R: l.r}
+    b, err := proto.Marshal(challenge)
+    if err != nil {
+        return false
+    }
+    return crypto.Verify(sig, l.sigmaPubKey, b)
 }
