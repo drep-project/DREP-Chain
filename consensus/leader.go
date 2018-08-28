@@ -134,6 +134,7 @@ func (l *Leader) ProcessResponse(response *bean.Response) {
     l.responseWg.Done()
     s := new(big.Int).SetBytes(response.S)
     l.sigmaS = l.sigmaS.Add(l.sigmaS, s)
+    l.sigmaS.Mod(l.sigmaS, crypto.GetCurve().N)
 }
 
 func (l *Leader) Validate(sig *bean.Signature, msg []byte) bool {
