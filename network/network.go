@@ -4,12 +4,12 @@ import (
    "sync"
    "strconv"
    "net"
-   "strings"
    "BlockChainTest/bean"
    "github.com/golang/protobuf/proto"
    "BlockChainTest/crypto"
    "errors"
    "fmt"
+   "strings"
 )
 
 var onceSender sync.Once
@@ -153,33 +153,33 @@ func startListen(process func(int, interface{})) {
         if err != nil {
            continue
         }
-        b := make([]byte, bufferSize)
-        cipher := b
+        cipher := make([]byte, bufferSize)
+        b := cipher
         offset := 0
         for {
-           n, err := conn.Read(cipher)
+           n, err := conn.Read(b)
            if err != nil {
               break
            } else {
-              cipher = b[n:]
               offset += n
+              b = cipher[offset:]
            }
-           fmt.Println("Receive before decrypt", cipher)
-           message, err := DecryptIntoMessage(cipher)
-           fmt.Println("Receive after decrypt", cipher)
-           if err != nil {
-              return
-           }
-           fromAddr := conn.RemoteAddr().String()
-           ip := fromAddr[:strings.LastIndex(fromAddr, ":")]
-           message.Peer.IP = IP(ip)
-           //queue := GetReceiverQueue()
-           //queue <- message
-           //p := processor.GetInstance()
-           t, msg := identifyMessage(message)
-           if msg != nil {
-              process(t, msg)
-           }
+        }
+        fmt.Println("Receive before decrypt", cipher)
+        message, err := DecryptIntoMessage(cipher[:offset])
+        fmt.Println("Receive after decrypt", message)
+        if err != nil {
+           return
+        }
+        fromAddr := conn.RemoteAddr().String()
+        ip := fromAddr[:strings.LastIndex(fromAddr, ":")]
+        message.Peer.IP = IP(ip)
+        //queue := GetReceiverQueue()
+        //queue <- message
+        //p := processor.GetInstance()
+        t, msg := identifyMessage(message)
+        if msg != nil {
+           process(t, msg)
         }
      }
   }()
