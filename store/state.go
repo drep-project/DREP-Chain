@@ -75,8 +75,8 @@ func GetMiners() []*network.Peer {
     pub1 = curve.ScalarBaseMultiply(k1)
     prv0 = &bean.PrivateKey{Prv: k0, PubKey: pub0}
     prv1 = &bean.PrivateKey{Prv: k1, PubKey: pub1}
-    ip0 = network.IP("192.168.3.43")
-    ip1 = network.IP("192.168.3.13")
+    ip0 = network.IP("192.168.3.13")
+    ip1 = network.IP("192.168.3.43")
     port0 = network.Port(55555)
     port1 = network.Port(55555)
     peer0 = &network.Peer{IP: ip0, Port: port0, PubKey: pub0}
