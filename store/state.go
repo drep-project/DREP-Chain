@@ -9,7 +9,7 @@ import (
 )
 
 
-const index = 1
+const index = 0
 
 var (
     role int
