@@ -8,7 +8,6 @@ import (
     "math/big"
     "BlockChainTest/hash"
     "math"
-    "BlockChainTest/store"
     "BlockChainTest/log"
 )
 
@@ -98,6 +97,19 @@ func (l *Leader) challenge(msg []byte)  {
 func isLegalIndex(index int, bitmap []byte) bool {
     return index >=0 && index <= len(bitmap) && bitmap[index] != 1
 }
+
+func (l *Leader) getMinerIndex(p *bean.Point) int {
+    if l.pubKey.Equal(p) {
+        return -1
+    }
+    for i, v := range l.members {
+        if v.PubKey.Equal(p) {
+            return i
+        }
+    }
+    return -1
+}
+
 func (l *Leader) ProcessCommit(commit *bean.Commitment) {
     log.Println("Leader process commit ", *commit)
     if l.state != setUp {
@@ -106,7 +118,7 @@ func (l *Leader) ProcessCommit(commit *bean.Commitment) {
     //if !store.CheckRole(node.LEADER) {
     //    return
     //}
-    index := store.GetMinerIndex(commit.PubKey)
+    index := l.getMinerIndex(commit.PubKey)
     if !isLegalIndex(index, l.commitBitmap) {
        return
     }
@@ -126,7 +138,7 @@ func (l *Leader) ProcessResponse(response *bean.Response) {
     //if !store.CheckRole(node.LEADER) {
     //    return
     //}
-    index := store.GetMinerIndex(response.PubKey)
+    index := l.getMinerIndex(response.PubKey)
     if !isLegalIndex(index, l.responseBitmap) {
        return
     }
