@@ -7,11 +7,14 @@ import (
     "sync"
     "BlockChainTest/bean"
     "BlockChainTest/hash"
+    "BlockChainTest/node"
 )
 
 const (
     MaximumGenerateKeyRetry = 100
 )
+
+var role = node.LEADER
 
 var CurveInstance *CurveParams
 var KeyInstance *bean.PrivateKey
@@ -75,16 +78,33 @@ func GetRandomKQ() ([]byte, *bean.Point, error) {
 }
 
 func GetPrivateKey() (*bean.PrivateKey, error) {
-    var err error
+    // var err error
     onceKey.Do(func() {
-        prv, pubKey, err0 := GetRandomKQ()
-        if err != nil {
-            err = err0
-            return
+        //prv, pubKey, err0 := GetRandomKQ()
+        //if err != nil {
+        //    err = err0
+        //    return
+        //}
+        //KeyInstance = &bean.PrivateKey{Prv: prv, PubKey: pubKey}
+        curve := GetCurve()
+        k0 := []byte{0x22, 0x11}
+        k1 := []byte{0x14, 0x44}
+        k2 := []byte{0x11, 0x55}
+        pub0 := curve.ScalarBaseMultiply(k0)
+        pub1 := curve.ScalarBaseMultiply(k1)
+        pub2 := curve.ScalarBaseMultiply(k2)
+        prv0 := &bean.PrivateKey{Prv: k0, PubKey: pub0}
+        prv1 := &bean.PrivateKey{Prv: k1, PubKey: pub1}
+        prv2 := &bean.PrivateKey{Prv: k2, PubKey: pub2}
+        if role == node.LEADER {
+            KeyInstance = prv0
+        } else if role == node.MEMBER1 {
+            KeyInstance = prv1
+        } else if role == node.MEMBER2 {
+            KeyInstance = prv2
         }
-        KeyInstance = &bean.PrivateKey{Prv: prv, PubKey: pubKey}
     })
-    return KeyInstance, err
+    return KeyInstance, nil
 }
 
 func GetPubKey() (*bean.Point, error) {
@@ -132,7 +152,7 @@ func Verify(sig *bean.Signature, pubKey *bean.Point, b []byte) bool {
     sG := curve.ScalarBaseMultiply(sig.S)
     rP := curve.ScalarMultiply(pubKey, sig.R)
     Q:= curve.Add(sG, rP)
-    Qx, Qy := new(big.Int).SetBytes(Q.X), new(big.Int).SetBytes(Q.Y)
+    Qx, Qy := Q.Int()
     if Qx.Cmp(Zero) == 0 && Qy.Cmp(Zero) == 0 {
         return false
     }
