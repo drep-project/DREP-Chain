@@ -34,8 +34,8 @@ var (
 
 func init()  {
     lock = &sync.Mutex{}
-    prvKey, _ = crypto.GetPrivateKey()
-    pubKey = GetPubKey()
+    //prvKey, _ = crypto.GetPrivateKey()
+    //pubKey = GetPubKey()
 }
 
 func ChangeRole(r int) {
@@ -82,12 +82,12 @@ func GetMiners() []*network.Peer {
     prv0 = &bean.PrivateKey{Prv: k0, PubKey: pub0}
     prv1 = &bean.PrivateKey{Prv: k1, PubKey: pub1}
     prv2 = &bean.PrivateKey{Prv: k2, PubKey: pub2}
-    ip0 = network.IP("192.168.3.13")
+    ip0 = network.IP("192.168.3.43")
     ip1 = network.IP("192.168.3.43")
-    ip2 = network.IP("192.168.3.73")
+    ip2 = network.IP("192.168.3.43")
     port0 = network.Port(55555)
-    port1 = network.Port(55555)
-    port2 = network.Port(55555)
+    port1 = network.Port(55556)
+    port2 = network.Port(55557)
     peer0 = &network.Peer{IP: ip0, Port: port0, PubKey: pub0}
     peer1 = &network.Peer{IP: ip1, Port: port1, PubKey: pub1}
     peer2 = &network.Peer{IP: ip2, Port: port2, PubKey: pub2}

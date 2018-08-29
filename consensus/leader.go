@@ -112,10 +112,10 @@ func (l *Leader) ProcessCommit(commit *bean.Commitment) {
        return
     }
     l.commitBitmap[addr] = true
-    l.commitWg.Done()
     curve := crypto.GetCurve()
     l.sigmaPubKey = curve.Add(l.sigmaPubKey, commit.PubKey)
     l.sigmaQ = curve.Add(l.sigmaQ, commit.Q)
+    l.commitWg.Done()
 }
 
 func (l *Leader) ProcessResponse(response *bean.Response) {

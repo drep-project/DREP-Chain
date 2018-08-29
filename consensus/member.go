@@ -80,8 +80,12 @@ func (m *Member) ProcessChallenge(challenge *bean.Challenge) {
     fmt.Println("Member process challenge ", *challenge)
     r := hash.ConcatHash256(challenge.SigmaQ.Bytes(), challenge.SigmaPubKey.Bytes(), m.msg)
     r0 := new(big.Int).SetBytes(challenge.R)
-    m.r = new(big.Int).SetBytes(r)
+    rInt := new(big.Int).SetBytes(r)
+    curve := crypto.GetCurve()
+    rInt.Mod(rInt, curve.N)
+    m.r = rInt
     if r0.Cmp(m.r) != 0 {
+        m.challengeWg.Done()
         return// errors.New("wrong hash value")
     }
     m.challengeWg.Done()
