@@ -7,8 +7,8 @@ import (
     "BlockChainTest/crypto"
     "math/big"
     "BlockChainTest/hash"
-    "fmt"
     "math"
+    "BlockChainTest/log"
 )
 
 const (
@@ -23,64 +23,59 @@ type Leader struct {
     LeaderPeer *network.Peer
 
     commitWg sync.WaitGroup
-    commitBitmap map[string] bool
+    commitBitmap []byte
     sigmaPubKey *bean.Point
     sigmaQ *bean.Point
     r []byte
 
     sigmaS *big.Int
     responseWg sync.WaitGroup
-    responseBitmap map[string] bool
+    responseBitmap []byte
 
-    sigs map[bean.Address][]byte
+    //sigs map[bean.Address][]byte
 }
 
 func NewLeader(pubKey *bean.Point, peers []*network.Peer) *Leader {
     l := &Leader{}
     l.pubKey = pubKey
     l.members = make([]*network.Peer, len(peers) - 1)
-    last := 0
-    for _, peer := range peers {
-        if !peer.PubKey.Equal(pubKey) {
-            l.members[last] = peer
-            last++
-        }
-    }
+    l.members = peers
     l.state = waiting
     l.sigmaPubKey = &bean.Point{X: []byte{0x00}, Y: []byte{0x00}}
     l.sigmaQ = &bean.Point{X: []byte{0x00}, Y: []byte{0x00}}
     l.sigmaS = new(big.Int)
-    l.commitBitmap = make(map[string]bool)
-    l.responseBitmap = make(map[string]bool)
+    len := len(l.members)
+    l.commitBitmap = make([]byte, len)
+    l.responseBitmap = make([]byte, len)
     return l
 }
 
-func (l *Leader) ProcessConsensus(msg []byte) *bean.Signature {
+func (l *Leader) ProcessConsensus(msg []byte) (*bean.Signature, []byte) {
     l.commitWg = sync.WaitGroup{}
-    l.commitWg.Add(len(l.members))
+    l.commitWg.Add(len(l.members) - 1)
     l.state = setUp
-    fmt.Println("Leader is going to setup")
+    log.Println("Leader is going to setup")
     l.setUp(msg, l.pubKey)
-    fmt.Println("Leader wait for commit")
+    log.Println("Leader wait for commit")
     l.commitWg.Wait()
 
     l.responseWg = sync.WaitGroup{}
-    l.responseWg.Add(len(l.commitBitmap))
+    l.responseWg.Add(len(l.commitBitmap) - 1)
     l.state = challenge
-    fmt.Println("Leader is going to challenge")
+    log.Println("Leader is going to challenge")
     l.challenge(msg)
-    fmt.Println("Leader wait for response")
+    log.Println("Leader wait for response")
     l.responseWg.Wait()
-    fmt.Println("Leader finish")
+    log.Println("Leader finish")
     sig := &bean.Signature{R: l.r, S: l.sigmaS.Bytes()}
     valid := l.Validate(sig, msg)
-    fmt.Println("valid? ", valid)
-    return sig
+    log.Println("valid? ", valid)
+    return sig, l.responseBitmap
 }
 
 func (l *Leader) setUp(msg []byte, pubKey *bean.Point) {
     setup := &bean.Setup{Msg: msg, PubKey: pubKey}
-    fmt.Println("Leader setup ", *setup)
+    log.Println("Leader setup ", *setup)
     network.SendMessage(l.members, setup)
 }
 
@@ -95,23 +90,40 @@ func (l *Leader) getR(msg []byte) []byte {
 func (l *Leader) challenge(msg []byte)  {
     l.r = l.getR(msg)
     challenge := &bean.Challenge{SigmaPubKey: l.sigmaPubKey, SigmaQ: l.sigmaQ, R: l.r}
-    fmt.Println("Leader challenge ", *challenge)
+    log.Println("Leader challenge ", *challenge)
     network.SendMessage(l.members, challenge)
 }
 
+func isLegalIndex(index int, bitmap []byte) bool {
+    return index >=0 && index <= len(bitmap) && bitmap[index] != 1
+}
+
+func (l *Leader) getMinerIndex(p *bean.Point) int {
+    if l.pubKey.Equal(p) {
+        return -1
+    }
+    for i, v := range l.members {
+        if v.PubKey.Equal(p) {
+            return i
+        }
+    }
+    return -1
+}
+
 func (l *Leader) ProcessCommit(commit *bean.Commitment) {
-    fmt.Println("Leader process commit ", *commit)
+    log.Println("Leader process commit ", *commit)
     if l.state != setUp {
         return
     }
     //if !store.CheckRole(node.LEADER) {
     //    return
     //}
-    addr := commit.PubKey.Addr()
-    if l.commitBitmap[addr] {
+    index := l.getMinerIndex(commit.PubKey)
+    if !isLegalIndex(index, l.commitBitmap) {
        return
     }
-    l.commitBitmap[addr] = true
+    l.commitBitmap[index] = 1
+    //l.commitWg.Done()
     curve := crypto.GetCurve()
     l.sigmaPubKey = curve.Add(l.sigmaPubKey, commit.PubKey)
     l.sigmaQ = curve.Add(l.sigmaQ, commit.Q)
@@ -119,18 +131,18 @@ func (l *Leader) ProcessCommit(commit *bean.Commitment) {
 }
 
 func (l *Leader) ProcessResponse(response *bean.Response) {
-    fmt.Println("Leader process response ", *response)
+    log.Println("Leader process response ", *response)
     if l.state != challenge {
         return
     }
     //if !store.CheckRole(node.LEADER) {
     //    return
     //}
-    addr := response.PubKey.Addr()
-    if l.responseBitmap[addr] {
+    index := l.getMinerIndex(response.PubKey)
+    if !isLegalIndex(index, l.responseBitmap) {
        return
     }
-    l.responseBitmap[addr] = true
+    l.responseBitmap[index] = 1
     l.responseWg.Done()
     s := new(big.Int).SetBytes(response.S)
     l.sigmaS = l.sigmaS.Add(l.sigmaS, s)
