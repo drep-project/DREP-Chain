@@ -33,9 +33,9 @@ func (p *Point) Int() (*big.Int, *big.Int) {
     return new(big.Int).SetBytes(p.X), new(big.Int).SetBytes(p.Y)
 }
 
-func (pubKey *Point) Addr() string {
+func (pubKey *Point) Addr() Address {
     j := pubKey.Bytes()
     h := hash.Hash256(j)
     str := hex.EncodeToString(h[len(h) - AddressLen:])
-    return str
+    return Address(str)
 }
