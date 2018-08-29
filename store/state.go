@@ -16,6 +16,7 @@ var (
     member *consensus.Member
     miningState int
     miners []*network.Peer
+    minerIndex map[bean.Address]int
     peers []*network.Peer
     blockHeight int
     block *bean.Block
@@ -169,4 +170,14 @@ func GetItSelfOnLeader() *consensus.Leader {
 
 func GetItSelfOnMember() *consensus.Member {
     return member
+}
+
+func GetMinerIndex(p *bean.Point) int {
+    if pubKey.Equal(p) {
+        return -1
+    }
+    if index, exist := minerIndex[p.Addr()]; exist {
+        return index
+    }
+    return -1
 }
