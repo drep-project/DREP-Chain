@@ -17,3 +17,9 @@ const (
     MsgTypeChallenge   = 7
     MsgTypeResponse    = 8
 )
+
+const (
+    LEADER    = 0
+    MEMBER    = 1
+    OTHER     = 2
+)

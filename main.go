@@ -4,13 +4,13 @@ import (
 	"BlockChainTest/node"
 	"BlockChainTest/network"
 	"BlockChainTest/processor"
-	"BlockChainTest/store"
 	"time"
-	"BlockChainTest/log"
+	"BlockChainTest/bean"
+	"BlockChainTest/store"
 )
 
 var (
-	role = node.LEADER
+	role = bean.LEADER
 )
 func main()  {
 
@@ -46,14 +46,14 @@ func main()  {
 			p.Process(t, msg)
 		}
 	})
-	store.ChangeRole(role)
 	processor.GetInstance().Start()
-	if role == node.LEADER {
-		s, b := store.GetItSelfOnLeader().ProcessConsensus([]byte{100, 200, 234})
-		log.Println("Leader get sig ", s)
-		log.Println("Leader get bytes ", b)
-	} else {
-		store.GetItSelfOnMember().ProcessConsensus()
-	}
+	node.NewNode(store.GetPrvKey()).Start()
+	//if role == node.LEADER {
+	//	s, b := store.GetItSelfOnLeader().ProcessConsensus([]byte{100, 200, 234})
+	//	log.Println("Leader get sig ", s)
+	//	log.Println("Leader get bytes ", b)
+	//} else {
+	//	store.GetItSelfOnMember().ProcessConsensus()
+	//}
 	time.Sleep(4000 * time.Second)
 }
