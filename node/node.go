@@ -2,8 +2,9 @@ package node
 
 const (
     LEADER     = 0
-    MEMBER      = 1
-    NON_MINER  = 2
+    MEMBER1      = 1
+    MEMBER2 = 2
+    NON_MINER  = 3
 )
 
 //type Miner struct {
