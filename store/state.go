@@ -145,7 +145,7 @@ func GetLeader() *network.Peer {
 }
 
 func GetBlock() *bean.Block {
-    return block
+    return &bean.Block{}
 }
 
 func SetBlock(b *bean.Block) {

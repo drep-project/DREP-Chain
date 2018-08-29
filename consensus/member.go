@@ -7,7 +7,7 @@ import (
     "BlockChainTest/crypto"
     "math/big"
     "BlockChainTest/hash"
-    "fmt"
+    "BlockChainTest/log"
 )
 
 type Member struct {
@@ -25,28 +25,29 @@ type Member struct {
 
 }
 
-func NewMember(leader *network.Peer, prvKey *bean.PrivateKey, pubKey *bean.Point) *Member {
+func NewMember(leader *network.Peer, prvKey *bean.PrivateKey) *Member {
     m := &Member{}
     m.state = waiting
     m.leader = leader
     m.prvKey = prvKey
-    m.pubKey = pubKey
+    m.pubKey = prvKey.PubKey
     return m
 }
-func (m *Member) ProcessConsensus() {
+func (m *Member) ProcessConsensus() []byte {
     m.setUpWg = sync.WaitGroup{}
     m.setUpWg.Add(1)
-    fmt.Println("Member set up wait")
+    log.Println("Member set up wait")
     m.setUpWg.Wait()
-    fmt.Println("Member is going to commit")
+    log.Println("Member is going to commit")
     m.commit()
 
     m.challengeWg = sync.WaitGroup{}
     m.challengeWg.Add(1)
-    fmt.Println("Member challenge wait")
+    log.Println("Member challenge wait")
     m.challengeWg.Wait()
-    fmt.Println("Member is going to response")
+    log.Println("Member is going to response")
     m.response()
+    return m.msg
 }
 
 func (m *Member) ProcessSetUp(setupMsg *bean.Setup) {
@@ -59,7 +60,7 @@ func (m *Member) ProcessSetUp(setupMsg *bean.Setup) {
     if m.state != waiting {
         return
     }
-    fmt.Println("Member process setup ", *setupMsg)
+    log.Println("Member process setup ", *setupMsg)
     m.msg = setupMsg.Msg
     m.setUpWg.Done()
 }
@@ -72,12 +73,12 @@ func (m *Member) commit()  {
     pubKey := m.pubKey
     m.k = k
     commitment := &bean.Commitment{PubKey: pubKey, Q: q}
-    fmt.Println("Member commit ", *commitment)
+    log.Println("Member commit ", *commitment)
     network.SendMessage([]*network.Peer{m.leader}, commitment)
 }
 
 func (m *Member) ProcessChallenge(challenge *bean.Challenge) {
-    fmt.Println("Member process challenge ", *challenge)
+    log.Println("Member process challenge ", *challenge)
     r := hash.ConcatHash256(challenge.SigmaQ.Bytes(), challenge.SigmaPubKey.Bytes(), m.msg)
     r0 := new(big.Int).SetBytes(challenge.R)
     rInt := new(big.Int).SetBytes(r)
@@ -102,6 +103,6 @@ func (m *Member) response()  {
     response := &bean.Response{PubKey: prvKey.PubKey, S: s.Bytes()}
     peers := make([]*network.Peer, 1)
     peers[0] = m.leader
-    fmt.Println("Member response ", *response)
+    log.Println("Member response ", *response)
     network.SendMessage(peers, response)
 }
