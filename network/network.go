@@ -5,9 +5,8 @@ import (
    "strconv"
    "net"
    "BlockChainTest/bean"
-   "github.com/golang/protobuf/proto"
    "BlockChainTest/crypto"
-   "errors"
+   "github.com/golang/protobuf/proto"
    "fmt"
    "strings"
 )
@@ -69,27 +68,30 @@ func GetSenderQueue() chan *Message {
 func (m *Message) Cipher() ([]byte, error) {
    serializable, err := bean.Serialize(m.Msg)
    if err != nil {
-      return nil, err
+     return nil, err
    }
-   sig, err := crypto.Sign(serializable.Body)
-   if err != nil {
-      return nil, err
-   }
-   serializable.Sig = sig
-   pubKey, err := crypto.GetPubKey()
-   if err != nil {
-      return nil, err
-   }
-   serializable.PubKey = pubKey
-   plaintext, err := proto.Marshal(serializable)
-   if err != nil {
-      return nil, err
-   }
-   cipher, err := crypto.Encrypt(m.Peer.PubKey, plaintext)
-   if err != nil {
-      return nil, err
-   }
-   return cipher, nil
+   //sig, err := crypto.Sign(serializable.Body)
+   //if err != nil {
+   //   return nil, err
+   //}
+   //serializable.Sig = sig
+   //pubKey, err := crypto.GetPubKey()
+   //if err != nil {
+   //   return nil, err
+   //}
+   //serializable.PubKey = pubKey
+   //plaintext, err := proto.Marshal(serializable)
+   //if err != nil {
+   //   return nil, err
+   //}
+   //cipher, err := crypto.Encrypt(m.Peer.PubKey, plaintext)
+   //if err != nil {
+   //   return nil, err
+   //}
+   //return cipher, nil
+   serializable.Sig = &bean.Signature{R: []byte{0x00}, S: []byte{0x00}}
+   serializable.PubKey = &bean.Point{X: []byte{0x00}, Y: []byte{0x00}}
+   return proto.Marshal(serializable)
 }
 
 func (m *Message) Send() error {
@@ -130,9 +132,9 @@ func DecryptIntoMessage(cipher []byte) (*Message, error) {
    if err != nil {
       return nil, err
    }
-   if !crypto.Verify(serializable.Sig, serializable.PubKey, serializable.Body) {
-      return nil, errors.New("decrypt fail")
-   }
+   //if !crypto.Verify(serializable.Sig, serializable.PubKey, serializable.Body) {
+   //   return nil, errors.New("decrypt fail")
+   //}
    peer := &Peer{PubKey: serializable.PubKey}
    message := &Message{Peer: peer, Msg: msg}
    return message, nil

@@ -43,3 +43,8 @@ message transaction {
 	transaction_data data = 1;
 	signature sig = 2;
 }
+
+message multi_signature {
+    signature sig = 1;
+    bytes bitmap = 2;
+}
