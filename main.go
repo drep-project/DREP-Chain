@@ -6,7 +6,7 @@ import (
 	"BlockChainTest/processor"
 	"BlockChainTest/store"
 	"time"
-	"fmt"
+	"BlockChainTest/log"
 )
 
 var (
@@ -49,8 +49,9 @@ func main()  {
 	store.ChangeRole(role)
 	processor.GetInstance().Start()
 	if role == node.LEADER {
-		s := store.GetItSelfOnLeader().ProcessConsensus([]byte{100, 200, 234})
-		fmt.Println("Leader get sig ", s)
+		s, b := store.GetItSelfOnLeader().ProcessConsensus([]byte{100, 200, 234})
+		log.Println("Leader get sig ", s)
+		log.Println("Leader get bytes ", b)
 	} else {
 		store.GetItSelfOnMember().ProcessConsensus()
 	}
