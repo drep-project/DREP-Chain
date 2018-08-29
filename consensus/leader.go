@@ -52,7 +52,7 @@ func NewLeader(pubKey *bean.Point, peers []*network.Peer) *Leader {
 
 func (l *Leader) ProcessConsensus(msg []byte) (*bean.Signature, []byte) {
     l.commitWg = sync.WaitGroup{}
-    l.commitWg.Add(len(l.members))
+    l.commitWg.Add(len(l.members) - 1)
     l.state = setUp
     log.Println("Leader is going to setup")
     l.setUp(msg, l.pubKey)
@@ -60,7 +60,7 @@ func (l *Leader) ProcessConsensus(msg []byte) (*bean.Signature, []byte) {
     l.commitWg.Wait()
 
     l.responseWg = sync.WaitGroup{}
-    l.responseWg.Add(len(l.commitBitmap))
+    l.responseWg.Add(len(l.commitBitmap) - 1)
     l.state = challenge
     log.Println("Leader is going to challenge")
     l.challenge(msg)
@@ -123,7 +123,7 @@ func (l *Leader) ProcessCommit(commit *bean.Commitment) {
        return
     }
     l.commitBitmap[index] = 1
-    l.commitWg.Done()
+    //l.commitWg.Done()
     curve := crypto.GetCurve()
     l.sigmaPubKey = curve.Add(l.sigmaPubKey, commit.PubKey)
     l.sigmaQ = curve.Add(l.sigmaQ, commit.Q)
