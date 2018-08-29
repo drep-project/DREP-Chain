@@ -72,9 +72,14 @@ func (l *Leader) ProcessConsensus(msg []byte) *bean.Signature {
     fmt.Println("Leader wait for response")
     l.responseWg.Wait()
     fmt.Println("Leader finish")
+    fmt.Println("leader r: ", new(big.Int).SetBytes(l.r))
+    // time.Sleep(10 * time.Second)
     sig := &bean.Signature{R: l.r, S: l.sigmaS.Bytes()}
     valid := l.Validate(sig, msg)
     fmt.Println("valid? ", valid)
+    sumx, sumy := l.sigmaQ.Int()
+    fmt.Println("sumx: ", sumx)
+    fmt.Println("sumy: ", sumy)
     return sig
 }
 
@@ -89,6 +94,9 @@ func (l *Leader) getR(msg []byte) []byte {
     r := hash.ConcatHash256(l.sigmaQ.Bytes(), l.sigmaPubKey.Bytes(), msg)
     rInt := new(big.Int).SetBytes(r)
     rInt.Mod(rInt, curve.N)
+    sQx, sQy := l.sigmaQ.Int()
+    fmt.Println("sQx: ", sQx)
+    fmt.Println("sQy: ", sQy)
     return rInt.Bytes()
 }
 
@@ -112,10 +120,17 @@ func (l *Leader) ProcessCommit(commit *bean.Commitment) {
        return
     }
     l.commitBitmap[addr] = true
-    l.commitWg.Done()
+    //l.commitWg.Done()
     curve := crypto.GetCurve()
     l.sigmaPubKey = curve.Add(l.sigmaPubKey, commit.PubKey)
     l.sigmaQ = curve.Add(l.sigmaQ, commit.Q)
+    randx, randy := commit.Q.Int()
+    fmt.Println("**********************randx********************", randx)
+    fmt.Println("**********************randy********************", randy)
+    freshx, freshy := l.sigmaQ.Int()
+    fmt.Println("**********************freshx*******************", freshx)
+    fmt.Println("**********************freshy*******************", freshy)
+    l.commitWg.Done()
 }
 
 func (l *Leader) ProcessResponse(response *bean.Response) {

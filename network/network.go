@@ -165,7 +165,6 @@ func startListen(process func(int, interface{})) {
               b = cipher[offset:]
            }
         }
-        fmt.Println("Receive before decrypt", cipher)
         message, err := DecryptIntoMessage(cipher[:offset])
         fmt.Println("Receive after decrypt", message)
         if err != nil {

@@ -19,6 +19,7 @@ type Member struct {
 
     k []byte
     r *big.Int
+    q *bean.Point
 
     setUpWg sync.WaitGroup
     challengeWg sync.WaitGroup
@@ -71,8 +72,15 @@ func (m *Member) commit()  {
     }
     pubKey := m.pubKey
     m.k = k
+    m.q = q
     commitment := &bean.Commitment{PubKey: pubKey, Q: q}
     fmt.Println("Member commit ", *commitment)
+    randx, randy := q.Int()
+    fmt.Println("----------------randx-------------------: ", randx)
+    fmt.Println("----------------randy-------------------: ", randy)
+    qx, qy := commitment.PubKey.Int()
+    fmt.Println("member pubkey x: ", qx)
+    fmt.Println("member pubkey y: ", qy)
     network.SendMessage([]*network.Peer{m.leader}, commitment)
 }
 
@@ -80,8 +88,12 @@ func (m *Member) ProcessChallenge(challenge *bean.Challenge) {
     fmt.Println("Member process challenge ", *challenge)
     r := hash.ConcatHash256(challenge.SigmaQ.Bytes(), challenge.SigmaPubKey.Bytes(), m.msg)
     r0 := new(big.Int).SetBytes(challenge.R)
-    m.r = new(big.Int).SetBytes(r)
+    rInt := new(big.Int).SetBytes(r)
+    curve := crypto.GetCurve()
+    rInt.Mod(rInt, curve.N)
+    m.r = rInt
     if r0.Cmp(m.r) != 0 {
+        m.challengeWg.Done()
         return// errors.New("wrong hash value")
     }
     m.challengeWg.Done()
@@ -99,5 +111,25 @@ func (m *Member) response()  {
     peers := make([]*network.Peer, 1)
     peers[0] = m.leader
     fmt.Println("Member response ", *response)
+    fmt.Println("member s: ", s)
+    fmt.Println()
+    fmt.Println("(((((((((((((((((((((((((((((())))))))))))))))))))))")
+    sG := curve.ScalarBaseMultiply(s.Bytes())
+    sGx, sGy := sG.Int()
+    fmt.Println("sGx: ", sGx)
+    fmt.Println("sGy: ", sGy)
+    rP := curve.ScalarMultiply(m.pubKey, m.r.Bytes())
+    rPx, rPy := rP.Int()
+    fmt.Println("rPx: ", rPx)
+    fmt.Println("rPy: ", rPy)
+    qx, qy := m.q.Int()
+    fmt.Println("qx: ", qx)
+    fmt.Println("qy: ", qy)
+    logic := curve.Add(sG, rP)
+    logx, logy := logic.Int()
+    fmt.Println("logx: ", logx)
+    fmt.Println("logy: ", logy)
+    fmt.Println("(((((((((((((((((((((((((((((())))))))))))))))))))))")
+    fmt.Println()
     network.SendMessage(peers, response)
 }
