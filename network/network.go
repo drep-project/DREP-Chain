@@ -111,10 +111,13 @@ func (m *Message) Send() error {
    }
    defer conn.Close()
    fmt.Println("Send msg to ",m.Peer.ToString(), cipher)
-   if _, err := conn.Write(cipher); err != nil {
+   if num, err := conn.Write(cipher); err != nil {
+      fmt.Println("Send error ", err)
       return err
+   } else {
+      fmt.Println("Send bytes ", num)
+      return nil
    }
-   return nil
 }
 
 func SendMessage(peers []*Peer, msg interface{}) {
@@ -171,6 +174,7 @@ func startListen(process func(int, interface{})) {
            }
         }
         fmt.Println("Receive ", cipher[:offset])
+        fmt.Println("Receive byte ", offset)
         message, err := DecryptIntoMessage(cipher[:offset])
         fmt.Println("Receive after decrypt", message)
         if err != nil {
