@@ -152,6 +152,7 @@ func startListen(process func(int, interface{})) {
         return
      }
      for {
+        fmt.Println("start listen")
         conn, err := listener.AcceptTCP()
         fmt.Println("listen from ", conn.RemoteAddr())
         if err != nil {
@@ -169,6 +170,7 @@ func startListen(process func(int, interface{})) {
               b = cipher[offset:]
            }
         }
+        fmt.Println("Receive ", cipher[:offset])
         message, err := DecryptIntoMessage(cipher[:offset])
         fmt.Println("Receive after decrypt", message)
         if err != nil {
@@ -184,6 +186,7 @@ func startListen(process func(int, interface{})) {
         if msg != nil {
            process(t, msg)
         }
+        fmt.Println("end listen")
      }
   }()
 }
