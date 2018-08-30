@@ -30,7 +30,7 @@ var (
 
 func init()  {
     lock = &sync.Mutex{}
-    currentMinerIndex = -1
+    currentMinerIndex = 0
     //prvKey, _ = crypto.GetPrivateKey()
     //pubKey = GetPubKey()
     curve := crypto.GetCurve()
