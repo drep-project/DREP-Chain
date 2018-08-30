@@ -7,7 +7,6 @@ import (
 )
 
 type SetUpProcessor struct {
-    setUp *bean.Setup
 }
 
 func (p *SetUpProcessor) process(msg interface{}) {
@@ -15,16 +14,9 @@ func (p *SetUpProcessor) process(msg interface{}) {
         if member := store.GetItSelfOnMember(); member != nil {
             if !member.ProcessSetUp(setUp) {
                 log.Println("SOS Help ", *setUp)
-                p.setUp = setUp
+                store.SetRemainingSetup(setUp)
             }
         }
-    }
-}
-
-func (p *SetUpProcessor) processRemaining()  {
-    if p.setUp != nil {
-        p.process(p.setUp)
-        p.setUp = nil
     }
 }
 

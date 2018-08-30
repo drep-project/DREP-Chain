@@ -37,9 +37,14 @@ func NewMember(leader *network.Peer, prvKey *bean.PrivateKey) *Member {
     m.challengeWg.Add(1)
     return m
 }
-func (m *Member) ProcessConsensus() []byte {
-
+func (m *Member) ProcessConsensus(remainingSetup *bean.Setup, cleanup func()) []byte {
     log.Println("Member set up wait")
+    if remainingSetup != nil {
+        log.Println("Member has a remainingSetup")
+        m.ProcessSetUp(remainingSetup)
+        cleanup()
+        log.Println("Member finish the remainingSetup")
+    }
     m.setUpWg.Wait()
     log.Println("Member is going to commit")
     m.commit()

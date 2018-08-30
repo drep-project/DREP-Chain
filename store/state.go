@@ -24,6 +24,7 @@ var (
     prvKey *bean.PrivateKey
     pubKey *bean.Point
     address bean.Address
+    remainingSetUp *bean.Setup
 
     currentMinerIndex int
     myIndex = 0
@@ -177,4 +178,12 @@ func GetItSelfOnLeader() *consensus.Leader {
 
 func GetItSelfOnMember() *consensus.Member {
     return member
+}
+
+func SetRemainingSetup(setup *bean.Setup)  {
+    remainingSetUp = setup
+}
+
+func GetRemainingSetup() *bean.Setup {
+    return remainingSetUp
 }
