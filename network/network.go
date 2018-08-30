@@ -54,7 +54,7 @@ func identifyMessage(message *Message) (int, interface{}) {
    case *bean.Response:
       return bean.MsgTypeResponse, msg.(*bean.Response)
    case *bean.Block:
-      return bean.MsgTypeBlock, msg.(*bean.Response)
+      return bean.MsgTypeBlock, msg.(*bean.Block)
    default:
       return -1, nil
    }
