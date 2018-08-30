@@ -7,6 +7,7 @@ import (
     "BlockChainTest/consensus"
     "BlockChainTest/crypto"
     "BlockChainTest/log"
+    "math/big"
 )
 
 var (
@@ -149,7 +150,9 @@ func GetLeader() *network.Peer {
 }
 
 func GetBlock() *bean.Block {
-    return &bean.Block{}
+    height := currentBlockHeight
+    height.Add(height, big.NewInt(1))
+    return &bean.Block{Header: &bean.BlockHeader{Height: height.Bytes()}}
 }
 
 func SetBlock(b *bean.Block) {
