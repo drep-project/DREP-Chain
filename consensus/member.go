@@ -31,18 +31,19 @@ func NewMember(leader *network.Peer, prvKey *bean.PrivateKey) *Member {
     m.leader = leader
     m.prvKey = prvKey
     m.pubKey = prvKey.PubKey
+    m.setUpWg = sync.WaitGroup{}
+    m.setUpWg.Add(1)
+    m.challengeWg = sync.WaitGroup{}
+    m.challengeWg.Add(1)
     return m
 }
 func (m *Member) ProcessConsensus() []byte {
-    m.setUpWg = sync.WaitGroup{}
-    m.setUpWg.Add(1)
+
     log.Println("Member set up wait")
     m.setUpWg.Wait()
     log.Println("Member is going to commit")
     m.commit()
 
-    m.challengeWg = sync.WaitGroup{}
-    m.challengeWg.Add(1)
     log.Println("Member challenge wait")
     m.challengeWg.Wait()
     log.Println("Member is going to response")

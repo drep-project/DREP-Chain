@@ -47,12 +47,13 @@ func NewLeader(pubKey *bean.Point, peers []*network.Peer) *Leader {
     len := len(l.members)
     l.commitBitmap = make([]byte, len)
     l.responseBitmap = make([]byte, len)
+    l.commitWg = sync.WaitGroup{}
+    l.commitWg.Add(len - 1)
     return l
 }
 
 func (l *Leader) ProcessConsensus(msg []byte) (*bean.Signature, []byte) {
-    l.commitWg = sync.WaitGroup{}
-    l.commitWg.Add(len(l.members) - 1)
+
     l.state = setUp
     log.Println("Leader is going to setup")
     l.setUp(msg, l.pubKey)

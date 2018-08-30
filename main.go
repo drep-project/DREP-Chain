@@ -5,13 +5,9 @@ import (
 	"BlockChainTest/network"
 	"BlockChainTest/processor"
 	"time"
-	"BlockChainTest/bean"
 	"BlockChainTest/store"
 )
 
-var (
-	role = bean.LEADER
-)
 func main()  {
 
 	//messages := make(chan *common.Message, 100)
