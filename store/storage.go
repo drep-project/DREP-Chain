@@ -23,7 +23,7 @@ func SetBalance(addr bean.Address, bal big.Int) {
 }
 
 func ExecuteTransactions(b *bean.Block) {
-    if b == nil || b.Header == nil || b.Data == nil || b.Data.TxList == nil {
+    if b == nil || b.Header == nil { // || b.Data == nil || b.Data.TxList == nil {
         return
     }
     currentBlockHeight.SetBytes(b.Header.Height)
