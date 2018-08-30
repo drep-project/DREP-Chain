@@ -5,6 +5,7 @@ import (
     "BlockChainTest/crypto"
     "BlockChainTest/bean"
     "BlockChainTest/store"
+    "BlockChainTest/node"
 )
 
 var curve = crypto.InitCurve()
@@ -47,5 +48,15 @@ func (p *transactionProcessor) process(msg interface{})  {
         if checkTransaction(transaction) {
             store.AddTransaction(transaction)
         }
+    }
+}
+
+type BlockProcessor struct {
+
+}
+
+func (p *BlockProcessor) process(msg interface{}) {
+    if block, ok := msg.(*bean.Block); ok {
+        node.GetNode(nil).ProcessBlock(block)
     }
 }

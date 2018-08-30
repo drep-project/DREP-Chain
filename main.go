@@ -43,7 +43,7 @@ func main()  {
 		}
 	})
 	processor.GetInstance().Start()
-	node.NewNode(store.GetPrvKey()).Start()
+	node.GetNode(store.GetPrvKey()).Start()
 	//if role == node.LEADER {
 	//	s, b := store.GetItSelfOnLeader().ProcessConsensus([]byte{100, 200, 234})
 	//	log.Println("Leader get sig ", s)
