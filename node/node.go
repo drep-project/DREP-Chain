@@ -8,6 +8,7 @@ import (
     "sync"
     "BlockChainTest/log"
     "BlockChainTest/network"
+    "time"
 )
 
 var (
@@ -43,6 +44,7 @@ func (n *Node) isLeader() bool {
 
 func (n *Node) Start() {
     for {
+        time.Sleep(3 * time.Second)
         log.Println("node start")
         store.ChangeRole()
         switch store.GetRole() {
@@ -112,5 +114,6 @@ func (n *Node) runAsOther() {
 
 func (n *Node) ProcessBlock(block *bean.Block) {
     log.Println("node receive block", *block)
+    store.ExecuteTransactions(block)
     n.wg.Done()
 }
