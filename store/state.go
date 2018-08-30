@@ -153,6 +153,7 @@ func GetLeader() *network.Peer {
 func GetBlock() *bean.Block {
     height := currentBlockHeight
     height.Add(height, big.NewInt(1))
+    currentBlockHeight = height
     return &bean.Block{Header: &bean.BlockHeader{Height: height.Bytes()}}
 }
 
