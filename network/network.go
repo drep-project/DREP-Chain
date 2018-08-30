@@ -110,7 +110,7 @@ func (m *Message) Send() error {
      return err
    }
    defer conn.Close()
-   fmt.Println("Send msg:", cipher)
+   fmt.Println("Send msg to ",m.Peer.ToString(), cipher)
    if _, err := conn.Write(cipher); err != nil {
       return err
    }
