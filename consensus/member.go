@@ -51,19 +51,20 @@ func (m *Member) ProcessConsensus() []byte {
     return m.msg
 }
 
-func (m *Member) ProcessSetUp(setupMsg *bean.Setup) {
+func (m *Member) ProcessSetUp(setupMsg *bean.Setup) bool {
     //if !store.CheckRole(node.MINER) {
     //    return
     //}
     if !m.leader.PubKey.Equal(setupMsg.PubKey) {
-        return
+        return false
     }
     if m.state != waiting {
-        return
+        return false
     }
     log.Println("Member process setup ", *setupMsg)
     m.msg = setupMsg.Msg
     m.setUpWg.Done()
+    return true
 }
 
 func (m *Member) commit()  {

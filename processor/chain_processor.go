@@ -52,11 +52,12 @@ func (p *transactionProcessor) process(msg interface{})  {
 }
 
 type BlockProcessor struct {
-
+    processor *Processor
 }
 
 func (p *BlockProcessor) process(msg interface{}) {
     if block, ok := msg.(*bean.Block); ok {
         node.GetNode(nil).ProcessBlock(block)
+        p.processor.processRemaining()
     }
 }

@@ -3,16 +3,28 @@ package processor
 import (
     "BlockChainTest/bean"
     "BlockChainTest/store"
+    "BlockChainTest/log"
 )
 
 type SetUpProcessor struct {
+    setUp *bean.Setup
 }
 
 func (p *SetUpProcessor) process(msg interface{}) {
     if setUp, ok := msg.(*bean.Setup); ok {
         if member := store.GetItSelfOnMember(); member != nil {
-            member.ProcessSetUp(setUp)
+            if !member.ProcessSetUp(setUp) {
+                log.Println("SOS Help ", *setUp)
+                p.setUp = setUp
+            }
         }
+    }
+}
+
+func (p *SetUpProcessor) processRemaining()  {
+    if p.setUp != nil {
+        p.process(p.setUp)
+        p.setUp = nil
     }
 }
 

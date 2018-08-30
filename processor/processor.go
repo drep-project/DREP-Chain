@@ -32,7 +32,7 @@ func (p *Processor) init()  {
     p.processors[bean.MsgTypeChallenge] = &ChallengeProcessor{}
     p.processors[bean.MsgTypeCommitment] = &CommitProcessor{}
     p.processors[bean.MsgTypeResponse] = &ResponseProcessor{}
-    p.processors[bean.MsgTypeBlock] = &BlockProcessor{}
+    p.processors[bean.MsgTypeBlock] = &BlockProcessor{p}
 }
 
 func GetInstance() *Processor {
@@ -51,6 +51,13 @@ func (p *Processor) Start() {
             }
         }
     }()
+}
+
+func (p *Processor) processRemaining() {
+    processor := p.processors[bean.MsgTypeSetUp]
+    if pr, ok := processor.(*SetUpProcessor); ok {
+        pr.processRemaining()
+    }
 }
 
 func (p *Processor) Process(t int, msg interface{}) {
