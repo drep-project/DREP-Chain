@@ -81,13 +81,7 @@ func (n *Node) runAsLeader() {
 }
 
 func (n *Node) sendBlock(block *bean.Block) {
-    peers := make([]*network.Peer, 0)
-    for _, v := range store.GetPeers() {
-        if v.PubKey.Equal(store.GetPubKey()) {
-            continue
-        }
-        peers = append(peers, v)
-    }
+    peers := store.GetPeersExcludingItself()
     network.SendMessage(peers, block)
 }
 
