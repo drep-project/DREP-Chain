@@ -34,3 +34,7 @@ func ExecuteTransactions(b *bean.Block) {
 
 func execute(t *bean.Transaction)  {
 }
+
+func GetCurrentBlockHeight() *big.Int {
+    return currentBlockHeight
+}

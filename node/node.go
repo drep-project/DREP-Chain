@@ -56,6 +56,7 @@ func (n *Node) Start() {
             n.runAsOther()
         }
         log.Println("node stop")
+        log.Println("Current height ", *store.GetCurrentBlockHeight())
     }
 }
 
