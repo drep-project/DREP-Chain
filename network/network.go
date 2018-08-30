@@ -53,6 +53,8 @@ func identifyMessage(message *Message) (int, interface{}) {
       return bean.MsgTypeChallenge, msg.(*bean.Challenge)
    case *bean.Response:
       return bean.MsgTypeResponse, msg.(*bean.Response)
+   case *bean.Block:
+      return bean.MsgTypeBlock, msg.(*bean.Block)
    default:
       return -1, nil
    }
@@ -95,6 +97,7 @@ func (m *Message) Cipher() ([]byte, error) {
 }
 
 func (m *Message) Send() error {
+   // If sleep 1000 here, haha
    cipher, err := m.Cipher()
    if err != nil {
       return err
@@ -108,11 +111,14 @@ func (m *Message) Send() error {
      return err
    }
    defer conn.Close()
-   fmt.Println("Send msg:", cipher)
-   if _, err := conn.Write(cipher); err != nil {
+   fmt.Println("Send msg to ",m.Peer.ToString(), cipher)
+   if num, err := conn.Write(cipher); err != nil {
+      fmt.Println("Send error ", err)
       return err
+   } else {
+      fmt.Println("Send bytes ", num)
+      return nil
    }
-   return nil
 }
 
 func SendMessage(peers []*Peer, msg interface{}) {
@@ -150,6 +156,7 @@ func startListen(process func(int, interface{})) {
         return
      }
      for {
+        fmt.Println("start listen")
         conn, err := listener.AcceptTCP()
         fmt.Println("listen from ", conn.RemoteAddr())
         if err != nil {
@@ -167,6 +174,8 @@ func startListen(process func(int, interface{})) {
               b = cipher[offset:]
            }
         }
+        fmt.Println("Receive ", cipher[:offset])
+        fmt.Println("Receive byte ", offset)
         message, err := DecryptIntoMessage(cipher[:offset])
         fmt.Println("Receive after decrypt", message)
         if err != nil {
@@ -182,6 +191,7 @@ func startListen(process func(int, interface{})) {
         if msg != nil {
            process(t, msg)
         }
+        fmt.Println("end listen")
      }
   }()
 }

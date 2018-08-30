@@ -7,28 +7,31 @@ import (
     "github.com/golang/protobuf/proto"
     "sync"
     "BlockChainTest/log"
+    "BlockChainTest/network"
+    "time"
 )
 
-const (
-    //LEADER     = 0
-    //MEMBER1      = 1
-    //MEMBER2 = 2
-    //NON_MINER  = 3
-    LEADER    = 0
-    MEMBER    = 1
-    OTHER     = 2
+var (
+    once sync.Once
+    node *Node
 )
 
 type Node struct {
-    role int
     address *bean.Address
     prvKey *bean.PrivateKey
     wg *sync.WaitGroup
 }
 
-func NewNode(role int, prvKey *bean.PrivateKey) *Node {
+func newNode(prvKey *bean.PrivateKey) *Node {
     address := prvKey.PubKey.Addr()
-    return &Node{role: role, address: &address, prvKey: prvKey}
+    return &Node{address: &address, prvKey: prvKey}
+}
+
+func GetNode(prvKey *bean.PrivateKey) *Node {
+    once.Do(func() {
+        node = newNode(prvKey)
+    })
+    return node
 }
 
 func (n *Node) isLeader() bool {
@@ -41,21 +44,25 @@ func (n *Node) isLeader() bool {
 
 func (n *Node) Start() {
     for {
+        time.Sleep(3 * time.Second)
         log.Println("node start")
+        store.ChangeRole()
         switch store.GetRole() {
-        case LEADER:
+        case bean.LEADER:
             n.runAsLeader()
-        case MEMBER:
+        case bean.MEMBER:
             n.runAsMember()
-        case OTHER:
+        case bean.OTHER:
             n.runAsOther()
         }
         log.Println("node stop")
+        log.Println("Current height ", *store.GetCurrentBlockHeight())
     }
 }
 
 func (n *Node) runAsLeader() {
     leader1 := consensus.NewLeader(n.prvKey.PubKey, store.GetMiners())
+    store.SetLeader(leader1)
     block := store.GetBlock()
     log.Println("node leader is preparing process consensus for round 1")
     if msg, err := proto.Marshal(block); err ==nil {
@@ -65,25 +72,44 @@ func (n *Node) runAsLeader() {
         log.Println("node leader is preparing process consensus for round 2")
         if msg, err := proto.Marshal(multiSig); err == nil {
             leader2 := consensus.NewLeader(n.prvKey.PubKey, store.GetMiners())
+            store.SetLeader(leader2)
             log.Println("node leader is going to process consensus for round 2")
             leader2.ProcessConsensus(msg)
             log.Println("node leader finishes process consensus for round 2")
+            log.Println("node leader is going to send block")
+            n.sendBlock(block)
+            log.Println("node leader finishes sending block")
         }
     }
 }
 
+func (n *Node) sendBlock(block *bean.Block) {
+    peers := store.GetPeersExcludingItself()
+    network.SendMessage(peers, block)
+}
+
 func (n *Node) runAsMember() {
     member1 := consensus.NewMember(store.GetLeader(), store.GetPrvKey())
+    store.SetMember(member1)
     log.Println("node member is going to process consensus for round 1")
-    bytes := member1.ProcessConsensus()
+    setUp := store.GetRemainingSetup()
+    var bytes []byte
+    if setUp != nil {
+        bytes = member1.ProcessConsensus(setUp, func() {
+            store.SetRemainingSetup(nil)
+        })
+    } else {
+        bytes = member1.ProcessConsensus(nil, nil)
+    }
     log.Println("node member finishes consensus for round 1")
     block := &bean.Block{}
     n.wg = &sync.WaitGroup{}
     n.wg.Add(1)
-    if proto.Unmarshal(bytes, block) != nil {
+    if proto.Unmarshal(bytes, block) == nil {
         member2 := consensus.NewMember(store.GetLeader(), store.GetPrvKey())
+        store.SetMember(member2)
         log.Println("node member is going to process consensus for round 2")
-        member2.ProcessConsensus()
+        member2.ProcessConsensus(nil, nil)
         log.Println("node member finishes consensus for round 2")
     }
     log.Println("node member is going to wait")
@@ -95,7 +121,8 @@ func (n *Node) runAsOther() {
 
 }
 
-func (n *Node) processBlock(block *bean.Block) {
-    log.Println("Receive ", *block)
+func (n *Node) ProcessBlock(block *bean.Block) {
+    log.Println("node receive block", *block)
+    store.ExecuteTransactions(block)
     n.wg.Done()
 }
