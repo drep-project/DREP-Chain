@@ -27,6 +27,9 @@ func ExecuteTransactions(b *bean.Block) {
         return
     }
     currentBlockHeight.SetBytes(b.Header.Height)
+    if b.Data == nil || b.Data.TxList == nil {
+        return
+    }
     for _, t := range b.Data.TxList {
         execute(t)
     }
