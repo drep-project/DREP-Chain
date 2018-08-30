@@ -97,6 +97,7 @@ func (m *Message) Cipher() ([]byte, error) {
 }
 
 func (m *Message) Send() error {
+   // If sleep 1000 here, haha
    cipher, err := m.Cipher()
    if err != nil {
       return err
