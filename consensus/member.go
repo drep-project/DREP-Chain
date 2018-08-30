@@ -102,8 +102,6 @@ func (m *Member) response()  {
     s.Sub(k, s)
     s.Mod(s, curve.N)
     response := &bean.Response{PubKey: prvKey.PubKey, S: s.Bytes()}
-    peers := make([]*network.Peer, 1)
-    peers[0] = m.leader
     log.Println("Member response ", *response)
-    network.SendMessage(peers, response)
+    network.SendMessage([]*network.Peer{m.leader}, response)
 }
