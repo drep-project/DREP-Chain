@@ -126,6 +126,16 @@ func GetPeers() []*network.Peer {
     return peers
 }
 
+func GetPeersExcludingItself() []*network.Peer {
+    result := make([]*network.Peer, 0)
+    for _, v := range peers {
+        if !v.PubKey.Equal(pubKey) {
+            result = append(result, v)
+        }
+    }
+    return result
+}
+
 func GetBlockHeight() int {
     return blockHeight
 }

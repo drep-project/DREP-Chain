@@ -39,11 +39,14 @@ func NewLeader(pubKey *bean.Point, members []*network.Peer) *Leader {
     l := &Leader{}
     l.pubKey = pubKey
     l.members = make([]*network.Peer, len(members) - 1)
+    last := -1
     for _, v := range members {
         if v.PubKey.Equal(pubKey) {
             continue
         }
-        l.members = append(l.members, v)
+        last++
+        l.members[last] = v
+        //l.members = append(l.members, v)
     }
     l.state = waiting
     l.sigmaPubKey = &bean.Point{X: []byte{0x00}, Y: []byte{0x00}}
