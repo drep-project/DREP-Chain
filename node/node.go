@@ -74,10 +74,21 @@ func (n *Node) runAsLeader() {
             leader2.ProcessConsensus(msg)
             log.Println("node leader finishes process consensus for round 2")
             log.Println("node leader is going to send block")
-            network.SendMessage(store.GetPeers(), block)
+            n.sendBlock(block)
             log.Println("node leader finishes sending block")
         }
     }
+}
+
+func (n *Node) sendBlock(block *bean.Block) {
+    peers := make([]*network.Peer, 0)
+    for _, v := range store.GetPeers() {
+        if v.PubKey.Equal(store.GetPubKey()) {
+            continue
+        }
+        peers = append(peers, v)
+    }
+    network.SendMessage(peers, block)
 }
 
 func (n *Node) runAsMember() {
