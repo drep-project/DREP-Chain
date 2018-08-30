@@ -25,7 +25,7 @@ var (
     address bean.Address
 
     currentMinerIndex int
-    myIndex int
+    myIndex = 0
 )
 
 func init()  {
@@ -135,7 +135,7 @@ func CheckRole(r int) bool {
 }
 
 func GetLeader() *network.Peer {
-    return nil
+    return miners[currentMinerIndex]
 }
 
 func GetBlock() *bean.Block {
