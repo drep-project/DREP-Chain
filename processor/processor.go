@@ -32,6 +32,7 @@ func (p *Processor) init()  {
     p.processors[bean.MsgTypeChallenge] = &ChallengeProcessor{}
     p.processors[bean.MsgTypeCommitment] = &CommitProcessor{}
     p.processors[bean.MsgTypeResponse] = &ResponseProcessor{}
+    p.processors[bean.MsgTypeBlock] = &BlockProcessor{p}
 }
 
 func GetInstance() *Processor {

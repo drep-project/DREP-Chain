@@ -31,18 +31,24 @@ func NewMember(leader *network.Peer, prvKey *bean.PrivateKey) *Member {
     m.leader = leader
     m.prvKey = prvKey
     m.pubKey = prvKey.PubKey
-    return m
-}
-func (m *Member) ProcessConsensus() []byte {
     m.setUpWg = sync.WaitGroup{}
     m.setUpWg.Add(1)
+    m.challengeWg = sync.WaitGroup{}
+    m.challengeWg.Add(1)
+    return m
+}
+func (m *Member) ProcessConsensus(remainingSetup *bean.Setup, cleanup func()) []byte {
     log.Println("Member set up wait")
+    if remainingSetup != nil {
+        log.Println("Member has a remainingSetup")
+        m.ProcessSetUp(remainingSetup)
+        cleanup()
+        log.Println("Member finish the remainingSetup")
+    }
     m.setUpWg.Wait()
     log.Println("Member is going to commit")
     m.commit()
 
-    m.challengeWg = sync.WaitGroup{}
-    m.challengeWg.Add(1)
     log.Println("Member challenge wait")
     m.challengeWg.Wait()
     log.Println("Member is going to response")
@@ -50,19 +56,20 @@ func (m *Member) ProcessConsensus() []byte {
     return m.msg
 }
 
-func (m *Member) ProcessSetUp(setupMsg *bean.Setup) {
+func (m *Member) ProcessSetUp(setupMsg *bean.Setup) bool {
     //if !store.CheckRole(node.MINER) {
     //    return
     //}
     if !m.leader.PubKey.Equal(setupMsg.PubKey) {
-        return
+        return false
     }
     if m.state != waiting {
-        return
+        return false
     }
     log.Println("Member process setup ", *setupMsg)
     m.msg = setupMsg.Msg
     m.setUpWg.Done()
+    return true
 }
 
 func (m *Member) commit()  {
@@ -101,8 +108,6 @@ func (m *Member) response()  {
     s.Sub(k, s)
     s.Mod(s, curve.N)
     response := &bean.Response{PubKey: prvKey.PubKey, S: s.Bytes()}
-    peers := make([]*network.Peer, 1)
-    peers[0] = m.leader
     log.Println("Member response ", *response)
-    network.SendMessage(peers, response)
+    network.SendMessage([]*network.Peer{m.leader}, response)
 }
