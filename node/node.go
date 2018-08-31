@@ -9,6 +9,7 @@ import (
     "BlockChainTest/log"
     "BlockChainTest/network"
     "time"
+    "BlockChainTest/crypto"
 )
 
 var (
@@ -17,17 +18,17 @@ var (
 )
 
 type Node struct {
-    address *bean.Address
-    prvKey *bean.PrivateKey
+    address *crypto.Address
+    prvKey *crypto.PrivateKey
     wg *sync.WaitGroup
 }
 
-func newNode(prvKey *bean.PrivateKey) *Node {
+func newNode(prvKey *crypto.PrivateKey) *Node {
     address := prvKey.PubKey.Addr()
     return &Node{address: &address, prvKey: prvKey}
 }
 
-func GetNode(prvKey *bean.PrivateKey) *Node {
+func GetNode(prvKey *crypto.PrivateKey) *Node {
     once.Do(func() {
         node = newNode(prvKey)
     })
@@ -56,7 +57,7 @@ func (n *Node) Start() {
             n.runAsOther()
         }
         log.Println("node stop")
-        log.Println("Current height ", *store.GetCurrentBlockHeight())
+        log.Println("Current height ", store.GetCurrentBlockHeight())
     }
 }
 

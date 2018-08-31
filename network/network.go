@@ -29,8 +29,8 @@ func (port Port) String() string {
 type Peer struct {
    IP      IP
    Port    Port
-   PubKey  *bean.Point
-   Address bean.Address
+   PubKey  *crypto.Point
+   Address crypto.Address
 }
 
 func (peer *Peer) ToString() string {
@@ -91,8 +91,8 @@ func (m *Message) Cipher() ([]byte, error) {
    //   return nil, err
    //}
    //return cipher, nil
-   serializable.Sig = &bean.Signature{R: []byte{0x00}, S: []byte{0x00}}
-   serializable.PubKey = &bean.Point{X: []byte{0x00}, Y: []byte{0x00}}
+   serializable.Sig = &crypto.Signature{R: []byte{0x00}, S: []byte{0x00}}
+   serializable.PubKey = &crypto.Point{X: []byte{0x00}, Y: []byte{0x00}}
    return proto.Marshal(serializable)
 }
 

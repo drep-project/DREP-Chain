@@ -13,8 +13,8 @@ import (
 type Member struct {
     leader *network.Peer
     state int
-    prvKey *bean.PrivateKey
-    pubKey *bean.Point
+    prvKey *crypto.PrivateKey
+    pubKey *crypto.Point
     msg []byte
 
     k []byte
@@ -25,7 +25,7 @@ type Member struct {
 
 }
 
-func NewMember(leader *network.Peer, prvKey *bean.PrivateKey) *Member {
+func NewMember(leader *network.Peer, prvKey *crypto.PrivateKey) *Member {
     m := &Member{}
     m.state = waiting
     m.leader = leader

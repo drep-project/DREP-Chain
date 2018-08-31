@@ -5,7 +5,6 @@ import (
     "crypto/rand"
     "errors"
     "sync"
-    "BlockChainTest/bean"
     "BlockChainTest/hash"
 )
 
@@ -14,7 +13,7 @@ const (
 )
 
 var CurveInstance *CurveParams
-var KeyInstance *bean.PrivateKey
+var KeyInstance *PrivateKey
 var onceCurve, onceKey sync.Once
 
 func InitCurve() (curveParams *CurveParams) {
@@ -28,7 +27,7 @@ func InitCurve() (curveParams *CurveParams) {
         0xDB, 0x2D, 0xCE, 0x28, 0xD9, 0x59, 0xF2, 0x81, 0x5B, 0x16, 0xF8, 0x17, 0x98}
     Gy := []byte{0x48, 0x3A, 0xDA, 0x77, 0x26, 0xA3, 0xC4, 0x65, 0x5D, 0xA4, 0xFB, 0xFC, 0x0E, 0x11, 0x08, 0xA8, 0xFD, 0x17, 0xB4,
         0x48, 0xA6, 0x85, 0x54, 0x19, 0x9C, 0x47, 0xD0, 0x8F, 0xFB, 0x10, 0xD4, 0xB8}
-    curveParams.G = &bean.Point{X: Gx, Y: Gy}
+    curveParams.G = &Point{X: Gx, Y: Gy}
     curveParams.BitSize = 256
     curveParams.Name = "Secp256-k1"
     return
@@ -41,7 +40,7 @@ func GetCurve() *CurveParams {
     return CurveInstance
 }
 
-func GetRandomKQ() ([]byte, *bean.Point, error) {
+func GetRandomKQ() ([]byte, *Point, error) {
     curve := GetCurve()
     mask := []byte{0xff, 0x1, 0x3, 0x7, 0xf, 0x1f, 0x3f, 0x7f}
     N := curve.Params().N
@@ -74,7 +73,7 @@ func GetRandomKQ() ([]byte, *bean.Point, error) {
     }
 }
 
-func GetPrivateKey() (*bean.PrivateKey, error) {
+func GetPrivateKey() (*PrivateKey, error) {
     var err error
     onceKey.Do(func() {
         prv, pubKey, err0 := GetRandomKQ()
@@ -82,7 +81,7 @@ func GetPrivateKey() (*bean.PrivateKey, error) {
            err = err0
            return
         }
-        KeyInstance = &bean.PrivateKey{Prv: prv, PubKey: pubKey}
+        KeyInstance = &PrivateKey{Prv: prv, PubKey: pubKey}
         //curve := GetCurve()
         //k0 := []byte{0x22, 0x11}
         //k1 := []byte{0x14, 0x44}
@@ -104,7 +103,7 @@ func GetPrivateKey() (*bean.PrivateKey, error) {
     return KeyInstance, nil
 }
 
-func GetPubKey() (*bean.Point, error) {
+func GetPubKey() (*Point, error) {
     prvKey, err := GetPrivateKey()
     if err != nil {
         return nil, err
@@ -112,7 +111,7 @@ func GetPubKey() (*bean.Point, error) {
     return prvKey.PubKey, nil
 }
 
-func Sign(b []byte) (*bean.Signature, error) {
+func Sign(b []byte) (*Signature, error) {
     curve := GetCurve()
     prvKey, err := GetPrivateKey()
     if err != nil {
@@ -133,13 +132,13 @@ func Sign(b []byte) (*bean.Signature, error) {
         s.Sub(new(big.Int).SetBytes(k), s)
         s.Mod(s, N)
     }
-    sig := &bean.Signature{}
+    sig := &Signature{}
     sig.R = r.Bytes()
     sig.S = s.Bytes()
     return sig, nil
 }
 
-func Verify(sig *bean.Signature, pubKey *bean.Point, b []byte) bool {
+func Verify(sig *Signature, pubKey *Point, b []byte) bool {
     curve := GetCurve()
     r, s := new(big.Int).SetBytes(sig.R), new(big.Int).SetBytes(sig.S)
     if r.Cmp(Zero) <= 0 || r.Cmp(curve.Params().N) >= 0 || s.Cmp(Zero) <=0 || s.Cmp(curve.Params().N) >=0 {
@@ -162,7 +161,7 @@ func Verify(sig *bean.Signature, pubKey *bean.Point, b []byte) bool {
     }
 }
 
-func Encrypt(pubKey *bean.Point, b []byte) ([]byte, error) {
+func Encrypt(pubKey *Point, b []byte) ([]byte, error) {
     //curve := GetCurve()
     //k, p1, err := GetRandomKQ()
     //if err != nil {

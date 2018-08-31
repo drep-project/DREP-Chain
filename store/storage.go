@@ -4,19 +4,20 @@ import (
     "math/big"
     "sync"
     "BlockChainTest/bean"
+    "BlockChainTest/crypto"
 )
 
 var (
-    balances map[bean.Address]big.Int
+    balances map[crypto.Address]big.Int
     balancesLock sync.Locker
-    currentBlockHeight = new(big.Int)
+    currentBlockHeight int64 = 0
 )
 
-func getBalance(addr bean.Address) big.Int {
+func getBalance(addr crypto.Address) big.Int {
     return balances[addr]
 }
 
-func SetBalance(addr bean.Address, bal big.Int) {
+func SetBalance(addr crypto.Address, bal big.Int) {
     balancesLock.Lock()
     balances[addr] = bal
     balancesLock.Unlock()
@@ -26,7 +27,7 @@ func ExecuteTransactions(b *bean.Block) {
     if b == nil || b.Header == nil { // || b.Data == nil || b.Data.TxList == nil {
         return
     }
-    currentBlockHeight.SetBytes(b.Header.Height)
+    currentBlockHeight = b.Header.Height
     if b.Data == nil || b.Data.TxList == nil {
         return
     }
@@ -38,6 +39,6 @@ func ExecuteTransactions(b *bean.Block) {
 func execute(t *bean.Transaction)  {
 }
 
-func GetCurrentBlockHeight() *big.Int {
+func GetCurrentBlockHeight() int64 {
     return currentBlockHeight
 }

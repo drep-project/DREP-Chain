@@ -4,9 +4,10 @@ import (
     "encoding/hex"
     "BlockChainTest/hash"
     "github.com/golang/protobuf/proto"
+    "BlockChainTest/crypto"
 )
 
-func (tx *Transaction) GetId() (string, error) {
+func (tx *Transaction) TxId() (string, error) {
     b, err := proto.Marshal(tx.Data)
     if err != nil {
         return "", err
@@ -15,13 +16,21 @@ func (tx *Transaction) GetId() (string, error) {
     return id, nil
 }
 
-func (tx *Transaction) GetHash() ([]byte, error) {
+func (tx *Transaction) TxHash() ([]byte, error) {
     b, err := proto.Marshal(tx)
     if err != nil {
         return nil, err
     }
     h := hash.Hash256(b)
     return h, nil
+}
+
+func (tx *Transaction) TxSig() (*crypto.Signature, error) {
+    b, err := proto.Marshal(tx.Data)
+    if err != nil {
+        return nil, err
+    }
+    return crypto.Sign(b)
 }
 
 func (block *Block) BlockID() (string, error) {
