@@ -18,13 +18,13 @@ var (
 )
 
 type Node struct {
-    address *crypto.Address
+    address *bean.Address
     prvKey *crypto.PrivateKey
     wg *sync.WaitGroup
 }
 
 func newNode(prvKey *crypto.PrivateKey) *Node {
-    address := prvKey.PubKey.Addr()
+    address := bean.Addr(prvKey.PubKey)
     return &Node{address: &address, prvKey: prvKey}
 }
 

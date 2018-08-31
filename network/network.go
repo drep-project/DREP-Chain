@@ -30,7 +30,7 @@ type Peer struct {
    IP      IP
    Port    Port
    PubKey  *crypto.Point
-   Address crypto.Address
+   Address bean.Address
 }
 
 func (peer *Peer) ToString() string {

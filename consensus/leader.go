@@ -6,7 +6,6 @@ import (
     "BlockChainTest/bean"
     "BlockChainTest/crypto"
     "math/big"
-    "BlockChainTest/hash"
     "math"
     "BlockChainTest/log"
 )
@@ -90,7 +89,7 @@ func (l *Leader) setUp(msg []byte, pubKey *crypto.Point) {
 
 func (l *Leader) getR(msg []byte) []byte {
     curve := crypto.GetCurve()
-    r := hash.ConcatHash256(l.sigmaQ.Bytes(), l.sigmaPubKey.Bytes(), msg)
+    r := crypto.ConcatHash256(l.sigmaQ.Bytes(), l.sigmaPubKey.Bytes(), msg)
     rInt := new(big.Int).SetBytes(r)
     rInt.Mod(rInt, curve.N)
     return rInt.Bytes()

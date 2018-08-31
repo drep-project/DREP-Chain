@@ -6,7 +6,6 @@ import (
     "BlockChainTest/bean"
     "BlockChainTest/crypto"
     "math/big"
-    "BlockChainTest/hash"
     "BlockChainTest/log"
 )
 
@@ -86,7 +85,7 @@ func (m *Member) commit()  {
 
 func (m *Member) ProcessChallenge(challenge *bean.Challenge) {
     log.Println("Member process challenge ", *challenge)
-    r := hash.ConcatHash256(challenge.SigmaQ.Bytes(), challenge.SigmaPubKey.Bytes(), m.msg)
+    r := crypto.ConcatHash256(challenge.SigmaQ.Bytes(), challenge.SigmaPubKey.Bytes(), m.msg)
     r0 := new(big.Int).SetBytes(challenge.R)
     rInt := new(big.Int).SetBytes(r)
     curve := crypto.GetCurve()

@@ -2,9 +2,12 @@ package bean
 
 import (
     "encoding/hex"
-    "BlockChainTest/hash"
     "github.com/golang/protobuf/proto"
     "BlockChainTest/crypto"
+)
+
+const (
+    AddressLen = 20
 )
 
 func (tx *Transaction) TxId() (string, error) {
@@ -12,7 +15,7 @@ func (tx *Transaction) TxId() (string, error) {
     if err != nil {
         return "", err
     }
-    id := hex.EncodeToString(hash.Hash256(b))
+    id := hex.EncodeToString(crypto.Hash256(b))
     return id, nil
 }
 
@@ -21,7 +24,7 @@ func (tx *Transaction) TxHash() ([]byte, error) {
     if err != nil {
         return nil, err
     }
-    h := hash.Hash256(b)
+    h := crypto.Hash256(b)
     return h, nil
 }
 
@@ -38,6 +41,19 @@ func (block *Block) BlockID() (string, error) {
     if err != nil {
         return "", err
     }
-    id := hex.EncodeToString(hash.Hash256(b))
+    id := hex.EncodeToString(crypto.Hash256(b))
     return id, nil
+}
+
+type Address string
+
+func (addr Address) String() string {
+    return string(addr)
+}
+
+func Addr(pubKey *crypto.Point) Address {
+    j := pubKey.Bytes()
+    h := crypto.Hash256(j)
+    str := hex.EncodeToString(h[len(h) - AddressLen:])
+    return Address(str)
 }
