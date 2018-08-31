@@ -23,7 +23,7 @@ func Contains(id string) bool {
 
 //func AddTransaction(id string, transaction *common.Transaction) {
 func AddTransaction(transaction *bean.Transaction) error {
-    id, err := transaction.GetId()
+    id, err := transaction.TxId()
     if err != nil {
         return err
     }
@@ -41,7 +41,7 @@ func AddTransaction(transaction *bean.Transaction) error {
 func RemoveTransactions(trans []*bean.Transaction) error {
     tranLock.Lock()
     for _, t := range trans {
-        id, err := t.GetId()
+        id, err := t.TxId()
         if err != nil {
             return err
         }

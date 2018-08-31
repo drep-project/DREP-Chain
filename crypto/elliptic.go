@@ -2,18 +2,17 @@ package crypto
 
 import (
 	"math/big"
-	"BlockChainTest/bean"
 )
 
 var Zero = new(big.Int)
 
 type Curve interface {
 	Params() *CurveParams
-	IsOnCurve(*bean.Point) bool
-	Add(*bean.Point, *bean.Point) *bean.Point
-	Double(*bean.Point) *bean.Point
-	ScalarMultiply(*bean.Point, []byte) *bean.Point
-	ScalarBaseMultiply([]byte) *bean.Point
+	IsOnCurve(*Point) bool
+	Add(*Point, *Point) *Point
+	Double(*Point) *Point
+	ScalarMultiply(*Point, []byte) *Point
+	ScalarBaseMultiply([]byte) *Point
 }
 
 // Y^2 == X^3 + AX + B (mod p), with a == 0
@@ -21,7 +20,7 @@ type CurveParams struct {
 	P *big.Int
 	N *big.Int
 	B *big.Int
-	G *bean.Point
+	G *Point
 	BitSize int
 	Name string
 }
@@ -37,7 +36,7 @@ func (curveParams *CurveParams) Params() *CurveParams {
 }
 
 // Y^2 == X^3 + 7 (mod p)
-func (curveParams *CurveParams) IsOnCurve(point *bean.Point) bool {
+func (curveParams *CurveParams) IsOnCurve(point *Point) bool {
 	x, y := point.Int()
 	P := curveParams.P
 	B := curveParams.B
@@ -51,7 +50,7 @@ func (curveParams *CurveParams) IsOnCurve(point *bean.Point) bool {
 	return ySquare.Cmp(xPolynomial) == 0
 }
 
-func JacobiAffine(point *bean.Point) *JacobiCoordinate {
+func JacobiAffine(point *Point) *JacobiCoordinate {
 	x, y := point.Int()
 	z := new(big.Int)
 	if x.Sign() != 0 || y.Sign() != 0 {
@@ -60,10 +59,10 @@ func JacobiAffine(point *bean.Point) *JacobiCoordinate {
 	return &JacobiCoordinate{x, y, z}
 }
 
-func (curveParams *CurveParams) InverseJacobiAffine(jc *JacobiCoordinate) *bean.Point {
+func (curveParams *CurveParams) InverseJacobiAffine(jc *JacobiCoordinate) *Point {
 	x, y, z := jc.X, jc.Y, jc.Z
 	if z.Sign() == 0 {
-		return &bean.Point{X: new(big.Int).Bytes(), Y: new(big.Int).Bytes()}
+		return &Point{X: new(big.Int).Bytes(), Y: new(big.Int).Bytes()}
 	}
 	P := curveParams.P
 	zInv := new(big.Int).ModInverse(z, P)
@@ -75,7 +74,7 @@ func (curveParams *CurveParams) InverseJacobiAffine(jc *JacobiCoordinate) *bean.
 	xOut.Mod(xOut, P)
 	yOut := new(big.Int).Mul(y, zInvCube)
 	yOut.Mod(yOut, P)
-	return &bean.Point{X: xOut.Bytes(), Y: yOut.Bytes()}
+	return &Point{X: xOut.Bytes(), Y: yOut.Bytes()}
 }
 
 // add-2007-bl addition
@@ -211,18 +210,18 @@ func (curveParams *CurveParams) JacobiDoubling(jc *JacobiCoordinate) *JacobiCoor
 	return &JacobiCoordinate{x2, y2, z2}
 }
 
-func (curveParams *CurveParams) Add(pt1, pt2 *bean.Point) *bean.Point {
+func (curveParams *CurveParams) Add(pt1, pt2 *Point) *Point {
 	jc1 := JacobiAffine(pt1)
 	jc2 := JacobiAffine(pt2)
 	return curveParams.InverseJacobiAffine(curveParams.JacobiAddition(jc1, jc2))
 }
 
-func (curveParams *CurveParams) Double(point *bean.Point) *bean.Point {
+func (curveParams *CurveParams) Double(point *Point) *Point {
 	jc := JacobiAffine(point)
 	return curveParams.InverseJacobiAffine(curveParams.JacobiDoubling(jc))
 }
 
-func (curveParams *CurveParams) ScalarMultiply(point *bean.Point, k []byte) *bean.Point {
+func (curveParams *CurveParams) ScalarMultiply(point *Point, k []byte) *Point {
 	jc0 := JacobiAffine(point)
 	jc := &JacobiCoordinate{new(big.Int), new(big.Int), new(big.Int)}
 	for _, byt := range k {
@@ -237,11 +236,11 @@ func (curveParams *CurveParams) ScalarMultiply(point *bean.Point, k []byte) *bea
 	return curveParams.InverseJacobiAffine(jc)
 }
 
-func (curveParams *CurveParams) ScalarBaseMultiply(k []byte) *bean.Point {
+func (curveParams *CurveParams) ScalarBaseMultiply(k []byte) *Point {
 	return curveParams.ScalarMultiply(curveParams.G, k)
 }
 
-func (curveParams *CurveParams) ScalarBaseMultiplyByFormula(k int) *bean.Point {
+func (curveParams *CurveParams) ScalarBaseMultiplyByFormula(k int) *Point {
 	Gx, Gy := curveParams.G.Int()
 	Fx, Fy := new(big.Int).Set(Gx), new(big.Int).Set(Gy)
 	P := curveParams.P
@@ -271,5 +270,5 @@ func (curveParams *CurveParams) ScalarBaseMultiplyByFormula(k int) *bean.Point {
 		Fx.Set(u)
 		Fy.Set(v)
 	}
-	return &bean.Point{X: Fx.Bytes(), Y:Fy.Bytes()}
+	return &Point{X: Fx.Bytes(), Y:Fy.Bytes()}
 }

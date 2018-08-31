@@ -1,4 +1,4 @@
-package bean
+package crypto
 
 import (
     "bytes"
@@ -31,6 +31,12 @@ func (p *Point) Equal(q *Point) bool {
 
 func (p *Point) Int() (*big.Int, *big.Int) {
     return new(big.Int).SetBytes(p.X), new(big.Int).SetBytes(p.Y)
+}
+
+type Address string
+
+func (addr Address) String() string {
+    return string(addr)
 }
 
 func (pubKey *Point) Addr() Address {

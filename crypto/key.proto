@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package bean;
+package crypto;
 
 message point {
 	bytes x = 1;
