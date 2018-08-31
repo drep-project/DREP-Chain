@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package bean;
 
-import public "crypto/key.proto";
+import "crypto/key.proto";
 
 message setup {
 	bytes msg = 1;

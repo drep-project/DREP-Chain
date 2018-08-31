@@ -3,8 +3,6 @@ package crypto
 import (
     "bytes"
     "math/big"
-    "encoding/hex"
-    "BlockChainTest/hash"
 )
 
 const (
@@ -31,17 +29,4 @@ func (p *Point) Equal(q *Point) bool {
 
 func (p *Point) Int() (*big.Int, *big.Int) {
     return new(big.Int).SetBytes(p.X), new(big.Int).SetBytes(p.Y)
-}
-
-type Address string
-
-func (addr Address) String() string {
-    return string(addr)
-}
-
-func (pubKey *Point) Addr() Address {
-    j := pubKey.Bytes()
-    h := hash.Hash256(j)
-    str := hex.EncodeToString(h[len(h) - AddressLen:])
-    return Address(str)
 }

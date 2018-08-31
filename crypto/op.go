@@ -5,7 +5,6 @@ import (
     "crypto/rand"
     "errors"
     "sync"
-    "BlockChainTest/hash"
 )
 
 const (
@@ -125,7 +124,7 @@ func Sign(b []byte) (*Signature, error) {
             return nil, err
         }
         N := curve.Params().N
-        r = new(big.Int).SetBytes(hash.ConcatHash256(Q.Bytes(), prvKey.PubKey.Bytes(), b))
+        r = new(big.Int).SetBytes(ConcatHash256(Q.Bytes(), prvKey.PubKey.Bytes(), b))
         r.Mod(r, N)
         s = new(big.Int).Mul(r, prvInt)
         s.Mod(s, N)
@@ -152,7 +151,7 @@ func Verify(sig *Signature, pubKey *Point, b []byte) bool {
     if Qx.Cmp(Zero) == 0 && Qy.Cmp(Zero) == 0 {
         return false
     }
-    v := new(big.Int).SetBytes(hash.ConcatHash256(Q.Bytes(), pubKey.Bytes(), b))
+    v := new(big.Int).SetBytes(ConcatHash256(Q.Bytes(), pubKey.Bytes(), b))
     v.Mod(v, N)
     if v.Cmp(r) == 0{
         return true

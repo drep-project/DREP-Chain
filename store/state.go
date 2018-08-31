@@ -22,7 +22,7 @@ var (
     lock sync.Locker
     prvKey *crypto.PrivateKey
     pubKey *crypto.Point
-    address crypto.Address
+    address bean.Address
     remainingSetUp *bean.Setup
 
     currentMinerIndex int
@@ -163,7 +163,7 @@ func GetPubKey() *crypto.Point {
     return pubKey
 }
 
-func GetAddress() crypto.Address {
+func GetAddress() bean.Address {
     return address
 }
 
