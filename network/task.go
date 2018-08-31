@@ -8,12 +8,12 @@ import (
     "fmt"
 )
 
-type Message struct {
+type Task struct {
     Peer *Peer
     Msg  interface{}
 }
 
-func identifyMessage(message *Message) (int, interface{}) {
+func identifyMessage(message *Task) (int, interface{}) {
     msg := message.Msg
     switch msg.(type) {
     case *bean.Setup:
@@ -31,7 +31,7 @@ func identifyMessage(message *Message) (int, interface{}) {
     }
 }
 
-func (m *Message) Cipher() ([]byte, error) {
+func (m *Task) Cipher() ([]byte, error) {
     serializable, err := bean.Serialize(m.Msg)
     if err != nil {
         return nil, err
@@ -60,7 +60,7 @@ func (m *Message) Cipher() ([]byte, error) {
     return proto.Marshal(serializable)
 }
 
-func (m *Message) Send() error {
+func (m *Task) Send() error {
     // If sleep 1000 here, haha
     cipher, err := m.Cipher()
     if err != nil {
@@ -85,7 +85,7 @@ func (m *Message) Send() error {
     }
 }
 
-func DecryptIntoMessage(cipher []byte) (*Message, error) {
+func DecryptIntoMessage(cipher []byte) (*Task, error) {
     plaintext, err := crypto.Decrypt(cipher)
     if err != nil {
         return nil, err
@@ -98,6 +98,6 @@ func DecryptIntoMessage(cipher []byte) (*Message, error) {
     //   return nil, errors.New("decrypt fail")
     //}
     peer := &Peer{PubKey: serializable.PubKey}
-    message := &Message{Peer: peer, Msg: msg}
+    message := &Task{Peer: peer, Msg: msg}
     return message, nil
 }

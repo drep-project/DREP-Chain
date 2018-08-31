@@ -1,6 +1,9 @@
 package network
 
+import "sync"
+
 var sharedPeerStore *PeerStore
+var once sync.Once
 
 type PeerStore struct {
     store map[int]string

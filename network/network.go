@@ -8,11 +8,11 @@ import (
 )
 
 var onceSender sync.Once
-var SenderQueue chan *Message
+var SenderQueue chan *Task
 
-func GetSenderQueue() chan *Message {
+func GetSenderQueue() chan *Task {
    onceSender.Do(func() {
-      SenderQueue = make(chan *Message,  10)
+      SenderQueue = make(chan *Task,  10)
    })
    return SenderQueue
 }
@@ -20,10 +20,39 @@ func GetSenderQueue() chan *Message {
 func SendMessage(peers []*Peer, msg interface{}) {
    queue := GetSenderQueue()
    for _, peer := range peers {
-      message := &Message{peer, msg}
-      queue <- message
+      task := &Task{peer, msg}
+      queue <- task
    }
 }
+
+//func SendMessage(peers []*Peer, msg interface{}) error {
+//    for _, peer := range peers  {
+//        //use proto buffer serialize
+//        serializable, err := bean.Serialize(msg)
+//        if err != nil {
+//            return err
+//        }
+//        SendMessageCore(peer, serializable.Body)
+//    }
+//    return nil
+//}
+//
+//func SendMessageCore(peer *Peer, bytes []byte) error {
+//
+//    addr, err := net.ResolveTCPAddr("tcp", peer.ToString())
+//    if err != nil {
+//        return err
+//    }
+//    conn, err := net.DialTCP("tcp", nil, addr)
+//    if err != nil {
+//        return err
+//    }
+//    defer conn.Close()
+//    if _, err := conn.Write(bytes); err != nil {
+//        return err
+//    }
+//    return nil
+//}
 
 func startListen(process func(int, interface{})) {
   go func() {
