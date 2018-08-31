@@ -6,15 +6,14 @@ import (
     "BlockChainTest/bean"
     "BlockChainTest/crypto"
     "math/big"
-    "BlockChainTest/hash"
     "BlockChainTest/log"
 )
 
 type Member struct {
     leader *network.Peer
     state int
-    prvKey *bean.PrivateKey
-    pubKey *bean.Point
+    prvKey *crypto.PrivateKey
+    pubKey *crypto.Point
     msg []byte
 
     k []byte
@@ -25,7 +24,7 @@ type Member struct {
 
 }
 
-func NewMember(leader *network.Peer, prvKey *bean.PrivateKey) *Member {
+func NewMember(leader *network.Peer, prvKey *crypto.PrivateKey) *Member {
     m := &Member{}
     m.state = waiting
     m.leader = leader
@@ -86,7 +85,7 @@ func (m *Member) commit()  {
 
 func (m *Member) ProcessChallenge(challenge *bean.Challenge) {
     log.Println("Member process challenge ", *challenge)
-    r := hash.ConcatHash256(challenge.SigmaQ.Bytes(), challenge.SigmaPubKey.Bytes(), m.msg)
+    r := crypto.ConcatHash256(challenge.SigmaQ.Bytes(), challenge.SigmaPubKey.Bytes(), m.msg)
     r0 := new(big.Int).SetBytes(challenge.R)
     rInt := new(big.Int).SetBytes(r)
     curve := crypto.GetCurve()

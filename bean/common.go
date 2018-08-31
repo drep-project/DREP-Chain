@@ -1,10 +1,9 @@
 package bean
 
-type Address string
-
-func (addr Address) String() string {
-    return string(addr)
-}
+import (
+    "BlockChainTest/crypto"
+    "encoding/hex"
+)
 
 const (
     MsgTypeAccount     = 0
@@ -23,3 +22,16 @@ const (
     MEMBER    = 1
     OTHER     = 2
 )
+
+type Address string
+
+func (addr Address) String() string {
+    return string(addr)
+}
+
+func Addr(pubKey *crypto.Point) Address {
+    j := pubKey.Bytes()
+    h := crypto.Hash256(j)
+    str := hex.EncodeToString(h[len(h) - AddressLen:])
+    return Address(str)
+}

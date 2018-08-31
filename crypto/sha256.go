@@ -1,12 +1,8 @@
-package hash
+package crypto
 
 import (
     "math/big"
     "crypto/sha256"
-)
-
-const (
-    ByteLen = 32
 )
 
 func Hash256(text []byte) []byte {

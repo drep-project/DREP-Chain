@@ -2,12 +2,12 @@ syntax = "proto3";
 
 package bean;
 
-import "key.proto";
+import "crypto/key.proto";
 
 
 message serializable {
 	int32 header = 1;
 	bytes body = 2;
-	point pub_key = 3;
-	signature sig = 4;
+	crypto.point pub_key = 3;
+	crypto.signature sig = 4;
 }

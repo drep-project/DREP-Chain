@@ -6,7 +6,6 @@ import (
     "BlockChainTest/bean"
     "BlockChainTest/crypto"
     "math/big"
-    "BlockChainTest/hash"
     "math"
     "BlockChainTest/log"
 )
@@ -18,14 +17,14 @@ const (
 )
 type Leader struct {
     members    []*network.Peer
-    pubKey     *bean.Point
+    pubKey     *crypto.Point
     state      int
     LeaderPeer *network.Peer
 
     commitWg sync.WaitGroup
     commitBitmap []byte
-    sigmaPubKey *bean.Point
-    sigmaQ *bean.Point
+    sigmaPubKey *crypto.Point
+    sigmaQ *crypto.Point
     r []byte
 
     sigmaS *big.Int
@@ -35,7 +34,7 @@ type Leader struct {
     //sigs map[bean.Address][]byte
 }
 
-func NewLeader(pubKey *bean.Point, members []*network.Peer) *Leader {
+func NewLeader(pubKey *crypto.Point, members []*network.Peer) *Leader {
     l := &Leader{}
     l.pubKey = pubKey
     l.members = make([]*network.Peer, len(members) - 1)
@@ -49,8 +48,8 @@ func NewLeader(pubKey *bean.Point, members []*network.Peer) *Leader {
         //l.members = append(l.members, v)
     }
     l.state = waiting
-    l.sigmaPubKey = &bean.Point{X: []byte{0x00}, Y: []byte{0x00}}
-    l.sigmaQ = &bean.Point{X: []byte{0x00}, Y: []byte{0x00}}
+    l.sigmaPubKey = &crypto.Point{X: []byte{0x00}, Y: []byte{0x00}}
+    l.sigmaQ = &crypto.Point{X: []byte{0x00}, Y: []byte{0x00}}
     l.sigmaS = new(big.Int)
     len := len(members)
     l.commitBitmap = make([]byte, len)
@@ -60,7 +59,7 @@ func NewLeader(pubKey *bean.Point, members []*network.Peer) *Leader {
     return l
 }
 
-func (l *Leader) ProcessConsensus(msg []byte) (*bean.Signature, []byte) {
+func (l *Leader) ProcessConsensus(msg []byte) (*crypto.Signature, []byte) {
 
     l.state = setUp
     log.Println("Leader is going to setup")
@@ -76,13 +75,13 @@ func (l *Leader) ProcessConsensus(msg []byte) (*bean.Signature, []byte) {
     log.Println("Leader wait for response")
     l.responseWg.Wait()
     log.Println("Leader finish")
-    sig := &bean.Signature{R: l.r, S: l.sigmaS.Bytes()}
+    sig := &crypto.Signature{R: l.r, S: l.sigmaS.Bytes()}
     valid := l.Validate(sig, msg)
     log.Println("valid? ", valid)
     return sig, l.responseBitmap
 }
 
-func (l *Leader) setUp(msg []byte, pubKey *bean.Point) {
+func (l *Leader) setUp(msg []byte, pubKey *crypto.Point) {
     setup := &bean.Setup{Msg: msg, PubKey: pubKey}
     log.Println("Leader setup ", *setup)
     network.SendMessage(l.members, setup)
@@ -90,7 +89,7 @@ func (l *Leader) setUp(msg []byte, pubKey *bean.Point) {
 
 func (l *Leader) getR(msg []byte) []byte {
     curve := crypto.GetCurve()
-    r := hash.ConcatHash256(l.sigmaQ.Bytes(), l.sigmaPubKey.Bytes(), msg)
+    r := crypto.ConcatHash256(l.sigmaQ.Bytes(), l.sigmaPubKey.Bytes(), msg)
     rInt := new(big.Int).SetBytes(r)
     rInt.Mod(rInt, curve.N)
     return rInt.Bytes()
@@ -107,7 +106,7 @@ func isLegalIndex(index int, bitmap []byte) bool {
     return index >=0 && index <= len(bitmap) && bitmap[index] != 1
 }
 
-func (l *Leader) getMinerIndex(p *bean.Point) int {
+func (l *Leader) getMinerIndex(p *crypto.Point) int {
     if l.pubKey.Equal(p) {
         return -1
     }
@@ -158,7 +157,7 @@ func (l *Leader) ProcessResponse(response *bean.Response) {
     l.sigmaS.Mod(l.sigmaS, crypto.GetCurve().N)
 }
 
-func (l *Leader) Validate(sig *bean.Signature, msg []byte) bool {
+func (l *Leader) Validate(sig *crypto.Signature, msg []byte) bool {
     if len(l.responseBitmap) < len(l.commitBitmap) {
         return false
     }
