@@ -8,7 +8,7 @@ import (
     "sync"
     "BlockChainTest/log"
     "BlockChainTest/network"
-    "time"
+    "BlockChainTest/crypto"
 )
 
 var (
@@ -18,16 +18,16 @@ var (
 
 type Node struct {
     address *bean.Address
-    prvKey *bean.PrivateKey
+    prvKey *crypto.PrivateKey
     wg *sync.WaitGroup
 }
 
-func newNode(prvKey *bean.PrivateKey) *Node {
-    address := prvKey.PubKey.Addr()
+func newNode(prvKey *crypto.PrivateKey) *Node {
+    address := bean.Addr(prvKey.PubKey)
     return &Node{address: &address, prvKey: prvKey}
 }
 
-func GetNode(prvKey *bean.PrivateKey) *Node {
+func GetNode(prvKey *crypto.PrivateKey) *Node {
     once.Do(func() {
         node = newNode(prvKey)
     })
@@ -44,7 +44,7 @@ func (n *Node) isLeader() bool {
 
 func (n *Node) Start() {
     for {
-        time.Sleep(3 * time.Second)
+        //time.Sleep(3 * time.Second)
         log.Println("node start")
         store.ChangeRole()
         switch store.GetRole() {
@@ -56,7 +56,7 @@ func (n *Node) Start() {
             n.runAsOther()
         }
         log.Println("node stop")
-        log.Println("Current height ", *store.GetCurrentBlockHeight())
+        log.Println("Current height ", store.GetCurrentBlockHeight())
     }
 }
 

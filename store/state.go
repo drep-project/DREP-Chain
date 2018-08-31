@@ -7,7 +7,6 @@ import (
     "BlockChainTest/consensus"
     "BlockChainTest/crypto"
     "BlockChainTest/log"
-    "math/big"
 )
 
 var (
@@ -21,8 +20,8 @@ var (
     blockHeight int
     block *bean.Block
     lock sync.Locker
-    prvKey *bean.PrivateKey
-    pubKey *bean.Point
+    prvKey *crypto.PrivateKey
+    pubKey *crypto.Point
     address bean.Address
     remainingSetUp *bean.Setup
 
@@ -42,9 +41,9 @@ func init()  {
     pub0 := curve.ScalarBaseMultiply(k0)
     pub1 := curve.ScalarBaseMultiply(k1)
     pub2 := curve.ScalarBaseMultiply(k2)
-    prv0 := &bean.PrivateKey{Prv: k0, PubKey: pub0}
-    prv1 := &bean.PrivateKey{Prv: k1, PubKey: pub1}
-    prv2 := &bean.PrivateKey{Prv: k2, PubKey: pub2}
+    prv0 := &crypto.PrivateKey{Prv: k0, PubKey: pub0}
+    prv1 := &crypto.PrivateKey{Prv: k1, PubKey: pub1}
+    prv2 := &crypto.PrivateKey{Prv: k2, PubKey: pub2}
     ip0 := network.IP("192.168.3.13")
     ip1 := network.IP("192.168.3.43")
     ip2 := network.IP("192.168.3.73")
@@ -106,7 +105,7 @@ func GetMiners() []*network.Peer {
     return miners
 }
 
-func ContainsMiner(pubKey *bean.Point) bool {
+func ContainsMiner(pubKey *crypto.Point) bool {
     for _, v:= range miners {
         if v.PubKey.Equal(pubKey) {
             return true
@@ -115,7 +114,7 @@ func ContainsMiner(pubKey *bean.Point) bool {
     return false
 }
 
-func GetMiner(pubKey *bean.Point) *network.Peer {
+func GetMiner(pubKey *crypto.Point) *network.Peer {
     for _, v:= range miners {
         if v.PubKey.Equal(pubKey) {
             return v
@@ -151,17 +150,16 @@ func GetLeader() *network.Peer {
 }
 
 func GetBlock() *bean.Block {
-    height := currentBlockHeight
-    height.Add(height, big.NewInt(1))
+    height := currentBlockHeight + 1
     currentBlockHeight = height
-    return &bean.Block{Header: &bean.BlockHeader{Height: height.Bytes()}}
+    return &bean.Block{Header: &bean.BlockHeader{Height: height}}
 }
 
 func SetBlock(b *bean.Block) {
     block = b
 }
 
-func GetPubKey() *bean.Point {
+func GetPubKey() *crypto.Point {
     return pubKey
 }
 
@@ -169,7 +167,7 @@ func GetAddress() bean.Address {
     return address
 }
 
-func GetPrvKey() *bean.PrivateKey {
+func GetPrvKey() *crypto.PrivateKey {
     return prvKey
 }
 

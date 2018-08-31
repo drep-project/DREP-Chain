@@ -37,7 +37,7 @@ func transactionExistsInPreviousBlocks(id string) bool {
 func (p *transactionProcessor) process(msg interface{})  {
     if transaction, ok := msg.(*bean.Transaction); ok {
         fmt.Println(transaction)
-        id, _ := transaction.GetId()
+        id, _ := transaction.TxId()
         if transactionExistsInPreviousBlocks(id) || store.Contains(id) {
             return
         }

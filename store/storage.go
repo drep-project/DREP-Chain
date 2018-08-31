@@ -9,7 +9,7 @@ import (
 var (
     balances map[bean.Address]big.Int
     balancesLock sync.Locker
-    currentBlockHeight = new(big.Int)
+    currentBlockHeight int64 = 0
 )
 
 func getBalance(addr bean.Address) big.Int {
@@ -26,7 +26,7 @@ func ExecuteTransactions(b *bean.Block) {
     if b == nil || b.Header == nil { // || b.Data == nil || b.Data.TxList == nil {
         return
     }
-    currentBlockHeight.SetBytes(b.Header.Height)
+    currentBlockHeight = b.Header.Height
     if b.Data == nil || b.Data.TxList == nil {
         return
     }
@@ -38,6 +38,6 @@ func ExecuteTransactions(b *bean.Block) {
 func execute(t *bean.Transaction)  {
 }
 
-func GetCurrentBlockHeight() *big.Int {
+func GetCurrentBlockHeight() int64 {
     return currentBlockHeight
 }
