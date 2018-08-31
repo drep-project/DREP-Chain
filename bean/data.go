@@ -44,16 +44,3 @@ func (block *Block) BlockID() (string, error) {
     id := hex.EncodeToString(crypto.Hash256(b))
     return id, nil
 }
-
-type Address string
-
-func (addr Address) String() string {
-    return string(addr)
-}
-
-func Addr(pubKey *crypto.Point) Address {
-    j := pubKey.Bytes()
-    h := crypto.Hash256(j)
-    str := hex.EncodeToString(h[len(h) - AddressLen:])
-    return Address(str)
-}
