@@ -31,8 +31,8 @@ func identifyMessage(message *Task) (int, interface{}) {
     }
 }
 
-func (m *Task) Cipher() ([]byte, error) {
-    serializable, err := bean.Serialize(m.Msg)
+func (t *Task) Cipher() ([]byte, error) {
+    serializable, err := bean.Serialize(t.Msg)
     if err != nil {
         return nil, err
     }
@@ -60,13 +60,13 @@ func (m *Task) Cipher() ([]byte, error) {
     return proto.Marshal(serializable)
 }
 
-func (m *Task) Send() error {
+func (t *Task) Send() error {
     // If sleep 1000 here, haha
-    cipher, err := m.Cipher()
+    cipher, err := t.Cipher()
     if err != nil {
         return err
     }
-    addr, err := net.ResolveTCPAddr("tcp", m.Peer.ToString())
+    addr, err := net.ResolveTCPAddr("tcp", t.Peer.ToString())
     if err != nil {
         return err
     }
@@ -75,7 +75,7 @@ func (m *Task) Send() error {
         return err
     }
     defer conn.Close()
-    fmt.Println("Send msg to ",m.Peer.ToString(), cipher)
+    fmt.Println("Send msg to ",t.Peer.ToString(), cipher)
     if num, err := conn.Write(cipher); err != nil {
         fmt.Println("Send error ", err)
         return err
