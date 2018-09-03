@@ -2,7 +2,6 @@ package network
 
 import (
     "BlockChainTest/bean"
-    "BlockChainTest/crypto"
     "github.com/golang/protobuf/proto"
     "net"
     "fmt"
@@ -11,24 +10,6 @@ import (
 type Task struct {
     Peer *Peer
     Msg  interface{}
-}
-
-func identifyMessage(message *Task) (int, interface{}) {
-    msg := message.Msg
-    switch msg.(type) {
-    case *bean.Setup:
-        return bean.MsgTypeSetUp, msg.(*bean.Setup)
-    case *bean.Commitment:
-        return bean.MsgTypeCommitment, msg.(*bean.Commitment)
-    case *bean.Challenge:
-        return bean.MsgTypeChallenge, msg.(*bean.Challenge)
-    case *bean.Response:
-        return bean.MsgTypeResponse, msg.(*bean.Response)
-    case *bean.Block:
-        return bean.MsgTypeBlock, msg.(*bean.Block)
-    default:
-        return -1, nil
-    }
 }
 
 func (t *Task) Cipher() ([]byte, error) {
@@ -60,7 +41,7 @@ func (t *Task) Cipher() ([]byte, error) {
     return proto.Marshal(serializable)
 }
 
-func (t *Task) Send() error {
+func (t *Task) SendMessageCore() error {
     // If sleep 1000 here, haha
     cipher, err := t.Cipher()
     if err != nil {
@@ -83,21 +64,4 @@ func (t *Task) Send() error {
         fmt.Println("Send bytes ", num)
         return nil
     }
-}
-
-func DecryptIntoMessage(cipher []byte) (*Task, error) {
-    plaintext, err := crypto.Decrypt(cipher)
-    if err != nil {
-        return nil, err
-    }
-    serializable, msg, err := bean.Deserialize(plaintext)
-    if err != nil {
-        return nil, err
-    }
-    //if !crypto.Verify(serializable.Sig, serializable.PubKey, serializable.Body) {
-    //   return nil, errors.New("decrypt fail")
-    //}
-    peer := &Peer{PubKey: serializable.PubKey}
-    message := &Task{Peer: peer, Msg: msg}
-    return message, nil
 }

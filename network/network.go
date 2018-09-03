@@ -5,6 +5,8 @@ import (
    "net"
    "fmt"
    "strings"
+    "BlockChainTest/crypto"
+    "BlockChainTest/bean"
 )
 
 var onceSender sync.Once
@@ -25,97 +27,103 @@ func SendMessage(peers []*Peer, msg interface{}) {
    }
 }
 
-//func SendMessage(peers []*Peer, msg interface{}) error {
-//    for _, peer := range peers  {
-//        //use proto buffer serialize
-//        serializable, err := bean.Serialize(msg)
-//        if err != nil {
-//            return err
-//        }
-//        SendMessageCore(peer, serializable.Body)
-//    }
-//    return nil
-//}
-//
-//func SendMessageCore(peer *Peer, bytes []byte) error {
-//
-//    addr, err := net.ResolveTCPAddr("tcp", peer.ToString())
-//    if err != nil {
-//        return err
-//    }
-//    conn, err := net.DialTCP("tcp", nil, addr)
-//    if err != nil {
-//        return err
-//    }
-//    defer conn.Close()
-//    if _, err := conn.Write(bytes); err != nil {
-//        return err
-//    }
-//    return nil
-//}
+func Start(process func(int, interface{})) {
+    startListen(process)
+    startSend()
+}
 
 func startListen(process func(int, interface{})) {
-  go func() {
-     //room for modification addr := &net.TCPAddr{IP: net.ParseIP("x.x.x.x"), Port: receiver.listeningPort()}
-     addr := &net.TCPAddr{Port: listeningPort}
-     listener, err := net.ListenTCP("tcp", addr)
-     if err != nil {
-        fmt.Println("error", err)
-        return
-     }
-     for {
-        fmt.Println("start listen")
-        conn, err := listener.AcceptTCP()
-        fmt.Println("listen from ", conn.RemoteAddr())
+    go func() {
+        //room for modification addr := &net.TCPAddr{IP: net.ParseIP("x.x.x.x"), Port: receiver.listeningPort()}
+        addr := &net.TCPAddr{Port: listeningPort}
+        listener, err := net.ListenTCP("tcp", addr)
         if err != nil {
-           continue
+            fmt.Println("error", err)
+            return
         }
-        cipher := make([]byte, bufferSize)
-        b := cipher
-        offset := 0
         for {
-           n, err := conn.Read(b)
-           if err != nil {
-              break
-           } else {
-              offset += n
-              b = cipher[offset:]
-           }
+            fmt.Println("start listen")
+            conn, err := listener.AcceptTCP()
+            fmt.Println("listen from ", conn.RemoteAddr())
+            if err != nil {
+                continue
+            }
+            cipher := make([]byte, bufferSize)
+            b := cipher
+            offset := 0
+            for {
+                n, err := conn.Read(b)
+                if err != nil {
+                    break
+                } else {
+                    offset += n
+                    b = cipher[offset:]
+                }
+            }
+            fmt.Println("Receive ", cipher[:offset])
+            fmt.Println("Receive byte ", offset)
+            task, err := DecryptIntoTask(cipher[:offset])
+            fmt.Println("Receive after decrypt", task)
+            if err != nil {
+                return
+            }
+            fromAddr := conn.RemoteAddr().String()
+            ip := fromAddr[:strings.LastIndex(fromAddr, ":")]
+            task.Peer.IP = IP(ip)
+            //queue := GetReceiverQueue()
+            //queue <- message
+            //p := processor.GetInstance()
+            t, msg := identifyMessage(task)
+            if msg != nil {
+                process(t, msg)
+            }
+            fmt.Println("end listen")
         }
-        fmt.Println("Receive ", cipher[:offset])
-        fmt.Println("Receive byte ", offset)
-        message, err := DecryptIntoMessage(cipher[:offset])
-        fmt.Println("Receive after decrypt", message)
-        if err != nil {
-           return
-        }
-        fromAddr := conn.RemoteAddr().String()
-        ip := fromAddr[:strings.LastIndex(fromAddr, ":")]
-        message.Peer.IP = IP(ip)
-        //queue := GetReceiverQueue()
-        //queue <- message
-        //p := processor.GetInstance()
-        t, msg := identifyMessage(message)
-        if msg != nil {
-           process(t, msg)
-        }
-        fmt.Println("end listen")
-     }
-  }()
+    }()
 }
 
 func startSend() {
    go func() {
       sender := GetSenderQueue()
       for {
-         if message, ok := <-sender; ok {
-            message.Send()
+         if task, ok := <-sender; ok {
+            task.SendMessageCore()
          }
       }
    }()
 }
 
-func Start(process func(int, interface{})) {
-   startListen(process)
-   startSend()
+func DecryptIntoTask(cipher []byte) (*Task, error) {
+    plaintext, err := crypto.Decrypt(cipher)
+    if err != nil {
+        return nil, err
+    }
+    serializable, msg, err := bean.Deserialize(plaintext)
+    if err != nil {
+        return nil, err
+    }
+    //if !crypto.Verify(serializable.Sig, serializable.PubKey, serializable.Body) {
+    //   return nil, errors.New("decrypt fail")
+    //}
+    peer := &Peer{PubKey: serializable.PubKey}
+    task := &Task{Peer: peer, Msg: msg}
+    return task, nil
+}
+
+func identifyMessage(task *Task) (int, interface{}) {
+    msg := task.Msg
+    switch msg.(type) {
+    case *bean.Setup:
+        return bean.MsgTypeSetUp, msg.(*bean.Setup)
+    case *bean.Commitment:
+        return bean.MsgTypeCommitment, msg.(*bean.Commitment)
+    case *bean.Challenge:
+        return bean.MsgTypeChallenge, msg.(*bean.Challenge)
+    case *bean.Response:
+        return bean.MsgTypeResponse, msg.(*bean.Response)
+    case *bean.Block:
+        return bean.MsgTypeBlock, msg.(*bean.Block)
+    default:
+        return -1, nil
+    }
 }
