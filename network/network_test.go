@@ -30,3 +30,7 @@ func TestSendMessage(t *testing.T) {
     peers := InitPeers()
     SendMessage(peers,"this is a msg")
 }
+
+func TestDecryptIntoMessage(t *testing.T) {
+
+}
