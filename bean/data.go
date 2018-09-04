@@ -36,6 +36,10 @@ func (tx *Transaction) TxSig() (*crypto.Signature, error) {
     return crypto.Sign(b)
 }
 
+func (tx *Transaction) Addr() Address {
+    return Addr(tx.Data.PubKey)
+}
+
 func (block *Block) BlockID() (string, error) {
     b, err := proto.Marshal(block.Header)
     if err != nil {
