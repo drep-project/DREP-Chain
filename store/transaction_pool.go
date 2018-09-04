@@ -140,7 +140,7 @@ func removeTransaction(tran *bean.Transaction) {
         }
     }
     if i < len(ts) {
-        tran = append(tran[:i], tran[i + 1:])
+        accountTran[addr] = append(ts[:i], ts[i + 1:]...)
     }
 }
 
@@ -152,10 +152,13 @@ func RemoveTransactions(trans []*bean.Transaction) {
     tranLock.Unlock()
 }
 
-func PickTransactions() []*bean.Transaction {
+func PickTransactions(gasLimit *big.Int) []*bean.Transaction {
+    gas := big.NewInt(0)
     tranLock.Lock()
-    for _, t := range transactions {
+    for p := tranHead; p != nil; p = p.next {
 
+    }
+    for _, t := range  {
     }
     tranLock.Unlock()
 }
