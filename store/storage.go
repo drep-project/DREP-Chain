@@ -7,19 +7,39 @@ import (
 )
 
 var (
-    balances map[bean.Address]big.Int
-    balancesLock sync.Locker
+    balances           map[bean.Address]*big.Int
+    nonces             map[bean.Address]int64
+    accountLock        sync.Mutex
     currentBlockHeight int64 = 0
+    one = big.NewInt(1)
 )
 
-func getBalance(addr bean.Address) big.Int {
+func GetBalance(addr bean.Address) *big.Int {
     return balances[addr]
 }
 
-func SetBalance(addr bean.Address, bal big.Int) {
-    balancesLock.Lock()
+func SetBalance(addr bean.Address, bal *big.Int) {
+    accountLock.Lock()
     balances[addr] = bal
-    balancesLock.Unlock()
+    accountLock.Unlock()
+}
+
+func GetNonce(addr bean.Address) int64 {
+    return nonces[addr]
+}
+
+func AddNonce(addr bean.Address) {
+    accountLock.Lock()
+    value, exists := nonces[addr]
+    if exists {
+        if value >= 0 {
+            nonces[addr]++
+        } else {
+            nonces[addr] = 1
+        }
+    } else {
+        nonces[addr] = 1
+    }
 }
 
 func ExecuteTransactions(b *bean.Block) {
