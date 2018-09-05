@@ -5,6 +5,7 @@ import (
     "log"
     "BlockChainTest/bean"
     "math/big"
+    "BlockChainTest/util/list"
 )
 
 type listNode struct {
@@ -15,7 +16,7 @@ type listNode struct {
 var (
     tranHead *listNode
     tranTail *listNode
-    accountTran map[bean.Address][]*bean.Transaction
+    accountTran map[bean.Address]*list.SortedLinkedList
     tranSet map[string]bool
     tranLock     sync.Mutex
 )
@@ -23,7 +24,7 @@ var (
 func init()  {
     tranHead = nil
     tranTail = nil
-    accountTran = make(map[bean.Address][]*bean.Transaction)
+    accountTran = make(map[bean.Address]*list.SortedLinkedList)
     tranSet = make(map[string]bool)
 }
 
