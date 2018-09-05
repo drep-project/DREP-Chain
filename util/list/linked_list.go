@@ -1,12 +1,7 @@
-package util
-
-type ListNode struct {
-    value  interface{}
-    prev, next *ListNode
-}
+package list
 
 type LinkedList struct {
-    head, tail *ListNode
+    head, tail *node
     len int
 }
 
@@ -22,7 +17,7 @@ func (l *LinkedList) Push(e interface{}) {
 
 }
 
-func (l *LinkedList) remove(n *ListNode) {
+func (l *LinkedList) remove(n *node) {
     if l.head == n && l.tail == n {
         l.head = nil
         l.tail = nil
@@ -53,23 +48,6 @@ func (l *LinkedList) Remove(e interface{}, cp func(interface{}, interface{})bool
     return false
 }
 
-type Iterator struct {
-    l *LinkedList
-    n *ListNode
-}
-
-func (i *Iterator) hasNext() bool {
-    return i.n != nil
-}
-
-func (i *Iterator) next() interface{} {
-    t := i.n
-    i.n = i.n.next
-    return t.value
-}
-
-func (i *Iterator) remove() {
-    t := i.n
-    i.l.remove(t)
-    i.n = i.n.next
+func (l *LinkedList) iterator() *Iterator {
+    return &Iterator{l:l}
 }
