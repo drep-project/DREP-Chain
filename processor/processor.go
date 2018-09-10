@@ -36,6 +36,8 @@ func (p *Processor) init()  {
     p.processors[bean.MsgTypeTransaction] = &transactionProcessor{}
     p.processors[bean.MsgTypeNewPeer] = &NewComerProcessor{}
     p.processors[bean.MsgTypePeerList] = &PeersProcessor{}
+    p.processors[bean.MsgTypeBlockReq] = &BlockReqProcessor{}
+    p.processors[bean.MsgTypeBlockResp] = &BlockRespProcessor{}
 }
 
 func GetInstance() *Processor {
