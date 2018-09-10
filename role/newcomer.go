@@ -1,11 +1,10 @@
-package node
+package role
 
 import (
     "sync"
     "BlockChainTest/network"
     "BlockChainTest/crypto"
     "BlockChainTest/bean"
-    "BlockChainTest/store"
     "BlockChainTest/log"
 )
 
@@ -15,12 +14,14 @@ const (
 )
 
 type Newcomer struct {
-    Node
+    address *bean.Address
+    prvKey *crypto.PrivateKey
     neighbour *network.Peer
     state int
+    wg *sync.WaitGroup
 }
 
-func NewJoiner() *Newcomer {
+func NewJoiner(peer *network.Peer) *Newcomer {
     sk,pk,error := crypto.GetRandomKQ()
     if error != nil {
         log.Println("generate key error:", error)
@@ -34,8 +35,7 @@ func NewJoiner() *Newcomer {
 
     newcomer.state = waiting
     // TODO: a hard coding server
-    peers := store.GetPeers()
-    newcomer.neighbour = peers[0]
+    newcomer.neighbour = peer
 
     newcomer.wg = &sync.WaitGroup{}
     newcomer.wg.Add(1)

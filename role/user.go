@@ -1,10 +1,9 @@
-package node
+package role
 
 import (
     "BlockChainTest/bean"
     "BlockChainTest/network"
     "BlockChainTest/crypto"
-    "BlockChainTest/store"
 )
 
 type User struct {
@@ -16,7 +15,7 @@ type User struct {
 func NewUser(pubKey *crypto.Point, peers []*network.Peer) *User {
     m := &User{}
     m.PubKey = pubKey
-    m.peers = store.GetPeers()
+    m.peers = peers
     return m
 }
 
@@ -49,6 +48,6 @@ func (n *User) ProcessNewComers(newcomer *bean.Newcomer)  {
     peerStore.Store[address] = newPeer
 
     // broadcast the new comer msg
-    peers := store.GetPeers()
-    network.SendMessage(peers, newcomer)
+    //peers := store.GetPeers()
+    //network.SendMessage(peers, newcomer)
 }

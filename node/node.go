@@ -10,6 +10,7 @@ import (
     "BlockChainTest/network"
     "BlockChainTest/crypto"
     "time"
+    "BlockChainTest/role"
 )
 
 var (
@@ -124,14 +125,28 @@ func (n *Node) runAsMember() {
 }
 
 func (n *Node) runAsOther() {
-    //if n.prvKey == nil {
-    //    n.runAsNewComer()
-    //    return
-    //}
+    if n.prvKey != nil {
+       n.runAsUser()
+       return
+    }
+}
+
+func (n *Node) runAsUser()  {
+    peer := store.GetPeers()[0]
+    user := role.NewUser(peer.PubKey, store.GetPeers())
+    store.SetUser(user)
+    log.Println("already ran as user!")
 }
 
 func (n *Node) runAsNewComer() {
-    newcomer :=  NewJoiner()
+    curve := crypto.GetCurve()
+    k := []byte{0x22, 0x11}
+    pub := curve.ScalarBaseMultiply(k)
+    ip := network.IP("192.168.3.13")
+    port := network.Port(55555)
+    peer := &network.Peer{IP: ip, Port: port, PubKey: pub}
+
+    newcomer := role.NewJoiner(peer)
     store.SetNewComer(newcomer)
     log.Println("newcomer is going to process")
     newcomer.ProcessJoin()
