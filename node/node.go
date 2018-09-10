@@ -150,6 +150,7 @@ func (n *Node) runAsUser()  {
 }
 
 func (n *Node) runAsNewComer() {
+    // TODO: a hard coding server
     curve := crypto.GetCurve()
     k := []byte{0x22, 0x11}
     pub := curve.ScalarBaseMultiply(k)

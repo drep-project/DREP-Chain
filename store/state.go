@@ -33,7 +33,7 @@ var (
     remainingSetUp *bean.Setup
 
     currentMinerIndex int
-    myIndex = 2
+    myIndex = 1
 )
 
 func init()  {
