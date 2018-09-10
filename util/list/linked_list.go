@@ -57,7 +57,7 @@ func (l *LinkedList) Remove(e interface{}, cp func(interface{}, interface{})bool
     return false
 }
 
-func (l *LinkedList) iterator() Iterator {
+func (l *LinkedList) Iterator() Iterator {
     return &linkedListIterator{l:l, n1:l.head}
 }
 

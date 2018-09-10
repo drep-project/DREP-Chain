@@ -70,13 +70,13 @@ func TestLinkedList_Iterator1(t *testing.T) {
     }
     it := func() []interface{} {
         var r []interface{}
-        for i := l.iterator(); i.HasNext(); {
+        for i := l.Iterator(); i.HasNext(); {
             r = append(r, i.Next())
         }
         return r
     }
     remove := func(e int) {
-        for i := l.iterator(); i.HasNext(); {
+        for i := l.Iterator(); i.HasNext(); {
             t := i.Next()
             if cp(t, e) {
                 i.Remove()
@@ -113,7 +113,7 @@ func TestLinkedList_Iterator2(t *testing.T) {
     for i:= 0; i < 5; i++ {
         l.Add(i)
     }
-    for i := l.iterator(); i.HasNext(); {
+    for i := l.Iterator(); i.HasNext(); {
         t := i.Next()
         if cp(t, 2) || cp(t, 3){
             i.Remove()
@@ -121,7 +121,7 @@ func TestLinkedList_Iterator2(t *testing.T) {
     }
     assert(t, util.SliceEqual(l.ToArray(), []interface{}{0, 1, 4}, cp))
     assert(t, util.SliceEqual(l.ToReverseArray(), []interface{}{4, 1, 0}, cp))
-    for i := l.iterator(); i.HasNext(); {
+    for i := l.Iterator(); i.HasNext(); {
         t := i.Next()
         if cp(t, 0) || cp(t, 4){
             i.Remove()
@@ -136,7 +136,7 @@ func TestLinkedList_Iterator3(t *testing.T) {
     for i:= 0; i < 5; i++ {
         l.Add(i)
     }
-    for i := l.iterator(); i.HasNext(); {
+    for i := l.Iterator(); i.HasNext(); {
         i.Next()
         i.Remove()
     }
