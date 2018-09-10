@@ -16,7 +16,7 @@ const (
 
 type Newcomer struct {
     Node
-    neighbours []*network.Peer
+    neighbour *network.Peer
     state int
 }
 
@@ -33,7 +33,10 @@ func NewJoiner() *Newcomer {
     newcomer.address = &address
 
     newcomer.state = waiting
-    newcomer.neighbours = store.GetMiners()
+    // TODO: a hard coding server
+    peers := store.GetPeers()
+    newcomer.neighbour = peers[0]
+
     newcomer.wg = &sync.WaitGroup{}
     newcomer.wg.Add(1)
 
@@ -47,7 +50,9 @@ func (n *Newcomer) ProcessJoin()  {
 
     log.Println("there is a newcomer request to join the blockchain family!")
     log.Println("start request.")
-    network.SendMessage(n.neighbours, msg)
+
+    var peers = []*network.Peer{n.neighbour}
+    network.SendMessage(peers, msg)
     n.wg.Wait()
 }
 

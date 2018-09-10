@@ -125,6 +125,8 @@ func identifyMessage(task *Task) (int, interface{}) {
         return bean.MsgTypeBlock, msg.(*bean.Block)
     case *bean.Newcomer:
         return bean.MsgTypeNewComer, msg.(*bean.Newcomer)
+    case bean.ListOfPeer:
+        return bean.MsgTypeUser,msg.(*bean.ListOfPeer)
     default:
         return -1, nil
     }

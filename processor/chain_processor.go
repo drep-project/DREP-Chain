@@ -44,24 +44,3 @@ func (p *BlockProcessor) process(msg interface{}) {
     }
 }
 
-type NewComerProcessor struct {
-}
-
-func (p *NewComerProcessor) process(msg interface{}) {
-    if newcomer, ok := msg.(*bean.Newcomer); ok {
-        if peer := store.GetItSelfOnPeer(); peer != nil {
-            peer.ProcessNewComers(newcomer)
-        }
-    }
-}
-
-type PeerProcessor struct {
-}
-
-func (p *PeerProcessor) process(msg interface{}) {
-    if listOfNewComer, ok := msg.(*bean.ListOfPeer); ok {
-        if newcomer := store.GetItSelfOnPeer(); peer != nil {
-            newcomer.ProcessNewComers(listOfNewComer)
-        }
-    }
-}

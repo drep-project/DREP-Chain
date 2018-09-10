@@ -35,6 +35,7 @@ func (p *Processor) init()  {
     p.processors[bean.MsgTypeBlock] = &BlockProcessor{p}
     p.processors[bean.MsgTypeTransaction] = &transactionProcessor{}
     p.processors[bean.MsgTypeNewComer] = &NewComerProcessor{}
+    p.processors[bean.MsgTypeUser] = &UserProcessor{}
 }
 
 func GetInstance() *Processor {

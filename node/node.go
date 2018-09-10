@@ -54,6 +54,8 @@ func (n *Node) Start() {
                 n.runAsLeader()
             case bean.MEMBER:
                 n.runAsMember()
+            case bean.NEWCOMER:
+                n.runAsNewComer()
             case bean.OTHER:
                 n.runAsOther()
             }
@@ -122,14 +124,15 @@ func (n *Node) runAsMember() {
 }
 
 func (n *Node) runAsOther() {
-    if n.prvKey == nil {
-        n.runAsNewComer()
-        return
-    }
+    //if n.prvKey == nil {
+    //    n.runAsNewComer()
+    //    return
+    //}
 }
 
 func (n *Node) runAsNewComer() {
     newcomer :=  NewJoiner()
+    store.SetNewComer(newcomer)
     log.Println("newcomer is going to process")
     newcomer.ProcessJoin()
     log.Println("welcome the newcomer!")
