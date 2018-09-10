@@ -122,7 +122,17 @@ func (n *Node) runAsMember() {
 }
 
 func (n *Node) runAsOther() {
+    if n.prvKey == nil {
+        n.runAsNewComer()
+        return
+    }
+}
 
+func (n *Node) runAsNewComer() {
+    newcomer :=  NewJoiner()
+    log.Println("newcomer is going to process")
+    newcomer.ProcessJoin()
+    log.Println("welcome the newcomer!")
 }
 
 func (n *Node) ProcessBlock(block *bean.Block, del bool) {

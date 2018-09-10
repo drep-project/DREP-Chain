@@ -15,6 +15,8 @@ const (
     MsgTypeCommitment  = 6
     MsgTypeChallenge   = 7
     MsgTypeResponse    = 8
+    MsgTypeNewComer    = 9
+    MsgTypePeer        = 10
 )
 
 const (

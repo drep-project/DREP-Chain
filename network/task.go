@@ -42,7 +42,7 @@ func (t *Task) Cipher() ([]byte, error) {
 }
 
 func (t *Task) SendMessageCore() error {
-    // If sleep 1000 here, haha
+    // If sleep 1000 here, hahax
     cipher, err := t.Cipher()
     if err != nil {
         return err
