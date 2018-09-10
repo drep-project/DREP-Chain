@@ -13,7 +13,7 @@ func (l *LinkedList) Size() int {
     return l.len
 }
 
-func (l *LinkedList) Push(e interface{}) {
+func (l *LinkedList) Add(e interface{}) {
     n := &node{value: e}
     if l.head == nil {
         l.head = n
