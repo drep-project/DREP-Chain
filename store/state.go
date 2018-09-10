@@ -9,6 +9,7 @@ import (
     "BlockChainTest/log"
     "math/big"
     "BlockChainTest/node"
+    role2 "BlockChainTest/role"
 )
 
 var (
@@ -16,8 +17,8 @@ var (
     leader *consensus.Leader
     member *consensus.Member
 
-    user   *node.User
-    newcomer *node.Newcomer
+    user   *role2.User
+    newcomer *role2.Newcomer
 
     //miningState int
     miners []*network.Peer
@@ -127,11 +128,11 @@ func SetMember(m *consensus.Member) {
     member = m
 }
 
-func SetUser(u *node.User) {
+func SetUser(u *role2.User) {
     user = u
 }
 
-func SetNewComer(n *node.Newcomer)  {
+func SetNewComer(n *role2.Newcomer)  {
     newcomer = n
 }
 
@@ -223,11 +224,11 @@ func GetItSelfOnMember() *consensus.Member {
     return member
 }
 
-func GetItSelfOnUser() *node.User {
+func GetItSelfOnUser() *role2.User {
     return user
 }
 
-func GetItSelfOnNewcomer() *node.Newcomer {
+func GetItSelfOnNewcomer() *role2.Newcomer {
     return newcomer
 }
 
