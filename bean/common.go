@@ -16,13 +16,14 @@ const (
     MsgTypeChallenge   = 7
     MsgTypeResponse    = 8
     MsgTypeNewComer    = 9
-    MsgTypePeer        = 10
+    MsgTypeUser        = 10
 )
 
 const (
     LEADER    = 0
     MEMBER    = 1
-    OTHER     = 2
+    NEWCOMER  = 2
+    OTHER     = 3
 )
 
 type Address string

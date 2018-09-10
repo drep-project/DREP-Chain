@@ -15,7 +15,10 @@ var (
     role int
     leader *consensus.Leader
     member *consensus.Member
-    miner *node.Miner
+
+    user   *node.User
+    newcomer *node.Newcomer
+
     //miningState int
     miners []*network.Peer
     //minerIndex map[bean.Address]int
@@ -104,12 +107,32 @@ func ChangeRole() {
     lock.Unlock()
 }
 
+
+func NewcomerRole()  {
+    switch myIndex {
+    case 2:
+        role = bean.NEWCOMER
+    default:
+        role = bean.OTHER
+    }
+    leader = nil
+    member = nil
+}
+
 func SetLeader(l *consensus.Leader) {
     leader = l
 }
 
 func SetMember(m *consensus.Member) {
     member = m
+}
+
+func SetUser(u *node.User) {
+    user = u
+}
+
+func SetNewComer(n *node.Newcomer)  {
+    newcomer = n
 }
 
 func GetRole() int {
@@ -200,8 +223,12 @@ func GetItSelfOnMember() *consensus.Member {
     return member
 }
 
-func GetItSelfOnMiner() *node.Miner {
-    return miner
+func GetItSelfOnUser() *node.User {
+    return user
+}
+
+func GetItSelfOnNewcomer() *node.Newcomer {
+    return newcomer
 }
 
 func SetRemainingSetup(setup *bean.Setup)  {

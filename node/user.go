@@ -30,23 +30,25 @@ func (n *User) ProcessNewComers(newcomer *bean.Newcomer)  {
 
     peerStore := network.GetStore()
 
-    // add newcomer to the map table.
-    peerStore.Store[address] = newPeer
-
     list := make([]*bean.Newcomer, 0)
 
     for _, value := range peerStore.Store {
-        newcomer := &bean.Newcomer{}
-        newcomer.Pk = value.PubKey
-        list = append(list, newcomer)
+        msg := &bean.Newcomer{}
+        msg.Pk = value.PubKey
+        list = append(list, msg)
     }
 
     listOfPeer := &bean.ListOfPeer{}
     listOfPeer.List = list
+
     // return the list to newcomer
     task := network.Task{newPeer,listOfPeer}
     task.SendMessageCore()
+
+    // add newcomer to the map table.
+    peerStore.Store[address] = newPeer
+
     // broadcast the new comer msg
-    //peers := store.GetPeers()
-    //network.SendMessage(peers, newcomer)
+    peers := store.GetPeers()
+    network.SendMessage(peers, newcomer)
 }
