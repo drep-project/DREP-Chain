@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package bean;
+
+import "crypto/key.proto";
+
+message newcomer {
+    crypto.point pk = 1;
+}
+
+message listOfPeer {
+    repeated newcomer list = 1;
+}

@@ -50,5 +50,6 @@ func (p *ResponseProcessor) process(msg interface{}) {
         if leader := store.GetItSelfOnLeader(); leader != nil {
             leader.ProcessResponse(response)
         }
+        store.GetPubKey()
     }
 }

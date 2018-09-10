@@ -1,31 +1,34 @@
 package network
 
-import "sync"
+import (
+    "sync"
+    "BlockChainTest/bean"
+)
 
 var sharedPeerStore *PeerStore
 var once sync.Once
 
 type PeerStore struct {
-    store map[int]string
+    Store map[bean.Address]*Peer
 }
 
 // Returns the singleton PeerStore instance.
-func (ps *PeerStore) GetStore () *PeerStore {
+func GetStore () *PeerStore {
     once.Do(func() {
         sharedPeerStore = &PeerStore{}
     })
     return sharedPeerStore
-
 }
 
-// Adds a Peer to the table.
-func (ps *PeerStore) AddPeerPair (pk string, peer *Peer) {
-
+// Adds a Peer to the map table.
+func (ps *PeerStore) AddPeer(peer *Peer) {
+    pk := bean.Addr(peer.PubKey)
+    ps.Store[pk] = peer
 }
 
-// Returns the number of peers in the table.
+// Returns the current number of peers in the table.
 func (ps *PeerStore) GetPeerCount () int {
-    return len(ps.store)
+    return len(ps.Store)
 }
 
 

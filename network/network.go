@@ -123,6 +123,8 @@ func identifyMessage(task *Task) (int, interface{}) {
         return bean.MsgTypeResponse, msg.(*bean.Response)
     case *bean.Block:
         return bean.MsgTypeBlock, msg.(*bean.Block)
+    case *bean.Newcomer:
+        return bean.MsgTypeNewComer, msg.(*bean.Newcomer)
     default:
         return -1, nil
     }

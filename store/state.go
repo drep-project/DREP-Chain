@@ -8,12 +8,14 @@ import (
     "BlockChainTest/crypto"
     "BlockChainTest/log"
     "math/big"
+    "BlockChainTest/node"
 )
 
 var (
     role int
     leader *consensus.Leader
     member *consensus.Member
+    miner *node.Miner
     //miningState int
     miners []*network.Peer
     //minerIndex map[bean.Address]int
@@ -136,6 +138,15 @@ func GetMiner(pubKey *crypto.Point) *network.Peer {
     return nil
 }
 
+func GetPeer(pubKey *crypto.Point) *network.Peer {
+    for _, v:= range peers {
+        if v.PubKey.Equal(pubKey) {
+            return v
+        }
+    }
+    return nil
+}
+
 func GetPeers() []*network.Peer {
     result := make([]*network.Peer, 0)
     for _, v := range peers {
@@ -187,6 +198,10 @@ func GetItSelfOnLeader() *consensus.Leader {
 
 func GetItSelfOnMember() *consensus.Member {
     return member
+}
+
+func GetItSelfOnMiner() *node.Miner {
+    return miner
 }
 
 func SetRemainingSetup(setup *bean.Setup)  {
