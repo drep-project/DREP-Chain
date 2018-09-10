@@ -73,18 +73,20 @@ func checkAndGetAddr(tran *bean.Transaction) (bool, bean.Address) {
     return true, addr
 }
 //func AddTransaction(id string, transaction *common.Transaction) {
-func AddTransaction(transaction *bean.Transaction) {
+func AddTransaction(transaction *bean.Transaction) bool {
     check, addr := checkAndGetAddr(transaction)
     if !check {
-        return
+        return false
     }
     id, err := transaction.TxId()
     if err != nil {
-        return
+        return false
     }
     tranLock.Lock()
     if _, exists := tranSet[id]; exists {
         log.Fatalf("Transaction %s exists", id)
+        tranLock.Unlock()
+        return false
     } else {
         tranSet[id] = true
         trans.Add(transaction)
@@ -96,6 +98,7 @@ func AddTransaction(transaction *bean.Transaction) {
         }
     }
     tranLock.Unlock()
+    return true
 }
 
 func removeTransaction(tran *bean.Transaction) {

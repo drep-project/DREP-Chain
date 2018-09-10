@@ -6,6 +6,7 @@ import (
     "BlockChainTest/bean"
     "BlockChainTest/store"
     "BlockChainTest/node"
+    "BlockChainTest/network"
 )
 
 var curve = crypto.InitCurve()
@@ -14,39 +15,20 @@ type transactionProcessor struct {
 
 }
 
-//func checkTransaction(t *common.Transaction) bool {
-    // TODO Check sig
-    // TODO Check nonce
-
-func checkTransaction(t *bean.Transaction) bool {
-    // Check sig
-    //merge, err := t.()
-    //if err != nil {
-    //    return false
-    //}
-    //if !network.Verify(curve, t.Sig, t.PubKey, merge) {
-    //    return false
-    //}
-    return true
-}
-
-func transactionExistsInPreviousBlocks(id string) bool {
-    return false
-}
+//func transactionExistsInPreviousBlocks(id string) bool {
+//    return false
+//}
 
 func (p *transactionProcessor) process(msg interface{})  {
     if transaction, ok := msg.(*bean.Transaction); ok {
         fmt.Println(transaction)
         id, _ := transaction.TxId()
-        if transactionExistsInPreviousBlocks(id) || store.Contains(id) {
+        if store.Contains(id) {
             return
         }
-        //if checkTransaction(&transaction) {
-        //    pool.AddTransaction(id, &transaction)
-            // TODO Send the transaction to all peers
-
-        if checkTransaction(transaction) {
-            store.AddTransaction(transaction)
+        if store.AddTransaction(transaction) {
+            peers := store.GetPeers()
+            network.SendMessage(peers, transaction)
         }
     }
 }
