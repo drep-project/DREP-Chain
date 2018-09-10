@@ -49,5 +49,5 @@ func (l *SortedLinkedList) Remove(e interface{}, cp func(interface{}, interface{
 }
 
 func (l *SortedLinkedList) iterator() *Iterator {
-    return &Iterator{l:l}
+    return nil//&Iterator{l:l}
 }
