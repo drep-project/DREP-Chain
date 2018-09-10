@@ -21,7 +21,7 @@ func assert(b bool)  {
 func TestLinkedList_Common(t *testing.T) {
     l := NewLinkedList()
     for i := 0; i < 5; i++ {
-        l.Push(i)
+        l.Add(i)
         if i + 1 != l.Size() {
             t.Error("fail", i)
         }
@@ -42,7 +42,7 @@ func TestLinkedList_Common(t *testing.T) {
     assert(util.SliceEqual(l.ToArray(), []interface{}{2, 3}, cp))
     assert(util.SliceEqual(l.ToReverseArray(), []interface{}{3, 2}, cp))
     assert(l.Size() == 2)
-    l.Push(5)
+    l.Add(5)
     assert(util.SliceEqual(l.ToArray(), []interface{}{2, 3, 5}, cp))
     assert(util.SliceEqual(l.ToReverseArray(), []interface{}{5, 3, 2}, cp))
     assert(l.Size() == 3)
@@ -58,7 +58,7 @@ func TestLinkedList_Common(t *testing.T) {
     assert(util.SliceEqual(l.ToArray(), []interface{}{}, cp))
     assert(util.SliceEqual(l.ToReverseArray(), []interface{}{}, cp))
     assert(l.Size() == 0)
-    l.Push(5)
+    l.Add(5)
     assert(util.SliceEqual(l.ToArray(), []interface{}{5}, cp))
     assert(util.SliceEqual(l.ToReverseArray(), []interface{}{5}, cp))
     assert(l.Size() == 1)
@@ -67,7 +67,7 @@ func TestLinkedList_Common(t *testing.T) {
 func TestLinkedList_Iterator1(t *testing.T) {
     l := NewLinkedList()
     for i:= 0; i < 5; i++ {
-        l.Push(i)
+        l.Add(i)
     }
     it := func() []interface{} {
         var r []interface{}
@@ -112,7 +112,7 @@ func TestLinkedList_Iterator1(t *testing.T) {
 func TestLinkedList_Iterator2(t *testing.T) {
     l := NewLinkedList()
     for i:= 0; i < 5; i++ {
-        l.Push(i)
+        l.Add(i)
     }
     for i := l.iterator(); i.HasNext(); {
         t := i.Next()
@@ -135,7 +135,7 @@ func TestLinkedList_Iterator2(t *testing.T) {
 func TestLinkedList_Iterator3(t *testing.T) {
     l := NewLinkedList()
     for i:= 0; i < 5; i++ {
-        l.Push(i)
+        l.Add(i)
     }
     for i := l.iterator(); i.HasNext(); {
         i.Next()

@@ -1,53 +1,36 @@
 package list
 
 type SortedLinkedList struct {
-    head, tail *node
-    len int
+    LinkedList
+    cp func(interface{}, interface{})int
 }
 
-func NewSortedLinkedList() *LinkedList {
-    return &LinkedList{len:0}
+func NewSortedLinkedList(cp func(interface{}, interface{})int) *SortedLinkedList {
+    return &SortedLinkedList{LinkedList: *NewLinkedList(), cp:cp}
 }
 
-func (l *SortedLinkedList) Size() int {
-    return l.len
-}
-
-func (l *SortedLinkedList) Push(e interface{}) {
-
-}
-
-func (l *SortedLinkedList) remove(n *node) {
-    if l.head == n && l.tail == n {
-        l.head = nil
-        l.tail = nil
-    } else if l.head == n {
-        l.head = n.next
-        n.next.prev = nil
-        n.next = nil
-    } else if l.tail == n {
-        l.tail = n.prev
-        n.prev.next = nil
-        n.prev = nil
+func (l *SortedLinkedList) Add(e interface{}) {
+    l.len++
+    n := &node{value: e}
+    if l.head == nil {
+        l.head = n
+        l.tail = n
+        return
+    }
+    var p *node
+    for p = l.head; p != nil && l.cp(e, p.value) > 0; p = p.next {}
+    if p == l.head {
+        l.head.prev = n
+        n.next = l.head
+        l.head = n
+    } else if p == nil {
+        l.tail.next = n
+        n.prev = l.tail
+        l.tail = n
     } else {
-        n.prev.next = n.next
-        n.next.prev = n.prev
-        n.next = nil
-        n.prev = nil
+        n.prev = p.prev
+        n.next = p
+        p.prev.next = n
+        p.prev = n
     }
-    l.len--
-}
-
-func (l *SortedLinkedList) Remove(e interface{}, cp func(interface{}, interface{})bool) bool {
-    for p := l.head; p != nil; p = p.next {
-        if cp(p.value, e) {
-            l.remove(p)
-            return true
-        }
-    }
-    return false
-}
-
-func (l *SortedLinkedList) iterator() *Iterator {
-    return nil//&Iterator{l:l}
 }
