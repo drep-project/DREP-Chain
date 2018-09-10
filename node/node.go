@@ -66,6 +66,17 @@ func (n *Node) Start() {
     }()
 }
 
+//TODO : simulate the newcomer join in
+// func (n *Node) Start()  {
+//     store.NewcomerRole()
+//     switch store.GetRole() {
+//     case bean.NEWCOMER:
+//         n.runAsNewComer()
+//     case bean.OTHER:
+//         n.runAsOther()
+//     }
+// }
+
 func (n *Node) runAsLeader() {
     leader1 := consensus.NewLeader(n.prvKey.PubKey, store.GetMiners())
     store.SetLeader(leader1)

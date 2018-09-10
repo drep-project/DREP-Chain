@@ -59,7 +59,7 @@ func (n *Newcomer) ProcessJoin()  {
 func (n *Newcomer) ProcessWelcome(list *bean.ListOfPeer) {
     log.Println("welcome newcomer! it's done.")
     peerStore := network.GetStore()
-
+    log.Println("the peerStore before: ", peerStore.Store)
     // store the peers in the local memory.
     for _, item := range list.List {
         pubKey := item.Pk
@@ -69,8 +69,9 @@ func (n *Newcomer) ProcessWelcome(list *bean.ListOfPeer) {
         peer.Address = address
         peerStore.Store[address] = peer
     }
-
+    log.Println("the peerStore after: ", peerStore.Store)
     n.state = done
     n.wg.Done()
+    log.Println("add newcomer done")
 }
 
