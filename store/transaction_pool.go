@@ -6,24 +6,35 @@ import (
     "BlockChainTest/bean"
     "math/big"
     "BlockChainTest/util/list"
+    "bytes"
 )
 
-type listNode struct {
-    tran *bean.Transaction
-    prev, next *listNode
-}
-
 var (
-    tranHead *listNode
-    tranTail *listNode
+    trans       *list.LinkedList
     accountTran map[bean.Address]*list.SortedLinkedList
-    tranSet map[string]bool
-    tranLock     sync.Mutex
+    tranSet     map[string]bool
+    tranLock    sync.Mutex
+    tranCp       = func(a interface{}, b interface{}) int{
+        ta, oka := a.(*bean.Transaction)
+        tb, okb := b.(*bean.Transaction)
+        if oka && okb {
+            nonceA := ta.Data.Nonce
+            nonceB := tb.Data.Nonce
+            if nonceA < nonceB {
+                return -1
+            } else if nonceA > nonceB {
+                return 1
+            } else {
+                return 0
+            }
+        } else {
+            return 0
+        }
+    }
 )
 
 func init()  {
-    tranHead = nil
-    tranTail = nil
+    trans = list.NewLinkedList()
     accountTran = make(map[bean.Address]*list.SortedLinkedList)
     tranSet = make(map[string]bool)
 }
@@ -76,19 +87,12 @@ func AddTransaction(transaction *bean.Transaction) {
         log.Fatalf("Transaction %s exists", id)
     } else {
         tranSet[id] = true
-        n := &listNode{tran: transaction}
-        if tranHead == nil {
-            tranHead = n
-            tranTail = n
-        } else {
-            tranTail.next = n
-            n.prev = tranTail
-            tranTail = n
-        }
+        trans.Add(transaction)
         if l, exists := accountTran[addr]; exists {
-            l = append(l, transaction)
+            l.Add(transaction)
         } else {
-            accountTran[addr] = []*bean.Transaction{transaction}
+            l = list.NewSortedLinkedList(tranCp)
+            l.Add(transaction)
         }
     }
     tranLock.Unlock()
@@ -99,50 +103,18 @@ func removeTransaction(tran *bean.Transaction) {
     if err != nil {
         return
     }
-    p := tranHead
-    for p != nil {
-        tmp, err := p.tran.TxId()
-        if err != nil {
-            continue
-        }
-        if id == tmp {
-            if p == tranHead && p == tranTail {
-                tranHead = nil
-                tranTail = nil
-            } else if p == tranHead {
-                tranHead = p.next
-                p.next.prev = nil
-                p.next = nil
-            } else if p == tranTail {
-                tranTail = p.prev
-                p.prev.next = nil
-                p.prev = nil
-            } else {
-                p.prev.next = p.next
-                p.next.prev = p.prev
-                p.next = nil
-                p.prev = nil
-            }
-            return
-        }
-        p = p.next
+    cp := func(a interface{}, b interface{}) bool {
+        ta, oka := a.(*bean.Transaction)
+        tb, okb := b.(*bean.Transaction)
+        ba, ea := ta.TxHash()
+        bb, eb := tb.TxHash()
+        return oka && okb && ea == nil && eb == nil && bytes.Equal(ba, bb)
     }
+    trans.Remove(tran, cp)
     delete(tranSet, id)
     addr := tran.Addr()
     ts := accountTran[addr]
-    var i int
-    for i = 0; i < len(ts); i++ {
-        tmp, err := ts[i].TxId()
-        if err != nil {
-            continue
-        }
-        if id == tmp {
-            break
-        }
-    }
-    if i < len(ts) {
-        accountTran[addr] = append(ts[:i], ts[i + 1:]...)
-    }
+    ts.Remove(tran, cp)
 }
 
 func RemoveTransactions(trans []*bean.Transaction) {
@@ -154,12 +126,38 @@ func RemoveTransactions(trans []*bean.Transaction) {
 }
 
 func PickTransactions(gasLimit *big.Int) []*bean.Transaction {
+    r := make([]*bean.Transaction, 10)
     gas := big.NewInt(0)
     tranLock.Lock()
-    for p := tranHead; p != nil; p = p.next {
-
-    }
-    for _, t := range  {
+    it := trans.Iterator()
+    for it.HasNext() {
+        if t, ok := it.Next().(*bean.Transaction); ok {
+            if id, err := t.TxId(); err != nil {
+                if tranSet[id] {
+                    addr := bean.Addr(t.Data.PubKey)
+                    if ts, exists := accountTran[addr]; exists {
+                        it2 := ts.Iterator()
+                        for it2.HasNext() {
+                            if t2, ok := it2.Next().(*bean.Transaction); ok {
+                                tmp := big.NewInt(0)
+                                gasLimit := big.NewInt(0).SetBytes(t2.Data.GasLimit)
+                                tmp.Add(gas, gasLimit)
+                                if tmp.Cmp(BlockGasLimit) < 0 {
+                                    if id2, err := t2.TxId(); err != nil {
+                                        gas = tmp
+                                        r = append(r, t2)
+                                        delete(tranSet, id2)
+                                        it2.Remove()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                it.Remove()
+            }
+        }
     }
     tranLock.Unlock()
+    return r
 }
