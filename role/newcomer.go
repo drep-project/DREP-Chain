@@ -6,6 +6,7 @@ import (
     "BlockChainTest/crypto"
     "BlockChainTest/bean"
     "BlockChainTest/log"
+    "fmt"
 )
 
 const (
@@ -34,7 +35,7 @@ func NewJoiner(peer *network.Peer) *Newcomer {
     newcomer.address = &address
 
     newcomer.state = waiting
-    // TODO: a hard coding server
+
     newcomer.neighbour = peer
 
     newcomer.wg = &sync.WaitGroup{}
@@ -59,7 +60,7 @@ func (n *Newcomer) ProcessJoin()  {
 func (n *Newcomer) ProcessWelcome(list *bean.ListOfPeer) {
     log.Println("welcome newcomer! it's done.")
     peerStore := network.GetStore()
-    log.Println("the peerStore before: ", peerStore.Store)
+    fmt.Println("the peerStore before: ", peerStore.Store)
     // store the peers in the local memory.
     for _, item := range list.List {
         pubKey := item.Pk
@@ -67,9 +68,11 @@ func (n *Newcomer) ProcessWelcome(list *bean.ListOfPeer) {
         peer := &network.Peer{}
         peer.PubKey = pubKey
         peer.Address = address
+        peerStore.AddPeer(peer)
         peerStore.Store[address] = peer
     }
-    log.Println("the peerStore after: ", peerStore.Store)
+    fmt.Println("the peerStore after: ", peerStore.Store)
+    log.Println("newcomer has refreshed the peerStore")
     n.state = done
     n.wg.Done()
     log.Println("add newcomer done")

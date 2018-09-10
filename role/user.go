@@ -14,6 +14,7 @@ type User struct {
 }
 
 func NewUser(pubKey *crypto.Point, peers []*network.Peer) *User {
+    log.Println("ready for process newcomers")
     m := &User{}
     m.PubKey = pubKey
     m.peers = peers
@@ -35,13 +36,21 @@ func (n *User) ProcessNewComers(newcomer *bean.Newcomer)  {
     // add newcomer to the map table.
 
     peerStore := network.GetStore()
-    peerStore.Store[address] = newPeer
+    peerStore.AddPeer(newPeer)
 
     list := make([]*bean.Newcomer, 0)
+    peers := make([]*network.Peer, 0)
     for _, value := range peerStore.Store {
         msg := &bean.Newcomer{}
         msg.Pk = value.PubKey
         list = append(list, msg)
+
+        peer := &network.Peer{}
+        peer.PubKey = value.PubKey
+        peer.Address = address
+        peer.IP = value.IP
+        peer.Port = value.Port
+        peers = append(peers, peer)
     }
 
     listOfPeer := &bean.ListOfPeer{}
@@ -53,6 +62,5 @@ func (n *User) ProcessNewComers(newcomer *bean.Newcomer)  {
     task.SendMessageCore()
 
     // broadcast the new comer msg
-    //peers := store.GetPeers()
-    //network.SendMessage(peers, newcomer)
+    network.SendMessage(peers, newcomer)
 }
