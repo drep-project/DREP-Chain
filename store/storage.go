@@ -4,6 +4,7 @@ import (
     "math/big"
     "sync"
     "BlockChainTest/bean"
+    "log"
 )
 
 var (
@@ -15,20 +16,21 @@ var (
 )
 
 func GetBalance(addr bean.Address) *big.Int {
-    return balances[addr]
-}
-
-func SetBalance(addr bean.Address, bal *big.Int) {
-    accountLock.Lock()
-    balances[addr] = bal
-    accountLock.Unlock()
+    balance, exists := balances[addr]
+    if exists {
+        return balance
+    } else {
+        balance = big.NewInt(0)
+        balances[addr] = balance
+        return balance
+    }
 }
 
 func GetNonce(addr bean.Address) int64 {
     return nonces[addr]
 }
 
-func AddNonce(addr bean.Address) {
+func addNonce(addr bean.Address) {
     accountLock.Lock()
     value, exists := nonces[addr]
     if exists {
@@ -55,7 +57,37 @@ func ExecuteTransactions(b *bean.Block) {
     }
 }
 
-func execute(t *bean.Transaction)  {
+func execute(t *bean.Transaction) *big.Int {
+    addr := t.Addr()
+    nonce := t.Data.Nonce
+    curN := GetNonce(addr)
+    if curN + 1 != nonce {
+        return nil
+    }
+    addNonce(addr)
+    gasPrice := big.NewInt(0).SetBytes(t.Data.GasPrice)
+    gasLimit := big.NewInt(0).SetBytes(t.Data.GasLimit)
+    gasFee := big.NewInt(0).Mul(gasLimit, gasPrice)
+    balance := GetBalance(addr)
+    if gasFee.Cmp(balance) > 0 {
+        log.Fatal("Error, gas not right")
+        return nil
+    }
+    if gasLimit.Cmp(TransferGas) < 0 {
+        balance.Sub(balance, gasFee)
+    } else {
+        amount := big.NewInt(0).SetBytes(t.Data.Amount)
+        total := big.NewInt(0).Add(amount, TransferGas)
+        if balance.Cmp(total) >= 0 {
+            balance.Sub(balance, total)
+            to := bean.Address(t.Data.To)
+            balance2 := GetBalance(to)
+            balance2.Add(balance2, amount)
+        } else {
+            balance.Sub(balance, gasFee)
+        }
+    }
+    return gasFee
 }
 
 func GetCurrentBlockHeight() int64 {

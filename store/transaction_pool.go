@@ -134,7 +134,7 @@ func PickTransactions(gasLimit *big.Int) []*bean.Transaction {
         if t, ok := it.Next().(*bean.Transaction); ok {
             if id, err := t.TxId(); err != nil {
                 if tranSet[id] {
-                    addr := bean.Addr(t.Data.PubKey)
+                    addr := t.Addr()
                     if ts, exists := accountTran[addr]; exists {
                         it2 := ts.Iterator()
                         for it2.HasNext() {
