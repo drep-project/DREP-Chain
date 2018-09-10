@@ -3,7 +3,6 @@ package list
 import (
     "testing"
     "BlockChainTest/util"
-    "fmt"
 )
 
 var cp = func(a interface{}, b interface{}) bool {
@@ -12,9 +11,9 @@ var cp = func(a interface{}, b interface{}) bool {
     return ok1 && ok2 && a1 == b1;
 }
 
-func assert(b bool)  {
+func assert(t *testing.T, b bool)  {
     if !b {
-        fmt.Println("Fail")
+        t.Error("Fail")
     }
 }
 
@@ -27,41 +26,41 @@ func TestLinkedList_Common(t *testing.T) {
         }
     }
     l.Remove(1, cp)
-    assert(util.SliceEqual(l.ToArray(), []interface{}{0, 2, 3, 4}, cp))
-    assert(util.SliceEqual(l.ToReverseArray(), []interface{}{4, 3, 2, 0}, cp))
-    assert(l.Size() == 4)
+    assert(t, util.SliceEqual(l.ToArray(), []interface{}{0, 2, 3, 4}, cp))
+    assert(t, util.SliceEqual(l.ToReverseArray(), []interface{}{4, 3, 2, 0}, cp))
+    assert(t, l.Size() == 4)
     l.Remove(0, cp)
-    assert(util.SliceEqual(l.ToArray(), []interface{}{2, 3, 4}, cp))
-    assert(util.SliceEqual(l.ToReverseArray(), []interface{}{4, 3, 2}, cp))
-    assert(l.Size() == 3)
+    assert(t, util.SliceEqual(l.ToArray(), []interface{}{2, 3, 4}, cp))
+    assert(t, util.SliceEqual(l.ToReverseArray(), []interface{}{4, 3, 2}, cp))
+    assert(t, l.Size() == 3)
     l.Remove(4, cp)
-    assert(util.SliceEqual(l.ToArray(), []interface{}{2, 3}, cp))
-    assert(util.SliceEqual(l.ToReverseArray(), []interface{}{3, 2}, cp))
-    assert(l.Size() == 2)
+    assert(t, util.SliceEqual(l.ToArray(), []interface{}{2, 3}, cp))
+    assert(t, util.SliceEqual(l.ToReverseArray(), []interface{}{3, 2}, cp))
+    assert(t, l.Size() == 2)
     l.Remove(5, cp)
-    assert(util.SliceEqual(l.ToArray(), []interface{}{2, 3}, cp))
-    assert(util.SliceEqual(l.ToReverseArray(), []interface{}{3, 2}, cp))
-    assert(l.Size() == 2)
+    assert(t, util.SliceEqual(l.ToArray(), []interface{}{2, 3}, cp))
+    assert(t, util.SliceEqual(l.ToReverseArray(), []interface{}{3, 2}, cp))
+    assert(t, l.Size() == 2)
     l.Add(5)
-    assert(util.SliceEqual(l.ToArray(), []interface{}{2, 3, 5}, cp))
-    assert(util.SliceEqual(l.ToReverseArray(), []interface{}{5, 3, 2}, cp))
-    assert(l.Size() == 3)
+    assert(t, util.SliceEqual(l.ToArray(), []interface{}{2, 3, 5}, cp))
+    assert(t, util.SliceEqual(l.ToReverseArray(), []interface{}{5, 3, 2}, cp))
+    assert(t, l.Size() == 3)
     l.Remove(5, cp)
-    assert(util.SliceEqual(l.ToArray(), []interface{}{2, 3}, cp))
-    assert(util.SliceEqual(l.ToReverseArray(), []interface{}{3, 2}, cp))
-    assert(l.Size() == 2)
+    assert(t, util.SliceEqual(l.ToArray(), []interface{}{2, 3}, cp))
+    assert(t, util.SliceEqual(l.ToReverseArray(), []interface{}{3, 2}, cp))
+    assert(t, l.Size() == 2)
     l.Remove(3, cp)
-    assert(util.SliceEqual(l.ToArray(), []interface{}{2}, cp))
-    assert(util.SliceEqual(l.ToReverseArray(), []interface{}{2}, cp))
-    assert(l.Size() == 1)
+    assert(t, util.SliceEqual(l.ToArray(), []interface{}{2}, cp))
+    assert(t, util.SliceEqual(l.ToReverseArray(), []interface{}{2}, cp))
+    assert(t, l.Size() == 1)
     l.Remove(2, cp)
-    assert(util.SliceEqual(l.ToArray(), []interface{}{}, cp))
-    assert(util.SliceEqual(l.ToReverseArray(), []interface{}{}, cp))
-    assert(l.Size() == 0)
+    assert(t, util.SliceEqual(l.ToArray(), []interface{}{}, cp))
+    assert(t, util.SliceEqual(l.ToReverseArray(), []interface{}{}, cp))
+    assert(t, l.Size() == 0)
     l.Add(5)
-    assert(util.SliceEqual(l.ToArray(), []interface{}{5}, cp))
-    assert(util.SliceEqual(l.ToReverseArray(), []interface{}{5}, cp))
-    assert(l.Size() == 1)
+    assert(t, util.SliceEqual(l.ToArray(), []interface{}{5}, cp))
+    assert(t, util.SliceEqual(l.ToReverseArray(), []interface{}{5}, cp))
+    assert(t, l.Size() == 1)
 }
 
 func TestLinkedList_Iterator1(t *testing.T) {
@@ -84,29 +83,29 @@ func TestLinkedList_Iterator1(t *testing.T) {
             }
         }
     }
-    assert(util.SliceEqual(it(), []interface{}{0, 1, 2, 3, 4}, cp))
-    assert(util.SliceEqual(l.ToArray(), []interface{}{0, 1, 2, 3, 4}, cp))
-    assert(util.SliceEqual(l.ToReverseArray(), []interface{}{4, 3, 2, 1, 0}, cp))
+    assert(t, util.SliceEqual(it(), []interface{}{0, 1, 2, 3, 4}, cp))
+    assert(t, util.SliceEqual(l.ToArray(), []interface{}{0, 1, 2, 3, 4}, cp))
+    assert(t, util.SliceEqual(l.ToReverseArray(), []interface{}{4, 3, 2, 1, 0}, cp))
     remove(3)
-    assert(util.SliceEqual(it(), []interface{}{0, 1, 2, 4}, cp))
-    assert(util.SliceEqual(l.ToArray(), []interface{}{0, 1, 2, 4}, cp))
-    assert(util.SliceEqual(l.ToReverseArray(), []interface{}{4, 2, 1, 0}, cp))
+    assert(t, util.SliceEqual(it(), []interface{}{0, 1, 2, 4}, cp))
+    assert(t, util.SliceEqual(l.ToArray(), []interface{}{0, 1, 2, 4}, cp))
+    assert(t, util.SliceEqual(l.ToReverseArray(), []interface{}{4, 2, 1, 0}, cp))
     remove(0)
-    assert(util.SliceEqual(it(), []interface{}{1, 2, 4}, cp))
-    assert(util.SliceEqual(l.ToArray(), []interface{}{1, 2, 4}, cp))
-    assert(util.SliceEqual(l.ToReverseArray(), []interface{}{4, 2, 1}, cp))
+    assert(t, util.SliceEqual(it(), []interface{}{1, 2, 4}, cp))
+    assert(t, util.SliceEqual(l.ToArray(), []interface{}{1, 2, 4}, cp))
+    assert(t, util.SliceEqual(l.ToReverseArray(), []interface{}{4, 2, 1}, cp))
     remove(4)
-    assert(util.SliceEqual(it(), []interface{}{1, 2}, cp))
-    assert(util.SliceEqual(l.ToArray(), []interface{}{1, 2}, cp))
-    assert(util.SliceEqual(l.ToReverseArray(), []interface{}{2, 1}, cp))
+    assert(t, util.SliceEqual(it(), []interface{}{1, 2}, cp))
+    assert(t, util.SliceEqual(l.ToArray(), []interface{}{1, 2}, cp))
+    assert(t, util.SliceEqual(l.ToReverseArray(), []interface{}{2, 1}, cp))
     remove(1)
-    assert(util.SliceEqual(it(), []interface{}{2}, cp))
-    assert(util.SliceEqual(l.ToArray(), []interface{}{2}, cp))
-    assert(util.SliceEqual(l.ToReverseArray(), []interface{}{2}, cp))
+    assert(t, util.SliceEqual(it(), []interface{}{2}, cp))
+    assert(t, util.SliceEqual(l.ToArray(), []interface{}{2}, cp))
+    assert(t, util.SliceEqual(l.ToReverseArray(), []interface{}{2}, cp))
     remove(2)
-    assert(util.SliceEqual(it(), []interface{}{}, cp))
-    assert(util.SliceEqual(l.ToArray(), []interface{}{}, cp))
-    assert(util.SliceEqual(l.ToReverseArray(), []interface{}{}, cp))
+    assert(t, util.SliceEqual(it(), []interface{}{}, cp))
+    assert(t, util.SliceEqual(l.ToArray(), []interface{}{}, cp))
+    assert(t, util.SliceEqual(l.ToReverseArray(), []interface{}{}, cp))
 }
 
 func TestLinkedList_Iterator2(t *testing.T) {
@@ -120,16 +119,16 @@ func TestLinkedList_Iterator2(t *testing.T) {
             i.Remove()
         }
     }
-    assert(util.SliceEqual(l.ToArray(), []interface{}{0, 1, 4}, cp))
-    assert(util.SliceEqual(l.ToReverseArray(), []interface{}{4, 1, 0}, cp))
+    assert(t, util.SliceEqual(l.ToArray(), []interface{}{0, 1, 4}, cp))
+    assert(t, util.SliceEqual(l.ToReverseArray(), []interface{}{4, 1, 0}, cp))
     for i := l.iterator(); i.HasNext(); {
         t := i.Next()
         if cp(t, 0) || cp(t, 4){
             i.Remove()
         }
     }
-    assert(util.SliceEqual(l.ToArray(), []interface{}{1}, cp))
-    assert(util.SliceEqual(l.ToReverseArray(), []interface{}{1}, cp))
+    assert(t, util.SliceEqual(l.ToArray(), []interface{}{1}, cp))
+    assert(t, util.SliceEqual(l.ToReverseArray(), []interface{}{1}, cp))
 }
 
 func TestLinkedList_Iterator3(t *testing.T) {
@@ -141,7 +140,7 @@ func TestLinkedList_Iterator3(t *testing.T) {
         i.Next()
         i.Remove()
     }
-    assert(util.SliceEqual(l.ToArray(), []interface{}{}, cp))
-    assert(util.SliceEqual(l.ToReverseArray(), []interface{}{}, cp))
-    assert(l.Size() == 0)
+    assert(t, util.SliceEqual(l.ToArray(), []interface{}{}, cp))
+    assert(t, util.SliceEqual(l.ToReverseArray(), []interface{}{}, cp))
+    assert(t, l.Size() == 0)
 }
