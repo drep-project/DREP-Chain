@@ -94,6 +94,7 @@ func AddTransaction(transaction *bean.Transaction) bool {
             l.Add(transaction)
         } else {
             l = list.NewSortedLinkedList(tranCp)
+            accountTran[addr] = l
             l.Add(transaction)
         }
     }

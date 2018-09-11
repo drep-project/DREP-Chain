@@ -63,7 +63,7 @@ func (n *Node) Start() {
 func (n *Node) runAsLeader() {
     leader1 := consensus.NewLeader(n.prvKey.PubKey, store.GetMiners())
     store.SetLeader(leader1)
-    block := store.GetBlock()
+    block := store.GenerateBlock()
     log.Println("node leader is preparing process consensus for round 1")
     if msg, err := proto.Marshal(block); err ==nil {
         log.Println("node leader is going to process consensus for round 1")
@@ -84,7 +84,7 @@ func (n *Node) runAsLeader() {
 }
 
 func (n *Node) sendBlock(block *bean.Block) {
-    peers := store.GetPeersExcludingItself()
+    peers := store.GetPeers()
     network.SendMessage(peers, block)
 }
 
