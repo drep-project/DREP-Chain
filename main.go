@@ -4,7 +4,6 @@ import (
 	"BlockChainTest/network"
 	"BlockChainTest/processor"
 	"BlockChainTest/node"
-	"BlockChainTest/store"
 	"time"
 )
 
@@ -16,7 +15,7 @@ func main()  {
 		}
 	})
 	processor.GetInstance().Start()
-	node.GetNode(store.GetPrvKey()).Start()
+	node.GetNode().Start()
 	time.Sleep(4000 * time.Second)
 
 }

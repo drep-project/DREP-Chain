@@ -27,9 +27,9 @@ func newNode(prvKey *crypto.PrivateKey) *Node {
     return &Node{address: &address, prvKey: prvKey}
 }
 
-func GetNode(prvKey *crypto.PrivateKey) *Node {
+func GetNode() *Node {
     once.Do(func() {
-        node = newNode(prvKey)
+        node = newNode(store.GetPrvKey())
     })
     return node
 }
