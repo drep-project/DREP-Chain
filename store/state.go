@@ -69,16 +69,19 @@ func init()  {
     case 0:
         pubKey = pub0
         prvKey = prv0
+        address = bean.Addr(pub0)
         //leader = consensus.NewLeader(pub0, peers)
         //member = nil
     case 1:
         pubKey = pub1
         prvKey = prv1
+        address = bean.Addr(pub1)
         //leader = nil
         //member = consensus.NewMember(peer0, prvKey)
     case 2:
         pubKey = pub2
         prvKey = prv2
+        address = bean.Addr(pub2)
         //leader = nil
         //member = consensus.NewMember(peer0, prvKey)
     }

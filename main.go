@@ -49,6 +49,13 @@ func main()  {
 				fmt.Scanln(&addr)
 				fmt.Println(store.GetNonce(bean.Address(addr)))
 			}
+		case "me":
+			{
+				addr := store.GetAddress()
+				fmt.Println("Addr: ", addr)
+				fmt.Println("Nonce: ", store.GetNonce(addr))
+				fmt.Println("Bal: ", store.GetBalance(addr))
+			}
 		case "exit":
 			{
 				break
