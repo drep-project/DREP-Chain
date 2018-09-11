@@ -4,7 +4,10 @@ import (
 	"BlockChainTest/network"
 	"BlockChainTest/processor"
 	"BlockChainTest/node"
-	"time"
+	"fmt"
+	"math/big"
+	"BlockChainTest/bean"
+	"BlockChainTest/store"
 )
 
 func main()  {
@@ -16,6 +19,41 @@ func main()  {
 	})
 	processor.GetInstance().Start()
 	node.GetNode().Start()
-	time.Sleep(4000 * time.Second)
+	for {
+		var cmd string
+		fmt.Scanln(&cmd)
+		switch cmd {
+		case "send":
+			{
+				var addr string
+				var amount int64
+				fmt.Print("To: ")
+				fmt.Scanln(&addr)
+				fmt.Print("Amount: ")
+				fmt.Scanln(&amount)
+				t := node.GenerateBalanceTransaction(bean.Address(addr), big.NewInt(amount))
+				node.SendTransaction(t)
+				fmt.Println("Send finish")
+			}
+		case "checkBalance":
+			{
+				var addr string
+				fmt.Print("Who: ")
+				fmt.Scanln(&addr)
+				fmt.Println(store.GetBalance(bean.Address(addr)))
+			}
+		case "checkNonce":
+			{
+				var addr string
+				fmt.Print("Who: ")
+				fmt.Scanln(&addr)
+				fmt.Println(store.GetNonce(bean.Address(addr)))
+			}
+		case "exit":
+			{
+				break
+			}
+		}
+	}
 
 }
