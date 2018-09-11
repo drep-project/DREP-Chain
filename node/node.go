@@ -43,21 +43,23 @@ func (n *Node) isLeader() bool {
 }
 
 func (n *Node) Start() {
-    for {
-        //time.Sleep(3 * time.Second)
-        log.Println("node start")
-        store.ChangeRole()
-        switch store.GetRole() {
-        case bean.LEADER:
-            n.runAsLeader()
-        case bean.MEMBER:
-            n.runAsMember()
-        case bean.OTHER:
-            n.runAsOther()
+    go func() {
+        for {
+            //time.Sleep(3 * time.Second)
+            log.Println("node start")
+            store.ChangeRole()
+            switch store.GetRole() {
+            case bean.LEADER:
+                n.runAsLeader()
+            case bean.MEMBER:
+                n.runAsMember()
+            case bean.OTHER:
+                n.runAsOther()
+            }
+            log.Println("node stop")
+            log.Println("Current height ", store.GetCurrentBlockHeight())
         }
-        log.Println("node stop")
-        log.Println("Current height ", store.GetCurrentBlockHeight())
-    }
+    }()
 }
 
 func (n *Node) runAsLeader() {
