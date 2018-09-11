@@ -2,14 +2,11 @@ package processor
 
 import (
     "fmt"
-    "BlockChainTest/crypto"
     "BlockChainTest/bean"
     "BlockChainTest/store"
     "BlockChainTest/node"
     "BlockChainTest/network"
 )
-
-var curve = crypto.InitCurve()
 
 type transactionProcessor struct {
 
@@ -39,6 +36,6 @@ type BlockProcessor struct {
 
 func (p *BlockProcessor) process(msg interface{}) {
     if block, ok := msg.(*bean.Block); ok {
-        node.GetNode(nil).ProcessBlock(block)
+        node.GetNode().ProcessBlock(block)
     }
 }
