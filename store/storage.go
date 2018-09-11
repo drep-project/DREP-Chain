@@ -8,7 +8,7 @@ import (
 )
 
 var (
-    balances           map[bean.Address]*big.Int
+    balances           = make(map[bean.Address]*big.Int)//map[bean.Address]*big.Int
     nonces             map[bean.Address]int64
     accountLock        sync.Mutex
     currentBlockHeight int64 = 0
@@ -16,7 +16,7 @@ var (
 )
 
 func init()  {
-    balances = make(map[bean.Address]*big.Int)
+    //balances = make(map[bean.Address]*big.Int)
     nonces = make(map[bean.Address]int64)
 }
 
