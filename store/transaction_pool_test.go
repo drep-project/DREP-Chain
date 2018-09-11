@@ -29,6 +29,10 @@ func TestPickTransactions(t *testing.T) {
         To:"0x2", Amount:big.NewInt(2).Bytes(),Nonce:2, GasLimit:TransferGas.Bytes(), GasPrice:GasPrice.Bytes(), PubKey:peers[1].PubKey}}
     AddTransaction(tran)
     print()
+    tran = &bean.Transaction{Data:&bean.TransactionData{
+        To:"0x2", Amount:big.NewInt(2).Bytes(),Nonce:3, GasLimit:TransferGas.Bytes(), GasPrice:GasPrice.Bytes(), PubKey:peers[1].PubKey}}
+    AddTransaction(tran)
+    print()
 }
 
 func print() {
