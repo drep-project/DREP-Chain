@@ -15,6 +15,7 @@ type Task struct {
 func (t *Task) Cipher() ([]byte, error) {
     serializable, err := bean.Serialize(t.Msg)
     if err != nil {
+        fmt.Println("there's an error during the serialize", err)
         return nil, err
     }
     //sig, err := crypto.Sign(serializable.Body)
@@ -44,7 +45,9 @@ func (t *Task) Cipher() ([]byte, error) {
 func (t *Task) SendMessageCore() error {
     // If sleep 1000 here, hahax
     cipher, err := t.Cipher()
+
     if err != nil {
+        fmt.Println("error during cipher:", err)
         return err
     }
     addr, err := net.ResolveTCPAddr("tcp", t.Peer.ToString())
@@ -53,6 +56,7 @@ func (t *Task) SendMessageCore() error {
     }
     conn, err := net.DialTCP("tcp", nil, addr)
     if err != nil {
+        fmt.Println("error during dail:", err)
         return err
     }
     defer conn.Close()

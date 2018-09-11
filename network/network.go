@@ -7,6 +7,7 @@ import (
    "strings"
     "BlockChainTest/crypto"
     "BlockChainTest/bean"
+    "BlockChainTest/log"
 )
 
 var onceSender sync.Once
@@ -87,6 +88,7 @@ func startSend() {
       sender := GetSenderQueue()
       for {
          if task, ok := <-sender; ok {
+            log.Println(task.Peer.IP)
             task.SendMessageCore()
          }
       }

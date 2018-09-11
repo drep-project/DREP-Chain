@@ -48,12 +48,14 @@ func NewJoiner(peer *network.Peer) *Newcomer {
 func (n *Newcomer) ProcessJoin()  {
     msg := &bean.Newcomer{}
     msg.Pk = n.prvKey.PubKey
-
+    msg.Ip = "192.168.3.113"
+    msg.Port = 55555
     log.Println("there is a newcomer request to join the blockchain family!")
     log.Println("start request.")
 
     var peers = []*network.Peer{n.neighbour}
     network.SendMessage(peers, msg)
+    log.Println("n.neighbour: ", n.neighbour)
     n.wg.Wait()
 }
 

@@ -28,6 +28,9 @@ func (n *User) ProcessNewComers(newcomer *bean.Newcomer)  {
 
     log.Println("starting generate a new peer from the newcomer")
     newPeer := &network.Peer{}
+    newPeer.IP = network.IP(newcomer.Ip)
+    newPeer.Port = network.Port(newcomer.Port)
+
     newPeer.PubKey = pubKey
     newPeer.Address = address
 
@@ -59,8 +62,9 @@ func (n *User) ProcessNewComers(newcomer *bean.Newcomer)  {
     // return the list to newcomer
     log.Println("send a list of peer to the newcomer")
     task := network.Task{newPeer,listOfPeer}
+
     task.SendMessageCore()
 
     // broadcast the new comer msg
-    network.SendMessage(peers, newcomer)
+    network.SendMessage(n.peers, newcomer)
 }

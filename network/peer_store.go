@@ -12,10 +12,12 @@ type PeerStore struct {
     Store map[bean.Address]*Peer
 }
 
+
 // Returns the singleton PeerStore instance.
 func GetStore () *PeerStore {
     once.Do(func() {
         sharedPeerStore = &PeerStore{}
+        sharedPeerStore.Store = make(map[bean.Address]*Peer)
     })
     return sharedPeerStore
 }
