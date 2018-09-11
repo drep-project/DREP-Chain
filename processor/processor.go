@@ -59,6 +59,9 @@ func (p *Processor) Process(t int, msg interface{}) {
 }
 
 func (p *Processor) dispatch(msg *message) {
+    if msg.t == bean.MsgTypeTransaction {
+        fmt.Println("Receive transaction")
+    }
     if processor := p.processors[msg.t]; processor != nil {
         processor.process(msg.msg)
     } else {
