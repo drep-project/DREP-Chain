@@ -61,10 +61,13 @@ func (n *User) ProcessNewComers(newcomer *bean.Newcomer)  {
 
     // return the list to newcomer
     log.Println("send a list of peer to the newcomer")
-    task := network.Task{newPeer,listOfPeer}
 
+    //newcomers := []*network.Peer{newPeer}
+    //network.SendMessage(newcomers, listOfPeer)
+
+    task := network.Task{newPeer,listOfPeer}
     task.SendMessageCore()
 
     // broadcast the new comer msg
-    network.SendMessage(n.peers, newcomer)
+    //network.SendMessage(n.peers, newcomer)
 }

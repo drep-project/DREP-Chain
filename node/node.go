@@ -143,7 +143,7 @@ func (n *Node) runAsOther() {
 }
 
 func (n *Node) runAsUser()  {
-    peer := store.GetPeers()[0]
+    peer := store.GetPeers()[1]
     user := role.NewUser(peer.PubKey, store.GetPeers())
     store.SetUser(user)
     log.Println("already ran as user!")
