@@ -2,11 +2,10 @@ package store
 
 import (
     "sync"
-    "log"
+    "BlockChainTest/log"
     "BlockChainTest/bean"
     "math/big"
     "BlockChainTest/util/list"
-    "bytes"
 )
 
 var (
@@ -38,7 +37,6 @@ func init()  {
     accountTran = make(map[bean.Address]*list.SortedLinkedList)
     tranSet = make(map[string]bool)
 }
-
 
 func Contains(id string) bool {
     tranLock.Lock()
@@ -84,7 +82,7 @@ func AddTransaction(transaction *bean.Transaction) bool {
     }
     tranLock.Lock()
     if _, exists := tranSet[id]; exists {
-        log.Fatalf("Transaction %s exists", id)
+        log.Errorf("Transaction %s exists", id)
         tranLock.Unlock()
         return false
     } else {
@@ -110,9 +108,9 @@ func removeTransaction(tran *bean.Transaction) {
     cp := func(a interface{}, b interface{}) bool {
         ta, oka := a.(*bean.Transaction)
         tb, okb := b.(*bean.Transaction)
-        ba, ea := ta.TxHash()
-        bb, eb := tb.TxHash()
-        return oka && okb && ea == nil && eb == nil && bytes.Equal(ba, bb)
+        sa, ea := ta.TxId()
+        sb, eb := tb.TxId()
+        return oka && okb && ea == nil && eb == nil && sa == sb
     }
     trans.Remove(tran, cp)
     delete(tranSet, id)
@@ -129,11 +127,12 @@ func RemoveTransactions(trans []*bean.Transaction) {
     tranLock.Unlock()
 }
 
-func PickTransactions(gasLimit *big.Int) []*bean.Transaction {
+func PickTransactions(maxGas *big.Int) []*bean.Transaction {
     r := make([]*bean.Transaction, 10)
     gas := big.NewInt(0)
     tranLock.Lock()
     it := trans.Iterator()
+    tn := make(map[bean.Address]int64)
     for it.HasNext() {
         if t, ok := it.Next().(*bean.Transaction); ok {
             if id, err := t.TxId(); err != nil {
@@ -143,23 +142,31 @@ func PickTransactions(gasLimit *big.Int) []*bean.Transaction {
                         it2 := ts.Iterator()
                         for it2.HasNext() {
                             if t2, ok := it2.Next().(*bean.Transaction); ok {
-                                tmp := big.NewInt(0)
                                 gasLimit := big.NewInt(0).SetBytes(t2.Data.GasLimit)
-                                tmp.Add(gas, gasLimit)
-                                if tmp.Cmp(BlockGasLimit) < 0 {
+                                tmp := big.NewInt(0).Add(gas, gasLimit)
+                                if tmp.Cmp(maxGas) < 0 {
                                     if id2, err := t2.TxId(); err != nil {
                                         gas = tmp
                                         r = append(r, t2)
                                         delete(tranSet, id2)
                                         it2.Remove()
                                     }
+                                } else {
+                                    return r
                                 }
+                            } else {
+                                it2.Remove()
                             }
                         }
+                    } else {
+                        log.Errorf("Fuck")
                     }
+                } else {
+                    it.Remove()
                 }
-                it.Remove()
             }
+        } else {
+            it.Remove()
         }
     }
     tranLock.Unlock()
