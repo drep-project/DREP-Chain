@@ -6,10 +6,12 @@ import (
     "BlockChainTest/network"
     "math/big"
     "time"
+    "fmt"
 )
 
 func SendTransaction(t *bean.Transaction)  {
     peers := store.GetPeers()
+    fmt.Println("Send transaction")
     network.SendMessage(peers, t)
     store.AddTransaction(t)
 }

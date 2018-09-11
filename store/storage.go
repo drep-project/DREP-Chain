@@ -65,6 +65,7 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
     total := big.NewInt(0)
     for _, t := range b.Data.TxList {
         gasFee := execute(t)
+        removeTransaction(t)
         if gasFee != nil {
             total.Add(total, gasFee)
         }
