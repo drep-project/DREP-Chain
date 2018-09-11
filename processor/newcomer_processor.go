@@ -9,6 +9,7 @@ type NewComerProcessor struct {
 }
 
 func (p *NewComerProcessor) process(msg interface{}) {
+
     if newcomer, ok := msg.(*bean.Newcomer); ok {
         if user := store.GetItSelfOnUser(); user != nil {
             user.ProcessNewComers(newcomer)

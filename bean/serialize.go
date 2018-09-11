@@ -34,6 +34,10 @@ func Serialize(message interface{}) (*Serializable, error) {
 		serializable.Header = MsgTypeBlockHeader
 	case *Transaction:
 		serializable.Header = MsgTypeTransaction
+	case *Newcomer:
+		serializable.Header = MsgTypeNewComer
+	case *ListOfPeer:
+		serializable.Header = MsgTypeUser
 	case *Block:
 		serializable.Header = MsgTypeBlock
 	default:
@@ -116,6 +120,20 @@ func Deserialize(msg []byte) (*Serializable, interface{}, error) {
 		block := &Block{}
 		if err := proto.Unmarshal(body, block); err == nil {
 			return serializable, block, nil
+		} else {
+			return nil, nil, err
+		}
+	case MsgTypeNewComer:
+		newcomer := &Newcomer{}
+		if err := proto.Unmarshal(body, newcomer); err == nil {
+			return serializable, newcomer, nil
+		} else {
+			return nil, nil, err
+		}
+	case MsgTypeUser:
+		list := &ListOfPeer{}
+		if err := proto.Unmarshal(body, list); err == nil {
+			return serializable, list, nil
 		} else {
 			return nil, nil, err
 		}
