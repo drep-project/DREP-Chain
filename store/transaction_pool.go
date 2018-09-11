@@ -129,7 +129,7 @@ func RemoveTransactions(trans []*bean.Transaction) {
 }
 
 func PickTransactions(maxGas *big.Int) []*bean.Transaction {
-    r := make([]*bean.Transaction, 0)
+    r := make([]*bean.Transaction, 0) //TODO if 10
     gas := big.NewInt(0)
     tranLock.Lock()
     defer func() {
