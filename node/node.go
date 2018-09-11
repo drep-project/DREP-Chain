@@ -80,7 +80,7 @@ func (n *Node) runAsLeader() {
             log.Println("node leader finishes process consensus for round 2")
             log.Println("node leader is going to send block")
             n.sendBlock(block)
-            n.ProcessBlock(block)
+            n.ProcessBlock(block, false)
             log.Println("node leader finishes sending block")
         }
     }
@@ -124,8 +124,8 @@ func (n *Node) runAsOther() {
 
 }
 
-func (n *Node) ProcessBlock(block *bean.Block) {
+func (n *Node) ProcessBlock(block *bean.Block, del bool) {
     log.Println("node receive block", *block)
-    store.ExecuteTransactions(block)
+    store.ExecuteTransactions(block, del)
     n.wg.Done()
 }

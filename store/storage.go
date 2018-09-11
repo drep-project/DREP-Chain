@@ -54,7 +54,7 @@ func addNonce(addr bean.Address) {
     accountLock.Unlock()
 }
 
-func ExecuteTransactions(b *bean.Block) *big.Int {
+func ExecuteTransactions(b *bean.Block, del bool) *big.Int {
     if b == nil || b.Header == nil { // || b.Data == nil || b.Data.TxList == nil {
         return nil
     }
@@ -65,7 +65,9 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
     total := big.NewInt(0)
     for _, t := range b.Data.TxList {
         gasFee := execute(t)
-        removeTransaction(t)
+        if del {
+            removeTransaction(t)
+        }
         if gasFee != nil {
             total.Add(total, gasFee)
         }

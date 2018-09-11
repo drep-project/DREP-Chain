@@ -36,6 +36,6 @@ type BlockProcessor struct {
 
 func (p *BlockProcessor) process(msg interface{}) {
     if block, ok := msg.(*bean.Block); ok {
-        node.GetNode().ProcessBlock(block)
+        node.GetNode().ProcessBlock(block, true)
     }
 }
