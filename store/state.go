@@ -7,6 +7,7 @@ import (
     "BlockChainTest/consensus"
     "BlockChainTest/crypto"
     "BlockChainTest/log"
+    "math/big"
 )
 
 var (
@@ -42,14 +43,17 @@ func init()  {
     pub0 := curve.ScalarBaseMultiply(k0)
     pub1 := curve.ScalarBaseMultiply(k1)
     pub2 := curve.ScalarBaseMultiply(k2)
+    balances[bean.Addr(pub0)] = big.NewInt(10000)
+    balances[bean.Addr(pub1)] = big.NewInt(10000)
+    balances[bean.Addr(pub2)] = big.NewInt(10000)
     //pub3 := curve.ScalarBaseMultiply(k3)
     prv0 := &crypto.PrivateKey{Prv: k0, PubKey: pub0}
     prv1 := &crypto.PrivateKey{Prv: k1, PubKey: pub1}
     prv2 := &crypto.PrivateKey{Prv: k2, PubKey: pub2}
     //prv3 := &crypto.PrivateKey{Prv: k3, PubKey: pub3}
-    ip0 := network.IP("192.168.3.13")
+    ip0 := network.IP("192.168.3.143")
     ip1 := network.IP("192.168.3.43")
-    ip2 := network.IP("192.168.3.73")
+    ip2 := network.IP("192.168.3.113")
     //ip3 := network.IP("192.168.3.79")
     port0 := network.Port(55555)
     port1 := network.Port(55555)
@@ -154,8 +158,8 @@ func GetLeader() *network.Peer {
 func GenerateBlock() *bean.Block {
     height := currentBlockHeight + 1
     currentBlockHeight = height
-    //PickTransactions()
-    return &bean.Block{Header: &bean.BlockHeader{Height: height}}
+    ts := PickTransactions(BlockGasLimit)
+    return &bean.Block{Header: &bean.BlockHeader{Height: height},Data:&bean.BlockData{TxCount:int32(len(ts)), TxList:ts}}
 }
 
 func SetBlock(b *bean.Block) {
