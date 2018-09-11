@@ -124,10 +124,6 @@ func GetMiner(pubKey *crypto.Point) *network.Peer {
 }
 
 func GetPeers() []*network.Peer {
-    return peers
-}
-
-func GetPeersExcludingItself() []*network.Peer {
     result := make([]*network.Peer, 0)
     for _, v := range peers {
         if !v.PubKey.Equal(pubKey) {
@@ -149,9 +145,10 @@ func GetLeader() *network.Peer {
     return miners[currentMinerIndex]
 }
 
-func GetBlock() *bean.Block {
+func GenerateBlock() *bean.Block {
     height := currentBlockHeight + 1
     currentBlockHeight = height
+    //PickTransactions()
     return &bean.Block{Header: &bean.BlockHeader{Height: height}}
 }
 

@@ -15,15 +15,24 @@ var (
     one = big.NewInt(1)
 )
 
+func init()  {
+    balances = make(map[bean.Address]*big.Int)
+    nonces = make(map[bean.Address]int64)
+}
+
 func GetBalance(addr bean.Address) *big.Int {
+    accountLock.Lock()
+    defer accountLock.Unlock()
     balance, exists := balances[addr]
     if exists {
+        // TODO if map is nil what the fuck
         return balance
     } else {
         balance = big.NewInt(0)
         balances[addr] = balance
         return balance
     }
+
 }
 
 func GetNonce(addr bean.Address) int64 {
@@ -42,19 +51,25 @@ func addNonce(addr bean.Address) {
     } else {
         nonces[addr] = 1
     }
+    accountLock.Unlock()
 }
 
-func ExecuteTransactions(b *bean.Block) {
+func ExecuteTransactions(b *bean.Block) *big.Int {
     if b == nil || b.Header == nil { // || b.Data == nil || b.Data.TxList == nil {
-        return
+        return nil
     }
     currentBlockHeight = b.Header.Height
     if b.Data == nil || b.Data.TxList == nil {
-        return
+        return nil
     }
+    total := big.NewInt(0)
     for _, t := range b.Data.TxList {
-        execute(t)
+        gasFee := execute(t)
+        if gasFee != nil {
+            total.Add(total, gasFee)
+        }
     }
+    return total
 }
 
 func execute(t *bean.Transaction) *big.Int {
