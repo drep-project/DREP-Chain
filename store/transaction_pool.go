@@ -13,7 +13,7 @@ var (
     accountTran map[bean.Address]*list.SortedLinkedList
     tranSet     map[string]bool
     tranLock    sync.Mutex
-    tranCp       = func(a interface{}, b interface{}) int{
+    nonceCp     = func(a interface{}, b interface{}) int{
         ta, oka := a.(*bean.Transaction)
         tb, okb := b.(*bean.Transaction)
         if oka && okb {
@@ -29,6 +29,13 @@ var (
         } else {
             return 0
         }
+    }
+    tranCp = func(a interface{}, b interface{}) bool {
+        ta, oka := a.(*bean.Transaction)
+        tb, okb := b.(*bean.Transaction)
+        sa, ea := ta.TxId()
+        sb, eb := tb.TxId()
+        return oka && okb && ea == nil && eb == nil && sa == sb
     }
 )
 
@@ -65,7 +72,8 @@ func checkAndGetAddr(tran *bean.Transaction) (bool, bean.Address) {
         total.Mul(gasLimit, gasPrice)
         total.Add(total, amount)
         if GetBalance(addr).Cmp(total) < 0 {
-           return false, ""
+            return false, ""
+            // TODO Remove this
         }
     }
     return true, addr
@@ -91,7 +99,7 @@ func AddTransaction(transaction *bean.Transaction) bool {
         if l, exists := accountTran[addr]; exists {
             l.Add(transaction)
         } else {
-            l = list.NewSortedLinkedList(tranCp)
+            l = list.NewSortedLinkedList(nonceCp)
             accountTran[addr] = l
             l.Add(transaction)
         }
@@ -105,18 +113,11 @@ func removeTransaction(tran *bean.Transaction) {
     if err != nil {
         return
     }
-    cp := func(a interface{}, b interface{}) bool {
-        ta, oka := a.(*bean.Transaction)
-        tb, okb := b.(*bean.Transaction)
-        sa, ea := ta.TxId()
-        sb, eb := tb.TxId()
-        return oka && okb && ea == nil && eb == nil && sa == sb
-    }
-    trans.Remove(tran, cp)
+    trans.Remove(tran, tranCp)
     delete(tranSet, id)
     addr := tran.Addr()
     ts := accountTran[addr]
-    ts.Remove(tran, cp)
+    ts.Remove(tran, tranCp)
 }
 
 func RemoveTransactions(trans []*bean.Transaction) {
@@ -128,27 +129,41 @@ func RemoveTransactions(trans []*bean.Transaction) {
 }
 
 func PickTransactions(maxGas *big.Int) []*bean.Transaction {
-    r := make([]*bean.Transaction, 10)
+    r := make([]*bean.Transaction, 0)
     gas := big.NewInt(0)
     tranLock.Lock()
+    defer func() {
+        tranLock.Unlock()
+        for _, t := range r {
+            trans.Remove(t, tranCp)
+        }
+    }()
     it := trans.Iterator()
     tn := make(map[bean.Address]int64)
     for it.HasNext() {
         if t, ok := it.Next().(*bean.Transaction); ok {
-            if id, err := t.TxId(); err != nil {
+            if id, err := t.TxId(); err == nil {
                 if tranSet[id] {
                     addr := t.Addr()
                     if ts, exists := accountTran[addr]; exists {
                         it2 := ts.Iterator()
                         for it2.HasNext() {
                             if t2, ok := it2.Next().(*bean.Transaction); ok {
+                                cn, e := tn[addr]
+                                if !e {
+                                    cn = 0
+                                }
+                                if t2.Data.Nonce != cn + 1 {
+                                    continue
+                                }
                                 gasLimit := big.NewInt(0).SetBytes(t2.Data.GasLimit)
                                 tmp := big.NewInt(0).Add(gas, gasLimit)
-                                if tmp.Cmp(maxGas) < 0 {
-                                    if id2, err := t2.TxId(); err != nil {
+                                if tmp.Cmp(maxGas) <= 0 {
+                                    if id2, err := t2.TxId(); err == nil {
                                         gas = tmp
                                         r = append(r, t2)
                                         delete(tranSet, id2)
+                                        tn[addr] = t2.Data.Nonce
                                         it2.Remove()
                                     }
                                 } else {
@@ -169,6 +184,5 @@ func PickTransactions(maxGas *big.Int) []*bean.Transaction {
             it.Remove()
         }
     }
-    tranLock.Unlock()
     return r
 }
