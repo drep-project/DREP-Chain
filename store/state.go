@@ -51,7 +51,7 @@ func init()  {
     prv1 := &crypto.PrivateKey{Prv: k1, PubKey: pub1}
     prv2 := &crypto.PrivateKey{Prv: k2, PubKey: pub2}
     //prv3 := &crypto.PrivateKey{Prv: k3, PubKey: pub3}
-    ip0 := network.IP("192.168.3.143")
+    ip0 := network.IP("192.168.3.147")
     ip1 := network.IP("192.168.3.43")
     ip2 := network.IP("192.168.3.113")
     //ip3 := network.IP("192.168.3.79")
