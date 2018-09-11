@@ -6,7 +6,7 @@ package bean
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import crypto "crypto"
+import crypto "BlockChainTest/crypto"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
