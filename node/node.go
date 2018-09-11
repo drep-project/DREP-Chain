@@ -80,6 +80,7 @@ func (n *Node) runAsLeader() {
             log.Println("node leader finishes process consensus for round 2")
             log.Println("node leader is going to send block")
             n.sendBlock(block)
+            n.ProcessBlock(block)
             log.Println("node leader finishes sending block")
         }
     }
