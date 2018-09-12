@@ -153,7 +153,7 @@ func PickTransactions(maxGas *big.Int) []*bean.Transaction {
                             if t2, ok := it2.Next().(*bean.Transaction); ok {
                                 cn, e := tn[addr]
                                 if !e {
-                                    cn = 0
+                                    cn = GetNonce(addr)
                                 }
                                 if t2.Data.Nonce != cn + 1 {
                                     continue
