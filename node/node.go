@@ -10,8 +10,6 @@ import (
     "BlockChainTest/network"
     "BlockChainTest/crypto"
     "time"
-    "fmt"
-    "container/list"
 )
 
 var (
@@ -35,14 +33,6 @@ func GetNode() *Node {
         node = newNode(store.GetPrvKey())
     })
     return node
-}
-
-func (n *Node) isLeader() bool {
-    if leader := store.GetLeader(); leader != nil {
-        return *n.address == leader.Address
-    } else {
-        return false
-    }
 }
 
 func (n *Node) Start() {
@@ -139,72 +129,32 @@ func (n *Node) ProcessBlock(block *bean.Block, del bool) {
 }
 
 func (n *Node) discover() {
-    msg := &bean.Newcomer{Pk: n.prvKey.PubKey, Ip:"192.168.3.113", Port: 55555}
+    msg := &bean.Peer{Pk: n.prvKey.PubKey, Ip:"192.168.3.113", Port: 55555}
     peers := []*network.Peer{store.Admin}
     network.SendMessage(peers, msg)
 }
 
-func (n *Node) ProcessNewComer(newcomer *bean.Newcomer)  {
+func (n *Node) ProcessNewPeer(newcomer *bean.Peer) {
     log.Println("user starting process a newcomer")
-    pubKey := newcomer.Pk
-    address := bean.Addr(pubKey)
-    newPeer := &network.Peer{}
-    newPeer.IP = network.IP(newcomer.Ip)
-    newPeer.Port = network.Port(newcomer.Port)
-
-    newPeer.PubKey = pubKey
-    newPeer.Address = address
-    peerStore := network.GetStore()
-    peerStore.AddPeer(newPeer)
-
-    list := make([]*bean.Newcomer, 0)
-    peers := make([]*network.Peer, 0)
-    for _, value := range peerStore.Store {
-        msg := &bean.Newcomer{}
-        msg.Pk = value.PubKey
-        list = append(list, msg)
-
-        peer := &network.Peer{}
-        peer.PubKey = value.PubKey
-        peer.Address = address
-        peer.IP = value.IP
-        peer.Port = value.Port
-        peers = append(peers, peer)
+    peers := store.GetPeers()
+    newPeer := &network.Peer{
+        IP:network.IP(newcomer.Ip),
+        Port: network.Port(newcomer.Port),
+        PubKey: newcomer.Pk,
+        Address: bean.Addr(newcomer.Pk)}
+    store.AddPeer(newPeer)
+    list := make([]*bean.Peer, 0)
+    for _, p := range peers {
+        t := &bean.Peer{Pk: p.PubKey, Ip:string(p.IP), Port:int32(p.Port)}
+        list = append(list, t)
     }
-
-    listOfPeer := &bean.ListOfPeer{}
-    listOfPeer.List = list
-
-    // return the list to newcomer
-    log.Println("send a list of peer to the newcomer")
-
-    //newcomers := []*network.Peer{newPeer}
-    //network.SendMessage(newcomers, listOfPeer)
-
-    task := network.Task{newPeer,listOfPeer}
-    task.sendMessageCore()
-
-    // broadcast the new comer msg
-    //network.SendMessage(n.peers, newcomer)
+    peerList := &bean.PeerList{List:list}
+    network.SendMessage([]*network.Peer{newPeer}, peerList)
+    network.SendMessage(store.GetPeers(), newcomer)
 }
 
-func (n *Node) ProcessPeers(list *bean.ListOfPeer) {
-    log.Println("welcome newcomer! it's done.")
-    peerStore := network.GetStore()
-    fmt.Println("the peerStore before: ", peerStore.Store)
-    // store the peers in the local memory.
-    for _, item := range list.List {
-        pubKey := item.Pk
-        address := bean.Addr(pubKey)
-        peer := &network.Peer{}
-        peer.PubKey = pubKey
-        peer.Address = address
-        peerStore.AddPeer(peer)
-        peerStore.Store[address] = peer
+func (n *Node) ProcessPeerList(list *bean.PeerList) {
+    for _, t := range list.List {
+        store.AddPeer(&network.Peer{IP:network.IP(t.Ip), Port:network.Port(t.Port), PubKey:t.Pk})
     }
-    fmt.Println("the peerStore after: ", peerStore.Store)
-    log.Println("newcomer has refreshed the peerStore")
-    n.state = done
-    n.wg.Done()
-    log.Println("add newcomer done")
 }

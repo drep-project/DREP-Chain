@@ -11,7 +11,9 @@ var (
 
 func AddPeer(peer *network.Peer) {
     addr := bean.Addr(peer.PubKey)
-    store[addr] = peer
+    if _, exists := store[addr]; !exists {
+        store[addr] = peer
+    }
 }
 
 func GetPeers() []*network.Peer {

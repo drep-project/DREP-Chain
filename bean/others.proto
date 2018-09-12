@@ -2,14 +2,14 @@ syntax = "proto3";
 
 package bean;
 
-import "crypto/key.proto";
+import "key.proto";
 
-message newcomer {
-    crypto.point pk = 1;
+message peer {
+    point pk = 1;
     string ip = 2;
     int32 port = 3;
 }
 
-message listOfPeer {
-    repeated newcomer list = 1;
+message peer_list {
+    repeated peer list = 1;
 }
