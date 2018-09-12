@@ -2,51 +2,34 @@ package processor
 
 import (
     "fmt"
-    "BlockChainTest/crypto"
     "BlockChainTest/bean"
     "BlockChainTest/store"
     "BlockChainTest/node"
+    "BlockChainTest/network"
 )
-
-var curve = crypto.InitCurve()
 
 type transactionProcessor struct {
 
 }
 
-//func checkTransaction(t *common.Transaction) bool {
-    // TODO Check sig
-    // TODO Check nonce
-
-func checkTransaction(t *bean.Transaction) bool {
-    // Check sig
-    //merge, err := t.()
-    //if err != nil {
-    //    return false
-    //}
-    //if !network.Verify(curve, t.Sig, t.PubKey, merge) {
-    //    return false
-    //}
-    return true
-}
-
-func transactionExistsInPreviousBlocks(id string) bool {
-    return false
-}
+//func transactionExistsInPreviousBlocks(id string) bool {
+//    return false
+//}
 
 func (p *transactionProcessor) process(msg interface{})  {
     if transaction, ok := msg.(*bean.Transaction); ok {
         fmt.Println(transaction)
         id, _ := transaction.TxId()
-        if transactionExistsInPreviousBlocks(id) || store.Contains(id) {
+        if store.Contains(id) {
+            fmt.Println("Contains this transaction ", *transaction)
             return
         }
-        //if checkTransaction(&transaction) {
-        //    pool.AddTransaction(id, &transaction)
-            // TODO Send the transaction to all peers
-
-        if checkTransaction(transaction) {
-            store.AddTransaction(transaction)
+        if store.AddTransaction(transaction) {
+            fmt.Println("Succeed to add this transaction ", *transaction)
+            peers := store.GetPeers()
+            network.SendMessage(peers, transaction)
+        } else {
+            fmt.Println("Fail to add this transaction ", *transaction)
         }
     }
 }
@@ -57,6 +40,6 @@ type BlockProcessor struct {
 
 func (p *BlockProcessor) process(msg interface{}) {
     if block, ok := msg.(*bean.Block); ok {
-        node.GetNode(nil).ProcessBlock(block)
+        node.GetNode().ProcessBlock(block, true)
     }
 }

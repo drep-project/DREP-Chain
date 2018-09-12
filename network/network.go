@@ -7,8 +7,8 @@ import (
    "BlockChainTest/bean"
    "BlockChainTest/crypto"
    "github.com/golang/protobuf/proto"
-   "fmt"
    "strings"
+   "BlockChainTest/log"
 )
 
 var onceSender sync.Once
@@ -55,6 +55,8 @@ func identifyMessage(message *Message) (int, interface{}) {
       return bean.MsgTypeResponse, msg.(*bean.Response)
    case *bean.Block:
       return bean.MsgTypeBlock, msg.(*bean.Block)
+   case *bean.Transaction:
+      return bean.MsgTypeTransaction, msg.(*bean.Transaction)
    default:
       return -1, nil
    }
@@ -111,12 +113,12 @@ func (m *Message) Send() error {
      return err
    }
    defer conn.Close()
-   fmt.Println("Send msg to ",m.Peer.ToString(), cipher)
+   log.Println("Send msg to ",m.Peer.ToString(), cipher)
    if num, err := conn.Write(cipher); err != nil {
-      fmt.Println("Send error ", err)
+      log.Println("Send error ", err)
       return err
    } else {
-      fmt.Println("Send bytes ", num)
+      log.Println("Send bytes ", num)
       return nil
    }
 }
@@ -152,13 +154,13 @@ func startListen(process func(int, interface{})) {
      addr := &net.TCPAddr{Port: listeningPort}
      listener, err := net.ListenTCP("tcp", addr)
      if err != nil {
-        fmt.Println("error", err)
+        log.Println("error", err)
         return
      }
      for {
-        fmt.Println("start listen")
+        log.Println("start listen")
         conn, err := listener.AcceptTCP()
-        fmt.Println("listen from ", conn.RemoteAddr())
+        log.Println("listen from ", conn.RemoteAddr())
         if err != nil {
            continue
         }
@@ -174,10 +176,10 @@ func startListen(process func(int, interface{})) {
               b = cipher[offset:]
            }
         }
-        fmt.Println("Receive ", cipher[:offset])
-        fmt.Println("Receive byte ", offset)
+        log.Println("Receive ", cipher[:offset])
+        log.Println("Receive byte ", offset)
         message, err := DecryptIntoMessage(cipher[:offset])
-        fmt.Println("Receive after decrypt", message)
+        log.Println("Receive after decrypt", message)
         if err != nil {
            return
         }
@@ -191,7 +193,7 @@ func startListen(process func(int, interface{})) {
         if msg != nil {
            process(t, msg)
         }
-        fmt.Println("end listen")
+        log.Println("end listen")
      }
   }()
 }

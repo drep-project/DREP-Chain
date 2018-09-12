@@ -4,8 +4,10 @@ import (
 	"BlockChainTest/network"
 	"BlockChainTest/processor"
 	"BlockChainTest/node"
+	"fmt"
+	"math/big"
+	"BlockChainTest/bean"
 	"BlockChainTest/store"
-	"time"
 )
 
 func main()  {
@@ -16,7 +18,49 @@ func main()  {
 		}
 	})
 	processor.GetInstance().Start()
-	node.GetNode(store.GetPrvKey()).Start()
-	time.Sleep(4000 * time.Second)
-
+	node.GetNode().Start()
+	for {
+		var cmd string
+		fmt.Scanln(&cmd)
+		switch cmd {
+		case "send":
+			{
+				var addr string
+				var amount int64
+				fmt.Print("To: ")
+				fmt.Scanln(&addr)
+				fmt.Print("Amount: ")
+				fmt.Scanln(&amount)
+				t := node.GenerateBalanceTransaction(bean.Address(addr), big.NewInt(amount))
+				node.SendTransaction(t)
+				fmt.Println("Send finish")
+			}
+		case "checkBalance":
+			{
+				var addr string
+				fmt.Print("Who: ")
+				fmt.Scanln(&addr)
+				fmt.Println(store.GetBalance(bean.Address(addr)))
+			}
+		case "checkNonce":
+			{
+				var addr string
+				fmt.Print("Who: ")
+				fmt.Scanln(&addr)
+				fmt.Println(store.GetNonce(bean.Address(addr)))
+			}
+		case "me":
+			{
+				addr := store.GetAddress()
+				fmt.Println("Addr: ", addr)
+				fmt.Println("Nonce: ", store.GetNonce(addr))
+				fmt.Println("Bal: ", store.GetBalance(addr))
+			}
+		case "exit":
+			{
+				break
+			}
+		}
+	}
+// Why stuck
 }

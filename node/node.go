@@ -9,6 +9,7 @@ import (
     "BlockChainTest/log"
     "BlockChainTest/network"
     "BlockChainTest/crypto"
+    "time"
 )
 
 var (
@@ -27,9 +28,9 @@ func newNode(prvKey *crypto.PrivateKey) *Node {
     return &Node{address: &address, prvKey: prvKey}
 }
 
-func GetNode(prvKey *crypto.PrivateKey) *Node {
+func GetNode() *Node {
     once.Do(func() {
-        node = newNode(prvKey)
+        node = newNode(store.GetPrvKey())
     })
     return node
 }
@@ -43,27 +44,29 @@ func (n *Node) isLeader() bool {
 }
 
 func (n *Node) Start() {
-    for {
-        //time.Sleep(3 * time.Second)
-        log.Println("node start")
-        store.ChangeRole()
-        switch store.GetRole() {
-        case bean.LEADER:
-            n.runAsLeader()
-        case bean.MEMBER:
-            n.runAsMember()
-        case bean.OTHER:
-            n.runAsOther()
+    go func() {
+        for {
+            time.Sleep(5 * time.Second)
+            log.Println("node start")
+            store.ChangeRole()
+            switch store.GetRole() {
+            case bean.LEADER:
+                n.runAsLeader()
+            case bean.MEMBER:
+                n.runAsMember()
+            case bean.OTHER:
+                n.runAsOther()
+            }
+            log.Println("node stop")
+            log.Println("Current height ", store.GetCurrentBlockHeight())
         }
-        log.Println("node stop")
-        log.Println("Current height ", store.GetCurrentBlockHeight())
-    }
+    }()
 }
 
 func (n *Node) runAsLeader() {
     leader1 := consensus.NewLeader(n.prvKey.PubKey, store.GetMiners())
     store.SetLeader(leader1)
-    block := store.GetBlock()
+    block := store.GenerateBlock()
     log.Println("node leader is preparing process consensus for round 1")
     if msg, err := proto.Marshal(block); err ==nil {
         log.Println("node leader is going to process consensus for round 1")
@@ -78,13 +81,14 @@ func (n *Node) runAsLeader() {
             log.Println("node leader finishes process consensus for round 2")
             log.Println("node leader is going to send block")
             n.sendBlock(block)
+            n.ProcessBlock(block, false)
             log.Println("node leader finishes sending block")
         }
     }
 }
 
 func (n *Node) sendBlock(block *bean.Block) {
-    peers := store.GetPeersExcludingItself()
+    peers := store.GetPeers()
     network.SendMessage(peers, block)
 }
 
@@ -121,8 +125,10 @@ func (n *Node) runAsOther() {
 
 }
 
-func (n *Node) ProcessBlock(block *bean.Block) {
+func (n *Node) ProcessBlock(block *bean.Block, del bool) {
     log.Println("node receive block", *block)
-    store.ExecuteTransactions(block)
-    n.wg.Done()
+    store.ExecuteTransactions(block, del)
+    if del {
+        n.wg.Done()
+    }
 }
