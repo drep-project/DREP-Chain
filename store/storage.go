@@ -5,6 +5,7 @@ import (
     "sync"
     "BlockChainTest/bean"
     "log"
+    "fmt"
 )
 
 var (
@@ -66,7 +67,10 @@ func ExecuteTransactions(b *bean.Block, del bool) *big.Int {
     for _, t := range b.Data.TxList {
         gasFee := execute(t)
         if del {
+            fmt.Println("Delete transaction ", *t)
             removeTransaction(t)
+        } else {
+            fmt.Println("Does not delete transaction ", *t)
         }
         if gasFee != nil {
             total.Add(total, gasFee)

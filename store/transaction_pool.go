@@ -13,6 +13,7 @@ var (
     accountTran map[bean.Address]*list.SortedLinkedList
     tranSet     map[string]bool
     tranLock    sync.Mutex
+    includedTrans map[string]bool
     nonceCp     = func(a interface{}, b interface{}) int{
         ta, oka := a.(*bean.Transaction)
         tb, okb := b.(*bean.Transaction)
@@ -43,6 +44,7 @@ func init()  {
     trans = list.NewLinkedList()
     accountTran = make(map[bean.Address]*list.SortedLinkedList)
     tranSet = make(map[string]bool)
+    includedTrans = make(map[string]bool)
 }
 
 func Contains(id string) bool {
@@ -119,14 +121,14 @@ func removeTransaction(tran *bean.Transaction) {
     ts := accountTran[addr]
     ts.Remove(tran, tranCp)
 }
-
-func RemoveTransactions(trans []*bean.Transaction) {
-    tranLock.Lock()
-    for _, t := range trans {
-        removeTransaction(t)
-    }
-    tranLock.Unlock()
-}
+//
+//func RemoveTransactions(trans []*bean.Transaction) {
+//    tranLock.Lock()
+//    for _, t := range trans {
+//        removeTransaction(t)
+//    }
+//    tranLock.Unlock()
+//}
 
 func PickTransactions(maxGas *big.Int) []*bean.Transaction {
     r := make([]*bean.Transaction, 0) //TODO if 10

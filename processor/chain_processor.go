@@ -21,11 +21,15 @@ func (p *transactionProcessor) process(msg interface{})  {
         fmt.Println(transaction)
         id, _ := transaction.TxId()
         if store.Contains(id) {
+            fmt.Println("Contains this transaction ", *transaction)
             return
         }
         if store.AddTransaction(transaction) {
+            fmt.Println("Succeed to add this transaction ", *transaction)
             peers := store.GetPeers()
             network.SendMessage(peers, transaction)
+        } else {
+            fmt.Println("Fail to add this transaction ", *transaction)
         }
     }
 }
