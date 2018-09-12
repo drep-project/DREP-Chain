@@ -12,7 +12,7 @@ type Task struct {
     Msg  interface{}
 }
 
-func (t *Task) Cipher() ([]byte, error) {
+func (t *Task) cipher() ([]byte, error) {
     serializable, err := bean.Serialize(t.Msg)
     if err != nil {
         fmt.Println("there's an error during the serialize", err)
@@ -42,9 +42,9 @@ func (t *Task) Cipher() ([]byte, error) {
     return proto.Marshal(serializable)
 }
 
-func (t *Task) SendMessageCore() error {
+func (t *Task) execute() error {
     // If sleep 1000 here, hahax
-    cipher, err := t.Cipher()
+    cipher, err := t.cipher()
 
     if err != nil {
         fmt.Println("error during cipher:", err)

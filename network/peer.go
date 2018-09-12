@@ -5,8 +5,6 @@ import (
     "strconv"
 )
 
-//var key *common.PrivateKey
-
 type IP string
 
 func (ip IP) String() string {
@@ -29,16 +27,3 @@ type Peer struct {
 func (peer *Peer) ToString() string {
     return peer.IP.String() + ":" + peer.Port.String()
 }
-
-//func GetPrvKey() *PrivateKey {
-//   once1.Do(func() {
-//       var prvKey *PrivateKey = nil
-//       err := errors.New("fail to generate key pair")
-//       for err != nil {
-//           prvKey, err = GenerateKey(curve)
-//           key = prvKey
-//           time.Sleep(100 * time.Millisecond)
-//       }
-//   })
-//   return key
-//}

@@ -43,4 +43,3 @@ func (p *BlockProcessor) process(msg interface{}) {
         node.GetNode().ProcessBlock(block, true)
     }
 }
-
