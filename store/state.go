@@ -8,7 +8,6 @@ import (
     "BlockChainTest/crypto"
     "BlockChainTest/log"
     "math/big"
-    "BlockChainTest/node"
     role2 "BlockChainTest/role"
 )
 
@@ -107,7 +106,6 @@ func ChangeRole() {
     member = nil
     lock.Unlock()
 }
-
 
 func NewcomerRole()  {
     switch myIndex {

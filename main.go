@@ -19,6 +19,8 @@ func main()  {
 	})
 	processor.GetInstance().Start()
 	node.GetNode().Start()
+	// newcomer's entrance
+    //node.GetNode().Start2()
 	for {
 		var cmd string
 		fmt.Scanln(&cmd)
