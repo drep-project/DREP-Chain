@@ -32,7 +32,7 @@ func Serialize(message interface{}) (*Serializable, error) {
 		serializable.Header = MsgTypeResponse
 	case *BlockHeader:
 		serializable.Header = MsgTypeBlockHeader
-	case *TransactionData:
+	case *Transaction:
 		serializable.Header = MsgTypeTransaction
 	case *Block:
 		serializable.Header = MsgTypeBlock
@@ -106,9 +106,9 @@ func Deserialize(msg []byte) (*Serializable, interface{}, error) {
 			return nil, nil, err
 		}
 	case MsgTypeTransaction:
-		transactionData := &TransactionData{}
-		if err := proto.Unmarshal(body, transactionData); err == nil {
-			return serializable, transactionData, nil
+		transaction := &Transaction{}
+		if err := proto.Unmarshal(body, transaction); err == nil {
+			return serializable, transaction, nil
 		} else {
 			return nil, nil, err
 		}
