@@ -9,6 +9,7 @@ import (
     "BlockChainTest/log"
     "BlockChainTest/network"
     "BlockChainTest/crypto"
+    "time"
 )
 
 var (
@@ -45,7 +46,7 @@ func (n *Node) isLeader() bool {
 func (n *Node) Start() {
     go func() {
         for {
-            //time.Sleep(3 * time.Second)
+            time.Sleep(5 * time.Second)
             log.Println("node start")
             store.ChangeRole()
             switch store.GetRole() {
