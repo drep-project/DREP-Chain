@@ -10,8 +10,8 @@ import (
     "BlockChainTest/network"
     "BlockChainTest/crypto"
     "time"
-    "BlockChainTest/role"
     "fmt"
+    "container/list"
 )
 
 var (
@@ -46,6 +46,9 @@ func (n *Node) isLeader() bool {
 }
 
 func (n *Node) Start() {
+    if store.IsAdmin {
+
+    }
     go func() {
         for {
             time.Sleep(5 * time.Second)
@@ -124,33 +127,7 @@ func (n *Node) runAsMember() {
 }
 
 func (n *Node) runAsOther() {
-    if n.prvKey != nil {
-       n.runAsUser()
-       return
-    }
-}
 
-func (n *Node) runAsUser()  {
-    peer := store.GetPeers()[1]
-    user := role.NewUser(peer.PubKey, store.GetPeers())
-    store.SetUser(user)
-    log.Println("already ran as user!")
-}
-
-func (n *Node) runAsNewComer() {
-    // TODO: a hard coding server
-    curve := crypto.GetCurve()
-    k := []byte{0x22, 0x11}
-    pub := curve.ScalarBaseMultiply(k)
-    ip := network.IP("192.168.3.43")
-    port := network.Port(55555)
-    peer := &network.Peer{IP: ip, Port: port, PubKey: pub}
-
-    newcomer := role.NewJoiner(peer)
-    store.SetNewComer(newcomer)
-    log.Println("newcomer is going to process")
-    newcomer.ProcessJoin()
-    log.Println("welcome the newcomer!")
 }
 
 func (n *Node) ProcessBlock(block *bean.Block, del bool) {
@@ -161,7 +138,13 @@ func (n *Node) ProcessBlock(block *bean.Block, del bool) {
     }
 }
 
-func (n *Node) ProcessNewComers(newcomer *bean.Newcomer)  {
+func (n *Node) discover() {
+    msg := &bean.Newcomer{Pk: n.prvKey.PubKey, Ip:"192.168.3.113", Port: 55555}
+    peers := []*network.Peer{store.Admin}
+    network.SendMessage(peers, msg)
+}
+
+func (n *Node) ProcessNewComer(newcomer *bean.Newcomer)  {
     log.Println("user starting process a newcomer")
     pubKey := newcomer.Pk
     address := bean.Addr(pubKey)
@@ -171,7 +154,6 @@ func (n *Node) ProcessNewComers(newcomer *bean.Newcomer)  {
 
     newPeer.PubKey = pubKey
     newPeer.Address = address
-
     peerStore := network.GetStore()
     peerStore.AddPeer(newPeer)
 
@@ -206,21 +188,7 @@ func (n *Node) ProcessNewComers(newcomer *bean.Newcomer)  {
     //network.SendMessage(n.peers, newcomer)
 }
 
-func (n *Newcomer) ProcessJoin()  {
-    msg := &bean.Newcomer{}
-    msg.Pk = n.prvKey.PubKey
-    msg.Ip = "192.168.3.113"
-    msg.Port = 55555
-    log.Println("there is a newcomer request to join the blockchain family!")
-    log.Println("start request.")
-
-    var peers = []*network.Peer{n.neighbour}
-    network.SendMessage(peers, msg)
-    log.Println("n.neighbour: ", n.neighbour)
-    n.wg.Wait()
-}
-
-func (n *Newcomer) ProcessWelcome(list *bean.ListOfPeer) {
+func (n *Node) ProcessPeers(list *bean.ListOfPeer) {
     log.Println("welcome newcomer! it's done.")
     peerStore := network.GetStore()
     fmt.Println("the peerStore before: ", peerStore.Store)

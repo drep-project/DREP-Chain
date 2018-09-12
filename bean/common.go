@@ -25,8 +25,6 @@ const (
     OTHER     = 2
 )
 
-const IsAdmin = true
-
 type Address string
 
 func (addr Address) String() string {
