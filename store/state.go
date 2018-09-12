@@ -8,7 +8,6 @@ import (
     "BlockChainTest/crypto"
     "BlockChainTest/log"
     "math/big"
-    "fmt"
 )
 
 var (
@@ -94,10 +93,8 @@ func ChangeRole() {
     currentMinerIndex = (currentMinerIndex + 1) % len(miners)
     log.Println("Current miner index:", currentMinerIndex, " my index: ", myIndex)
     if currentMinerIndex == myIndex {
-        fmt.Println("I am leader")
         role = bean.LEADER
     } else {
-        fmt.Println("I am member")
         role = bean.MEMBER
     }
     leader = nil
@@ -165,7 +162,6 @@ func GenerateBlock() *bean.Block {
     height := currentBlockHeight + 1
     currentBlockHeight = height
     ts := PickTransactions(BlockGasLimit)
-    fmt.Println(" Include ts ", len(ts))
     return &bean.Block{Header: &bean.BlockHeader{Height: height},Data:&bean.BlockData{TxCount:int32(len(ts)), TxList:ts}}
 }
 
