@@ -10,10 +10,15 @@ import (
     "BlockChainTest/log"
 )
 
+const (
+    listeningPort = 55555
+    bufferSize    = 1024 * 1024
+)
+
 var onceSender sync.Once
 var SenderQueue chan *Task
 
-func GetSenderQueue() chan *Task {
+func getSenderQueue() chan *Task {
    onceSender.Do(func() {
       SenderQueue = make(chan *Task,  10)
    })
@@ -21,7 +26,7 @@ func GetSenderQueue() chan *Task {
 }
 
 func SendMessage(peers []*Peer, msg interface{}) {
-   queue := GetSenderQueue()
+   queue := getSenderQueue()
    for _, peer := range peers {
       task := &Task{peer, msg}
       queue <- task
@@ -63,7 +68,7 @@ func startListen(process func(int, interface{})) {
             }
             fmt.Println("Receive ", cipher[:offset])
             fmt.Println("Receive byte ", offset)
-            task, err := DecryptIntoTask(cipher[:offset])
+            task, err := decryptIntoTask(cipher[:offset])
             fmt.Println("Receive after decrypt", task)
             if err != nil {
                 return
@@ -85,17 +90,17 @@ func startListen(process func(int, interface{})) {
 
 func startSend() {
    go func() {
-      sender := GetSenderQueue()
+      sender := getSenderQueue()
       for {
          if task, ok := <-sender; ok {
             log.Println(task.Peer.IP)
-            task.SendMessageCore()
+            task.execute()
          }
       }
    }()
 }
 
-func DecryptIntoTask(cipher []byte) (*Task, error) {
+func decryptIntoTask(cipher []byte) (*Task, error) {
     plaintext, err := crypto.Decrypt(cipher)
     if err != nil {
         return nil, err

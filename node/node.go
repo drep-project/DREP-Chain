@@ -11,6 +11,7 @@ import (
     "BlockChainTest/crypto"
     "time"
     "BlockChainTest/role"
+    "fmt"
 )
 
 var (
@@ -62,17 +63,6 @@ func (n *Node) Start() {
             log.Println("Current height ", store.GetCurrentBlockHeight())
         }
     }()
-}
-
-//TODO : simulate the newcomer join in
-func (n *Node) Start2()  {
-   store.NewcomerRole()
-   switch store.GetRole() {
-   case bean.NEWCOMER:
-       n.runAsNewComer()
-   case bean.OTHER:
-       n.runAsOther()
-   }
 }
 
 func (n *Node) runAsLeader() {
@@ -169,4 +159,84 @@ func (n *Node) ProcessBlock(block *bean.Block, del bool) {
     if del {
         n.wg.Done()
     }
+}
+
+func (n *Node) ProcessNewComers(newcomer *bean.Newcomer)  {
+    log.Println("user starting process a newcomer")
+    pubKey := newcomer.Pk
+    address := bean.Addr(pubKey)
+    newPeer := &network.Peer{}
+    newPeer.IP = network.IP(newcomer.Ip)
+    newPeer.Port = network.Port(newcomer.Port)
+
+    newPeer.PubKey = pubKey
+    newPeer.Address = address
+
+    peerStore := network.GetStore()
+    peerStore.AddPeer(newPeer)
+
+    list := make([]*bean.Newcomer, 0)
+    peers := make([]*network.Peer, 0)
+    for _, value := range peerStore.Store {
+        msg := &bean.Newcomer{}
+        msg.Pk = value.PubKey
+        list = append(list, msg)
+
+        peer := &network.Peer{}
+        peer.PubKey = value.PubKey
+        peer.Address = address
+        peer.IP = value.IP
+        peer.Port = value.Port
+        peers = append(peers, peer)
+    }
+
+    listOfPeer := &bean.ListOfPeer{}
+    listOfPeer.List = list
+
+    // return the list to newcomer
+    log.Println("send a list of peer to the newcomer")
+
+    //newcomers := []*network.Peer{newPeer}
+    //network.SendMessage(newcomers, listOfPeer)
+
+    task := network.Task{newPeer,listOfPeer}
+    task.sendMessageCore()
+
+    // broadcast the new comer msg
+    //network.SendMessage(n.peers, newcomer)
+}
+
+func (n *Newcomer) ProcessJoin()  {
+    msg := &bean.Newcomer{}
+    msg.Pk = n.prvKey.PubKey
+    msg.Ip = "192.168.3.113"
+    msg.Port = 55555
+    log.Println("there is a newcomer request to join the blockchain family!")
+    log.Println("start request.")
+
+    var peers = []*network.Peer{n.neighbour}
+    network.SendMessage(peers, msg)
+    log.Println("n.neighbour: ", n.neighbour)
+    n.wg.Wait()
+}
+
+func (n *Newcomer) ProcessWelcome(list *bean.ListOfPeer) {
+    log.Println("welcome newcomer! it's done.")
+    peerStore := network.GetStore()
+    fmt.Println("the peerStore before: ", peerStore.Store)
+    // store the peers in the local memory.
+    for _, item := range list.List {
+        pubKey := item.Pk
+        address := bean.Addr(pubKey)
+        peer := &network.Peer{}
+        peer.PubKey = pubKey
+        peer.Address = address
+        peerStore.AddPeer(peer)
+        peerStore.Store[address] = peer
+    }
+    fmt.Println("the peerStore after: ", peerStore.Store)
+    log.Println("newcomer has refreshed the peerStore")
+    n.state = done
+    n.wg.Done()
+    log.Println("add newcomer done")
 }

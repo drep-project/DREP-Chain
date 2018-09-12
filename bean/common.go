@@ -22,9 +22,10 @@ const (
 const (
     LEADER    = 0
     MEMBER    = 1
-    NEWCOMER  = 2
-    OTHER     = 3
+    OTHER     = 2
 )
+
+const IsAdmin = true
 
 type Address string
 

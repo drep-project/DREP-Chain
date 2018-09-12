@@ -8,16 +8,12 @@ import (
     "BlockChainTest/crypto"
     "BlockChainTest/log"
     "math/big"
-    role2 "BlockChainTest/role"
 )
 
 var (
     role int
     leader *consensus.Leader
     member *consensus.Member
-
-    user   *role2.User
-    newcomer *role2.Newcomer
 
     //miningState int
     miners []*network.Peer
@@ -107,31 +103,12 @@ func ChangeRole() {
     lock.Unlock()
 }
 
-func NewcomerRole()  {
-    switch myIndex {
-    case 2:
-        role = bean.NEWCOMER
-    default:
-        role = bean.OTHER
-    }
-    leader = nil
-    member = nil
-}
-
 func SetLeader(l *consensus.Leader) {
     leader = l
 }
 
 func SetMember(m *consensus.Member) {
     member = m
-}
-
-func SetUser(u *role2.User) {
-    user = u
-}
-
-func SetNewComer(n *role2.Newcomer)  {
-    newcomer = n
 }
 
 func GetRole() int {
@@ -160,24 +137,6 @@ func GetMiner(pubKey *crypto.Point) *network.Peer {
     return nil
 }
 
-func GetPeer(pubKey *crypto.Point) *network.Peer {
-    for _, v:= range peers {
-        if v.PubKey.Equal(pubKey) {
-            return v
-        }
-    }
-    return nil
-}
-
-func GetPeers() []*network.Peer {
-    result := make([]*network.Peer, 0)
-    for _, v := range peers {
-        if !v.PubKey.Equal(pubKey) {
-            result = append(result, v)
-        }
-    }
-    return result
-}
 
 func GetBlockHeight() int {
     return blockHeight
@@ -220,14 +179,6 @@ func GetItSelfOnLeader() *consensus.Leader {
 
 func GetItSelfOnMember() *consensus.Member {
     return member
-}
-
-func GetItSelfOnUser() *role2.User {
-    return user
-}
-
-func GetItSelfOnNewcomer() *role2.Newcomer {
-    return newcomer
 }
 
 func SetRemainingSetup(setup *bean.Setup)  {
