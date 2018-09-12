@@ -127,5 +127,7 @@ func (n *Node) runAsOther() {
 func (n *Node) ProcessBlock(block *bean.Block, del bool) {
     log.Println("node receive block", *block)
     store.ExecuteTransactions(block, del)
-    n.wg.Done()
+    if del {
+        n.wg.Done()
+    }
 }
