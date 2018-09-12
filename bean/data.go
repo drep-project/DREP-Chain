@@ -28,12 +28,16 @@ func (tx *Transaction) TxHash() ([]byte, error) {
     return h, nil
 }
 
-func (tx *Transaction) TxSig() (*crypto.Signature, error) {
+func (tx *Transaction) TxSig(prvKey *PrivateKey) (*crypto.Signature, error) {
     b, err := proto.Marshal(tx.Data)
     if err != nil {
         return nil, err
     }
-    return crypto.Sign(b)
+    return crypto.Sign(prvKey, b)
+}
+
+func (tx *Transaction) Addr() Address {
+    return Addr(tx.Data.PubKey)
 }
 
 func (block *Block) BlockID() (string, error) {
