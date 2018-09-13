@@ -6,9 +6,7 @@ import (
 )
 
 const (
-    MsgTypeAccount     = 0
     MsgTypeBlockHeader = 1
-    MsgTypeBlockData   = 2
     MsgTypeBlock       = 3
     MsgTypeTransaction = 4
     MsgTypeSetUp       = 5
@@ -17,6 +15,7 @@ const (
     MsgTypeResponse    = 8
     MsgTypeNewPeer     = 9
     MsgTypePeerList    = 10
+    MsgTypeMinerInfo   = 11
 )
 
 const (
