@@ -133,6 +133,8 @@ func identifyMessage(task *Task) (int, interface{}) {
         return bean.MsgTypeNewPeer, msg.(*bean.PeerInfo)
     case *bean.PeerInfoList:
         return bean.MsgTypePeerList,msg.(*bean.PeerInfoList)
+    case *bean.Transaction:
+        return bean.MsgTypeTransaction, msg.(*bean.Transaction)
     default:
         return -1, nil
     }
