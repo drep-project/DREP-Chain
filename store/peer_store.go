@@ -18,7 +18,7 @@ func AddPeer(peer *network.Peer) {
 
 func GetPeers() []*network.Peer {
     result := make([]*network.Peer, 0)
-    for _, v := range peers {
+    for _, v := range store {
         if !v.PubKey.Equal(pubKey) {
             result = append(result, v)
         }

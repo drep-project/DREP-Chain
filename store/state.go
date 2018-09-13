@@ -18,7 +18,7 @@ var (
     //miningState int
     miners []*network.Peer
     //minerIndex map[bean.Address]int
-    peers []*network.Peer
+
     blockHeight int
     block *bean.Block
     lock sync.Locker
@@ -64,8 +64,11 @@ func init()  {
     peer1 := &network.Peer{IP: ip1, Port: port1, PubKey: pub1}
     peer2 := &network.Peer{IP: ip2, Port: port2, PubKey: pub2}
     //peer3 := &network.Peer{IP: ip3, Port: port3, PubKey: pub3}
+    AddPeer(peer0)
+    AddPeer(peer1)
+    AddPeer(peer2)
     miners = []*network.Peer{peer0, peer1, peer2}
-    peers = []*network.Peer{peer0, peer1, peer2}//, peer3}
+
     switch myIndex {
     case 0:
         pubKey = pub0
