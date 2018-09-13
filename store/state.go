@@ -13,7 +13,7 @@ import (
 const maxMinerNumber = 2
 
 var (
-    role = bean.OTHER
+    role = bean.MINER
     leader *consensus.Leader
     member *consensus.Member
 

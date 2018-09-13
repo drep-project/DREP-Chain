@@ -13,6 +13,9 @@ func SendTransaction(t *bean.Transaction)  {
     peers := store.GetPeers()
     fmt.Println("Send transaction")
     network.SendMessage(peers, t)
+    if id, err := t.TxId(); err == nil {
+        store.Forwarded(id)
+    }
     store.AddTransaction(t)
 }
 
