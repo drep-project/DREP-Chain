@@ -6,7 +6,7 @@ import (
 )
 
 var (
-    store map[bean.Address]*network.Peer
+    store = make(map[bean.Address]*network.Peer)
 )
 
 func AddPeer(peer *network.Peer) {
