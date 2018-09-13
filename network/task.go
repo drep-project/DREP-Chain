@@ -6,6 +6,7 @@ import (
     "BlockChainTest/log"
     "net"
     "fmt"
+    "BlockChainTest/mycrypto"
 )
 
 type Task struct {
@@ -19,12 +20,12 @@ func (t *Task) cipher() ([]byte, error) {
         fmt.Println("there's an error during the serialize", err)
         return nil, err
     }
-    //sig, err := crypto.Sign(serializable.Body)
+    //sig, err := mycrypto.Sign(serializable.Body)
     //if err != nil {
     //   return nil, err
     //}
     //serializable.Sig = sig
-    //pubKey, err := crypto.GetPubKey()
+    //pubKey, err := mycrypto.GetPubKey()
     //if err != nil {
     //   return nil, err
     //}
@@ -33,13 +34,13 @@ func (t *Task) cipher() ([]byte, error) {
     //if err != nil {
     //   return nil, err
     //}
-    //cipher, err := crypto.Encrypt(m.Peer.PubKey, plaintext)
+    //cipher, err := mycrypto.Encrypt(m.Peer.PubKey, plaintext)
     //if err != nil {
     //   return nil, err
     //}
     //return cipher, nil
-    serializable.Sig = &bean.Signature{R: []byte{0x00}, S: []byte{0x00}}
-    serializable.PubKey = &bean.Point{X: []byte{0x00}, Y: []byte{0x00}}
+    serializable.Sig = &mycrypto.Signature{R: []byte{0x00}, S: []byte{0x00}}
+    serializable.PubKey = &mycrypto.Point{X: []byte{0x00}, Y: []byte{0x00}}
     return proto.Marshal(serializable)
 }
 

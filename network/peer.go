@@ -3,6 +3,7 @@ package network
 import (
     "BlockChainTest/bean"
     "strconv"
+    "BlockChainTest/mycrypto"
 )
 
 type IP string
@@ -20,7 +21,7 @@ func (port Port) String() string {
 type Peer struct {
     IP      IP
     Port    Port
-    PubKey  *bean.Point
+    PubKey  *mycrypto.Point
     Address bean.Address
 }
 

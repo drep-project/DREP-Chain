@@ -5,7 +5,7 @@ import (
     "BlockChainTest/network"
     "BlockChainTest/bean"
     "BlockChainTest/consensus"
-    "BlockChainTest/crypto"
+    "BlockChainTest/mycrypto"
     "BlockChainTest/log"
     "math/big"
 )
@@ -22,8 +22,8 @@ var (
     blockHeight int
     block *bean.Block
     lock sync.Locker
-    prvKey *crypto.PrivateKey
-    pubKey *crypto.Point
+    prvKey *mycrypto.PrivateKey
+    pubKey *mycrypto.Point
     address bean.Address
     remainingSetUp *bean.Setup
 
@@ -34,9 +34,9 @@ var (
 func init()  {
     lock = &sync.Mutex{}
     currentMinerIndex = -1
-    //prvKey, _ = crypto.GetPrivateKey()
+    //prvKey, _ = mycrypto.GetPrivateKey()
     //pubKey = GetPubKey()
-    curve := crypto.GetCurve()
+    curve := mycrypto.GetCurve()
     k0 := []byte{0x22, 0x11}
     k1 := []byte{0x14, 0x44}
     k2 := []byte{0x11, 0x55}
@@ -48,10 +48,10 @@ func init()  {
     balances[bean.Addr(pub1)] = big.NewInt(10000)
     balances[bean.Addr(pub2)] = big.NewInt(10000)
     //pub3 := curve.ScalarBaseMultiply(k3)
-    prv0 := &crypto.PrivateKey{Prv: k0, PubKey: pub0}
-    prv1 := &crypto.PrivateKey{Prv: k1, PubKey: pub1}
-    prv2 := &crypto.PrivateKey{Prv: k2, PubKey: pub2}
-    //prv3 := &crypto.PrivateKey{Prv: k3, PubKey: pub3}
+    prv0 := &mycrypto.PrivateKey{Prv: k0, PubKey: pub0}
+    prv1 := &mycrypto.PrivateKey{Prv: k1, PubKey: pub1}
+    prv2 := &mycrypto.PrivateKey{Prv: k2, PubKey: pub2}
+    //prv3 := &mycrypto.PrivateKey{Prv: k3, PubKey: pub3}
     ip0 := network.IP("192.168.3.147")
     ip1 := network.IP("192.168.3.43")
     ip2 := network.IP("192.168.3.113")
@@ -119,7 +119,7 @@ func GetMiners() []*network.Peer {
     return miners
 }
 
-func ContainsMiner(pubKey *crypto.Point) bool {
+func ContainsMiner(pubKey *mycrypto.Point) bool {
     for _, v:= range miners {
         if v.PubKey.Equal(pubKey) {
             return true
@@ -128,7 +128,7 @@ func ContainsMiner(pubKey *crypto.Point) bool {
     return false
 }
 
-func GetMiner(pubKey *crypto.Point) *network.Peer {
+func GetMiner(pubKey *mycrypto.Point) *network.Peer {
     for _, v:= range miners {
         if v.PubKey.Equal(pubKey) {
             return v
@@ -161,7 +161,7 @@ func SetBlock(b *bean.Block) {
     block = b
 }
 
-func GetPubKey() *crypto.Point {
+func GetPubKey() *mycrypto.Point {
     return pubKey
 }
 
@@ -169,7 +169,7 @@ func GetAddress() bean.Address {
     return address
 }
 
-func GetPrvKey() *crypto.PrivateKey {
+func GetPrvKey() *mycrypto.PrivateKey {
     return prvKey
 }
 

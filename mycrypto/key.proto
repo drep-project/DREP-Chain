@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package crypto;
+package mycrypto;
 
 message point {
 	bytes x = 1;

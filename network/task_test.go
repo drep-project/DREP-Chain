@@ -2,12 +2,12 @@ package network
 
 import (
     "testing"
-    "BlockChainTest/crypto"
+    "BlockChainTest/mycrypto"
     "fmt"
 )
 
 func InitPeer() *Peer {
-    curve := crypto.GetCurve()
+    curve := mycrypto.GetCurve()
     k := []byte{0x22, 0x11}
     pub := curve.ScalarBaseMultiply(k)
     ip := IP("192.168.3.73")

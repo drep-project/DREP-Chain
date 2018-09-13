@@ -2,11 +2,11 @@ package network
 
 import (
     "testing"
-    "BlockChainTest/crypto"
+    "BlockChainTest/mycrypto"
 )
 
 func InitPeers() []*Peer {
-    curve := crypto.GetCurve()
+    curve := mycrypto.GetCurve()
     k0 := []byte{0x22, 0x11}
     k1 := []byte{0x14, 0x44}
     k2 := []byte{0x11, 0x55}
