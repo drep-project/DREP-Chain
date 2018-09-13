@@ -4,7 +4,7 @@ import (
     "BlockChainTest/network"
     "sync"
     "BlockChainTest/bean"
-    "BlockChainTest/crypto"
+    "BlockChainTest/mycrypto"
     "math/big"
     "math"
     "BlockChainTest/log"
@@ -17,14 +17,14 @@ const (
 )
 type Leader struct {
     members    []*network.Peer
-    pubKey     *crypto.Point
+    pubKey     *mycrypto.Point
     state      int
     LeaderPeer *network.Peer
 
     commitWg sync.WaitGroup
     commitBitmap []byte
-    sigmaPubKey *crypto.Point
-    sigmaQ *crypto.Point
+    sigmaPubKey *mycrypto.Point
+    sigmaQ *mycrypto.Point
     r []byte
 
     sigmaS *big.Int
@@ -34,7 +34,7 @@ type Leader struct {
     //sigs map[bean.Address][]byte
 }
 
-func NewLeader(pubKey *crypto.Point, members []*network.Peer) *Leader {
+func NewLeader(pubKey *mycrypto.Point, members []*network.Peer) *Leader {
     l := &Leader{}
     l.pubKey = pubKey
     l.members = make([]*network.Peer, len(members) - 1)
@@ -48,8 +48,8 @@ func NewLeader(pubKey *crypto.Point, members []*network.Peer) *Leader {
         //l.members = append(l.members, v)
     }
     l.state = waiting
-    l.sigmaPubKey = &crypto.Point{X: []byte{0x00}, Y: []byte{0x00}}
-    l.sigmaQ = &crypto.Point{X: []byte{0x00}, Y: []byte{0x00}}
+    l.sigmaPubKey = &mycrypto.Point{X: []byte{0x00}, Y: []byte{0x00}}
+    l.sigmaQ = &mycrypto.Point{X: []byte{0x00}, Y: []byte{0x00}}
     l.sigmaS = new(big.Int)
     len := len(members)
     l.commitBitmap = make([]byte, len)
@@ -59,7 +59,7 @@ func NewLeader(pubKey *crypto.Point, members []*network.Peer) *Leader {
     return l
 }
 
-func (l *Leader) ProcessConsensus(msg []byte) (*crypto.Signature, []byte) {
+func (l *Leader) ProcessConsensus(msg []byte) (*mycrypto.Signature, []byte) {
 
     l.state = setUp
     log.Println("Leader is going to setup")
@@ -75,21 +75,21 @@ func (l *Leader) ProcessConsensus(msg []byte) (*crypto.Signature, []byte) {
     log.Println("Leader wait for response")
     l.responseWg.Wait()
     log.Println("Leader finish")
-    sig := &crypto.Signature{R: l.r, S: l.sigmaS.Bytes()}
+    sig := &mycrypto.Signature{R: l.r, S: l.sigmaS.Bytes()}
     valid := l.Validate(sig, msg)
     log.Println("valid? ", valid)
     return sig, l.responseBitmap
 }
 
-func (l *Leader) setUp(msg []byte, pubKey *crypto.Point) {
+func (l *Leader) setUp(msg []byte, pubKey *mycrypto.Point) {
     setup := &bean.Setup{Msg: msg, PubKey: pubKey}
     log.Println("Leader setup ", *setup)
     network.SendMessage(l.members, setup)
 }
 
 func (l *Leader) getR(msg []byte) []byte {
-    curve := crypto.GetCurve()
-    r := crypto.ConcatHash256(l.sigmaQ.Bytes(), l.sigmaPubKey.Bytes(), msg)
+    curve := mycrypto.GetCurve()
+    r := mycrypto.ConcatHash256(l.sigmaQ.Bytes(), l.sigmaPubKey.Bytes(), msg)
     rInt := new(big.Int).SetBytes(r)
     rInt.Mod(rInt, curve.N)
     return rInt.Bytes()
@@ -106,7 +106,7 @@ func isLegalIndex(index int, bitmap []byte) bool {
     return index >=0 && index <= len(bitmap) && bitmap[index] != 1
 }
 
-func (l *Leader) getMinerIndex(p *crypto.Point) int {
+func (l *Leader) getMinerIndex(p *mycrypto.Point) int {
     if l.pubKey.Equal(p) {
         return -1
     }
@@ -132,7 +132,7 @@ func (l *Leader) ProcessCommit(commit *bean.Commitment) {
     }
     l.commitBitmap[index] = 1
     //l.commitWg.Done()
-    curve := crypto.GetCurve()
+    curve := mycrypto.GetCurve()
     l.sigmaPubKey = curve.Add(l.sigmaPubKey, commit.PubKey)
     l.sigmaQ = curve.Add(l.sigmaQ, commit.Q)
     l.commitWg.Done()
@@ -154,15 +154,15 @@ func (l *Leader) ProcessResponse(response *bean.Response) {
     l.responseWg.Done()
     s := new(big.Int).SetBytes(response.S)
     l.sigmaS = l.sigmaS.Add(l.sigmaS, s)
-    l.sigmaS.Mod(l.sigmaS, crypto.GetCurve().N)
+    l.sigmaS.Mod(l.sigmaS, mycrypto.GetCurve().N)
 }
 
-func (l *Leader) Validate(sig *crypto.Signature, msg []byte) bool {
+func (l *Leader) Validate(sig *mycrypto.Signature, msg []byte) bool {
     if len(l.responseBitmap) < len(l.commitBitmap) {
         return false
     }
     if float64(len(l.responseBitmap)) < math.Ceil(float64(len(l.members)*2.0/3.0)+1) {
         return false
     }
-    return crypto.Verify(sig, l.sigmaPubKey, msg)
+    return mycrypto.Verify(sig, l.sigmaPubKey, msg)
 }

@@ -4,7 +4,7 @@ import (
    "sync"
    "net"
    "strings"
-    "BlockChainTest/crypto"
+    "BlockChainTest/mycrypto"
     "BlockChainTest/bean"
     "BlockChainTest/log"
 )
@@ -100,7 +100,7 @@ func startSend() {
 }
 
 func decryptIntoTask(cipher []byte) (*Task, error) {
-    plaintext, err := crypto.Decrypt(cipher)
+    plaintext, err := mycrypto.Decrypt(cipher)
     if err != nil {
         return nil, err
     }
@@ -108,7 +108,7 @@ func decryptIntoTask(cipher []byte) (*Task, error) {
     if err != nil {
         return nil, err
     }
-    //if !crypto.Verify(serializable.Sig, serializable.PubKey, serializable.Body) {
+    //if !mycrypto.Verify(serializable.Sig, serializable.PubKey, serializable.Body) {
     //   return nil, errors.New("decrypt fail")
     //}
     peer := &Peer{PubKey: serializable.PubKey}
@@ -129,10 +129,10 @@ func identifyMessage(task *Task) (int, interface{}) {
         return bean.MsgTypeResponse, msg.(*bean.Response)
     case *bean.Block:
         return bean.MsgTypeBlock, msg.(*bean.Block)
-    case *bean.Peer:
-        return bean.MsgTypeNewPeer, msg.(*bean.Peer)
-    case *bean.PeerList:
-        return bean.MsgTypePeerList,msg.(*bean.PeerList)
+    case *bean.PeerInfo:
+        return bean.MsgTypeNewPeer, msg.(*bean.PeerInfo)
+    case *bean.PeerInfoList:
+        return bean.MsgTypePeerList,msg.(*bean.PeerInfoList)
     default:
         return -1, nil
     }

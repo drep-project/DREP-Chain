@@ -1,7 +1,7 @@
 package bean
 
 import (
-    "BlockChainTest/crypto"
+    "BlockChainTest/mycrypto"
     "encoding/hex"
 )
 
@@ -31,9 +31,9 @@ func (addr Address) String() string {
     return string(addr)
 }
 
-func Addr(pubKey *crypto.Point) Address {
+func Addr(pubKey *mycrypto.Point) Address {
     j := pubKey.Bytes()
-    h := crypto.Hash256(j)
+    h := mycrypto.Hash256(j)
     str := hex.EncodeToString(h[len(h) - AddressLen:])
     return Address(str)
 }

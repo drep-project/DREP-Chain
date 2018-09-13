@@ -8,7 +8,7 @@ import (
     "sync"
     "BlockChainTest/log"
     "BlockChainTest/network"
-    "BlockChainTest/crypto"
+    "BlockChainTest/mycrypto"
     "time"
 )
 
@@ -19,11 +19,11 @@ var (
 
 type Node struct {
     address *bean.Address
-    prvKey *crypto.PrivateKey
+    prvKey *mycrypto.PrivateKey
     wg *sync.WaitGroup
 }
 
-func newNode(prvKey *crypto.PrivateKey) *Node {
+func newNode(prvKey *mycrypto.PrivateKey) *Node {
     address := bean.Addr(prvKey.PubKey)
     return &Node{address: &address, prvKey: prvKey}
 }
@@ -129,12 +129,12 @@ func (n *Node) ProcessBlock(block *bean.Block, del bool) {
 }
 
 func (n *Node) discover() {
-    msg := &bean.Peer{Pk: n.prvKey.PubKey, Ip:"192.168.3.113", Port: 55555}
+    msg := &bean.PeerInfo{Pk: n.prvKey.PubKey, Ip:"192.168.3.113", Port: 55555}
     peers := []*network.Peer{store.Admin}
     network.SendMessage(peers, msg)
 }
 
-func (n *Node) ProcessNewPeer(newcomer *bean.Peer) {
+func (n *Node) ProcessNewPeer(newcomer *bean.PeerInfo) {
     log.Println("user starting process a newcomer")
     peers := store.GetPeers()
     newPeer := &network.Peer{
@@ -143,17 +143,17 @@ func (n *Node) ProcessNewPeer(newcomer *bean.Peer) {
         PubKey: newcomer.Pk,
         Address: bean.Addr(newcomer.Pk)}
     store.AddPeer(newPeer)
-    list := make([]*bean.Peer, 0)
+    list := make([]*bean.PeerInfo, 0)
     for _, p := range peers {
-        t := &bean.Peer{Pk: p.PubKey, Ip:string(p.IP), Port:int32(p.Port)}
+        t := &bean.PeerInfo{Pk: p.PubKey, Ip:string(p.IP), Port:int32(p.Port)}
         list = append(list, t)
     }
-    peerList := &bean.PeerList{List:list}
+    peerList := &bean.PeerInfoList{List:list}
     network.SendMessage([]*network.Peer{newPeer}, peerList)
     network.SendMessage(store.GetPeers(), newcomer)
 }
 
-func (n *Node) ProcessPeerList(list *bean.PeerList) {
+func (n *Node) ProcessPeerList(list *bean.PeerInfoList) {
     for _, t := range list.List {
         store.AddPeer(&network.Peer{IP:network.IP(t.Ip), Port:network.Port(t.Port), PubKey:t.Pk})
     }
