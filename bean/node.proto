@@ -13,3 +13,8 @@ message peer_info {
 message peer_info_list {
     repeated peer_info list = 1;
 }
+
+message miner_info {
+    mycrypto.point pk = 1;
+    peer_info peer = 2;
+}
