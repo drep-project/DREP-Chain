@@ -68,7 +68,7 @@ func init()  {
     AddPeer(peer0)
     AddPeer(peer1)
     AddPeer(peer2)
-    miners = []*network.Peer{peer0, peer1, peer2}
+    miners = []*network.Peer{peer0, peer1}//, peer2}
 
     switch myIndex {
     case 0:
