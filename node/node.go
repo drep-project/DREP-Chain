@@ -39,23 +39,21 @@ func (n *Node) Start() {
     if store.IsAdmin {
 
     }
-    go func() {
-        for {
-            time.Sleep(5 * time.Second)
-            log.Println("node start")
-            store.ChangeRole()
-            switch store.GetRole() {
-            case bean.LEADER:
-                n.runAsLeader()
-            case bean.MEMBER:
-                n.runAsMember()
-            case bean.OTHER:
-                n.runAsOther()
+    if store.GetRole() == bean.MINER {
+        go func() {
+            for {
+                time.Sleep(5 * time.Second)
+                log.Println("node start")
+                if store.MoveToNextMiner() {
+                    n.runAsLeader()
+                } else {
+                    n.runAsMember()
+                }
+                log.Println("node stop")
+                log.Println("Current height ", store.GetCurrentBlockHeight())
             }
-            log.Println("node stop")
-            log.Println("Current height ", store.GetCurrentBlockHeight())
-        }
-    }()
+        }()
+    }
 }
 
 func (n *Node) runAsLeader() {
