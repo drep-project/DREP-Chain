@@ -19,9 +19,8 @@ const (
 )
 
 const (
-    LEADER    = 0
-    MEMBER    = 1
-    OTHER     = 2
+    MINER    = 0
+    OTHER     = 1
 )
 
 type Address string
