@@ -2,10 +2,10 @@ syntax = "proto3";
 
 package bean;
 
-import "key.proto";
+import "crypto/key.proto";
 
 message peer {
-    point pk = 1;
+    crypto.point pk = 1;
     string ip = 2;
     int32 port = 3;
 }
