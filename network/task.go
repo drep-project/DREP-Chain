@@ -3,6 +3,7 @@ package network
 import (
     "BlockChainTest/bean"
     "github.com/golang/protobuf/proto"
+    "BlockChainTest/log"
     "net"
     "fmt"
 )
@@ -47,7 +48,7 @@ func (t *Task) execute() error {
     cipher, err := t.cipher()
 
     if err != nil {
-        fmt.Println("error during cipher:", err)
+        log.Println("error during cipher:", err)
         return err
     }
     addr, err := net.ResolveTCPAddr("tcp", t.Peer.ToString())
@@ -56,16 +57,16 @@ func (t *Task) execute() error {
     }
     conn, err := net.DialTCP("tcp", nil, addr)
     if err != nil {
-        fmt.Println("error during dail:", err)
+        log.Println("error during dail:", err)
         return err
     }
     defer conn.Close()
-    fmt.Println("Send msg to ",t.Peer.ToString(), cipher)
+    log.Println("Send msg to ",t.Peer.ToString(), cipher)
     if num, err := conn.Write(cipher); err != nil {
-        fmt.Println("Send error ", err)
+        log.Println("Send error ", err)
         return err
     } else {
-        fmt.Println("Send bytes ", num)
+        log.Println("Send bytes ", num)
         return nil
     }
 }

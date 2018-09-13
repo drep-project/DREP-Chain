@@ -3,7 +3,6 @@ package network
 import (
    "sync"
    "net"
-   "fmt"
    "strings"
     "BlockChainTest/crypto"
     "BlockChainTest/bean"
@@ -44,13 +43,13 @@ func startListen(process func(int, interface{})) {
         addr := &net.TCPAddr{Port: listeningPort}
         listener, err := net.ListenTCP("tcp", addr)
         if err != nil {
-            fmt.Println("error", err)
+            log.Println("error", err)
             return
         }
         for {
-            fmt.Println("start listen")
+            log.Println("start listen")
             conn, err := listener.AcceptTCP()
-            fmt.Println("listen from ", conn.RemoteAddr())
+            log.Println("listen from ", conn.RemoteAddr())
             if err != nil {
                 continue
             }
@@ -66,10 +65,10 @@ func startListen(process func(int, interface{})) {
                     b = cipher[offset:]
                 }
             }
-            fmt.Println("Receive ", cipher[:offset])
-            fmt.Println("Receive byte ", offset)
+            log.Println("Receive ", cipher[:offset])
+            log.Println("Receive byte ", offset)
             task, err := decryptIntoTask(cipher[:offset])
-            fmt.Println("Receive after decrypt", task)
+            log.Println("Receive after decrypt", task)
             if err != nil {
                 return
             }
@@ -83,7 +82,7 @@ func startListen(process func(int, interface{})) {
             if msg != nil {
                 process(t, msg)
             }
-            fmt.Println("end listen")
+            log.Println("end listen")
         }
     }()
 }
