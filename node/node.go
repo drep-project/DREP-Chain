@@ -114,10 +114,6 @@ func (n *Node) runAsMember() {
     log.Println("node member finishes wait")
 }
 
-func (n *Node) runAsOther() {
-
-}
-
 func (n *Node) ProcessBlock(block *bean.Block, del bool) {
     log.Println("node receive block", *block)
     store.ExecuteTransactions(block, del)
@@ -138,8 +134,7 @@ func (n *Node) ProcessNewPeer(newcomer *bean.PeerInfo) {
     newPeer := &network.Peer{
         IP:network.IP(newcomer.Ip),
         Port: network.Port(newcomer.Port),
-        PubKey: newcomer.Pk,
-        Address: bean.Addr(newcomer.Pk)}
+        PubKey: newcomer.Pk}
     store.AddPeer(newPeer)
     list := make([]*bean.PeerInfo, 0)
     for _, p := range peers {
@@ -157,6 +152,8 @@ func (n *Node) ProcessPeerList(list *bean.PeerInfoList) {
     }
 }
 
-func (n *Node) ProcessMinerInfo(miner *bean.MinerInfo) {
-
+func (n *Node) ProcessMinerInfo(minerInfo *bean.MinerInfo) {
+    peerInfo := minerInfo.Peer
+    peer := &network.Peer{IP: network.IP(peerInfo.Ip), Port: network.Port(peerInfo.Port), PubKey:peerInfo.Pk}
+    store.AddMiner(peer)
 }

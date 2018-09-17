@@ -15,6 +15,6 @@ message peer_info_list {
 }
 
 message miner_info {
-    mycrypto.point pk = 1;
+    int64 block_height = 1;
     peer_info peer = 2;
 }
