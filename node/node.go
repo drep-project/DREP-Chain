@@ -151,9 +151,3 @@ func (n *Node) ProcessPeerList(list *bean.PeerInfoList) {
         store.AddPeer(&network.Peer{IP:network.IP(t.Ip), Port:network.Port(t.Port), PubKey:t.Pk})
     }
 }
-
-func (n *Node) ProcessMinerInfo(minerInfo *bean.MinerInfo) {
-    peerInfo := minerInfo.Peer
-    peer := &network.Peer{IP: network.IP(peerInfo.Ip), Port: network.Port(peerInfo.Port), PubKey:peerInfo.Pk}
-    store.AddMiner(peer)
-}
