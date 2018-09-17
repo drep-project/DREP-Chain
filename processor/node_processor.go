@@ -23,12 +23,3 @@ func (p *PeersProcessor) process(msg interface{}) {
         node.GetNode().ProcessPeerList(list)
     }
 }
-
-type MinerProcessor struct {}
-
-func (p *MinerProcessor) process(msg interface{}) {
-    // Admin should also process
-    if miner, ok := msg.(*bean.MinerInfo); ok {
-        node.GetNode().ProcessMinerInfo(miner)
-    }
-}

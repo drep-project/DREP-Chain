@@ -3,28 +3,28 @@ package store
 import (
     "BlockChainTest/bean"
     "BlockChainTest/network"
-    "BlockChainTest/log"
     "BlockChainTest/mycrypto"
 )
 
 var (
-    store = make(map[bean.Address]*network.Peer)
-    miners []*network.Peer
-    nextMiners []*network.Peer
-    nextBlockHeight int64
-    currentMinerIndex int
+    peers                    = make(map[bean.Address]*network.Peer)
+    curMiners   []*network.Peer
+    miners                  = make([]*network.Peer, 0)
+    curMiner    int
+    minerIndex  int
+    adminPubKey *mycrypto.Point
 )
 
 func AddPeer(peer *network.Peer) {
     addr := bean.Addr(peer.PubKey)
-    if _, exists := store[addr]; !exists {
-        store[addr] = peer
+    if _, exists := peers[addr]; !exists {
+        peers[addr] = peer
     }
 }
 
 func GetPeers() []*network.Peer {
     result := make([]*network.Peer, 0)
-    for _, v := range store {
+    for _, v := range peers {
         if !v.PubKey.Equal(pubKey) {
             result = append(result, v)
         }
@@ -33,57 +33,42 @@ func GetPeers() []*network.Peer {
 }
 
 
-func MoveToNextMiner() bool {
+func MoveToNextMiner() (bool, bool) {
     lock.Lock()
-    currentMinerIndex = (currentMinerIndex + 1) % len(miners)
-    log.Println("Current miner index:", currentMinerIndex, " my index: ", myIndex)
-    r := currentMinerIndex == myIndex
-    leader = nil
-    member = nil
-    lock.Unlock()
-    return r
+    defer lock.Unlock()
+    curMiner++
+    if curMiner == len(curMiners) {
+        if minerIndex < len(miners) - 1 {
+            minerIndex++
+            curMiners = append(curMiners[1:], miners[minerIndex])
+        }
+        curMiner = 0
+    }
+    for i, m := range curMiners {
+        if m.PubKey.Equal(GetPubKey()) {
+            return true, i == 0
+        }
+    }
+    return false, false
 }
 
 func GetLeader() *network.Peer {
-    return miners[currentMinerIndex]
+    return curMiners[curMiner]
 }
 
 
 func GetMiners() []*network.Peer {
-    return miners
+    return curMiners
 }
 
-func AddMiner(miner *network.Peer, height int64) {
-    if miner != nil {
-        if len(miners) < maxMinerNumber {
-            miners = append(miners, miner)
-        } else {
-            miners = append(miners[1:], miner)
+func AddMiner(minerPk *mycrypto.Point) {
+    for _, p := range peers {
+        if p.PubKey.Equal(minerPk) {
+            miners = append(miners, p)
         }
     }
-    for _, m := range miners {
-        if m.PubKey.Equal(pubKey) {
-            role = bean.MINER
-            return
-        }
-    }
-    role = bean.OTHER
 }
 
-func ContainsMiner(pubKey *mycrypto.Point) bool {
-    for _, v:= range miners {
-        if v.PubKey.Equal(pubKey) {
-            return true
-        }
-    }
-    return false
-}
-
-func GetMiner(pubKey *mycrypto.Point) *network.Peer {
-    for _, v:= range miners {
-        if v.PubKey.Equal(pubKey) {
-            return v
-        }
-    }
-    return nil
+func GetAdminPubKey() *mycrypto.Point {
+    return adminPubKey
 }
