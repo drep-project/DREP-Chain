@@ -53,6 +53,7 @@ func (n *Node) Start() {
                 if isM {
                     n.runAsMember()
                 }
+                n.wg.Wait() // If not, next will be nil member
             }
             log.Println("node stop")
             log.Println("Current height ", store.GetCurrentBlockHeight())
