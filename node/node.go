@@ -22,11 +22,16 @@ type Node struct {
     address *bean.Address
     prvKey *mycrypto.PrivateKey
     wg *sync.WaitGroup
+    prep  bool
+    prepLock sync.Mutex
+    prepCond *sync.Cond
 }
 
 func newNode(prvKey *mycrypto.PrivateKey) *Node {
     address := bean.Addr(prvKey.PubKey)
-    return &Node{address: &address, prvKey: prvKey}
+    n := &Node{address: &address, prvKey: prvKey, prep:false}
+    n.prepCond = sync.NewCond(&n.prepLock)
+    return n
 }
 
 func GetNode() *Node {
@@ -50,6 +55,10 @@ func (n *Node) Start() {
             } else {
                 n.wg = &sync.WaitGroup{}
                 n.wg.Add(1)
+                n.prepLock.Lock()
+                n.prep = true
+                n.prepCond.Broadcast()
+                n.prepLock.Unlock()
                 if isM {
                     n.runAsMember()
                 }
@@ -120,6 +129,11 @@ func (n *Node) runAsMember() {
 }
 
 func (n *Node) ProcessBlock(block *bean.Block, del bool) {
+    n.prepLock.Lock()
+    for !n.prep {
+        n.prepCond.Wait()
+    }
+    n.prepLock.Unlock()
     log.Println("node receive block", *block)
     fmt.Println("Process block leader = ", bean.Addr(block.Header.LeaderPubKey))
     store.ExecuteTransactions(block, del)
