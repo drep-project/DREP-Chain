@@ -9,8 +9,6 @@ import (
     "math/big"
 )
 
-const maxMinerNumber = 2
-
 var (
     leader *consensus.Leader
     member *consensus.Member
