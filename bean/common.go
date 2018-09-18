@@ -17,11 +17,6 @@ const (
     MsgTypePeerList    = 10
 )
 
-const (
-    MINER    = 0
-    OTHER    = 1
-)
-
 type Address string
 
 func (addr Address) String() string {

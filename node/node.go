@@ -10,6 +10,7 @@ import (
     "BlockChainTest/network"
     "BlockChainTest/mycrypto"
     "time"
+    "fmt"
 )
 
 var (
@@ -119,6 +120,7 @@ func (n *Node) runAsMember() {
 
 func (n *Node) ProcessBlock(block *bean.Block, del bool) {
     log.Println("node receive block", *block)
+    fmt.Println("Process block leader = ", bean.Addr(block.Header.LeaderPubKey))
     store.ExecuteTransactions(block, del)
     if del {
         n.wg.Done()
