@@ -12,7 +12,6 @@ import (
 const maxMinerNumber = 2
 
 var (
-    role = bean.MINER
     leader *consensus.Leader
     member *consensus.Member
 
@@ -96,10 +95,6 @@ func SetLeader(l *consensus.Leader) {
 
 func SetMember(m *consensus.Member) {
     member = m
-}
-
-func GetRole() int {
-    return role
 }
 
 func GetBlockHeight() int {

@@ -39,21 +39,24 @@ func (n *Node) Start() {
     if store.IsAdmin {
 
     }
-    if store.GetRole() == bean.MINER {
-        go func() {
-            for {
-                time.Sleep(5 * time.Second)
-                log.Println("node start")
-                if store.MoveToNextMiner() {
-                    n.runAsLeader()
-                } else {
+    go func() {
+        for {
+            time.Sleep(5 * time.Second)
+            log.Println("node start")
+            isM, isL := store.MoveToNextMiner();
+            if isL {
+                n.runAsLeader()
+            } else {
+                n.wg = &sync.WaitGroup{}
+                n.wg.Add(1)
+                if isM {
                     n.runAsMember()
                 }
-                log.Println("node stop")
-                log.Println("Current height ", store.GetCurrentBlockHeight())
             }
-        }()
-    }
+            log.Println("node stop")
+            log.Println("Current height ", store.GetCurrentBlockHeight())
+        }
+    }()
 }
 
 func (n *Node) runAsLeader() {
@@ -73,8 +76,8 @@ func (n *Node) runAsLeader() {
             leader2.ProcessConsensus(msg)
             log.Println("node leader finishes process consensus for round 2")
             log.Println("node leader is going to send block")
+            n.ProcessBlock(block, false) // process before sending
             n.sendBlock(block)
-            n.ProcessBlock(block, false)
             log.Println("node leader finishes sending block")
         }
     }
@@ -100,8 +103,8 @@ func (n *Node) runAsMember() {
     }
     log.Println("node member finishes consensus for round 1")
     block := &bean.Block{}
-    n.wg = &sync.WaitGroup{}
-    n.wg.Add(1)
+    //n.wg = &sync.WaitGroup{}
+    //n.wg.Add(1)
     if proto.Unmarshal(bytes, block) == nil {
         member2 := consensus.NewMember(store.GetLeader(), store.GetPrvKey())
         store.SetMember(member2)
@@ -109,9 +112,9 @@ func (n *Node) runAsMember() {
         member2.ProcessConsensus(nil, nil)
         log.Println("node member finishes consensus for round 2")
     }
-    log.Println("node member is going to wait")
-    n.wg.Wait()
-    log.Println("node member finishes wait")
+    //log.Println("node member is going to wait")
+    //n.wg.Wait()
+    //log.Println("node member finishes wait")
 }
 
 func (n *Node) ProcessBlock(block *bean.Block, del bool) {
