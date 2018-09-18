@@ -22,19 +22,14 @@ func (p *transactionProcessor) process(msg interface{})  {
             fmt.Println("Forwarded this transaction ", *transaction)
             return
         }
-        if store.GetRole() == bean.OTHER {
+        // TODO backup nodes should not add
+        if store.AddTransaction(transaction) {
+            fmt.Println("Succeed to add this transaction ", *transaction)
             peers := store.GetPeers()
             network.SendMessage(peers, transaction)
             store.Forward(id)
         } else {
-            if store.AddTransaction(transaction) {
-                fmt.Println("Succeed to add this transaction ", *transaction)
-                peers := store.GetPeers()
-                network.SendMessage(peers, transaction)
-                store.Forward(id)
-            } else {
-                fmt.Println("Fail to add this transaction ", *transaction)
-            }
+            fmt.Println("Fail to add this transaction ", *transaction)
         }
     }
 }
@@ -50,6 +45,6 @@ func (p *BlockProcessor) process(msg interface{}) {
         }
         peers := store.GetPeers()
         network.SendMessage(peers, block)
-        node.GetNode().ProcessBlock(block, store.GetRole() == bean.MINER)
+        node.GetNode().ProcessBlock(block, true)
     }
 }

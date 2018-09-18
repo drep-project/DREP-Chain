@@ -31,12 +31,14 @@ message block {
 message transaction_data {
 	int32 version = 1;
 	int64 nonce = 2;
-	string to = 3;
-	bytes amount = 4;
-	bytes gas_price = 5;
-	bytes gas_limit = 6;
-	int64 timestamp = 7;
-	mycrypto.point pub_key = 8;
+	int32 type = 3;
+	string to = 4;
+	bytes amount = 5;
+	bytes gas_price = 6;
+	bytes gas_limit = 7;
+	int64 timestamp = 8;
+	bytes data = 9;
+	mycrypto.point pub_key = 10;
 }
 
 message transaction {

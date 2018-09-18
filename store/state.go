@@ -6,19 +6,15 @@ import (
     "BlockChainTest/bean"
     "BlockChainTest/consensus"
     "BlockChainTest/mycrypto"
-    "BlockChainTest/log"
     "math/big"
 )
 
-const maxMinerNumber = 2
-
 var (
-    role = bean.MINER
     leader *consensus.Leader
     member *consensus.Member
 
     //miningState int
-    miners []*network.Peer
+
     //minerIndex map[bean.Address]int
 
     blockHeight int
@@ -28,13 +24,12 @@ var (
     address bean.Address
     remainingSetUp *bean.Setup
 
-    currentMinerIndex int
     myIndex = 0
 )
 
 func init()  {
     lock = &sync.Mutex{}
-    currentMinerIndex = -1
+    curMiner = -1
     //prvKey, _ = mycrypto.GetPrivateKey()
     //pubKey = GetPubKey()
     curve := mycrypto.GetCurve()
@@ -68,7 +63,7 @@ func init()  {
     AddPeer(peer0)
     AddPeer(peer1)
     AddPeer(peer2)
-    miners = []*network.Peer{peer0, peer1}//, peer2}
+    curMiners = []*network.Peer{peer0, peer1} //, peer2}
 
     switch myIndex {
     case 0:
@@ -92,17 +87,6 @@ func init()  {
     }
 }
 
-func MoveToNextMiner() bool {
-    lock.Lock()
-    currentMinerIndex = (currentMinerIndex + 1) % len(miners)
-    log.Println("Current miner index:", currentMinerIndex, " my index: ", myIndex)
-    r := currentMinerIndex == myIndex
-    leader = nil
-    member = nil
-    lock.Unlock()
-    return r
-}
-
 func SetLeader(l *consensus.Leader) {
     leader = l
 }
@@ -111,63 +95,15 @@ func SetMember(m *consensus.Member) {
     member = m
 }
 
-func GetRole() int {
-    return role
-}
-
-func GetMiners() []*network.Peer {
-    return miners
-}
-
-func AddMiner(miner *network.Peer) {
-    if miner != nil {
-        if len(miners) < maxMinerNumber {
-            miners = append(miners, miner)
-        } else {
-            miners = append(miners[1:], miner)
-        }
-    }
-    for _, m := range miners {
-        if m.PubKey.Equal(pubKey) {
-            role = bean.MINER
-            return
-        }
-    }
-    role = bean.OTHER
-}
-
-func ContainsMiner(pubKey *mycrypto.Point) bool {
-    for _, v:= range miners {
-        if v.PubKey.Equal(pubKey) {
-            return true
-        }
-    }
-    return false
-}
-
-func GetMiner(pubKey *mycrypto.Point) *network.Peer {
-    for _, v:= range miners {
-        if v.PubKey.Equal(pubKey) {
-            return v
-        }
-    }
-    return nil
-}
-
-
 func GetBlockHeight() int {
     return blockHeight
-}
-
-func GetLeader() *network.Peer {
-    return miners[currentMinerIndex]
 }
 
 func GenerateBlock() *bean.Block {
     height := currentBlockHeight + 1
     currentBlockHeight = height
     ts := PickTransactions(BlockGasLimit)
-    return &bean.Block{Header: &bean.BlockHeader{Height: height},Data:&bean.BlockData{TxCount:int32(len(ts)), TxList:ts}}
+    return &bean.Block{Header: &bean.BlockHeader{Height: height, LeaderPubKey:GetPubKey()},Data:&bean.BlockData{TxCount:int32(len(ts)), TxList:ts}}
 }
 
 func GetPubKey() *mycrypto.Point {
