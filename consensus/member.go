@@ -59,13 +59,16 @@ func (m *Member) ProcessSetUp(setupMsg *bean.Setup) bool {
     //if !store.CheckRole(node.MINER) {
     //    return
     //}
+    log.Println("Member process setup 1", *setupMsg)
     if !m.leader.PubKey.Equal(setupMsg.PubKey) {
+        log.Println("Member process setup 2", *setupMsg)
         return false
     }
     if m.state != waiting {
+        log.Println("Member process setup 3", *setupMsg)
         return false
     }
-    log.Println("Member process setup ", *setupMsg)
+    log.Println("Member process setup 4", *setupMsg)
     m.msg = setupMsg.Msg
     m.setUpWg.Done()
     return true
