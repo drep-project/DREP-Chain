@@ -61,9 +61,10 @@ func GetMiners() []*network.Peer {
     return curMiners
 }
 
-func AddMiner(minerPk *mycrypto.Point) {
+func AddMiner(addr bean.Address) {
+    a := string(addr)
     for _, p := range peers {
-        if p.PubKey.Equal(minerPk) {
+        if string(bean.Addr(p.PubKey)) == a {
             miners = append(miners, p)
         }
     }
