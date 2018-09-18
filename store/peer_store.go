@@ -44,12 +44,14 @@ func MoveToNextMiner() (bool, bool) {
         }
         curMiner = 0
     }
-    for i, m := range curMiners {
+    isM := false
+    for _, m := range curMiners {
         if m.PubKey.Equal(GetPubKey()) {
-            return true, i == 0
+            isM = true
+            break
         }
     }
-    return false, false
+    return isM, curMiners[curMiner].PubKey.Equal(GetPubKey())
 }
 
 func GetLeader() *network.Peer {
