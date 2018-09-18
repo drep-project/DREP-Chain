@@ -15,12 +15,6 @@ const (
     MsgTypeResponse    = 8
     MsgTypeNewPeer     = 9
     MsgTypePeerList    = 10
-    MsgTypeMinerInfo   = 11
-)
-
-const (
-    MINER    = 0
-    OTHER     = 1
 )
 
 type Address string
