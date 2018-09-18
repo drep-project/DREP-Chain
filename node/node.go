@@ -11,6 +11,7 @@ import (
     "BlockChainTest/mycrypto"
     "time"
     "fmt"
+    "container/list"
 )
 
 var (
@@ -129,11 +130,13 @@ func (n *Node) runAsMember() {
 }
 
 func (n *Node) ProcessBlock(block *bean.Block, del bool) {
-    n.prepLock.Lock()
-    for !n.prep {
-        n.prepCond.Wait()
+    if del {
+        n.prepLock.Lock()
+        for !n.prep {
+            n.prepCond.Wait()
+        }
+        n.prepLock.Unlock()
     }
-    n.prepLock.Unlock()
     log.Println("node receive block", *block)
     fmt.Println("Process block leader = ", bean.Addr(block.Header.LeaderPubKey))
     store.ExecuteTransactions(block, del)
