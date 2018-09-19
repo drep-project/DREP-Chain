@@ -64,7 +64,8 @@ func init()  {
     AddPeer(peer1)
     AddPeer(peer2)
     curMiners = []*network.Peer{peer0, peer1} //, peer2}
-
+    miners = []*network.Peer{peer0, peer1}
+    minerIndex = 1
     switch myIndex {
     case 0:
         pubKey = pub0
