@@ -4,6 +4,7 @@ import (
     "BlockChainTest/bean"
     "BlockChainTest/network"
     "BlockChainTest/mycrypto"
+    "fmt"
 )
 
 var (
@@ -67,8 +68,12 @@ func GetMiners() []*network.Peer {
 
 func AddMiner(addr bean.Address) {
     a := string(addr)
+    fmt.Println("storage change 6")
     for _, p := range peers {
+        addr := bean.Addr(p.PubKey)
+        fmt.Println("storage change 7 ", addr)
         if string(bean.Addr(p.PubKey)) == a {
+            fmt.Println("storage change 8")
             miners = append(miners, p)
         }
     }
