@@ -70,6 +70,7 @@ func init()  {
         pubKey = pub0
         prvKey = prv0
         address = bean.Addr(pub0)
+        adminPubKey = pub0
         //leader = consensus.NewLeader(pub0, peers)
         //member = nil
     case 1:
