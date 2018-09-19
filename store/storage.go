@@ -116,12 +116,9 @@ func execute(t *bean.Transaction) *big.Int {
     case MinerType:
         {
             // TODO if not the admin
-            fmt.Println("storage change 1")
             if gasLimit.Cmp(MinerGas) < 0 {
-                fmt.Println("storage change 2")
                 balance.Sub(balance, gasFee)
             } else {
-                fmt.Println("storage change 3")
                 balance.Sub(balance, gasFee)
                 AddMiner(bean.Address(t.Data.Data))
             }
