@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package bean;
 
-import "crypto/key.proto";
+import "mycrypto/key.proto";
 
 message block_header {
 	int32 version = 1;
@@ -13,8 +13,8 @@ message block_header {
 	int64 timestamp = 6;
 	bytes merkle_root = 7;
 	repeated bytes tx_hashes = 8;
-	crypto.point leader_pub_key = 9;
-	repeated crypto.point minor_pub_keys = 10;
+	mycrypto.point leader_pub_key = 9;
+	repeated mycrypto.point minor_pub_keys = 10;
 }
 
 message block_data {
@@ -25,26 +25,28 @@ message block_data {
 message block {
 	block_header header = 2;
 	block_data data = 3;
-	crypto.signature multi_sig = 4;
+	mycrypto.signature multi_sig = 4;
 }
 
 message transaction_data {
 	int32 version = 1;
 	int64 nonce = 2;
-	string to = 3;
-	bytes amount = 4;
-	bytes gas_price = 5;
-	bytes gas_limit = 6;
-	int64 timestamp = 7;
-	crypto.point pub_key = 8;
+	int32 type = 3;
+	string to = 4;
+	bytes amount = 5;
+	bytes gas_price = 6;
+	bytes gas_limit = 7;
+	int64 timestamp = 8;
+	bytes data = 9;
+	mycrypto.point pub_key = 10;
 }
 
 message transaction {
 	transaction_data data = 1;
-	crypto.signature sig = 2;
+	mycrypto.signature sig = 2;
 }
 
 message multi_signature {
-    crypto.signature sig = 1;
+    mycrypto.signature sig = 1;
     bytes bitmap = 2;
 }

@@ -16,6 +16,8 @@ func (p *SetUpProcessor) process(msg interface{}) {
                 log.Println("SOS Help ", *setUp)
                 store.SetRemainingSetup(setUp)
             }
+        } else {
+            store.SetRemainingSetup(setUp)
         }
     }
 }

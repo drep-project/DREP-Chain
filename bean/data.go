@@ -3,7 +3,7 @@ package bean
 import (
     "encoding/hex"
     "github.com/golang/protobuf/proto"
-    "BlockChainTest/crypto"
+    "BlockChainTest/mycrypto"
 )
 
 const (
@@ -15,7 +15,7 @@ func (tx *Transaction) TxId() (string, error) {
     if err != nil {
         return "", err
     }
-    id := hex.EncodeToString(crypto.Hash256(b))
+    id := hex.EncodeToString(mycrypto.Hash256(b))
     return id, nil
 }
 
@@ -24,16 +24,16 @@ func (tx *Transaction) TxHash() ([]byte, error) {
     if err != nil {
         return nil, err
     }
-    h := crypto.Hash256(b)
+    h := mycrypto.Hash256(b)
     return h, nil
 }
 
-func (tx *Transaction) TxSig(prvKey *PrivateKey) (*crypto.Signature, error) {
+func (tx *Transaction) TxSig(prvKey *mycrypto.PrivateKey) (*mycrypto.Signature, error) {
     b, err := proto.Marshal(tx.Data)
     if err != nil {
         return nil, err
     }
-    return crypto.Sign(prvKey, b)
+    return mycrypto.Sign(prvKey, b)
 }
 
 func (tx *Transaction) Addr() Address {
@@ -45,6 +45,6 @@ func (block *Block) BlockID() (string, error) {
     if err != nil {
         return "", err
     }
-    id := hex.EncodeToString(crypto.Hash256(b))
+    id := hex.EncodeToString(mycrypto.Hash256(b))
     return id, nil
 }

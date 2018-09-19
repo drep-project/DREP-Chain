@@ -13,7 +13,6 @@ var (
     nonces             map[bean.Address]int64
     accountLock        sync.Mutex
     currentBlockHeight int64 = 0
-    one = big.NewInt(1)
 )
 
 func init()  {
@@ -59,6 +58,7 @@ func ExecuteTransactions(b *bean.Block, del bool) *big.Int {
     if b == nil || b.Header == nil { // || b.Data == nil || b.Data.TxList == nil {
         return nil
     }
+    // TODO check height
     currentBlockHeight = b.Header.Height
     if b.Data == nil || b.Data.TxList == nil {
         return nil
@@ -95,18 +95,33 @@ func execute(t *bean.Transaction) *big.Int {
         log.Fatal("Error, gas not right")
         return nil
     }
-    if gasLimit.Cmp(TransferGas) < 0 {
-        balance.Sub(balance, gasFee)
-    } else {
-        amount := big.NewInt(0).SetBytes(t.Data.Amount)
-        total := big.NewInt(0).Add(amount, TransferGas)
-        if balance.Cmp(total) >= 0 {
-            balance.Sub(balance, total)
-            to := bean.Address(t.Data.To)
-            balance2 := GetBalance(to)
-            balance2.Add(balance2, amount)
-        } else {
-            balance.Sub(balance, gasFee)
+    switch t.Data.Type {
+    case TransferType:
+        {
+            if gasLimit.Cmp(TransferGas) < 0 {
+                balance.Sub(balance, gasFee)
+            } else {
+                amount := big.NewInt(0).SetBytes(t.Data.Amount)
+                total := big.NewInt(0).Add(amount, gasFee)
+                if balance.Cmp(total) >= 0 {
+                    balance.Sub(balance, total)
+                    to := bean.Address(t.Data.To)
+                    balance2 := GetBalance(to)
+                    balance2.Add(balance2, amount)
+                } else {
+                    balance.Sub(balance, gasFee)
+                }
+            }
+        }
+    case MinerType:
+        {
+            // TODO if not the admin
+            if gasLimit.Cmp(MinerGas) < 0 {
+                balance.Sub(balance, gasFee)
+            } else {
+                balance.Sub(balance, gasFee)
+                AddMiner(bean.Address(t.Data.Data))
+            }
         }
     }
     return gasFee

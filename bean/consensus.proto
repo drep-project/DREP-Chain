@@ -2,26 +2,26 @@ syntax = "proto3";
 
 package bean;
 
-import "crypto/key.proto";
+import "mycrypto/key.proto";
 
 message setup {
 	bytes msg = 1;
-	crypto.point pub_key = 2;
-    crypto.signature sig = 3;
+	mycrypto.point pub_key = 2;
+    mycrypto.signature sig = 3;
 }
 
 message commitment {
-	crypto.point pub_key = 1;
-	crypto.point q = 2;
+	mycrypto.point pub_key = 1;
+	mycrypto.point q = 2;
 }
 
 message challenge {
-	crypto.point sigma_pub_key = 1;
-	crypto.point sigma_q = 2;
+	mycrypto.point sigma_pub_key = 1;
+	mycrypto.point sigma_q = 2;
 	bytes r = 3;
 }
 
 message response {
-	crypto.point pub_key = 1;
+	mycrypto.point pub_key = 1;
 	bytes s = 2;
 }

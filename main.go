@@ -56,11 +56,23 @@ func main()  {
 				fmt.Println("Nonce: ", store.GetNonce(addr))
 				fmt.Println("Bal: ", store.GetBalance(addr))
 			}
+		case "miner":
+			{
+				pk := store.GetPubKey()
+				if pk.Equal(store.GetAdminPubKey()) {
+					fmt.Print("Who: ")
+					var addr string
+					fmt.Scanln(&addr)
+					t := node.GenerateMinerTransaction(addr)
+					node.SendTransaction(t)
+				} else {
+					fmt.Println("You are not allowed.")
+				}
+			}
 		case "exit":
 			{
 				break
 			}
 		}
 	}
-// Why stuck
 }
