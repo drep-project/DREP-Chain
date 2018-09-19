@@ -4,7 +4,6 @@ import (
     "BlockChainTest/bean"
     "BlockChainTest/network"
     "BlockChainTest/mycrypto"
-    "fmt"
 )
 
 var (
@@ -44,7 +43,6 @@ func MoveToNextMiner() (bool, bool) {
         if minerIndex < len(miners) - 1 {
             minerIndex++
             curMiners = append(curMiners[1:], miners[minerIndex])
-            fmt.Println("Change miners ", curMiners, miners)
         }
         curMiner = 0
     }
@@ -69,12 +67,8 @@ func GetMiners() []*network.Peer {
 
 func AddMiner(addr bean.Address) {
     a := string(addr)
-    fmt.Println("storage change 6")
     for _, p := range peers {
-        addr := bean.Addr(p.PubKey)
-        fmt.Println("storage change 7 ", addr)
         if string(bean.Addr(p.PubKey)) == a {
-            fmt.Println("storage change 8")
             miners = append(miners, p)
         }
     }

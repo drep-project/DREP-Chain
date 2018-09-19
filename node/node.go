@@ -50,7 +50,6 @@ func (n *Node) Start() {
             time.Sleep(5 * time.Second)
             log.Println("node start")
             isM, isL := store.MoveToNextMiner();
-            fmt.Println("isM ", isM, " isL ", isL)
             if isL {
                 n.runAsLeader()
             } else {
