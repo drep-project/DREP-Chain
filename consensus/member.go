@@ -4,7 +4,7 @@ import (
     "BlockChainTest/network"
     "sync"
     "BlockChainTest/bean"
-    "BlockChainTest/crypto"
+    "BlockChainTest/mycrypto"
     "math/big"
     "BlockChainTest/log"
 )
@@ -12,8 +12,8 @@ import (
 type Member struct {
     leader *network.Peer
     state int
-    prvKey *crypto.PrivateKey
-    pubKey *crypto.Point
+    prvKey *mycrypto.PrivateKey
+    pubKey *mycrypto.Point
     msg []byte
 
     k []byte
@@ -24,7 +24,7 @@ type Member struct {
 
 }
 
-func NewMember(leader *network.Peer, prvKey *crypto.PrivateKey) *Member {
+func NewMember(leader *network.Peer, prvKey *mycrypto.PrivateKey) *Member {
     m := &Member{}
     m.state = waiting
     m.leader = leader
@@ -59,20 +59,23 @@ func (m *Member) ProcessSetUp(setupMsg *bean.Setup) bool {
     //if !store.CheckRole(node.MINER) {
     //    return
     //}
+    log.Println("Member process setup 1", *setupMsg)
     if !m.leader.PubKey.Equal(setupMsg.PubKey) {
+        log.Println("Member process setup 2", *setupMsg)
         return false
     }
     if m.state != waiting {
+        log.Println("Member process setup 3", *setupMsg)
         return false
     }
-    log.Println("Member process setup ", *setupMsg)
+    log.Println("Member process setup 4", *setupMsg)
     m.msg = setupMsg.Msg
     m.setUpWg.Done()
     return true
 }
 
 func (m *Member) commit()  {
-    k, q, err := crypto.GetRandomKQ()
+    k, q, err := mycrypto.GetRandomKQ()
     if err != nil {
         return
     }
@@ -85,10 +88,10 @@ func (m *Member) commit()  {
 
 func (m *Member) ProcessChallenge(challenge *bean.Challenge) {
     log.Println("Member process challenge ", *challenge)
-    r := crypto.ConcatHash256(challenge.SigmaQ.Bytes(), challenge.SigmaPubKey.Bytes(), m.msg)
+    r := mycrypto.ConcatHash256(challenge.SigmaQ.Bytes(), challenge.SigmaPubKey.Bytes(), m.msg)
     r0 := new(big.Int).SetBytes(challenge.R)
     rInt := new(big.Int).SetBytes(r)
-    curve := crypto.GetCurve()
+    curve := mycrypto.GetCurve()
     rInt.Mod(rInt, curve.N)
     m.r = rInt
     if r0.Cmp(m.r) != 0 {
@@ -99,7 +102,7 @@ func (m *Member) ProcessChallenge(challenge *bean.Challenge) {
 }
 
 func (m *Member) response()  {
-    curve := crypto.GetCurve()
+    curve := mycrypto.GetCurve()
     prvKey := m.prvKey
     k := new(big.Int).SetBytes(m.k)
     prvInt := new(big.Int).SetBytes(prvKey.Prv)
