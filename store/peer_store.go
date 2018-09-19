@@ -44,6 +44,7 @@ func MoveToNextMiner() (bool, bool) {
         if minerIndex < len(miners) - 1 {
             minerIndex++
             curMiners = append(curMiners[1:], miners[minerIndex])
+            fmt.Println("Change miners ", curMiners, miners)
         }
         curMiner = 0
     }
