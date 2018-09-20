@@ -11,7 +11,6 @@ import (
     "BlockChainTest/mycrypto"
     "time"
     "fmt"
-    "errors"
 )
 
 var (
@@ -210,29 +209,12 @@ func (n *Node) ProcessBlockResp(resp *bean.BlockResp) {
 func (n *Node) ProcessBlockReq(req *bean.BlockReq) {
     from := req.Height + 1
     size := int64(2)
+    peers := []*network.Peer{store.GetPeer(req.Pk)}
     for i := from; i <= store.GetCurrentBlockHeight(); {
         bs := store.GetBlocks(i, size)
         resp := &bean.BlockResp{Height:store.GetCurrentBlockHeight(), Blocks:bs}
-        network.SendMessage()
-    }
-    minHeight := req.MinHeight
-    maxHeight := sender.maxHeight
-    fmt.Println()
-    fmt.Println("minHeight: ", minHeight)
-    fmt.Println("maxHeight: ", maxHeight)
-    fmt.Println()
-    peers := make([]*network.Peer, 1)
-    peers[0] = sender.receiverPeer
-    for height := minHeight; height <= maxHeight; height ++ {
-        block := sender.GetBlock(height)
-        if block == nil {
-            fmt.Println("no such block exists")
-            break
-        }
-        resp := &bean.BlockResp{Resp: "block", MaxHeight: maxHeight, NewBlock: block}
         network.SendMessage(peers, resp)
+        i += int64(len(bs))
     }
-    //server.RespWg.Done()
-    return nil
 }
 
