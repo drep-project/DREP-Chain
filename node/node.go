@@ -23,6 +23,9 @@ type Node struct {
     address *bean.Address
     prvKey *mycrypto.PrivateKey
     wg *sync.WaitGroup
+    fetchLock sync.Mutex
+    fetchCond *sync.Cond
+    curMaxHeight int64
     prep  bool
     prepLock sync.Mutex
     prepCond *sync.Cond
@@ -175,41 +178,42 @@ func (n *Node) ProcessPeerList(list *bean.PeerInfoList) {
     }
 }
 
-func (n *Node) FetchBlocks() {
-    receiver.blockWg = sync.WaitGroup{}
-    receiver.blockWg.Add(1)
-    req := &bean.BlockReq{Req: "block", MinHeight: receiver.maxHeight + 1}
-    peers := make([]*network.Peer, 1)
-    peers[0] = receiver.senderPeer
-    fmt.Println("m.leader: ", peers[0])
-    network.SendMessage(peers, req)
-    receiver.blockWg.Wait()
-}
-
-func (n *Node) ProcessBlockResp(resp *bean.BlockResp) error {
-    if resp.Resp != "block" {
-        receiver.blockWg.Done()
-        return errors.New("invalid resp")
+func (n *Node) fetchBlocks() {
+    peers := store.GetPeers()
+    if len(peers) == 0 {
+        log.Errorf("Fuck")
+        return
     }
-    receiver.expectedHeight = resp.MaxHeight
-    block := resp.NewBlock
-    if receiver.ValidateBlock(block) {
-        receiver.AddBlock(block)
-        fmt.Println("m.maxHeight: ", receiver.maxHeight)
-        fmt.Println("m.expectedHeight: ", receiver.expectedHeight)
-        if receiver.maxHeight == receiver.expectedHeight {
-            receiver.blockWg.Done()
-        }
-        return nil
-    } else {
-        defer receiver.blockWg.Done()
-        return errors.New("invalid block")
+    n.fetchCond = sync.NewCond(&n.fetchLock)
+    n.fetchLock.Lock()
+    defer n.fetchLock.Unlock()
+    n.curMaxHeight = 2<<63
+    req := &bean.BlockReq{Height:store.GetCurrentBlockHeight()}
+
+    network.SendMessage([]*network.Peer{peers[0]}, req)
+    for n.curMaxHeight != store.GetCurrentBlockHeight() {
+        n.fetchCond.Wait()
     }
 }
 
-func (n *Node) ProcessBlockReq(req *bean.BlockReq) error {
-    if req.Req != "block" {
-        return errors.New("invalid req")
+func (n *Node) ProcessBlockResp(resp *bean.BlockResp) {
+    for _, b := range resp.Blocks {
+        n.ProcessBlock(b, false)
+        // TODO cannot receive tran
+    }
+    n.fetchLock.Lock()
+    defer n.fetchLock.Unlock()
+    n.curMaxHeight = resp.Height
+    n.fetchCond.Broadcast()
+}
+
+func (n *Node) ProcessBlockReq(req *bean.BlockReq) {
+    from := req.Height + 1
+    size := int64(2)
+    for i := from; i <= store.GetCurrentBlockHeight(); {
+        bs := store.GetBlocks(i, size)
+        resp := &bean.BlockResp{Height:store.GetCurrentBlockHeight(), Blocks:bs}
+        network.SendMessage()
     }
     minHeight := req.MinHeight
     maxHeight := sender.maxHeight
