@@ -13,10 +13,6 @@ var (
     leader *consensus.Leader
     member *consensus.Member
 
-    //miningState int
-
-    //minerIndex map[bean.Address]int
-
     blockHeight int
     lock sync.Locker
     prvKey *mycrypto.PrivateKey
