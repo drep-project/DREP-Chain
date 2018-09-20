@@ -46,19 +46,19 @@ func init()  {
     //prv3 := &mycrypto.PrivateKey{Prv: k3, PubKey: pub3}
     ip0 := network.IP("192.168.3.147")
     ip1 := network.IP("192.168.3.43")
-    ip2 := network.IP("192.168.3.113")
+    //ip2 := network.IP("192.168.3.113")
     //ip3 := network.IP("192.168.3.79")
     port0 := network.Port(55555)
     port1 := network.Port(55555)
-    port2 := network.Port(55555)
+    //port2 := network.Port(55555)
     //port3 := network.Port(55555)
     peer0 := &network.Peer{IP: ip0, Port: port0, PubKey: pub0}
     peer1 := &network.Peer{IP: ip1, Port: port1, PubKey: pub1}
-    peer2 := &network.Peer{IP: ip2, Port: port2, PubKey: pub2}
+    //peer2 := &network.Peer{IP: ip2, Port: port2, PubKey: pub2}
     //peer3 := &network.Peer{IP: ip3, Port: port3, PubKey: pub3}
     AddPeer(peer0)
     AddPeer(peer1)
-    AddPeer(peer2)
+    //AddPeer(peer2)
     curMiners = []*network.Peer{peer0, peer1} //, peer2}
     miners = []*network.Peer{peer0, peer1}
     minerIndex = 1
