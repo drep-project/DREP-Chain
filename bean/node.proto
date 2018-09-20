@@ -16,7 +16,8 @@ message peer_info_list {
 }
 
 message block_req {
-	int64 height = 1;
+    mycrypto.point pk = 1;
+	int64 height = 2;
 }
 
 message block_resp {
