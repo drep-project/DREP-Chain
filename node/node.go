@@ -11,6 +11,7 @@ import (
     "BlockChainTest/mycrypto"
     "time"
     "fmt"
+    "errors"
 )
 
 var (
@@ -173,3 +174,61 @@ func (n *Node) ProcessPeerList(list *bean.PeerInfoList) {
         store.AddPeer(&network.Peer{IP:network.IP(t.Ip), Port:network.Port(t.Port), PubKey:t.Pk})
     }
 }
+
+func (n *Node) FetchBlocks() {
+    receiver.blockWg = sync.WaitGroup{}
+    receiver.blockWg.Add(1)
+    req := &bean.BlockReq{Req: "block", MinHeight: receiver.maxHeight + 1}
+    peers := make([]*network.Peer, 1)
+    peers[0] = receiver.senderPeer
+    fmt.Println("m.leader: ", peers[0])
+    network.SendMessage(peers, req)
+    receiver.blockWg.Wait()
+}
+
+func (n *Node) ProcessBlockResp(resp *bean.BlockResp) error {
+    if resp.Resp != "block" {
+        receiver.blockWg.Done()
+        return errors.New("invalid resp")
+    }
+    receiver.expectedHeight = resp.MaxHeight
+    block := resp.NewBlock
+    if receiver.ValidateBlock(block) {
+        receiver.AddBlock(block)
+        fmt.Println("m.maxHeight: ", receiver.maxHeight)
+        fmt.Println("m.expectedHeight: ", receiver.expectedHeight)
+        if receiver.maxHeight == receiver.expectedHeight {
+            receiver.blockWg.Done()
+        }
+        return nil
+    } else {
+        defer receiver.blockWg.Done()
+        return errors.New("invalid block")
+    }
+}
+
+func (n *Node) ProcessBlockReq(req *bean.BlockReq) error {
+    if req.Req != "block" {
+        return errors.New("invalid req")
+    }
+    minHeight := req.MinHeight
+    maxHeight := sender.maxHeight
+    fmt.Println()
+    fmt.Println("minHeight: ", minHeight)
+    fmt.Println("maxHeight: ", maxHeight)
+    fmt.Println()
+    peers := make([]*network.Peer, 1)
+    peers[0] = sender.receiverPeer
+    for height := minHeight; height <= maxHeight; height ++ {
+        block := sender.GetBlock(height)
+        if block == nil {
+            fmt.Println("no such block exists")
+            break
+        }
+        resp := &bean.BlockResp{Resp: "block", MaxHeight: maxHeight, NewBlock: block}
+        network.SendMessage(peers, resp)
+    }
+    //server.RespWg.Done()
+    return nil
+}
+

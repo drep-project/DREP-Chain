@@ -3,6 +3,7 @@ syntax = "proto3";
 package bean;
 
 import "mycrypto/key.proto";
+import "bean/data.proto";
 
 message peer_info {
     mycrypto.point pk = 1;
@@ -12,4 +13,13 @@ message peer_info {
 
 message peer_info_list {
     repeated peer_info list = 1;
+}
+
+message block_req {
+	int64 height = 1;
+}
+
+message block_resp {
+	int64 height = 2;
+	repeated block blocks = 3;
 }
