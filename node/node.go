@@ -22,6 +22,7 @@ type Node struct {
     address *bean.Address
     prvKey *mycrypto.PrivateKey
     wg *sync.WaitGroup
+    discoverWg *sync.WaitGroup
     fetchLock sync.Mutex
     fetchCond *sync.Cond
     curMaxHeight int64
@@ -45,8 +46,11 @@ func GetNode() *Node {
 }
 
 func (n *Node) Start() {
-    if store.IsAdmin {
+    if store.IsStart {
 
+    } else {
+        n.discover()
+        n.fetchBlocks()
     }
     go func() {
         for {
@@ -150,7 +154,10 @@ func (n *Node) ProcessBlock(block *bean.Block, del bool) {
 func (n *Node) discover() {
     msg := &bean.PeerInfo{Pk: n.prvKey.PubKey, Ip:"192.168.3.113", Port: 55555}
     peers := []*network.Peer{store.Admin}
+    n.discoverWg = &sync.WaitGroup{}
+    n.discoverWg.Add(1)
     network.SendMessage(peers, msg)
+    n.discoverWg.Wait()
 }
 
 func (n *Node) ProcessNewPeer(newcomer *bean.PeerInfo) {
@@ -175,6 +182,7 @@ func (n *Node) ProcessPeerList(list *bean.PeerInfoList) {
     for _, t := range list.List {
         store.AddPeer(&network.Peer{IP:network.IP(t.Ip), Port:network.Port(t.Port), PubKey:t.Pk})
     }
+    n.discoverWg.Done()
 }
 
 func (n *Node) fetchBlocks() {
