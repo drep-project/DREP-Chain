@@ -180,7 +180,7 @@ func (n *Node) ProcessNewPeer(newcomer *bean.PeerInfo) {
     peerList := &bean.PeerInfoList{List:list}
     fmt.Println("ProcessNewPeer ", *peerList, peers, newcomer)
     network.SendMessage([]*network.Peer{newPeer}, peerList)
-    network.SendMessage(peers, newcomer)
+    network.SendMessage(peers, &bean.PeerInfoList{List:[]*bean.PeerInfo{newcomer}})
 }
 
 func (n *Node) ProcessPeerList(list *bean.PeerInfoList) {
