@@ -183,7 +183,7 @@ func (n *Node) ProcessNewPeer(newcomer *bean.PeerInfo) {
 }
 
 func (n *Node) ProcessPeerList(list *bean.PeerInfoList) {
-    fmt.Println("discovering 5")
+    fmt.Println("discovering 5 ", *list)
     for _, t := range list.List {
         store.AddPeer(&network.Peer{IP:network.IP(t.Ip), Port:network.Port(t.Port), PubKey:t.Pk})
     }
