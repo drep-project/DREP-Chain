@@ -3,13 +3,17 @@ package processor
 import (
     "BlockChainTest/bean"
     "BlockChainTest/node"
+    "fmt"
 )
 
 type NewComerProcessor struct {}
 
 func (p *NewComerProcessor) process(msg interface{}) {
+    fmt.Println("Receive a new comer 1")
     if peer, ok := msg.(*bean.PeerInfo); ok {
+        fmt.Println("Receive a new comer 2", *peer)
         node.GetNode().ProcessNewPeer(peer)
+        fmt.Println("Receive a new comer 3")
     }
 }
 

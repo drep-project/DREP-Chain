@@ -5,23 +5,23 @@ package bean;
 import "mycrypto/key.proto";
 
 message setup {
-	bytes msg = 1;
-	mycrypto.point pub_key = 2;
+    bytes msg = 1;
+    mycrypto.point pub_key = 2;
     mycrypto.signature sig = 3;
 }
 
 message commitment {
-	mycrypto.point pub_key = 1;
-	mycrypto.point q = 2;
+    mycrypto.point pub_key = 1;
+    mycrypto.point q = 2;
 }
 
 message challenge {
-	mycrypto.point sigma_pub_key = 1;
-	mycrypto.point sigma_q = 2;
-	bytes r = 3;
+    mycrypto.point sigma_pub_key = 1;
+    mycrypto.point sigma_q = 2;
+    bytes r = 3;
 }
 
 message response {
-	mycrypto.point pub_key = 1;
-	bytes s = 2;
+    mycrypto.point pub_key = 1;
+    bytes s = 2;
 }

@@ -165,7 +165,7 @@ func (n *Node) discover() {
 }
 
 func (n *Node) ProcessNewPeer(newcomer *bean.PeerInfo) {
-    log.Println("user starting process a newcomer")
+    fmt.Println("user starting process a newcomer")
     peers := store.GetPeers()
     newPeer := &network.Peer{
         IP:network.IP(newcomer.Ip),
