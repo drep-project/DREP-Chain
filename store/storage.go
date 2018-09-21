@@ -13,7 +13,7 @@ var (
     nonces             map[bean.Address]int64
     blocks             []*bean.Block
     accountLock        sync.Mutex
-    currentBlockHeight int64 = 0
+    currentBlockHeight int64 = -1
 )
 
 func init()  {
