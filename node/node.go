@@ -148,6 +148,7 @@ func (n *Node) ProcessBlock(block *bean.Block, del bool) {
     log.Println("node receive block", *block)
     fmt.Println("Process block leader = ", bean.Addr(block.Header.LeaderPubKey), " height = ", block.Header.Height)
     store.ExecuteTransactions(block, del)
+    // todo receive two
     if del {
         n.wg.Done()
     }
