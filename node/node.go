@@ -163,9 +163,7 @@ func (n *Node) discover() {
     n.discoverWg.Add(1)
     network.SendMessage(peers, msg)
     fmt.Println("discovering 3")
-    if n.discovering {
-        n.discoverWg.Wait()
-    }
+    n.discoverWg.Wait()
     fmt.Println("discovering 4")
 }
 
@@ -194,7 +192,9 @@ func (n *Node) ProcessPeerList(list *bean.PeerInfoList) {
         store.AddPeer(&network.Peer{IP:network.IP(t.Ip), Port:network.Port(t.Port), PubKey:t.Pk})
     }
     fmt.Println("discovering 6")
-    n.discoverWg.Done()
+    if n.discovering {
+        n.discoverWg.Done()
+    }
     fmt.Println("discovering 7")
 }
 
@@ -239,7 +239,7 @@ func (n *Node) ProcessBlockReq(req *bean.BlockReq) {
     fmt.Println("pk = ", req.Pk)
     peers := []*network.Peer{store.GetPeer(req.Pk)}
     fmt.Println("ProcessBlockReq")
-    for i := from; i <= store.GetCurrentBlockHeight(); {
+    for i := from; i < store.GetCurrentBlockHeight(); {
         fmt.Println("ProcessBlockReq 1 ", i)
         bs := store.GetBlocks(i, size)
         resp := &bean.BlockResp{Height:store.GetCurrentBlockHeight(), Blocks:bs}
