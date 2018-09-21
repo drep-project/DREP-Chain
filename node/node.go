@@ -239,7 +239,7 @@ func (n *Node) ProcessBlockReq(req *bean.BlockReq) {
     fmt.Println("pk = ", req.Pk)
     peers := []*network.Peer{store.GetPeer(req.Pk)}
     fmt.Println("ProcessBlockReq")
-    for i := from; i < store.GetCurrentBlockHeight(); {
+    for i := from; i <= store.GetCurrentBlockHeight(); {
         fmt.Println("ProcessBlockReq 1 ", i)
         bs := store.GetBlocks(i, size)
         resp := &bean.BlockResp{Height:store.GetCurrentBlockHeight(), Blocks:bs}
