@@ -146,7 +146,7 @@ func (n *Node) ProcessBlock(block *bean.Block, del bool) {
         n.prepLock.Unlock()
     }
     log.Println("node receive block", *block)
-    fmt.Println("Process block leader = ", bean.Addr(block.Header.LeaderPubKey))
+    fmt.Println("Process block leader = ", bean.Addr(block.Header.LeaderPubKey), " height = ", block.Header.Height)
     store.ExecuteTransactions(block, del)
     if del {
         n.wg.Done()
@@ -248,4 +248,3 @@ func (n *Node) ProcessBlockReq(req *bean.BlockReq) {
         fmt.Println("ProcessBlockReq 2 ", i)
     }
 }
-
