@@ -15,6 +15,8 @@ const (
     MsgTypeResponse    = 8
     MsgTypeNewPeer     = 9
     MsgTypePeerList    = 10
+    MsgTypeBlockReq    = 11
+    MsgTypeBlockResp   = 12
 )
 
 type Address string

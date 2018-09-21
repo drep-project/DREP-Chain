@@ -29,6 +29,21 @@ func ConcatHash256(args ...[]byte) []byte {
     return hash
 }
 
+func StackHash(hashList [][]byte) []byte {
+    totalLen := 0
+    buf := make([]byte, len(hashList) * ByteLen)
+    for _, hash := range hashList {
+        if hash != nil {
+            copy(buf[totalLen:], hash)
+            totalLen += len(hash)
+        }
+    }
+    if totalLen == 0 {
+        return nil
+    }
+    return Hash256(buf[:totalLen])
+}
+
 func KDF(text []byte) []byte {
     pLen := len(text)
     k := pLen / ByteLen

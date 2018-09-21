@@ -9,8 +9,8 @@ import (
     "BlockChainTest/log"
     "BlockChainTest/network"
     "BlockChainTest/mycrypto"
-    "time"
     "fmt"
+    "time"
 )
 
 var (
@@ -22,9 +22,14 @@ type Node struct {
     address *bean.Address
     prvKey *mycrypto.PrivateKey
     wg *sync.WaitGroup
+    discoverWg *sync.WaitGroup
+    fetchLock sync.Mutex
+    fetchCond *sync.Cond
+    curMaxHeight int64
     prep  bool
     prepLock sync.Mutex
     prepCond *sync.Cond
+    discovering bool
 }
 
 func newNode(prvKey *mycrypto.PrivateKey) *Node {
@@ -42,12 +47,15 @@ func GetNode() *Node {
 }
 
 func (n *Node) Start() {
-    if store.IsAdmin {
-
+    if store.IsStart {
+        n.discovering = false
+    } else {
+        n.discovering = true
+        n.discover()
+        n.fetchBlocks()
     }
     go func() {
         for {
-            time.Sleep(5 * time.Second)
             log.Println("node start")
             isM, isL := store.MoveToNextMiner();
             if isL {
@@ -65,6 +73,7 @@ func (n *Node) Start() {
                 n.wg.Wait() // If not, next will be nil member
             }
             log.Println("node stop")
+            time.Sleep(5 * time.Second)
             log.Println("Current height ", store.GetCurrentBlockHeight())
         }
     }()
@@ -137,21 +146,30 @@ func (n *Node) ProcessBlock(block *bean.Block, del bool) {
         n.prepLock.Unlock()
     }
     log.Println("node receive block", *block)
-    fmt.Println("Process block leader = ", bean.Addr(block.Header.LeaderPubKey))
+    fmt.Println("Process block leader = ", bean.Addr(block.Header.LeaderPubKey), " height = ", block.Header.Height)
     store.ExecuteTransactions(block, del)
+    // todo receive two
     if del {
         n.wg.Done()
     }
 }
 
 func (n *Node) discover() {
+    fmt.Println("discovering 1")
+    // todo
     msg := &bean.PeerInfo{Pk: n.prvKey.PubKey, Ip:"192.168.3.113", Port: 55555}
     peers := []*network.Peer{store.Admin}
+    fmt.Println("discovering 2")
+    n.discoverWg = &sync.WaitGroup{}
+    n.discoverWg.Add(1)
     network.SendMessage(peers, msg)
+    fmt.Println("discovering 3")
+    n.discoverWg.Wait()
+    fmt.Println("discovering 4")
 }
 
 func (n *Node) ProcessNewPeer(newcomer *bean.PeerInfo) {
-    log.Println("user starting process a newcomer")
+    fmt.Println("user starting process a newcomer")
     peers := store.GetPeers()
     newPeer := &network.Peer{
         IP:network.IP(newcomer.Ip),
@@ -164,12 +182,70 @@ func (n *Node) ProcessNewPeer(newcomer *bean.PeerInfo) {
         list = append(list, t)
     }
     peerList := &bean.PeerInfoList{List:list}
+    fmt.Println("ProcessNewPeer ", *peerList, peers, newcomer)
     network.SendMessage([]*network.Peer{newPeer}, peerList)
-    network.SendMessage(store.GetPeers(), newcomer)
+    network.SendMessage(peers, &bean.PeerInfoList{List:[]*bean.PeerInfo{newcomer}})
 }
 
 func (n *Node) ProcessPeerList(list *bean.PeerInfoList) {
+    fmt.Println("discovering 5 ", *list)
     for _, t := range list.List {
         store.AddPeer(&network.Peer{IP:network.IP(t.Ip), Port:network.Port(t.Port), PubKey:t.Pk})
+    }
+    fmt.Println("discovering 6")
+    if n.discovering {
+        n.discoverWg.Done()
+    }
+    fmt.Println("discovering 7")
+}
+
+func (n *Node) fetchBlocks() {
+    peers := store.GetPeers()
+    if len(peers) == 0 {
+        log.Errorf("Fuck")
+        return
+    }
+    n.fetchCond = sync.NewCond(&n.fetchLock)
+    n.fetchLock.Lock()
+    defer n.fetchLock.Unlock()
+    n.curMaxHeight = 2<<60
+    req := &bean.BlockReq{Height:store.GetCurrentBlockHeight(), Pk:store.GetPubKey()}
+
+    network.SendMessage([]*network.Peer{peers[0]}, req)
+    fmt.Println("fetching 1")
+    for n.curMaxHeight != store.GetCurrentBlockHeight() {
+        fmt.Println("fetching 2: ", n.curMaxHeight, store.GetCurrentBlockHeight())
+        n.fetchCond.Wait()
+        fmt.Println("fetching 3: ", n.curMaxHeight, store.GetCurrentBlockHeight())
+    }
+}
+
+func (n *Node) ProcessBlockResp(resp *bean.BlockResp) {
+    fmt.Println("fetching 4")
+    for _, b := range resp.Blocks {
+        n.ProcessBlock(b, false)
+        // TODO cannot receive tran
+    }
+    fmt.Println("fetching 5")
+    n.fetchLock.Lock()
+    defer n.fetchLock.Unlock()
+    fmt.Println("fetching 6 ", resp.Height)
+    n.curMaxHeight = resp.Height
+    n.fetchCond.Broadcast()
+}
+
+func (n *Node) ProcessBlockReq(req *bean.BlockReq) {
+    from := req.Height + 1
+    size := int64(2)
+    fmt.Println("pk = ", req.Pk)
+    peers := []*network.Peer{store.GetPeer(req.Pk)}
+    fmt.Println("ProcessBlockReq")
+    for i := from; i <= store.GetCurrentBlockHeight(); {
+        fmt.Println("ProcessBlockReq 1 ", i)
+        bs := store.GetBlocks(i, size)
+        resp := &bean.BlockResp{Height:store.GetCurrentBlockHeight(), Blocks:bs}
+        network.SendMessage(peers, resp)
+        i += int64(len(bs))
+        fmt.Println("ProcessBlockReq 2 ", i)
     }
 }
