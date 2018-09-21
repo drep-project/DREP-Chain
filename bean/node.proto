@@ -17,10 +17,10 @@ message peer_info_list {
 
 message block_req {
     mycrypto.point pk = 1;
-	int64 height = 2;
+    int64 height = 2;
 }
 
 message block_resp {
-	int64 height = 2;
-	repeated block blocks = 3;
+    int64 height = 2;
+    repeated block blocks = 3;
 }

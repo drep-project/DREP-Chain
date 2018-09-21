@@ -4,10 +4,9 @@ package bean;
 
 import "mycrypto/key.proto";
 
-
 message serializable {
-	int32 header = 1;
-	bytes body = 2;
-	mycrypto.point pub_key = 3;
-	mycrypto.signature sig = 4;
+    int32 header = 1;
+    bytes body = 2;
+    mycrypto.point pub_key = 3;
+    mycrypto.signature sig = 4;
 }
