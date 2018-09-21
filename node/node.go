@@ -215,7 +215,7 @@ func (n *Node) fetchBlocks() {
     for n.curMaxHeight != store.GetCurrentBlockHeight() {
         fmt.Println("fetching 2: ", n.curMaxHeight, store.GetCurrentBlockHeight())
         n.fetchCond.Wait()
-        fmt.Println("fetching 3")
+        fmt.Println("fetching 3: ", n.curMaxHeight, store.GetCurrentBlockHeight())
     }
 }
 
