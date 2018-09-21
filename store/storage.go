@@ -11,13 +11,15 @@ import (
 var (
     balances           = make(map[bean.Address]*big.Int)//map[bean.Address]*big.Int
     nonces             map[bean.Address]int64
+    blocks             []*bean.Block
     accountLock        sync.Mutex
-    currentBlockHeight int64 = 0
+    currentBlockHeight int64 = -1
 )
 
 func init()  {
     //balances = make(map[bean.Address]*big.Int)
     nonces = make(map[bean.Address]int64)
+    blocks = make([]*bean.Block, 0)
 }
 
 func GetBalance(addr bean.Address) *big.Int {
@@ -60,6 +62,7 @@ func ExecuteTransactions(b *bean.Block, del bool) *big.Int {
     }
     // TODO check height
     currentBlockHeight = b.Header.Height
+    blocks = append(blocks, b)
     if b.Data == nil || b.Data.TxList == nil {
         return nil
     }
@@ -129,4 +132,17 @@ func execute(t *bean.Transaction) *big.Int {
 
 func GetCurrentBlockHeight() int64 {
     return currentBlockHeight
+}
+
+func GetBlocks(from int64, number int64) []*bean.Block {
+    l := int64(len(blocks))
+    if l - 1 < from {
+        return []*bean.Block{}
+    }
+    end := from + number - 1
+    r := make([]*bean.Block, 0)
+    for i := from; i < l && i <= end; i++ {
+        r = append(r, blocks[i])
+    }
+    return r
 }

@@ -77,3 +77,12 @@ func AddMiner(addr bean.Address) {
 func GetAdminPubKey() *mycrypto.Point {
     return adminPubKey
 }
+
+func GetPeer(pk *mycrypto.Point) *network.Peer {
+    for _, p := range peers {
+        if p.PubKey.Equal(pk) {
+            return p
+        }
+    }
+    return nil
+}

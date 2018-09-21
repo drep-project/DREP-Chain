@@ -40,6 +40,10 @@ func Serialize(message interface{}) (*Serializable, error) {
 		serializable.Header = MsgTypePeerList
 	case *Block:
 		serializable.Header = MsgTypeBlock
+	case *BlockReq:
+		serializable.Header = MsgTypeBlockReq
+	case *BlockResp:
+		serializable.Header = MsgTypeBlockResp
 	default:
 		return nil, errors.New("bad message type")
 	}
@@ -137,6 +141,20 @@ func Deserialize(msg []byte) (*Serializable, interface{}, error) {
 		} else {
 			return nil, nil, err
 		}
+    case MsgTypeBlockReq:
+        blockReq := &BlockReq{}
+        if err := proto.Unmarshal(body, blockReq); err == nil {
+            return serializable, blockReq, nil
+        } else {
+            return nil, nil, err
+        }
+    case MsgTypeBlockResp:
+        blockResp := &BlockResp{}
+        if err := proto.Unmarshal(body, blockResp); err == nil {
+            return serializable, blockResp, nil
+        } else {
+            return nil, nil, err
+        }
 	default:
 		return nil, nil, errors.New("message header not found")
 	}
