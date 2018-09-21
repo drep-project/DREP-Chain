@@ -29,6 +29,7 @@ type Node struct {
     prep  bool
     prepLock sync.Mutex
     prepCond *sync.Cond
+    discovering bool
 }
 
 func newNode(prvKey *mycrypto.PrivateKey) *Node {
@@ -47,8 +48,9 @@ func GetNode() *Node {
 
 func (n *Node) Start() {
     if store.IsStart {
-
+        n.discovering = false
     } else {
+        n.discovering = true
         n.discover()
         n.fetchBlocks()
     }
@@ -153,6 +155,7 @@ func (n *Node) ProcessBlock(block *bean.Block, del bool) {
 
 func (n *Node) discover() {
     fmt.Println("discovering 1")
+    // todo
     msg := &bean.PeerInfo{Pk: n.prvKey.PubKey, Ip:"192.168.3.113", Port: 55555}
     peers := []*network.Peer{store.Admin}
     fmt.Println("discovering 2")
@@ -160,7 +163,9 @@ func (n *Node) discover() {
     n.discoverWg.Add(1)
     network.SendMessage(peers, msg)
     fmt.Println("discovering 3")
-    n.discoverWg.Wait()
+    if n.discovering {
+        n.discoverWg.Wait()
+    }
     fmt.Println("discovering 4")
 }
 
@@ -203,7 +208,7 @@ func (n *Node) fetchBlocks() {
     n.fetchLock.Lock()
     defer n.fetchLock.Unlock()
     n.curMaxHeight = 2<<60
-    req := &bean.BlockReq{Height:store.GetCurrentBlockHeight()}
+    req := &bean.BlockReq{Height:store.GetCurrentBlockHeight(), Pk:store.GetPubKey()}
 
     network.SendMessage([]*network.Peer{peers[0]}, req)
     fmt.Println("fetching 1")
@@ -231,6 +236,7 @@ func (n *Node) ProcessBlockResp(resp *bean.BlockResp) {
 func (n *Node) ProcessBlockReq(req *bean.BlockReq) {
     from := req.Height + 1
     size := int64(2)
+    fmt.Println("pk = ", req.Pk)
     peers := []*network.Peer{store.GetPeer(req.Pk)}
     fmt.Println("ProcessBlockReq")
     for i := from; i <= store.GetCurrentBlockHeight(); {
