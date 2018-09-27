@@ -58,6 +58,10 @@ func addNonce(addr bean.Address) {
 
 func ExecuteTransactions(b *bean.Block, del bool) *big.Int {
     if b == nil || b.Header == nil { // || b.Data == nil || b.Data.TxList == nil {
+        fmt.Errorf("error block nil or header nil")
+        return nil
+    }
+    if currentBlockHeight + 1 != b.Header.Height {
         return nil
     }
     // TODO check height
