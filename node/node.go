@@ -148,6 +148,7 @@ func (n *Node) ProcessBlock(block *bean.Block, del bool) {
     log.Println("node receive block", *block)
     fmt.Println("Process block leader = ", bean.Addr(block.Header.LeaderPubKey), " height = ", block.Header.Height)
     if fee := store.ExecuteTransactions(block, del); fee == nil {
+        fmt.Println("Offline. start to fetch block")
         n.fetchBlocks()
     }
     // todo receive two
