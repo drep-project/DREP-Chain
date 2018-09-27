@@ -67,10 +67,10 @@ func ExecuteTransactions(b *bean.Block, del bool) *big.Int {
     // TODO check height
     currentBlockHeight = b.Header.Height
     blocks = append(blocks, b)
-    if b.Data == nil || b.Data.TxList == nil {
-        return nil
-    }
     total := big.NewInt(0)
+    if b.Data == nil || b.Data.TxList == nil {
+        return total
+    }
     for _, t := range b.Data.TxList {
         gasFee := execute(t)
         if del {
