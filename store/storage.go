@@ -62,6 +62,7 @@ func ExecuteTransactions(b *bean.Block, del bool) *big.Int {
         return nil
     }
     if currentBlockHeight + 1 != b.Header.Height {
+        fmt.Println("error", currentBlockHeight, b.Header.Height)
         return nil
     }
     // TODO check height

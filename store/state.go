@@ -99,7 +99,7 @@ func GetBlockHeight() int {
 
 func GenerateBlock() *bean.Block {
     height := currentBlockHeight + 1
-    currentBlockHeight = height
+    //currentBlockHeight = height
     ts := PickTransactions(BlockGasLimit)
     return &bean.Block{Header: &bean.BlockHeader{Height: height, LeaderPubKey:GetPubKey()},Data:&bean.BlockData{TxCount:int32(len(ts)), TxList:ts}}
 }
