@@ -151,7 +151,7 @@ func (n *Node) ProcessBlock(block *bean.Block, del bool) {
         fmt.Println("Offline. start to fetch block")
         n.fetchBlocks()
     }
-    // todo receive two
+    // todo receive two, should not !!! the same goes with other similar cases
     if del {
         n.wg.Done()
     }
