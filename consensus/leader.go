@@ -95,7 +95,7 @@ func (l *Leader) getR(msg []byte) []byte {
     return rInt.Bytes()
 }
 
-func (l *Leader) challenge(msg []byte)  {
+func (l *Leader) challenge(msg []byte) {
     l.r = l.getR(msg)
     challenge := &bean.Challenge{SigmaPubKey: l.sigmaPubKey, SigmaQ: l.sigmaQ, R: l.r}
     log.Println("Leader challenge ", *challenge)
