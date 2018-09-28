@@ -14,27 +14,28 @@ const (
     bufferSize    = 1024 * 1024
 )
 
-var onceSender sync.Once
-var SenderQueue chan *Task
+var (
+    lock sync.Mutex
+)
 
-func getSenderQueue() chan *Task {
-   onceSender.Do(func() {
-      SenderQueue = make(chan *Task,  10)
-   })
-   return SenderQueue
-}
-
-func SendMessage(peers []*Peer, msg interface{}) {
-   queue := getSenderQueue()
+func SendMessage(peers []*Peer, msg interface{}) []*Peer {
+   lock.Lock()
+   defer lock.Unlock()
+   r := make([]*Peer, 0)
    for _, peer := range peers {
       task := &Task{peer, msg}
-      queue <- task
+      if err := task.execute(); err != nil {
+          switch err.(type) {
+          case *TimeoutError, *ConnectionError:
+              r = append(r, peer)
+          }
+      }
    }
+   return r
 }
 
 func Start(process func(int, interface{})) {
     startListen(process)
-    startSend()
 }
 
 func startListen(process func(int, interface{})) {
@@ -85,18 +86,6 @@ func startListen(process func(int, interface{})) {
             log.Println("end listen")
         }
     }()
-}
-
-func startSend() {
-   go func() {
-      sender := getSenderQueue()
-      for {
-         if task, ok := <-sender; ok {
-            log.Println(task.Peer.IP)
-            task.execute()
-         }
-      }
-   }()
 }
 
 func decryptIntoTask(cipher []byte) (*Task, error) {

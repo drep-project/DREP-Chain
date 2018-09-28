@@ -7,6 +7,7 @@ import (
     "net"
     "fmt"
     "BlockChainTest/mycrypto"
+    "time"
 )
 
 type Task struct {
@@ -45,27 +46,41 @@ func (t *Task) cipher() ([]byte, error) {
 }
 
 func (t *Task) execute() error {
-    // If sleep 1000 here, hahax
     cipher, err := t.cipher()
-
     if err != nil {
         log.Println("error during cipher:", err)
-        return err
+        return &DataError{myError{err}}
     }
-    addr, err := net.ResolveTCPAddr("tcp", t.Peer.ToString())
+    d, err := time.ParseDuration("3s")
     if err != nil {
-        return err
+        fmt.Println(err)
+        return &DefaultError{}
     }
-    conn, err := net.DialTCP("tcp", nil, addr)
+    conn, err := net.DialTimeout("tcp", t.Peer.ToString(), d)
     if err != nil {
-        log.Println("error during dail:", err)
-        return err
+        fmt.Printf("%T %v\n", err, err)
+        if ope, ok := err.(*net.OpError); ok {
+            fmt.Println(ope.Timeout(), ope)
+            if ope.Timeout() {
+                return &TimeoutError{myError{ope}}
+            } else {
+                return &ConnectionError{myError{ope}}
+            }
+        }
     }
     defer conn.Close()
+    now := time.Now()
+    d2, err := time.ParseDuration("5s")
+    if err != nil {
+        fmt.Println(err)
+        return &DefaultError{}
+    } else {
+        conn.SetDeadline(now.Add(d2))
+    }
     log.Println("Send msg to ",t.Peer.ToString(), cipher)
     if num, err := conn.Write(cipher); err != nil {
         log.Println("Send error ", err)
-        return err
+        return &TransmissionError{myError{err}}
     } else {
         log.Println("Send bytes ", num)
         return nil

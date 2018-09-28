@@ -42,16 +42,23 @@ func TestLocal2(t *testing.T)  {
     b := make([]byte, 1024*10)
     for {
         //conn, err := net.DialTCP("tcp", nil, addr)
+
         d, err := time.ParseDuration("3s")
         if err != nil {
-           fmt.Println(err)
-           return
+          fmt.Println(err)
+          return
         }
-        //add := "192.168.3.113:55556"
-        add := "127.0.0.1:55555"
+        //add := "127.0.0.1:55555"
+        add := "192.168.3.113:55556"
         conn, err := net.DialTimeout("tcp", add, d)
+
+        //add := "192.168.3.113:55556"
+        //conn, err := net.Dial("tcp", add) // This will block if it is offline, refused otherwise
         if err != nil {
-            fmt.Println(err)
+            fmt.Printf("%T %v\n", err, err)
+            if ope, ok := err.(*net.OpError); ok {
+                fmt.Println(ope.Timeout(), ope)
+            }
         }
         t := time.Now()
         d2, err := time.ParseDuration("1ms")
