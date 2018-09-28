@@ -56,7 +56,20 @@ func (t *Task) execute() error {
         fmt.Println(err)
         return &DefaultError{}
     }
-    conn, err := net.DialTimeout("tcp", t.Peer.ToString(), d)
+    var conn net.Conn
+    for i := 0; i <= 2; i++ {
+        conn, err = net.DialTimeout("tcp", t.Peer.ToString(), d)
+        if err == nil {
+            break
+        } else {
+            fmt.Printf("%T %v\n", err, err)
+            if ope, ok := err.(*net.OpError); ok {
+                fmt.Println(ope.Timeout(), ope)
+            }
+            fmt.Println("Retry after 2s")
+            time.Sleep(2 * time.Second)
+        }
+    }
     if err != nil {
         fmt.Printf("%T %v\n", err, err)
         if ope, ok := err.(*net.OpError); ok {
