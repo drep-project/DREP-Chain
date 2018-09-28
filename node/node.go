@@ -106,7 +106,9 @@ func (n *Node) runAsLeader() {
 
 func (n *Node) sendBlock(block *bean.Block) {
     peers := store.GetPeers()
-    network.SendMessage(peers, block)
+    if ps := network.SendMessage(peers, block); len(ps) > 0 {
+        fmt.Println("Offline peers: ", ps)
+    }
 }
 
 func (n *Node) runAsMember() {
