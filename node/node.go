@@ -143,6 +143,7 @@ func (n *Node) ProcessBlock(block *bean.Block, del bool) {
         for !n.prep {
             n.prepCond.Wait()
         }
+        n.prep = false
         n.prepLock.Unlock()
     }
     log.Println("node receive block", *block)
@@ -152,6 +153,7 @@ func (n *Node) ProcessBlock(block *bean.Block, del bool) {
         n.fetchBlocks()
     }
     // todo receive two, should not !!! the same goes with other similar cases
+    // todo maybe receive two consecutive blocks
     if del {
         n.wg.Done()
     }
