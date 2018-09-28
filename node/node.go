@@ -10,7 +10,6 @@ import (
     "BlockChainTest/network"
     "BlockChainTest/mycrypto"
     "fmt"
-    "time"
 )
 
 var (
@@ -73,7 +72,7 @@ func (n *Node) Start() {
                 n.wg.Wait() // If not, next will be nil member
             }
             log.Println("node stop")
-            time.Sleep(5 * time.Second)
+            //time.Sleep(5 * time.Second)
             log.Println("Current height ", store.GetCurrentBlockHeight())
             // todo if timeout still can go. why
         }
