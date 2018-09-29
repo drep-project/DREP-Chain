@@ -11,6 +11,7 @@ import (
     "BlockChainTest/mycrypto"
     "fmt"
     "time"
+    "math/big"
 )
 
 var (
@@ -149,9 +150,7 @@ func (n *Node) ProcessBlock(block *bean.Block, del bool) {
         n.prep = false
         n.prepLock.Unlock()
     }
-    log.Println("node receive block", *block)
-    fmt.Println("Process block leader = ", bean.Addr(block.Header.LeaderPubKey), " height = ", block.Header.Height)
-    if fee := store.ExecuteTransactions(block, del); fee == nil {
+    if fee := n.processBlock(block, del); fee == nil {
         fmt.Println("Offline. start to fetch block")
         n.fetchBlocks()
     }
@@ -160,6 +159,12 @@ func (n *Node) ProcessBlock(block *bean.Block, del bool) {
     if del {
         n.wg.Done()
     }
+}
+
+func (n *Node) processBlock(block *bean.Block, del bool) *big.Int {
+    log.Println("node receive block", *block)
+    fmt.Println("Process block leader = ", bean.Addr(block.Header.LeaderPubKey), " height = ", block.Header.Height)
+    return store.ExecuteTransactions(block, del)
 }
 
 func (n *Node) discover() {
@@ -231,7 +236,7 @@ func (n *Node) fetchBlocks() {
 func (n *Node) ProcessBlockResp(resp *bean.BlockResp) {
     fmt.Println("fetching 4")
     for _, b := range resp.Blocks {
-        n.ProcessBlock(b, false)
+        n.processBlock(b, false)
         // TODO cannot receive tran
     }
     fmt.Println("fetching 5")
