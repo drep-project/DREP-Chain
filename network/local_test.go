@@ -48,8 +48,8 @@ func TestLocal2(t *testing.T)  {
           fmt.Println(err)
           return
         }
-        //add := "127.0.0.1:55555"
-        add := "192.168.3.113:55556"
+        add := "127.0.0.1:55555"
+        //add := "192.168.3.113:55556"
         conn, err := net.DialTimeout("tcp", add, d)
 
         //add := "192.168.3.113:55556"

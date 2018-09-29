@@ -20,6 +20,8 @@ var (
     address bean.Address
     remainingSetUp *bean.Setup
 
+    port network.Port
+
     myIndex = 0
 )
 
@@ -44,12 +46,21 @@ func init()  {
     prv1 := &mycrypto.PrivateKey{Prv: k1, PubKey: pub1}
     prv2 := &mycrypto.PrivateKey{Prv: k2, PubKey: pub2}
     //prv3 := &mycrypto.PrivateKey{Prv: k3, PubKey: pub3}
-    ip0 := network.IP("192.168.3.147")
-    ip1 := network.IP("192.168.3.43")
-    //ip2 := network.IP("192.168.3.113")
-    //ip3 := network.IP("192.168.3.79")
-    port0 := network.Port(55555)
-    port1 := network.Port(55555)
+    var ip0, ip1 network.IP
+    var port0, port1, port2 network.Port
+    if LOCAL_TEST {
+        ip0 = network.IP("127.0.0.1")
+        ip1 = network.IP("127.0.0.1")
+        port0 = network.Port(55555)
+        port1 = network.Port(55556)
+        port2 = network.Port(55557)
+    } else {
+        ip0 = network.IP("192.168.3.147")
+        ip1 = network.IP("192.168.3.43")
+        port0 = network.Port(55555)
+        port1 = network.Port(55555)
+        port2 = network.Port(55555)
+    }
     //port2 := network.Port(55555)
     //port3 := network.Port(55555)
     peer0 := &network.Peer{IP: ip0, Port: port0, PubKey: pub0}
@@ -68,21 +79,25 @@ func init()  {
         prvKey = prv0
         address = bean.Addr(pub0)
         adminPubKey = pub0
+        port = port0
         //leader = consensus.NewLeader(pub0, peers)
         //member = nil
     case 1:
         pubKey = pub1
         prvKey = prv1
         address = bean.Addr(pub1)
+        port = port1
         //leader = nil
         //member = consensus.NewMember(peer0, prvKey)
     case 2:
        pubKey = pub2
        prvKey = prv2
        address = bean.Addr(pub2)
+       port = port2
         //leader = nil
         //member = consensus.NewMember(peer0, prvKey)
     }
+    IsStart = myIndex <= 1
 }
 
 func SetLeader(l *consensus.Leader) {
@@ -130,4 +145,8 @@ func SetRemainingSetup(setup *bean.Setup)  {
 
 func GetRemainingSetup() *bean.Setup {
     return remainingSetUp
+}
+
+func GetPort() network.Port {
+    return port
 }

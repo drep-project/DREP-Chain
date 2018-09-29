@@ -16,7 +16,7 @@ func main()  {
 		if msg != nil {
 			p.Process(t, msg)
 		}
-	})
+	}, store.GetPort())
 	processor.GetInstance().Start()
 	node.GetNode().Start()
 	for {
