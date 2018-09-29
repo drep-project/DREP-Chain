@@ -40,8 +40,8 @@ type BlockProcessor struct {
 
 func (p *BlockProcessor) process(msg interface{}) {
     if block, ok := msg.(*bean.Block); ok {
-        if block.Header.Height != store.GetCurrentBlockHeight() + 1 {
-            return
+        if block.Header.Height <= store.GetCurrentBlockHeight() {
+           return
         }
         peers := store.GetPeers()
         network.SendMessage(peers, block)
