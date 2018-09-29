@@ -82,3 +82,36 @@ func TestLocal2(t *testing.T)  {
         conn.Close()
     }
 }
+
+func TestLocal3(t *testing.T) {
+    fmt.Println("1")
+    addrs, _ := net.InterfaceAddrs()
+    for _, a := range addrs {
+        fmt.Println("s = ", a.String(), " net = ", a.Network())
+        if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+            fmt.Println("ip1")
+            if ipnet.IP.To4() != nil {
+                fmt.Println("ip:", ipnet.IP.String())
+            }
+        } else {
+            fmt.Println("ip2")
+        }
+    }
+    fmt.Println("2")
+    i, _ := net.Interfaces()
+    for _, a := range i {
+        fmt.Println(a.Index, a.Name, a.HardwareAddr.String())
+        fmt.Println("addrs")
+        ad1, _ := a.Addrs()
+        for _, b := range ad1 {
+            fmt.Println("s = ", b.String(), " net = ", b.Network())
+        }
+        fmt.Println("multi addrs")
+        ad2, _ := a.MulticastAddrs()
+        for _, b := range ad2 {
+            fmt.Println("s = ", b.String(), " net = ", b.Network())
+        }
+    }
+
+
+}
