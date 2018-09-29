@@ -170,7 +170,18 @@ func (n *Node) processBlock(block *bean.Block, del bool) *big.Int {
 func (n *Node) discover() {
     fmt.Println("discovering 1")
     // todo
-    msg := &bean.PeerInfo{Pk: n.prvKey.PubKey, Ip:"192.168.3.113", Port: 55555}
+    ips := network.GetIps()
+    if len(ips) == 0 {
+        fmt.Println("Error")
+    } else if len(ips) > 1 {
+        fmt.Println("Strange")
+    }
+    var msg *bean.PeerInfo
+    if store.LOCAL_TEST {
+        msg = &bean.PeerInfo{Pk: n.prvKey.PubKey, Ip: "127.0.0.1", Port: 55557}
+    } else {
+        msg = &bean.PeerInfo{Pk: n.prvKey.PubKey, Ip: ips[0], Port: 55555}
+    }
     peers := []*network.Peer{store.Admin}
     fmt.Println("discovering 2")
     n.discoverWg = &sync.WaitGroup{}

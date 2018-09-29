@@ -1,16 +1,15 @@
 package network
 
 import (
-   "sync"
-   "net"
-   "strings"
+    "sync"
+    "net"
+    "strings"
     "BlockChainTest/mycrypto"
     "BlockChainTest/bean"
     "BlockChainTest/log"
 )
 
 const (
-    listeningPort = 55555
     bufferSize    = 1024 * 1024
 )
 
@@ -34,21 +33,21 @@ func SendMessage(peers []*Peer, msg interface{}) []*Peer {
    return r
 }
 
-func Start(process func(int, interface{})) {
-    startListen(process)
+func Start(process func(int, interface{}), port Port) {
+    startListen(process, port)
 }
 
-func startListen(process func(int, interface{})) {
+func startListen(process func(int, interface{}), port Port) {
     go func() {
         //room for modification addr := &net.TCPAddr{IP: net.ParseIP("x.x.x.x"), Port: receiver.listeningPort()}
-        addr := &net.TCPAddr{Port: listeningPort}
+        addr := &net.TCPAddr{Port: int(port)}
         listener, err := net.ListenTCP("tcp", addr)
         if err != nil {
             log.Println("error", err)
             return
         }
         for {
-            log.Println("start listen")
+            log.Println("start listen", port)
             conn, err := listener.AcceptTCP()
             log.Println("listen from ", conn.RemoteAddr())
             if err != nil {
@@ -131,4 +130,18 @@ func identifyMessage(task *Task) (int, interface{}) {
     default:
         return -1, nil
     }
+}
+
+func GetIps() []string {
+    r := make([]string, 0)
+    if addrs, err := net.InterfaceAddrs(); err == nil {
+        for _, a := range addrs {
+            if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+                if ipnet.IP.To4() != nil {
+                    r = append(r, ipnet.IP.String())
+                }
+            }
+        }
+    }
+    return r
 }
