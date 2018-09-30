@@ -137,7 +137,7 @@ func (n *Node) runAsMember() {
         log.Println("node member finishes consensus for round 2")
     }
     //log.Println("node member is going to wait")
-    //n.wg.Wait()
+    //n.wg.WaitTimeout()
     //log.Println("node member finishes wait")
 }
 
