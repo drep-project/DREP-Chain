@@ -18,7 +18,7 @@ var (
 
 var IsStart bool
 
-const LOCAL_TEST = true
+const LOCAL_TEST = false
 
 func init() {
     if LOCAL_TEST {
