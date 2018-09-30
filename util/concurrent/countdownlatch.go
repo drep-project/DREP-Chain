@@ -3,11 +3,13 @@ package concurrent
 import (
     "time"
     "sync"
+    "fmt"
 )
 
 type CountDownLatch interface {
     Cancel()
-    Wait(duration time.Duration)
+    WaitTimeout(duration time.Duration)
+    Wait()
     Done()
 }
 
@@ -19,25 +21,38 @@ type countDownLatch struct {
     canceled bool
 }
 
-func (l *countDownLatch) Cancel()  {
+func (l *countDownLatch) Cancel() {
     l.lock.Lock()
     defer l.lock.Unlock()
     if !l.canceled {
         l.canceled = true
         l.ch <- struct{}{}
+    } else {
+        fmt.Errorf("error: already canceled")
     }
 }
 
-func (l *countDownLatch) Wait(duration time.Duration)  {
+func (l *countDownLatch) WaitTimeout(duration time.Duration) {
     select {
     case <- l.ch: case <-time.After(duration):
     }
 }
 
-func (l *countDownLatch) Done()  {
+func (l *countDownLatch) Wait() {
+    select {
+    case <- l.ch:
+    }
+}
+
+func (l *countDownLatch) Done() {
     l.lock.Lock()
     defer l.lock.Unlock()
     if l.canceled {
+        fmt.Errorf("error: already canceled. Cannot done")
+        return
+    }
+    if l.num == 0 {
+        fmt.Errorf("error: already done")
         return
     }
     l.num--
@@ -49,6 +64,6 @@ func (l *countDownLatch) Done()  {
 func NewCountDownLatch(num int) CountDownLatch {
     c := &countDownLatch{num:num, canceled:false}
     c.cond = sync.NewCond(&c.lock)
-    c.ch = make(chan struct{})
+    c.ch = make(chan struct{}, 1)// 1 is necessary
     return c
 }
