@@ -36,6 +36,7 @@ func (l *countDownLatch) WaitTimeout(duration time.Duration) {
     select {
     case <- l.ch: case <-time.After(duration):
     }
+    // TODO was going to modify these in Sept
 }
 
 func (l *countDownLatch) Wait() {
