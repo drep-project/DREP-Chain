@@ -2,33 +2,38 @@ package trie
 
 import (
     "fmt"
-    "BlockChainTest/crypto"
+    "BlockChainTest/mycrypto"
     "bytes"
+    "sync"
+    "BlockChainTest/database"
 )
+
+var trie *StateTrie
+var once sync.Once
 
 var digits = [17]string{"", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"}
 
 func getCommonPrefix(s1, s2 string) (int, string) {
-   if s1 == "" || s2 == "" {
-       return 0, ""
-   }
-   for i := 0; i < len(s1); i++ {
-       if i == len(s2) {
-           return i, s2
-       }
-       if s1[i] == s2[i] {
-           continue
-       }
-       return i, s1[:i]
-   }
-   return len(s1), s1
+    if s1 == "" || s2 == "" {
+        return 0, ""
+    }
+    for i := 0; i < len(s1); i++ {
+        if i == len(s2) {
+            return i, s2
+        }
+        if s1[i] == s2[i] {
+            continue
+        }
+        return i, s1[:i]
+    }
+    return len(s1), s1
 }
 
 func getNextDigit(start int, str string) string {
-   if start == len(str) {
-       return str[start:]
-   }
-   return str[start: start + 1]
+    if start == len(str) {
+        return str[start:]
+    }
+    return str[start: start + 1]
 }
 
 type StateNode struct {
@@ -51,7 +56,7 @@ func (n *StateNode) resetValue() {
             hashList[i] = n.Children[digit].Value
         }
     }
-    ret := crypto.StackHash(hashList)
+    ret := mycrypto.StackHash(hashList)
     n.Value = make([]byte, len(ret))
     copy(n.Value, ret)
     return
@@ -176,7 +181,18 @@ type StateTrie struct {
 }
 
 func NewStateTrie() *StateTrie {
-    return &StateTrie{}
+    tr := &StateTrie{}
+    tr.Build()
+    return tr
+}
+
+func GetStateTrie() *StateTrie {
+    once.Do(func() {
+        if trie == nil {
+            trie = NewStateTrie()
+        }
+    })
+    return trie
 }
 
 func (t *StateTrie) Insert(key string, value []byte) {
@@ -206,4 +222,19 @@ func (t *StateTrie) Validate() {
     root.resetValue()
     fmt.Println()
     fmt.Println("result: ", bytes.Equal(v0, root.Value))
+}
+
+func (t *StateTrie) Build() error {
+    if t.Root != nil {
+        return nil
+    }
+    db:= database.GetDatabase()
+    db.Open()
+    defer db.Close()
+    itr := db.NewIterator()
+    defer itr.Release()
+    for itr.Next() {
+        t.Insert(itr.Key(), itr.Value())
+    }
+    return nil
 }
