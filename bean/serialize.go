@@ -44,6 +44,12 @@ func Serialize(message interface{}) (*Serializable, error) {
 		serializable.Header = MsgTypeBlockReq
 	case *BlockResp:
 		serializable.Header = MsgTypeBlockResp
+	case *Ping:
+		serializable.Header = MsgTypePing
+	case *Pong:
+		serializable.Header = MsgTypePong
+	case *OfflinePeers:
+		serializable.Header = MsgTypeOfflinePeers
 	default:
 		return nil, errors.New("bad message type")
 	}
@@ -155,6 +161,27 @@ func Deserialize(msg []byte) (*Serializable, interface{}, error) {
         } else {
             return nil, nil, err
         }
+	case MsgTypePing:
+		ping := &Ping{}
+		if err := proto.Unmarshal(body, ping); err == nil {
+			return serializable, ping, nil
+		} else {
+			return nil, nil, err
+		}
+	case MsgTypePong:
+		pong := &Pong{}
+		if err := proto.Unmarshal(body, pong); err == nil {
+			return serializable, pong, nil
+		} else {
+			return nil, nil, err
+		}
+	case MsgTypeOfflinePeers:
+		peers := &OfflinePeers{}
+		if err := proto.Unmarshal(body, peers); err == nil {
+			return serializable, peers, nil
+		} else {
+			return nil, nil, err
+		}
 	default:
 		return nil, nil, errors.New("message header not found")
 	}

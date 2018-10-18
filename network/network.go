@@ -127,6 +127,12 @@ func identifyMessage(task *Task) (int, interface{}) {
         return bean.MsgTypeBlockReq, msg.(*bean.BlockReq)
     case *bean.BlockResp:
         return bean.MsgTypeBlockResp, msg.(*bean.BlockResp)
+    case *bean.Ping:
+        return bean.MsgTypePing, msg.(*bean.Ping)
+    case *bean.Pong:
+        return bean.MsgTypePong, msg.(*bean.Pong)
+    case *bean.OfflinePeers:
+        return bean.MsgTypeOfflinePeers, msg.(*bean.OfflinePeers)
     default:
         return -1, nil
     }
