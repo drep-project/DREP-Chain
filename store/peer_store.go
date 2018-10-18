@@ -22,6 +22,11 @@ func AddPeer(peer *network.Peer) {
     }
 }
 
+func RemovePeer(peer *network.Peer) {
+    addr := bean.Addr(peer.PubKey)
+    delete(peers, addr)
+}
+
 func GetPeers() []*network.Peer {
     result := make([]*network.Peer, 0)
     for _, v := range peers {
@@ -76,6 +81,10 @@ func AddMiner(addr bean.Address) {
 
 func GetAdminPubKey() *mycrypto.Point {
     return adminPubKey
+}
+
+func IsAdmin() bool {
+    return adminPubKey.Equal(pubKey)
 }
 
 func GetPeer(pk *mycrypto.Point) *network.Peer {
