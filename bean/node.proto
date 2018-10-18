@@ -24,3 +24,15 @@ message block_resp {
     int64 height = 2;
     repeated block blocks = 3;
 }
+
+message ping {
+    mycrypto.point pk = 1;
+}
+
+message pong {
+    mycrypto.point pk = 1;
+}
+
+message offline_peers {
+    repeated peer_info list = 1;
+}

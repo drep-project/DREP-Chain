@@ -20,7 +20,6 @@ var (
 )
 
 type Node struct {
-    address *bean.Address
     prvKey *mycrypto.PrivateKey
     wg *sync.WaitGroup
     discoverWg *sync.WaitGroup
@@ -34,8 +33,7 @@ type Node struct {
 }
 
 func newNode(prvKey *mycrypto.PrivateKey) *Node {
-    address := bean.Addr(prvKey.PubKey)
-    n := &Node{address: &address, prvKey: prvKey, prep:false}
+    n := &Node{prvKey: prvKey, prep:false}
     n.prepCond = sync.NewCond(&n.prepLock)
     return n
 }
@@ -271,5 +269,27 @@ func (n *Node) ProcessBlockReq(req *bean.BlockReq) {
         network.SendMessage(peers, resp)
         i += int64(len(bs))
         fmt.Println("ProcessBlockReq 2 ", i)
+    }
+}
+
+func (n *Node) ReportOfflinePeers(peers []*network.Peer) {
+    msg := make([]*bean.PeerInfo, len(peers))
+    for i, p := range peers {
+        msg[i] = &bean.PeerInfo{Pk:p.PubKey, Ip:string(p.IP), Port:int32(p.Port)}
+    }
+    network.SendMessage([]*network.Peer{store.Admin}, msg)
+}
+
+func (n *Node) Ping(peer *network.Peer)  {
+    network.SendMessage([]*network.Peer{peer}, )
+}
+
+func (n *Node) ProcessOfflinePeers(peers []*bean.PeerInfo)  {
+    if !store.IsAdmin() {
+        log.Errorf("I am not admin but receive offline peers.")
+        return
+    }
+    for _, p := range peers {
+        store.RemovePeer(&network.Peer{PubKey:p.Pk, IP:network.IP(p.Ip), Port:network.Port(p.Port)})
     }
 }
