@@ -3,7 +3,7 @@ package nat
 import (
     "net"
     "time"
-    "BlockChainTest/log"
+    "fmt"
 )
 
 type Interface interface {
@@ -16,9 +16,9 @@ type Interface interface {
 func Map(protocol string, extport, intport int, name string) {
     m := Any()
     if err := m.AddMapping(protocol, extport, intport, name, 20 * time.Minute); err != nil {
-        log.Println("Couldn't add port mapping", "err", err)
+        fmt.Println("Couldn't add port mapping", "err", err)
     } else {
-        log.Println("Mapped network port")
+        fmt.Println("Mapped network port")
     }
 }
 

@@ -30,4 +30,3 @@ func init() {
 }
 
 const IsStart = true
-const UPnPStart  = true
