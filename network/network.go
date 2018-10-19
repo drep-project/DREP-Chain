@@ -14,6 +14,7 @@ import (
 
 const (
     bufferSize    = 1024 * 1024
+    UPnPStart  = true
 )
 
 var (
@@ -51,7 +52,7 @@ func startListen(process func(*Peer, int, interface{}), port Port) {
     go func() {
         //room for modification addr := &net.TCPAddr{IP: net.ParseIP("x.x.x.x"), Port: receiver.listeningPort()}
         addr := &net.TCPAddr{Port: int(port)}
-        if store.UPnPStart {
+        if UPnPStart {
             nat.Map("tcp", listeningPort, listeningPort, "drep nat")
         }
         listener, err := net.ListenTCP("tcp", addr)
