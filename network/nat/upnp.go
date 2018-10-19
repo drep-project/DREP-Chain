@@ -1,14 +1,15 @@
 package nat
 
 import (
-    "github.com/huin/goupnp"
-    "time"
-    "net"
     "fmt"
     "strings"
+    "time"
+    "net"
     "errors"
+    "log"
     "github.com/huin/goupnp/dcps/internetgateway1"
     "github.com/huin/goupnp/dcps/internetgateway2"
+    "github.com/huin/goupnp"
 )
 
 const RequestTimeout = 3 * time.Second
@@ -34,6 +35,7 @@ func (n *upnp) AddMapping(protocol string, extport, intport int, desc string, li
     protocol = strings.ToUpper(protocol)
     lifetimeS := uint32(lifetime / time.Second)
     n.DeleteMapping(protocol, extport, intport)
+    fmt.Printf("%s: adding port...\n", n)
     return n.client.AddPortMapping("", uint16(extport), protocol, uint16(intport), ip.String(), true, desc, lifetimeS)
 }
 
@@ -54,7 +56,7 @@ func (n *upnp) ExternalIP() (addr net.IP, err error) {
 }
 
 func (n *upnp) String() string {
-    return "UPNP " + n.service
+    return "UPnP " + n.service
 }
 
 func (n *upnp) internalAddress() (net.IP, error) {
@@ -70,80 +72,120 @@ func (n *upnp) internalAddress() (net.IP, error) {
             }
         }
     }
-    return nil, fmt.Errorf("Get internal ip address error!")
+    return nil, fmt.Errorf("get internal ip address error")
 }
 
-func discoverUPnP() Interface {
-    found := make(chan *upnp, 2)
-    // IGDv1
-    go discover(found, internetgateway1.URN_WANConnectionDevice_1, func(dev *goupnp.RootDevice, sc goupnp.ServiceClient) *upnp {
-        switch sc.Service.ServiceType {
-        case internetgateway1.URN_WANIPConnection_1:
-            return &upnp{dev, "IGDv1-IP1", &internetgateway1.WANIPConnection1{ServiceClient: sc}}
-        case internetgateway1.URN_WANPPPConnection_1:
-            return &upnp{dev, "IGDv1-PPP1", &internetgateway1.WANPPPConnection1{ServiceClient: sc}}
-        }
-        return nil
-    })
-    // IGDv2
-    go discover(found, internetgateway2.URN_WANConnectionDevice_2, func(dev *goupnp.RootDevice, sc goupnp.ServiceClient) *upnp {
-        switch sc.Service.ServiceType {
-        case internetgateway2.URN_WANIPConnection_1:
-            return &upnp{dev, "IGDv2-IP1", &internetgateway2.WANIPConnection1{ServiceClient: sc}}
-        case internetgateway2.URN_WANIPConnection_2:
-            return &upnp{dev, "IGDv2-IP2", &internetgateway2.WANIPConnection2{ServiceClient: sc}}
-        case internetgateway2.URN_WANPPPConnection_1:
-            return &upnp{dev, "IGDv2-PPP1", &internetgateway2.WANPPPConnection1{ServiceClient: sc}}
-        }
-        return nil
-    })
+func discoverUPnP() *upnp {
+    found := make(chan *upnp, 5)
+
+    go discover(found, internetgateway1.URN_WANConnectionDevice_1, internetgateway1.URN_WANIPConnection_1)
+    go discover(found, internetgateway1.URN_WANConnectionDevice_1, internetgateway1.URN_WANPPPConnection_1)
+
+    go discover(found, internetgateway2.URN_WANConnectionDevice_2, internetgateway2.URN_WANIPConnection_1)
+    go discover(found, internetgateway2.URN_WANConnectionDevice_2, internetgateway2.URN_WANIPConnection_2)
+    go discover(found, internetgateway2.URN_WANConnectionDevice_2, internetgateway2.URN_WANPPPConnection_1)
+
+    fmt.Println("going to find somting... ")
+
     for i := 0; i < cap(found); i++ {
-        if c := <-found; c != nil {
-            return c
+        if u := <-found; u != nil {
+            fmt.Println("found upnp succeed")
+            return u
         }
     }
+    fmt.Println("found nothing!")
     return nil
 }
 
-// finds devices matching the given target and calls matcher for all
-// advertised services of each device. The first non-nil service found
-// is sent into out. If no service matched, nil is sent.
-func discover(out chan<- *upnp, target string, matcher func(*goupnp.RootDevice, goupnp.ServiceClient) *upnp) {
-    devs, err := goupnp.DiscoverDevices(target)
-    if err != nil {
-        out <- nil
-        return
-    }
-    found := false
-    for i := 0; i < len(devs) && !found; i++ {
-        if devs[i].Root == nil {
-            continue
+func discover(found chan<- *upnp, devURNs string, srvURNs string) {
+    switch devURNs {
+    case internetgateway1.URN_WANConnectionDevice_1:
+        switch srvURNs {
+        case internetgateway1.URN_WANIPConnection_1:
+            clients, errs, err := internetgateway1.NewWANIPConnection1Clients()
+            if err != nil {
+                return
+            }
+            for _, c := range clients {
+                if c != nil {
+                    dev := c.RootDevice
+                    upnp := &upnp{dev,"IGDv1-IP1", c}
+                    found <- upnp
+                    display("IGDv1-IP1", errs, len(clients))
+                    return
+                }
+            }
+        case internetgateway1.URN_WANPPPConnection_1:
+            clients, errs, err := internetgateway1.NewWANPPPConnection1Clients()
+            if err != nil {
+                return
+            }
+            for _, c := range clients {
+                if c != nil {
+                    dev := c.RootDevice
+                    upnp := &upnp{dev, "IGDv1-PPP1", c}
+                    found <- upnp
+                    display("IGDv1-PPP1", errs, len(clients))
+                    return
+                }
+            }
         }
-        devs[i].Root.Device.VisitServices(func(service *goupnp.Service) {
-            if found {
+    case internetgateway2.URN_WANConnectionDevice_2:
+        switch srvURNs {
+        case internetgateway2.URN_WANIPConnection_1:
+            clients, errs, err := internetgateway2.NewWANIPConnection1Clients()
+            if err != nil {
                 return
             }
-            // check for a matching IGD service
-            sc := goupnp.ServiceClient{
-                SOAPClient: service.NewSOAPClient(),
-                RootDevice: devs[i].Root,
-                Location:   devs[i].Location,
-                Service:    service,
+            for _, c := range clients {
+                if c != nil {
+                    dev := c.RootDevice
+                    upnp := &upnp{dev, "IGDv2-IP1", c}
+                    found <- upnp
+                    display("IGDv2-IP1", errs, len(clients))
+                    return
+                }
             }
-            sc.SOAPClient.HTTPClient.Timeout = RequestTimeout
-            upnp := matcher(devs[i].Root, sc)
-            if upnp == nil {
+        case internetgateway2.URN_WANIPConnection_2:
+            clients, errs, err := internetgateway2.NewWANIPConnection2Clients()
+            if err != nil {
                 return
             }
-            // check whether port mapping is enabled
-            if _, nat, err := upnp.client.GetNATRSIPStatus(); err != nil || !nat {
+            for _, c := range clients {
+                if c != nil {
+                    dev := c.RootDevice
+                    upnp := &upnp{dev, "IGDv2-IP2", c}
+                    found <- upnp
+                    display("IGDv2-IP2", errs, len(clients))
+                    return
+                }
+            }
+        case internetgateway2.URN_WANPPPConnection_1:
+            clients, errs, err := internetgateway2.NewWANPPPConnection1Clients()
+            if err != nil {
                 return
             }
-            out <- upnp
-            found = true
-        })
+            for _, c := range clients {
+                if c != nil {
+                    dev := c.RootDevice
+                    upnp := &upnp{dev, "IGDv2-PPP1", c}
+                    found <- upnp
+                    display("IGDv2-PPP1", errs, len(clients))
+                    return
+                }
+            }
+        }
     }
-    if !found {
-        out <- nil
+    found <- nil
+}
+
+func display(service string, errors []error, count int)  {
+    log.Printf("%s: Got %d errors finding servers and %d successfully discovered.\n", service,
+        len(errors), count)
+    for i, e := range errors {
+        log.Printf("%s: Error finding server #%d: %v\n",service, i+1, e)
     }
 }
+
+
+

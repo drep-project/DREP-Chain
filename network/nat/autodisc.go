@@ -16,7 +16,6 @@ type autodisc struct {
     found Interface
 }
 
-
 func startautodisc(what string, doit func() Interface) Interface {
     return &autodisc{what: what, doit: doit}
 }
