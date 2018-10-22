@@ -28,7 +28,7 @@ type upnpClient interface {
 }
 
 func (n *upnp) AddMapping(protocol string, extport, intport int, desc string, lifetime time.Duration) error {
-    ip, err := n.internalAddress()
+    ip, err := internalAddress()
     if err != nil {
         return nil
     }
@@ -57,22 +57,6 @@ func (n *upnp) ExternalIP() (addr net.IP, err error) {
 
 func (n *upnp) String() string {
     return "UPnP " + n.service
-}
-
-func (n *upnp) internalAddress() (net.IP, error) {
-    addrs, err := net.InterfaceAddrs()
-    if err != nil {
-        return nil, err
-    }
-    for _, address := range addrs {
-        if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-            if ipnet.IP.To4() != nil {
-                fmt.Println("ip:", ipnet.IP.String())
-                return ipnet.IP, err
-            }
-        }
-    }
-    return nil, fmt.Errorf("get internal ip address error")
 }
 
 func discoverUPnP() *upnp {
@@ -186,6 +170,3 @@ func display(service string, errors []error, count int)  {
         log.Printf("%s: Error finding server #%d: %v\n",service, i+1, e)
     }
 }
-
-
-
