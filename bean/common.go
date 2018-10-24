@@ -6,20 +6,20 @@ import (
 )
 
 const (
-    MsgTypeBlockHeader = 1
-    MsgTypeBlock       = 3
-    MsgTypeTransaction = 4
-    MsgTypeSetUp       = 5
-    MsgTypeCommitment  = 6
-    MsgTypeChallenge   = 7
-    MsgTypeResponse    = 8
-    MsgTypeNewPeer     = 9
-    MsgTypePeerList    = 10
-    MsgTypeBlockReq    = 11
-    MsgTypeBlockResp   = 12
-    MsgTypePing        = 13
-    MsgTypePong        = 14
-    MsgTypeOfflinePeers = 15
+    MsgTypeBlockHeader = iota
+    MsgTypeBlock
+    MsgTypeTransaction
+    MsgTypeSetUp
+    MsgTypeCommitment
+    MsgTypeChallenge
+    MsgTypeResponse
+    MsgTypeNewPeer
+    MsgTypePeerList
+    MsgTypeBlockReq
+    MsgTypeBlockResp
+    MsgTypePing
+    MsgTypePong
+    MsgTypeOfflinePeers
 )
 
 type Address string

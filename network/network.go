@@ -7,6 +7,7 @@ import (
     "BlockChainTest/mycrypto"
     "BlockChainTest/bean"
     "BlockChainTest/log"
+    "BlockChainTest/util"
 )
 
 const (
@@ -17,27 +18,34 @@ var (
     lock sync.Mutex
 )
 
-func SendMessage(peers []*Peer, msg interface{}) []*Peer {
+func SendMessage(peers []*Peer, msg interface{}) (error, []*Peer) {
    lock.Lock()
    defer lock.Unlock()
+   suc := false
    r := make([]*Peer, 0)
    for _, peer := range peers {
       task := &Task{peer, msg}
       if err := task.execute(); err != nil {
           switch err.(type) {
-          case *TimeoutError, *ConnectionError:
+          case *util.TimeoutError, *util.ConnectionError:
               r = append(r, peer)
           }
+      } else {
+          suc = true
       }
    }
-   return r
+   if suc {
+       return nil, r
+   } else {
+       return &util.OfflineError{}, r
+   }
 }
 
-func Start(process func(int, interface{}), port Port) {
+func Start(process func(*Peer, int, interface{}), port Port) {
     startListen(process, port)
 }
 
-func startListen(process func(int, interface{}), port Port) {
+func startListen(process func(*Peer, int, interface{}), port Port) {
     go func() {
         //room for modification addr := &net.TCPAddr{IP: net.ParseIP("x.x.x.x"), Port: receiver.listeningPort()}
         addr := &net.TCPAddr{Port: int(port)}
@@ -67,7 +75,7 @@ func startListen(process func(int, interface{}), port Port) {
             }
             log.Println("Receive ", cipher[:offset])
             log.Println("Receive byte ", offset)
-            task, err := decryptIntoTask(cipher[:offset])
+            task, err := decryptIntoTask(cipher[:offset]) // TODO what the fuck is this???
             log.Println("Receive after decrypt", task)
             if err != nil {
                 return
@@ -80,7 +88,7 @@ func startListen(process func(int, interface{}), port Port) {
             //p := processor.GetInstance()
             t, msg := identifyMessage(task)
             if msg != nil {
-                process(t, msg)
+                process(task.Peer, t, msg)
             }
             log.Println("end listen")
         }

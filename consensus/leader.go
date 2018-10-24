@@ -11,9 +11,9 @@ import (
 )
 
 const (
-    waiting              = 0
-    setUp               = 1
-    challenge            = 2
+    waiting = iota
+    setUp
+    challenge
 )
 type Leader struct {
     members    []*network.Peer

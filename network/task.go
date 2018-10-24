@@ -8,6 +8,7 @@ import (
     "fmt"
     "BlockChainTest/mycrypto"
     "time"
+    "BlockChainTest/util"
 )
 
 type Task struct {
@@ -49,12 +50,12 @@ func (t *Task) execute() error {
     cipher, err := t.cipher()
     if err != nil {
         log.Println("error during cipher:", err)
-        return &DataError{myError{err}}
+        return &util.DataError{MyError:util.MyError{Err:err}}
     }
     d, err := time.ParseDuration("3s")
     if err != nil {
         fmt.Println(err)
-        return &DefaultError{}
+        return &util.DefaultError{}
     }
     var conn net.Conn
     for i := 0; i <= 2; i++ {
@@ -75,9 +76,9 @@ func (t *Task) execute() error {
         if ope, ok := err.(*net.OpError); ok {
             fmt.Println(ope.Timeout(), ope)
             if ope.Timeout() {
-                return &TimeoutError{myError{ope}}
+                return &util.TimeoutError{MyError:util.MyError{Err:ope}}
             } else {
-                return &ConnectionError{myError{ope}}
+                return &util.ConnectionError{MyError:util.MyError{Err:ope}}
             }
         }
     }
@@ -86,14 +87,14 @@ func (t *Task) execute() error {
     d2, err := time.ParseDuration("5s")
     if err != nil {
         fmt.Println(err)
-        return &DefaultError{}
+        return &util.DefaultError{}
     } else {
         conn.SetDeadline(now.Add(d2))
     }
     log.Println("Send msg to ",t.Peer.ToString(), cipher)
     if num, err := conn.Write(cipher); err != nil {
         log.Println("Send error ", err)
-        return &TransmissionError{myError{err}}
+        return &util.TransmissionError{MyError:util.MyError{Err:err}}
     } else {
         log.Println("Send bytes ", num)
         return nil

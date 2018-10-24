@@ -8,9 +8,10 @@ import (
 
 type CountDownLatch interface {
     Cancel()
-    WaitTimeout(duration time.Duration)
+    WaitTimeout(duration time.Duration) bool
     Wait()
     Done()
+    IsAlive() bool
 }
 
 type countDownLatch struct {
@@ -32,9 +33,12 @@ func (l *countDownLatch) Cancel() {
     }
 }
 
-func (l *countDownLatch) WaitTimeout(duration time.Duration) {
+func (l *countDownLatch) WaitTimeout(duration time.Duration) bool {
     select {
-    case <- l.ch: case <-time.After(duration):
+    case <- l.ch:
+        return true
+    case <-time.After(duration):
+        return false
     }
     // TODO was going to modify these in Sept
 }
@@ -60,6 +64,12 @@ func (l *countDownLatch) Done() {
     if l.num == 0 {
         l.ch <- struct{}{}
     }
+}
+
+func (l *countDownLatch) IsAlive() bool {
+    l.lock.Lock()
+    defer l.lock.Unlock()
+    return !l.canceled && l.num > 0
 }
 
 func NewCountDownLatch(num int) CountDownLatch {

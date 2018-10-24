@@ -27,6 +27,12 @@ func RemovePeer(peer *network.Peer) {
     delete(peers, addr)
 }
 
+func RemovePeers(peers []*network.Peer) {
+    for _, p := range peers {
+        RemovePeer(p)
+    }
+}
+
 func GetPeers() []*network.Peer {
     result := make([]*network.Peer, 0)
     for _, v := range peers {

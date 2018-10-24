@@ -9,14 +9,19 @@ import (
     "fmt"
 )
 
-func SendTransaction(t *bean.Transaction)  {
+func SendTransaction(t *bean.Transaction) error {
     peers := store.GetPeers()
     fmt.Println("Send transaction")
-    network.SendMessage(peers, t)
-    if id, err := t.TxId(); err == nil {
-        store.Forward(id)
+    if err, offline := network.SendMessage(peers, t); err == nil {
+        if id, err := t.TxId(); err == nil {
+            store.Forward(id)
+        }
+        store.AddTransaction(t)
+        store.RemovePeers(offline)
+        return nil
+    } else {
+        return err
     }
-    store.AddTransaction(t)
 }
 
 func GenerateBalanceTransaction(to bean.Address, amount *big.Int) *bean.Transaction {
