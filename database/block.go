@@ -1,8 +1,7 @@
-package temp
+package database
 
 import (
 	"BlockChainTest/bean"
-	"BlockChainTest/database"
 	"errors"
 )
 
@@ -10,13 +9,13 @@ var (
 	ErrWrongBlockKey = errors.New("get non-block type element")
 )
 
-func saveBlock(db *database.Database, block *bean.Block) error {
+func saveBlock(db *Database, block *bean.Block) error {
 	_, _, err := db.Put(block)
 	return err
 }
 
 func SaveBlock(block *bean.Block) error {
-	db := database.GetDatabase()
+	db := GetDatabase()
 	//fmt.Println("db: ", db)
 	db.Open()
 	defer db.Close()
@@ -24,7 +23,7 @@ func SaveBlock(block *bean.Block) error {
 }
 
 func SaveAllBlock(blocks []*bean.Block) error {
-	db := database.GetDatabase()
+	db := GetDatabase()
 	db.Open()
 	defer db.Close()
 	for i := 0; i < len(blocks); i ++ {
@@ -33,7 +32,7 @@ func SaveAllBlock(blocks []*bean.Block) error {
 	return nil
 }
 
-func loadBlock(db *database.Database, height int64) (*bean.Block, error) {
+func loadBlock(db *Database, height int64) (*bean.Block, error) {
 	key := bean.HeightToKey(height)
 	elem, err := db.Get(key)
 	if err != nil {
@@ -47,14 +46,14 @@ func loadBlock(db *database.Database, height int64) (*bean.Block, error) {
 }
 
 func LoadBlock(height int64) (*bean.Block, error) {
-	db := database.GetDatabase()
+	db := GetDatabase()
 	db.Open()
 	defer db.Close()
 	return loadBlock(db, height)
 }
 
 func LoadAllBlock(fromHeight int64) []*bean.Block {
-	db := database.GetDatabase()
+	db := GetDatabase()
 	db.Open()
 	defer db.Close()
 
