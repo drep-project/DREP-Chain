@@ -12,6 +12,8 @@ import (
     "fmt"
     "time"
     "math/big"
+    "BlockChainTest/util/concurrent"
+    "BlockChainTest/util"
 )
 
 var (
@@ -21,7 +23,7 @@ var (
 
 type Node struct {
     prvKey *mycrypto.PrivateKey
-    wg *sync.WaitGroup
+    wg concurrent.CountDownLatch
     discoverWg *sync.WaitGroup
     fetchLock sync.Mutex
     fetchCond *sync.Cond
@@ -30,11 +32,13 @@ type Node struct {
     prepLock sync.Mutex
     prepCond *sync.Cond
     discovering bool
+    pingLatches map[bean.Address]concurrent.CountDownLatch
 }
 
 func newNode(prvKey *mycrypto.PrivateKey) *Node {
     n := &Node{prvKey: prvKey, prep:false}
     n.prepCond = sync.NewCond(&n.prepLock)
+    n.pingLatches = make(map[bean.Address]concurrent.CountDownLatch)
     return n
 }
 
@@ -60,8 +64,8 @@ func (n *Node) Start() {
             if isL {
                 n.runAsLeader()
             } else {
-                n.wg = &sync.WaitGroup{}
-                n.wg.Add(1)
+                n.wg = concurrent.NewCountDownLatch(1)
+                //n.wg.Add(1)
                 n.prepLock.Lock()
                 n.prep = true
                 n.prepCond.Broadcast()
@@ -69,7 +73,11 @@ func (n *Node) Start() {
                 if isM {
                     n.runAsMember()
                 }
-                n.wg.Wait() // If not, next will be nil member
+                n.wg.Wait()
+                //if !n.wg.Wait() {//Timeout(5 * time.Second) { // If not, next will be nil member
+                //    fmt.Println("Offline")
+                //    return
+                //}
             }
             log.Println("node stop")
             time.Sleep(5 * time.Second)
@@ -105,8 +113,9 @@ func (n *Node) runAsLeader() {
 
 func (n *Node) sendBlock(block *bean.Block) {
     peers := store.GetPeers()
-    if ps := network.SendMessage(peers, block); len(ps) > 0 {
+    if _, ps := network.SendMessage(peers, block); len(ps) > 0 {
         fmt.Println("Offline peers: ", ps)
+        store.RemovePeers(ps)
     }
 }
 
@@ -280,8 +289,33 @@ func (n *Node) ReportOfflinePeers(peers []*network.Peer) {
     network.SendMessage([]*network.Peer{store.Admin}, msg)
 }
 
-func (n *Node) Ping(peer *network.Peer)  {
-    network.SendMessage([]*network.Peer{peer}, )
+func (n *Node) Ping(peer *network.Peer) error {
+    addr := bean.Addr(peer.PubKey)
+    if latch, exist := n.pingLatches[addr]; exist {
+        return &util.DupOpError{}
+    } else {
+        latch = concurrent.NewCountDownLatch(1)
+        n.pingLatches[addr] = latch
+        ping := &bean.Ping{Pk:store.GetPubKey()}
+        network.SendMessage([]*network.Peer{peer}, ping)
+        if latch.WaitTimeout(5 * time.Second) {
+            return &util.TimeoutError{}
+        } else {
+            return nil
+        }
+    }
+}
+
+func (n *Node) ProcessPing(peer *network.Peer, ping *bean.Ping)  {
+    network.SendMessage([]*network.Peer{peer}, &bean.Pong{Pk:store.GetPubKey()})
+}
+
+func (n *Node) ProcessPong(peer *network.Peer, ping *bean.Ping) {
+    addr := bean.Addr(peer.PubKey)
+    if latch, exist := n.pingLatches[addr]; exist {
+        latch.Done()
+        delete(n.pingLatches, addr)
+    }
 }
 
 func (n *Node) ProcessOfflinePeers(peers []*bean.PeerInfo)  {

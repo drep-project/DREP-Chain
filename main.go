@@ -11,10 +11,10 @@ import (
 )
 
 func main()  {
-	network.Start(func(t int, msg interface{}) {
+	network.Start(func(peer *network.Peer, t int, msg interface{}) {
 		p := processor.GetInstance()
 		if msg != nil {
-			p.Process(t, msg)
+			p.Process(peer, t, msg)
 		}
 	}, store.GetPort())
 	processor.GetInstance().Start()
@@ -32,8 +32,11 @@ func main()  {
 				fmt.Print("Amount: ")
 				fmt.Scanln(&amount)
 				t := node.GenerateBalanceTransaction(bean.Address(addr), big.NewInt(amount))
-				node.SendTransaction(t)
-				fmt.Println("Send finish")
+				if node.SendTransaction(t) != nil {
+					fmt.Println("Offline")
+				} else {
+					fmt.Println("Send finish")
+				}
 			}
 		case "checkBalance":
 			{
@@ -64,7 +67,9 @@ func main()  {
 					var addr string
 					fmt.Scanln(&addr)
 					t := node.GenerateMinerTransaction(addr)
-					node.SendTransaction(t)
+					if node.SendTransaction(t) != nil {
+						fmt.Println("Offline")
+					}
 				} else {
 					fmt.Println("You are not allowed.")
 				}
