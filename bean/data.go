@@ -4,6 +4,7 @@ import (
     "encoding/hex"
     "github.com/golang/protobuf/proto"
     "BlockChainTest/mycrypto"
+    "math/big"
 )
 
 const (
@@ -47,4 +48,23 @@ func (block *Block) BlockID() (string, error) {
     }
     id := hex.EncodeToString(mycrypto.Hash256(b))
     return id, nil
+}
+
+func HeightToKey(height int64) string {
+    return hex.EncodeToString(new(big.Int).SetInt64(height).Bytes())
+}
+
+func (block *Block) DBKey() string {
+    return HeightToKey(block.Header.Height)
+}
+
+func (block *Block) DBMarshal() ([]byte, error) {
+    _b, err := proto.Marshal(block)
+    if err != nil {
+        return nil, err
+    }
+    b := make([]byte, len(_b) + 1)
+    b[0] = byte(MsgTypeBlock)
+    copy(b[1:], _b)
+    return b, nil
 }
