@@ -6,20 +6,21 @@ import (
     "BlockChainTest/bean"
     "log"
     "fmt"
+    "BlockChainTest/database"
 )
 
 var (
     balances           = make(map[bean.Address]*big.Int)//map[bean.Address]*big.Int
     nonces             map[bean.Address]int64
-    blocks             []*bean.Block
+    //blocks             []*bean.Block
     accountLock        sync.Mutex
-    currentBlockHeight int64 = -1
+    //currentBlockHeight int64 = -1
 )
 
 func init()  {
     //balances = make(map[bean.Address]*big.Int)
     nonces = make(map[bean.Address]int64)
-    blocks = make([]*bean.Block, 0)
+    //blocks = make([]*bean.Block, 0)
 }
 
 func GetBalance(addr bean.Address) *big.Int {
@@ -61,13 +62,16 @@ func ExecuteTransactions(b *bean.Block, del bool) *big.Int {
         fmt.Errorf("error block nil or header nil")
         return nil
     }
-    if currentBlockHeight + 1 != b.Header.Height {
-        fmt.Println("error", currentBlockHeight, b.Header.Height)
+    height := GetCurrentBlockHeight()
+    if height + 1 != b.Header.Height {
+        fmt.Println("error", height, b.Header.Height)
         return nil
     }
     // TODO check height
-    currentBlockHeight = b.Header.Height
-    blocks = append(blocks, b)
+    height = b.Header.Height
+    database.PutInt("height", int(height))
+    //blocks = append(blocks, b)
+    database.SaveBlock(b)
     total := big.NewInt(0)
     if b.Data == nil || b.Data.TxList == nil {
         return total
@@ -136,18 +140,23 @@ func execute(t *bean.Transaction) *big.Int {
 }
 
 func GetCurrentBlockHeight() int64 {
-    return currentBlockHeight
+    if height, err := database.GetInt("Height"); err == nil {
+        return int64(height)
+    } else {
+        return -1
+    }
 }
 
 func GetBlocks(from int64, number int64) []*bean.Block {
-    l := int64(len(blocks))
+    bs := database.LoadAllBlock(0)
+    l := int64(len(bs))
     if l - 1 < from {
         return []*bean.Block{}
     }
     end := from + number - 1
     r := make([]*bean.Block, 0)
     for i := from; i < l && i <= end; i++ {
-        r = append(r, blocks[i])
+        r = append(r, bs[i])
     }
     return r
 }
