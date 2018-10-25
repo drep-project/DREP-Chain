@@ -86,12 +86,9 @@ func (db *Database) Delete(key string) error {
 }
 
 func (db *Database) Open() {
-	var err error
-	db.LevelDB, err = leveldb.OpenFile(db.Name, nil)
-	if err != nil {
-		panic(err)
+	if ldb, err := leveldb.OpenFile(db.Name, nil); err == nil {
+		db.LevelDB = ldb
 	}
-	return
 }
 
 func (db *Database) Close() {
