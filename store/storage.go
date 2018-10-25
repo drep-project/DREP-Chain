@@ -69,7 +69,7 @@ func ExecuteTransactions(b *bean.Block, del bool) *big.Int {
     }
     // TODO check height
     height = b.Header.Height
-    database.PutInt("height", int(height))
+    database.PutInt("Height", int(height))
     //blocks = append(blocks, b)
     database.SaveBlock(b)
     total := big.NewInt(0)
