@@ -233,18 +233,18 @@ func (n *Node) ProcessPeerList(list *bean.PeerInfoList) {
 }
 
 func (n *Node) fetchBlocks() {
-    peers := store.GetPeers()
-    if len(peers) == 0 {
-        log.Errorf("Fuck")
-        return
-    }
+    //peers := store.GetPeers()
+    //if len(peers) == 0 {
+    //    log.Errorf("Fuck")
+    //    return
+    //}
     n.fetchCond = sync.NewCond(&n.fetchLock)
     n.fetchLock.Lock()
     defer n.fetchLock.Unlock()
     n.curMaxHeight = 2<<60
     req := &bean.BlockReq{Height:store.GetCurrentBlockHeight(), Pk:store.GetPubKey()}
-
-    network.SendMessage([]*network.Peer{peers[0]}, req)
+    //network.SendMessage([]*network.Peer{peers[0]}, req)
+    network.SendMessage([]*network.Peer{store.Admin}, req)
     fmt.Println("fetching 1")
     for n.curMaxHeight != store.GetCurrentBlockHeight() {
         fmt.Println("fetching 2: ", n.curMaxHeight, store.GetCurrentBlockHeight())
