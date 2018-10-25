@@ -24,6 +24,6 @@ func init() {
     if LOCAL_TEST {
         Admin = &network.Peer{IP: network.IP("127.0.0.1"), Port: 55555}
     } else {
-        Admin = &network.Peer{IP: network.IP("192.168.3.147"), Port: 55555}
+        Admin = &network.Peer{IP: network.IP("192.168.3.231"), Port: 55555}
     }
 }
