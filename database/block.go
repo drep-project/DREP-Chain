@@ -72,3 +72,17 @@ func LoadAllBlock(fromHeight int64) []*bean.Block {
 	}
 	return blocks
 }
+
+func PutInt(key string, value int) {
+	db := GetDatabase()
+	db.Open()
+	defer db.Close()
+	db.PutInt(key, value)
+}
+
+func GetInt(key string) (int, error) {
+	db := GetDatabase()
+	db.Open()
+	defer db.Close()
+	return db.GetInt(key)
+}

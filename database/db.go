@@ -5,6 +5,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"encoding/hex"
 	"sync"
+	"strconv"
 )
 
 var db *Database
@@ -60,6 +61,22 @@ func (db *Database) Put(elem DBElem) (string, []byte, error) {
 	return key, b, db.LevelDB.Put(k, b, nil)
 }
 
+func (db *Database) PutInt(key string, value int) {
+	db.LevelDB.Put([]byte(key), []byte(strconv.Itoa(value)), nil)
+}
+
+func (db *Database) GetInt(key string) (int, error) {
+	if value, err := db.LevelDB.Get([]byte(key), nil); err == nil {
+		if r, err := strconv.Atoi(string(value)); err == nil {
+			return r, nil
+		} else {
+			return 0, err
+		}
+	} else {
+		return 0, err
+	}
+}
+
 func (db *Database) Delete(key string) error {
 	k, err := hex.DecodeString(key)
 	if err != nil {
@@ -81,6 +98,9 @@ func (db *Database) Close() {
 	db.LevelDB.Close()
 }
 
+func (db *Database) Clear()  {
+
+}
 type Iterator struct {
 	Itr iterator.Iterator
 }

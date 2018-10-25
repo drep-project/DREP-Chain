@@ -14,6 +14,7 @@ import (
     "math/big"
     "BlockChainTest/util/concurrent"
     "BlockChainTest/util"
+    "BlockChainTest/database"
 )
 
 var (
@@ -55,6 +56,7 @@ func (n *Node) Start() {
     } else {
         n.discovering = true
         n.discover()
+        n.initState()
         n.fetchBlocks()
     }
     go func() {
@@ -73,11 +75,11 @@ func (n *Node) Start() {
                 if isM {
                     n.runAsMember()
                 }
-                n.wg.Wait()
-                //if !n.wg.Wait() {//Timeout(5 * time.Second) { // If not, next will be nil member
-                //    fmt.Println("Offline")
-                //    return
-                //}
+                //n.wg.Wait()
+                if !n.wg.WaitTimeout(5 * time.Second) { // If not, next will be nil member
+                   fmt.Println("Offline")
+                   return
+                }
             }
             log.Println("node stop")
             time.Sleep(5 * time.Second)
@@ -325,5 +327,12 @@ func (n *Node) ProcessOfflinePeers(peers []*bean.PeerInfo)  {
     }
     for _, p := range peers {
         store.RemovePeer(&network.Peer{PubKey:p.Pk, IP:network.IP(p.Ip), Port:network.Port(p.Port)})
+    }
+}
+
+func (n *Node) initState() {
+    bs := database.LoadAllBlock(0)
+    for _, b := range bs {
+        store.ExecuteTransactions(b, false)
     }
 }
