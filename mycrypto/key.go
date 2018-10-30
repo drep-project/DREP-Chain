@@ -7,7 +7,6 @@ import (
 
 const (
     ByteLen = 32
-    AddressLen = 20
 )
 
 func (p *Point) Bytes() []byte {

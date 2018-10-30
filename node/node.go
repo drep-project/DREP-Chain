@@ -4,7 +4,6 @@ import (
     "BlockChainTest/store"
     "BlockChainTest/bean"
     "BlockChainTest/consensus"
-    "github.com/golang/protobuf/proto"
     "sync"
     "BlockChainTest/log"
     "BlockChainTest/network"
@@ -15,6 +14,7 @@ import (
     "BlockChainTest/util/concurrent"
     "BlockChainTest/util"
     "BlockChainTest/database"
+    "encoding/json"
 )
 
 var (
@@ -94,12 +94,12 @@ func (n *Node) runAsLeader() {
     store.SetLeader(leader1)
     block := store.GenerateBlock()
     log.Println("node leader is preparing process consensus for round 1")
-    if msg, err := proto.Marshal(block); err ==nil {
+    if msg, err := json.Marshal(block); err ==nil {
         log.Println("node leader is going to process consensus for round 1")
         sig, bitmap := leader1.ProcessConsensus(msg)
         multiSig := &bean.MultiSignature{Sig: sig, Bitmap: bitmap}
         log.Println("node leader is preparing process consensus for round 2")
-        if msg, err := proto.Marshal(multiSig); err == nil {
+        if msg, err := json.Marshal(multiSig); err == nil {
             leader2 := consensus.NewLeader(n.prvKey.PubKey, store.GetMiners())
             store.SetLeader(leader2)
             log.Println("node leader is going to process consensus for round 2")
@@ -138,7 +138,7 @@ func (n *Node) runAsMember() {
     block := &bean.Block{}
     //n.wg = &sync.WaitGroup{}
     //n.wg.Add(1)
-    if proto.Unmarshal(bytes, block) == nil {
+    if json.Unmarshal(bytes, block) == nil {
         member2 := consensus.NewMember(store.GetLeader(), store.GetPrvKey())
         store.SetMember(member2)
         log.Println("node member is going to process consensus for round 2")
