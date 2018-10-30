@@ -2,9 +2,9 @@ package bean
 
 import (
     "encoding/hex"
-    "github.com/golang/protobuf/proto"
     "BlockChainTest/mycrypto"
     "math/big"
+    "encoding/json"
 )
 
 const (
@@ -12,7 +12,7 @@ const (
 )
 
 func (tx *Transaction) TxId() (string, error) {
-    b, err := proto.Marshal(tx.Data)
+    b, err := json.Marshal(tx.Data)
     if err != nil {
         return "", err
     }
@@ -21,7 +21,7 @@ func (tx *Transaction) TxId() (string, error) {
 }
 
 func (tx *Transaction) TxHash() ([]byte, error) {
-    b, err := proto.Marshal(tx)
+    b, err := json.Marshal(tx)
     if err != nil {
         return nil, err
     }
@@ -30,7 +30,7 @@ func (tx *Transaction) TxHash() ([]byte, error) {
 }
 
 func (tx *Transaction) TxSig(prvKey *mycrypto.PrivateKey) (*mycrypto.Signature, error) {
-    b, err := proto.Marshal(tx.Data)
+    b, err := json.Marshal(tx.Data)
     if err != nil {
         return nil, err
     }
@@ -42,7 +42,7 @@ func (tx *Transaction) Addr() Address {
 }
 
 func (block *Block) BlockID() (string, error) {
-    b, err := proto.Marshal(block.Header)
+    b, err := json.Marshal(block.Header)
     if err != nil {
         return "", err
     }
@@ -59,7 +59,7 @@ func (block *Block) DBKey() string {
 }
 
 func (block *Block) DBMarshal() ([]byte, error) {
-    _b, err := proto.Marshal(block)
+    _b, err := json.Marshal(block)
     if err != nil {
         return nil, err
     }
