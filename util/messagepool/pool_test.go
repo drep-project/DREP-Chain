@@ -12,7 +12,7 @@ func TestMessagePool(t *testing.T) {
     go func() {
         time.Sleep(1 * time.Second)
         p.Push(3)
-        p.Push(4)
+        p.Push("oi")
         time.Sleep(1 * time.Second)
         p.Push(3)
     }()
@@ -31,11 +31,8 @@ func TestMessagePool(t *testing.T) {
         }
     }, 3 * time.Second))
     fmt.Println(p.Obtain(func(i interface{}) bool {
-        if j, ok := i.(int); ok {
-            return j == 4
-        } else {
-            return false
-        }
+        _, ok := i.(string)
+        return ok
     }, 3 * time.Second))
     fmt.Println(p.Obtain(func(i interface{}) bool {
         if j, ok := i.(int); ok {
