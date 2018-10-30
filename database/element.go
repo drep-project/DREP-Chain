@@ -1,9 +1,9 @@
 package database
 
 import (
-	"github.com/golang/protobuf/proto"
 	"BlockChainTest/bean"
 	"errors"
+	"encoding/json"
 )
 
 var (
@@ -20,7 +20,7 @@ type unmarshaller func([]byte) (DBElem, error)
 
 func blockUnmarshaller(b []byte) (DBElem, error) {
 	block := &bean.Block{}
-	err := proto.Unmarshal(b, block)
+	err := json.Unmarshal(b, block)
 	if err != nil {
 		return nil, err
 	}

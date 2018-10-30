@@ -2,13 +2,13 @@ package network
 
 import (
     "BlockChainTest/bean"
-    "github.com/golang/protobuf/proto"
     "BlockChainTest/log"
     "net"
     "fmt"
     "BlockChainTest/mycrypto"
     "time"
     "BlockChainTest/util"
+    "encoding/json"
 )
 
 type Task struct {
@@ -43,7 +43,7 @@ func (t *Task) cipher() ([]byte, error) {
     //return cipher, nil
     serializable.Sig = &mycrypto.Signature{R: []byte{0x00}, S: []byte{0x00}}
     serializable.PubKey = &mycrypto.Point{X: []byte{0x00}, Y: []byte{0x00}}
-    return proto.Marshal(serializable)
+    return json.Marshal(serializable)
 }
 
 func (t *Task) execute() error {
