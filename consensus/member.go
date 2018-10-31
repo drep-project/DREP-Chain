@@ -2,7 +2,6 @@ package consensus
 
 import (
     "BlockChainTest/network"
-    "sync"
     "BlockChainTest/bean"
     "BlockChainTest/mycrypto"
     "math/big"
@@ -13,7 +12,6 @@ import (
 
 type Member struct {
     leader *network.Peer
-    state int
     prvKey *mycrypto.PrivateKey
     pubKey *mycrypto.Point
     msg []byte
@@ -21,19 +19,13 @@ type Member struct {
     k []byte
     r *big.Int
 
-    challengeWg sync.WaitGroup
-
 }
 
 func NewMember(leader *network.Peer, prvKey *mycrypto.PrivateKey) *Member {
     m := &Member{}
-    m.state = waiting
     m.leader = leader
     m.prvKey = prvKey
     m.pubKey = prvKey.PubKey
-
-    m.challengeWg = sync.WaitGroup{}
-    m.challengeWg.Add(1)
     return m
 }
 func (m *Member) ProcessConsensus() []byte {
@@ -43,7 +35,7 @@ func (m *Member) ProcessConsensus() []byte {
     m.commit()
 
     log.Println("Member challenge wait")
-    m.challengeWg.Wait()
+    m.waitForChallenge()
     log.Println("Member is going to response")
     m.response()
     return m.msg
@@ -80,19 +72,23 @@ func (m *Member) commit()  {
     network.SendMessage([]*network.Peer{m.leader}, commitment)
 }
 
-func (m *Member) ProcessChallenge(challenge *bean.Challenge) {
-    log.Println("Member process challenge ", *challenge)
-    r := mycrypto.ConcatHash256(challenge.SigmaQ.Bytes(), challenge.SigmaPubKey.Bytes(), m.msg)
-    r0 := new(big.Int).SetBytes(challenge.R)
-    rInt := new(big.Int).SetBytes(r)
-    curve := mycrypto.GetCurve()
-    rInt.Mod(rInt, curve.N)
-    m.r = rInt
-    if r0.Cmp(m.r) != 0 {
-        m.challengeWg.Done()
-        return// errors.New("wrong hash value")
+func (m *Member) waitForChallenge() {
+    challengeMsg := pool.ObtainOne(func(msg interface{}) bool {
+        _, ok := msg.(*bean.Challenge)
+        return ok
+    }, 5 * time.Second)
+    if challenge, ok := challengeMsg.(*bean.Challenge); ok {
+        log.Println("Member process challenge ", *challenge)
+        r := mycrypto.ConcatHash256(challenge.SigmaQ.Bytes(), challenge.SigmaPubKey.Bytes(), m.msg)
+        r0 := new(big.Int).SetBytes(challenge.R)
+        rInt := new(big.Int).SetBytes(r)
+        curve := mycrypto.GetCurve()
+        rInt.Mod(rInt, curve.N)
+        m.r = rInt
+        if r0.Cmp(m.r) != 0 {
+            return // errors.New("wrong hash value")
+        }
     }
-    m.challengeWg.Done()
 }
 
 func (m *Member) response()  {

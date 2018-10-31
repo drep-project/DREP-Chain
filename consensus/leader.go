@@ -11,13 +11,9 @@ import (
     "BlockChainTest/pool"
 )
 
-const (
-    waiting = iota
-)
 type Leader struct {
     members    []*network.Peer
     pubKey     *mycrypto.Point
-    state      int
     LeaderPeer *network.Peer
 
     commitBitmap []byte
@@ -45,7 +41,6 @@ func NewLeader(pubKey *mycrypto.Point, members []*network.Peer) *Leader {
         l.members[last] = v
         //l.members = append(l.members, v)
     }
-    l.state = waiting
     l.sigmaPubKey = &mycrypto.Point{X: []byte{0x00}, Y: []byte{0x00}}
     l.sigmaQ = &mycrypto.Point{X: []byte{0x00}, Y: []byte{0x00}}
     l.sigmaS = new(big.Int)
