@@ -9,6 +9,7 @@ import (
     "BlockChainTest/log"
     "time"
     "BlockChainTest/pool"
+    "fmt"
 )
 
 const (
@@ -69,7 +70,7 @@ func (l *Leader) ProcessConsensus(msg []byte) (*mycrypto.Signature, []byte) {
     log.Println("Leader is going to challenge")
     l.challenge(msg)
     log.Println("Leader wait for response")
-
+    l.waitForResponse()
     log.Println("Leader finish")
     sig := &mycrypto.Signature{R: l.r, S: l.sigmaS.Bytes()}
     valid := l.Validate(sig, msg)
@@ -84,6 +85,7 @@ func (l *Leader) setUp(msg []byte, pubKey *mycrypto.Point) {
 }
 
 func (l *Leader) waitForCommit()  {
+    fmt.Println(len(l.members), len(l.commitBitmap))
     commits := pool.Obtain(len(l.members), func(msg interface{}) bool {
         if m, ok := msg.(*bean.Commitment); ok {
             index := l.getMinerIndex(m.PubKey)
