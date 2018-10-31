@@ -27,9 +27,10 @@ type CommitProcessor struct {}
 
 func (p *CommitProcessor) process(peer *network.Peer, msg interface{}) {
     if commitment, ok := msg.(*bean.Commitment); ok {
-        if leader := store.GetItSelfOnLeader(); leader != nil {
-            leader.ProcessCommit(commitment)
-        }
+        //if leader := store.GetItSelfOnLeader(); leader != nil {
+        //    leader.ProcessCommit(commitment)
+        //}
+        store.Push(commitment)
     }
 }
 
