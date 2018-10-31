@@ -8,6 +8,8 @@ import (
     "math/big"
     "math"
     "BlockChainTest/log"
+    "BlockChainTest/util/messagepool"
+    "time"
 )
 
 const (
@@ -21,7 +23,6 @@ type Leader struct {
     state      int
     LeaderPeer *network.Peer
 
-    commitWg sync.WaitGroup
     commitBitmap []byte
     sigmaPubKey *mycrypto.Point
     sigmaQ *mycrypto.Point
@@ -54,8 +55,6 @@ func NewLeader(pubKey *mycrypto.Point, members []*network.Peer) *Leader {
     len := len(members)
     l.commitBitmap = make([]byte, len)
     l.responseBitmap = make([]byte, len)
-    l.commitWg = sync.WaitGroup{}
-    l.commitWg.Add(len - 1)
     return l
 }
 
@@ -65,7 +64,7 @@ func (l *Leader) ProcessConsensus(msg []byte) (*mycrypto.Signature, []byte) {
     log.Println("Leader is going to setup")
     l.setUp(msg, l.pubKey)
     log.Println("Leader wait for commit")
-    l.commitWg.Wait()
+    l.waitForCommit()
 
     l.responseWg = sync.WaitGroup{}
     l.responseWg.Add(len(l.commitBitmap) - 1)
@@ -87,6 +86,28 @@ func (l *Leader) setUp(msg []byte, pubKey *mycrypto.Point) {
     network.SendMessage(l.members, setup)
 }
 
+func (l *Leader) waitForCommit()  {
+    p := messagepool.NewMessagePool()
+    commits := p.Obtain(len(l.members) - 1, func(msg interface{}) bool {
+        if m, ok := msg.(*bean.Commitment); ok {
+            index := l.getMinerIndex(m.PubKey)
+            if !isLegalIndex(index, l.commitBitmap) {
+                return false
+            }
+            l.commitBitmap[index] = 1
+            return true
+        } else {
+            return false
+        }
+    }, 5 * time.Second)
+    curve := mycrypto.GetCurve()
+    for _, c := range commits {
+        if commit, ok := c.(*bean.Commitment); ok {
+            l.sigmaPubKey = curve.Add(l.sigmaPubKey, commit.PubKey)
+            l.sigmaQ = curve.Add(l.sigmaQ, commit.Q)
+        }
+    }
+}
 func (l *Leader) getR(msg []byte) []byte {
     curve := mycrypto.GetCurve()
     r := mycrypto.ConcatHash256(l.sigmaQ.Bytes(), l.sigmaPubKey.Bytes(), msg)
@@ -117,26 +138,25 @@ func (l *Leader) getMinerIndex(p *mycrypto.Point) int {
     }
     return -1
 }
-
-func (l *Leader) ProcessCommit(commit *bean.Commitment) {
-    log.Println("Leader process commit ", *commit)
-    if l.state != setUp {
-        return
-    }
-    //if !store.CheckRole(node.LEADER) {
-    //    return
-    //}
-    index := l.getMinerIndex(commit.PubKey)
-    if !isLegalIndex(index, l.commitBitmap) {
-       return
-    }
-    l.commitBitmap[index] = 1
-    //l.commitWg.Done()
-    curve := mycrypto.GetCurve()
-    l.sigmaPubKey = curve.Add(l.sigmaPubKey, commit.PubKey)
-    l.sigmaQ = curve.Add(l.sigmaQ, commit.Q)
-    l.commitWg.Done()
-}
+//
+//func (l *Leader) ProcessCommit(commit *bean.Commitment) {
+//    log.Println("Leader process commit ", *commit)
+//    if l.state != setUp {
+//        return
+//    }
+//    //if !store.CheckRole(node.LEADER) {
+//    //    return
+//    //}
+//    index := l.getMinerIndex(commit.PubKey)
+//    if !isLegalIndex(index, l.commitBitmap) {
+//       return
+//    }
+//    l.commitBitmap[index] = 1
+//    curve := mycrypto.GetCurve()
+//    l.sigmaPubKey = curve.Add(l.sigmaPubKey, commit.PubKey)
+//    l.sigmaQ = curve.Add(l.sigmaQ, commit.Q)
+//    l.commitWg.Done()
+//}
 
 func (l *Leader) ProcessResponse(response *bean.Response) {
     log.Println("Leader process response ", *response)
