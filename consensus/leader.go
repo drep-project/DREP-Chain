@@ -9,13 +9,10 @@ import (
     "BlockChainTest/log"
     "time"
     "BlockChainTest/pool"
-    "fmt"
 )
 
 const (
     waiting = iota
-    setUp
-    challenge
 )
 type Leader struct {
     members    []*network.Peer
@@ -59,14 +56,11 @@ func NewLeader(pubKey *mycrypto.Point, members []*network.Peer) *Leader {
 }
 
 func (l *Leader) ProcessConsensus(msg []byte) (*mycrypto.Signature, []byte) {
-
-    l.state = setUp
     log.Println("Leader is going to setup")
     l.setUp(msg, l.pubKey)
     log.Println("Leader wait for commit")
     l.waitForCommit()
 
-    l.state = challenge
     log.Println("Leader is going to challenge")
     l.challenge(msg)
     log.Println("Leader wait for response")
@@ -85,7 +79,6 @@ func (l *Leader) setUp(msg []byte, pubKey *mycrypto.Point) {
 }
 
 func (l *Leader) waitForCommit()  {
-    fmt.Println(len(l.members), len(l.commitBitmap))
     commits := pool.Obtain(len(l.members), func(msg interface{}) bool {
         if m, ok := msg.(*bean.Commitment); ok {
             index := l.getMinerIndex(m.PubKey)
@@ -160,44 +153,6 @@ func (l *Leader) getMinerIndex(p *mycrypto.Point) int {
     }
     return -1
 }
-//
-//func (l *Leader) ProcessCommit(commit *bean.Commitment) {
-//    log.Println("Leader process commit ", *commit)
-//    if l.state != setUp {
-//        return
-//    }
-//    //if !store.CheckRole(node.LEADER) {
-//    //    return
-//    //}
-//    index := l.getMinerIndex(commit.PubKey)
-//    if !isLegalIndex(index, l.commitBitmap) {
-//       return
-//    }
-//    l.commitBitmap[index] = 1
-//    curve := mycrypto.GetCurve()
-//    l.sigmaPubKey = curve.Add(l.sigmaPubKey, commit.PubKey)
-//    l.sigmaQ = curve.Add(l.sigmaQ, commit.Q)
-//    l.commitWg.Done()
-//}
-//
-//func (l *Leader) ProcessResponse(response *bean.Response) {
-//    log.Println("Leader process response ", *response)
-//    if l.state != challenge {
-//        return
-//    }
-//    //if !store.CheckRole(node.LEADER) {
-//    //    return
-//    //}
-//    index := l.getMinerIndex(response.PubKey)
-//    if !isLegalIndex(index, l.responseBitmap) {
-//       return
-//    }
-//    l.responseBitmap[index] = 1
-//    l.responseWg.Done()
-//    s := new(big.Int).SetBytes(response.S)
-//    l.sigmaS = l.sigmaS.Add(l.sigmaS, s)
-//    l.sigmaS.Mod(l.sigmaS, mycrypto.GetCurve().N)
-//}
 
 func (l *Leader) Validate(sig *mycrypto.Signature, msg []byte) bool {
     if len(l.responseBitmap) < len(l.commitBitmap) {

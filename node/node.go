@@ -125,15 +125,7 @@ func (n *Node) runAsMember() {
     member1 := consensus.NewMember(store.GetLeader(), store.GetPrvKey())
     store.SetMember(member1)
     log.Println("node member is going to process consensus for round 1")
-    setUp := store.GetRemainingSetup()
-    var bytes []byte
-    if setUp != nil {
-        bytes = member1.ProcessConsensus(setUp, func() {
-            store.SetRemainingSetup(nil)
-        })
-    } else {
-        bytes = member1.ProcessConsensus(nil, nil)
-    }
+    bytes := member1.ProcessConsensus()
     log.Println("node member finishes consensus for round 1")
     block := &bean.Block{}
     //n.wg = &sync.WaitGroup{}
@@ -142,7 +134,7 @@ func (n *Node) runAsMember() {
         member2 := consensus.NewMember(store.GetLeader(), store.GetPrvKey())
         store.SetMember(member2)
         log.Println("node member is going to process consensus for round 2")
-        member2.ProcessConsensus(nil, nil)
+        member2.ProcessConsensus()
         log.Println("node member finishes consensus for round 2")
     }
     //log.Println("node member is going to wait")

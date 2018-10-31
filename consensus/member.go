@@ -7,6 +7,8 @@ import (
     "BlockChainTest/mycrypto"
     "math/big"
     "BlockChainTest/log"
+    "BlockChainTest/pool"
+    "time"
 )
 
 type Member struct {
@@ -19,7 +21,6 @@ type Member struct {
     k []byte
     r *big.Int
 
-    setUpWg sync.WaitGroup
     challengeWg sync.WaitGroup
 
 }
@@ -30,21 +31,14 @@ func NewMember(leader *network.Peer, prvKey *mycrypto.PrivateKey) *Member {
     m.leader = leader
     m.prvKey = prvKey
     m.pubKey = prvKey.PubKey
-    m.setUpWg = sync.WaitGroup{}
-    m.setUpWg.Add(1)
+
     m.challengeWg = sync.WaitGroup{}
     m.challengeWg.Add(1)
     return m
 }
-func (m *Member) ProcessConsensus(remainingSetup *bean.Setup, cleanup func()) []byte {
+func (m *Member) ProcessConsensus() []byte {
     log.Println("Member set up wait")
-    if remainingSetup != nil {
-        log.Println("Member has a remainingSetup")
-        m.ProcessSetUp(remainingSetup)
-        cleanup()
-        log.Println("Member finish the remainingSetup")
-    }
-    m.setUpWg.Wait()
+    m.waitForSetUp()
     log.Println("Member is going to commit")
     m.commit()
 
@@ -55,23 +49,23 @@ func (m *Member) ProcessConsensus(remainingSetup *bean.Setup, cleanup func()) []
     return m.msg
 }
 
-func (m *Member) ProcessSetUp(setupMsg *bean.Setup) bool {
-    //if !store.CheckRole(node.MINER) {
-    //    return
-    //}
-    log.Println("Member process setup 1", *setupMsg)
-    if !m.leader.PubKey.Equal(setupMsg.PubKey) {
-        log.Println("Member process setup 2", *setupMsg)
+func (m *Member) waitForSetUp() bool {
+    setUpMsg := pool.ObtainOne(func(msg interface{}) bool {
+        if setup, ok := msg.(*bean.Setup); ok {
+            return m.leader.PubKey.Equal(setup.PubKey)
+        } else {
+            return false
+        }
+    }, 5 * time.Second)
+    if setUpMsg == nil {
         return false
     }
-    if m.state != waiting {
-        log.Println("Member process setup 3", *setupMsg)
+    if setUp, ok := setUpMsg.(*bean.Setup); ok {
+        m.msg = setUp.Msg
+        return true
+    } else {
         return false
     }
-    log.Println("Member process setup 4", *setupMsg)
-    m.msg = setupMsg.Msg
-    m.setUpWg.Done()
-    return true
 }
 
 func (m *Member) commit()  {
