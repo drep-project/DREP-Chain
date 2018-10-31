@@ -87,19 +87,26 @@ func (l *Leader) setUp(msg []byte, pubKey *mycrypto.Point) {
 }
 
 func (l *Leader) waitForCommit()  {
-    commits := pool.Obtain(len(l.members) - 1, func(msg interface{}) bool {
+    log.Println("wait commits 1", len(l.members))
+    commits := pool.Obtain(len(l.members), func(msg interface{}) bool {
+        log.Println("wait commits 1.1")
         if m, ok := msg.(*bean.Commitment); ok {
+            log.Println("wait commits 1.2")
             index := l.getMinerIndex(m.PubKey)
+            log.Println("wait commits 1.3")
             if !isLegalIndex(index, l.commitBitmap) {
+                log.Println("wait commits 1.4")
                 return false
             }
+            log.Println("wait commits 1.5")
             l.commitBitmap[index] = 1
             return true
         } else {
+            log.Println("wait commits 1.6")
             return false
         }
     }, 5 * time.Second)
-    log.Println("wait commits")
+    log.Println("wait commits 2")
     curve := mycrypto.GetCurve()
     for _, c := range commits {
         if commit, ok := c.(*bean.Commitment); ok {
