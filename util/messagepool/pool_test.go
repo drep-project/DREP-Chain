@@ -67,3 +67,12 @@ func TestMessagePool_Obtain(t *testing.T) {
         return ok
     }, 3 * time.Second))
 }
+
+func TestMessagePool_Obtain2(t *testing.T) {
+    p := NewMessagePool()
+    p.Push(34)
+    fmt.Println(p.Obtain(0, func(i interface{}) bool {
+        _, ok := i.(int)
+        return ok
+    }, 3 * time.Second))
+}
