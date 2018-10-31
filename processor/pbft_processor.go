@@ -5,7 +5,6 @@ import (
     "BlockChainTest/store"
     "BlockChainTest/log"
     "BlockChainTest/network"
-    "fmt"
     "BlockChainTest/pool"
 )
 
@@ -32,7 +31,6 @@ func (p *CommitProcessor) process(peer *network.Peer, msg interface{}) {
         //if leader := store.GetItSelfOnLeader(); leader != nil {
         //    leader.ProcessCommit(commitment)
         //}
-        fmt.Println("Receive.........", commitment)
         pool.Push(commitment)
     }
 }
@@ -51,8 +49,9 @@ type ResponseProcessor struct {}
 
 func (p *ResponseProcessor) process(peer *network.Peer, msg interface{}) {
     if response, ok := msg.(*bean.Response); ok {
-        if leader := store.GetItSelfOnLeader(); leader != nil {
-            leader.ProcessResponse(response)
-        }
+        //if leader := store.GetItSelfOnLeader(); leader != nil {
+        //    leader.ProcessResponse(response)
+        //}
+        pool.Push(response)
     }
 }
