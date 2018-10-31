@@ -3,7 +3,6 @@ package processor
 import (
     "BlockChainTest/bean"
     "BlockChainTest/store"
-    "BlockChainTest/log"
     "BlockChainTest/network"
     "BlockChainTest/pool"
 )
@@ -13,14 +12,15 @@ type SetUpProcessor struct {
 
 func (p *SetUpProcessor) process(peer *network.Peer, msg interface{}) {
     if setUp, ok := msg.(*bean.Setup); ok {
-        if member := store.GetItSelfOnMember(); member != nil {
-            if !member.ProcessSetUp(setUp) {
-                log.Println("SOS Help ", *setUp)
-                store.SetRemainingSetup(setUp)
-            }
-        } else {
-            store.SetRemainingSetup(setUp)
-        }
+        //if member := store.GetItSelfOnMember(); member != nil {
+        //    if !member.ProcessSetUp(setUp) {
+        //        log.Println("SOS Help ", *setUp)
+        //        store.SetRemainingSetup(setUp)
+        //    }
+        //} else {
+        //    store.SetRemainingSetup(setUp)
+        //}
+        pool.Push(setUp)
     }
 }
 

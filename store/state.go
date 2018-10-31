@@ -18,7 +18,6 @@ var (
     prvKey *mycrypto.PrivateKey
     pubKey *mycrypto.Point
     address bean.Address
-    remainingSetUp *bean.Setup
 
     port network.Port
 
@@ -137,14 +136,6 @@ func GetItSelfOnLeader() *consensus.Leader {
 
 func GetItSelfOnMember() *consensus.Member {
     return member
-}
-
-func SetRemainingSetup(setup *bean.Setup)  {
-    remainingSetUp = setup
-}
-
-func GetRemainingSetup() *bean.Setup {
-    return remainingSetUp
 }
 
 func GetPort() network.Port {
