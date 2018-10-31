@@ -2,7 +2,6 @@ package processor
 
 import (
     "BlockChainTest/bean"
-    "BlockChainTest/store"
     "BlockChainTest/network"
     "BlockChainTest/pool"
 )
@@ -39,9 +38,10 @@ type ChallengeProcessor struct {}
 
 func (p *ChallengeProcessor) process(peer *network.Peer, msg interface{}) {
     if challenge, ok := msg.(*bean.Challenge); ok {
-        if member := store.GetItSelfOnMember(); member != nil {
-            member.ProcessChallenge(challenge)
-        }
+        //if member := store.GetItSelfOnMember(); member != nil {
+        //    member.ProcessChallenge(challenge)
+        //}
+        pool.Push(challenge)
     }
 }
 
