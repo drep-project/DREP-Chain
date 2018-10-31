@@ -4,7 +4,6 @@ import (
     "sync"
     "time"
     "BlockChainTest/util/list"
-    "fmt"
 )
 
 type MessagePool struct {
@@ -33,36 +32,25 @@ func (p *MessagePool) Obtain(num int, cp func(interface{})bool, duration time.Du
         time.Sleep(duration)
         p.lock.Lock()
         defer p.lock.Unlock()
-        fmt.Println("ppppppp1")
         if count < num {
-            fmt.Println("ppppppp2")
             timeout = true
             p.cond.Broadcast()
         }
-        fmt.Println("ppppppp3")
     }()
-    fmt.Println("ppppppp4")
     for !timeout {
-        fmt.Println("ppppppp5")
         for it := p.messages.Iterator(); it.HasNext(); {
-            fmt.Println("ppppppp6")
             m := it.Next()
             if cp(m) {
-                fmt.Println("ppppppp7", count, num)
                 r = append(r, m)
                 count++
                 it.Remove()
                 if count == num {
-                    fmt.Println("ppppppp8")
                     return r
                 }
             }
-            fmt.Println("ppppppp9")
         }
         p.cond.Wait()
-        fmt.Println("ppppppp10")
     }
-    fmt.Println("ppppppp11")
     return r
 }
 
