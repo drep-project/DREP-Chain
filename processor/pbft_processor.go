@@ -6,6 +6,7 @@ import (
     "BlockChainTest/log"
     "BlockChainTest/network"
     "fmt"
+    "BlockChainTest/pool"
 )
 
 type SetUpProcessor struct {
@@ -32,7 +33,7 @@ func (p *CommitProcessor) process(peer *network.Peer, msg interface{}) {
         //    leader.ProcessCommit(commitment)
         //}
         fmt.Println("Receive.........", commitment)
-        store.Push(commitment)
+        pool.Push(commitment)
     }
 }
 

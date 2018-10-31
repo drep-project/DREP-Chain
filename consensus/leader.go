@@ -9,7 +9,7 @@ import (
     "math"
     "BlockChainTest/log"
     "time"
-    "BlockChainTest/store"
+    "BlockChainTest/pool"
 )
 
 const (
@@ -87,7 +87,7 @@ func (l *Leader) setUp(msg []byte, pubKey *mycrypto.Point) {
 }
 
 func (l *Leader) waitForCommit()  {
-    commits := store.Obtain(len(l.members) - 1, func(msg interface{}) bool {
+    commits := pool.Obtain(len(l.members) - 1, func(msg interface{}) bool {
         if m, ok := msg.(*bean.Commitment); ok {
             index := l.getMinerIndex(m.PubKey)
             if !isLegalIndex(index, l.commitBitmap) {
