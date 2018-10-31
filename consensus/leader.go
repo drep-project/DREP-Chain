@@ -8,8 +8,8 @@ import (
     "math/big"
     "math"
     "BlockChainTest/log"
-    "BlockChainTest/util/messagepool"
     "time"
+    "BlockChainTest/store"
 )
 
 const (
@@ -87,8 +87,7 @@ func (l *Leader) setUp(msg []byte, pubKey *mycrypto.Point) {
 }
 
 func (l *Leader) waitForCommit()  {
-    p := messagepool.NewMessagePool()
-    commits := p.Obtain(len(l.members) - 1, func(msg interface{}) bool {
+    commits := store.Obtain(len(l.members) - 1, func(msg interface{}) bool {
         if m, ok := msg.(*bean.Commitment); ok {
             index := l.getMinerIndex(m.PubKey)
             if !isLegalIndex(index, l.commitBitmap) {
@@ -100,6 +99,7 @@ func (l *Leader) waitForCommit()  {
             return false
         }
     }, 5 * time.Second)
+    log.Println("wait commits")
     curve := mycrypto.GetCurve()
     for _, c := range commits {
         if commit, ok := c.(*bean.Commitment); ok {

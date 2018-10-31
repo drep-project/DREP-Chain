@@ -5,6 +5,7 @@ import (
     "BlockChainTest/store"
     "BlockChainTest/log"
     "BlockChainTest/network"
+    "fmt"
 )
 
 type SetUpProcessor struct {
@@ -30,6 +31,7 @@ func (p *CommitProcessor) process(peer *network.Peer, msg interface{}) {
         //if leader := store.GetItSelfOnLeader(); leader != nil {
         //    leader.ProcessCommit(commitment)
         //}
+        fmt.Println("Receive.........", commitment)
         store.Push(commitment)
     }
 }
