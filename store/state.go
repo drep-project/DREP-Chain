@@ -10,7 +10,7 @@ import (
 
 var (
 
-    minerNum = 2
+    minerNum = 3
     lock     sync.Locker
     prvKey   *mycrypto.PrivateKey
     pubKey   *mycrypto.Point
@@ -74,7 +74,7 @@ func init()  {
         curMiners = []*network.Peer{peer0, peer1} //, peer2}
         miners = []*network.Peer{peer0, peer1}
     }
-    minerIndex = 1
+    minerIndex = minerNum - 1
     switch myIndex {
     case 0:
         pubKey = pub0
