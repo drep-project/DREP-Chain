@@ -44,7 +44,7 @@ func init()  {
     //prv3 := &mycrypto.PrivateKey{Prv: k3, PubKey: pub3}
     var ip0, ip1, ip2 network.IP
     var port0, port1, port2 network.Port
-    if LOCAL_TEST {
+    if LocalTest {
         ip0 = network.IP("127.0.0.1")
         ip1 = network.IP("127.0.0.1")
         port0 = network.Port(55555)
