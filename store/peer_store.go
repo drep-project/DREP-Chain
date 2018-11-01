@@ -47,8 +47,6 @@ func GetPeers() []*network.Peer {
 func MoveToNextMiner() (bool, bool) {
     lock.Lock()
     defer lock.Unlock()
-    SetLeader(nil)
-    SetMember(nil)
     curMiner++
     if curMiner == len(curMiners) {
         if minerIndex < len(miners) - 1 {

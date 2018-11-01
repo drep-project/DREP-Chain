@@ -4,16 +4,12 @@ import (
     "sync"
     "BlockChainTest/network"
     "BlockChainTest/bean"
-    "BlockChainTest/consensus"
     "BlockChainTest/mycrypto"
     "math/big"
 )
 
 var (
-    leader *consensus.Leader
-    member *consensus.Member
 
-    blockHeight int
     lock sync.Locker
     prvKey *mycrypto.PrivateKey
     pubKey *mycrypto.Point
@@ -99,18 +95,6 @@ func init()  {
     IsStart = myIndex <= 1
 }
 
-func SetLeader(l *consensus.Leader) {
-    leader = l
-}
-
-func SetMember(m *consensus.Member) {
-    member = m
-}
-
-func GetBlockHeight() int {
-    return blockHeight
-}
-
 func GenerateBlock() *bean.Block {
     height := GetCurrentBlockHeight() + 1
     //currentBlockHeight = height
@@ -128,14 +112,6 @@ func GetAddress() bean.Address {
 
 func GetPrvKey() *mycrypto.PrivateKey {
     return prvKey
-}
-
-func GetItSelfOnLeader() *consensus.Leader {
-    return leader
-}
-
-func GetItSelfOnMember() *consensus.Member {
-    return member
 }
 
 func GetPort() network.Port {
