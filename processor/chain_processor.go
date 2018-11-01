@@ -4,8 +4,8 @@ import (
     "fmt"
     "BlockChainTest/bean"
     "BlockChainTest/store"
-    "BlockChainTest/node"
     "BlockChainTest/network"
+    "BlockChainTest/pool"
 )
 
 type transactionProcessor struct {}
@@ -45,6 +45,6 @@ func (p *BlockProcessor) process(peer *network.Peer, msg interface{}) {
         }
         peers := store.GetPeers()
         network.SendMessage(peers, block)
-        node.GetNode().ProcessBlock(block, true)
+        pool.Push(block)
     }
 }

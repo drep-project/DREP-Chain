@@ -57,7 +57,7 @@ func addNonce(addr bean.Address) {
     accountLock.Unlock()
 }
 
-func ExecuteTransactions(b *bean.Block, del bool) *big.Int {
+func ExecuteTransactions(b *bean.Block) *big.Int {
     if b == nil || b.Header == nil { // || b.Data == nil || b.Data.TxList == nil {
         fmt.Errorf("error block nil or header nil")
         return nil
@@ -78,12 +78,8 @@ func ExecuteTransactions(b *bean.Block, del bool) *big.Int {
     }
     for _, t := range b.Data.TxList {
         gasFee := execute(t)
-        if del {
-            fmt.Println("Delete transaction ", *t)
-            removeTransaction(t)
-        } else {
-            fmt.Println("Does not delete transaction ", *t)
-        }
+        fmt.Println("Delete transaction ", *t)
+        fmt.Println(removeTransaction(t))
         if gasFee != nil {
             total.Add(total, gasFee)
         }

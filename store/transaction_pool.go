@@ -108,16 +108,17 @@ func AddTransaction(transaction *bean.Transaction) bool {
     return true
 }
 
-func removeTransaction(tran *bean.Transaction) {
+func removeTransaction(tran *bean.Transaction) (bool, bool) {
     id, err := tran.TxId()
     if err != nil {
-        return
+        return false, false
     }
-    trans.Remove(tran, tranCp)
+    r1 := trans.Remove(tran, tranCp)
     delete(tranSet, id)
     addr := tran.Addr()
     ts := accountTran[addr]
-    ts.Remove(tran, tranCp)
+    r2 := ts.Remove(tran, tranCp)
+    return r1, r2
 }
 
 func PickTransactions(maxGas *big.Int) []*bean.Transaction {

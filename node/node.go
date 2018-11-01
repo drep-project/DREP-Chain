@@ -15,6 +15,7 @@ import (
     "BlockChainTest/util"
     "BlockChainTest/database"
     "encoding/json"
+    "BlockChainTest/pool"
 )
 
 var (
@@ -29,16 +30,16 @@ type Node struct {
     fetchLock sync.Mutex
     fetchCond *sync.Cond
     curMaxHeight int64
-    prep  bool
-    prepLock sync.Mutex
-    prepCond *sync.Cond
+    //prep  bool
+    //prepLock sync.Mutex
+    //prepCond *sync.Cond
     discovering bool
     pingLatches map[bean.Address]concurrent.CountDownLatch
 }
 
 func newNode(prvKey *mycrypto.PrivateKey) *Node {
-    n := &Node{prvKey: prvKey, prep:false}
-    n.prepCond = sync.NewCond(&n.prepLock)
+    n := &Node{prvKey: prvKey}
+    //n.prepCond = sync.NewCond(&n.prepLock)
     n.pingLatches = make(map[bean.Address]concurrent.CountDownLatch)
     return n
 }
@@ -66,15 +67,22 @@ func (n *Node) Start() {
             if isL {
                 n.runAsLeader()
             } else {
-                n.prepLock.Lock()
-                n.prep = true
-                n.prepCond.Broadcast()
-                n.prepLock.Unlock()
+                //n.prepLock.Lock()
+                //n.prep = true
+                //n.prepCond.Broadcast()
+                //n.prepLock.Unlock()
                 if isM {
                     n.runAsMember()
                 }
                 //n.wg.Wait()
-                if !n.wg.WaitTimeout(5 * time.Second) { // If not, next will be nil member
+                if block := pool.ObtainOne(func(msg interface{}) bool {
+                    _, ok := msg.(*bean.Block)
+                    return ok
+                }, 5 * time.Second); block != nil {
+                    if b, ok := block.(*bean.Block); ok {
+                        n.processBlock(b)
+                    }
+                } else {
                    fmt.Println("Offline")
                    return
                 }
@@ -102,7 +110,7 @@ func (n *Node) runAsLeader() {
             leader2.ProcessConsensus(msg)
             log.Println("node leader finishes process consensus for round 2")
             log.Println("node leader is going to send block")
-            n.ProcessBlock(block, false) // process before sending
+            n.ProcessBlock(block) // process before sending
             n.sendBlock(block)
             log.Println("node leader finishes sending block")
         }
@@ -136,30 +144,30 @@ func (n *Node) runAsMember() {
     //log.Println("node member finishes wait")
 }
 
-func (n *Node) ProcessBlock(block *bean.Block, del bool) {
-    if del {
-        n.prepLock.Lock()
-        for !n.prep {
-            n.prepCond.Wait()
-        }
-        n.prep = false
-        n.prepLock.Unlock()
-    }
-    if fee := n.processBlock(block, del); fee == nil {
+func (n *Node) ProcessBlock(block *bean.Block) {
+    //if del {
+    //    n.prepLock.Lock()
+    //    for !n.prep {
+    //        n.prepCond.Wait()
+    //    }
+    //    n.prep = false
+    //    n.prepLock.Unlock()
+    //}
+    if fee := n.processBlock(block); fee == nil {
         fmt.Println("Offline. start to fetch block")
         n.fetchBlocks()
     }
     // todo receive two, should not !!! the same goes with other similar cases
     // todo maybe receive two consecutive blocks
-    if del {
-        n.wg.Done()
-    }
+    //if del {
+    //    n.wg.Done()
+    //}
 }
 
-func (n *Node) processBlock(block *bean.Block, del bool) *big.Int {
+func (n *Node) processBlock(block *bean.Block) *big.Int {
     log.Println("node receive block", *block)
     fmt.Println("Process block leader = ", bean.Addr(block.Header.LeaderPubKey), " height = ", block.Header.Height)
-    return store.ExecuteTransactions(block, del)
+    return store.ExecuteTransactions(block)
 }
 
 func (n *Node) discover() {
@@ -242,7 +250,7 @@ func (n *Node) fetchBlocks() {
 func (n *Node) ProcessBlockResp(resp *bean.BlockResp) {
     fmt.Println("fetching 4")
     for _, b := range resp.Blocks {
-        n.processBlock(b, false)
+        n.processBlock(b)
         // TODO cannot receive tran
     }
     fmt.Println("fetching 5")
@@ -319,6 +327,6 @@ func (n *Node) ProcessOfflinePeers(peers []*bean.PeerInfo)  {
 func (n *Node) initState() {
     bs := database.LoadAllBlock(0)
     for _, b := range bs {
-        store.ExecuteTransactions(b, false)
+        store.ExecuteTransactions(b)
     }
 }
