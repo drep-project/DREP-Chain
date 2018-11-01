@@ -229,8 +229,8 @@ func (t *StateTrie) Build() error {
         return nil
     }
     db:= database.GetDatabase()
-    db.Open()
-    defer db.Close()
+    //db.Open()
+    //defer db.Close()
     itr := db.NewIterator()
     defer itr.Release()
     for itr.Next() {
