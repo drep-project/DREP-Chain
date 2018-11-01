@@ -14,7 +14,7 @@ func SendTransaction(t *bean.Transaction) error {
     fmt.Println("Send transaction")
     if err, offline := network.SendMessage(peers, t); err == nil {
         if id, err := t.TxId(); err == nil {
-            store.Forward(id)
+            store.ForwardTransaction(id)
         }
         store.AddTransaction(t)
         store.RemovePeers(offline)
