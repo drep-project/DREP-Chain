@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"sync"
 	"strconv"
+	"fmt"
 )
 
 var db *Database
@@ -62,7 +63,9 @@ func (db *Database) Put(elem DBElem) (string, []byte, error) {
 }
 
 func (db *Database) PutInt(key string, value int) {
-	db.LevelDB.Put([]byte(key), []byte(strconv.Itoa(value)), nil)
+	if err := db.LevelDB.Put([]byte(key), []byte(strconv.Itoa(value)), nil); err != nil {
+		fmt.Println("Error!!!!!!!", err)
+	}
 }
 
 func (db *Database) GetInt(key string) (int, error) {

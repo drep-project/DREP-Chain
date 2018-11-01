@@ -10,7 +10,7 @@ import (
 
 var (
 
-    minerNum = 2
+    minerNum = 3
     lock     sync.Locker
     prvKey   *mycrypto.PrivateKey
     pubKey   *mycrypto.Point
@@ -99,7 +99,7 @@ func init()  {
         //leader = nil
         //member = consensus.NewMember(peer0, prvKey)
     }
-    IsStart = myIndex <= minerNum
+    IsStart = myIndex < minerNum
 }
 
 func GenerateBlock() *bean.Block {
