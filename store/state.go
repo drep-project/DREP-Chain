@@ -10,10 +10,11 @@ import (
 
 var (
 
-    lock sync.Locker
-    prvKey *mycrypto.PrivateKey
-    pubKey *mycrypto.Point
-    address bean.Address
+    minerNum = 2
+    lock     sync.Locker
+    prvKey   *mycrypto.PrivateKey
+    pubKey   *mycrypto.Point
+    address  bean.Address
 
     port network.Port
 
@@ -41,7 +42,7 @@ func init()  {
     prv1 := &mycrypto.PrivateKey{Prv: k1, PubKey: pub1}
     prv2 := &mycrypto.PrivateKey{Prv: k2, PubKey: pub2}
     //prv3 := &mycrypto.PrivateKey{Prv: k3, PubKey: pub3}
-    var ip0, ip1 network.IP
+    var ip0, ip1, ip2 network.IP
     var port0, port1, port2 network.Port
     if LOCAL_TEST {
         ip0 = network.IP("127.0.0.1")
@@ -52,6 +53,7 @@ func init()  {
     } else {
         ip0 = network.IP("192.168.3.231")
         ip1 = network.IP("192.168.3.197")
+        ip2 = network.IP("192.168.3.43")
         port0 = network.Port(55555)
         port1 = network.Port(55555)
         port2 = network.Port(55555)
@@ -60,13 +62,18 @@ func init()  {
     //port3 := network.Port(55555)
     peer0 := &network.Peer{IP: ip0, Port: port0, PubKey: pub0}
     peer1 := &network.Peer{IP: ip1, Port: port1, PubKey: pub1}
-    //peer2 := &network.Peer{IP: ip2, Port: port2, PubKey: pub2}
+    peer2 := &network.Peer{IP: ip2, Port: port2, PubKey: pub2}
     //peer3 := &network.Peer{IP: ip3, Port: port3, PubKey: pub3}
     AddPeer(peer0)
     AddPeer(peer1)
-    //AddPeer(peer2)
-    curMiners = []*network.Peer{peer0, peer1} //, peer2}
-    miners = []*network.Peer{peer0, peer1}
+    if minerNum > 2 {
+        AddPeer(peer2)
+        curMiners = []*network.Peer{peer0, peer1, peer2}
+        miners = []*network.Peer{peer0, peer1, peer2}
+    } else {
+        curMiners = []*network.Peer{peer0, peer1} //, peer2}
+        miners = []*network.Peer{peer0, peer1}
+    }
     minerIndex = 1
     switch myIndex {
     case 0:
@@ -85,14 +92,14 @@ func init()  {
         //leader = nil
         //member = consensus.NewMember(peer0, prvKey)
     case 2:
-       pubKey = pub2
-       prvKey = prv2
-       address = bean.Addr(pub2)
-       port = port2
+        pubKey = pub2
+        prvKey = prv2
+        address = bean.Addr(pub2)
+        port = port2
         //leader = nil
         //member = consensus.NewMember(peer0, prvKey)
     }
-    IsStart = myIndex <= 1
+    IsStart = myIndex <= minerNum
 }
 
 func GenerateBlock() *bean.Block {
