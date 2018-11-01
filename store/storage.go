@@ -143,6 +143,7 @@ func GetCurrentBlockHeight() int64 {
     if height, err := database.GetInt("Height"); err == nil {
         return int64(height)
     } else {
+        fmt.Println("ERROR!!!", err)
         return -1
     }
 }
