@@ -24,6 +24,7 @@ func TestSave(t *testing.T) {
 	SaveAllBlock(blocks)
 }
 
+// TODO change all tab indents into spaces
 func TestLoad(t *testing.T) {
 	block, err := LoadBlock(100)
 	fmt.Println()

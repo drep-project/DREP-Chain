@@ -24,7 +24,7 @@ var (
 
 type Node struct {
     prvKey *mycrypto.PrivateKey
-    wg concurrent.CountDownLatch
+    //wg concurrent.CountDownLatch
     discoverWg *sync.WaitGroup
     fetchLock sync.Mutex
     fetchCond *sync.Cond
@@ -66,8 +66,6 @@ func (n *Node) Start() {
             if isL {
                 n.runAsLeader()
             } else {
-                n.wg = concurrent.NewCountDownLatch(1)
-                //n.wg.Add(1)
                 n.prepLock.Lock()
                 n.prep = true
                 n.prepCond.Broadcast()
@@ -174,7 +172,7 @@ func (n *Node) discover() {
         fmt.Println("Strange")
     }
     var msg *bean.PeerInfo
-    if store.LOCAL_TEST {
+    if store.LocalTest {
         msg = &bean.PeerInfo{Pk: n.prvKey.PubKey, Ip: "127.0.0.1", Port: 55557}
     } else {
         msg = &bean.PeerInfo{Pk: n.prvKey.PubKey, Ip: ips[0], Port: 55555}
