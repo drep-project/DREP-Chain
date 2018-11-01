@@ -91,7 +91,6 @@ func (n *Node) Start() {
 
 func (n *Node) runAsLeader() {
     leader1 := consensus.NewLeader(n.prvKey.PubKey, store.GetMiners())
-    store.SetLeader(leader1)
     block := store.GenerateBlock()
     log.Println("node leader is preparing process consensus for round 1")
     if msg, err := json.Marshal(block); err ==nil {
@@ -101,7 +100,6 @@ func (n *Node) runAsLeader() {
         log.Println("node leader is preparing process consensus for round 2")
         if msg, err := json.Marshal(multiSig); err == nil {
             leader2 := consensus.NewLeader(n.prvKey.PubKey, store.GetMiners())
-            store.SetLeader(leader2)
             log.Println("node leader is going to process consensus for round 2")
             leader2.ProcessConsensus(msg)
             log.Println("node leader finishes process consensus for round 2")
@@ -123,7 +121,6 @@ func (n *Node) sendBlock(block *bean.Block) {
 
 func (n *Node) runAsMember() {
     member1 := consensus.NewMember(store.GetLeader(), store.GetPrvKey())
-    store.SetMember(member1)
     log.Println("node member is going to process consensus for round 1")
     bytes := member1.ProcessConsensus()
     log.Println("node member finishes consensus for round 1")
@@ -132,7 +129,6 @@ func (n *Node) runAsMember() {
     //n.wg.Add(1)
     if json.Unmarshal(bytes, block) == nil {
         member2 := consensus.NewMember(store.GetLeader(), store.GetPrvKey())
-        store.SetMember(member2)
         log.Println("node member is going to process consensus for round 2")
         member2.ProcessConsensus()
         log.Println("node member finishes consensus for round 2")
