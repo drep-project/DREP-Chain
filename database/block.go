@@ -17,15 +17,15 @@ func saveBlock(db *Database, block *bean.Block) error {
 func SaveBlock(block *bean.Block) error {
 	db := GetDatabase()
 	//fmt.Println("db: ", db)
-	db.Open()
-	defer db.Close()
+	//db.Open()
+	//defer db.Close()
 	return saveBlock(db, block)
 }
 
 func SaveAllBlock(blocks []*bean.Block) error {
 	db := GetDatabase()
-	db.Open()
-	defer db.Close()
+	//db.Open()
+	//defer db.Close()
 	for i := 0; i < len(blocks); i ++ {
 		saveBlock(db, blocks[i])
 	}
@@ -47,15 +47,15 @@ func loadBlock(db *Database, height int64) (*bean.Block, error) {
 
 func LoadBlock(height int64) (*bean.Block, error) {
 	db := GetDatabase()
-	db.Open()
-	defer db.Close()
+	//db.Open()
+	//defer db.Close()
 	return loadBlock(db, height)
 }
 
 func LoadAllBlock(fromHeight int64) []*bean.Block {
 	db := GetDatabase()
-	db.Open()
-	defer db.Close()
+	//db.Open()
+	//defer db.Close()
 
 	var (
 		currentBlock *bean.Block
@@ -75,14 +75,14 @@ func LoadAllBlock(fromHeight int64) []*bean.Block {
 
 func PutInt(key string, value int) {
 	db := GetDatabase()
-	db.Open()
-	defer db.Close()
+	//db.Open()
+	//defer db.Close()
 	db.PutInt(key, value)
 }
 
 func GetInt(key string) (int, error) {
 	db := GetDatabase()
-	db.Open()
-	defer db.Close()
+	//db.Open()
+	//defer db.Close()
 	return db.GetInt(key)
 }

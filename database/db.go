@@ -94,9 +94,9 @@ func (db *Database) Open() {
 	}
 }
 
-func (db *Database) Close() {
-	db.LevelDB.Close()
-}
+//func (db *Database) Close() {
+//	db.LevelDB.Close()
+//}
 
 func (db *Database) Clear()  {
 
