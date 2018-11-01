@@ -3,6 +3,7 @@ package database
 import (
 	"BlockChainTest/bean"
 	"errors"
+	"fmt"
 )
 
 var (
@@ -77,7 +78,15 @@ func PutInt(key string, value int) {
 	db := GetDatabase()
 	//db.Open()
 	//defer db.Close()
+	val0, err0 := db.GetInt(key)
+	fmt.Println("val0: ", val0)
+	fmt.Println("err0: ", err0)
+
 	db.PutInt(key, value)
+
+	val1, err1 := db.GetInt(key)
+	fmt.Println("val1: ", val1)
+	fmt.Println("err1: ", err1)
 }
 
 func GetInt(key string) (int, error) {
