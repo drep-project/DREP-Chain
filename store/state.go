@@ -10,7 +10,7 @@ import (
 
 var (
 
-    minerNum = 3
+    minerNum = 2
     lock     sync.Locker
     prvKey   *mycrypto.PrivateKey
     pubKey   *mycrypto.Point
