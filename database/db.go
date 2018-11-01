@@ -21,7 +21,7 @@ var databaseName = "local_data"
 
 func NewDatabase() *Database {
 	ldb, err := leveldb.OpenFile(databaseName, nil)
-	defer ldb.Close()
+	//defer ldb.Close()
 	if err != nil {
 		panic(err)
 	}
@@ -88,11 +88,11 @@ func (db *Database) Delete(key string) error {
 	return db.LevelDB.Delete(k, nil)
 }
 
-func (db *Database) Open() {
-	if ldb, err := leveldb.OpenFile(db.Name, nil); err == nil {
-		db.LevelDB = ldb
-	}
-}
+//func (db *Database) Open() {
+//	if ldb, err := leveldb.OpenFile(db.Name, nil); err == nil {
+//		db.LevelDB = ldb
+//	}
+//}
 
 //func (db *Database) Close() {
 //	db.LevelDB.Close()
