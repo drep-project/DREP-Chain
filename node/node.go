@@ -82,7 +82,7 @@ func (n *Node) Start() {
                 }
             }
             log.Println("node stop")
-            time.Sleep(5 * time.Second)
+            //time.Sleep(5 * time.Second)
             log.Println("Current height ", store.GetCurrentBlockHeight())
             // todo if timeout still can go. why
         }
