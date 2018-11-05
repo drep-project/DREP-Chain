@@ -6,6 +6,10 @@ import (
     "BlockChainTest/bean"
     "BlockChainTest/mycrypto"
     "math/big"
+    "BlockChainTest/database"
+    "encoding/json"
+    "errors"
+    "time"
 )
 
 var (
@@ -102,11 +106,40 @@ func init()  {
     IsStart = myIndex < minerNum
 }
 
-func GenerateBlock() *bean.Block {
+func GenerateBlock() (*bean.Block, error) {
     height := GetCurrentBlockHeight() + 1
-    //currentBlockHeight = height
     ts := PickTransactions(BlockGasLimit)
-    return &bean.Block{Header: &bean.BlockHeader{Height: height, LeaderPubKey:GetPubKey()},Data:&bean.BlockData{TxCount:int32(len(ts)), TxList:ts}}
+    previousBlock, err := database.GetHighestBlock()
+    if err != nil {
+        return nil, err
+    }
+    b, err := json.Marshal(previousBlock.Header)
+    if err != nil {
+        return nil, err
+    }
+    previousHash := mycrypto.Hash256(b)
+    gasLimit := new(big.Int).SetInt64(int64(10000000)).Bytes()
+    gasUsed := GetGasSum(ts).Bytes()
+    if ExceedGasLimit(gasUsed, gasLimit) {
+        return nil, errors.New("gas used exceeds gas limit")
+    }
+    timestamp := time.Now().Unix()
+
+    return &bean.Block{
+        Header: &bean.BlockHeader{
+            Version: 1,
+            PreviousHash: previousHash,
+            GasLimit: gasLimit,
+            GasUsed: gasUsed,
+
+            Height: height,
+            LeaderPubKey:GetPubKey(),
+        },
+        Data:&bean.BlockData{
+            TxCount:int32(len(ts)),
+            TxList:ts,
+        },
+    }, nil
 }
 
 func GetPubKey() *mycrypto.Point {
@@ -123,4 +156,41 @@ func GetPrvKey() *mycrypto.PrivateKey {
 
 func GetPort() network.Port {
     return port
+}
+
+func GetGasSum(ts []*bean.Transaction) *big.Int {
+    gasSum := new(big.Int)
+    for _, tx := range ts {
+        gasSum = gasSum.Add(gasSum, tx.GetGasUsed())
+    }
+    return gasSum
+}
+
+func ExceedGasLimit(used, limit []byte) bool {
+    if new(big.Int).SetBytes(used).Cmp(new(big.Int).SetBytes(limit)) > 0 {
+        return true
+    }
+    return false
+}
+
+func GetStateRoot(ts []*bean.Transaction) ([]byte, error) {
+    for _, tx := range ts {
+        from := bean.PubKey2Address(tx.Data.PubKey)
+        to := bean.Hex2Address(tx.Data.To)
+        gasUsed := tx.GetGasUsed()
+        nonce := tx.Data.Nonce
+        amount := new(big.Int).SetBytes(tx.Data.Amount)
+        prevSenderBalance, err := database.GetBalance(from)
+        if err != nil {
+            return nil, err
+        }
+        prevReceiverBalance, err := database.GetBalance(to)
+        if err != nil {
+            return nil, err
+        }
+        newSenderBalance := new(big.Int).Sub(prevSenderBalance, amount)
+        newSenderBalance = newSenderBalance.Sub(newSenderBalance, gasUsed)
+        newReceiverBalance := new(big.Int).Add(prevReceiverBalance, amount)
+
+    }
 }

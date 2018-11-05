@@ -4,14 +4,18 @@ import (
     "fmt"
     "BlockChainTest/mycrypto"
     "bytes"
-    "sync"
-    "BlockChainTest/database"
+    "encoding/hex"
 )
 
-var trie *StateTrie
-var once sync.Once
-
 var digits = [17]string{"", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"}
+
+func GetTrieKey(key []byte) string {
+    return hex.EncodeToString(key)
+}
+
+func GetTrieValue(value []byte) []byte {
+    return mycrypto.Hash256(value)
+}
 
 func getCommonPrefix(s1, s2 string) (int, string) {
     if s1 == "" || s2 == "" {
@@ -181,30 +185,19 @@ type StateTrie struct {
 }
 
 func NewStateTrie() *StateTrie {
-    tr := &StateTrie{}
-    tr.Build()
-    return tr
+    return &StateTrie{}
 }
 
-func GetStateTrie() *StateTrie {
-    once.Do(func() {
-        if trie == nil {
-            trie = NewStateTrie()
-        }
-    })
-    return trie
+func (t *StateTrie) Insert(key, value []byte) {
+    t.Root = insertNode(t.Root, GetTrieKey(key), GetTrieValue(value))
 }
 
-func (t *StateTrie) Insert(key string, value []byte) {
-    t.Root = insertNode(t.Root, key, value)
+func (t *StateTrie) Delete(key []byte) {
+    t.Root, _ = deleteNode(t.Root, GetTrieKey(key))
 }
 
-func (t *StateTrie) Delete(key string) {
-    t.Root, _ = deleteNode(t.Root, key)
-}
-
-func (t *StateTrie) Get(key string) []byte {
-    n := getNode(t.Root, key)
+func (t *StateTrie) Get(key []byte) []byte {
+    n := getNode(t.Root, GetTrieKey(key))
     if n == nil {
         return nil
     }
@@ -220,21 +213,5 @@ func (t *StateTrie) Validate() {
     v0 := make([]byte, len(root.Value))
     copy(v0, root.Value)
     root.resetValue()
-    fmt.Println()
     fmt.Println("result: ", bytes.Equal(v0, root.Value))
-}
-
-func (t *StateTrie) Build() error {
-    if t.Root != nil {
-        return nil
-    }
-    db:= database.GetDatabase()
-    //db.Open()
-    //defer db.Close()
-    itr := db.NewIterator()
-    defer itr.Release()
-    for itr.Next() {
-        t.Insert(itr.Key(), itr.Value())
-    }
-    return nil
 }

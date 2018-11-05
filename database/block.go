@@ -33,7 +33,7 @@ func SaveAllBlock(blocks []*bean.Block) error {
 }
 
 func loadBlock(db *Database, height int64) (*bean.Block, error) {
-	key := bean.HeightToKey(height)
+	key := bean.Height2Key(height)
 	elem, err := db.Get(key)
 	if err != nil {
 		return nil, err

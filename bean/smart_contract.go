@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"math/big"
 	"errors"
+	"BlockChainTest/mycrypto"
 )
 
 const (
@@ -47,6 +48,10 @@ func Big2Hash(x *big.Int) Hash {
 }
 
 type CommonAddress [AddressLength]byte
+
+func (addr CommonAddress) IsEmpty() bool {
+	return addr == CommonAddress{}
+}
 
 func Bytes2Address(b []byte) CommonAddress {
 	if b == nil {
@@ -95,8 +100,8 @@ func (addr CommonAddress) Big() *big.Int {
 	return new(big.Int).SetBytes(addr.Bytes())
 }
 
-func (addr CommonAddress) IsEmpty() bool {
-	return addr == CommonAddress{}
+func PubKey2Address(pubKey *mycrypto.Point) CommonAddress {
+	return Bytes2Address(pubKey.Bytes())
 }
 
 //type ByteCode []byte
