@@ -9,6 +9,7 @@ type BlockHeader struct {
 	GasUsed              []byte
 	Height               int64
 	Timestamp            int64
+	StateRoot            []byte
 	MerkleRoot           []byte
 	TxHashes             [][]byte
 	LeaderPubKey         *mycrypto.Point

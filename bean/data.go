@@ -41,6 +41,17 @@ func (tx *Transaction) Addr() Address {
     return Addr(tx.Data.PubKey)
 }
 
+func (tx *Transaction) GetGasQuantity() *big.Int {
+    return new(big.Int).SetInt64(int64(100))
+}
+
+func (tx *Transaction) GetGasUsed() *big.Int {
+    gasQuantity := tx.GetGasQuantity()
+    gasPrice := new(big.Int).SetBytes(tx.Data.GasPrice)
+    gasUsed := new(big.Int).Mul(gasQuantity, gasPrice)
+    return gasUsed
+}
+
 func (block *Block) BlockID() (string, error) {
     b, err := json.Marshal(block.Header)
     if err != nil {

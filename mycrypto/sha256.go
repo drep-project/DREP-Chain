@@ -2,16 +2,19 @@ package mycrypto
 
 import (
     "math/big"
-    "crypto/sha256"
 )
 
-func Hash256(text []byte) []byte {
-    h := sha256.New()
-    h.Write(text)
-    ret := h.Sum(nil)
-    hash := make([]byte, ByteLen)
-    copy(hash[ByteLen - len(ret):], ret)
-    return hash
+func Hash256(data ...[]byte) []byte {
+    //h := sha256.New()
+    //h.Write(text)
+    //ret := h.Sum(nil)
+    //hash := make([]byte, ByteLen)
+    //copy(hash[ByteLen - len(ret):], ret)
+    d := &state{rate: 136, outputLen: 32, dsbyte: 0x01}
+    for _, b := range data {
+        d.Write(b)
+    }
+    return d.Sum(nil)
 }
 
 func ConcatHash256(args ...[]byte) []byte {

@@ -7,17 +7,20 @@ import (
 	"sync"
 	"strconv"
 	"fmt"
-	"BlockChainTest/mycrypto"
-	"math/big"
 	"BlockChainTest/bean"
+	"math/big"
+	"BlockChainTest/mycrypto"
+	"BlockChainTest/trie"
 )
 
 var db *Database
 var once sync.Once
 
 type Database struct {
-	LevelDB *leveldb.DB
-	Name    string
+	Name      string
+	LevelDB   *leveldb.DB
+	Trie      *trie.StateTrie
+	StateRoot []byte
 }
 
 var databaseName = "local_data"
@@ -27,7 +30,12 @@ func NewDatabase() *Database {
 	if err != nil {
 		panic(err)
 	}
-	return &Database{ldb, databaseName}
+	return &Database{
+		Name: databaseName,
+		LevelDB: ldb,
+		Trie: trie.NewStateTrie(),
+		StateRoot: nil,
+	}
 }
 
 func GetDatabase() *Database {
@@ -90,90 +98,6 @@ func (db *Database) Delete(key string) error {
 	return db.LevelDB.Delete(k, nil)
 }
 
-func (db *Database) GetBlock(height int64) (*bean.Block, error) {
-	key := bean.Height2Key(height)
-	elem, err := db.Get(key)
-	if err != nil {
-		return nil, err
-	}
-	if block, ok := elem.(*bean.Block); ok {
-		return block, nil
-	} else {
-		return nil, ErrWrongBlockKey
-	}
-}
-
-func (db *Database) GetBlocksFrom(start int64) ([]*bean.Block, error) {
-	var (
-		currentBlock *bean.Block
-		err error
-		height = start
-		blocks = make([]*bean.Block, 0)
-	)
-	for err == nil {
-		currentBlock, err = db.GetBlock(start)
-		if err == nil {
-			blocks = append(blocks, currentBlock)
-		}
-		height += 1
-	}
-	return blocks, nil
-}
-
-func (db *Database) GetAllBlocks() ([]*bean.Block, error) {
-	return db.GetBlocksFrom(int64(0))
-}
-
-func (db *Database) PutBlock(block *bean.Block) error {
-	_, _, err := db.Put(block)
-	return err
-}
-
-func (db *Database) GetMaxHeight() (int64, error) {
-	key := mycrypto.Hash256([]byte("max_height"))
-	value, err := db.Load(key)
-	if err != nil {
-		return -1, err
-	}
-	return new(big.Int).SetBytes(value).Int64(), nil
-}
-
-func (db *Database) PutMaxHeight(height int64) error {
-	key := mycrypto.Hash256([]byte("max_height"))
-	value := new(big.Int).SetInt64(height).Bytes()
-	return db.Store(key, value)
-}
-
-func (db *Database) GetBalance(addr bean.CommonAddress) (*big.Int, error) {
-	key := mycrypto.Hash256([]byte("balance_" + addr.Hex()))
-	value, err := db.Load(key)
-	if err != nil {
-		return nil, err
-	}
-	return new(big.Int).SetBytes(value), nil
-}
-
-func (db *Database) PutBalance(addr bean.CommonAddress, balance *big.Int) error {
-	key := mycrypto.Hash256([]byte("balance_" + addr.Hex()))
-	value := balance.Bytes()
-	return db.Store(key, value)
-}
-
-func (db *Database) GetNonce(addr bean.CommonAddress) (int64, error) {
-	key := mycrypto.Hash256([]byte("nonce_" + addr.Hex()))
-	value, err := db.Load(key)
-	if err != nil {
-		return -1, err
-	}
-	return new(big.Int).SetBytes(value).Int64(), nil
-}
-
-func (db *Database) PutNonce(addr bean.CommonAddress, nonce int64) error {
-	key := mycrypto.Hash256([]byte("balance_" + addr.Hex()))
-	value := new(big.Int).SetInt64(nonce).Bytes()
-	return db.Store(key, value)
-}
-
 func (db *Database) Store(key, value []byte) error {
 	return db.LevelDB.Put(key, value, nil)
 }
@@ -207,8 +131,8 @@ func (itr *Iterator) Next() bool {
 	return itr.Itr.Next()
 }
 
-func (itr *Iterator) Key() string {
-	return string(itr.Itr.Key())
+func (itr *Iterator) Key() []byte {
+	return itr.Itr.Key()
 }
 
 func (itr *Iterator) Value() []byte {
@@ -221,4 +145,119 @@ func (itr *Iterator) Elem() (DBElem, error) {
 
 func (itr *Iterator) Release() {
 	itr.Itr.Release()
+}
+
+func GetBlock(height int64) (*bean.Block, error) {
+	db := GetDatabase()
+	key := bean.Height2Key(height)
+	elem, err := db.Get(key)
+	if err != nil {
+		return nil, err
+	}
+	if block, ok := elem.(*bean.Block); ok {
+		return block, nil
+	} else {
+		return nil, ErrWrongBlockKey
+	}
+}
+
+func GetBlocksFrom(start int64) ([]*bean.Block, error) {
+	var (
+		currentBlock *bean.Block
+		err error
+		height = start
+		blocks = make([]*bean.Block, 0)
+	)
+	for err == nil {
+		currentBlock, err = GetBlock(start)
+		if err == nil {
+			blocks = append(blocks, currentBlock)
+		}
+		height += 1
+	}
+	return blocks, nil
+}
+
+func GetAllBlocks() ([]*bean.Block, error) {
+	return GetBlocksFrom(int64(0))
+}
+
+func GetHighestBlock() (*bean.Block, error) {
+	maxHeight, err := GetMaxHeight()
+	if err != nil {
+		return nil, err
+	}
+	return GetBlock(maxHeight)
+}
+
+func PutBlock(block *bean.Block) error {
+	db := GetDatabase()
+	_, _, err := db.Put(block)
+	return err
+}
+
+func GetMaxHeight() (int64, error) {
+	db := GetDatabase()
+	key := mycrypto.Hash256([]byte("max_height"))
+	value, err := db.Load(key)
+	if err != nil {
+		return -1, err
+	}
+	return new(big.Int).SetBytes(value).Int64(), nil
+}
+
+func PutMaxHeight(height int64) error {
+	db := GetDatabase()
+	key := mycrypto.Hash256([]byte("max_height"))
+	value := new(big.Int).SetInt64(height).Bytes()
+	err := db.Store(key, value)
+	if err != nil {
+		return err
+	}
+	db.Trie.Insert(key, value)
+	return nil
+}
+
+func GetBalance(addr bean.CommonAddress) (*big.Int, error) {
+	db := GetDatabase()
+	key := mycrypto.Hash256([]byte("balance_" + addr.Hex()))
+	value, err := db.Load(key)
+	if err != nil {
+		return nil, err
+	}
+	return new(big.Int).SetBytes(value), nil
+}
+
+func PutBalance(addr bean.CommonAddress, balance *big.Int) ([]byte, []byte, error) {
+	db := GetDatabase()
+	key := mycrypto.Hash256([]byte("balance_" + addr.Hex()))
+	value := balance.Bytes()
+	err := db.Store(key, value)
+	if err != nil {
+		return nil, nil, err
+	}
+	db.Trie.Insert(key, value)
+	return key, value, nil
+}
+
+func GetNonce(addr bean.CommonAddress) (int64, error) {
+	db := GetDatabase()
+	key := mycrypto.Hash256([]byte("nonce_" + addr.Hex()))
+	value, err := db.Load(key)
+	if err != nil {
+		return -1, err
+	}
+	return new(big.Int).SetBytes(value).Int64(), nil
+}
+
+func PutNonce(addr bean.CommonAddress, nonce int64) ([]byte, []byte, error) {
+	db := GetDatabase()
+	key := mycrypto.Hash256([]byte("nonce_" + addr.Hex()))
+	value := new(big.Int).SetInt64(nonce).Bytes()
+	err := db.Store(key, value)
+	if err != nil {
+		return nil, nil, err
+	}
+	db.Trie.Insert(key, value)
+	return key, value, nil
 }
