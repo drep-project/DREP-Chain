@@ -20,7 +20,6 @@ type Database struct {
 	Name      string
 	LevelDB   *leveldb.DB
 	Trie      *trie.StateTrie
-	StateRoot []byte
 }
 
 var databaseName = "local_data"
@@ -34,7 +33,6 @@ func NewDatabase() *Database {
 		Name: databaseName,
 		LevelDB: ldb,
 		Trie: trie.NewStateTrie(),
-		StateRoot: nil,
 	}
 }
 
@@ -260,4 +258,9 @@ func PutNonce(addr bean.CommonAddress, nonce int64) ([]byte, []byte, error) {
 	}
 	db.Trie.Insert(key, value)
 	return key, value, nil
+}
+
+func GetStateRoot() []byte {
+	db := GetDatabase()
+	return db.Trie.Root.Value
 }

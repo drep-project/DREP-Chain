@@ -10,6 +10,8 @@ import (
     "encoding/json"
     "errors"
     "time"
+    "fmt"
+    "BlockChainTest/trie"
 )
 
 var (
@@ -124,14 +126,23 @@ func GenerateBlock() (*bean.Block, error) {
         return nil, errors.New("gas used exceeds gas limit")
     }
     timestamp := time.Now().Unix()
-
+    stateRoot := GetStateRoot(ts)
+    txHashes, err := GetTxHashes(ts)
+    if err != nil {
+        return nil, err
+    }
+    merkle := trie.NewMerkle(txHashes)
+    merkleRoot := merkle.Root.Hash
     return &bean.Block{
         Header: &bean.BlockHeader{
             Version: 1,
             PreviousHash: previousHash,
             GasLimit: gasLimit,
             GasUsed: gasUsed,
-
+            Timestamp: timestamp,
+            StateRoot: stateRoot,
+            MerkleRoot: merkleRoot,
+            TxHashes: txHashes,
             Height: height,
             LeaderPubKey:GetPubKey(),
         },
@@ -173,7 +184,7 @@ func ExceedGasLimit(used, limit []byte) bool {
     return false
 }
 
-func GetStateRoot(ts []*bean.Transaction) ([]byte, error) {
+func GetStateRoot(ts []*bean.Transaction) []byte {
     for _, tx := range ts {
         from := bean.PubKey2Address(tx.Data.PubKey)
         to := bean.Hex2Address(tx.Data.To)
@@ -182,15 +193,30 @@ func GetStateRoot(ts []*bean.Transaction) ([]byte, error) {
         amount := new(big.Int).SetBytes(tx.Data.Amount)
         prevSenderBalance, err := database.GetBalance(from)
         if err != nil {
-            return nil, err
+            fmt.Println("err: ", err)
         }
         prevReceiverBalance, err := database.GetBalance(to)
         if err != nil {
-            return nil, err
+            fmt.Println("err: ", err)
         }
         newSenderBalance := new(big.Int).Sub(prevSenderBalance, amount)
         newSenderBalance = newSenderBalance.Sub(newSenderBalance, gasUsed)
         newReceiverBalance := new(big.Int).Add(prevReceiverBalance, amount)
-
+        database.PutBalance(from, newSenderBalance)
+        database.PutBalance(to, newReceiverBalance)
+        database.PutNonce(from, nonce)
     }
+    return database.GetStateRoot()
+}
+
+func GetTxHashes(ts []*bean.Transaction) ([][]byte, error) {
+    txHashes := make([][]byte, len(ts))
+    for i, tx := range ts {
+        b, err := json.Marshal(tx.Data)
+        if err != nil {
+            return nil, err
+        }
+        txHashes[i] = mycrypto.Hash256(b)
+    }
+    return txHashes, nil
 }
