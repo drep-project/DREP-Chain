@@ -50,12 +50,12 @@ func (block *Block) BlockID() (string, error) {
     return id, nil
 }
 
-func HeightToKey(height int64) string {
+func Height2Key(height int64) string {
     return hex.EncodeToString(new(big.Int).SetInt64(height).Bytes())
 }
 
 func (block *Block) DBKey() string {
-    return HeightToKey(block.Header.Height)
+    return Height2Key(block.Header.Height)
 }
 
 func (block *Block) DBMarshal() ([]byte, error) {
