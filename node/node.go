@@ -25,15 +25,7 @@ var (
 
 type Node struct {
     prvKey *mycrypto.PrivateKey
-    //wg concurrent.CountDownLatch
-    discoverWg *sync.WaitGroup
-    fetchLock sync.Mutex
-    fetchCond *sync.Cond
     curMaxHeight int64
-    //prep  bool
-    //prepLock sync.Mutex
-    //prepCond *sync.Cond
-    discovering bool
     pingLatches map[bean.Address]concurrent.CountDownLatch
 }
 
@@ -53,9 +45,9 @@ func GetNode() *Node {
 
 func (n *Node) Start() {
     if store.IsStart {
-        n.discovering = false
+        //n.discovering = false
     } else {
-        n.discovering = true
+        //n.discovering = true
         n.discover()
         n.initState()
         n.fetchBlocks()
@@ -170,7 +162,7 @@ func (n *Node) processBlock(block *bean.Block) *big.Int {
     return store.ExecuteTransactions(block)
 }
 
-func (n *Node) discover() {
+func (n *Node) discover() bool {
     fmt.Println("discovering 1")
     // todo
     ips := network.GetIps()
@@ -186,13 +178,22 @@ func (n *Node) discover() {
         msg = &bean.PeerInfo{Pk: n.prvKey.PubKey, Ip: ips[0], Port: 55555}
     }
     peers := []*network.Peer{store.Admin}
-    fmt.Println("discovering 2")
-    n.discoverWg = &sync.WaitGroup{}
-    n.discoverWg.Add(1)
     network.SendMessage(peers, msg)
     fmt.Println("discovering 3")
-    n.discoverWg.Wait()
-    fmt.Println("discovering 4")
+    if msg := pool.ObtainOne(func(msg interface{}) bool {
+        _, ok := msg.(*bean.FirstPeerInfoList)
+        return ok
+    }, 5 * time.Second); msg != nil {
+        if pil, ok := msg.(*bean.FirstPeerInfoList); ok {
+            for _, t := range pil.List {
+                store.AddPeer(&network.Peer{IP:network.IP(t.Ip), Port:network.Port(t.Port), PubKey:t.Pk})
+            }
+        }
+        return true
+    } else {
+        fmt.Println("Cannot get peers")
+        return false
+    }
 }
 
 func (n *Node) ProcessNewPeer(newcomer *bean.PeerInfo) {
@@ -211,7 +212,7 @@ func (n *Node) ProcessNewPeer(newcomer *bean.PeerInfo) {
     peerList := &bean.PeerInfoList{List:list}
     fmt.Println("ProcessNewPeer ", *peerList, peers, newcomer)
     network.SendMessage([]*network.Peer{newPeer}, peerList)
-    network.SendMessage(peers, &bean.PeerInfoList{List:[]*bean.PeerInfo{newcomer}})
+    network.SendMessage(peers, &bean.FirstPeerInfoList{List:[]*bean.PeerInfo{newcomer}})
 }
 
 func (n *Node) ProcessPeerList(list *bean.PeerInfoList) {
@@ -219,22 +220,12 @@ func (n *Node) ProcessPeerList(list *bean.PeerInfoList) {
     for _, t := range list.List {
         store.AddPeer(&network.Peer{IP:network.IP(t.Ip), Port:network.Port(t.Port), PubKey:t.Pk})
     }
-    fmt.Println("discovering 6")
-    if n.discovering {
-        n.discoverWg.Done()
-    }
-    fmt.Println("discovering 7")
+    //if n.discovering {
+    //    n.discoverWg.Done()
+    //}
 }
 
 func (n *Node) fetchBlocks() {
-    //peers := store.GetPeers()
-    //if len(peers) == 0 {
-    //    log.Errorf("Fuck")
-    //    return
-    //}
-    n.fetchCond = sync.NewCond(&n.fetchLock)
-    n.fetchLock.Lock()
-    defer n.fetchLock.Unlock()
     n.curMaxHeight = 2<<60
     req := &bean.BlockReq{Height:store.GetCurrentBlockHeight(), Pk:store.GetPubKey()}
     //network.SendMessage([]*network.Peer{peers[0]}, req)
@@ -242,7 +233,11 @@ func (n *Node) fetchBlocks() {
     fmt.Println("fetching 1")
     for n.curMaxHeight != store.GetCurrentBlockHeight() {
         fmt.Println("fetching 2: ", n.curMaxHeight, store.GetCurrentBlockHeight())
-        n.fetchCond.Wait()
+        if msg := pool.ObtainOne(func(i interface{}) bool {
+
+        }, 5 * time.Second); msg != nil {
+
+        }
         fmt.Println("fetching 3: ", n.curMaxHeight, store.GetCurrentBlockHeight())
     }
 }
