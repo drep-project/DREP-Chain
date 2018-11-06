@@ -53,31 +53,17 @@ func GetMaxHeight(w http.ResponseWriter, r *http.Request) {
 //}
 
 func GetBalance(w http.ResponseWriter, r *http.Request) {
-    uri := r.RequestURI
     // find param string in uri
-    s := strings.Split(uri, "?")
+    _, params := analysisParamWithUri(r.RequestURI)
 
-    p := s[1]
-    params := strings.Split(p, "&")
-
-    dict := make(map[string] string, 50)
-    for _, param := range params {
-        argument := strings.Split(param, "=")
-
-        key := argument[0]
-        value := argument[1]
-        dict[key] = value
-    }
-    fmt.Println(dict)
-
-    address := dict["address"]
+    address := params["address"]
     if len(address) == 0 {
         resp := &Response{Code:"400", Body:"param format incorrect"}
         writeResponse(w, resp)
         return
     }
 
-    fmt.Println(address)
+    fmt.Println("BalanceAddress: ", address)
     ca := bean.Hex2Address(address)
     database.PutBalance(ca, big.NewInt(1314))
 
@@ -142,4 +128,26 @@ func writeResponse(w http.ResponseWriter, resp *Response) {
         fmt.Println("error occured resp marshal:", err)
     }
     w.Write(b)
+}
+
+func analysisParamWithUri(uri string) (methodName string, params map[string] string)  {
+    s := strings.Split(uri, "?")
+    p := s[1]
+    parts := strings.Split(p, "&")
+
+    dict := make(map[string] string, 50)
+    for _, param := range parts {
+        argument := strings.Split(param, "=")
+
+        key := argument[0]
+        value := argument[1]
+        dict[key] = value
+    }
+    name := strings.Trim(s[0], "/")
+    fmt.Println("MethodName: ", name)
+
+    jsonBytes, _ := json.Marshal(dict)
+    json := string(jsonBytes)
+    fmt.Printf("Params:\n %s\n", json)
+    return name, dict
 }
