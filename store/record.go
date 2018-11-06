@@ -19,6 +19,7 @@ func ForwardBlock(id string) {
 }
 
 func ForwardedBlock(id string) bool {
+    // TODO first check db and second check the pool
     v, exists := forwardedBlocks[id]
     return v && exists
 }
