@@ -21,21 +21,77 @@ type Response struct {
     Body string `json:"params"`
 }
 
-//func GetBlock(w http.ResponseWriter, r *http.Request) {
-//
-//}
+func GetBlock(w http.ResponseWriter, r *http.Request) {
+    block, err := database.GetBlock(1)
+    if err != nil{
+        errMsg := "error occurred during database.GetBlock"
+        fmt.Println(errMsg, ": ", err)
+        resp := &Response{Code:"400", Body:errMsg}
+        writeResponse(w, resp)
+        return
+    }
+    bytes, err := json.Marshal(block)
+    if err != nil{
+        errMsg := "error occurred during json.Marshal(block)"
+        fmt.Println(errMsg, ": ", err)
+        resp := &Response{Code:"400", Body:errMsg}
+        writeResponse(w, resp)
+        return
+    }
+    body := string(bytes)
+    resp := &Response{Code:"200", Body:body}
+    writeResponse(w, resp)
+}
+
 //
 //func GetBlocksFrom(w http.ResponseWriter, r *http.Request){
 //
 //}
 //
-//func GetAllBlocks(w http.ResponseWriter, r *http.Request) {
-//
-//}
-//
-//func GetHighestBlock(w http.ResponseWriter, r *http.Request) {
-//
-//}
+func GetAllBlocks(w http.ResponseWriter, r *http.Request) {
+    blocks, err := database.GetAllBlocks()
+
+    if err != nil {
+        errMsg := "error occurred during database.GetAllBlocks"
+        fmt.Println(errMsg, ": ", err)
+        resp := &Response{Code:"400", Body:errMsg}
+        writeResponse(w, resp)
+        return
+    }
+    bytes, err := json.Marshal(blocks)
+    if err != nil{
+        errMsg := "error occurred during json.Marshal(block)"
+        fmt.Println(errMsg, ": ", err)
+        resp := &Response{Code:"400", Body:errMsg}
+        writeResponse(w, resp)
+        return
+    }
+    body := string(bytes)
+    resp := &Response{Code:"200", Body:body}
+    writeResponse(w, resp)
+}
+
+func GetHighestBlock(w http.ResponseWriter, r *http.Request) {
+    block, err := database.GetHighestBlock()
+    if err != nil {
+        errMsg := "error occurred during database.GetHighestBlock"
+        fmt.Println(errMsg, ": ", err)
+        resp := &Response{Code:"400", Body:errMsg}
+        writeResponse(w, resp)
+        return
+    }
+    bytes, err := json.Marshal(block)
+    if err != nil{
+        errMsg := "error occurred during json.Marshal(block)"
+        fmt.Println(errMsg, ": ", err)
+        resp := &Response{Code:"400", Body:errMsg}
+        writeResponse(w, resp)
+        return
+    }
+    body := string(bytes)
+    resp := &Response{Code:"200", Body:body}
+    writeResponse(w, resp)
+}
 
 //func PutBlock(w http.ResponseWriter, r *http.Request) {
 //
@@ -54,7 +110,7 @@ func GetMaxHeight(w http.ResponseWriter, r *http.Request) {
 
 func GetBalance(w http.ResponseWriter, r *http.Request) {
     // find param string in uri
-    _, params := analysisParamWithUri(r.RequestURI)
+    _, params := analysisGetReqParamWithUri(r.RequestURI)
 
     address := params["address"]
     if len(address) == 0 {
@@ -80,15 +136,28 @@ func GetBalance(w http.ResponseWriter, r *http.Request) {
 //}
 
 func GetNonce(w http.ResponseWriter, r *http.Request) {
-    address := bean.CommonAddress{}
-    nonce, _ := database.GetNonce(address)
+    _, params := analysisGetReqParamWithUri(r.RequestURI)
+    address := params["address"]
+    if len(address) == 0 {
+        resp := &Response{Code:"400", Body:"param format incorrect"}
+        writeResponse(w, resp)
+        return
+    }
+    fmt.Println("NonceAddress: ", address)
+
+    ca := bean.Hex2Address(address)
+    database.PutNonce(ca, 13131313)
+
+    nonce, _ := database.GetNonce(ca)
     body := "nonce:" + strconv.FormatInt(nonce, 10)
     resp := &Response{Code:"200", Body:body}
     writeResponse(w, resp)
 }
 
 //func PutNonce(w http.ResponseWriter, r *http.Request) {
-//
+//       address := "1A2B3C"
+//       ca := bean.Hex2Address(address)
+//       database.PutNonce(ca, 13131313)
 //}
 
 func GetStateRoot(w http.ResponseWriter, r *http.Request) {
@@ -99,6 +168,8 @@ func GetStateRoot(w http.ResponseWriter, r *http.Request) {
 }
 
 func HttpStart() {
+    http.HandleFunc("/GetAllBlocks", GetAllBlocks)
+    http.HandleFunc("/GetBlock", GetBlock)
     http.HandleFunc("/GetMaxHeight", GetMaxHeight)
     http.HandleFunc("/GetBalance", GetBalance)
     http.HandleFunc("/GetNonce", GetNonce)
@@ -130,7 +201,7 @@ func writeResponse(w http.ResponseWriter, resp *Response) {
     w.Write(b)
 }
 
-func analysisParamWithUri(uri string) (methodName string, params map[string] string)  {
+func analysisGetReqParamWithUri(uri string) (methodName string, params map[string] string)  {
     s := strings.Split(uri, "?")
     p := s[1]
     parts := strings.Split(p, "&")
