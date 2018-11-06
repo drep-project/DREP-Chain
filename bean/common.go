@@ -20,6 +20,7 @@ const (
     MsgTypePing
     MsgTypePong
     MsgTypeOfflinePeers
+    MsgTypeFirstPeerInfoList
 )
 
 type Address string
