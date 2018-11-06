@@ -46,6 +46,8 @@ func Serialize(message interface{}) (*Serializable, error) {
 		serializable.Header = MsgTypePong
 	case *OfflinePeers:
 		serializable.Header = MsgTypeOfflinePeers
+	case *FirstPeerInfoList:
+		serializable.Header = MsgTypeFirstPeerInfoList
 	default:
 		return nil, errors.New("bad message type")
 	}
@@ -175,6 +177,13 @@ func Deserialize(msg []byte) (*Serializable, interface{}, error) {
 		peers := &OfflinePeers{}
 		if err := json.Unmarshal(body, peers); err == nil {
 			return serializable, peers, nil
+		} else {
+			return nil, nil, err
+		}
+	case MsgTypeFirstPeerInfoList:
+		peer := &FirstPeerInfoList{}
+		if err := json.Unmarshal(body, peer); err == nil {
+			return serializable, peer, nil
 		} else {
 			return nil, nil, err
 		}
