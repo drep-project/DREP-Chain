@@ -71,3 +71,15 @@ func (p *MessagePool) Push(msg interface{})  {
     p.messages.Add(msg)
     p.cond.Broadcast()
 }
+
+func (p *MessagePool) Contains(cp func(interface{})bool) bool {
+    p.lock.Lock()
+    defer p.lock.Unlock()
+    for it := p.messages.Iterator(); it.HasNext(); {
+        m := it.Next()
+        if cp(m) {
+            return true
+        }
+    }
+    return false
+}

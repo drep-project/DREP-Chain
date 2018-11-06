@@ -24,3 +24,7 @@ func ObtainOne(cp func(interface{})bool, duration time.Duration) interface{} {
 func Push(msg interface{})  {
     pool.Push(msg)
 }
+
+func Contains(cp func(interface{})bool) bool {
+    return pool.Contains(cp)
+}
