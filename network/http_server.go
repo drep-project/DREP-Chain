@@ -18,12 +18,18 @@ type Request struct {
 }
 
 type Response struct {
-    Code string `json:"method"`
-    Body string `json:"params"`
+    Code string `json:"code"`
+    Body string `json:"body"`
 }
 
 func GetBlock(w http.ResponseWriter, r *http.Request) {
-    block, err := database.GetBlock(1)
+    params := analysisReqParam(r)
+    var height int64
+    if value, ok := params["start"].(int64); ok {
+        height = value
+    }
+
+    block, err := database.GetBlock(height)
     if err != nil{
         errMsg := "error occurred during database.GetBlock"
         fmt.Println(errMsg, ": ", err)
@@ -45,9 +51,33 @@ func GetBlock(w http.ResponseWriter, r *http.Request) {
 }
 
 
-//func GetBlocksFrom(w http.ResponseWriter, r *http.Request){
-//
-//}
+func GetBlocksFrom(w http.ResponseWriter, r *http.Request){
+    params := analysisReqParam(r)
+    var start int64
+    if value, ok := params["start"].(int64); ok {
+        start = value
+    }
+
+    blocks, err := database.GetBlocksFrom(start)
+    if err != nil{
+        errMsg := "error occurred during GetBlocksFrom"
+        fmt.Println(errMsg, ": ", err)
+        resp := &Response{Code:"400", Body:errMsg}
+        writeResponse(w, resp)
+        return
+    }
+    bytes, err := json.Marshal(blocks)
+    if err != nil{
+        errMsg := "error occurred during json.Marshal(block)"
+        fmt.Println(errMsg, ": ", err)
+        resp := &Response{Code:"400", Body:errMsg}
+        writeResponse(w, resp)
+        return
+    }
+    body := string(bytes)
+    resp := &Response{Code:"200", Body:body}
+    writeResponse(w, resp)
+}
 
 func GetAllBlocks(w http.ResponseWriter, _ *http.Request) {
     blocks, err := database.GetAllBlocks()
@@ -98,12 +128,7 @@ func GetHighestBlock(w http.ResponseWriter, _ *http.Request) {
 //
 //}
 
-func GetMaxHeight(w http.ResponseWriter, r *http.Request) {
-    params := analysisReqParam(r)
-    var height int64
-    if value, ok := params["address"].(int64); ok {
-        height = value
-    }
+func GetMaxHeight(w http.ResponseWriter, _ *http.Request) {
 
     height, err := database.GetMaxHeight()
     if err != nil {
@@ -233,6 +258,7 @@ var methodsMap = map[string] http.HandlerFunc {
     "/GetBlock": GetBlock,
     "/GetHighestBlock": GetHighestBlock,
     "/GetMaxHeight": GetMaxHeight,
+    "/GetBlocksFrom": GetBlocksFrom,
     "/PutMaxHeight": PutMaxHeight,
     "/GetBalance": GetBalance,
     "/PutBalance": PutBalance,
