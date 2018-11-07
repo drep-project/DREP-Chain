@@ -110,26 +110,11 @@ func GetMaxHeight(w http.ResponseWriter, r *http.Request) {
 //}
 
 func GetBalance(w http.ResponseWriter, r *http.Request) {
-    // find param string in uri
-    //_, params := analysisGetReqParamWithUri(r.RequestURI)
+    // find param in http.Request
     var address string
-    r.ParseForm()
-    if r.Method == "GET" {
-        fmt.Println("method:", r.Method)
-        fmt.Println("params", r.Form["address"])
-        address = r.Form["address"][0]
-    } else if r.Method == "POST" {
-        result, _ := ioutil.ReadAll(r.Body)
-        r.Body.Close()
-        fmt.Printf("%s\n", result)
-
-        var params map[string] interface{}
-        json.Unmarshal(result, &params)
-        //m := f.(map[string]interface{})
-        analysisParamsType(params)
-        if value, ok := params["address"].(string); ok {
-            address = value
-        }
+    params := analysisReqParam(r)
+    if value, ok := params["address"].(string); ok {
+        address = value
     }
 
     if len(address) == 0 {
@@ -218,6 +203,30 @@ func writeResponse(w http.ResponseWriter, resp *Response) {
         fmt.Println("error occured resp marshal:", err)
     }
     w.Write(b)
+}
+
+func analysisReqParam(r *http.Request) map[string] interface{} {
+    params := make(map[string] interface{}, 50)
+    switch r.Method {
+    case "GET":
+        fmt.Println("method: GET")
+        r.ParseForm()
+        for k, v := range(r.Form) {
+            fmt.Println("value: ", v)
+            // url.values is a slice of string
+            params[k] = v[0]
+        }
+    case "POST":
+        fmt.Println("method: POST")
+        result, _ := ioutil.ReadAll(r.Body)
+        r.Body.Close()
+        fmt.Printf("%s\n", result)
+        json.Unmarshal(result, &params)
+        //m := f.(map[string]interface{})
+        analysisParamsType(params)
+    }
+    fmt.Println("params: ", params)
+    return params
 }
 
 func analysisGetReqParamWithUri(uri string) (methodName string, params map[string] string)  {
