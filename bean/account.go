@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"errors"
 	"BlockChainTest/mycrypto"
+	"encoding/json"
 )
 
 const (
@@ -104,71 +105,75 @@ func PubKey2Address(pubKey *mycrypto.Point) CommonAddress {
 	return Bytes2Address(pubKey.Bytes())
 }
 
-//type ByteCode []byte
-//
-//func CodeHash(byteCode ByteCode) Hash {
-//	b := mycrypto.Hash256(byteCode)
-//	return Bytes2Hash(b)
-//}
-//
-//func CodeAddr(byteCode ByteCode) CommonAddress {
-//	return Bytes2Address(mycrypto.Hash256(byteCode))
-//}
-//
-//func Bytes2Key(b []byte) string {
-//	return hex.EncodeToString(mycrypto.Hash256(b))
-//}
-//
-//func Address2Key(addr CommonAddress) string {
-//	return Bytes2Key(addr.Bytes())
-//}
-//
-//func (account *ContractAccount) DBKey() string {
-//	return Bytes2Key(account.Addr)
-//}
-//
-//func (account *ContractAccount) DBMarshal() ([]byte, error) {
-//	_b, err := proto.Marshal(account)
-//	if err != nil {
-//		return nil, err
-//	}
-//	b := make([]byte, len(_b) + 1)
-//	b[0] = byte(MsgTypeContractAccount)
-//	copy(b[1:], _b)
-//	return b, nil
-//}
-//
-//func (account *ContractAccount) Address() CommonAddress {
-//	return Bytes2Address(account.Addr)
-//}
-//
-//func (account *ContractAccount) Exists() bool {
-//	return !account.Address().IsEmpty()
-//}
-//
-//func (log *Log) DBKey() string {
-//	return Address2Key(log.Address())
-//}
-//
-//func (log *Log) DBMarshal() ([]byte, error) {
-//	_b, err := proto.Marshal(log)
-//	if err != nil {
-//		return nil, err
-//	}
-//	b := make([]byte, len(_b) + 1)
-//	b[0] = byte(MsgTypeLog)
-//	copy(b[1:], _b)
-//	return b, nil
-//}
-//
-//func (log *Log) Address() CommonAddress {
-//	b := make([]byte, len(log.ContractAddr) + len(log.TxHash))
-//	copy(b, log.ContractAddr)
-//	copy(b[len(log.ContractAddr):], log.TxHash)
-//	b = mycrypto.Hash256(b)
-//	return Bytes2Address(b)
-//}
-//
-//func (log *Log) Exists() bool {
-//	return !log.Address().IsEmpty()
-//}
+type ByteCode []byte
+
+func CodeHash(byteCode ByteCode) Hash {
+	b := mycrypto.Hash256(byteCode)
+	return Bytes2Hash(b)
+}
+
+func CodeAddr(byteCode ByteCode) CommonAddress {
+	return Bytes2Address(mycrypto.Hash256(byteCode))
+}
+
+func Bytes2Key(b []byte) string {
+	return hex.EncodeToString(mycrypto.Hash256(b))
+}
+
+func Address2Key(addr CommonAddress) string {
+	return Bytes2Key(addr.Bytes())
+}
+
+func (account *Account) Address() CommonAddress {
+	return Bytes2Address(account.Addr)
+}
+
+func (account *Account) Exists() bool {
+	return !account.Address().IsEmpty()
+}
+
+func MarshalAccount(account *Account) ([]byte, error) {
+	b, err := json.Marshal(account)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func UnmarshalAccount(b []byte) (*Account, error) {
+	account := &Account{}
+	err := json.Unmarshal(b, account)
+	if err != nil {
+		return nil, err
+	}
+	return account, nil
+}
+
+func (log *Log) Address() CommonAddress {
+	b := make([]byte, len(log.ContractAddr) + len(log.TxHash))
+	copy(b, log.ContractAddr)
+	copy(b[len(log.ContractAddr):], log.TxHash)
+	b = mycrypto.Hash256(b)
+	return Bytes2Address(b)
+}
+
+func (log *Log) Exists() bool {
+	return !log.Address().IsEmpty()
+}
+
+func MarshalLog(log *Log) ([]byte, error) {
+	b, err := json.Marshal(log)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func UnmarshalLog(b []byte) (*Log, error) {
+	log := &Log{}
+	err := json.Unmarshal(b, log)
+	if err != nil {
+		return nil, err
+	}
+	return log, nil
+}

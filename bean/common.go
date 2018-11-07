@@ -21,6 +21,8 @@ const (
     MsgTypePong
     MsgTypeOfflinePeers
     MsgTypeFirstPeerInfoList
+    MsgTypeAccount
+    MsgTypeLog
 )
 
 type Address string
