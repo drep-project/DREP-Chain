@@ -9,6 +9,7 @@ import (
     "BlockChainTest/bean"
     "math/big"
     "strings"
+    "io/ioutil"
 )
 
 type Request struct {
@@ -110,9 +111,27 @@ func GetMaxHeight(w http.ResponseWriter, r *http.Request) {
 
 func GetBalance(w http.ResponseWriter, r *http.Request) {
     // find param string in uri
-    _, params := analysisGetReqParamWithUri(r.RequestURI)
+    //_, params := analysisGetReqParamWithUri(r.RequestURI)
+    var address string
+    r.ParseForm()
+    if r.Method == "GET" {
+        fmt.Println("method:", r.Method)
+        fmt.Println("params", r.Form["address"])
+        address = r.Form["address"][0]
+    } else if r.Method == "POST" {
+        result, _ := ioutil.ReadAll(r.Body)
+        r.Body.Close()
+        fmt.Printf("%s\n", result)
 
-    address := params["address"]
+        var params map[string] interface{}
+        json.Unmarshal(result, &params)
+        //m := f.(map[string]interface{})
+        analysisParamsType(params)
+        if value, ok := params["address"].(string); ok {
+            address = value
+        }
+    }
+
     if len(address) == 0 {
         resp := &Response{Code:"400", Body:"param format incorrect"}
         writeResponse(w, resp)
@@ -129,11 +148,11 @@ func GetBalance(w http.ResponseWriter, r *http.Request) {
     writeResponse(w, resp)
 }
 
-//func PutBalance(w http.ResponseWriter, r *http.Request) {
-//    address := "1A2B3C"
-//    ca := bean.Hex2Address(address)
-//    database.PutBalance(ca, big.NewInt(13131313))
-//}
+func PutBalance(w http.ResponseWriter, r *http.Request) {
+   address := "1A2B3C"
+   ca := bean.Hex2Address(address)
+   database.PutBalance(ca, big.NewInt(13131313))
+}
 
 func GetNonce(w http.ResponseWriter, r *http.Request) {
     _, params := analysisGetReqParamWithUri(r.RequestURI)
@@ -221,4 +240,24 @@ func analysisGetReqParamWithUri(uri string) (methodName string, params map[strin
     json := string(jsonBytes)
     fmt.Printf("Params:\n %s\n", json)
     return name, dict
+}
+
+func analysisParamsType(params map[string] interface{})  {
+    for k, v := range params {
+        switch vType := v.(type) {
+        case string:
+            fmt.Println(k, "is string", vType)
+        case int:
+            fmt.Println(k, "is int", vType)
+        case float64:
+            fmt.Println(k, "is float64", vType)
+        case []interface{}:
+            fmt.Println(k, "is an array:")
+            for i, u := range vType {
+                fmt.Println(i, u)
+            }
+        default:
+            fmt.Println(k, "is an unkown Type to handle")
+        }
+    }
 }
