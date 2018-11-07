@@ -216,48 +216,96 @@ func PutMaxHeight(height int64) error {
 	return nil
 }
 
-func GetBalance(addr bean.CommonAddress) (*big.Int, error) {
+func GetAccount(addr bean.CommonAddress) (*bean.Account, error) {
 	db := GetDatabase()
-	key := mycrypto.Hash256([]byte("balance_" + addr.Hex()))
+	key := mycrypto.Hash256([]byte("account_" + addr.Hex()))
 	value, err := db.Load(key)
 	if err != nil {
 		return nil, err
 	}
-	return new(big.Int).SetBytes(value), nil
+	account, err := bean.UnmarshalAccount(value)
+	if err != nil {
+		return nil, err
+	}
+	return account, nil
 }
 
-func PutBalance(addr bean.CommonAddress, balance *big.Int) ([]byte, []byte, error) {
+func PutAccount(account *bean.Account) error {
 	db := GetDatabase()
-	key := mycrypto.Hash256([]byte("balance_" + addr.Hex()))
-	value := balance.Bytes()
-	err := db.Store(key, value)
+	key := mycrypto.Hash256([]byte("account_" + account.Address().Hex()))
+	value, err := bean.MarshalAccount(account)
 	if err != nil {
-		return nil, nil, err
+		return err
+	}
+	err = db.Store(key, value)
+	if err != nil {
+		return err
 	}
 	db.Trie.Insert(key, value)
-	return key, value, nil
+	return nil
+}
+
+func GetLog(addr bean.CommonAddress) (*bean.Log, error) {
+	db := GetDatabase()
+	key := mycrypto.Hash256([]byte("log_" + addr.Hex()))
+	value, err := db.Load(key)
+	if err != nil {
+		return nil, err
+	}
+	log, err := bean.UnmarshalLog(value)
+	if err != nil {
+		return nil, err
+	}
+	return log, err
+}
+
+func PutLog(log *bean.Log) error {
+	db := GetDatabase()
+	key := mycrypto.Hash256([]byte("log_" + log.Address().Hex()))
+	value, err := bean.MarshalLog(log)
+	if err != nil {
+		return err
+	}
+	err = db.Store(key, value)
+	if err != nil {
+		return err
+	}
+	db.Trie.Insert(key, value)
+	return nil
+}
+
+func GetBalance(addr bean.CommonAddress) (*big.Int, error) {
+	account, err := GetAccount(addr)
+	if err != nil {
+		return nil, err
+	}
+	return account.Balance, nil
+}
+
+func PutBalance(addr bean.CommonAddress, balance *big.Int) error {
+	account, err := GetAccount(addr)
+	if err != nil {
+		return err
+	}
+	account.Balance = balance
+	return PutAccount(account)
 }
 
 func GetNonce(addr bean.CommonAddress) (int64, error) {
-	db := GetDatabase()
-	key := mycrypto.Hash256([]byte("nonce_" + addr.Hex()))
-	value, err := db.Load(key)
+	account, err := GetAccount(addr)
 	if err != nil {
 		return -1, err
 	}
-	return new(big.Int).SetBytes(value).Int64(), nil
+	return account.Nonce, nil
 }
 
-func PutNonce(addr bean.CommonAddress, nonce int64) ([]byte, []byte, error) {
-	db := GetDatabase()
-	key := mycrypto.Hash256([]byte("nonce_" + addr.Hex()))
-	value := new(big.Int).SetInt64(nonce).Bytes()
-	err := db.Store(key, value)
+func PutNonce(addr bean.CommonAddress, nonce int64) error {
+	account, err := GetAccount(addr)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
-	db.Trie.Insert(key, value)
-	return key, value, nil
+	account.Nonce = nonce
+	return PutAccount(account)
 }
 
 func GetStateRoot() []byte {
