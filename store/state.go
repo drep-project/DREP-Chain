@@ -53,7 +53,7 @@ func init()  {
     } else {
         ip0 = network.IP("192.168.3.231")
         ip1 = network.IP("192.168.3.197")
-        ip2 = network.IP("192.168.3.43")
+        ip2 = network.IP("192.168.3.236")
         port0 = network.Port(55555)
         port1 = network.Port(55555)
         port2 = network.Port(55555)
