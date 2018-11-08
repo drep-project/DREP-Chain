@@ -232,28 +232,20 @@ func (n *Node) fetchBlocks() {
     network.SendMessage([]*network.Peer{store.Admin}, req)
     fmt.Println("fetching 1")
     for n.curMaxHeight != store.GetCurrentBlockHeight() {
-        fmt.Println("fetching 2: ", n.curMaxHeight, store.GetCurrentBlockHeight())
-        if msg := pool.ObtainOne(func(i interface{}) bool {
-
-        }, 5 * time.Second); msg != nil {
-
-        }
-        fmt.Println("fetching 3: ", n.curMaxHeight, store.GetCurrentBlockHeight())
+       fmt.Println("fetching 2: ", n.curMaxHeight, store.GetCurrentBlockHeight())
+       if msg := pool.ObtainOne(func(msg interface{}) bool {
+           if block, ok := msg.(*bean.Block); ok {
+               return block != nil && block.Header != nil && block.Header.Height == store.GetCurrentBlockHeight() + 1
+           } else {
+               return false
+           }
+       }, 5 * time.Second); msg != nil {
+           if block, ok := msg.(*bean.Block); ok {
+               n.processBlock(block)
+           }
+       }
+       fmt.Println("fetching 3: ", n.curMaxHeight, store.GetCurrentBlockHeight())
     }
-}
-
-func (n *Node) ProcessBlockResp(resp *bean.BlockResp) {
-    fmt.Println("fetching 4")
-    for _, b := range resp.Blocks {
-        n.processBlock(b)
-        // TODO cannot receive tran
-    }
-    fmt.Println("fetching 5")
-    n.fetchLock.Lock()
-    defer n.fetchLock.Unlock()
-    fmt.Println("fetching 6 ", resp.Height)
-    n.curMaxHeight = resp.Height
-    n.fetchCond.Broadcast()
 }
 
 func (n *Node) ProcessBlockReq(req *bean.BlockReq) {
