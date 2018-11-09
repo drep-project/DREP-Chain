@@ -62,16 +62,16 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
         fmt.Errorf("error block nil or header nil")
         return nil
     }
-    height, _ := database.GetMaxHeight()
+    height := database.GetMaxHeight()
     if height + 1 != b.Header.Height {
         fmt.Println("error", height, b.Header.Height)
         return nil
     }
     // TODO check height
     height = b.Header.Height
-    database.PutInt("Height", int(height))
+    database.PutMaxHeight(height)
     //blocks = append(blocks, b)
-    database.SaveBlock(b)
+    database.PutBlock(b)
     total := big.NewInt(0)
     if b.Data == nil || b.Data.TxList == nil {
         return total
@@ -90,7 +90,7 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
 func execute(t *bean.Transaction) *big.Int {
     addr := bean.Hex2Address(t.Addr().String())
     nonce := t.Data.Nonce
-    curN, _ := database.GetNonce(addr)
+    curN := database.GetNonce(addr)
     if curN + 1 != nonce {
         return nil
     }
@@ -98,7 +98,7 @@ func execute(t *bean.Transaction) *big.Int {
     gasPrice := big.NewInt(0).SetBytes(t.Data.GasPrice)
     gasLimit := big.NewInt(0).SetBytes(t.Data.GasLimit)
     gasFee := big.NewInt(0).Mul(gasLimit, gasPrice)
-    balance, _ := database.GetBalance(addr)
+    balance := database.GetBalance(addr)
     if gasFee.Cmp(balance) > 0 {
         log.Fatal("Error, gas not right")
         return nil
@@ -114,7 +114,7 @@ func execute(t *bean.Transaction) *big.Int {
                 if balance.Cmp(total) >= 0 {
                     balance.Sub(balance, total)
                     to := bean.Address(t.Data.To)
-                    balance2, _ := database.GetBalance(bean.Hex2Address(to.String()))
+                    balance2 := database.GetBalance(bean.Hex2Address(to.String()))
                     balance2.Add(balance2, amount)
                 } else {
                     balance.Sub(balance, gasFee)
@@ -136,16 +136,16 @@ func execute(t *bean.Transaction) *big.Int {
 }
 
 func GetCurrentBlockHeight() int64 {
-    if height, err := database.GetInt("Height"); err == nil {
+    if height := database.GetMaxHeight(); height != -1 {
         return int64(height)
     } else {
-        fmt.Println("ERROR!!!", err)
+        fmt.Println("ERROR!!! height is -1")
         return -1
     }
 }
 
 func GetBlocks(from int64, number int64) []*bean.Block {
-    bs := database.LoadAllBlock(0)
+    bs := database.GetAllBlocks()
     l := int64(len(bs))
     if l - 1 < from {
         return []*bean.Block{}

@@ -58,12 +58,10 @@ func main()  {
 			{
 				addr := bean.Hex2Address(store.GetAddress().String())
 				fmt.Println("Addr: ", addr)
-				nonce, err := database.GetNonce(addr)
+				nonce := database.GetNonce(addr)
 				fmt.Println("Nonce: ", nonce)
-				fmt.Println("Nonce err: ", err)
-				balance, err := database.GetBalance(addr)
+				balance := database.GetBalance(addr)
 				fmt.Println("Bal: ", balance)
-				fmt.Println("Bal err: ", err)
 			}
 		case "miner":
 			{

@@ -69,17 +69,19 @@ func Height2Key(height int64) string {
     return hex.EncodeToString(new(big.Int).SetInt64(height).Bytes())
 }
 
-func (block *Block) DBKey() string {
-    return Height2Key(block.Header.Height)
-}
-
-func (block *Block) DBMarshal() ([]byte, error) {
-    _b, err := json.Marshal(block)
+func MarshalBlock(block *Block) ([]byte, error) {
+    b, err := json.Marshal(block)
     if err != nil {
         return nil, err
     }
-    b := make([]byte, len(_b) + 1)
-    b[0] = byte(MsgTypeBlock)
-    copy(b[1:], _b)
     return b, nil
+}
+
+func UnmarshalBlock(b []byte) (*Block, error) {
+    block := &Block{}
+    err := json.Unmarshal(b, block)
+    if err != nil {
+        return nil, err
+    }
+    return block, nil
 }

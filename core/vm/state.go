@@ -55,22 +55,16 @@ func (s *State) CreateContractAccount(addr bean.CommonAddress, byteCode bean.Byt
 }
 
 func (s *State) SubBalance(addr bean.CommonAddress, amount *big.Int) error {
-	balance, err := database.GetBalance(addr)
-	if err != nil {
-		return err
-	}
+	balance := database.GetBalance(addr)
 	return database.PutBalance(addr, new(big.Int).Sub(balance, amount))
 }
 
 func (s *State) AddBalance(addr bean.CommonAddress, amount *big.Int) error {
-	balance, err := database.GetBalance(addr)
-	if err != nil {
-		return err
-	}
+	balance := database.GetBalance(addr)
 	return database.PutBalance(addr, new(big.Int).Add(balance, amount))
 }
 
-func (s *State) GetBalance(addr bean.CommonAddress) (*big.Int, error) {
+func (s *State) GetBalance(addr bean.CommonAddress) *big.Int {
 	return database.GetBalance(addr)
 }
 
@@ -78,56 +72,44 @@ func (s *State) SetNonce(addr bean.CommonAddress, nonce int64) error {
 	return database.PutNonce(addr, nonce)
 }
 
-func (s *State) GetNonce(addr bean.CommonAddress) (int64, error) {
+func (s *State) GetNonce(addr bean.CommonAddress) int64 {
 	return database.GetNonce(addr)
 }
 
 
 func (s *State) Suicide(addr bean.CommonAddress) error {
-	account, err := database.GetAccount(addr)
-	if err != nil {
-		return err
-	}
+	account := database.GetAccount(addr)
 	account.Nonce = 0
 	account.Balance = new(big.Int)
 	return database.PutAccount(account)
 }
 
-func (s *State) GetAccountStorage(x *big.Int) (bean.CommonAddress, error) {
+func (s *State) GetAccountStorage(x *big.Int) bean.CommonAddress {
 	addr := bean.Big2Address(x)
-	_, err := database.GetAccount(addr)
+	err := database.GetAccount(addr)
 	if err != nil {
-		return bean.CommonAddress{}, err
+		return bean.CommonAddress{}
 	}
-	return addr, nil
+	return addr
 }
 
 
-func (s *State) GetByteCode(addr bean.CommonAddress) (bean.ByteCode, error) {
-	account, err := database.GetAccount(addr)
-	if err != nil {
-		return nil, err
-	}
-	return account.ByteCode, nil
+func (s *State) GetByteCode(addr bean.CommonAddress) bean.ByteCode {
+	account := database.GetAccount(addr)
+	return account.ByteCode
 }
 
-func (s *State) GetCodeSize(addr bean.CommonAddress) (int, error) {
-	account, err := database.GetAccount(addr)
-	if err != nil {
-		return 0, err
-	}
-	return len(account.ByteCode), nil
+func (s *State) GetCodeSize(addr bean.CommonAddress) int {
+	account := database.GetAccount(addr)
+	return len(account.ByteCode)
 }
 
-func (s *State) GetCodeHash(addr bean.CommonAddress) ([]byte, error) {
-	account, err := database.GetAccount(addr)
-	if err != nil {
-		return nil, err
-	}
-	return account.CodeHash, nil
+func (s *State) GetCodeHash(addr bean.CommonAddress) []byte {
+	account := database.GetAccount(addr)
+	return account.CodeHash
 }
 
-func (s *State) GetLog(contractAddr bean.CommonAddress, txHash []byte) (*bean.Log, error) {
+func (s *State) GetLog(contractAddr bean.CommonAddress, txHash []byte) *bean.Log {
 	log := &bean.Log{ContractAddr: contractAddr.Bytes(), TxHash: txHash}
 	addr := log.Address()
 	return database.GetLog(addr)

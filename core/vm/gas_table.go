@@ -313,10 +313,7 @@ func gasCall(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize
 		gas            = Calls
 		transfersValue = stack.Back(2).Sign() != 0
 	)
-	addr, err := evm.State.GetAccountStorage(stack.Back(1))
-	if err != nil {
-		return 0, err
-	}
+	addr := evm.State.GetAccountStorage(stack.Back(1))
 	if addr.IsEmpty() {
 		gas += CallNewAccountGas
 	}

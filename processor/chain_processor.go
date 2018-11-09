@@ -41,7 +41,7 @@ type BlockProcessor struct {
 
 func (p *BlockProcessor) process(peer *network.Peer, msg interface{}) {
     if block, ok := msg.(*bean.Block); ok {
-        maxHeight, _ := database.GetMaxHeight()
+        maxHeight := database.GetMaxHeight()
         if block.Header.Height <= maxHeight {
            return
         }
