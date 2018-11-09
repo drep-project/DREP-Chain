@@ -7,6 +7,7 @@ import (
     "math/big"
     "time"
     "fmt"
+    "BlockChainTest/database"
 )
 
 func SendTransaction(t *bean.Transaction) error {
@@ -24,13 +25,14 @@ func SendTransaction(t *bean.Transaction) error {
     }
 }
 
-func GenerateBalanceTransaction(to bean.Address, amount *big.Int) *bean.Transaction {
-    nonce := store.GetNonce(store.GetAddress()) + 1
+func GenerateBalanceTransaction(to string, amount *big.Int) *bean.Transaction {
+    nonce, _ := database.GetNonce(bean.Hex2Address(store.GetAddress().String()))
+    nonce++
     data := &bean.TransactionData{
         Version: store.Version,
         Nonce:nonce,
         Type:store.TransferType,
-        To:string(to),
+        To:to,
         Amount:amount.Bytes(),
         GasPrice:store.GasPrice.Bytes(),
         GasLimit:store.TransferGas.Bytes(),
@@ -45,7 +47,8 @@ func GenerateBalanceTransaction(to bean.Address, amount *big.Int) *bean.Transact
 }
 
 func GenerateMinerTransaction(addr string) *bean.Transaction {
-    nonce := store.GetNonce(store.GetAddress()) + 1
+    nonce, _ := database.GetNonce(bean.Hex2Address(store.GetAddress().String()))
+    nonce++
     data := &bean.TransactionData{
         Nonce:     nonce,
         Type:      store.MinerType,

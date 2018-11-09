@@ -109,7 +109,8 @@ func init()  {
 }
 
 func GenerateBlock() (*bean.Block, error) {
-    height := GetCurrentBlockHeight() + 1
+    maxHeight, _ := database.GetMaxHeight()
+    height := maxHeight + 1
     ts := PickTransactions(BlockGasLimit)
     previousBlock, err := database.GetHighestBlock()
     if err != nil {

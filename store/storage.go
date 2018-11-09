@@ -62,7 +62,7 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
         fmt.Errorf("error block nil or header nil")
         return nil
     }
-    height := GetCurrentBlockHeight()
+    height, _ := database.GetMaxHeight()
     if height + 1 != b.Header.Height {
         fmt.Println("error", height, b.Header.Height)
         return nil
@@ -88,17 +88,17 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
 }
 
 func execute(t *bean.Transaction) *big.Int {
-    addr := t.Addr()
+    addr := bean.Hex2Address(t.Addr().String())
     nonce := t.Data.Nonce
-    curN := GetNonce(addr)
+    curN, _ := database.GetNonce(addr)
     if curN + 1 != nonce {
         return nil
     }
-    addNonce(addr)
+    database.PutNonce(addr, curN + 1)
     gasPrice := big.NewInt(0).SetBytes(t.Data.GasPrice)
     gasLimit := big.NewInt(0).SetBytes(t.Data.GasLimit)
     gasFee := big.NewInt(0).Mul(gasLimit, gasPrice)
-    balance := GetBalance(addr)
+    balance, _ := database.GetBalance(addr)
     if gasFee.Cmp(balance) > 0 {
         log.Fatal("Error, gas not right")
         return nil
@@ -114,7 +114,7 @@ func execute(t *bean.Transaction) *big.Int {
                 if balance.Cmp(total) >= 0 {
                     balance.Sub(balance, total)
                     to := bean.Address(t.Data.To)
-                    balance2 := GetBalance(to)
+                    balance2, _ := database.GetBalance(bean.Hex2Address(to.String()))
                     balance2.Add(balance2, amount)
                 } else {
                     balance.Sub(balance, gasFee)
