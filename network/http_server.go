@@ -29,10 +29,10 @@ func GetBlock(w http.ResponseWriter, r *http.Request) {
         height = value
     }
 
-    block, err := database.GetBlock(height)
-    if err != nil{
+    block := database.GetBlock(height)
+    if block == nil {
         errMsg := "error occurred during database.GetBlock"
-        fmt.Println(errMsg, ": ", err)
+        fmt.Println(errMsg)
         resp := &Response{Code:"400", Body:errMsg}
         writeResponse(w, resp)
         return
@@ -53,15 +53,18 @@ func GetBlock(w http.ResponseWriter, r *http.Request) {
 
 func GetBlocksFrom(w http.ResponseWriter, r *http.Request){
     params := analysisReqParam(r)
-    var start int64
+    var start, size int64
     if value, ok := params["start"].(int64); ok {
         start = value
     }
+    if value, ok := params["size"].(int64); ok {
+        size = value
+    }
 
-    blocks, err := database.GetBlocksFrom(start)
-    if err != nil{
+    blocks := database.GetBlocksFrom(start, size)
+    if blocks == nil || len(blocks) == 0 {
         errMsg := "error occurred during GetBlocksFrom"
-        fmt.Println(errMsg, ": ", err)
+        fmt.Println(errMsg)
         resp := &Response{Code:"400", Body:errMsg}
         writeResponse(w, resp)
         return
@@ -80,11 +83,11 @@ func GetBlocksFrom(w http.ResponseWriter, r *http.Request){
 }
 
 func GetAllBlocks(w http.ResponseWriter, _ *http.Request) {
-    blocks, err := database.GetAllBlocks()
+    blocks := database.GetAllBlocks()
 
-    if err != nil {
+    if blocks == nil || len(blocks) == 0 {
         errMsg := "error occurred during database.GetAllBlocks"
-        fmt.Println(errMsg, ": ", err)
+        fmt.Println(errMsg)
         resp := &Response{Code:"400", Body:errMsg}
         writeResponse(w, resp)
         return
@@ -103,10 +106,10 @@ func GetAllBlocks(w http.ResponseWriter, _ *http.Request) {
 }
 
 func GetHighestBlock(w http.ResponseWriter, _ *http.Request) {
-    block, err := database.GetHighestBlock()
-    if err != nil {
+    block := database.GetHighestBlock()
+    if block == nil {
         errMsg := "error occurred during database.GetHighestBlock"
-        fmt.Println(errMsg, ": ", err)
+        fmt.Println(errMsg)
         resp := &Response{Code:"400", Body:errMsg}
         writeResponse(w, resp)
         return
@@ -130,10 +133,10 @@ func GetHighestBlock(w http.ResponseWriter, _ *http.Request) {
 
 func GetMaxHeight(w http.ResponseWriter, _ *http.Request) {
 
-    height, err := database.GetMaxHeight()
-    if err != nil {
+    height := database.GetMaxHeight()
+    if height == -1 {
         errMsg := "error occurred during database.GetMaxHeight()"
-        fmt.Println(errMsg, ": ", err)
+        fmt.Println(errMsg)
         resp := &Response{Code:"400", Body:errMsg}
         writeResponse(w, resp)
         return
@@ -183,7 +186,7 @@ func GetBalance(w http.ResponseWriter, r *http.Request) {
     //database.PutBalance(ca, big.NewInt(1314))
     //fmt.Println("[database PutBalance] succeed!")
 
-    b, _ := database.GetBalance(ca)
+    b := database.GetBalance(ca)
     defer func() {
         if x := recover(); x != nil {
             fmt.Printf("[database GetBalance] caught panic: %v", x)
@@ -227,7 +230,7 @@ func GetNonce(w http.ResponseWriter, r *http.Request) {
     ca := bean.Hex2Address(address)
     database.PutNonce(ca, 13131313)
 
-    nonce, _ := database.GetNonce(ca)
+    nonce := database.GetNonce(ca)
     body := "nonce:" + strconv.FormatInt(nonce, 10)
     resp := &Response{Code:"200", Body:body}
     writeResponse(w, resp)

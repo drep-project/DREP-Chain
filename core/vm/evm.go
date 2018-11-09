@@ -36,20 +36,18 @@ func (evm *EVM) CreateContractCode(callerAddr bean.CommonAddress, byteCode bean.
 	}
 
 	contractAddr := bean.CodeAddr(byteCode)
-	_, err := evm.State.GetByteCode(contractAddr)
-	if err == nil {
+	b := evm.State.GetByteCode(contractAddr)
+	if b != nil {
 		return nil, bean.CommonAddress{}, ErrCodeAlreadyExists
 	}
 
-	nonce, err := evm.State.GetNonce(callerAddr)
-	if err != nil {
-		return nil, bean.CommonAddress{}, err
-	}
+	nonce := evm.State.GetNonce(callerAddr)
+
 	evm.State.SetNonce(callerAddr, nonce + 1)
 	evm.Transfer(callerAddr, contractAddr, value)
 	evm.State.CreateContractAccount(contractAddr, byteCode)
 
-	return nil, contractAddr, err
+	return nil, contractAddr, nil
 }
 
 func (evm *EVM) CallContractCode(callerAddr, contractAddr bean.CommonAddress, input []byte, gas uint64, value *big.Int) (ret []byte, returnGas uint64, err error) {
@@ -57,7 +55,7 @@ func (evm *EVM) CallContractCode(callerAddr, contractAddr bean.CommonAddress, in
 		return nil, gas, ErrInsufficientBalance
 	}
 
-	byteCode, err := evm.State.GetByteCode(contractAddr)
+	byteCode := evm.State.GetByteCode(contractAddr)
 	if byteCode == nil {
 		return nil, gas, ErrCodeNotExists
 	}
@@ -72,7 +70,7 @@ func (evm *EVM) CallContractCode(callerAddr, contractAddr bean.CommonAddress, in
 }
 
 func (evm *EVM) StaticCall(callerAddr, contractAddr bean.CommonAddress, input []byte, gas uint64) (ret []byte, returnGas uint64, err error) {
-	byteCode, err := evm.State.GetByteCode(contractAddr)
+	byteCode := evm.State.GetByteCode(contractAddr)
 	if byteCode == nil {
 		return nil, gas, ErrCodeNotExists
 	}
@@ -90,7 +88,7 @@ func (evm *EVM) DelegateCall(con *Contract, contractAddr bean.CommonAddress, inp
 	callerAddr := con.CallerAddr
 	jumpdests := con.Jumpdests
 
-	byteCode, err := evm.State.GetByteCode(contractAddr)
+	byteCode := evm.State.GetByteCode(contractAddr)
 	if byteCode == nil {
 		return nil, gas, ErrCodeNotExists
 	}
@@ -122,12 +120,7 @@ func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
 }
 
 func (evm *EVM) CanTransfer(addr bean.CommonAddress, amount *big.Int) bool {
-	balance, err := evm.State.GetBalance(addr)
-	fmt.Println("balance: ", balance)
-	fmt.Println("balance error: ", err)
-	if err != nil {
-		return false
-	}
+	balance := evm.State.GetBalance(addr)
 	return balance.Cmp(amount) >= 0
 }
 

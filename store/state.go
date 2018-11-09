@@ -10,7 +10,6 @@ import (
     "encoding/json"
     "errors"
     "time"
-    "fmt"
     "BlockChainTest/trie"
 )
 
@@ -109,13 +108,10 @@ func init()  {
 }
 
 func GenerateBlock() (*bean.Block, error) {
-    maxHeight, _ := database.GetMaxHeight()
+    maxHeight := database.GetMaxHeight()
     height := maxHeight + 1
     ts := PickTransactions(BlockGasLimit)
-    previousBlock, err := database.GetHighestBlock()
-    if err != nil {
-        return nil, err
-    }
+    previousBlock := database.GetHighestBlock()
     b, err := json.Marshal(previousBlock.Header)
     if err != nil {
         return nil, err
@@ -192,14 +188,8 @@ func GetStateRoot(ts []*bean.Transaction) []byte {
         gasUsed := tx.GetGasUsed()
         nonce := tx.Data.Nonce
         amount := new(big.Int).SetBytes(tx.Data.Amount)
-        prevSenderBalance, err := database.GetBalance(from)
-        if err != nil {
-            fmt.Println("err: ", err)
-        }
-        prevReceiverBalance, err := database.GetBalance(to)
-        if err != nil {
-            fmt.Println("err: ", err)
-        }
+        prevSenderBalance := database.GetBalance(from)
+        prevReceiverBalance := database.GetBalance(to)
         newSenderBalance := new(big.Int).Sub(prevSenderBalance, amount)
         newSenderBalance = newSenderBalance.Sub(newSenderBalance, gasUsed)
         newReceiverBalance := new(big.Int).Add(prevReceiverBalance, amount)

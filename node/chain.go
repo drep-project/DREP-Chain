@@ -26,7 +26,7 @@ func SendTransaction(t *bean.Transaction) error {
 }
 
 func GenerateBalanceTransaction(to bean.Address, amount *big.Int) *bean.Transaction {
-    nonce, _ := database.GetNonce(bean.Hex2Address(store.GetAddress().String()))
+    nonce := database.GetNonce(bean.Hex2Address(store.GetAddress().String()))
     nonce++
     data := &bean.TransactionData{
         Version: store.Version,
@@ -47,7 +47,7 @@ func GenerateBalanceTransaction(to bean.Address, amount *big.Int) *bean.Transact
 }
 
 func GenerateMinerTransaction(addr string) *bean.Transaction {
-    nonce, _ := database.GetNonce(bean.Hex2Address(store.GetAddress().String()))
+    nonce := database.GetNonce(bean.Hex2Address(store.GetAddress().String()))
     nonce++
     data := &bean.TransactionData{
         Nonce:     nonce,
