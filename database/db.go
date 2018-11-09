@@ -159,14 +159,14 @@ func GetBlock(height int64) (*bean.Block, error) {
 	}
 }
 
-func GetBlocksFrom(start int64) ([]*bean.Block, error) {
+func GetBlocksFrom(start, size int64) ([]*bean.Block, error) {
 	var (
 		currentBlock *bean.Block
 		err error
 		height = start
 		blocks = make([]*bean.Block, 0)
 	)
-	for err == nil {
+	for err == nil && (height < start + size || size == -1)  {
 		currentBlock, err = GetBlock(start)
 		if err == nil {
 			blocks = append(blocks, currentBlock)
@@ -177,7 +177,7 @@ func GetBlocksFrom(start int64) ([]*bean.Block, error) {
 }
 
 func GetAllBlocks() ([]*bean.Block, error) {
-	return GetBlocksFrom(int64(0))
+	return GetBlocksFrom(int64(0), int64(-1))
 }
 
 func GetHighestBlock() (*bean.Block, error) {
