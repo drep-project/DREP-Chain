@@ -14,6 +14,7 @@ var (
     MinerType int32 = 1
     // TODO
     Admin *network.Peer
+    Version int32 = 1
 )
 
 var IsStart bool

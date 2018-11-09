@@ -27,6 +27,7 @@ func SendTransaction(t *bean.Transaction) error {
 func GenerateBalanceTransaction(to bean.Address, amount *big.Int) *bean.Transaction {
     nonce := store.GetNonce(store.GetAddress()) + 1
     data := &bean.TransactionData{
+        Version: store.Version,
         Nonce:nonce,
         Type:store.TransferType,
         To:string(to),
@@ -36,7 +37,11 @@ func GenerateBalanceTransaction(to bean.Address, amount *big.Int) *bean.Transact
         Timestamp:time.Now().Unix(),
         PubKey:store.GetPubKey()}
     // TODO Get sig bean.Transaction{}
-    return &bean.Transaction{Data:data}
+    tx := &bean.Transaction{Data: data}
+    prvKey := store.GetPrvKey()
+    sig, _ := tx.TxSig(prvKey)
+    tx.Sig = sig
+    return tx
 }
 
 func GenerateMinerTransaction(addr string) *bean.Transaction {
