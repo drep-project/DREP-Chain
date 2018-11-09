@@ -25,14 +25,14 @@ func SendTransaction(t *bean.Transaction) error {
     }
 }
 
-func GenerateBalanceTransaction(to string, amount *big.Int) *bean.Transaction {
+func GenerateBalanceTransaction(to bean.Address, amount *big.Int) *bean.Transaction {
     nonce, _ := database.GetNonce(bean.Hex2Address(store.GetAddress().String()))
     nonce++
     data := &bean.TransactionData{
         Version: store.Version,
         Nonce:nonce,
         Type:store.TransferType,
-        To:to,
+        To:to.String(),
         Amount:amount.Bytes(),
         GasPrice:store.GasPrice.Bytes(),
         GasLimit:store.TransferGas.Bytes(),
