@@ -33,7 +33,7 @@ func main()  {
 				fmt.Scanln(&addr)
 				fmt.Print("Amount: ")
 				fmt.Scanln(&amount)
-				t := node.GenerateBalanceTransaction(addr, big.NewInt(amount))
+				t := node.GenerateBalanceTransaction(bean.Address(addr), big.NewInt(amount))
 				if node.SendTransaction(t) != nil {
 					fmt.Println("Offline")
 				} else {
