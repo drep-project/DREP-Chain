@@ -135,7 +135,7 @@ func GenerateBlock() (*bean.Block, error) {
     merkleRoot := merkle.Root.Hash
     return &bean.Block{
         Header: &bean.BlockHeader{
-            Version: 1,
+            Version: Version,
             PreviousHash: previousHash,
             GasLimit: gasLimit,
             GasUsed: gasUsed,

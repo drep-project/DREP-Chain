@@ -82,3 +82,5 @@ func main()  {
 		}
 	}
 }
+
+//TODO （1）智能合约代码放进去(core文件夹, bean文件件里新加的account.go，account.pb.go)；（2）数据库部分新加GetBlock, PutBlock, GetBalance, PutBalance等接口；（3）哈希函数改成以太坊的SHA3算法；（4）Block和Transaction字段填完整

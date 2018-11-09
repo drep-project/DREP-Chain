@@ -3,7 +3,6 @@ package _our
 import (
 	"math/big"
 	"BlockChainTest/bean"
-	"BlockChainTest/store"
 	"fmt"
 	"BlockChainTest/core/vm"
 )
@@ -36,7 +35,7 @@ func Tx2Message(tx *bean.Transaction) *Message {
 	gasValue := new(big.Int).SetBytes(tx.Data.GasPrice)
 	gas := new(big.Int).Mul(gasLimit, gasValue)
 	return &Message{
-		From: bean.Hex2Address(store.GetAddress().String()),
+		From: tx.Address(),
 		To: bean.Hex2Address(tx.Data.To),
 		Gas: gas.Uint64(),
 		Value: new(big.Int).SetBytes(tx.Data.Amount),
