@@ -3,7 +3,15 @@ package bean
 import (
 	"errors"
 	"encoding/json"
+	"BlockChainTest/mycrypto"
 )
+
+type Serializable struct {
+	Header               int32
+	Body                 []byte
+	PubKey               *mycrypto.Point
+	Sig                  *mycrypto.Signature
+}
 
 func Serialize(message interface{}) (*Serializable, error) {
 	body, err := json.Marshal(message)

@@ -1,3 +1,5 @@
+//TODO
+
 package bean
 
 import (
@@ -124,6 +126,15 @@ func Address2Key(addr CommonAddress) string {
 	return Bytes2Key(addr.Bytes())
 }
 
+type Account struct {
+	Addr                 []byte
+	Nonce                int64
+	Balance             *big.Int
+	IsContract           bool
+	ByteCode             []byte
+	CodeHash             []byte
+}
+
 func (account *Account) Address() CommonAddress {
 	return Bytes2Address(account.Addr)
 }
@@ -147,33 +158,4 @@ func UnmarshalAccount(b []byte) (*Account, error) {
 		return nil, err
 	}
 	return account, nil
-}
-
-func (log *Log) Address() CommonAddress {
-	b := make([]byte, len(log.ContractAddr) + len(log.TxHash))
-	copy(b, log.ContractAddr)
-	copy(b[len(log.ContractAddr):], log.TxHash)
-	b = mycrypto.Hash256(b)
-	return Bytes2Address(b)
-}
-
-func (log *Log) Exists() bool {
-	return !log.Address().IsEmpty()
-}
-
-func MarshalLog(log *Log) ([]byte, error) {
-	b, err := json.Marshal(log)
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
-func UnmarshalLog(b []byte) (*Log, error) {
-	log := &Log{}
-	err := json.Unmarshal(b, log)
-	if err != nil {
-		return nil, err
-	}
-	return log, nil
 }
