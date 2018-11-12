@@ -90,26 +90,6 @@ func PutAccount(account *bean.Account) error {
     return nil
 }
 
-func GetLog(addr bean.CommonAddress) *bean.Log {
-    db := GetDatabase()
-    key := mycrypto.Hash256([]byte("log_" + addr.Hex()))
-    value, _ := db.Load(key)
-    log, _ := bean.UnmarshalLog(value)
-    return log
-}
-
-func PutLog(log *bean.Log) error {
-    db := GetDatabase()
-    key := mycrypto.Hash256([]byte("log_" + log.Address().Hex()))
-    value, _ := bean.MarshalLog(log)
-    err := db.Store(key, value)
-    if err != nil {
-        return err
-    }
-    db.Trie.Insert(key, value)
-    return nil
-}
-
 func GetBalance(addr bean.CommonAddress) *big.Int {
     account := GetAccount(addr)
     return account.Balance
