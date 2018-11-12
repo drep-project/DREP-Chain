@@ -1,5 +1,3 @@
-//TODO
-
 package bean
 
 import (
@@ -67,7 +65,7 @@ func Bytes2Address(b []byte) CommonAddress {
 
 func (addr *CommonAddress) SetBytes(b []byte) {
 	if len(b) > len(addr) {
-		copy(addr[:], b[len(b) - AddressLen:])
+		copy(addr[:], b[len(b) - AddressLength:])
 	} else {
 		copy(addr[AddressLength-len(b):], b)
 	}
@@ -105,25 +103,6 @@ func (addr CommonAddress) Big() *big.Int {
 
 func PubKey2Address(pubKey *mycrypto.Point) CommonAddress {
 	return Bytes2Address(pubKey.Bytes())
-}
-
-type ByteCode []byte
-
-func CodeHash(byteCode ByteCode) Hash {
-	b := mycrypto.Hash256(byteCode)
-	return Bytes2Hash(b)
-}
-
-func CodeAddr(byteCode ByteCode) CommonAddress {
-	return Bytes2Address(mycrypto.Hash256(byteCode))
-}
-
-func Bytes2Key(b []byte) string {
-	return hex.EncodeToString(mycrypto.Hash256(b))
-}
-
-func Address2Key(addr CommonAddress) string {
-	return Bytes2Key(addr.Bytes())
 }
 
 type Account struct {

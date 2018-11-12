@@ -7,10 +7,6 @@ import (
     "encoding/json"
 )
 
-const (
-    AddressLen = 20
-)
-
 type BlockHeader struct {
     Version              int32
     PreviousHash         []byte
