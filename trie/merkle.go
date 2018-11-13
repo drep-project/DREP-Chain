@@ -20,7 +20,6 @@ type MerkleLayer []*MerkleNode
 
 type Merkle struct {
     Root   *MerkleNode
-    //Trie   []MerkleLayer
     Leaves MerkleLayer
     Height int
 }
@@ -29,19 +28,19 @@ func NewMerkle(hashes [][]byte) *Merkle {
     merkle := &Merkle{}
     height := getHeight(len(hashes))
     merkle.Height = height
-    //merkle.Trie = make([]MerkleLayer, height)
     leaves := getLeaves(hashes)
     merkle.Leaves = leaves
-    //merkle.Trie[0] = leaves
     layer := leaves
     fmt.Println("1: ", len(layer))
     for i := 0; i < height- 1; i++ {
-        //merkle.Trie[i + 1] = getUpperLayer(merkle.Trie[i])
         layer = getUpperLayer(layer)
         fmt.Println(i + 2, ": ", len(layer))
     }
-    //merkle.Root = merkle.Trie[height- 1][0]
-    merkle.Root = layer[0]
+    if len(layer) > 0 {
+        merkle.Root = layer[0]
+    } else {
+        merkle.Root = &MerkleNode{Hash:[]byte{}}
+    }
     return merkle
 }
 
