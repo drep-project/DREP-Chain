@@ -2,60 +2,11 @@ package store
 
 import (
     "math/big"
-    "sync"
     "BlockChainTest/bean"
     "log"
     "fmt"
     "BlockChainTest/database"
 )
-
-var (
-    balances           = make(map[bean.Address]*big.Int)//map[bean.Address]*big.Int
-    nonces             map[bean.Address]int64
-    //blocks             []*bean.Block
-    accountLock        sync.Mutex
-    //currentBlockHeight int64 = -1
-)
-
-func init()  {
-    //balances = make(map[bean.Address]*big.Int)
-    nonces = make(map[bean.Address]int64)
-    //blocks = make([]*bean.Block, 0)
-}
-
-func GetBalance(addr bean.Address) *big.Int {
-    accountLock.Lock()
-    defer accountLock.Unlock()
-    balance, exists := balances[addr]
-    if exists {
-        // TODO if map is nil what the fuck
-        return balance
-    } else {
-        balance = big.NewInt(0)
-        balances[addr] = balance
-        return balance
-    }
-
-}
-
-func GetNonce(addr bean.Address) int64 {
-    return nonces[addr]
-}
-
-func addNonce(addr bean.Address) {
-    accountLock.Lock()
-    value, exists := nonces[addr]
-    if exists {
-        if value >= 0 {
-            nonces[addr]++
-        } else {
-            nonces[addr] = 1
-        }
-    } else {
-        nonces[addr] = 1
-    }
-    accountLock.Unlock()
-}
 
 func ExecuteTransactions(b *bean.Block) *big.Int {
     if b == nil || b.Header == nil { // || b.Data == nil || b.Data.TxList == nil {
@@ -133,27 +84,4 @@ func execute(t *bean.Transaction) *big.Int {
         }
     }
     return gasFee
-}
-
-func GetCurrentBlockHeight() int64 {
-    if height := database.GetMaxHeight(); height != -1 {
-        return int64(height)
-    } else {
-        fmt.Println("ERROR!!! height is -1")
-        return -1
-    }
-}
-
-func GetBlocks(from int64, number int64) []*bean.Block {
-    bs := database.GetAllBlocks()
-    l := int64(len(bs))
-    if l - 1 < from {
-        return []*bean.Block{}
-    }
-    end := from + number - 1
-    r := make([]*bean.Block, 0)
-    for i := from; i < l && i <= end; i++ {
-        r = append(r, bs[i])
-    }
-    return r
 }
