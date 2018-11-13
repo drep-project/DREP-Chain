@@ -57,7 +57,7 @@ func main()  {
 		case "me":
 			{
 				addr := bean.Hex2Address(store.GetAddress().String())
-				fmt.Println("Addr: ", addr)
+				fmt.Println("Addr: ", store.GetAddress().String())
 				nonce := database.GetNonce(addr)
 				fmt.Println("Nonce: ", nonce)
 				balance := database.GetBalance(addr)
