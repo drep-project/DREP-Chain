@@ -71,6 +71,7 @@ func execute(t *bean.Transaction) *big.Int {
                     balance.Sub(balance, gasFee)
                 }
             }
+            database.PutBalance(addr, balance)
         }
     case MinerType:
         {
