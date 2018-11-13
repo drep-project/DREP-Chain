@@ -73,14 +73,19 @@ func PutMaxHeight(height int64) error {
 func GetAccount(addr bean.CommonAddress) *bean.Account {
     db := GetDatabase()
     key := mycrypto.Hash256([]byte("account_" + addr.Hex()))
-    value, _ := db.Load(key)
-    account, _ := bean.UnmarshalAccount(value)
-    return account
+    if value, err := db.Load(key); err == nil {
+        account, _ := bean.UnmarshalAccount(value)
+        return account
+    } else {
+        account := &bean.Account{Addr:addr, Nonce:0, Balance:big.NewInt(0)}
+        PutAccount(account)
+        return account
+    }
 }
 
 func PutAccount(account *bean.Account) error {
     db := GetDatabase()
-    key := mycrypto.Hash256([]byte("account_" + account.Address().Hex()))
+    key := mycrypto.Hash256([]byte("account_" + account.Addr.Hex()))
     value, err := bean.MarshalAccount(account)
     err = db.Store(key, value)
     if err != nil {

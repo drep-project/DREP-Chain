@@ -81,10 +81,6 @@ func (tx *Transaction) TxSig(prvKey *mycrypto.PrivateKey) (*mycrypto.Signature, 
     return mycrypto.Sign(prvKey, b)
 }
 
-func (tx *Transaction) Address() CommonAddress {
-    return PubKey2Address(tx.Data.PubKey)
-}
-
 func (tx *Transaction) Addr() Address {
     return Addr(tx.Data.PubKey)
 }
