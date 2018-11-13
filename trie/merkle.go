@@ -36,7 +36,11 @@ func NewMerkle(hashes [][]byte) *Merkle {
         layer = getUpperLayer(layer)
         fmt.Println(i + 2, ": ", len(layer))
     }
-    merkle.Root = layer[0]
+    if len(layer) > 0 {
+        merkle.Root = layer[0]
+    } else {
+        merkle.Root = &MerkleNode{Hash:[]byte{}}
+    }
     return merkle
 }
 
