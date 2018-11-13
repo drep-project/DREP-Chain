@@ -271,14 +271,16 @@ var methodsMap = map[string] http.HandlerFunc {
 }
 
 func HttpStart() {
-    for pattern, handleFunc := range(methodsMap) {
-        http.HandleFunc(pattern, handleFunc)
-    }
-    fmt.Println("http server is ready for listen port: 8880")
-    err := http.ListenAndServe("localhost:8880", nil)
-    if err != nil {
-        fmt.Println("http listen failed")
-    }
+    go func() {
+        for pattern, handleFunc := range (methodsMap) {
+            http.HandleFunc(pattern, handleFunc)
+        }
+        fmt.Println("http server is ready for listen port: 8880")
+        err := http.ListenAndServe("localhost:8880", nil)
+        if err != nil {
+            fmt.Println("http listen failed")
+        }
+    }()
 }
 
 //func logPanics(handle http.HandlerFunc) http.HandlerFunc {
