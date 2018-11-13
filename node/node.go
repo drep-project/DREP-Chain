@@ -248,13 +248,6 @@ func (n *Node) fetchBlocks() {
    }
 }
 
-func (n *Node) ProcessBlockResp(resp *bean.BlockResp) {
-    fmt.Println("fetching 4")
-    for _, b := range resp.Blocks {
-        n.processBlock(b)
-    }
-}
-
 func (n *Node) ProcessBlockReq(req *bean.BlockReq) {
     from := req.Height + 1
     size := int64(2)
