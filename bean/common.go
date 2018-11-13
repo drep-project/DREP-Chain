@@ -6,17 +6,21 @@ import (
 )
 
 const (
-    MsgTypeBlockHeader = 1
-    MsgTypeBlock       = 3
-    MsgTypeTransaction = 4
-    MsgTypeSetUp       = 5
-    MsgTypeCommitment  = 6
-    MsgTypeChallenge   = 7
-    MsgTypeResponse    = 8
-    MsgTypeNewPeer     = 9
-    MsgTypePeerList    = 10
-    MsgTypeBlockReq    = 11
-    MsgTypeBlockResp   = 12
+    MsgTypeBlockHeader = iota
+    MsgTypeBlock
+    MsgTypeTransaction
+    MsgTypeSetUp
+    MsgTypeCommitment
+    MsgTypeChallenge
+    MsgTypeResponse
+    MsgTypeNewPeer
+    MsgTypePeerList
+    MsgTypeBlockReq
+    MsgTypeBlockResp
+    MsgTypePing
+    MsgTypePong
+    MsgTypeOfflinePeers
+    MsgTypeFirstPeerInfoList
 )
 
 type Address string
@@ -28,6 +32,6 @@ func (addr Address) String() string {
 func Addr(pubKey *mycrypto.Point) Address {
     j := pubKey.Bytes()
     h := mycrypto.Hash256(j)
-    str := hex.EncodeToString(h[len(h) - AddressLen:])
+    str := hex.EncodeToString(h[len(h) - AddressLength:])
     return Address(str)
 }

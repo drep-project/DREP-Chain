@@ -4,13 +4,15 @@ import (
     "sync"
     "fmt"
     "BlockChainTest/bean"
+    "BlockChainTest/network"
 )
 
 type processor interface {
-    process(interface{})
+    process(peer *network.Peer, msg interface{})
 }
 
 type message struct {
+    peer *network.Peer
     t int
     msg interface{}
 }
@@ -58,8 +60,8 @@ func (p *Processor) Start() {
     }()
 }
 
-func (p *Processor) Process(t int, msg interface{}) {
-    p.channel <- &message{t, msg}
+func (p *Processor) Process(peer *network.Peer, t int, msg interface{}) {
+    p.channel <- &message{peer:peer, t: t, msg:msg}
 }
 
 func (p *Processor) dispatch(msg *message) {
@@ -67,7 +69,7 @@ func (p *Processor) dispatch(msg *message) {
         fmt.Println("Receive transaction")
     }
     if processor := p.processors[msg.t]; processor != nil {
-        processor.process(msg.msg)
+        processor.process(msg.peer, msg.msg)
     } else {
         fmt.Errorf("invalid message %v", msg)
     }

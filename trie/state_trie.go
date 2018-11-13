@@ -2,33 +2,42 @@ package trie
 
 import (
     "fmt"
-    "BlockChainTest/crypto"
+    "BlockChainTest/mycrypto"
     "bytes"
+    "encoding/hex"
 )
 
 var digits = [17]string{"", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"}
 
+func GetTrieKey(key []byte) string {
+    return hex.EncodeToString(key)
+}
+
+func GetTrieValue(value []byte) []byte {
+    return mycrypto.Hash256(value)
+}
+
 func getCommonPrefix(s1, s2 string) (int, string) {
-   if s1 == "" || s2 == "" {
-       return 0, ""
-   }
-   for i := 0; i < len(s1); i++ {
-       if i == len(s2) {
-           return i, s2
-       }
-       if s1[i] == s2[i] {
-           continue
-       }
-       return i, s1[:i]
-   }
-   return len(s1), s1
+    if s1 == "" || s2 == "" {
+        return 0, ""
+    }
+    for i := 0; i < len(s1); i++ {
+        if i == len(s2) {
+            return i, s2
+        }
+        if s1[i] == s2[i] {
+            continue
+        }
+        return i, s1[:i]
+    }
+    return len(s1), s1
 }
 
 func getNextDigit(start int, str string) string {
-   if start == len(str) {
-       return str[start:]
-   }
-   return str[start: start + 1]
+    if start == len(str) {
+        return str[start:]
+    }
+    return str[start: start + 1]
 }
 
 type StateNode struct {
@@ -51,7 +60,7 @@ func (n *StateNode) resetValue() {
             hashList[i] = n.Children[digit].Value
         }
     }
-    ret := crypto.StackHash(hashList)
+    ret := mycrypto.StackHash(hashList)
     n.Value = make([]byte, len(ret))
     copy(n.Value, ret)
     return
@@ -179,16 +188,16 @@ func NewStateTrie() *StateTrie {
     return &StateTrie{}
 }
 
-func (t *StateTrie) Insert(key string, value []byte) {
-    t.Root = insertNode(t.Root, key, value)
+func (t *StateTrie) Insert(key, value []byte) {
+    t.Root = insertNode(t.Root, GetTrieKey(key), GetTrieValue(value))
 }
 
-func (t *StateTrie) Delete(key string) {
-    t.Root, _ = deleteNode(t.Root, key)
+func (t *StateTrie) Delete(key []byte) {
+    t.Root, _ = deleteNode(t.Root, GetTrieKey(key))
 }
 
-func (t *StateTrie) Get(key string) []byte {
-    n := getNode(t.Root, key)
+func (t *StateTrie) Get(key []byte) []byte {
+    n := getNode(t.Root, GetTrieKey(key))
     if n == nil {
         return nil
     }
@@ -204,6 +213,5 @@ func (t *StateTrie) Validate() {
     v0 := make([]byte, len(root.Value))
     copy(v0, root.Value)
     root.resetValue()
-    fmt.Println()
     fmt.Println("result: ", bytes.Equal(v0, root.Value))
 }

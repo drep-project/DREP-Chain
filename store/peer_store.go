@@ -22,6 +22,17 @@ func AddPeer(peer *network.Peer) {
     }
 }
 
+func RemovePeer(peer *network.Peer) {
+    addr := bean.Addr(peer.PubKey)
+    delete(peers, addr)
+}
+
+func RemovePeers(peers []*network.Peer) {
+    for _, p := range peers {
+        RemovePeer(p)
+    }
+}
+
 func GetPeers() []*network.Peer {
     result := make([]*network.Peer, 0)
     for _, v := range peers {
@@ -36,8 +47,6 @@ func GetPeers() []*network.Peer {
 func MoveToNextMiner() (bool, bool) {
     lock.Lock()
     defer lock.Unlock()
-    SetLeader(nil)
-    SetMember(nil)
     curMiner++
     if curMiner == len(curMiners) {
         if minerIndex < len(miners) - 1 {
@@ -76,6 +85,10 @@ func AddMiner(addr bean.Address) {
 
 func GetAdminPubKey() *mycrypto.Point {
     return adminPubKey
+}
+
+func IsAdmin() bool {
+    return adminPubKey.Equal(pubKey)
 }
 
 func GetPeer(pk *mycrypto.Point) *network.Peer {
