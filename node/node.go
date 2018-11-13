@@ -81,8 +81,7 @@ func (n *Node) Start() {
             }
             log.Println("node stop")
             //time.Sleep(5 * time.Second)
-            maxHeight := database.GetMaxHeight()
-            log.Println("Current height ", maxHeight)
+            log.Println("Current height ", database.GetMaxHeight())
             // todo if timeout still can go. why
         }
     }()
@@ -228,16 +227,15 @@ func (n *Node) ProcessPeerList(list *bean.PeerInfoList) {
 
 func (n *Node) fetchBlocks() {
     n.curMaxHeight = 2<<60
-    maxHeight := database.GetMaxHeight()
-    req := &bean.BlockReq{Height:maxHeight, Pk:store.GetPubKey()}
+    req := &bean.BlockReq{Height:database.GetMaxHeight(), Pk:store.GetPubKey()}
     //network.SendMessage([]*network.Peer{peers[0]}, req)
     network.SendMessage([]*network.Peer{store.Admin}, req)
     fmt.Println("fetching 1")
-    for n.curMaxHeight != maxHeight {
-       fmt.Println("fetching 2: ", n.curMaxHeight, maxHeight)
+    for n.curMaxHeight != database.GetMaxHeight() {
+       fmt.Println("fetching 2: ", n.curMaxHeight, database.GetMaxHeight())
        if msg := pool.ObtainOne(func(msg interface{}) bool {
            if block, ok := msg.(*bean.Block); ok {
-               return block != nil && block.Header != nil && block.Header.Height == maxHeight + 1
+               return block != nil && block.Header != nil && block.Header.Height == database.GetMaxHeight() + 1
            } else {
                return false
            }
@@ -246,8 +244,7 @@ func (n *Node) fetchBlocks() {
                n.processBlock(block)
            }
        }
-       maxHeight = database.GetMaxHeight()
-       fmt.Println("fetching 3: ", n.curMaxHeight, maxHeight)
+       fmt.Println("fetching 3: ", n.curMaxHeight, database.GetMaxHeight())
    }
 }
 
@@ -264,11 +261,10 @@ func (n *Node) ProcessBlockReq(req *bean.BlockReq) {
     fmt.Println("pk = ", req.Pk)
     peers := []*network.Peer{store.GetPeer(req.Pk)}
     fmt.Println("ProcessBlockReq")
-    maxHeight := database.GetMaxHeight()
-    for i := from; i <= maxHeight; {
+    for i := from; i <= database.GetMaxHeight(); {
         fmt.Println("ProcessBlockReq 1 ", i)
         bs := database.GetBlocksFrom(i, size)
-        resp := &bean.BlockResp{Height:maxHeight, Blocks:bs}
+        resp := &bean.BlockResp{Height:database.GetMaxHeight(), Blocks:bs}
         network.SendMessage(peers, resp)
         i += int64(len(bs))
         fmt.Println("ProcessBlockReq 2 ", i)
