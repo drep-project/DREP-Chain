@@ -112,11 +112,17 @@ func GenerateBlock() (*bean.Block, error) {
     height := maxHeight + 1
     ts := PickTransactions(BlockGasLimit)
     previousBlock := database.GetHighestBlock()
-    b, err := json.Marshal(previousBlock.Header)
-    if err != nil {
-        return nil, err
+    var b, previousHash []byte
+    var err error
+    if previousBlock != nil {
+        b, err = json.Marshal(previousBlock.Header)
+        if err != nil {
+            return nil, err
+        }
+        previousHash = mycrypto.Hash256(b)
+    } else {
+        previousHash = []byte{}
     }
-    previousHash := mycrypto.Hash256(b)
     gasLimit := new(big.Int).SetInt64(int64(10000000)).Bytes()
     gasUsed := GetGasSum(ts).Bytes()
     if ExceedGasLimit(gasUsed, gasLimit) {
