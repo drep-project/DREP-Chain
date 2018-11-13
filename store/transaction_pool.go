@@ -6,6 +6,7 @@ import (
     "BlockChainTest/bean"
     "math/big"
     "BlockChainTest/util/list"
+    "BlockChainTest/database"
 )
 
 var (
@@ -56,12 +57,12 @@ func Contains(id string) bool {
 }
 
 func checkAndGetAddr(tran *bean.Transaction) (bool, bean.Address) {
-    addr := tran.Addr()
+    addr := bean.Hex2Address(tran.Addr().String())
     if tran.Data == nil {
         return false, ""
     }
     // TODO Check sig
-    if GetNonce(addr) >= tran.Data.Nonce {
+    if database.GetNonce(addr) >= tran.Data.Nonce {
         return false, ""
     }
     {
@@ -71,12 +72,12 @@ func checkAndGetAddr(tran *bean.Transaction) (bool, bean.Address) {
         total := big.NewInt(0)
         total.Mul(gasLimit, gasPrice)
         total.Add(total, amount)
-        if GetBalance(addr).Cmp(total) < 0 {
+        if database.GetBalance(addr).Cmp(total) < 0 {
             return false, ""
             // TODO Remove this
         }
     }
-    return true, addr
+    return true, bean.Address(addr.Hex())
 }
 //func AddTransaction(id string, transaction *common.Transaction) {
 func AddTransaction(transaction *bean.Transaction) bool {
@@ -144,7 +145,7 @@ func PickTransactions(maxGas *big.Int) []*bean.Transaction {
                             if t2, ok := it2.Next().(*bean.Transaction); ok {
                                 cn, e := tn[addr]
                                 if !e {
-                                    cn = GetNonce(addr)
+                                    cn = database.GetNonce(bean.Hex2Address(addr.String()))
                                 }
                                 if t2.Data.Nonce != cn + 1 {
                                     continue
