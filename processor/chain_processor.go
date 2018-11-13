@@ -4,8 +4,9 @@ import (
     "fmt"
     "BlockChainTest/bean"
     "BlockChainTest/store"
-    "BlockChainTest/node"
     "BlockChainTest/network"
+    "BlockChainTest/pool"
+    "BlockChainTest/database"
 )
 
 type transactionProcessor struct {}
@@ -18,7 +19,7 @@ func (p *transactionProcessor) process(peer *network.Peer, msg interface{})  {
     if transaction, ok := msg.(*bean.Transaction); ok {
         fmt.Println(transaction)
         id, _ := transaction.TxId()
-        if store.Forwarded(id) {
+        if store.ForwardedTransaction(id) {
             fmt.Println("Forwarded this transaction ", *transaction)
             return
         }
@@ -27,7 +28,7 @@ func (p *transactionProcessor) process(peer *network.Peer, msg interface{})  {
             fmt.Println("Succeed to add this transaction ", *transaction)
             peers := store.GetPeers()
             network.SendMessage(peers, transaction)
-            store.Forward(id)
+            store.ForwardTransaction(id)
         } else {
             fmt.Println("Fail to add this transaction ", *transaction)
         }
@@ -40,11 +41,18 @@ type BlockProcessor struct {
 
 func (p *BlockProcessor) process(peer *network.Peer, msg interface{}) {
     if block, ok := msg.(*bean.Block); ok {
-        if block.Header.Height <= store.GetCurrentBlockHeight() {
+        if block.Header.Height <= database.GetMaxHeight() {
            return
         }
+        id, _ := block.BlockID()
+        if store.ForwardedBlock(id) { // if forwarded, then processed. later this will be read from db
+            fmt.Println("Forwarded this block ", *block)
+            return
+        }
+        store.ForwardBlock(id)
         peers := store.GetPeers()
         network.SendMessage(peers, block)
-        node.GetNode().ProcessBlock(block, true)
+        pool.Push(block)
+        // Here, two blocks will be forwarded here. so is this store enough?
     }
 }

@@ -5,6 +5,7 @@ import (
     "BlockChainTest/node"
     "fmt"
     "BlockChainTest/network"
+    "BlockChainTest/pool"
 )
 
 type NewComerProcessor struct {}
@@ -38,7 +39,7 @@ type BlockRespProcessor struct {}
 
 func (p *BlockRespProcessor) process(peer *network.Peer, msg interface{}) {
     if resp, ok := msg.(*bean.BlockResp); ok {
-        node.GetNode().ProcessBlockResp(resp)
+        pool.Push(resp)
     }
 }
 

@@ -12,6 +12,10 @@ type PeerInfoList struct {
 	List                 []*PeerInfo
 }
 
+type FirstPeerInfoList struct {
+	List                 []*PeerInfo
+}
+
 type BlockReq struct {
 	Pk                   *mycrypto.Point
 	Height               int64

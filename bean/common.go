@@ -20,6 +20,7 @@ const (
     MsgTypePing
     MsgTypePong
     MsgTypeOfflinePeers
+    MsgTypeFirstPeerInfoList
 )
 
 type Address string
@@ -31,6 +32,6 @@ func (addr Address) String() string {
 func Addr(pubKey *mycrypto.Point) Address {
     j := pubKey.Bytes()
     h := mycrypto.Hash256(j)
-    str := hex.EncodeToString(h[len(h) - AddressLen:])
+    str := hex.EncodeToString(h[len(h) - AddressLength:])
     return Address(str)
 }

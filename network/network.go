@@ -141,6 +141,8 @@ func identifyMessage(task *Task) (int, interface{}) {
         return bean.MsgTypePong, msg.(*bean.Pong)
     case *bean.OfflinePeers:
         return bean.MsgTypeOfflinePeers, msg.(*bean.OfflinePeers)
+    case *bean.FirstPeerInfoList:
+        return bean.MsgTypeFirstPeerInfoList, msg.(*bean.FirstPeerInfoList)
     default:
         return -1, nil
     }

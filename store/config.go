@@ -14,14 +14,15 @@ var (
     MinerType int32 = 1
     // TODO
     Admin *network.Peer
+    Version int32 = 1
 )
 
 var IsStart bool
 
-const LOCAL_TEST = false
+const LocalTest = false
 
 func init() {
-    if LOCAL_TEST {
+    if LocalTest {
         Admin = &network.Peer{IP: network.IP("127.0.0.1"), Port: 55555}
     } else {
         Admin = &network.Peer{IP: network.IP("192.168.3.231"), Port: 55555}
