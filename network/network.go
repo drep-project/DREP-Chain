@@ -8,7 +8,6 @@ import (
     "BlockChainTest/bean"
     "BlockChainTest/log"
     "BlockChainTest/util"
-    "BlockChainTest/store"
     "BlockChainTest/network/nat"
 )
 
@@ -53,7 +52,7 @@ func startListen(process func(*Peer, int, interface{}), port Port) {
         //room for modification addr := &net.TCPAddr{IP: net.ParseIP("x.x.x.x"), Port: receiver.listeningPort()}
         addr := &net.TCPAddr{Port: int(port)}
         if UPnPStart {
-            nat.Map("tcp", listeningPort, listeningPort, "drep nat")
+            nat.Map("tcp", int(port), int(port), "drep nat")
         }
         listener, err := net.ListenTCP("tcp", addr)
         if err != nil {
