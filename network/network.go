@@ -1,53 +1,61 @@
 package network
 
 import (
-   "sync"
-   "net"
-   "strings"
+    "sync"
+    "net"
+    "strings"
     "BlockChainTest/mycrypto"
     "BlockChainTest/bean"
     "BlockChainTest/log"
+    "BlockChainTest/util"
 )
 
 const (
-    listeningPort = 55555
     bufferSize    = 1024 * 1024
 )
 
-var onceSender sync.Once
-var SenderQueue chan *Task
+var (
+    lock sync.Mutex
+)
 
-func getSenderQueue() chan *Task {
-   onceSender.Do(func() {
-      SenderQueue = make(chan *Task,  10)
-   })
-   return SenderQueue
-}
-
-func SendMessage(peers []*Peer, msg interface{}) {
-   queue := getSenderQueue()
+func SendMessage(peers []*Peer, msg interface{}) (error, []*Peer) {
+   lock.Lock()
+   defer lock.Unlock()
+   suc := false
+   r := make([]*Peer, 0)
    for _, peer := range peers {
       task := &Task{peer, msg}
-      queue <- task
+      if err := task.execute(); err != nil {
+          switch err.(type) {
+          case *util.TimeoutError, *util.ConnectionError:
+              r = append(r, peer)
+          }
+      } else {
+          suc = true
+      }
+   }
+   if suc {
+       return nil, r
+   } else {
+       return &util.OfflineError{}, r
    }
 }
 
-func Start(process func(int, interface{})) {
-    startListen(process)
-    startSend()
+func Start(process func(*Peer, int, interface{}), port Port) {
+    startListen(process, port)
 }
 
-func startListen(process func(int, interface{})) {
+func startListen(process func(*Peer, int, interface{}), port Port) {
     go func() {
         //room for modification addr := &net.TCPAddr{IP: net.ParseIP("x.x.x.x"), Port: receiver.listeningPort()}
-        addr := &net.TCPAddr{Port: listeningPort}
+        addr := &net.TCPAddr{Port: int(port)}
         listener, err := net.ListenTCP("tcp", addr)
         if err != nil {
             log.Println("error", err)
             return
         }
         for {
-            log.Println("start listen")
+            log.Println("start listen", port)
             conn, err := listener.AcceptTCP()
             log.Println("listen from ", conn.RemoteAddr())
             if err != nil {
@@ -67,7 +75,7 @@ func startListen(process func(int, interface{})) {
             }
             log.Println("Receive ", cipher[:offset])
             log.Println("Receive byte ", offset)
-            task, err := decryptIntoTask(cipher[:offset])
+            task, err := decryptIntoTask(cipher[:offset]) // TODO what the fuck is this???
             log.Println("Receive after decrypt", task)
             if err != nil {
                 return
@@ -80,23 +88,11 @@ func startListen(process func(int, interface{})) {
             //p := processor.GetInstance()
             t, msg := identifyMessage(task)
             if msg != nil {
-                process(t, msg)
+                process(task.Peer, t, msg)
             }
             log.Println("end listen")
         }
     }()
-}
-
-func startSend() {
-   go func() {
-      sender := getSenderQueue()
-      for {
-         if task, ok := <-sender; ok {
-            log.Println(task.Peer.IP)
-            task.execute()
-         }
-      }
-   }()
 }
 
 func decryptIntoTask(cipher []byte) (*Task, error) {
@@ -139,7 +135,29 @@ func identifyMessage(task *Task) (int, interface{}) {
         return bean.MsgTypeBlockReq, msg.(*bean.BlockReq)
     case *bean.BlockResp:
         return bean.MsgTypeBlockResp, msg.(*bean.BlockResp)
+    case *bean.Ping:
+        return bean.MsgTypePing, msg.(*bean.Ping)
+    case *bean.Pong:
+        return bean.MsgTypePong, msg.(*bean.Pong)
+    case *bean.OfflinePeers:
+        return bean.MsgTypeOfflinePeers, msg.(*bean.OfflinePeers)
+    case *bean.FirstPeerInfoList:
+        return bean.MsgTypeFirstPeerInfoList, msg.(*bean.FirstPeerInfoList)
     default:
         return -1, nil
     }
+}
+
+func GetIps() []string {
+    r := make([]string, 0)
+    if addrs, err := net.InterfaceAddrs(); err == nil {
+        for _, a := range addrs {
+            if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+                if ipnet.IP.To4() != nil {
+                    r = append(r, ipnet.IP.String())
+                }
+            }
+        }
+    }
+    return r
 }

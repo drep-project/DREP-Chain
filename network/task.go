@@ -2,11 +2,13 @@ package network
 
 import (
     "BlockChainTest/bean"
-    "github.com/golang/protobuf/proto"
     "BlockChainTest/log"
     "net"
     "fmt"
     "BlockChainTest/mycrypto"
+    "time"
+    "BlockChainTest/util"
+    "encoding/json"
 )
 
 type Task struct {
@@ -41,31 +43,58 @@ func (t *Task) cipher() ([]byte, error) {
     //return cipher, nil
     serializable.Sig = &mycrypto.Signature{R: []byte{0x00}, S: []byte{0x00}}
     serializable.PubKey = &mycrypto.Point{X: []byte{0x00}, Y: []byte{0x00}}
-    return proto.Marshal(serializable)
+    return json.Marshal(serializable)
 }
 
 func (t *Task) execute() error {
-    // If sleep 1000 here, hahax
     cipher, err := t.cipher()
-
     if err != nil {
         log.Println("error during cipher:", err)
-        return err
+        return &util.DataError{MyError:util.MyError{Err:err}}
     }
-    addr, err := net.ResolveTCPAddr("tcp", t.Peer.ToString())
+    d, err := time.ParseDuration("3s")
     if err != nil {
-        return err
+        fmt.Println(err)
+        return &util.DefaultError{}
     }
-    conn, err := net.DialTCP("tcp", nil, addr)
+    var conn net.Conn
+    for i := 0; i <= 2; i++ {
+        conn, err = net.DialTimeout("tcp", t.Peer.ToString(), d)
+        if err == nil {
+            break
+        } else {
+            fmt.Printf("%T %v\n", err, err)
+            if ope, ok := err.(*net.OpError); ok {
+                fmt.Println(ope.Timeout(), ope)
+            }
+            fmt.Println("Retry after 2s")
+            time.Sleep(2 * time.Second)
+        }
+    }
     if err != nil {
-        log.Println("error during dail:", err)
-        return err
+        fmt.Printf("%T %v\n", err, err)
+        if ope, ok := err.(*net.OpError); ok {
+            fmt.Println(ope.Timeout(), ope)
+            if ope.Timeout() {
+                return &util.TimeoutError{MyError:util.MyError{Err:ope}}
+            } else {
+                return &util.ConnectionError{MyError:util.MyError{Err:ope}}
+            }
+        }
     }
     defer conn.Close()
+    now := time.Now()
+    d2, err := time.ParseDuration("5s")
+    if err != nil {
+        fmt.Println(err)
+        return &util.DefaultError{}
+    } else {
+        conn.SetDeadline(now.Add(d2))
+    }
     log.Println("Send msg to ",t.Peer.ToString(), cipher)
     if num, err := conn.Write(cipher); err != nil {
         log.Println("Send error ", err)
-        return err
+        return &util.TransmissionError{MyError:util.MyError{Err:err}}
     } else {
         log.Println("Send bytes ", num)
         return nil

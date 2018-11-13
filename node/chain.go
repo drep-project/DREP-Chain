@@ -7,35 +7,47 @@ import (
     "math/big"
     "time"
     "fmt"
+    "BlockChainTest/database"
 )
 
-func SendTransaction(t *bean.Transaction)  {
+func SendTransaction(t *bean.Transaction) error {
     peers := store.GetPeers()
     fmt.Println("Send transaction")
-    network.SendMessage(peers, t)
-    if id, err := t.TxId(); err == nil {
-        store.Forward(id)
+    if err, offline := network.SendMessage(peers, t); err == nil {
+        if id, err := t.TxId(); err == nil {
+            store.ForwardTransaction(id)
+        }
+        store.AddTransaction(t)
+        store.RemovePeers(offline)
+        return nil
+    } else {
+        return err
     }
-    store.AddTransaction(t)
 }
 
 func GenerateBalanceTransaction(to bean.Address, amount *big.Int) *bean.Transaction {
-    nonce := store.GetNonce(store.GetAddress()) + 1
+    nonce := database.GetNonce(bean.Hex2Address(store.GetAddress().String()))
+    nonce++
     data := &bean.TransactionData{
+        Version: store.Version,
         Nonce:nonce,
         Type:store.TransferType,
-        To:string(to),
+        To:to.String(),
         Amount:amount.Bytes(),
         GasPrice:store.GasPrice.Bytes(),
         GasLimit:store.TransferGas.Bytes(),
         Timestamp:time.Now().Unix(),
         PubKey:store.GetPubKey()}
     // TODO Get sig bean.Transaction{}
-    return &bean.Transaction{Data:data}
+    tx := &bean.Transaction{Data: data}
+    prvKey := store.GetPrvKey()
+    sig, _ := tx.TxSig(prvKey)
+    tx.Sig = sig
+    return tx
 }
 
 func GenerateMinerTransaction(addr string) *bean.Transaction {
-    nonce := store.GetNonce(store.GetAddress()) + 1
+    nonce := database.GetNonce(bean.Hex2Address(store.GetAddress().String())) + 1
     data := &bean.TransactionData{
         Nonce:     nonce,
         Type:      store.MinerType,
