@@ -67,6 +67,7 @@ func execute(t *bean.Transaction) *big.Int {
                     to := bean.Address(t.Data.To)
                     balance2 := database.GetBalance(bean.Hex2Address(to.String()))
                     balance2.Add(balance2, amount)
+                    database.PutBalance(bean.Hex2Address(to.String()), balance2)
                 } else {
                     balance.Sub(balance, gasFee)
                 }
