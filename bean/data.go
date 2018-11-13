@@ -7,9 +7,53 @@ import (
     "encoding/json"
 )
 
-const (
-    AddressLen = 20
-)
+type BlockHeader struct {
+    Version              int32
+    PreviousHash         []byte
+    GasLimit             []byte
+    GasUsed              []byte
+    Height               int64
+    Timestamp            int64
+    StateRoot            []byte
+    MerkleRoot           []byte
+    TxHashes             [][]byte
+    LeaderPubKey         *mycrypto.Point
+    MinorPubKeys         []*mycrypto.Point
+}
+
+type BlockData struct {
+    TxCount              int32
+    TxList               []*Transaction
+}
+
+type Block struct {
+    Header               *BlockHeader
+    Data                 *BlockData
+    MultiSig             *mycrypto.Signature
+}
+
+type TransactionData struct {
+    Version              int32
+    Nonce                int64
+    Type                 int32
+    To                   string
+    Amount               []byte
+    GasPrice             []byte
+    GasLimit             []byte
+    Timestamp            int64
+    Data                 []byte
+    PubKey               *mycrypto.Point
+}
+
+type Transaction struct {
+    Data                 *TransactionData
+    Sig                  *mycrypto.Signature
+}
+
+type MultiSignature struct {
+    Sig                  *mycrypto.Signature
+    Bitmap               []byte
+}
 
 func (tx *Transaction) TxId() (string, error) {
     b, err := json.Marshal(tx.Data)
@@ -41,6 +85,17 @@ func (tx *Transaction) Addr() Address {
     return Addr(tx.Data.PubKey)
 }
 
+func (tx *Transaction) GetGasQuantity() *big.Int {
+    return new(big.Int).SetInt64(int64(100))
+}
+
+func (tx *Transaction) GetGasUsed() *big.Int {
+    gasQuantity := tx.GetGasQuantity()
+    gasPrice := new(big.Int).SetBytes(tx.Data.GasPrice)
+    gasUsed := new(big.Int).Mul(gasQuantity, gasPrice)
+    return gasUsed
+}
+
 func (block *Block) BlockID() (string, error) {
     b, err := json.Marshal(block.Header)
     if err != nil {
@@ -50,21 +105,23 @@ func (block *Block) BlockID() (string, error) {
     return id, nil
 }
 
-func HeightToKey(height int64) string {
+func Height2Key(height int64) string {
     return hex.EncodeToString(new(big.Int).SetInt64(height).Bytes())
 }
 
-func (block *Block) DBKey() string {
-    return HeightToKey(block.Header.Height)
-}
-
-func (block *Block) DBMarshal() ([]byte, error) {
-    _b, err := json.Marshal(block)
+func MarshalBlock(block *Block) ([]byte, error) {
+    b, err := json.Marshal(block)
     if err != nil {
         return nil, err
     }
-    b := make([]byte, len(_b) + 1)
-    b[0] = byte(MsgTypeBlock)
-    copy(b[1:], _b)
     return b, nil
+}
+
+func UnmarshalBlock(b []byte) (*Block, error) {
+    block := &Block{}
+    err := json.Unmarshal(b, block)
+    if err != nil {
+        return nil, err
+    }
+    return block, nil
 }

@@ -6,6 +6,7 @@ import (
     "BlockChainTest/store"
     "BlockChainTest/network"
     "BlockChainTest/pool"
+    "BlockChainTest/database"
 )
 
 type transactionProcessor struct {}
@@ -40,7 +41,7 @@ type BlockProcessor struct {
 
 func (p *BlockProcessor) process(peer *network.Peer, msg interface{}) {
     if block, ok := msg.(*bean.Block); ok {
-        if block.Header.Height <= store.GetCurrentBlockHeight() {
+        if block.Header.Height <= database.GetMaxHeight() {
            return
         }
         id, _ := block.BlockID()
