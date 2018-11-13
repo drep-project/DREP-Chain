@@ -62,8 +62,7 @@ func checkAndGetAddr(tran *bean.Transaction) (bool, bean.Address) {
         return false, ""
     }
     // TODO Check sig
-    nonce := database.GetNonce(addr)
-    if nonce >= tran.Data.Nonce {
+    if database.GetNonce(addr) >= tran.Data.Nonce {
         return false, ""
     }
     {
@@ -73,8 +72,7 @@ func checkAndGetAddr(tran *bean.Transaction) (bool, bean.Address) {
         total := big.NewInt(0)
         total.Mul(gasLimit, gasPrice)
         total.Add(total, amount)
-        balance := database.GetBalance(addr)
-        if balance.Cmp(total) < 0 {
+        if database.GetBalance(addr).Cmp(total) < 0 {
             return false, ""
             // TODO Remove this
         }

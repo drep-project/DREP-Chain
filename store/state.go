@@ -39,9 +39,9 @@ func init()  {
     pub0 := curve.ScalarBaseMultiply(k0)
     pub1 := curve.ScalarBaseMultiply(k1)
     pub2 := curve.ScalarBaseMultiply(k2)
-    balances[bean.Addr(pub0)] = big.NewInt(10000)
-    balances[bean.Addr(pub1)] = big.NewInt(10000)
-    balances[bean.Addr(pub2)] = big.NewInt(10000)
+    database.PutBalance(bean.Hex2Address(bean.Addr(pub0).String()), big.NewInt(10000))
+    database.PutBalance(bean.Hex2Address(bean.Addr(pub1).String()), big.NewInt(10000))
+    database.PutBalance(bean.Hex2Address(bean.Addr(pub2).String()), big.NewInt(10000))
     //pub3 := curve.ScalarBaseMultiply(k3)
     prv0 := &mycrypto.PrivateKey{Prv: k0, PubKey: pub0}
     prv1 := &mycrypto.PrivateKey{Prv: k1, PubKey: pub1}
@@ -182,21 +182,21 @@ func ExceedGasLimit(used, limit []byte) bool {
 }
 
 func GetStateRoot(ts []*bean.Transaction) []byte {
-    for _, tx := range ts {
-        from := bean.PubKey2Address(tx.Data.PubKey)
-        to := bean.Hex2Address(tx.Data.To)
-        gasUsed := tx.GetGasUsed()
-        nonce := tx.Data.Nonce
-        amount := new(big.Int).SetBytes(tx.Data.Amount)
-        prevSenderBalance := database.GetBalance(from)
-        prevReceiverBalance := database.GetBalance(to)
-        newSenderBalance := new(big.Int).Sub(prevSenderBalance, amount)
-        newSenderBalance = newSenderBalance.Sub(newSenderBalance, gasUsed)
-        newReceiverBalance := new(big.Int).Add(prevReceiverBalance, amount)
-        database.PutBalance(from, newSenderBalance)
-        database.PutBalance(to, newReceiverBalance)
-        database.PutNonce(from, nonce)
-    }
+    //for _, tx := range ts {
+    //    from := bean.PubKey2Address(tx.Data.PubKey)
+    //    to := bean.Hex2Address(tx.Data.To)
+    //    gasUsed := tx.GetGasUsed()
+    //    nonce := tx.Data.Nonce
+    //    amount := new(big.Int).SetBytes(tx.Data.Amount)
+    //    prevSenderBalance := database.GetBalance(from)
+    //    prevReceiverBalance := database.GetBalance(to)
+    //    newSenderBalance := new(big.Int).Sub(prevSenderBalance, amount)
+    //    newSenderBalance = newSenderBalance.Sub(newSenderBalance, gasUsed)
+    //    newReceiverBalance := new(big.Int).Add(prevReceiverBalance, amount)
+    //    database.PutBalance(from, newSenderBalance)
+    //    database.PutBalance(to, newReceiverBalance)
+    //    database.PutNonce(from, nonce)
+    //}
     return database.GetStateRoot()
 }
 
