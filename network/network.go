@@ -13,7 +13,7 @@ import (
 
 const (
     bufferSize    = 1024 * 1024
-    UPnPStart  = true
+    UPnPStart  = false
 )
 
 var (
