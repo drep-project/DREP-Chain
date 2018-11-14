@@ -19,7 +19,7 @@ type Request struct {
 
 type Response struct {
     Code string `json:"code"`
-    Body string `json:"body"`
+    Body interface{} `json:"body"`
 }
 
 const SucceedCode  = "200"
@@ -144,8 +144,9 @@ func GetMaxHeight(w http.ResponseWriter, _ *http.Request) {
         writeResponse(w, resp)
         return
     }
+    body := make(map[string] string, 10)
+    body["height"] = strconv.FormatInt(height, 10)
 
-    body := "height:" + strconv.FormatInt(height, 10)
     resp := &Response{Code:SucceedCode, Body:body}
     writeResponse(w, resp)
 }
@@ -274,7 +275,7 @@ var methodsMap = map[string] http.HandlerFunc {
 }
 
 func HttpStart() {
-    go func() {
+    //go func() {
         for pattern, handleFunc := range (methodsMap) {
             http.HandleFunc(pattern, handleFunc)
         }
@@ -283,7 +284,7 @@ func HttpStart() {
         if err != nil {
             fmt.Println("http listen failed")
         }
-    }()
+    //}()
 }
 
 //func logPanics(handle http.HandlerFunc) http.HandlerFunc {
