@@ -53,7 +53,6 @@ func GetBlock(w http.ResponseWriter, r *http.Request) {
     writeResponse(w, resp)
 }
 
-
 func GetBlocksFrom(w http.ResponseWriter, r *http.Request){
     params := analysisReqParam(r)
     var start, size int64
@@ -259,6 +258,12 @@ func GetStateRoot(w http.ResponseWriter, _ *http.Request) {
     writeResponse(w, resp)
 }
 
+func GetAccountsAddress(w http.ResponseWriter, _ *http.Request) {
+    address := database.GetAccountsAddress()
+    resp := &Response{Code:SucceedCode, Body:address}
+    writeResponse(w, resp)
+}
+
 var methodsMap = map[string] http.HandlerFunc {
     "/GetAllBlocks": GetAllBlocks,
     "/GetBlock": GetBlock,
@@ -271,6 +276,7 @@ var methodsMap = map[string] http.HandlerFunc {
     "/GetNonce": GetNonce,
     "/PutNonce": PutNonce,
     "/GetStateRoot": GetStateRoot,
+    "/GetAccountsAddress": GetAccountsAddress,
 }
 
 func HttpStart() {

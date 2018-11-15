@@ -5,6 +5,7 @@ import (
     "math/big"
     "BlockChainTest/mycrypto"
     "strconv"
+    "encoding/json"
 )
 
 func GetBlock(height int64) *bean.Block {
@@ -92,7 +93,7 @@ func PutAccount(account *bean.Account) error {
         return err
     }
     db.Trie.Insert(key, value)
-    return nil
+    return AddAccountsAddress(account)
 }
 
 func GetBalance(addr bean.CommonAddress) *big.Int {
@@ -115,4 +116,31 @@ func PutNonce(addr bean.CommonAddress, nonce int64) error {
     account := GetAccount(addr)
     account.Nonce = nonce
     return PutAccount(account)
+}
+
+func GetAccountsAddress() []bean.CommonAddress {
+    db := GetDatabase()
+    key := mycrypto.Hash256([]byte("accounts"))
+    value, err := db.Load(key)
+    if err != nil {
+        return make([]bean.CommonAddress, 0)
+    }
+    var ca []bean.CommonAddress
+    err = json.Unmarshal(value, &ca)
+    if err != nil {
+        return make([]bean.CommonAddress, 0)
+    }
+    return ca
+}
+
+func AddAccountsAddress(account *bean.Account) error {
+    db := GetDatabase()
+    key := mycrypto.Hash256([]byte("accounts"))
+    ca := GetAccountsAddress()
+    ca = append(ca, account.Addr)
+    value, err := json.Marshal(ca)
+    if err != nil {
+        return err
+    }
+    return db.Store(key, value)
 }
