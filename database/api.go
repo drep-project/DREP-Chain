@@ -5,6 +5,7 @@ import (
     "math/big"
     "BlockChainTest/mycrypto"
     "strconv"
+    "errors"
     "encoding/json"
 )
 
@@ -93,7 +94,7 @@ func PutAccount(account *bean.Account) error {
         return err
     }
     db.Trie.Insert(key, value)
-    return AddAccountsAddress(account)
+    return nil
 }
 
 func GetBalance(addr bean.CommonAddress) *big.Int {
@@ -133,7 +134,20 @@ func GetAccountsAddress() []bean.CommonAddress {
     return ca
 }
 
-func AddAccountsAddress(account *bean.Account) error {
+func AddAccount(hex string) error {
+    addr := bean.Hex2Address(hex)
+    if addr.IsEmpty() {
+        return errors.New("invalid account address")
+    }
+    account := &bean.Account{
+        Addr: addr,
+        Nonce: 0,
+        Balance: new(big.Int),
+    }
+    err := PutAccount(account)
+    if err != nil {
+        return err
+    }
     db := GetDatabase()
     key := mycrypto.Hash256([]byte("accounts"))
     ca := GetAccountsAddress()

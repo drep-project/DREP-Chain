@@ -264,6 +264,17 @@ func GetAccountsAddress(w http.ResponseWriter, _ *http.Request) {
     writeResponse(w, resp)
 }
 
+func AddAccount(w http.ResponseWriter, r *http.Request) {
+    params := analysisReqParam(r)
+    var hex string
+    if value, ok := params["hex"].(string); ok {
+        hex = value
+    }
+    account := database.AddAccount(hex)
+    resp := &Response{Code:SucceedCode, Body:account}
+    writeResponse(w, resp)
+}
+
 var methodsMap = map[string] http.HandlerFunc {
     "/GetAllBlocks": GetAllBlocks,
     "/GetBlock": GetBlock,
@@ -277,6 +288,7 @@ var methodsMap = map[string] http.HandlerFunc {
     "/PutNonce": PutNonce,
     "/GetStateRoot": GetStateRoot,
     "/GetAccountsAddress": GetAccountsAddress,
+    "/AddAccount": AddAccount,
 }
 
 func HttpStart() {

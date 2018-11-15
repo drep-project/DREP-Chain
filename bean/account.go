@@ -97,7 +97,7 @@ func (addr CommonAddress) Big() *big.Int {
 type Account struct {
 	Addr                 CommonAddress
 	Nonce                int64
-	Balance             *big.Int
+	Balance              *big.Int
 	IsContract           bool
 	ByteCode             []byte
 	CodeHash             []byte
