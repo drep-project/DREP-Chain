@@ -95,6 +95,7 @@ func GetAllBlocks(w http.ResponseWriter, _ *http.Request) {
         writeResponse(w, resp)
         return
     }
+
     bytes, err := json.Marshal(blocks)
     if err != nil{
         errMsg := "error occurred during json.Marshal(block)"
@@ -144,9 +145,7 @@ func GetMaxHeight(w http.ResponseWriter, _ *http.Request) {
         writeResponse(w, resp)
         return
     }
-    body := make(map[string] string, 10)
-    body["height"] = strconv.FormatInt(height, 10)
-
+    body := strconv.FormatInt(height, 10)
     resp := &Response{Code:SucceedCode, Body:body}
     writeResponse(w, resp)
 }
@@ -198,7 +197,7 @@ func GetBalance(w http.ResponseWriter, r *http.Request) {
             writeResponse(w, resp)
         }
     }()
-    body := "balance:" + strconv.FormatInt(b.Int64(), 10)
+    body := strconv.FormatInt(b.Int64(), 10)
     resp := &Response{Code:SucceedCode, Body:body}
     writeResponse(w, resp)
 }
@@ -235,7 +234,7 @@ func GetNonce(w http.ResponseWriter, r *http.Request) {
     database.PutNonce(ca, 13131313)
 
     nonce := database.GetNonce(ca)
-    body := "nonce:" + strconv.FormatInt(nonce, 10)
+    body := strconv.FormatInt(nonce, 10)
     resp := &Response{Code:SucceedCode, Body:body}
     writeResponse(w, resp)
 }
@@ -255,7 +254,7 @@ func PutNonce(w http.ResponseWriter, r *http.Request) {
 
 func GetStateRoot(w http.ResponseWriter, _ *http.Request) {
     b := database.GetStateRoot()
-    body := "StateRoot:" + string(b)
+    body := string(b)
     resp := &Response{Code:SucceedCode, Body:body}
     writeResponse(w, resp)
 }
