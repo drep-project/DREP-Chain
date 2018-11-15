@@ -28,7 +28,7 @@ const FailedCode  = "400"
 func GetBlock(w http.ResponseWriter, r *http.Request) {
     params := analysisReqParam(r)
     var height int64
-    if value, ok := params["start"].(int64); ok {
+    if value, ok := params["height"].(int64); ok {
         height = value
     }
 
