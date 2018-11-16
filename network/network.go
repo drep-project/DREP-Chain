@@ -8,10 +8,12 @@ import (
     "BlockChainTest/bean"
     "BlockChainTest/log"
     "BlockChainTest/util"
+    "BlockChainTest/network/nat"
 )
 
 const (
     bufferSize    = 1024 * 1024
+    UPnPStart  = false
 )
 
 var (
@@ -49,6 +51,9 @@ func startListen(process func(*Peer, int, interface{}), port Port) {
     go func() {
         //room for modification addr := &net.TCPAddr{IP: net.ParseIP("x.x.x.x"), Port: receiver.listeningPort()}
         addr := &net.TCPAddr{Port: int(port)}
+        if UPnPStart {
+            nat.Map("tcp", int(port), int(port), "drep nat")
+        }
         listener, err := net.ListenTCP("tcp", addr)
         if err != nil {
             log.Println("error", err)
