@@ -1,4 +1,4 @@
-package network
+package http
 
 import (
     "net/http"
@@ -11,6 +11,7 @@ import (
     "strings"
     "io/ioutil"
     "BlockChainTest/node"
+    "BlockChainTest/store"
 )
 
 type Request struct {
@@ -260,23 +261,6 @@ func GetStateRoot(w http.ResponseWriter, _ *http.Request) {
     writeResponse(w, resp)
 }
 
-func GetAccountsHex(w http.ResponseWriter, _ *http.Request) {
-    address := database.GetAccountsHex()
-    resp := &Response{Code:SucceedCode, Body:address}
-    writeResponse(w, resp)
-}
-
-func AddAccount(w http.ResponseWriter, r *http.Request) {
-    params := analysisReqParam(r)
-    var hex string
-    if value, ok := params["hex"].(string); ok {
-        hex = value
-    }
-    account := database.AddAccount(hex)
-    resp := &Response{Code:SucceedCode, Body:account}
-    writeResponse(w, resp)
-}
-
 func SendTransaction(w http.ResponseWriter, r *http.Request) {
     params := analysisReqParam(r)
     var to string
@@ -308,6 +292,41 @@ func SendTransaction(w http.ResponseWriter, r *http.Request) {
     writeResponse(w, resp)
 }
 
+func CreateAccount(w http.ResponseWriter, _ *http.Request) {
+    hexStr, err := store.CreateAccount()
+    var resp *Response
+    if err != nil {
+        resp = &Response{Code:SucceedCode, ErrorMsg:err.Error()}
+        return
+    }
+    resp = &Response{Code:SucceedCode, Body:hexStr}
+    writeResponse(w, resp)
+}
+
+func SwitchAccount(w http.ResponseWriter, r *http.Request) {
+    params := analysisReqParam(r)
+    var addr string
+    if value, ok := params["addr"].(string); ok {
+        addr = value
+    }
+
+    err := store.SwitchAccount(addr)
+    var resp *Response
+    if err != nil {
+        resp = &Response{Code:SucceedCode, ErrorMsg:err.Error()}
+        return
+    }
+    resp = &Response{Code:SucceedCode, Body:"Switch account succeed!"}
+    writeResponse(w, resp)
+
+}
+
+func GetAccounts(w http.ResponseWriter, _ *http.Request) {
+    accounts := store.GetAccounts()
+    resp := &Response{Code:SucceedCode, Body:accounts}
+    writeResponse(w, resp)
+}
+
 var methodsMap = map[string] http.HandlerFunc {
     "/GetAllBlocks": GetAllBlocks,
     "/GetBlock": GetBlock,
@@ -320,9 +339,10 @@ var methodsMap = map[string] http.HandlerFunc {
     "/GetNonce": GetNonce,
     "/PutNonce": PutNonce,
     "/GetStateRoot": GetStateRoot,
-    "/GetAccountsHex": GetAccountsHex,
-    "/AddAccount": AddAccount,
     "/SendTransaction": SendTransaction,
+    "/CreateAccount": CreateAccount,
+    "/SwitchAccount": SwitchAccount,
+    "/GetAccounts": GetAccounts,
 }
 
 func HttpStart() {
