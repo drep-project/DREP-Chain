@@ -119,19 +119,23 @@ func PutNonce(addr bean.CommonAddress, nonce int64) error {
     return PutAccount(account)
 }
 
-func GetAccountsAddress() []bean.CommonAddress {
+func GetAccountsHex() []string {
     db := GetDatabase()
-    key := mycrypto.Hash256([]byte("accounts"))
+    key := mycrypto.Hash256([]byte("accounts_hex"))
     value, err := db.Load(key)
     if err != nil {
-        return make([]bean.CommonAddress, 0)
+        return make([]string, 0)
     }
     var ca []bean.CommonAddress
     err = json.Unmarshal(value, &ca)
     if err != nil {
-        return make([]bean.CommonAddress, 0)
+        return make([]string, 0)
     }
-    return ca
+    ah := make([]string, len(ca))
+    for i, addr := range ca {
+        ah[i] = addr.Hex()
+    }
+    return ah
 }
 
 func AddAccount(hex string) error {
@@ -149,10 +153,10 @@ func AddAccount(hex string) error {
         return err
     }
     db := GetDatabase()
-    key := mycrypto.Hash256([]byte("accounts"))
-    ca := GetAccountsAddress()
-    ca = append(ca, account.Addr)
-    value, err := json.Marshal(ca)
+    key := mycrypto.Hash256([]byte("accounts_hex"))
+    ah := GetAccountsHex()
+    ah = append(ah, account.Addr.Hex())
+    value, err := json.Marshal(ah)
     if err != nil {
         return err
     }
