@@ -258,8 +258,8 @@ func GetStateRoot(w http.ResponseWriter, _ *http.Request) {
     writeResponse(w, resp)
 }
 
-func GetAccountsAddress(w http.ResponseWriter, _ *http.Request) {
-    address := database.GetAccountsAddress()
+func GetAccountsHex(w http.ResponseWriter, _ *http.Request) {
+    address := database.GetAccountsHex()
     resp := &Response{Code:SucceedCode, Body:address}
     writeResponse(w, resp)
 }
@@ -287,7 +287,7 @@ var methodsMap = map[string] http.HandlerFunc {
     "/GetNonce": GetNonce,
     "/PutNonce": PutNonce,
     "/GetStateRoot": GetStateRoot,
-    "/GetAccountsAddress": GetAccountsAddress,
+    "/GetAccountsHex": GetAccountsHex,
     "/AddAccount": AddAccount,
 }
 
