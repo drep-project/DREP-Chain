@@ -293,8 +293,8 @@ func SendTransaction(w http.ResponseWriter, r *http.Request) {
         errorMsg := err.Error()
         resp := &Response{Code:SucceedCode, ErrorMsg:errorMsg}
         writeResponse(w, resp)
+        return
     }
-
     resp := &Response{Code:SucceedCode, Body:"Send transaction succeed!"}
     writeResponse(w, resp)
 }
