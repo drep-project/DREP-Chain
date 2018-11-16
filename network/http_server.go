@@ -10,6 +10,7 @@ import (
     "math/big"
     "strings"
     "io/ioutil"
+    "BlockChainTest/node"
 )
 
 type Request struct {
@@ -278,24 +279,32 @@ func AddAccount(w http.ResponseWriter, r *http.Request) {
 
 func SendTransaction(w http.ResponseWriter, r *http.Request) {
     params := analysisReqParam(r)
-    var from, to, amount string
-    if value, ok := params["from"].(string); ok {
-        from = value
-    }
+    var to string
+    var amount int64
     if value, ok := params["to"].(string); ok {
         to = value
     }
     if value, ok := params["amount"].(string); ok {
-        amount = value
+        a, err := strconv.ParseInt(value, 10, 64)
+        if err!= nil {
+            errorMsg := err.Error()
+            resp := &Response{Code:SucceedCode, ErrorMsg:errorMsg}
+            writeResponse(w, resp)
+            return
+        }
+        amount = a
     }
-    err := database.SendTransaction(from, to, amount)
-    if err != nil {
-        errorMsg := err.Error()
-        resp := &Response{Code:SucceedCode, ErrorMsg:errorMsg}
-        writeResponse(w, resp)
-        return
+
+    t := node.GenerateBalanceTransaction(bean.Address(to), big.NewInt(amount))
+
+    var body string
+    if node.SendTransaction(t) != nil {
+        body = "Offline"
+    } else {
+        body = "Send finish"
     }
-    resp := &Response{Code:SucceedCode, Body:"Send transaction succeed!"}
+
+    resp := &Response{Code:SucceedCode, Body:body}
     writeResponse(w, resp)
 }
 
