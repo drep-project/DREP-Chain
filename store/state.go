@@ -204,6 +204,10 @@ func SwitchAccount(addr string) error {
     }
 }
 
+func CurrentAccount() string {
+    return bean.PubKey2Address(GetPubKey()).Hex()
+}
+
 func GetAccounts() []string {
     acc := make([]string, len(prv))
     i := 0

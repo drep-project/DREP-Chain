@@ -327,6 +327,12 @@ func GetAccounts(w http.ResponseWriter, _ *http.Request) {
     writeResponse(w, resp)
 }
 
+func CurrentAccount(w http.ResponseWriter, _ *http.Request) {
+    account := store.CurrentAccount()
+    resp := &Response{Code:SucceedCode, Body:account}
+    writeResponse(w, resp)
+}
+
 var methodsMap = map[string] http.HandlerFunc {
     "/GetAllBlocks": GetAllBlocks,
     "/GetBlock": GetBlock,
@@ -343,6 +349,7 @@ var methodsMap = map[string] http.HandlerFunc {
     "/CreateAccount": CreateAccount,
     "/SwitchAccount": SwitchAccount,
     "/GetAccounts": GetAccounts,
+    "/CurrentAccount": CurrentAccount,
 }
 
 func HttpStart() {
