@@ -19,6 +19,7 @@ type Request struct {
 
 type Response struct {
     Code string `json:"code"`
+    ErrorMsg string `json:"errMsg"`
     Body interface{} `json:"body"`
 }
 
@@ -275,6 +276,29 @@ func AddAccount(w http.ResponseWriter, r *http.Request) {
     writeResponse(w, resp)
 }
 
+func SendTransaction(w http.ResponseWriter, r *http.Request) {
+    params := analysisReqParam(r)
+    var from, to, amount string
+    if value, ok := params["from"].(string); ok {
+        from = value
+    }
+    if value, ok := params["to"].(string); ok {
+        to = value
+    }
+    if value, ok := params["amount"].(string); ok {
+        amount = value
+    }
+    err := database.SendTransaction(from, to, amount)
+    if err != nil {
+        errorMsg := err.Error()
+        resp := &Response{Code:SucceedCode, ErrorMsg:errorMsg}
+        writeResponse(w, resp)
+    }
+
+    resp := &Response{Code:SucceedCode, Body:"Send transaction succeed!"}
+    writeResponse(w, resp)
+}
+
 var methodsMap = map[string] http.HandlerFunc {
     "/GetAllBlocks": GetAllBlocks,
     "/GetBlock": GetBlock,
@@ -289,6 +313,7 @@ var methodsMap = map[string] http.HandlerFunc {
     "/GetStateRoot": GetStateRoot,
     "/GetAccountsHex": GetAccountsHex,
     "/AddAccount": AddAccount,
+    "/SendTransaction": SendTransaction,
 }
 
 func HttpStart() {
