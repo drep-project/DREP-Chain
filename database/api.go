@@ -158,3 +158,35 @@ func AddAccount(hex string) error {
     }
     return db.Store(key, value)
 }
+
+func SendTransaction(from, to, amount string) error {
+    addrFrom := bean.Hex2Address(from)
+    sender := GetAccount(addrFrom)
+    if sender == nil {
+        return errors.New("sender account not found")
+    }
+    addrTo := bean.Hex2Address(to)
+    receiver := GetAccount(addrTo)
+    if receiver == nil {
+        return errors.New("receiver account not found")
+    }
+    value, ok := new(big.Int).SetString(amount, 10)
+    if !ok {
+        return errors.New("wrong amount value")
+    }
+    if sender.Balance.Cmp(value) < 0 {
+        return errors.New("do not have enough balance to send")
+    }
+    sender.Balance = new(big.Int).Sub(sender.Balance, value)
+    sender.Nonce++
+    receiver.Balance = new(big.Int).Add(receiver.Balance, value)
+    err := PutAccount(sender)
+    if err != nil {
+        return errors.New("failed to modify sender account, error: " + err.Error())
+    }
+    err = PutAccount(receiver)
+    if err != nil {
+        return errors.New("failed to modify receiver account, error: " + err.Error())
+    }
+    return nil
+}
