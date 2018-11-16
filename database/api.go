@@ -126,14 +126,10 @@ func GetAccountsHex() []string {
     if err != nil {
         return make([]string, 0)
     }
-    var ca []bean.CommonAddress
-    err = json.Unmarshal(value, &ca)
+    var ah []string
+    err = json.Unmarshal(value, &ah)
     if err != nil {
         return make([]string, 0)
-    }
-    ah := make([]string, len(ca))
-    for i, addr := range ca {
-        ah[i] = addr.Hex()
     }
     return ah
 }
