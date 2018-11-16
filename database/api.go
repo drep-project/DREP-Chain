@@ -5,7 +5,6 @@ import (
     "math/big"
     "BlockChainTest/mycrypto"
     "strconv"
-    "errors"
     "encoding/json"
 )
 
@@ -119,26 +118,33 @@ func PutNonce(addr bean.CommonAddress, nonce int64) error {
     return PutAccount(account)
 }
 
-func GetAccountsHex() []string {
+func PutPrv(prv map[string] *mycrypto.PrivateKey) error {
     db := GetDatabase()
-    key := mycrypto.Hash256([]byte("accounts_hex"))
-    value, err := db.Load(key)
+    key := mycrypto.Hash256([]byte("private_keys"))
+    value, err := json.Marshal(prv)
     if err != nil {
-        return make([]string, 0)
+        return err
     }
-    var ah []string
-    err = json.Unmarshal(value, &ah)
-    if err != nil {
-        return make([]string, 0)
-    }
-    return ah
+    return db.Store(key, value)
 }
 
-func AddAccount(hex string) error {
-    addr := bean.Hex2Address(hex)
-    if addr.IsEmpty() {
-        return errors.New("invalid account address")
+func GetPrv() map[string] *mycrypto.PrivateKey {
+    db := GetDatabase()
+    key := mycrypto.Hash256([]byte("private_keys"))
+    value, err := db.Load(key)
+    if err != nil {
+        return nil
     }
+    var prv map[string] *mycrypto.PrivateKey
+    err = json.Unmarshal(value, &prv)
+    if err != nil {
+        return nil
+    }
+    return prv
+}
+
+func AddAccount(hexStr string, prv map[string] *mycrypto.PrivateKey) error {
+    addr := bean.Hex2Address(hexStr)
     account := &bean.Account{
         Addr: addr,
         Nonce: 0,
@@ -148,45 +154,37 @@ func AddAccount(hex string) error {
     if err != nil {
         return err
     }
-    db := GetDatabase()
-    key := mycrypto.Hash256([]byte("accounts_hex"))
-    ah := GetAccountsHex()
-    ah = append(ah, account.Addr.Hex())
-    value, err := json.Marshal(ah)
-    if err != nil {
-        return err
-    }
-    return db.Store(key, value)
+    return PutPrv(prv)
 }
 
-func SendTransaction(from, to, amount string) error {
-    addrFrom := bean.Hex2Address(from)
-    sender := GetAccount(addrFrom)
-    if sender == nil {
-        return errors.New("sender account not found")
-    }
-    addrTo := bean.Hex2Address(to)
-    receiver := GetAccount(addrTo)
-    if receiver == nil {
-        return errors.New("receiver account not found")
-    }
-    value, ok := new(big.Int).SetString(amount, 10)
-    if !ok {
-        return errors.New("wrong amount value")
-    }
-    if sender.Balance.Cmp(value) < 0 {
-        return errors.New("do not have enough balance to send")
-    }
-    sender.Balance = new(big.Int).Sub(sender.Balance, value)
-    sender.Nonce++
-    receiver.Balance = new(big.Int).Add(receiver.Balance, value)
-    err := PutAccount(sender)
-    if err != nil {
-        return errors.New("failed to modify sender account, error: " + err.Error())
-    }
-    err = PutAccount(receiver)
-    if err != nil {
-        return errors.New("failed to modify receiver account, error: " + err.Error())
-    }
-    return nil
-}
+//func SendTransaction(from, to, amount string) error {
+//    addrFrom := bean.Hex2Address(from)
+//    sender := GetAccount(addrFrom)
+//    if sender == nil {
+//        return errors.New("sender account not found")
+//    }
+//    addrTo := bean.Hex2Address(to)
+//    receiver := GetAccount(addrTo)
+//    if receiver == nil {
+//        return errors.New("receiver account not found")
+//    }
+//    value, ok := new(big.Int).SetString(amount, 10)
+//    if !ok {
+//        return errors.New("wrong amount value")
+//    }
+//    if sender.Balance.Cmp(value) < 0 {
+//        return errors.New("do not have enough balance to send")
+//    }
+//    sender.Balance = new(big.Int).Sub(sender.Balance, value)
+//    sender.Nonce++
+//    receiver.Balance = new(big.Int).Add(receiver.Balance, value)
+//    err := PutAccount(sender)
+//    if err != nil {
+//        return errors.New("failed to modify sender account, error: " + err.Error())
+//    }
+//    err = PutAccount(receiver)
+//    if err != nil {
+//        return errors.New("failed to modify receiver account, error: " + err.Error())
+//    }
+//    return nil
+//}

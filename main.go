@@ -9,6 +9,7 @@ import (
 	"BlockChainTest/bean"
 	"BlockChainTest/store"
 	"BlockChainTest/database"
+	"BlockChainTest/http"
 )
 
 func main()  {
@@ -18,7 +19,7 @@ func main()  {
 			p.Process(peer, t, msg)
 		}
 	}, store.GetPort())
-	network.HttpStart()
+	http.HttpStart()
 	processor.GetInstance().Start()
 	node.GetNode().Start()
 	for {

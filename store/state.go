@@ -14,7 +14,6 @@ import (
 )
 
 var (
-
     minerNum = 3
     lock     sync.Locker
     prvKey   *mycrypto.PrivateKey
@@ -24,6 +23,7 @@ var (
     port network.Port
 
     myIndex = 0
+    prv map[string] *mycrypto.PrivateKey
 )
 
 func init()  {
@@ -104,6 +104,13 @@ func init()  {
         //leader = nil
         //member = consensus.NewMember(peer0, prvKey)
     }
+    prv := database.GetPrv()
+    if prv == nil {
+        prv = make(map[string] *mycrypto.PrivateKey)
+    }
+    addr := bean.PubKey2Address(pubKey).Hex()
+    prv[addr] = prvKey
+
     IsStart = myIndex < minerNum
 }
 
@@ -166,6 +173,45 @@ func GetAddress() bean.Address {
 
 func GetPrvKey() *mycrypto.PrivateKey {
     return prvKey
+}
+
+func CreateAccount() (string, error) {
+    sk, err := mycrypto.GeneratePrivateKey()
+    if err != nil {
+        return "", err
+    }
+    pk := sk.PubKey
+    hexStr := bean.PubKey2Address(pk).Hex()
+    if prv[hexStr] != nil {
+        return "", errors.New("account already exists")
+    }
+    prv[hexStr] = sk
+    err = database.AddAccount(hexStr, prv)
+    if err != nil {
+        delete(prv, hexStr)
+        return "", err
+    }
+    return hexStr, nil
+}
+
+func SwitchAccount(addr string) error {
+    if sk, ok := prv[addr]; ok {
+        prvKey = sk
+        pubKey = sk.PubKey
+        return nil
+    } else {
+        return errors.New("fail to switch account: " + addr + " not found")
+    }
+}
+
+func GetAccounts() []string {
+    acc := make([]string, len(prv))
+    i := 0
+    for addr, _ := range prv {
+        acc[i] = addr
+        i++
+    }
+    return acc
 }
 
 func GetPort() network.Port {
