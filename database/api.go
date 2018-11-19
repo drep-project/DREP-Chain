@@ -75,13 +75,13 @@ func GetAccount(addr bean.CommonAddress) *bean.Account {
     db := GetDatabase()
     key := mycrypto.Hash256([]byte("account_" + addr.Hex()))
     if value, err := db.Load(key); err == nil {
-        account, _ := bean.UnmarshalAccount(value)
-        return account
-    } else {
-        account := &bean.Account{Addr:addr, Nonce:0, Balance:big.NewInt(0)}
-        PutAccount(account)
-        return account
+        account, err := bean.UnmarshalAccount(value)
+        if err == nil {
+            return account
+        }
+        return &bean.Account{Addr:addr, Nonce:0, Balance:big.NewInt(0)}
     }
+    return &bean.Account{Addr:addr, Nonce:0, Balance:big.NewInt(0)}
 }
 
 func PutAccount(account *bean.Account) error {
