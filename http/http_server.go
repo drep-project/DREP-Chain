@@ -233,7 +233,6 @@ func GetNonce(w http.ResponseWriter, r *http.Request) {
     fmt.Println("NonceAddress: ", address)
 
     ca := bean.Hex2Address(address)
-    database.PutNonce(ca, 13131313)
 
     nonce := database.GetNonce(ca)
     body := strconv.FormatInt(nonce, 10)
@@ -264,22 +263,23 @@ func GetStateRoot(w http.ResponseWriter, _ *http.Request) {
 func SendTransaction(w http.ResponseWriter, r *http.Request) {
     params := analysisReqParam(r)
     var to string
-    var amount int64
+    var amount string
     if value, ok := params["to"].(string); ok {
         to = value
     }
     if value, ok := params["amount"].(string); ok {
-        a, err := strconv.ParseInt(value, 10, 64)
-        if err!= nil {
-            errorMsg := err.Error()
-            resp := &Response{Code:SucceedCode, ErrorMsg:errorMsg}
-            writeResponse(w, resp)
-            return
-        }
-        amount = a
+        amount = value
     }
 
-    t := node.GenerateBalanceTransaction(bean.Address(to), big.NewInt(amount))
+    a, succeed := new(big.Int).SetString(amount, 10)
+    if succeed == false {
+        errorMsg := "params amount parsing error"
+        resp := &Response{Code:SucceedCode, ErrorMsg:errorMsg}
+        writeResponse(w, resp)
+        return
+    }
+
+    t := node.GenerateBalanceTransaction(bean.Address(to), a)
 
     var body string
     if node.SendTransaction(t) != nil {
