@@ -88,6 +88,7 @@ func GetBlocksFrom(w http.ResponseWriter, r *http.Request){
 }
 
 func GetAllBlocks(w http.ResponseWriter, _ *http.Request) {
+    fmt.Println("get all blocks running")
     blocks := database.GetAllBlocks()
 
     if blocks == nil || len(blocks) == 0 {
@@ -297,6 +298,7 @@ func CreateAccount(w http.ResponseWriter, _ *http.Request) {
     var resp *Response
     if err != nil {
         resp = &Response{Code:SucceedCode, ErrorMsg:err.Error()}
+        writeResponse(w, resp)
         return
     }
     resp = &Response{Code:SucceedCode, Body:hexStr}
@@ -306,7 +308,7 @@ func CreateAccount(w http.ResponseWriter, _ *http.Request) {
 func SwitchAccount(w http.ResponseWriter, r *http.Request) {
     params := analysisReqParam(r)
     var addr string
-    if value, ok := params["addr"].(string); ok {
+    if value, ok := params["address"].(string); ok {
         addr = value
     }
 
@@ -314,11 +316,11 @@ func SwitchAccount(w http.ResponseWriter, r *http.Request) {
     var resp *Response
     if err != nil {
         resp = &Response{Code:SucceedCode, ErrorMsg:err.Error()}
+        writeResponse(w, resp)
         return
     }
     resp = &Response{Code:SucceedCode, Body:"Switch account succeed!"}
     writeResponse(w, resp)
-
 }
 
 func GetAccounts(w http.ResponseWriter, _ *http.Request) {

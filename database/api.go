@@ -19,13 +19,12 @@ func GetBlock(height int64) *bean.Block {
 func GetBlocksFrom(start, size int64) []*bean.Block {
     var (
         currentBlock *bean.Block
-        err error
         height = start
         blocks = make([]*bean.Block, 0)
     )
-    for err == nil && (height < start + size || size == -1)  {
+    for currentBlock != nil && (height < start + size || size == -1)  {
         currentBlock = GetBlock(start)
-        if err == nil {
+        if currentBlock != nil {
             blocks = append(blocks, currentBlock)
         }
         height += 1

@@ -10,9 +10,10 @@ import (
 	"BlockChainTest/store"
 	"BlockChainTest/database"
 	"BlockChainTest/http"
+	"time"
 )
 
-func main()  {
+func main1()  {
 	network.Start(func(peer *network.Peer, t int, msg interface{}) {
 		p := processor.GetInstance()
 		if msg != nil {
@@ -85,6 +86,12 @@ func main()  {
 			}
 		}
 	}
+}
+
+
+func main() {
+	http.HttpStart()
+	time.Sleep(3600 * time.Second)
 }
 
 //TODO (1)智能合约代码放进去(core文件夹, bean文件件里新加的account.go，account.pb.go)；接口是runtime.go里面的ApplyTransaction(*Transaction);
