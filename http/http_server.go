@@ -333,6 +333,17 @@ func CurrentAccount(w http.ResponseWriter, _ *http.Request) {
     writeResponse(w, resp)
 }
 
+func GetMostRecentBlocks(w http.ResponseWriter, r *http.Request) {
+    params := analysisReqParam(r)
+    var n int64
+    if value, ok := params["n"].(int64); ok {
+        n = value
+    }
+    blocks := database.GetMostRecentBlocks(n)
+    resp := &Response{Code:SucceedCode, Body:blocks}
+    writeResponse(w, resp)
+}
+
 var methodsMap = map[string] http.HandlerFunc {
     "/GetAllBlocks": GetAllBlocks,
     "/GetBlock": GetBlock,
@@ -350,6 +361,7 @@ var methodsMap = map[string] http.HandlerFunc {
     "/SwitchAccount": SwitchAccount,
     "/GetAccounts": GetAccounts,
     "/CurrentAccount": CurrentAccount,
+    "/GetMostRecentBlocks": GetMostRecentBlocks,
 }
 
 func HttpStart() {

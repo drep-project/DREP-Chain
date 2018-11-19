@@ -157,6 +157,14 @@ func AddAccount(hexStr string, prv map[string] *mycrypto.PrivateKey) error {
     return PutPrv(prv)
 }
 
+func GetMostRecentBlocks(n int64) []*bean.Block {
+    height := GetMaxHeight()
+    if height == -1 {
+        return nil
+    }
+    return GetBlocksFrom(height - n, n)
+}
+
 //func SendTransaction(from, to, amount string) error {
 //    addrFrom := bean.Hex2Address(from)
 //    sender := GetAccount(addrFrom)
