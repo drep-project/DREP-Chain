@@ -20,13 +20,11 @@ type Request struct {
 }
 
 type Response struct {
-    Code string `json:"code"`
+    Success bool `json:"success"`
     ErrorMsg string `json:"errMsg"`
     Body interface{} `json:"body"`
 }
 
-const SucceedCode  = "200"
-const FailedCode  = "400"
 
 func GetBlock(w http.ResponseWriter, r *http.Request) {
     params := analysisReqParam(r)
@@ -39,7 +37,7 @@ func GetBlock(w http.ResponseWriter, r *http.Request) {
     if block == nil {
         errMsg := "error occurred during database.GetBlock"
         fmt.Println(errMsg)
-        resp := &Response{Code:FailedCode, Body:errMsg}
+        resp := &Response{Success:false, Body:errMsg}
         writeResponse(w, resp)
         return
     }
@@ -47,12 +45,12 @@ func GetBlock(w http.ResponseWriter, r *http.Request) {
     if err != nil{
         errMsg := "error occurred during json.Marshal(block)"
         fmt.Println(errMsg, ": ", err)
-        resp := &Response{Code:FailedCode, Body:errMsg}
+        resp := &Response{Success:false, Body:errMsg}
         writeResponse(w, resp)
         return
     }
     body := string(bytes)
-    resp := &Response{Code:SucceedCode, Body:body}
+    resp := &Response{Success:true, Body:body}
     writeResponse(w, resp)
 }
 
@@ -70,7 +68,7 @@ func GetBlocksFrom(w http.ResponseWriter, r *http.Request){
     if blocks == nil || len(blocks) == 0 {
         errMsg := "error occurred during GetBlocksFrom"
         fmt.Println(errMsg)
-        resp := &Response{Code:FailedCode, Body:errMsg}
+        resp := &Response{Success:false, Body:errMsg}
         writeResponse(w, resp)
         return
     }
@@ -78,12 +76,12 @@ func GetBlocksFrom(w http.ResponseWriter, r *http.Request){
     if err != nil{
         errMsg := "error occurred during json.Marshal(block)"
         fmt.Println(errMsg, ": ", err)
-        resp := &Response{Code:FailedCode, Body:errMsg}
+        resp := &Response{Success:false, Body:errMsg}
         writeResponse(w, resp)
         return
     }
     body := string(bytes)
-    resp := &Response{Code:SucceedCode, Body:body}
+    resp := &Response{Success:true, Body:body}
     writeResponse(w, resp)
 }
 
@@ -94,7 +92,7 @@ func GetAllBlocks(w http.ResponseWriter, _ *http.Request) {
     if blocks == nil || len(blocks) == 0 {
         errMsg := "error occurred during database.GetAllBlocks"
         fmt.Println(errMsg)
-        resp := &Response{Code:FailedCode, Body:errMsg}
+        resp := &Response{Success:false, Body:errMsg}
         writeResponse(w, resp)
         return
     }
@@ -103,12 +101,12 @@ func GetAllBlocks(w http.ResponseWriter, _ *http.Request) {
     if err != nil{
         errMsg := "error occurred during json.Marshal(block)"
         fmt.Println(errMsg, ": ", err)
-        resp := &Response{Code:FailedCode, Body:errMsg}
+        resp := &Response{Success:false, Body:errMsg}
         writeResponse(w, resp)
         return
     }
     body := string(bytes)
-    resp := &Response{Code:SucceedCode, Body:body}
+    resp := &Response{Success:true, Body:body}
     writeResponse(w, resp)
 }
 
@@ -117,7 +115,7 @@ func GetHighestBlock(w http.ResponseWriter, _ *http.Request) {
     if block == nil {
         errMsg := "error occurred during database.GetHighestBlock"
         fmt.Println(errMsg)
-        resp := &Response{Code:FailedCode, Body:errMsg}
+        resp := &Response{Success:false, Body:errMsg}
         writeResponse(w, resp)
         return
     }
@@ -125,12 +123,12 @@ func GetHighestBlock(w http.ResponseWriter, _ *http.Request) {
     if err != nil{
         errMsg := "error occurred during json.Marshal(block)"
         fmt.Println(errMsg, ": ", err)
-        resp := &Response{Code:FailedCode, Body:errMsg}
+        resp := &Response{Success:false, Body:errMsg}
         writeResponse(w, resp)
         return
     }
     body := string(bytes)
-    resp := &Response{Code:SucceedCode, Body:body}
+    resp := &Response{Success:true, Body:body}
     writeResponse(w, resp)
 }
 
@@ -144,12 +142,12 @@ func GetMaxHeight(w http.ResponseWriter, _ *http.Request) {
     if height == -1 {
         errMsg := "error occurred during database.GetMaxHeight()"
         fmt.Println(errMsg)
-        resp := &Response{Code:FailedCode, Body:errMsg}
+        resp := &Response{Success:false, Body:errMsg}
         writeResponse(w, resp)
         return
     }
     body := strconv.FormatInt(height, 10)
-    resp := &Response{Code:SucceedCode, Body:body}
+    resp := &Response{Success:true, Body:body}
     writeResponse(w, resp)
 }
 
@@ -164,12 +162,12 @@ func PutMaxHeight(w http.ResponseWriter, r *http.Request) {
     if err != nil {
         errMsg := "error occurred during database.PutMaxHeight()"
         fmt.Println(errMsg, ": ", err)
-        resp := &Response{Code:FailedCode, Body:errMsg}
+        resp := &Response{Success:false, Body:errMsg}
         writeResponse(w, resp)
         return
     }
 
-    resp := &Response{Code:SucceedCode, Body:"[database PutMaxHeight] succeed!"}
+    resp := &Response{Success:true, Body:"[database PutMaxHeight] succeed!"}
     writeResponse(w, resp)
 }
 
@@ -182,7 +180,7 @@ func GetBalance(w http.ResponseWriter, r *http.Request) {
     }
 
     if len(address) == 0 {
-        resp := &Response{Code:FailedCode, Body:"param format incorrect"}
+        resp := &Response{Success:false, Body:"param format incorrect"}
         writeResponse(w, resp)
         return
     }
@@ -196,12 +194,12 @@ func GetBalance(w http.ResponseWriter, r *http.Request) {
     defer func() {
         if x := recover(); x != nil {
             fmt.Printf("[database GetBalance] caught panic: %v", x)
-            resp := &Response{Code:FailedCode, Body:"[database GetBalance] caught panic!"}
+            resp := &Response{Success:false, Body:"[database GetBalance] caught panic!"}
             writeResponse(w, resp)
         }
     }()
     body := strconv.FormatInt(b.Int64(), 10)
-    resp := &Response{Code:SucceedCode, Body:body}
+    resp := &Response{Success:true, Body:body}
     writeResponse(w, resp)
 }
 
@@ -215,7 +213,7 @@ func PutBalance(w http.ResponseWriter, r *http.Request) {
 
     ca := bean.Hex2Address(address)
     database.PutBalance(ca, big.NewInt(13131313))
-    resp := &Response{Code:FailedCode, Body:"database PutBalance] succeed!"}
+    resp := &Response{Success:false, Body:"database PutBalance] succeed!"}
     writeResponse(w, resp)
 }
 
@@ -227,7 +225,7 @@ func GetNonce(w http.ResponseWriter, r *http.Request) {
     }
 
     if len(address) == 0 {
-        resp := &Response{Code:FailedCode, Body:"param format incorrect"}
+        resp := &Response{Success:false, Body:"param format incorrect"}
         writeResponse(w, resp)
         return
     }
@@ -237,7 +235,7 @@ func GetNonce(w http.ResponseWriter, r *http.Request) {
 
     nonce := database.GetNonce(ca)
     body := strconv.FormatInt(nonce, 10)
-    resp := &Response{Code:SucceedCode, Body:body}
+    resp := &Response{Success:true, Body:body}
     writeResponse(w, resp)
 }
 
@@ -250,14 +248,14 @@ func PutNonce(w http.ResponseWriter, r *http.Request) {
     ca := bean.Hex2Address(address)
     database.PutNonce(ca, 13131313)
 
-    resp := &Response{Code:SucceedCode, Body:"[database PutNonce] succeed!"}
+    resp := &Response{Success:true, Body:"[database PutNonce] succeed!"}
     writeResponse(w, resp)
 }
 
 func GetStateRoot(w http.ResponseWriter, _ *http.Request) {
     b := database.GetStateRoot()
     body := string(b)
-    resp := &Response{Code:SucceedCode, Body:body}
+    resp := &Response{Success:true, Body:body}
     writeResponse(w, resp)
 }
 
@@ -275,7 +273,7 @@ func SendTransaction(w http.ResponseWriter, r *http.Request) {
     a, succeed := new(big.Int).SetString(amount, 10)
     if succeed == false {
         errorMsg := "params amount parsing error"
-        resp := &Response{Code:SucceedCode, ErrorMsg:errorMsg}
+        resp := &Response{Success:true, ErrorMsg:errorMsg}
         writeResponse(w, resp)
         return
     }
@@ -289,7 +287,7 @@ func SendTransaction(w http.ResponseWriter, r *http.Request) {
         body = "Send finish"
     }
 
-    resp := &Response{Code:SucceedCode, Body:body}
+    resp := &Response{Success:true, Body:body}
     writeResponse(w, resp)
 }
 
@@ -297,11 +295,11 @@ func CreateAccount(w http.ResponseWriter, _ *http.Request) {
     hexStr, err := store.CreateAccount()
     var resp *Response
     if err != nil {
-        resp = &Response{Code:SucceedCode, ErrorMsg:err.Error()}
+        resp = &Response{Success:true, ErrorMsg:err.Error()}
         writeResponse(w, resp)
         return
     }
-    resp = &Response{Code:SucceedCode, Body:hexStr}
+    resp = &Response{Success:true, Body:hexStr}
     writeResponse(w, resp)
 }
 
@@ -315,23 +313,23 @@ func SwitchAccount(w http.ResponseWriter, r *http.Request) {
     err := store.SwitchAccount(addr)
     var resp *Response
     if err != nil {
-        resp = &Response{Code:SucceedCode, ErrorMsg:err.Error()}
+        resp = &Response{Success:true, ErrorMsg:err.Error()}
         writeResponse(w, resp)
         return
     }
-    resp = &Response{Code:SucceedCode, Body:"Switch account succeed!"}
+    resp = &Response{Success:true, Body:"Switch account succeed!"}
     writeResponse(w, resp)
 }
 
 func GetAccounts(w http.ResponseWriter, _ *http.Request) {
     accounts := store.GetAccounts()
-    resp := &Response{Code:SucceedCode, Body:accounts}
+    resp := &Response{Success:true, Body:accounts}
     writeResponse(w, resp)
 }
 
 func CurrentAccount(w http.ResponseWriter, _ *http.Request) {
     account := store.CurrentAccount()
-    resp := &Response{Code:SucceedCode, Body:account}
+    resp := &Response{Success:true, Body:account}
     writeResponse(w, resp)
 }
 
@@ -342,7 +340,7 @@ func GetMostRecentBlocks(w http.ResponseWriter, r *http.Request) {
         n = value
     }
     blocks := database.GetMostRecentBlocks(n)
-    resp := &Response{Code:SucceedCode, Body:blocks}
+    resp := &Response{Success:true, Body:blocks}
     writeResponse(w, resp)
 }
 
