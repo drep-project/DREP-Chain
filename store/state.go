@@ -104,7 +104,7 @@ func init()  {
         //leader = nil
         //member = consensus.NewMember(peer0, prvKey)
     }
-    prv := database.GetPrv()
+    prv = database.GetPrv()
     if prv == nil {
         prv = make(map[string] *mycrypto.PrivateKey)
     }
