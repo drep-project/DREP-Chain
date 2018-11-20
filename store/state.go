@@ -225,7 +225,7 @@ func GetPort() network.Port {
 func GetGasSum(ts []*bean.Transaction) *big.Int {
     gasSum := new(big.Int)
     for _, tx := range ts {
-        gasSum = gasSum.Add(gasSum, tx.GetGasUsed())
+        gasSum = gasSum.Add(gasSum, tx.GetGas())
     }
     return gasSum
 }
@@ -241,7 +241,7 @@ func GetStateRoot(ts []*bean.Transaction) []byte {
     //for _, tx := range ts {
     //    from := bean.PubKey2Address(tx.Data.PubKey)
     //    to := bean.Hex2Address(tx.Data.To)
-    //    gasUsed := tx.GetGasUsed()
+    //    gasUsed := tx.GetGas()
     //    nonce := tx.Data.Nonce
     //    amount := new(big.Int).SetBytes(tx.Data.Amount)
     //    prevSenderBalance := database.GetBalance(from)
