@@ -8,6 +8,7 @@ import (
 )
 
 type BlockHeader struct {
+    ChainId              int64
     Version              int32
     PreviousHash         []byte
     GasLimit             []byte
@@ -37,6 +38,7 @@ type TransactionData struct {
     Nonce                int64
     Type                 int32
     To                   string
+    ToChain              int64
     Amount               []byte
     GasPrice             []byte
     GasLimit             []byte
@@ -85,24 +87,32 @@ func (tx *Transaction) Addr() Address {
     return Addr(tx.Data.PubKey)
 }
 
-func (tx *Transaction) GetGasQuantity() *big.Int {
+func (tx *Transaction) GetGasUsed() *big.Int {
     return new(big.Int).SetInt64(int64(100))
 }
 
-func (tx *Transaction) GetGasUsed() *big.Int {
-    gasQuantity := tx.GetGasQuantity()
+func (tx *Transaction) GetGas() *big.Int {
+    gasQuantity := tx.GetGasUsed()
     gasPrice := new(big.Int).SetBytes(tx.Data.GasPrice)
     gasUsed := new(big.Int).Mul(gasQuantity, gasPrice)
     return gasUsed
 }
 
-func (block *Block) BlockID() (string, error) {
+func (block *Block) BlockHash() (string, error) {
     b, err := json.Marshal(block.Header)
     if err != nil {
         return "", err
     }
-    id := hex.EncodeToString(mycrypto.Hash256(b))
-    return id, nil
+    h := "0x" + hex.EncodeToString(mycrypto.Hash256(b))
+    return h, nil
+}
+
+func (block *Block) TxHashes() []string {
+    th := make([]string, len(block.Header.TxHashes))
+    for i, hash := range block.Header.TxHashes {
+        th[i] = "0x" + hex.EncodeToString(hash)
+    }
+    return th
 }
 
 func Height2Key(height int64) string {

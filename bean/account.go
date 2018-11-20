@@ -95,7 +95,7 @@ func (addr CommonAddress) Big() *big.Int {
 }
 
 func PubKey2Address(pubKey *mycrypto.Point) CommonAddress {
-	return Bytes2Address(pubKey.Bytes())
+	return Bytes2Address(mycrypto.Hash256(pubKey.Bytes()))
 }
 
 type Account struct {
