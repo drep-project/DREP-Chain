@@ -2,6 +2,8 @@ package account
 
 import (
     "os"
+    "encoding/hex"
+    "encoding/json"
 )
 
 var (
@@ -9,18 +11,12 @@ var (
 )
 
 type Key struct {
+    ChainId int64
     PrivateKey string
     Address string
 }
 
-type KeyStore interface {
-    IfExist(string) (bool, error)
-    GetKey(string) (string, error)
-    StoreKey(string) (string, error)
-    JoinPath(filename string) string
-}
-
-func GenKeystore(keyAddr string, jsonBytes []byte) error {
+func genKeystore(keyAddr string, jsonBytes []byte) error {
     cdErr := os.Chdir(KeystoreDirName)
     if cdErr != nil {
         if os.IsNotExist(cdErr) {
@@ -31,7 +27,7 @@ func GenKeystore(keyAddr string, jsonBytes []byte) error {
             return cdErr
         }
     }
-    keystoreName := GetFilename(keyAddr)
+    keystoreName := getFilename(keyAddr)
     file, cfErr := os.Create(keystoreName)
     if cfErr != nil {
         return cfErr
@@ -40,12 +36,12 @@ func GenKeystore(keyAddr string, jsonBytes []byte) error {
     return nil
 }
 
-func LoadKeystore(keyAddr string) ([]byte, error) {
+func load(keyAddr string) ([]byte, error) {
     cdErr := os.Chdir(KeystoreDirName)
     if cdErr != nil {
         return nil, cdErr
     }
-    keystoreName := GetFilename(keyAddr)
+    keystoreName := getFilename(keyAddr)
     file, opErr := os.Open(keystoreName)
     if opErr != nil {
         return nil, opErr
@@ -55,11 +51,46 @@ func LoadKeystore(keyAddr string) ([]byte, error) {
     return jsonObj[:n], readErr
 }
 
-func GetFilename(keyAddr string) string {
+func store(node *Node) error {
+    key := &Key{
+        ChainId: int64(node.ChainId),
+        PrivateKey: hex.EncodeToString(node.PrvKey.Prv),
+        Address: node.Address.Hex(),
+    }
+    b, err := json.Marshal(key)
+    if err != nil {
+        return err
+    }
+    return genKeystore(key.Address, b)
+}
+
+func getFilename(keyAddr string) string {
     return keyAddr
 }
 
-//func GetFilename(keyAddr string) string {
+func OpenKeystore(addr string) (*Node, error) {
+    jsonBytes, err := load(addr)
+    if err != nil {
+        return nil, err
+    }
+    key := &Key{}
+    err = json.Unmarshal(jsonBytes, key)
+    if err != nil {
+        return nil, err
+    }
+    prv, err := hex.DecodeString(key.PrivateKey)
+    if err != nil {
+        return nil, err
+    }
+    node := &Node{
+        ChainId: ChainID(key.ChainId),
+        PrvKey:  genPrvKey(prv),
+        Address: Hex2Address(key.Address),
+    }
+    return node, nil
+}
+
+//func getFilename(keyAddr string) string {
 //    ts := time.Now().UTC()
 //    return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), keyAddr)
 //}

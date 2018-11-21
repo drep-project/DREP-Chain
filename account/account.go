@@ -4,12 +4,9 @@ import (
 	"log"
 	"math/big"
 	"BlockChainTest/mycrypto"
-	"BlockChainTest/bean"
 	"crypto/rand"
 	"crypto/hmac"
 	"crypto/sha512"
-	"encoding/hex"
-	"encoding/json"
 )
 
 var (
@@ -18,107 +15,110 @@ var (
 	KeyBitSize = 256
 )
 
-type ChainID int64
-
 type Node struct {
+	ChainId ChainID
 	PrvKey  *mycrypto.PrivateKey
-	Address bean.CommonAddress
+	Address CommonAddress
 }
 
-func NewNode(prv []byte) *Node {
-	prvKey := GenPrvKey(prv)
-	address := bean.PubKey2Address(prvKey.PubKey)
+func NewNode(prv []byte, chainId ChainID) *Node {
+	prvKey := genPrvKey(prv)
+	address := PubKey2Address(prvKey.PubKey)
 	return &Node{
+		ChainId: chainId,
 		PrvKey: prvKey,
 		Address: address,
 	}
 }
 
-func store(node *Node) error {
-	key := &Key{
-		PrivateKey: hex.EncodeToString(node.PrvKey.Prv),
-		Address: node.Address.Hex(),
-	}
-	b, err := json.Marshal(key)
-	if err != nil {
-		return err
-	}
-	return GenKeystore(key.Address, b)
+type Storage struct {
+	Balance    *big.Int
+	Nonce      int64
+	IsContract bool
+	ByteCode   ByteCode
+	CodeHash   Hash
 }
 
-func load(addr string) (*Node, error) {
-	jsonBytes, err := LoadKeystore(addr)
-	if err != nil {
-		return nil, err
+func NewStorage(code ByteCode) *Storage {
+	storage := &Storage{}
+	storage.Balance = new(big.Int)
+	storage.Nonce = 0
+	storage.ByteCode = code
+	if code != nil {
+		storage.IsContract = true
+		storage.CodeHash = Bytes2Hash(code)
 	}
-	key := &Key{}
-	err = json.Unmarshal(jsonBytes, key)
-	if err != nil {
-		return nil, err
-	}
-	prv, err := hex.DecodeString(key.PrivateKey)
-	if err != nil {
-		return nil, err
-	}
-	node := &Node{
-		PrvKey: GenPrvKey(prv),
-		Address: bean.Hex2Address(key.Address),
-	}
-	return node, nil
+	return storage
+}
+
+type Account interface {
+	Address() CommonAddress
 }
 
 type MainAccount struct {
 	Node        *Node
+	Storage     *Storage
 	ChainCode   []byte
 	SubAccounts map[ChainID] *SubAccount
 }
 
-type SubAccount struct {
-	Node *Node
-}
-
 func NewMainAccount() (*MainAccount, error) {
-	seed, err := GenSeed()
+	seed, err := genSeed()
 	if err != nil {
 		return nil, err
 	}
-	h := HMAC(seed, SeedMark)
+	h := hmAC(seed, SeedMark)
 	account := &MainAccount{
-		Node: NewNode(h[:KeyBitSize]),
+		Node: NewNode(h[:KeyBitSize], MainChainID),
+		Storage: NewStorage(nil),
 		ChainCode: h[KeyBitSize:],
 		SubAccounts: make(map[ChainID] *SubAccount),
 	}
 	return account, store(account.Node)
 }
 
+func (m *MainAccount) Address() CommonAddress {
+	return m.Node.Address
+}
+
 func (m *MainAccount) NewSubAccount(chainId ChainID) (*SubAccount, error) {
 	code := new(big.Int).SetBytes(m.ChainCode)
 	id := new(big.Int).SetInt64(int64(chainId))
 	msg := new(big.Int).Xor(code, id).Bytes()
-	h := HMAC(msg, m.Node.PrvKey.Prv)
+	h := hmAC(msg, m.Node.PrvKey.Prv)
 	account := &SubAccount{
-		Node: NewNode(h[:KeyBitSize]),
+		Node: NewNode(h[:KeyBitSize], chainId),
+		Storage: NewStorage(nil),
 	}
 	m.SubAccounts[chainId] = account
 	return account, store(account.Node)
 }
 
-func HMAC(message, key []byte) []byte {
+type SubAccount struct {
+	Node    *Node
+	Storage *Storage
+}
+
+func (s *SubAccount) Address() CommonAddress {
+	return s.Node.Address
+}
+
+func hmAC(message, key []byte) []byte {
 	h := hmac.New(sha512.New, key)
 	h.Write(message)
 	return h.Sum(nil)
 }
 
-func GenSeed() ([]byte, error) {
+func genSeed() ([]byte, error) {
 	seed := make([]byte, SeedSize)
 	_, err := rand.Read(seed)
 	if err != nil {
-		log.Println("Error in GenSeed().")
+		log.Println("Error in genSeed().")
 	}
 	return seed, err
 }
 
-func GenPrvKey(prv []byte) *mycrypto.PrivateKey {
+func genPrvKey(prv []byte) *mycrypto.PrivateKey {
 	cur := mycrypto.GetCurve()
 	pubKey := cur.ScalarBaseMultiply(prv)
 	prvKey := &mycrypto.PrivateKey{Prv: prv, PubKey: pubKey}

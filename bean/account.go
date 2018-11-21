@@ -48,6 +48,7 @@ func Big2Hash(x *big.Int) Hash {
 	return Bytes2Hash(x.Bytes())
 }
 
+//TODO
 type CommonAddress [AddressLength]byte
 
 func (addr CommonAddress) IsEmpty() bool {
