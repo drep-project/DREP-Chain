@@ -8,9 +8,9 @@ import (
 )
 
 const (
-    HashLength = 32
+    HashLength    = 32
     AddressLength = 20
-    MainChainID = ChainID(0)
+    RootChainID   = ChainID(0)
 )
 
 var (
@@ -71,8 +71,12 @@ func PubKey2Address(pubKey *mycrypto.Point) CommonAddress {
 
 type ByteCode []byte
 
-func GetCodeHash(byteCode ByteCode) Hash {
+func (byteCode ByteCode) Hash() Hash {
     return Bytes2Hash(byteCode)
+}
+
+func (byteCode ByteCode) Address() CommonAddress {
+    return Bytes2Address(byteCode.Hash().Bytes())
 }
 
 type Hash [HashLength]byte

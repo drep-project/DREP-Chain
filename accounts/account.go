@@ -3,6 +3,7 @@ package accounts
 import (
 	"math/big"
 	"BlockChainTest/mycrypto"
+	"errors"
 )
 
 var (
@@ -12,25 +13,48 @@ var (
 )
 
 type Node struct {
-	ChainId ChainID
-	PrvKey  *mycrypto.PrivateKey
-	Address CommonAddress
+	PrvKey    *mycrypto.PrivateKey
+	ChainId   ChainID
+	ChainCode []byte
 }
 
-func NewNode(prv []byte, chainId ChainID) *Node {
-	prvKey := genPrvKey(prv)
-	address := PubKey2Address(prvKey.PubKey)
-	return &Node{
-		ChainId: chainId,
-		PrvKey: prvKey,
-		Address: address,
+func NewNode(parent *Node, chainId ChainID) *Node {
+	var (
+		prvKey *mycrypto.PrivateKey
+		chainCode []byte
+	)
+
+	IsRoot := parent == nil
+	if IsRoot {
+		seed, err := genSeed()
+		if err != nil {
+			return nil
+		}
+		h := hmAC(seed, SeedMark)
+		prvKey = genPrvKey(h[:KeyBitSize])
+		chainCode = h[KeyBitSize:]
+	} else {
+		pid := new(big.Int).SetBytes(parent.ChainCode)
+		cid := new(big.Int).SetInt64(int64(chainId))
+		msg := new(big.Int).Xor(pid, cid).Bytes()
+		h := hmAC(msg, parent.PrvKey.Prv)
+		prvKey = genPrvKey(h[:KeyBitSize])
 	}
+
+	return &Node{
+		PrvKey: prvKey,
+		ChainId: chainId,
+		ChainCode: chainCode,
+	}
+}
+
+func (node *Node) Address() CommonAddress {
+	return PubKey2Address(node.PrvKey.PubKey)
 }
 
 type Storage struct {
 	Balance    *big.Int
 	Nonce      int64
-	IsContract bool
 	ByteCode   ByteCode
 	CodeHash   Hash
 }
@@ -41,95 +65,48 @@ func NewStorage(byteCode ByteCode) *Storage {
 	storage.Nonce = 0
 	storage.ByteCode = byteCode
 	if byteCode != nil {
-		storage.IsContract = true
-		storage.CodeHash = GetCodeHash(byteCode)
+		storage.CodeHash = byteCode.Hash()
 	}
 	return storage
 }
 
-type Account interface {
-	Address() CommonAddress
-	GetNode() *Node
-	GetStorage() *Storage
+type Account struct {
+	Address       CommonAddress
+	Node          *Node
+	Storage       *Storage
 }
 
-func NewAccount(m *MainAccount, chainId ChainID, byteCode ByteCode) (Account, error) {
-	 isMain := chainId == MainChainID
-	 if isMain {
-	 	return NewMainAccount(byteCode)
-	 } else {
-	 	return NewSubAccount(m, chainId, byteCode)
-	 }
-}
+func NewAccount(parent *Node, chainId ChainID, byteCode ByteCode) (*Account, error) {
+	var (
+		address       CommonAddress
+		node          *Node
+		storage       *Storage
+	)
 
-type MainAccount struct {
-	Node        *Node
-	Storage     *Storage
-	ChainCode   []byte
-	SubAccounts map[ChainID] *SubAccount
-}
-
-func NewMainAccount(byteCode ByteCode) (*MainAccount, error) {
-	seed, err := genSeed()
-	if err != nil {
-		return nil, err
+	IsRoot := chainId == RootChainID
+	if !IsRoot && parent == nil {
+		return nil, errors.New("missing parent account")
 	}
-	h := hmAC(seed, SeedMark)
-	account := &MainAccount{
-		Node: NewNode(h[:KeyBitSize], MainChainID),
-		Storage: NewStorage(byteCode),
-		ChainCode: h[KeyBitSize:],
-		SubAccounts: make(map[ChainID] *SubAccount),
+
+	IsContract := byteCode != nil
+	if IsContract {
+		address = byteCode.Address()
+		storage = NewStorage(byteCode)
+	} else {
+
+		node = NewNode(parent, chainId)
+		err := store(node)
+		if err != nil {
+			return nil, err
+		}
+		address = node.Address()
+		storage = NewStorage(nil)
 	}
-	err = store(account.Node)
-	if err != nil {
-		return nil, err
-	}
-	return account, nil
-}
 
-func (m *MainAccount) Address() CommonAddress {
-	return m.Node.Address
-}
-
-func (m *MainAccount) GetNode() *Node {
-	return m.Node
-}
-
-func (m *MainAccount) GetStorage() *Storage {
-	return m.Storage
-}
-
-type SubAccount struct {
-	Node    *Node
-	Storage *Storage
-}
-
-func NewSubAccount(m *MainAccount, chainId ChainID, byteCode ByteCode) (*SubAccount, error) {
-	chainCode := new(big.Int).SetBytes(m.ChainCode)
-	id := new(big.Int).SetInt64(int64(chainId))
-	msg := new(big.Int).Xor(chainCode, id).Bytes()
-	h := hmAC(msg, m.Node.PrvKey.Prv)
-	account := &SubAccount{
-		Node: NewNode(h[:KeyBitSize], chainId),
-		Storage: NewStorage(byteCode),
-	}
-	m.SubAccounts[chainId] = account
-	err := store(account.Node)
-	if err != nil {
-		return nil, err
+	account := &Account{
+		Address:       address,
+		Node:          node,
+		Storage:       storage,
 	}
 	return account, nil
-}
-
-func (s *SubAccount) Address() CommonAddress {
-	return s.Node.Address
-}
-
-func (s *SubAccount) GetNode() *Node {
-	return s.Node
-}
-
-func (s *SubAccount) GetStorage() *Storage {
-	return s.Storage
 }

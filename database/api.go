@@ -71,30 +71,26 @@ func PutMaxHeight(height int64) error {
     return nil
 }
 
-func GetAccount(addr accounts.CommonAddress) accounts.Account {
+func GetAccount(addr accounts.CommonAddress) *accounts.Account {
     db := GetDatabase()
     key := mycrypto.Hash256([]byte("account_" + addr.Hex()))
     value, err := db.Load(key)
     if err != nil {
         return nil
     }
-    var m *accounts.MainAccount
-    var s *accounts.SubAccount
-    mErr := json.Unmarshal(value, m)
-    sErr := json.Unmarshal(value, s)
-    if mErr == nil {
-        return m
+    account := &accounts.Account{}
+    err = json.Unmarshal(value, account)
+    if err != nil {
+        return nil
     }
-    if sErr == nil {
-        return s
-    }
-    return nil
+    return account
 }
 
-func PutAccount(acc accounts.Account) error {
+func PutAccount(account *accounts.Account) error {
     db := GetDatabase()
-    key := mycrypto.Hash256([]byte("account_" + acc.Address().Hex()))
-    value, err := json.Marshal(acc)
+    key := mycrypto.Hash256([]byte("account_" + account.Address.Hex()))
+    a := &accounts.Account{Storage: account.Storage}
+    value, err := json.Marshal(a)
     if err != nil {
         return err
     }
@@ -107,52 +103,27 @@ func PutAccount(acc accounts.Account) error {
 }
 
 func GetBalance(addr accounts.CommonAddress) *big.Int {
-    acc := GetAccount(addr)
-    return acc.GetStorage().Balance
+    account := GetAccount(addr)
+    return account.Storage.Balance
 }
 
 func PutBalance(addr accounts.CommonAddress, balance *big.Int) error {
-    acc := GetAccount(addr)
-    storage := acc.GetStorage()
+    account := GetAccount(addr)
+    storage := account.Storage
     storage.Balance = balance
-    return PutAccount(acc)
+    return PutAccount(account)
 }
 
 func GetNonce(addr accounts.CommonAddress) int64 {
-    acc := GetAccount(addr)
-    return acc.GetStorage().Nonce
+    account := GetAccount(addr)
+    return account.Storage.Nonce
 }
 
 func PutNonce(addr accounts.CommonAddress, nonce int64) error {
-    acc := GetAccount(addr)
-    storage := acc.GetStorage()
+    account := GetAccount(addr)
+    storage := account.Storage
     storage.Nonce = nonce
-    return PutAccount(acc)
-}
-
-func PutPrv(prv map[string] *mycrypto.PrivateKey) error {
-    db := GetDatabase()
-    key := mycrypto.Hash256([]byte("private_keys"))
-    value, err := json.Marshal(prv)
-    if err != nil {
-        return err
-    }
-    return db.Store(key, value)
-}
-
-func GetPrv() map[string] *mycrypto.PrivateKey {
-    db := GetDatabase()
-    key := mycrypto.Hash256([]byte("private_keys"))
-    value, err := db.Load(key)
-    if err != nil {
-        return nil
-    }
-    var prv map[string] *mycrypto.PrivateKey
-    err = json.Unmarshal(value, &prv)
-    if err != nil {
-        return nil
-    }
-    return prv
+    return PutAccount(account)
 }
 
 func PutNodes(nodes map[string] *accounts.Node) error {
@@ -182,7 +153,7 @@ func GetNodes() map[string] *accounts.Node {
 
 func AddNode(node *accounts.Node) error {
     nodes := GetNodes()
-    nodes[node.Address.Hex()] = node
+    nodes[node.Address().Hex()] = node
     return PutNodes(nodes)
 }
 

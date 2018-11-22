@@ -11,9 +11,10 @@ var (
 )
 
 type Key struct {
-    ChainId int64
-    PrivateKey string
     Address string
+    PrivateKey string
+    ChainId int64
+    ChainCode string
 }
 
 func genKeystore(keyAddr string, jsonBytes []byte) error {
@@ -53,9 +54,10 @@ func load(keyAddr string) ([]byte, error) {
 
 func store(node *Node) error {
     key := &Key{
-        ChainId: int64(node.ChainId),
+        Address: node.Address().Hex(),
         PrivateKey: hex.EncodeToString(node.PrvKey.Prv),
-        Address: node.Address.Hex(),
+        ChainId: int64(node.ChainId),
+        ChainCode: string(node.ChainCode),
     }
     b, err := json.Marshal(key)
     if err != nil {
@@ -82,10 +84,14 @@ func OpenKeystore(addr string) (*Node, error) {
     if err != nil {
         return nil, err
     }
+    chainCode, err := hex.DecodeString(key.ChainCode)
+    if err != nil {
+        return nil, err
+    }
     node := &Node{
-        ChainId: ChainID(key.ChainId),
         PrvKey:  genPrvKey(prv),
-        Address: Hex2Address(key.Address),
+        ChainId: ChainID(key.ChainId),
+        ChainCode: chainCode,
     }
     return node, nil
 }

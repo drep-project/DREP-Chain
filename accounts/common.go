@@ -6,7 +6,6 @@ import (
     "BlockChainTest/mycrypto"
     "crypto/rand"
     "BlockChainTest/log"
-    "math/big"
 )
 
 func hmAC(message, key []byte) []byte {
@@ -31,16 +30,33 @@ func genPrvKey(prv []byte) *mycrypto.PrivateKey {
     return prvKey
 }
 
-func NewAccountInDebug(prv []byte) (Account, error) {
-    account := &MainAccount{
-        Node: NewNode(prv, MainChainID),
-        Storage: NewStorage(nil),
-        ChainCode: new(big.Int).SetInt64(int64(1)).Bytes(),
-        SubAccounts: make(map[ChainID] *SubAccount),
-    }
-    err := store(account.Node)
+func NewNodeInDebug(prv []byte) (*Node, error) {
+    seed, err := genSeed()
     if err != nil {
         return nil, err
+    }
+    h := hmAC(seed, SeedMark)
+    prvKey := genPrvKey(prv)
+    chainCode := h[KeyBitSize:]
+    node := &Node{
+        PrvKey: prvKey,
+        ChainId: RootChainID,
+        ChainCode: chainCode,
+    }
+    return node, nil
+}
+
+func NewAccountInDebug(prv []byte) (*Account, error) {
+    node, _ := NewNodeInDebug(prv)
+    err := store(node)
+    if err != nil {
+        return nil, err
+    }
+    address := PubKey2Address(node.PrvKey.PubKey)
+    account := &Account{
+        Address: address,
+        Node: node,
+        Storage: NewStorage(nil),
     }
     return account, nil
 }

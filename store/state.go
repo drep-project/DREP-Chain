@@ -182,7 +182,7 @@ func GetPrvKey() *mycrypto.PrivateKey {
 }
 
 func CreateAccount(addr string, id int64) (string, error) {
-    isMain := id == int64(accounts.MainChainID)
+    isMain := id == int64(accounts.RootChainID)
     var (
         acc accounts.Account
         err error
@@ -210,7 +210,7 @@ func CreateAccount(addr string, id int64) (string, error) {
         return "", err
     }
     database.AddNode(acc.GetNode())
-    return acc.Address().Hex(), nil
+    return acc.GetAddress().Hex(), nil
 }
 
 func SwitchAccount(addr string) error {
