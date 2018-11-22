@@ -15,7 +15,7 @@ var cmdNonce = &cobra.Command{
     Short: `"` + nonce + `" is the command to check current nonce(s) of local accounts reserved.`,
 
     Long: `"` + nonce + `" is the command to check current nonce(s) of local accounts reserved. if "--` + flagAccount +
-        `" is set to a specific account address, the nonce of that account will be returned if the address is valid, otherwise 
+        `" is set to a specific accounts address, the nonce of that accounts will be returned if the address is valid, otherwise 
 error will be returned.`,
 
     Run: func(cmd *cobra.Command, args []string) {
@@ -43,7 +43,7 @@ error will be returned.`,
 }
 
 func init() {
-    cmdNonce.Flags().StringVarP(&ptrAccount, flagAccount, "a", "", "account address")
+    cmdNonce.Flags().StringVarP(&ptrAccount, flagAccount, "a", "", "accounts address")
     CmdRoot.AddCommand(cmdNonce)
 }
 

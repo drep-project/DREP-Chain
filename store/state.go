@@ -11,11 +11,13 @@ import (
     "errors"
     "time"
     "BlockChainTest/trie"
+    "BlockChainTest/accounts"
 )
 
 var (
     minerNum = 3
     lock     sync.Locker
+    chainId  accounts.ChainID
     prvKey   *mycrypto.PrivateKey
     pubKey   *mycrypto.Point
     address  bean.Address
@@ -23,7 +25,7 @@ var (
     port network.Port
 
     myIndex = 0
-    prv map[string] *mycrypto.PrivateKey
+    nodes map[string] *accounts.Node
 )
 
 func init()  {
@@ -32,6 +34,9 @@ func init()  {
     //prvKey, _ = mycrypto.GetPrivateKey()
     //pubKey = GetPubKey()
     curve := mycrypto.GetCurve()
+    var id0 int64 = 0
+    var id1 int64 = 0
+    var id2 int64 = 0
     k0 := []byte{0x22, 0x11}
     k1 := []byte{0x14, 0x44}
     k2 := []byte{0x11, 0x55}
@@ -39,9 +44,9 @@ func init()  {
     pub0 := curve.ScalarBaseMultiply(k0)
     pub1 := curve.ScalarBaseMultiply(k1)
     pub2 := curve.ScalarBaseMultiply(k2)
-    database.PutBalance(bean.Hex2Address(bean.Addr(pub0).String()), big.NewInt(10000))
-    database.PutBalance(bean.Hex2Address(bean.Addr(pub1).String()), big.NewInt(10000))
-    database.PutBalance(bean.Hex2Address(bean.Addr(pub2).String()), big.NewInt(10000))
+    database.PutBalance(accounts.Hex2Address(bean.Addr(pub0).String()), big.NewInt(10000))
+    database.PutBalance(accounts.Hex2Address(bean.Addr(pub1).String()), big.NewInt(10000))
+    database.PutBalance(accounts.Hex2Address(bean.Addr(pub2).String()), big.NewInt(10000))
     //pub3 := curve.ScalarBaseMultiply(k3)
     prv0 := &mycrypto.PrivateKey{Prv: k0, PubKey: pub0}
     prv1 := &mycrypto.PrivateKey{Prv: k1, PubKey: pub1}
@@ -82,6 +87,7 @@ func init()  {
     minerIndex = minerNum - 1
     switch myIndex {
     case 0:
+        chainId = accounts.ChainID(id0)
         pubKey = pub0
         prvKey = prv0
         address = bean.Addr(pub0)
@@ -90,6 +96,7 @@ func init()  {
         //leader = consensus.NewLeader(pub0, peers)
         //member = nil
     case 1:
+        chainId = accounts.ChainID(id1)
         pubKey = pub1
         prvKey = prv1
         address = bean.Addr(pub1)
@@ -97,6 +104,7 @@ func init()  {
         //leader = nil
         //member = consensus.NewMember(peer0, prvKey)
     case 2:
+        chainId = accounts.ChainID(id2)
         pubKey = pub2
         prvKey = prv2
         address = bean.Addr(pub2)
@@ -104,12 +112,10 @@ func init()  {
         //leader = nil
         //member = consensus.NewMember(peer0, prvKey)
     }
-    prv = database.GetPrv()
-    if prv == nil {
-        prv = make(map[string] *mycrypto.PrivateKey)
-    }
-    addr := bean.PubKey2Address(pubKey).Hex()
-    prv[addr] = prvKey
+    acc, _ := accounts.NewAccountInDebug(prvKey.Prv)
+    database.PutAccount(acc)
+    database.AddNode(acc.GetNode())
+    nodes = database.GetNodes()
 
     IsStart = myIndex < minerNum
 }
@@ -175,32 +181,46 @@ func GetPrvKey() *mycrypto.PrivateKey {
     return prvKey
 }
 
-func CreateAccount() (string, error) {
-    sk, err := mycrypto.GeneratePrivateKey()
+func CreateAccount(addr string, id int64) (string, error) {
+    isMain := id == int64(accounts.MainChainID)
+    var (
+        acc accounts.Account
+        err error
+    )
+    if isMain {
+        acc, err = accounts.NewMainAccount(nil)
+        if err != nil {
+            return "", err
+        }
+    } else {
+        m := database.GetAccount(accounts.Hex2Address(addr))
+        if acc == nil {
+            return "", errors.New("main account: " + addr + " not found")
+        }
+        if _, ok := m.(*accounts.MainAccount); !ok {
+            return "", errors.New(addr + " is not a main account address")
+        }
+        acc, err = accounts.NewSubAccount(m.(*accounts.MainAccount), accounts.ChainID(id), nil)
+        if err != nil {
+            return "", nil
+        }
+    }
+    err = database.PutAccount(acc)
     if err != nil {
         return "", err
     }
-    pk := sk.PubKey
-    hexStr := bean.PubKey2Address(pk).Hex()
-    if prv[hexStr] != nil {
-        return "", errors.New("account already exists")
-    }
-    prv[hexStr] = sk
-    err = database.AddAccount(hexStr, prv)
-    if err != nil {
-        delete(prv, hexStr)
-        return "", err
-    }
-    return hexStr, nil
+    database.AddNode(acc.GetNode())
+    return acc.Address().Hex(), nil
 }
 
 func SwitchAccount(addr string) error {
-    if sk, ok := prv[addr]; ok {
-        prvKey = sk
-        pubKey = sk.PubKey
+    if node, ok := nodes[addr]; ok {
+        chainId = node.ChainId
+        prvKey = node.PrvKey
+        pubKey = node.PrvKey.PubKey
         return nil
     } else {
-        return errors.New("fail to switch account: " + addr + " not found")
+        return errors.New("fail to switch accounts: " + addr + " not found")
     }
 }
 
@@ -209,9 +229,9 @@ func CurrentAccount() string {
 }
 
 func GetAccounts() []string {
-    acc := make([]string, len(prv))
+    acc := make([]string, len(nodes))
     i := 0
-    for addr, _ := range prv {
+    for addr, _ := range nodes {
         acc[i] = addr
         i++
     }

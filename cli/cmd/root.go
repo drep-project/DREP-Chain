@@ -27,7 +27,7 @@ var ptrSize int64
 var ptrTo string
 var ptrAmount string
 
-var flagAccount = "account"
+var flagAccount = "accounts"
 var flagHeight = "height"
 var flagBegin = "start"
 var flagSize = "size"

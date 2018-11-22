@@ -6,6 +6,7 @@ import (
     "BlockChainTest/mycrypto"
     "strconv"
     "encoding/json"
+    "BlockChainTest/accounts"
 )
 
 func GetBlock(height int64) *bean.Block {
@@ -70,23 +71,33 @@ func PutMaxHeight(height int64) error {
     return nil
 }
 
-func GetAccount(addr bean.CommonAddress) *bean.Account {
+func GetAccount(addr accounts.CommonAddress) accounts.Account {
     db := GetDatabase()
     key := mycrypto.Hash256([]byte("account_" + addr.Hex()))
-    if value, err := db.Load(key); err == nil {
-        account, err := bean.UnmarshalAccount(value)
-        if err == nil {
-            return account
-        }
-        return &bean.Account{Addr:addr, Nonce:0, Balance:big.NewInt(0)}
+    value, err := db.Load(key)
+    if err != nil {
+        return nil
     }
-    return &bean.Account{Addr:addr, Nonce:0, Balance:big.NewInt(0)}
+    var m *accounts.MainAccount
+    var s *accounts.SubAccount
+    mErr := json.Unmarshal(value, m)
+    sErr := json.Unmarshal(value, s)
+    if mErr == nil {
+        return m
+    }
+    if sErr == nil {
+        return s
+    }
+    return nil
 }
 
-func PutAccount(account *bean.Account) error {
+func PutAccount(acc accounts.Account) error {
     db := GetDatabase()
-    key := mycrypto.Hash256([]byte("account_" + account.Addr.Hex()))
-    value, err := bean.MarshalAccount(account)
+    key := mycrypto.Hash256([]byte("account_" + acc.Address().Hex()))
+    value, err := json.Marshal(acc)
+    if err != nil {
+        return err
+    }
     err = db.Store(key, value)
     if err != nil {
         return err
@@ -95,26 +106,28 @@ func PutAccount(account *bean.Account) error {
     return nil
 }
 
-func GetBalance(addr bean.CommonAddress) *big.Int {
-    account := GetAccount(addr)
-    return account.Balance
+func GetBalance(addr accounts.CommonAddress) *big.Int {
+    acc := GetAccount(addr)
+    return acc.GetStorage().Balance
 }
 
-func PutBalance(addr bean.CommonAddress, balance *big.Int) error {
-    account := GetAccount(addr)
-    account.Balance = balance
-    return PutAccount(account)
+func PutBalance(addr accounts.CommonAddress, balance *big.Int) error {
+    acc := GetAccount(addr)
+    storage := acc.GetStorage()
+    storage.Balance = balance
+    return PutAccount(acc)
 }
 
-func GetNonce(addr bean.CommonAddress) int64 {
-    account := GetAccount(addr)
-    return account.Nonce
+func GetNonce(addr accounts.CommonAddress) int64 {
+    acc := GetAccount(addr)
+    return acc.GetStorage().Nonce
 }
 
-func PutNonce(addr bean.CommonAddress, nonce int64) error {
-    account := GetAccount(addr)
-    account.Nonce = nonce
-    return PutAccount(account)
+func PutNonce(addr accounts.CommonAddress, nonce int64) error {
+    acc := GetAccount(addr)
+    storage := acc.GetStorage()
+    storage.Nonce = nonce
+    return PutAccount(acc)
 }
 
 func PutPrv(prv map[string] *mycrypto.PrivateKey) error {
@@ -142,18 +155,35 @@ func GetPrv() map[string] *mycrypto.PrivateKey {
     return prv
 }
 
-func AddAccount(hexStr string, prv map[string] *mycrypto.PrivateKey) error {
-    addr := bean.Hex2Address(hexStr)
-    account := &bean.Account{
-        Addr: addr,
-        Nonce: 0,
-        Balance: new(big.Int),
-    }
-    err := PutAccount(account)
+func PutNodes(nodes map[string] *accounts.Node) error {
+    db := GetDatabase()
+    key := mycrypto.Hash256([]byte("nodes"))
+    value, err := json.Marshal(nodes)
     if err != nil {
         return err
     }
-    return PutPrv(prv)
+    return db.Store(key, value)
+}
+
+func GetNodes() map[string] *accounts.Node {
+    db := GetDatabase()
+    key := mycrypto.Hash256([]byte("nodes"))
+    value, err := db.Load(key)
+    if err != nil {
+        return make(map[string] *accounts.Node)
+    }
+    var nodes map[string] *accounts.Node
+    err = json.Unmarshal(value, &nodes)
+    if err != nil {
+        return make(map[string] *accounts.Node)
+    }
+    return nodes
+}
+
+func AddNode(node *accounts.Node) error {
+    nodes := GetNodes()
+    nodes[node.Address.Hex()] = node
+    return PutNodes(nodes)
 }
 
 func GetMostRecentBlocks(n int64) []*bean.Block {
@@ -168,12 +198,12 @@ func GetMostRecentBlocks(n int64) []*bean.Block {
 //    addrFrom := bean.Hex2Address(from)
 //    sender := GetAccount(addrFrom)
 //    if sender == nil {
-//        return errors.New("sender account not found")
+//        return errors.New("sender accounts not found")
 //    }
 //    addrTo := bean.Hex2Address(to)
 //    receiver := GetAccount(addrTo)
 //    if receiver == nil {
-//        return errors.New("receiver account not found")
+//        return errors.New("receiver accounts not found")
 //    }
 //    value, ok := new(big.Int).SetString(amount, 10)
 //    if !ok {
@@ -187,11 +217,11 @@ func GetMostRecentBlocks(n int64) []*bean.Block {
 //    receiver.Balance = new(big.Int).Add(receiver.Balance, value)
 //    err := PutAccount(sender)
 //    if err != nil {
-//        return errors.New("failed to modify sender account, error: " + err.Error())
+//        return errors.New("failed to modify sender accounts, error: " + err.Error())
 //    }
 //    err = PutAccount(receiver)
 //    if err != nil {
-//        return errors.New("failed to modify receiver account, error: " + err.Error())
+//        return errors.New("failed to modify receiver accounts, error: " + err.Error())
 //    }
 //    return nil
 //}

@@ -12,9 +12,9 @@ var cmdCreate = &cobra.Command{
 
     Use: create,
 
-    Short: `"` + create + `" is the command to create new account.`,
+    Short: `"` + create + `" is the command to create new accounts.`,
 
-    Long: `"` + create + `" is the command to create new account.`,
+    Long: `"` + create + `" is the command to create new accounts.`,
 
     Run: func(cmd *cobra.Command, args []string) {
         url := urlCreateAccount()
@@ -35,7 +35,7 @@ var cmdCreate = &cobra.Command{
             return
         }
 
-        fmt.Println("succeed creating new account: ", resp.Body)
+        fmt.Println("succeed creating new accounts: ", resp.Body)
     },
 }
 
@@ -44,5 +44,5 @@ func init() {
 }
 
 func errCreate(err interface{}) {
-    fmt.Println("failed to create new account，error: ", err)
+    fmt.Println("failed to create new accounts，error: ", err)
 }

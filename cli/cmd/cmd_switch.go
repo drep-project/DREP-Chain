@@ -13,9 +13,9 @@ var cmdSwitch = &cobra.Command{
 
     Use: _switch,
 
-    Short: `"` + _switch + `" is the command to switch to another account.`,
+    Short: `"` + _switch + `" is the command to switch to another accounts.`,
 
-    Long: `"` + _switch + `" is the command to switch to another account.`,
+    Long: `"` + _switch + `" is the command to switch to another accounts.`,
 
     Run: func(cmd *cobra.Command, args []string) {
         addr = cmd.Flag(flagAccount).Value.String()
@@ -37,15 +37,15 @@ var cmdSwitch = &cobra.Command{
             return
         }
 
-        fmt.Println("succeed switching to account: " + addr)
+        fmt.Println("succeed switching to accounts: " + addr)
     },
 }
 
 func init() {
-    cmdSwitch.Flags().StringVarP(&ptrAccount, flagAccount, "a", "", "switch account")
+    cmdSwitch.Flags().StringVarP(&ptrAccount, flagAccount, "a", "", "switch accounts")
     CmdRoot.AddCommand(cmdSwitch)
 }
 
 func errSwitch(err interface{}) {
-    fmt.Println("failed to switch to account " + addr + ", error: ", err)
+    fmt.Println("failed to switch to accounts " + addr + ", error: ", err)
 }
