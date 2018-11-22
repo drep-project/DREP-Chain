@@ -25,7 +25,7 @@ type Leader struct {
     //responseWg sync.WaitGroup
     responseBitmap []byte
 
-    //sigs map[bean.Address][]byte
+    //sigs map[bean.GetAddress][]byte
 }
 
 func NewLeader(pubKey *mycrypto.Point, members []*network.Peer) *Leader {
