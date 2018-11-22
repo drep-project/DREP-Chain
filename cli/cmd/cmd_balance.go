@@ -12,10 +12,10 @@ var cmdBalance = &cobra.Command{
 
     Use: balance,
 
-    Short: `"` + balance + `" is the command to check current balance of a specific account.`,
+    Short: `"` + balance + `" is the command to check current balance of a specific accounts.`,
 
-    Long: `"` + balance + `" is the command to check current balance a specific account. if "--` + flagAccount +
-        `" is set to a specific account address, the balance of that account will be returned if the address is valid, otherwise 
+    Long: `"` + balance + `" is the command to check current balance a specific accounts. if "--` + flagAccount +
+        `" is set to a specific accounts address, the balance of that accounts will be returned if the address is valid, otherwise 
  error will be returned.`,
 
     Run: func(cmd *cobra.Command, args []string) {
@@ -44,7 +44,7 @@ var cmdBalance = &cobra.Command{
 }
 
 func init() {
-    cmdBalance.Flags().StringVarP(&ptrAccount, flagAccount, "a", "", "account address")
+    cmdBalance.Flags().StringVarP(&ptrAccount, flagAccount, "a", "", "accounts address")
     CmdRoot.AddCommand(cmdBalance)
 }
 

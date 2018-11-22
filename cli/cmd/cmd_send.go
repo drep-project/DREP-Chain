@@ -12,9 +12,9 @@ var cmdSend = &cobra.Command{
 
     Use: send,
 
-    Short: `"` + send + `" is the command to send drep coins to another account.`,
+    Short: `"` + send + `" is the command to send drep coins to another accounts.`,
 
-    Long: `"` + send + `" is the command to send drep coins to another account.`,
+    Long: `"` + send + `" is the command to send drep coins to another accounts.`,
 
     Run: func(cmd *cobra.Command, args []string) {
         to := cmd.Flag(flagTo).Value.String()

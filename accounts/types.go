@@ -1,4 +1,4 @@
-package account
+package accounts
 
 import (
     "math/big"
@@ -70,6 +70,10 @@ func PubKey2Address(pubKey *mycrypto.Point) CommonAddress {
 }
 
 type ByteCode []byte
+
+func GetCodeHash(byteCode ByteCode) Hash {
+    return Bytes2Hash(byteCode)
+}
 
 type Hash [HashLength]byte
 

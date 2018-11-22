@@ -337,6 +337,7 @@ func SwitchAccount(w http.ResponseWriter, r *http.Request) {
         return
     }
     resp = &Response{Success:true, Body:"Switch account succeed!"}
+
     writeResponse(w, resp)
 }
 

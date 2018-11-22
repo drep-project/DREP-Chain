@@ -12,9 +12,9 @@ var cmdCurrent = &cobra.Command{
 
     Use: current,
 
-    Short: `"` + current + `" is the command to check current account address.`,
+    Short: `"` + current + `" is the command to check current accounts address.`,
 
-    Long: `"` + current + `" is the command to check and return current account address.`,
+    Long: `"` + current + `" is the command to check and return current accounts address.`,
 
     Run: func(cmd *cobra.Command, args []string) {
         url := urlCurrentAccount()
@@ -44,5 +44,5 @@ func init() {
 }
 
 func errCurrent(err interface{}) {
-    fmt.Println("failed to check current account address, error: ", err)
+    fmt.Println("failed to check current accounts address, error: ", err)
 }
