@@ -4,6 +4,7 @@ import (
     "os"
     "encoding/hex"
     "encoding/json"
+    "path"
 )
 
 var (
@@ -18,38 +19,27 @@ type Key struct {
 }
 
 func genKeystore(keyAddr string, jsonBytes []byte) error {
-    cdErr := os.Chdir(KeystoreDirName)
-    if cdErr != nil {
-        if os.IsNotExist(cdErr) {
-            if mkdErr := os.Mkdir(KeystoreDirName, os.ModeDir); mkdErr != nil {
-                return mkdErr
-            }
-        } else {
-            return cdErr
-        }
-    }
-    keystoreName := getFilename(keyAddr)
-    file, cfErr := os.Create(keystoreName)
-    if cfErr != nil {
-        return cfErr
+    os.Mkdir(KeystoreDirName, os.ModeDir|os.ModePerm)
+    filename := getFilename(keyAddr)
+    file, err := os.Create(filename)
+    if err != nil {
+        return err
     }
     file.Write(jsonBytes)
+    file.Close()
     return nil
 }
 
 func load(keyAddr string) ([]byte, error) {
-    cdErr := os.Chdir(KeystoreDirName)
-    if cdErr != nil {
-        return nil, cdErr
-    }
-    keystoreName := getFilename(keyAddr)
-    file, opErr := os.Open(keystoreName)
-    if opErr != nil {
-        return nil, opErr
+    filename := getFilename(keyAddr)
+    file, err := os.Open(filename)
+    if err != nil {
+        return nil, err
     }
     jsonObj := make([]byte, 1024)
-    n, readErr := file.Read(jsonObj)
-    return jsonObj[:n], readErr
+    n, err := file.Read(jsonObj)
+    file.Close()
+    return jsonObj[:n], err
 }
 
 func store(node *Node) error {
@@ -57,7 +47,7 @@ func store(node *Node) error {
         Address: node.Address().Hex(),
         PrivateKey: hex.EncodeToString(node.PrvKey.Prv),
         ChainId: int64(node.ChainId),
-        ChainCode: string(node.ChainCode),
+        ChainCode: hex.EncodeToString(node.ChainCode),
     }
     b, err := json.Marshal(key)
     if err != nil {
@@ -67,7 +57,7 @@ func store(node *Node) error {
 }
 
 func getFilename(keyAddr string) string {
-    return keyAddr
+    return path.Join(KeystoreDirName, keyAddr)
 }
 
 func OpenKeystore(addr string) (*Node, error) {
@@ -90,7 +80,7 @@ func OpenKeystore(addr string) (*Node, error) {
     }
     node := &Node{
         PrvKey:  genPrvKey(prv),
-        ChainId: ChainID(key.ChainId),
+        ChainId: key.ChainId,
         ChainCode: chainCode,
     }
     return node, nil

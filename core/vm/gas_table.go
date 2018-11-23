@@ -1,5 +1,7 @@
 package vm
 
+import "BlockChainTest/accounts"
+
 // memoryGasCosts calculates the quadratic gas for memory expansion. It does so
 // only for the memory region that is expanded, not the total memory.
 func memoryGasCost(mem *Memory, newMemSize uint64) (uint64, error) {
@@ -313,7 +315,8 @@ func gasCall(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize
 		gas            = Calls
 		transfersValue = stack.Back(2).Sign() != 0
 	)
-	addr := evm.State.GetAccountStorage(stack.Back(1))
+	addr := accounts.Big2Address(stack.Back(1))
+	//addr := evm.State.GetAccountAddress(stack.Back(1))
 	if addr.IsEmpty() {
 		gas += CallNewAccountGas
 	}

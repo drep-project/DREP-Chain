@@ -3,7 +3,7 @@ package vm
 import (
 	"sync/atomic"
 	"fmt"
-	"BlockChainTest/bean"
+	"BlockChainTest/accounts"
 )
 
 type EVMInterpreter struct {
@@ -141,6 +141,6 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 	return nil, nil
 }
 
-func (in *EVMInterpreter) CanRun(byteCode bean.ByteCode) bool {
+func (in *EVMInterpreter) CanRun(byteCode accounts.ByteCode) bool {
 	return true
 }

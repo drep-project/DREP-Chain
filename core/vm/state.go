@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"errors"
 	"fmt"
-	"BlockChainTest/bean"
+	"BlockChainTest/accounts"
 )
 
 var (
@@ -42,88 +42,74 @@ func GetState() *State {
 	return state
 }
 
-func (s *State) CreateContractAccount(addr bean.CommonAddress, byteCode bean.ByteCode) error {
-	codeHash := bean.CodeHash(byteCode)
-	account := &bean.Account{
-		Addr: addr.Bytes(),
-		Balance: new(big.Int),
-		Nonce:   0,
-		ByteCode: byteCode,
-		CodeHash: codeHash.Bytes(),
-	}
-	return database.PutAccount(account)
-}
-
-func (s *State) SubBalance(addr bean.CommonAddress, amount *big.Int) error {
-	balance := database.GetBalance(addr)
-	return database.PutBalance(addr, new(big.Int).Sub(balance, amount))
-}
-
-func (s *State) AddBalance(addr bean.CommonAddress, amount *big.Int) error {
-	balance := database.GetBalance(addr)
-	return database.PutBalance(addr, new(big.Int).Add(balance, amount))
-}
-
-func (s *State) GetBalance(addr bean.CommonAddress) *big.Int {
-	return database.GetBalance(addr)
-}
-
-func (s *State) SetNonce(addr bean.CommonAddress, nonce int64) error {
-	return database.PutNonce(addr, nonce)
-}
-
-func (s *State) GetNonce(addr bean.CommonAddress) int64 {
-	return database.GetNonce(addr)
-}
-
-
-func (s *State) Suicide(addr bean.CommonAddress) error {
-	account := database.GetAccount(addr)
-	account.Nonce = 0
-	account.Balance = new(big.Int)
-	return database.PutAccount(account)
-}
-
-func (s *State) GetAccountStorage(x *big.Int) bean.CommonAddress {
-	addr := bean.Big2Address(x)
-	err := database.GetAccount(addr)
+func (s *State) CreateContractAccount(callerAddr accounts.CommonAddress, chainId, nonce int64, byteCode accounts.ByteCode) (*accounts.Account, error) {
+	account, err := accounts.NewContractAccount(callerAddr, chainId, nonce, byteCode)
 	if err != nil {
-		return bean.CommonAddress{}
+		return nil, err
 	}
-	return addr
+	return account, database.PutAccount(account)
+}
+
+func (s *State) SubBalance(addr accounts.CommonAddress, chainId int64, amount *big.Int) error {
+	balance := database.GetBalance(addr, chainId)
+	return database.PutBalance(addr, chainId, new(big.Int).Sub(balance, amount))
+}
+
+func (s *State) AddBalance(addr accounts.CommonAddress, chainId int64, amount *big.Int) error {
+	balance := database.GetBalance(addr, chainId)
+	return database.PutBalance(addr, chainId, new(big.Int).Add(balance, amount))
+}
+
+func (s *State) GetBalance(addr accounts.CommonAddress, chainId int64) *big.Int {
+	return database.GetBalance(addr, chainId)
+}
+
+func (s *State) SetNonce(addr accounts.CommonAddress, chainId int64, nonce int64) error {
+	return database.PutNonce(addr, chainId, nonce)
+}
+
+func (s *State) GetNonce(addr accounts.CommonAddress, chainId int64) int64 {
+	return database.GetNonce(addr, chainId)
 }
 
 
-func (s *State) GetByteCode(addr bean.CommonAddress) bean.ByteCode {
-	account := database.GetAccount(addr)
-	return account.ByteCode
+func (s *State) Suicide(addr accounts.CommonAddress, chainId int64) error {
+	account := database.GetAccount(addr, chainId)
+	account.Storage = &accounts.Storage{
+		Balance: new(big.Int),
+		Nonce: 0,
+	}
+	return database.PutAccount(account)
 }
 
-func (s *State) GetCodeSize(addr bean.CommonAddress) int {
-	account := database.GetAccount(addr)
-	return len(account.ByteCode)
+func (s *State) GetByteCode(addr accounts.CommonAddress, chainId int64) accounts.ByteCode {
+	account := database.GetAccount(addr, chainId)
+	return account.Storage.ByteCode
 }
 
-func (s *State) GetCodeHash(addr bean.CommonAddress) []byte {
-	account := database.GetAccount(addr)
-	return account.CodeHash
+func (s *State) GetCodeSize(addr accounts.CommonAddress, chainId int64) int {
+	byteCode := s.GetByteCode(addr, chainId)
+	return len(byteCode)
 }
 
-func (s *State) GetLog(contractAddr bean.CommonAddress, txHash []byte) *bean.Log {
-	log := &bean.Log{ContractAddr: contractAddr.Bytes(), TxHash: txHash}
-	addr := log.Address()
-	return database.GetLog(addr)
+func (s *State) GetCodeHash(addr accounts.CommonAddress, chainId int64) []byte {
+	account := database.GetAccount(addr, chainId)
+	return account.Storage.CodeHash.Bytes()
 }
 
-func (s *State) AddLog(callerAddr, contractAddr bean.CommonAddress, txHash, data []byte, topics [][]byte) error {
-	log := &bean.Log{
-		CallerAddr: callerAddr.Bytes(),
-		ContractAddr: contractAddr.Bytes(),
+func (s *State) GetLogs(txHash []byte) []*Log {
+	return database.GetLogs(txHash)
+}
+
+func (s *State) AddLog(contractAddr accounts.CommonAddress, chainId int64, txHash, data []byte, topics [][]byte) error {
+	log := &Log{
+		Address: contractAddr,
+		ChainId: chainId,
 		TxHash: txHash,
 		Data: data,
 		Topics: topics,
 	}
-	return database.PutLog(log)
+	return database.AddLog(log)
 }
 
 func (s *State) AddRefund(gas uint64) {

@@ -6,7 +6,6 @@ import (
 	"BlockChainTest/node"
 	"fmt"
 	"math/big"
-	"BlockChainTest/bean"
 	"BlockChainTest/store"
 	"BlockChainTest/database"
 	"BlockChainTest/http"
@@ -31,12 +30,13 @@ func main1()  {
 		case "send":
 			{
 				var addr string
+				chainId := store.GetChainId()
 				var amount int64
 				fmt.Print("To: ")
 				fmt.Scanln(&addr)
 				fmt.Print("Amount: ")
 				fmt.Scanln(&amount)
-				t := node.GenerateBalanceTransaction(bean.Address(addr), big.NewInt(amount))
+				t := node.GenerateBalanceTransaction(addr, chainId, big.NewInt(amount))
 				if node.SendTransaction(t) != nil {
 					fmt.Println("Offline")
 				} else {
@@ -46,24 +46,27 @@ func main1()  {
 		case "checkBalance":
 			{
 				var addr string
+				chainId := store.GetChainId()
 				fmt.Print("Who: ")
 				fmt.Scanln(&addr)
-				fmt.Println(database.GetBalance(accounts.Hex2Address(addr)))
+				fmt.Println(database.GetBalance(accounts.Hex2Address(addr), chainId))
 			}
 		case "checkNonce":
 			{
 				var addr string
+				chainId := store.GetChainId()
 				fmt.Print("Who: ")
 				fmt.Scanln(&addr)
-				fmt.Println(database.GetNonce(accounts.Hex2Address(addr)))
+				fmt.Println(database.GetNonce(accounts.Hex2Address(addr), chainId))
 			}
 		case "me":
 			{
-				addr := accounts.Hex2Address(store.GetAddress().String())
-				fmt.Println("Addr: ", store.GetAddress().String())
-				nonce := database.GetNonce(addr)
+				addr := store.GetAddress()
+				chainId := store.GetChainId()
+				fmt.Println("Addr: ", addr.Hex())
+				nonce := database.GetNonce(addr, chainId)
 				fmt.Println("Nonce: ", nonce)
-				balance := database.GetBalance(addr)
+				balance := database.GetBalance(addr, chainId)
 				fmt.Println("Bal: ", balance)
 			}
 		case "miner":
@@ -72,8 +75,9 @@ func main1()  {
 				if pk.Equal(store.GetAdminPubKey()) {
 					fmt.Print("Who: ")
 					var addr string
+					chainId := store.GetChainId()
 					fmt.Scanln(&addr)
-					t := node.GenerateMinerTransaction(addr)
+					t := node.GenerateMinerTransaction(addr, chainId)
 					if node.SendTransaction(t) != nil {
 						fmt.Println("Offline")
 					}

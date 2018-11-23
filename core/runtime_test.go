@@ -9,9 +9,9 @@ import (
 	"BlockChainTest/core/abi"
 	"strings"
 	"encoding/hex"
-	"BlockChainTest/bean"
+	"BlockChainTest/accounts"
+	"encoding/json"
 )
-
 
 // Execute executes the code using the input as call data during the execution.
 // It returns the EVM's return value, the new state and an error if it failed.
@@ -22,18 +22,19 @@ func ExecuteCreate(code []byte) {
 	evm := vm.NewEVM()
 	s1 := "111111"
 	s2 := "222222"
-	callerAddr1 := bean.Hex2Address(s1)
-	callerAddr2 := bean.Hex2Address(s2)
-	caller1 := &bean.Account{Addr: callerAddr1.Bytes(), Balance: new(big.Int).SetInt64(100)}
-	caller2 := &bean.Account{Addr: callerAddr2.Bytes(), Balance: new(big.Int).SetInt64(200)}
+	var chainId int64 = 0
+	callerAddr1 := accounts.Hex2Address(s1)
+	callerAddr2 := accounts.Hex2Address(s2)
+	caller1 := &accounts.Account{Address: callerAddr1, Storage: &accounts.Storage{Balance: new(big.Int).SetInt64(100)}}
+	caller2 := &accounts.Account{Address: callerAddr2, Storage: &accounts.Storage{Balance: new(big.Int).SetInt64(200)}}
 	errPut1 := database.PutAccount(caller1)
 	errPut2 := database.PutAccount(caller2)
 	fmt.Println("errPut1: ", errPut1)
 	fmt.Println("errPut2: ", errPut2)
 	gas := uint64(1000000)
 	value := new(big.Int).SetInt64(0)
-	ret1, _, err1 := evm.CreateContractCode(callerAddr1, code, gas, value)
-	ret2, _, err2 := evm.CreateContractCode(callerAddr1, code, gas, value)
+	ret1, _, err1 := evm.CreateContractCode(callerAddr1, chainId, code, gas, value)
+	ret2, _, err2 := evm.CreateContractCode(callerAddr1, chainId, code, gas, value)
 	fmt.Println("err1: ", err1)
 	fmt.Println("err2: ", err2)
 	fmt.Println("ret1: ", ret1)
@@ -43,12 +44,13 @@ func ExecuteCreate(code []byte) {
 func ExecuteCall(input []byte) {
 	evm := vm.NewEVM()
 	s1 := "111111"
-	callerAddr := bean.Hex2Address(s1)
+	callerAddr := accounts.Hex2Address(s1)
 	s2 := "bf101a61d5cc3d5f0b3e2c44c967c3c725b29017"
 	gas := uint64(1000000)
 	value := new(big.Int).SetInt64(0)
-	contractAddr := bean.Hex2Address(s2)
-	evm.CallContractCode(callerAddr, contractAddr, input, gas, value)
+	contractAddr := accounts.Hex2Address(s2)
+	var chainId int64 = 0
+	evm.CallContractCode(callerAddr, contractAddr, chainId, input, gas, value)
 }
 
 func TestCreate(t *testing.T) {
@@ -288,9 +290,9 @@ func TestCallMyCode(t *testing.T) {
 	//ExecuteCall(transfer)
 
 	s1 := "111111"
-	from := bean.Hex2Address(s1)
+	from := accounts.Hex2Address(s1)
 	s2 := "222222"
-	to := bean.Hex2Address(s2)
+	to := accounts.Hex2Address(s2)
 	transferFrom, err := myabi.Pack("transferFrom", from, to, new(big.Int).SetUint64(10))
 	if err != nil {
 		fmt.Println("abi pack error: ", err)
@@ -315,15 +317,16 @@ func TestMain123(t *testing.T) {
 		fmt.Println()
 		fmt.Println("value: ", value)
 		fmt.Println()
-		account, err := bean.UnmarshalAccount(value)
+		account := &accounts.Account{}
+		err := json.Unmarshal(value, account)
 		if err == nil {
-			fmt.Println("v addr: ", account.Addr)
-			fmt.Println("v addr: ", account.Address().Hex())
+			fmt.Println("v addr: ", account.Address.Hex())
 			fmt.Println("v: ", account)
-			fmt.Println(account.Balance)
+			fmt.Println(account.Storage.Balance)
 			continue
 		}
-		log, err := bean.UnmarshalLog(value)
+		log := &vm.Log{}
+		err = json.Unmarshal(value, log)
 		if err == nil {
 			fmt.Println("log: ", log)
 		}
