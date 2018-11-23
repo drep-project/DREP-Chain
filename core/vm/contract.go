@@ -2,7 +2,6 @@ package vm
 
 import (
 	"math/big"
-	"BlockChainTest/bean"
 	"BlockChainTest/accounts"
 )
 
@@ -21,10 +20,11 @@ var (
 )
 
 type Contract struct {
-	CallerAddr   bean.CommonAddress
-	ContractAddr bean.CommonAddress
-	CodeHash     bean.Hash
+	CallerAddr   accounts.CommonAddress
+	ContractAddr accounts.CommonAddress
+	ChainId      int64
 	ByteCode     accounts.ByteCode
+	CodeHash     accounts.Hash
 	Input        []byte
 	Gas          uint64
 	Value        *big.Int
@@ -32,17 +32,17 @@ type Contract struct {
 	TxHash       []byte
 }
 
-func NewContract(callerAddr bean.CommonAddress, gas uint64, value *big.Int, jumpdests destinations) *Contract {
+func NewContract(callerAddr accounts.CommonAddress, gas uint64, value *big.Int, jumpdests destinations) *Contract {
 	if jumpdests == nil {
 		return &Contract{CallerAddr: callerAddr, Gas: gas, Value: value, Jumpdests: NewDest()}
 	}
 	return &Contract{CallerAddr: callerAddr, Gas: gas, Value: value, Jumpdests: jumpdests}
 }
 
-func (c *Contract) SetCode(contractAddr bean.CommonAddress, codeHash bean.Hash, byteCode accounts.ByteCode) {
+func (c *Contract) SetCode(contractAddr accounts.CommonAddress, byteCode accounts.ByteCode) {
 	c.ContractAddr = contractAddr
-	c.CodeHash = codeHash
 	c.ByteCode = byteCode
+	c.CodeHash = accounts.GetByteCodeHash(byteCode)
 }
 
 func (c *Contract) GetOp(n uint64) OpCode {

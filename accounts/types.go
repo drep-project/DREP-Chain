@@ -5,19 +5,18 @@ import (
     "errors"
     "encoding/hex"
     "BlockChainTest/mycrypto"
+    "encoding/json"
 )
 
 const (
     HashLength    = 32
     AddressLength = 20
-    RootChainID   = ChainID(0)
+    RootChainID   = 0
 )
 
 var (
     ErrExceedHashLength = errors.New("bytes length exceed maximum hash length of 32")
 )
-
-type ChainID int64
 
 type CommonAddress [AddressLength]byte
 
@@ -61,6 +60,10 @@ func (addr CommonAddress) Hex() string {
     return hex.EncodeToString(addr.Bytes())
 }
 
+func Big2Address(x *big.Int) CommonAddress {
+    return Bytes2Address(x.Bytes())
+}
+
 func (addr CommonAddress) Big() *big.Int {
     return new(big.Int).SetBytes(addr.Bytes())
 }
@@ -71,12 +74,23 @@ func PubKey2Address(pubKey *mycrypto.Point) CommonAddress {
 
 type ByteCode []byte
 
-func (byteCode ByteCode) Hash() Hash {
+func GetByteCodeHash(byteCode ByteCode) Hash {
     return Bytes2Hash(byteCode)
 }
 
-func (byteCode ByteCode) Address() CommonAddress {
-    return Bytes2Address(byteCode.Hash().Bytes())
+func GetByteCodeAddress(callerAddr CommonAddress, nonce int64) CommonAddress {
+    b, err := json.Marshal(
+        struct {
+            CallerAddr CommonAddress
+            Nonce      int64
+        }{
+            CallerAddr: callerAddr,
+            Nonce:      nonce,
+        })
+    if err != nil {
+        return CommonAddress{}
+    }
+    return Bytes2Address(mycrypto.Hash256(b))
 }
 
 type Hash [HashLength]byte
@@ -90,7 +104,7 @@ func Bytes2Hash(b []byte) Hash {
     return h
 }
 
-func (h *Hash) SetBytes(b []byte) {
+func (h Hash) SetBytes(b []byte) {
     if len(b) > len(h) {
         panic(ErrExceedHashLength)
     }

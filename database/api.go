@@ -7,6 +7,8 @@ import (
     "strconv"
     "encoding/json"
     "BlockChainTest/accounts"
+    "BlockChainTest/core/vm"
+    "encoding/hex"
 )
 
 func GetBlock(height int64) *bean.Block {
@@ -71,9 +73,9 @@ func PutMaxHeight(height int64) error {
     return nil
 }
 
-func GetAccount(addr accounts.CommonAddress) *accounts.Account {
+func GetAccount(addr accounts.CommonAddress, chainId int64) *accounts.Account {
     db := GetDatabase()
-    key := mycrypto.Hash256([]byte("account_" + addr.Hex()))
+    key := mycrypto.Hash256([]byte("account_" + addr.Hex() + strconv.FormatInt(chainId, 10)))
     value, err := db.Load(key)
     if err != nil {
         return nil
@@ -88,7 +90,7 @@ func GetAccount(addr accounts.CommonAddress) *accounts.Account {
 
 func PutAccount(account *accounts.Account) error {
     db := GetDatabase()
-    key := mycrypto.Hash256([]byte("account_" + account.Address.Hex()))
+    key := mycrypto.Hash256([]byte("account_" + account.Address.Hex() + strconv.FormatInt(account.Node.ChainId, 10)))
     a := &accounts.Account{Storage: account.Storage}
     value, err := json.Marshal(a)
     if err != nil {
@@ -102,28 +104,59 @@ func PutAccount(account *accounts.Account) error {
     return nil
 }
 
-func GetBalance(addr accounts.CommonAddress) *big.Int {
-    account := GetAccount(addr)
+func GetBalance(addr accounts.CommonAddress, chainId int64) *big.Int {
+    account := GetAccount(addr, chainId)
     return account.Storage.Balance
 }
 
-func PutBalance(addr accounts.CommonAddress, balance *big.Int) error {
-    account := GetAccount(addr)
+func PutBalance(addr accounts.CommonAddress, chainId int64, balance *big.Int) error {
+    account := GetAccount(addr, chainId)
     storage := account.Storage
     storage.Balance = balance
     return PutAccount(account)
 }
 
-func GetNonce(addr accounts.CommonAddress) int64 {
-    account := GetAccount(addr)
+func GetNonce(addr accounts.CommonAddress, chainId int64) int64 {
+    account := GetAccount(addr, chainId)
     return account.Storage.Nonce
 }
 
-func PutNonce(addr accounts.CommonAddress, nonce int64) error {
-    account := GetAccount(addr)
+func PutNonce(addr accounts.CommonAddress, chainId int64, nonce int64) error {
+    account := GetAccount(addr, chainId)
     storage := account.Storage
     storage.Nonce = nonce
     return PutAccount(account)
+}
+
+func PutLogs(txHash []byte, logs []*vm.Log) error {
+    db := GetDatabase()
+    key := mycrypto.Hash256([]byte("logs_" + hex.EncodeToString(txHash)))
+    value, err := json.Marshal(logs)
+    if err != nil {
+        return err
+    }
+    return db.Store(key, value)
+}
+
+func GetLogs(txHash []byte) []*vm.Log {
+    db := GetDatabase()
+    key := mycrypto.Hash256([]byte("logs_" + hex.EncodeToString(txHash)))
+    value, err := db.Load(key)
+    if err != nil {
+        return make([]*vm.Log, 0)
+    }
+    var logs []*vm.Log
+    err = json.Unmarshal(value, logs)
+    if err != nil {
+        return make([]*vm.Log, 0)
+    }
+    return logs
+}
+
+func AddLog(log *vm.Log) error {
+    logs := GetLogs(log.TxHash)
+    logs = append(logs, log)
+    return PutLogs(log.TxHash, logs)
 }
 
 func PutNodes(nodes map[string] *accounts.Node) error {

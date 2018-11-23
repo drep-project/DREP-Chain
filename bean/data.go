@@ -38,7 +38,7 @@ type TransactionData struct {
     Nonce                int64
     Type                 int32
     To                   string
-    ToChain              int64
+    ChainId              int64
     Amount               []byte
     GasPrice             []byte
     GasLimit             []byte

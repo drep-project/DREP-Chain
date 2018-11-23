@@ -8,6 +8,7 @@ import (
 	"BlockChainTest/core/ethcrypto"
 	"BlockChainTest/core/ethcrypto/bn256"
 	"BlockChainTest/bean"
+	"BlockChainTest/accounts"
 )
 
 var (
@@ -22,14 +23,14 @@ type PrecompiledContract interface {
 	Run(input []byte) ([]byte, error) // Run runs the precompiled contract
 }
 
-var PrecompiledContracts = map[bean.CommonAddress]PrecompiledContract{
-	bean.Bytes2Address([]byte{1}): &ecrecover{},
-	bean.Bytes2Address([]byte{2}): &sha256hash{},
-	bean.Bytes2Address([]byte{4}): &dataCopy{},
-	bean.Bytes2Address([]byte{5}): &bigModExp{},
-	bean.Bytes2Address([]byte{6}): &bn256Add{},
-	bean.Bytes2Address([]byte{7}): &bn256ScalarMul{},
-	bean.Bytes2Address([]byte{8}): &bn256Pairing{},
+var PrecompiledContracts = map[accounts.CommonAddress]PrecompiledContract{
+	accounts.Bytes2Address([]byte{1}): &ecrecover{},
+	accounts.Bytes2Address([]byte{2}): &sha256hash{},
+	accounts.Bytes2Address([]byte{4}): &dataCopy{},
+	accounts.Bytes2Address([]byte{5}): &bigModExp{},
+	accounts.Bytes2Address([]byte{6}): &bn256Add{},
+	accounts.Bytes2Address([]byte{7}): &bn256ScalarMul{},
+	accounts.Bytes2Address([]byte{8}): &bn256Pairing{},
 }
 
 func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contract) (ret []byte, err error) {

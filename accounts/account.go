@@ -4,21 +4,22 @@ import (
 	"math/big"
 	"BlockChainTest/mycrypto"
 	"errors"
+	"fmt"
 )
 
 var (
 	SeedSize = 64
 	SeedMark = []byte("Drep Coin Seed")
-	KeyBitSize = 256
+	KeyBitSize = 256 >> 3
 )
 
 type Node struct {
 	PrvKey    *mycrypto.PrivateKey
-	ChainId   ChainID
+	ChainId   int64
 	ChainCode []byte
 }
 
-func NewNode(parent *Node, chainId ChainID) *Node {
+func NewNode(parent *Node, chainId int64) *Node {
 	var (
 		prvKey *mycrypto.PrivateKey
 		chainCode []byte
@@ -31,6 +32,8 @@ func NewNode(parent *Node, chainId ChainID) *Node {
 			return nil
 		}
 		h := hmAC(seed, SeedMark)
+		fmt.Println("h: ", h)
+		fmt.Println("len h: ", len(h))
 		prvKey = genPrvKey(h[:KeyBitSize])
 		chainCode = h[KeyBitSize:]
 	} else {
@@ -65,7 +68,7 @@ func NewStorage(byteCode ByteCode) *Storage {
 	storage.Nonce = 0
 	storage.ByteCode = byteCode
 	if byteCode != nil {
-		storage.CodeHash = byteCode.Hash()
+		storage.CodeHash = GetByteCodeHash(byteCode)
 	}
 	return storage
 }
@@ -76,37 +79,34 @@ type Account struct {
 	Storage       *Storage
 }
 
-func NewAccount(parent *Node, chainId ChainID, byteCode ByteCode) (*Account, error) {
-	var (
-		address       CommonAddress
-		node          *Node
-		storage       *Storage
-	)
-
+func NewNormalAccount(parent *Node, chainId int64) (*Account, error) {
 	IsRoot := chainId == RootChainID
 	if !IsRoot && parent == nil {
 		return nil, errors.New("missing parent account")
 	}
-
-	IsContract := byteCode != nil
-	if IsContract {
-		address = byteCode.Address()
-		storage = NewStorage(byteCode)
-	} else {
-
-		node = NewNode(parent, chainId)
-		err := store(node)
-		if err != nil {
-			return nil, err
-		}
-		address = node.Address()
-		storage = NewStorage(nil)
+	node := NewNode(parent, chainId)
+	err := store(node)
+	if err != nil {
+		return nil, err
 	}
-
+	address := node.Address()
+	storage := NewStorage(nil)
 	account := &Account{
 		Address:       address,
 		Node:          node,
 		Storage:       storage,
+	}
+	return account, nil
+}
+
+func NewContractAccount(callerAddr CommonAddress, chainId, nonce int64, byteCode ByteCode) (*Account, error) {
+	address := GetByteCodeAddress(callerAddr, nonce)
+	node := &Node{ChainId: chainId}
+	storage := NewStorage(byteCode)
+	account := &Account{
+		Address: address,
+		Node: node,
+		Storage: storage,
 	}
 	return account, nil
 }

@@ -6,6 +6,7 @@ import (
     "BlockChainTest/mycrypto"
     "crypto/rand"
     "BlockChainTest/log"
+    "fmt"
 )
 
 func hmAC(message, key []byte) []byte {
@@ -20,6 +21,7 @@ func genSeed() ([]byte, error) {
     if err != nil {
         log.Println("Error in genSeed().")
     }
+    fmt.Println("seed: ", seed)
     return seed, err
 }
 

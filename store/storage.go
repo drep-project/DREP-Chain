@@ -6,6 +6,7 @@ import (
     "log"
     "fmt"
     "BlockChainTest/database"
+    "BlockChainTest/accounts"
 )
 
 func ExecuteTransactions(b *bean.Block) *big.Int {
@@ -39,17 +40,17 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
 }
 
 func execute(t *bean.Transaction) *big.Int {
-    addr := bean.Hex2Address(t.Addr().String())
+    addr := accounts.Hex2Address(t.Addr().String())
     nonce := t.Data.Nonce
-    curN := database.GetNonce(addr)
+    curN := database.GetNonce(addr, t.Data.ChainId)
     if curN + 1 != nonce {
         return nil
     }
-    database.PutNonce(addr, curN + 1)
+    database.PutNonce(addr, t.Data.ChainId, curN + 1)
     gasPrice := big.NewInt(0).SetBytes(t.Data.GasPrice)
     gasLimit := big.NewInt(0).SetBytes(t.Data.GasLimit)
     gasFee := big.NewInt(0).Mul(gasLimit, gasPrice)
-    balance := database.GetBalance(addr)
+    balance := database.GetBalance(addr, t.Data.ChainId)
     if gasFee.Cmp(balance) > 0 {
         log.Fatal("Error, gas not right")
         return nil
@@ -64,15 +65,15 @@ func execute(t *bean.Transaction) *big.Int {
                 total := big.NewInt(0).Add(amount, gasFee)
                 if balance.Cmp(total) >= 0 {
                     balance.Sub(balance, total)
-                    to := bean.Address(t.Data.To)
-                    balance2 := database.GetBalance(bean.Hex2Address(to.String()))
+                    to := t.Data.To
+                    balance2 := database.GetBalance(accounts.Hex2Address(to), t.Data.ChainId)
                     balance2.Add(balance2, amount)
-                    database.PutBalance(bean.Hex2Address(to.String()), balance2)
+                    database.PutBalance(accounts.Hex2Address(to), t.Data.ChainId, balance2)
                 } else {
                     balance.Sub(balance, gasFee)
                 }
             }
-            database.PutBalance(addr, balance)
+            database.PutBalance(addr, t.Data.ChainId, balance)
         }
     case MinerType:
         {

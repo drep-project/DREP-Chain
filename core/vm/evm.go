@@ -3,7 +3,6 @@ package vm
 import (
 	"math/big"
 	"errors"
-	"fmt"
 	"BlockChainTest/bean"
 	"BlockChainTest/accounts"
 )
@@ -31,72 +30,69 @@ func NewEVM() *EVM {
 	return evm
 }
 
-func (evm *EVM) CreateContractCode(callerAddr bean.CommonAddress, byteCode accounts.ByteCode, gas uint64, value *big.Int) ([]byte, bean.CommonAddress, error) {
-	if !evm.CanTransfer(callerAddr, value) {
-		return nil, bean.CommonAddress{}, ErrInsufficientBalance
+func (evm *EVM) CreateContractCode(callerAddr accounts.CommonAddress, chainId int64, byteCode accounts.ByteCode, gas uint64, value *big.Int) ([]byte, accounts.CommonAddress, error) {
+	if !evm.CanTransfer(callerAddr, chainId, value) {
+		return nil, accounts.CommonAddress{}, ErrInsufficientBalance
 	}
 
-	contractAddr := bean.CodeAddr(byteCode)
-	b := evm.State.GetByteCode(contractAddr)
-	if b != nil {
-		return nil, bean.CommonAddress{}, ErrCodeAlreadyExists
+	nonce := evm.State.GetNonce(callerAddr, chainId)
+	account, err := evm.State.CreateContractAccount(callerAddr, chainId, nonce, byteCode)
+	if err != nil {
+		return nil, accounts.CommonAddress{}, err
 	}
 
-	nonce := evm.State.GetNonce(callerAddr)
-
-	evm.State.SetNonce(callerAddr, nonce + 1)
-	evm.Transfer(callerAddr, contractAddr, value)
-	evm.State.CreateContractAccount(contractAddr, byteCode)
+	contractAddr := account.Address
+	evm.State.SetNonce(callerAddr, chainId, nonce + 1)
+	evm.Transfer(callerAddr, contractAddr, chainId, value)
 
 	return nil, contractAddr, nil
 }
 
-func (evm *EVM) CallContractCode(callerAddr, contractAddr bean.CommonAddress, input []byte, gas uint64, value *big.Int) (ret []byte, returnGas uint64, err error) {
-	if !evm.CanTransfer(callerAddr, value) {
+func (evm *EVM) CallContractCode(callerAddr, contractAddr accounts.CommonAddress, chainId int64, input []byte, gas uint64, value *big.Int) (ret []byte, returnGas uint64, err error) {
+	if !evm.CanTransfer(callerAddr, chainId, value) {
 		return nil, gas, ErrInsufficientBalance
 	}
 
-	byteCode := evm.State.GetByteCode(contractAddr)
+	byteCode := evm.State.GetByteCode(contractAddr, chainId)
 	if byteCode == nil {
 		return nil, gas, ErrCodeNotExists
 	}
-	evm.Transfer(callerAddr, contractAddr, value)
+	evm.Transfer(callerAddr, contractAddr, chainId, value)
 
-	codeHash := bean.CodeHash(byteCode)
 	contract := NewContract(callerAddr, gas, value, nil)
-	contract.SetCode(contractAddr, codeHash, byteCode)
+	contract.SetCode(contractAddr, byteCode)
 
 	ret, err = run(evm, contract, input)
 	return ret, contract.Gas, err
 }
 
-func (evm *EVM) StaticCall(callerAddr, contractAddr bean.CommonAddress, input []byte, gas uint64) (ret []byte, returnGas uint64, err error) {
-	byteCode := evm.State.GetByteCode(contractAddr)
+func (evm *EVM) StaticCall(callerAddr, contractAddr accounts.CommonAddress, chainId int64, input []byte, gas uint64) (ret []byte, returnGas uint64, err error) {
+
+	byteCode := evm.State.GetByteCode(contractAddr, chainId)
 	if byteCode == nil {
 		return nil, gas, ErrCodeNotExists
 	}
-	evm.Transfer(callerAddr, contractAddr, new(big.Int))
 
-	codeHash := bean.CodeHash(byteCode)
 	contract := NewContract(callerAddr, gas, new(big.Int), nil)
-	contract.SetCode(contractAddr, codeHash, byteCode)
+	contract.SetCode(contractAddr, byteCode)
 
 	ret, err = run(evm, contract, input)
 	return ret, contract.Gas, err
 }
 
-func (evm *EVM) DelegateCall(con *Contract, contractAddr bean.CommonAddress, input []byte, gas uint64) (ret []byte, leftGas uint64, err error) {
+func (evm *EVM) DelegateCall(con *Contract, contractAddr accounts.CommonAddress, input []byte, gas uint64) (ret []byte, leftGas uint64, err error) {
+
 	callerAddr := con.CallerAddr
+	chainId := con.ChainId
 	jumpdests := con.Jumpdests
 
-	byteCode := evm.State.GetByteCode(contractAddr)
+	byteCode := evm.State.GetByteCode(contractAddr, chainId)
 	if byteCode == nil {
 		return nil, gas, ErrCodeNotExists
 	}
 
-	codeHash := bean.CodeHash(byteCode)
 	contract := NewContract(callerAddr, gas, new(big.Int), jumpdests)
-	contract.SetCode(contractAddr, codeHash, byteCode)
+	contract.SetCode(contractAddr, byteCode)
 
 	ret, err = run(evm, contract, input)
 	return ret, con.Gas, err
@@ -111,28 +107,25 @@ func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
 		}
 	}
 	interpreter := evm.Interpreter
-	fmt.Println()
-	fmt.Println("interpreter: ", interpreter)
-	fmt.Println()
 	if interpreter.CanRun(contract.ByteCode) {
 		return interpreter.Run(contract, input)
 	}
 	return nil, ErrNoCompatibleInterpreter
 }
 
-func (evm *EVM) CanTransfer(addr bean.CommonAddress, amount *big.Int) bool {
-	balance := evm.State.GetBalance(addr)
+func (evm *EVM) CanTransfer(addr accounts.CommonAddress, chainId int64, amount *big.Int) bool {
+	balance := evm.State.GetBalance(addr, chainId)
 	return balance.Cmp(amount) >= 0
 }
 
-func (evm *EVM) Transfer(from, to bean.CommonAddress, amount *big.Int) error {
-	err := evm.State.SubBalance(from, amount)
+func (evm *EVM) Transfer(from, to accounts.CommonAddress, chainId int64, amount *big.Int) error {
+	err := evm.State.SubBalance(from, chainId, amount)
 	if err != nil {
 		return err
 	}
-	err = evm.State.AddBalance(to, amount)
+	err = evm.State.AddBalance(to, chainId, amount)
 	if err != nil {
-		evm.State.AddBalance(from, amount)
+		evm.State.AddBalance(from, chainId, amount)
 		return err
 	}
 	return nil

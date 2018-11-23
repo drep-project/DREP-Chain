@@ -3,21 +3,21 @@ package vm
 import (
 	"math/big"
 	"fmt"
-	"BlockChainTest/bean"
+	"BlockChainTest/accounts"
 )
 
 // destinations stores one map per contract (keyed by hash of code).
 // The maps contain an entry for each location of a JUMPDEST
 // instruction.
-type destinations map[bean.Hash]bitvec
+type destinations map[accounts.Hash]bitvec
 
 func NewDest() destinations {
-	dest := destinations(make(map[bean.Hash] bitvec))
+	dest := destinations(make(map[accounts.Hash] bitvec))
 	return dest
 }
 
 // has checks whether code has a JUMPDEST at dest.
-func (d destinations) has(codehash bean.Hash, code []byte, dest *big.Int) bool {
+func (d destinations) has(codehash accounts.Hash, code []byte, dest *big.Int) bool {
 	// PC cannot go beyond len(code) and certainly can't be bigger than 63bits.
 	// Don't bother checking for JUMPDEST in that case.
 	udest := dest.Uint64()
