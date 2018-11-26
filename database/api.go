@@ -7,7 +7,6 @@ import (
     "strconv"
     "encoding/json"
     "BlockChainTest/accounts"
-    "BlockChainTest/core/vm"
     "encoding/hex"
 )
 
@@ -73,26 +72,25 @@ func PutMaxHeight(height int64) error {
     return nil
 }
 
-func GetAccount(addr accounts.CommonAddress, chainId int64) *accounts.Account {
+func GetStorage(addr accounts.CommonAddress, chainId int64) *accounts.Storage {
     db := GetDatabase()
-    key := mycrypto.Hash256([]byte("account_" + addr.Hex() + strconv.FormatInt(chainId, 10)))
+    key := mycrypto.Hash256([]byte("storage_" + addr.Hex() + strconv.FormatInt(chainId, 10)))
     value, err := db.Load(key)
     if err != nil {
-        return nil
+        return &accounts.Storage{}
     }
-    account := &accounts.Account{}
-    err = json.Unmarshal(value, account)
+    storage := &accounts.Storage{}
+    err = json.Unmarshal(value, storage)
     if err != nil {
-        return nil
+        return &accounts.Storage{}
     }
-    return account
+    return storage
 }
 
-func PutAccount(account *accounts.Account) error {
+func PutStorage(addr accounts.CommonAddress, chainId int64, storage *accounts.Storage) error {
     db := GetDatabase()
-    key := mycrypto.Hash256([]byte("account_" + account.Address.Hex() + strconv.FormatInt(account.Node.ChainId, 10)))
-    a := &accounts.Account{Storage: account.Storage}
-    value, err := json.Marshal(a)
+    key := mycrypto.Hash256([]byte("storage_" + addr.Hex() + strconv.FormatInt(chainId, 10)))
+    value, err := json.Marshal(storage)
     if err != nil {
         return err
     }
@@ -105,30 +103,28 @@ func PutAccount(account *accounts.Account) error {
 }
 
 func GetBalance(addr accounts.CommonAddress, chainId int64) *big.Int {
-    account := GetAccount(addr, chainId)
-    return account.Storage.Balance
+    storage := GetStorage(addr, chainId)
+    return storage.Balance
 }
 
 func PutBalance(addr accounts.CommonAddress, chainId int64, balance *big.Int) error {
-    account := GetAccount(addr, chainId)
-    storage := account.Storage
+    storage := GetStorage(addr, chainId)
     storage.Balance = balance
-    return PutAccount(account)
+    return PutStorage(addr, chainId, storage)
 }
 
 func GetNonce(addr accounts.CommonAddress, chainId int64) int64 {
-    account := GetAccount(addr, chainId)
-    return account.Storage.Nonce
+    storage := GetStorage(addr, chainId)
+    return storage.Nonce
 }
 
 func PutNonce(addr accounts.CommonAddress, chainId int64, nonce int64) error {
-    account := GetAccount(addr, chainId)
-    storage := account.Storage
+    storage := GetStorage(addr, chainId)
     storage.Nonce = nonce
-    return PutAccount(account)
+    return PutStorage(addr, chainId, storage)
 }
 
-func PutLogs(txHash []byte, logs []*vm.Log) error {
+func PutLogs(txHash []byte, logs []*bean.Log) error {
     db := GetDatabase()
     key := mycrypto.Hash256([]byte("logs_" + hex.EncodeToString(txHash)))
     value, err := json.Marshal(logs)
@@ -138,22 +134,22 @@ func PutLogs(txHash []byte, logs []*vm.Log) error {
     return db.Store(key, value)
 }
 
-func GetLogs(txHash []byte) []*vm.Log {
+func GetLogs(txHash []byte) []*bean.Log {
     db := GetDatabase()
     key := mycrypto.Hash256([]byte("logs_" + hex.EncodeToString(txHash)))
     value, err := db.Load(key)
     if err != nil {
-        return make([]*vm.Log, 0)
+        return make([]*bean.Log, 0)
     }
-    var logs []*vm.Log
+    var logs []*bean.Log
     err = json.Unmarshal(value, logs)
     if err != nil {
-        return make([]*vm.Log, 0)
+        return make([]*bean.Log, 0)
     }
     return logs
 }
 
-func AddLog(log *vm.Log) error {
+func AddLog(log *bean.Log) error {
     logs := GetLogs(log.TxHash)
     logs = append(logs, log)
     return PutLogs(log.TxHash, logs)
@@ -200,12 +196,12 @@ func GetMostRecentBlocks(n int64) []*bean.Block {
 
 //func SendTransaction(from, to, amount string) error {
 //    addrFrom := bean.Hex2Address(from)
-//    sender := GetAccount(addrFrom)
+//    sender := GetStorage(addrFrom)
 //    if sender == nil {
 //        return errors.New("sender accounts not found")
 //    }
 //    addrTo := bean.Hex2Address(to)
-//    receiver := GetAccount(addrTo)
+//    receiver := GetStorage(addrTo)
 //    if receiver == nil {
 //        return errors.New("receiver accounts not found")
 //    }
@@ -219,11 +215,11 @@ func GetMostRecentBlocks(n int64) []*bean.Block {
 //    sender.Balance = new(big.Int).Sub(sender.Balance, value)
 //    sender.Nonce++
 //    receiver.Balance = new(big.Int).Add(receiver.Balance, value)
-//    err := PutAccount(sender)
+//    err := PutStorage(sender)
 //    if err != nil {
 //        return errors.New("failed to modify sender accounts, error: " + err.Error())
 //    }
-//    err = PutAccount(receiver)
+//    err = PutStorage(receiver)
 //    if err != nil {
 //        return errors.New("failed to modify receiver accounts, error: " + err.Error())
 //    }

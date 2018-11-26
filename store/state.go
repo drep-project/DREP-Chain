@@ -44,9 +44,6 @@ func init()  {
     pub0 := curve.ScalarBaseMultiply(k0)
     pub1 := curve.ScalarBaseMultiply(k1)
     pub2 := curve.ScalarBaseMultiply(k2)
-    database.PutBalance(accounts.PubKey2Address(pub0), id0, big.NewInt(10000))
-    database.PutBalance(accounts.PubKey2Address(pub1), id1, big.NewInt(10000))
-    database.PutBalance(accounts.PubKey2Address(pub2), id2, big.NewInt(10000))
     //pub3 := curve.ScalarBaseMultiply(k3)
     prv0 := &mycrypto.PrivateKey{Prv: k0, PubKey: pub0}
     prv1 := &mycrypto.PrivateKey{Prv: k1, PubKey: pub1}
@@ -113,9 +110,13 @@ func init()  {
         //member = consensus.NewMember(peer0, prvKey)
     }
     account, _ := accounts.NewAccountInDebug(prvKey.Prv)
-    database.PutAccount(account)
+    database.PutStorage(address, chainId, account.Storage)
     database.AddNode(account.Node)
     nodes = database.GetNodes()
+
+    database.PutBalance(accounts.PubKey2Address(pub0), id0, big.NewInt(10000))
+    database.PutBalance(accounts.PubKey2Address(pub1), id1, big.NewInt(10000))
+    database.PutBalance(accounts.PubKey2Address(pub2), id2, big.NewInt(10000))
 
     IsStart = myIndex < minerNum
 }
@@ -201,7 +202,7 @@ func CreateAccount(addr string, chainId int64) (string, error) {
     if err != nil {
         return "", err
     }
-    database.PutAccount(account)
+    database.PutStorage(account.Address, chainId, account.Storage)
     database.AddNode(account.Node)
     return account.Address.Hex(), nil
 }

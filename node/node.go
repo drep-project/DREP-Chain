@@ -16,6 +16,7 @@ import (
     "BlockChainTest/database"
     "encoding/json"
     "BlockChainTest/pool"
+    "BlockChainTest/accounts"
 )
 
 var (
@@ -26,13 +27,13 @@ var (
 type Node struct {
     prvKey *mycrypto.PrivateKey
     curMaxHeight int64
-    pingLatches map[bean.Address]concurrent.CountDownLatch
+    pingLatches map[accounts.CommonAddress]concurrent.CountDownLatch
 }
 
 func newNode(prvKey *mycrypto.PrivateKey) *Node {
     n := &Node{prvKey: prvKey}
     //n.prepCond = sync.NewCond(&n.prepLock)
-    n.pingLatches = make(map[bean.Address]concurrent.CountDownLatch)
+    n.pingLatches = make(map[accounts.CommonAddress]concurrent.CountDownLatch)
     return n
 }
 
@@ -158,7 +159,7 @@ func (n *Node) ProcessBlock(block *bean.Block) {
 
 func (n *Node) processBlock(block *bean.Block) *big.Int {
     log.Println("node receive block", *block)
-    fmt.Println("Process block leader = ", bean.Addr(block.Header.LeaderPubKey), " height = ", block.Header.Height)
+    fmt.Println("Process block leader = ", accounts.PubKey2Address(block.Header.LeaderPubKey).Hex(), " height = ", block.Header.Height)
     return store.ExecuteTransactions(block)
 }
 
@@ -273,7 +274,7 @@ func (n *Node) ReportOfflinePeers(peers []*network.Peer) {
 }
 
 func (n *Node) Ping(peer *network.Peer) error {
-    addr := bean.Addr(peer.PubKey)
+    addr := accounts.PubKey2Address(peer.PubKey)
     if latch, exist := n.pingLatches[addr]; exist {
         return &util.DupOpError{}
     } else {
@@ -294,7 +295,7 @@ func (n *Node) ProcessPing(peer *network.Peer, ping *bean.Ping)  {
 }
 
 func (n *Node) ProcessPong(peer *network.Peer, ping *bean.Ping) {
-    addr := bean.Addr(peer.PubKey)
+    addr := accounts.PubKey2Address(peer.PubKey)
     if latch, exist := n.pingLatches[addr]; exist {
         latch.Done()
         delete(n.pingLatches, addr)

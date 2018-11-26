@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"BlockChainTest/accounts"
+	"BlockChainTest/bean"
 )
 
 var (
@@ -47,7 +48,7 @@ func (s *State) CreateContractAccount(callerAddr accounts.CommonAddress, chainId
 	if err != nil {
 		return nil, err
 	}
-	return account, database.PutAccount(account)
+	return account, database.PutStorage(callerAddr, chainId, account.Storage)
 }
 
 func (s *State) SubBalance(addr accounts.CommonAddress, chainId int64, amount *big.Int) error {
@@ -74,17 +75,15 @@ func (s *State) GetNonce(addr accounts.CommonAddress, chainId int64) int64 {
 
 
 func (s *State) Suicide(addr accounts.CommonAddress, chainId int64) error {
-	account := database.GetAccount(addr, chainId)
-	account.Storage = &accounts.Storage{
-		Balance: new(big.Int),
-		Nonce: 0,
-	}
-	return database.PutAccount(account)
+	storage := database.GetStorage(addr, chainId)
+	storage.Balance = new(big.Int)
+	storage.Nonce = 0
+	return database.PutStorage(addr, chainId, storage)
 }
 
 func (s *State) GetByteCode(addr accounts.CommonAddress, chainId int64) accounts.ByteCode {
-	account := database.GetAccount(addr, chainId)
-	return account.Storage.ByteCode
+	storage := database.GetStorage(addr, chainId)
+	return storage.ByteCode
 }
 
 func (s *State) GetCodeSize(addr accounts.CommonAddress, chainId int64) int {
@@ -93,16 +92,16 @@ func (s *State) GetCodeSize(addr accounts.CommonAddress, chainId int64) int {
 }
 
 func (s *State) GetCodeHash(addr accounts.CommonAddress, chainId int64) []byte {
-	account := database.GetAccount(addr, chainId)
-	return account.Storage.CodeHash.Bytes()
+	storage := database.GetStorage(addr, chainId)
+	return storage.CodeHash.Bytes()
 }
 
-func (s *State) GetLogs(txHash []byte) []*Log {
+func (s *State) GetLogs(txHash []byte) []*bean.Log {
 	return database.GetLogs(txHash)
 }
 
 func (s *State) AddLog(contractAddr accounts.CommonAddress, chainId int64, txHash, data []byte, topics [][]byte) error {
-	log := &Log{
+	log := &bean.Log{
 		Address: contractAddr,
 		ChainId: chainId,
 		TxHash: txHash,

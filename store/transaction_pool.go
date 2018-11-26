@@ -7,11 +7,12 @@ import (
     "math/big"
     "BlockChainTest/util/list"
     "BlockChainTest/database"
+    "BlockChainTest/accounts"
 )
 
 var (
     trans       *list.LinkedList
-    accountTran map[bean.Address]*list.SortedLinkedList
+    accountTran map[accounts.CommonAddress]*list.SortedLinkedList
     tranSet     map[string]bool
     tranLock    sync.Mutex
     nonceCp     = func(a interface{}, b interface{}) int{
@@ -42,7 +43,7 @@ var (
 
 func init()  {
     trans = list.NewLinkedList()
-    accountTran = make(map[bean.Address]*list.SortedLinkedList)
+    accountTran = make(map[accounts.CommonAddress]*list.SortedLinkedList)
     tranSet = make(map[string]bool)
 }
 
@@ -56,14 +57,15 @@ func Contains(id string) bool {
     return exists || value
 }
 
-func checkAndGetAddr(tran *bean.Transaction) (bool, bean.Address) {
-    addr := bean.Hex2Address(tran.Addr().String())
+func checkAndGetAddr(tran *bean.Transaction) (bool, accounts.CommonAddress) {
+    addr := accounts.PubKey2Address(tran.Data.PubKey)
+    chainId := tran.Data.ChainId
     if tran.Data == nil {
-        return false, ""
+        return false, accounts.CommonAddress{}
     }
     // TODO Check sig
-    if database.GetNonce(addr) >= tran.Data.Nonce {
-        return false, ""
+    if database.GetNonce(addr, chainId) >= tran.Data.Nonce {
+        return false, accounts.CommonAddress{}
     }
     {
         amount := new(big.Int).SetBytes(tran.Data.Amount)
@@ -72,12 +74,12 @@ func checkAndGetAddr(tran *bean.Transaction) (bool, bean.Address) {
         total := big.NewInt(0)
         total.Mul(gasLimit, gasPrice)
         total.Add(total, amount)
-        if database.GetBalance(addr).Cmp(total) < 0 {
-            return false, ""
+        if database.GetBalance(addr, chainId).Cmp(total) < 0 {
+            return false, accounts.CommonAddress{}
             // TODO Remove this
         }
     }
-    return true, bean.Address(addr.Hex())
+    return true, addr
 }
 //func AddTransaction(id string, transaction *common.Transaction) {
 func AddTransaction(transaction *bean.Transaction) bool {
@@ -116,7 +118,7 @@ func removeTransaction(tran *bean.Transaction) (bool, bool) {
     }
     r1 := trans.Remove(tran, tranCp)
     delete(tranSet, id)
-    addr := tran.Addr()
+    addr := accounts.PubKey2Address(tran.Data.PubKey)
     ts := accountTran[addr]
     r2 := ts.Remove(tran, tranCp)
     return r1, r2
@@ -133,19 +135,20 @@ func PickTransactions(maxGas *big.Int) []*bean.Transaction {
         }
     }()
     it := trans.Iterator()
-    tn := make(map[bean.Address]int64)
+    tn := make(map[accounts.CommonAddress]int64)
     for it.HasNext() {
         if t, ok := it.Next().(*bean.Transaction); ok {
             if id, err := t.TxId(); err == nil {
                 if tranSet[id] {
-                    addr := t.Addr()
+                    addr := accounts.PubKey2Address(t.Data.PubKey)
+                    chainId := t.Data.ChainId
                     if ts, exists := accountTran[addr]; exists {
                         it2 := ts.Iterator()
                         for it2.HasNext() {
                             if t2, ok := it2.Next().(*bean.Transaction); ok {
                                 cn, e := tn[addr]
                                 if !e {
-                                    cn = database.GetNonce(bean.Hex2Address(addr.String()))
+                                    cn = database.GetNonce(addr, chainId)
                                 }
                                 if t2.Data.Nonce != cn + 1 {
                                     continue

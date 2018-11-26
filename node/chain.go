@@ -48,7 +48,7 @@ func GenerateBalanceTransaction(to string, chainId int64, amount *big.Int) *bean
 }
 
 func GenerateMinerTransaction(addr string, chainId int64) *bean.Transaction {
-    nonce := database.GetNonce(accounts.Hex2Address(store.GetAddress()), chainId) + 1
+    nonce := database.GetNonce(store.GetAddress(), chainId) + 1
     data := &bean.TransactionData{
         Nonce:     nonce,
         Type:      store.MinerType,
