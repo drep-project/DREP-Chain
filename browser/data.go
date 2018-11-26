@@ -42,7 +42,7 @@ type TransactionWeb struct {
     Hash      string
     From      string
     To        string
-    ToChain   int64
+    ChainId   int64
     Amount    string
     GasPrice  string
     GasUsed   string
@@ -57,7 +57,7 @@ func ParseTransaction(tx *bean.Transaction) string {
     t.Hash = "0x" + hex.EncodeToString(h)
     t.From = "0x" + bean.PubKey2Address(tx.Data.PubKey).Hex()
     t.To = "0x" + tx.Data.To
-    t.ToChain = tx.Data.ToChain
+    t.ChainId = tx.Data.ChainId
     t.Amount = new(big.Int).SetBytes(tx.Data.Amount).String()
     t.GasPrice = new(big.Int).SetBytes(tx.Data.GasPrice).String()
     t.GasUsed = new(big.Int).SetInt64(rand.Int63()).String()

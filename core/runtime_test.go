@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"BlockChainTest/accounts"
 	"encoding/json"
+	"BlockChainTest/bean"
 )
 
 // Execute executes the code using the input as call data during the execution.
@@ -27,8 +28,8 @@ func ExecuteCreate(code []byte) {
 	callerAddr2 := accounts.Hex2Address(s2)
 	caller1 := &accounts.Account{Address: callerAddr1, Storage: &accounts.Storage{Balance: new(big.Int).SetInt64(100)}}
 	caller2 := &accounts.Account{Address: callerAddr2, Storage: &accounts.Storage{Balance: new(big.Int).SetInt64(200)}}
-	errPut1 := database.PutAccount(caller1)
-	errPut2 := database.PutAccount(caller2)
+	errPut1 := database.PutStorage(callerAddr1, chainId, caller1.Storage)
+	errPut2 := database.PutStorage(callerAddr2, chainId, caller2.Storage)
 	fmt.Println("errPut1: ", errPut1)
 	fmt.Println("errPut2: ", errPut2)
 	gas := uint64(1000000)
@@ -325,7 +326,7 @@ func TestMain123(t *testing.T) {
 			fmt.Println(account.Storage.Balance)
 			continue
 		}
-		log := &vm.Log{}
+		log := &bean.Log{}
 		err = json.Unmarshal(value, log)
 		if err == nil {
 			fmt.Println("log: ", log)

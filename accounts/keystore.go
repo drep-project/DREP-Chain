@@ -46,7 +46,7 @@ func store(node *Node) error {
     key := &Key{
         Address: node.Address().Hex(),
         PrivateKey: hex.EncodeToString(node.PrvKey.Prv),
-        ChainId: int64(node.ChainId),
+        ChainId: node.ChainId,
         ChainCode: hex.EncodeToString(node.ChainCode),
     }
     b, err := json.Marshal(key)
@@ -80,7 +80,6 @@ func OpenKeystore(addr string) (*Node, error) {
     }
     node := &Node{
         PrvKey:  genPrvKey(prv),
-        ChainId: key.ChainId,
         ChainCode: chainCode,
     }
     return node, nil

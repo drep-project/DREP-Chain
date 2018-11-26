@@ -13,7 +13,7 @@ import (
 	"BlockChainTest/accounts"
 )
 
-func main1()  {
+func main()  {
 	network.Start(func(peer *network.Peer, t int, msg interface{}) {
 		p := processor.GetInstance()
 		if msg != nil {
@@ -94,7 +94,7 @@ func main1()  {
 }
 
 
-func main() {
+func main1() {
 	http.HttpStart()
 	time.Sleep(3600 * time.Second)
 }

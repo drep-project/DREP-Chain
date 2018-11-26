@@ -45,6 +45,5 @@ func TestLoad(t *testing.T) {
     fmt.Println("err: ", err)
     fmt.Println("node: ", node)
     fmt.Println("prvkey: ", hex.EncodeToString(node.PrvKey.Prv))
-    fmt.Println("chainId: ", node.ChainId)
     fmt.Println("chainCode: ", node.ChainCode)
 }

@@ -101,11 +101,10 @@ func NewNormalAccount(parent *Node, chainId int64) (*Account, error) {
 
 func NewContractAccount(callerAddr CommonAddress, chainId, nonce int64, byteCode ByteCode) (*Account, error) {
 	address := GetByteCodeAddress(callerAddr, nonce)
-	node := &Node{ChainId: chainId}
 	storage := NewStorage(byteCode)
 	account := &Account{
 		Address: address,
-		Node: node,
+		Node: &Node{ChainId: chainId},
 		Storage: storage,
 	}
 	return account, nil

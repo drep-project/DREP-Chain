@@ -5,6 +5,7 @@ import (
     "BlockChainTest/mycrypto"
     "math/big"
     "encoding/json"
+    "BlockChainTest/accounts"
 )
 
 type BlockHeader struct {
@@ -52,6 +53,14 @@ type Transaction struct {
     Sig                  *mycrypto.Signature
 }
 
+type Log struct {
+    Address      accounts.CommonAddress
+    ChainId      int64
+    TxHash       []byte
+    Topics       [][]byte
+    Data         []byte
+}
+
 type MultiSignature struct {
     Sig                  *mycrypto.Signature
     Bitmap               []byte
@@ -81,10 +90,6 @@ func (tx *Transaction) TxSig(prvKey *mycrypto.PrivateKey) (*mycrypto.Signature, 
         return nil, err
     }
     return mycrypto.Sign(prvKey, b)
-}
-
-func (tx *Transaction) Addr() Address {
-    return Addr(tx.Data.PubKey)
 }
 
 func (tx *Transaction) GetGasUsed() *big.Int {

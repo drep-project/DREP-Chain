@@ -30,7 +30,7 @@ func GenTransactions() {
             Nonce: rand.Int63(),
             Type: 1,
             To: bean.Bytes2Address(mycrypto.Hash256(new(big.Int).SetInt64(rand.Int63()).Bytes())).Hex(),
-            ToChain: rand.Int63(),
+            ChainId: rand.Int63(),
             Amount: new(big.Int).SetInt64(rand.Int63()).Bytes(),
             GasPrice: new(big.Int).SetInt64(rand.Int63()).Bytes(),
             GasLimit: new(big.Int).SetInt64(rand.Int63()).Bytes(),

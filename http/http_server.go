@@ -6,12 +6,12 @@ import (
     "BlockChainTest/database"
     "strconv"
     "encoding/json"
-    "BlockChainTest/bean"
     "math/big"
     "strings"
     "io/ioutil"
     "BlockChainTest/node"
     "BlockChainTest/store"
+    "BlockChainTest/accounts"
 )
 
 type Request struct {
@@ -175,8 +175,12 @@ func GetBalance(w http.ResponseWriter, r *http.Request) {
     // find param in http.Request
     params := analysisReqParam(r)
     var address string
+    var chainId int64
     if value, ok := params["address"].(string); ok {
         address = value
+    }
+    if value, ok := params["chainId"].(int64); ok {
+        chainId = value
     }
 
     if len(address) == 0 {
@@ -186,11 +190,11 @@ func GetBalance(w http.ResponseWriter, r *http.Request) {
     }
 
     fmt.Println("BalanceAddress: ", address)
-    ca := bean.Hex2Address(address)
+    ca := accounts.Hex2Address(address)
     //database.PutBalance(ca, big.NewInt(1314))
     //fmt.Println("[database PutBalance] succeed!")
 
-    b := database.GetBalance(ca)
+    b := database.GetBalance(ca, chainId)
     defer func() {
         if x := recover(); x != nil {
             fmt.Printf("[database GetBalance] caught panic: %v", x)
@@ -205,18 +209,20 @@ func GetBalance(w http.ResponseWriter, r *http.Request) {
 
 func PutBalance(w http.ResponseWriter, r *http.Request) {
     params := analysisReqParam(r)
-
     var address string
     var amount int64
     if value, ok := params["address"].(string); ok {
         address = value
     }
+    if value, ok := params["chainId"].(int64); ok {
+        chainId = value
+    }
     if value, ok := params["amount"].(int64); ok {
         amount = value
     }
 
-    ca := bean.Hex2Address(address)
-    err := database.PutBalance(ca, big.NewInt(amount))
+    ca := accounts.Hex2Address(address)
+    err := database.PutBalance(ca, chainId, big.NewInt(amount))
 
     if err != nil {
         resp := &Response{Success:false, ErrorMsg:err.Error(), Body:false}
@@ -230,8 +236,12 @@ func PutBalance(w http.ResponseWriter, r *http.Request) {
 func GetNonce(w http.ResponseWriter, r *http.Request) {
     params := analysisReqParam(r)
     var address string
+    var chainId int64
     if value, ok := params["address"].(string); ok {
         address = value
+    }
+    if value, ok := params["chainId"].(int64); ok {
+        chainId = value
     }
 
     if len(address) == 0 {
@@ -241,9 +251,9 @@ func GetNonce(w http.ResponseWriter, r *http.Request) {
     }
     fmt.Println("NonceAddress: ", address)
 
-    ca := bean.Hex2Address(address)
+    ca := accounts.Hex2Address(address)
 
-    nonce := database.GetNonce(ca)
+    nonce := database.GetNonce(ca, chainId)
     body := strconv.FormatInt(nonce, 10)
     resp := &Response{Success:true, Body:body}
     writeResponse(w, resp)
@@ -252,16 +262,20 @@ func GetNonce(w http.ResponseWriter, r *http.Request) {
 func PutNonce(w http.ResponseWriter, r *http.Request) {
     params := analysisReqParam(r)
     var address string
+    var chainId int64
     var nonce int64
     if value, ok := params["address"].(string); ok {
         address = value
     }
+    if value, ok := params["chainId"].(int64); ok {
+        chainId = value
+    }
     if value, ok := params["nonce"].(int64); ok {
         nonce = value
     }
-    ca := bean.Hex2Address(address)
+    ca := accounts.Hex2Address(address)
 
-    err := database.PutNonce(ca, nonce)
+    err := database.PutNonce(ca, chainId, nonce)
     if err != nil {
         resp := &Response{Success:false, ErrorMsg:err.Error(), Body:false}
         writeResponse(w, resp)
@@ -282,11 +296,15 @@ func SendTransaction(w http.ResponseWriter, r *http.Request) {
     params := analysisReqParam(r)
     var to string
     var amount string
+    var chainId int64
     if value, ok := params["to"].(string); ok {
         to = value
     }
     if value, ok := params["amount"].(string); ok {
         amount = value
+    }
+    if value, ok := params["chainId"].(int64); ok {
+        chainId = value
     }
 
     a, succeed := new(big.Int).SetString(amount, 10)
@@ -297,7 +315,7 @@ func SendTransaction(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    t := node.GenerateBalanceTransaction(bean.Address(to), a)
+    t := node.GenerateBalanceTransaction(to, chainId, a)
 
     var body string
     if node.SendTransaction(t) != nil {
@@ -310,8 +328,17 @@ func SendTransaction(w http.ResponseWriter, r *http.Request) {
     writeResponse(w, resp)
 }
 
-func CreateAccount(w http.ResponseWriter, _ *http.Request) {
-    hexStr, err := store.CreateAccount()
+func CreateAccount(w http.ResponseWriter, r *http.Request) {
+    params := analysisReqParam(r)
+    var address string
+    var chainId int64
+    if value, ok := params["address"].(string); ok {
+        address = value
+    }
+    if value, ok := params["chainId"].(int64); ok {
+        chainId = value
+    }
+    hexStr, err := store.CreateAccount(address, chainId)
     var resp *Response
     if err != nil {
         resp = &Response{Success:true, ErrorMsg:err.Error()}

@@ -40,7 +40,7 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
 }
 
 func execute(t *bean.Transaction) *big.Int {
-    addr := accounts.Hex2Address(t.Addr().String())
+    addr := accounts.PubKey2Address(t.Data.PubKey)
     nonce := t.Data.Nonce
     curN := database.GetNonce(addr, t.Data.ChainId)
     if curN + 1 != nonce {
@@ -82,7 +82,7 @@ func execute(t *bean.Transaction) *big.Int {
                 balance.Sub(balance, gasFee)
             } else {
                 balance.Sub(balance, gasFee)
-                AddMiner(bean.Address(t.Data.Data))
+                AddMiner(accounts.PubKey2Address(t.Data.PubKey))
             }
         }
     }
