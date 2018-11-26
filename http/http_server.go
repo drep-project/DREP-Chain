@@ -25,6 +25,31 @@ type Response struct {
     Body interface{} `json:"body"`
 }
 
+func GetAllBlocks(w http.ResponseWriter, _ *http.Request) {
+    //TODO:加参数，矿工地址
+    fmt.Println("get all blocks running")
+    blocks := database.GetAllBlocks()
+
+    if blocks == nil || len(blocks) == 0 {
+        errMsg := "error occurred during database.GetAllBlocks"
+        fmt.Println(errMsg)
+        resp := &Response{Success:false, Body:errMsg}
+        writeResponse(w, resp)
+        return
+    }
+
+    bytes, err := json.Marshal(blocks)
+    if err != nil{
+        errMsg := "error occurred during json.Marshal(block)"
+        fmt.Println(errMsg, ": ", err)
+        resp := &Response{Success:false, Body:errMsg}
+        writeResponse(w, resp)
+        return
+    }
+    body := string(bytes)
+    resp := &Response{Success:true, Body:body}
+    writeResponse(w, resp)
+}
 
 func GetBlock(w http.ResponseWriter, r *http.Request) {
     params := analysisReqParam(r)
@@ -50,6 +75,43 @@ func GetBlock(w http.ResponseWriter, r *http.Request) {
         return
     }
     body := string(bytes)
+    resp := &Response{Success:true, Body:body}
+    writeResponse(w, resp)
+}
+
+func GetHighestBlock(w http.ResponseWriter, _ *http.Request) {
+    block := database.GetHighestBlock()
+    if block == nil {
+        errMsg := "error occurred during database.GetHighestBlock"
+        fmt.Println(errMsg)
+        resp := &Response{Success:false, Body:errMsg}
+        writeResponse(w, resp)
+        return
+    }
+    bytes, err := json.Marshal(block)
+    if err != nil{
+        errMsg := "error occurred during json.Marshal(block)"
+        fmt.Println(errMsg, ": ", err)
+        resp := &Response{Success:false, Body:errMsg}
+        writeResponse(w, resp)
+        return
+    }
+    body := string(bytes)
+    resp := &Response{Success:true, Body:body}
+    writeResponse(w, resp)
+}
+
+func GetMaxHeight(w http.ResponseWriter, _ *http.Request) {
+
+    height := database.GetMaxHeight()
+    if height == -1 {
+        errMsg := "error occurred during database.GetMaxHeight()"
+        fmt.Println(errMsg)
+        resp := &Response{Success:false, Body:errMsg}
+        writeResponse(w, resp)
+        return
+    }
+    body := strconv.FormatInt(height, 10)
     resp := &Response{Success:true, Body:body}
     writeResponse(w, resp)
 }
@@ -85,76 +147,14 @@ func GetBlocksFrom(w http.ResponseWriter, r *http.Request){
     writeResponse(w, resp)
 }
 
-func GetAllBlocks(w http.ResponseWriter, _ *http.Request) {
-    fmt.Println("get all blocks running")
-    blocks := database.GetAllBlocks()
-
-    if blocks == nil || len(blocks) == 0 {
-        errMsg := "error occurred during database.GetAllBlocks"
-        fmt.Println(errMsg)
-        resp := &Response{Success:false, Body:errMsg}
-        writeResponse(w, resp)
-        return
-    }
-
-    bytes, err := json.Marshal(blocks)
-    if err != nil{
-        errMsg := "error occurred during json.Marshal(block)"
-        fmt.Println(errMsg, ": ", err)
-        resp := &Response{Success:false, Body:errMsg}
-        writeResponse(w, resp)
-        return
-    }
-    body := string(bytes)
-    resp := &Response{Success:true, Body:body}
-    writeResponse(w, resp)
-}
-
-func GetHighestBlock(w http.ResponseWriter, _ *http.Request) {
-    block := database.GetHighestBlock()
-    if block == nil {
-        errMsg := "error occurred during database.GetHighestBlock"
-        fmt.Println(errMsg)
-        resp := &Response{Success:false, Body:errMsg}
-        writeResponse(w, resp)
-        return
-    }
-    bytes, err := json.Marshal(block)
-    if err != nil{
-        errMsg := "error occurred during json.Marshal(block)"
-        fmt.Println(errMsg, ": ", err)
-        resp := &Response{Success:false, Body:errMsg}
-        writeResponse(w, resp)
-        return
-    }
-    body := string(bytes)
-    resp := &Response{Success:true, Body:body}
-    writeResponse(w, resp)
-}
-
 //func PutBlock(w http.ResponseWriter, r *http.Request) {
 //
 //}
 
-func GetMaxHeight(w http.ResponseWriter, _ *http.Request) {
-
-    height := database.GetMaxHeight()
-    if height == -1 {
-        errMsg := "error occurred during database.GetMaxHeight()"
-        fmt.Println(errMsg)
-        resp := &Response{Success:false, Body:errMsg}
-        writeResponse(w, resp)
-        return
-    }
-    body := strconv.FormatInt(height, 10)
-    resp := &Response{Success:true, Body:body}
-    writeResponse(w, resp)
-}
-
 func PutMaxHeight(w http.ResponseWriter, r *http.Request) {
     params := analysisReqParam(r)
     var height int64
-    if value, ok := params["address"].(int64); ok {
+    if value, ok := params["height"].(int64); ok {
         height = value
     }
 
@@ -162,12 +162,12 @@ func PutMaxHeight(w http.ResponseWriter, r *http.Request) {
     if err != nil {
         errMsg := "error occurred during database.PutMaxHeight()"
         fmt.Println(errMsg, ": ", err)
-        resp := &Response{Success:false, Body:errMsg}
+        resp := &Response{Success:false, ErrorMsg:errMsg, Body:false}
         writeResponse(w, resp)
         return
     }
 
-    resp := &Response{Success:true, Body:"[database PutMaxHeight] succeed!"}
+    resp := &Response{Success:true, Body:true}
     writeResponse(w, resp)
 }
 
@@ -180,7 +180,7 @@ func GetBalance(w http.ResponseWriter, r *http.Request) {
     }
 
     if len(address) == 0 {
-        resp := &Response{Success:false, Body:"param format incorrect"}
+        resp := &Response{Success:false, ErrorMsg:"param format incorrect"}
         writeResponse(w, resp)
         return
     }
@@ -194,7 +194,7 @@ func GetBalance(w http.ResponseWriter, r *http.Request) {
     defer func() {
         if x := recover(); x != nil {
             fmt.Printf("[database GetBalance] caught panic: %v", x)
-            resp := &Response{Success:false, Body:"[database GetBalance] caught panic!"}
+            resp := &Response{Success:false, ErrorMsg:"[database GetBalance] caught panic!"}
             writeResponse(w, resp)
         }
     }()
@@ -207,13 +207,23 @@ func PutBalance(w http.ResponseWriter, r *http.Request) {
     params := analysisReqParam(r)
 
     var address string
+    var amount int64
     if value, ok := params["address"].(string); ok {
         address = value
     }
+    if value, ok := params["amount"].(int64); ok {
+        amount = value
+    }
 
     ca := bean.Hex2Address(address)
-    database.PutBalance(ca, big.NewInt(13131313))
-    resp := &Response{Success:false, Body:"database PutBalance] succeed!"}
+    err := database.PutBalance(ca, big.NewInt(amount))
+
+    if err != nil {
+        resp := &Response{Success:false, ErrorMsg:err.Error(), Body:false}
+        writeResponse(w, resp)
+        return
+    }
+    resp := &Response{Success:true, Body:true}
     writeResponse(w, resp)
 }
 
@@ -225,7 +235,7 @@ func GetNonce(w http.ResponseWriter, r *http.Request) {
     }
 
     if len(address) == 0 {
-        resp := &Response{Success:false, Body:"param format incorrect"}
+        resp := &Response{Success:false, ErrorMsg:"param format incorrect"}
         writeResponse(w, resp)
         return
     }
@@ -242,13 +252,22 @@ func GetNonce(w http.ResponseWriter, r *http.Request) {
 func PutNonce(w http.ResponseWriter, r *http.Request) {
     params := analysisReqParam(r)
     var address string
+    var nonce int64
     if value, ok := params["address"].(string); ok {
         address = value
     }
+    if value, ok := params["nonce"].(int64); ok {
+        nonce = value
+    }
     ca := bean.Hex2Address(address)
-    database.PutNonce(ca, 13131313)
 
-    resp := &Response{Success:true, Body:"[database PutNonce] succeed!"}
+    err := database.PutNonce(ca, nonce)
+    if err != nil {
+        resp := &Response{Success:false, ErrorMsg:err.Error(), Body:false}
+        writeResponse(w, resp)
+        return
+    }
+    resp := &Response{Success:true, Body:true}
     writeResponse(w, resp)
 }
 
