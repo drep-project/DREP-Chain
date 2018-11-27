@@ -3,6 +3,7 @@ package vm
 import (
 	"fmt"
 	"math/big"
+	"BlockChainTest/core/common"
 )
 
 // Memory implements a simple memory model for the ethereum virtual machine.
@@ -46,7 +47,7 @@ func (m *Memory) Set32(offset uint64, val *big.Int) {
 	// Zero the memory area
 	copy(m.store[offset:offset+32], []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 	// Fill in relevant bits
-	ReadBits(val, m.store[offset:offset+32])
+	common.ReadBits(val, m.store[offset:offset+32])
 }
 
 // Resize resizes the memory to size

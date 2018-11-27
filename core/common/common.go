@@ -1,24 +1,24 @@
-package vm
+package common
 
 import (
 	"math/big"
 )
 
-func calcMemSize(off, l *big.Int) *big.Int {
+func CalcMemSize(off, l *big.Int) *big.Int {
 	if l.Sign() == 0 {
 		return Big0
 	}
 	return new(big.Int).Add(off, l)
 }
 
-func toWordSize(size uint64) uint64 {
+func ToWordSize(size uint64) uint64 {
 	if size > MaxUint64-31 {
 		return MaxUint64/32 + 1
 	}
 	return (size + 31) / 32
 }
 
-func getData(data []byte, start uint64, size uint64) []byte {
+func GetData(data []byte, start uint64, size uint64) []byte {
 	length := uint64(len(data))
 	if start > length {
 		start = length
@@ -30,7 +30,7 @@ func getData(data []byte, start uint64, size uint64) []byte {
 	return RightPadBytes(data[start:end], int(size))
 }
 
-func allZero(b []byte) bool {
+func AllZero(b []byte) bool {
 	for _, byt := range b {
 		if byt != 0 {
 			return false
@@ -39,7 +39,7 @@ func allZero(b []byte) bool {
 	return true
 }
 
-func getDataBig(data []byte, start *big.Int, size *big.Int) []byte {
+func GetDataBig(data []byte, start *big.Int, size *big.Int) []byte {
 	dlen := big.NewInt(int64(len(data)))
 
 	s := BigMin(start, dlen)

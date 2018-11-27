@@ -28,7 +28,7 @@ import (
 
 	"BlockChainTest/bean"
 	"BlockChainTest/core/ethhexutil"
-	"BlockChainTest/core/vm"
+	"BlockChainTest/core/common"
 )
 
 var testAddrHex = "970e8128ab834e8eac17ab8e3812f010678cf791"
@@ -182,9 +182,9 @@ func TestValidateSignatureValues(t *testing.T) {
 		}
 	}
 	minusOne := big.NewInt(-1)
-	one := vm.Big1
-	zero := vm.Big0
-	secp256k1nMinus1 := new(big.Int).Sub(secp256k1N, vm.Big1)
+	one := common.Big1
+	zero := common.Big0
+	secp256k1nMinus1 := new(big.Int).Sub(secp256k1N, common.Big1)
 
 	// correct v,r,s
 	check(true, 0, one, one)

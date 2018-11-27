@@ -24,7 +24,7 @@ import (
 	"fmt"
 
 	"BlockChainTest/core/ethcrypto/secp256k1"
-	"BlockChainTest/core/vm"
+	"BlockChainTest/core/common"
 )
 
 // Ecrecover returns the uncompressed public key that created the given signature.
@@ -55,7 +55,7 @@ func Sign(hash []byte, prv *ecdsa.PrivateKey) (sig []byte, err error) {
 	if len(hash) != 32 {
 		return nil, fmt.Errorf("hash is required to be exactly 32 bytes (%d)", len(hash))
 	}
-	seckey := vm.PaddedBigBytes(prv.D, prv.Params().BitSize/8)
+	seckey := common.PaddedBigBytes(prv.D, prv.Params().BitSize/8)
 	defer zeroBytes(seckey)
 	return secp256k1.Sign(hash, seckey)
 }
