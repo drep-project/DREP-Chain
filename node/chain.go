@@ -63,3 +63,23 @@ func GenerateMinerTransaction(addr string, chainId int64) *bean.Transaction {
     // TODO Get sig bean.Transaction{}
     return &bean.Transaction{Data: data}
 }
+
+func GenerateCreateContractTransaction(code []byte) *bean.Transaction {
+    chainId := store.GetChainId()
+    nonce := database.GetNonce(store.GetAddress(), chainId) + 1
+    data := &bean.TransactionData{
+        Nonce: nonce,
+        Type: store.CreateContractType,
+        ChainId: chainId,
+        GasPrice: store.GasPrice.Bytes(),
+        GasLimit: store.CreateContractGas.Bytes(),
+        Timestamp: time.Now().Unix(),
+        Data: code,
+        PubKey: store.GetPubKey(),
+    }
+    return &bean.Transaction{Data: data}
+}
+
+func GenerateCallContractTransaction(input []byte, readOnly bool) {
+
+}
