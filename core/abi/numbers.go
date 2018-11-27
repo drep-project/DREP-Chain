@@ -3,8 +3,8 @@ package abi
 import (
 	"math/big"
 	"reflect"
-	"BlockChainTest/core/vm"
 	"BlockChainTest/bean"
+	"BlockChainTest/core/common"
 )
 
 var (
@@ -23,5 +23,5 @@ var (
 
 // U256 converts a big Int into a 256bit EVM number.
 func U256(n *big.Int) []byte {
-	return vm.PaddedBigBytes(vm.U256(n), 32)
+	return common.PaddedBigBytes(common.U256(n), 32)
 }

@@ -29,9 +29,9 @@ import (
 	"os"
 
 	"BlockChainTest/core/ethrlp"
-	"BlockChainTest/core/vm"
 	"BlockChainTest/core/ethcrypto/sha3"
 	"BlockChainTest/bean"
+	"BlockChainTest/core/common"
 )
 
 var (
@@ -127,7 +127,7 @@ func FromECDSA(priv *ecdsa.PrivateKey) []byte {
 	if priv == nil {
 		return nil
 	}
-	return vm.PaddedBigBytes(priv.D, priv.Params().BitSize/8)
+	return common.PaddedBigBytes(priv.D, priv.Params().BitSize/8)
 }
 
 // UnmarshalPubkey converts bytes to a secp256k1 public key.
@@ -188,7 +188,7 @@ func GenerateKey() (*ecdsa.PrivateKey, error) {
 // ValidateSignatureValues verifies whether the signature values are valid with
 // the given chain rules. The v value is assumed to be either 0 or 1.
 func ValidateSignatureValues(v byte, r, s *big.Int, homestead bool) bool {
-	if r.Cmp(vm.Big1) < 0 || s.Cmp(vm.Big1) < 0 {
+	if r.Cmp(common.Big1) < 0 || s.Cmp(common.Big1) < 0 {
 		return false
 	}
 	// reject upper range of s values (ECDSA malleability)

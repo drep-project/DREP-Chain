@@ -1,6 +1,9 @@
 package vm
 
-import "BlockChainTest/accounts"
+import (
+	"BlockChainTest/accounts"
+	"BlockChainTest/core/common"
+)
 
 // memoryGasCosts calculates the quadratic gas for memory expansion. It does so
 // only for the memory region that is expanded, not the total memory.
@@ -20,7 +23,7 @@ func memoryGasCost(mem *Memory, newMemSize uint64) (uint64, error) {
 		return 0, errGasUintOverflow
 	}
 
-	newMemSizeWords := toWordSize(newMemSize)
+	newMemSizeWords := common.ToWordSize(newMemSize)
 	newMemSize = newMemSizeWords * 32
 
 	if newMemSize > uint64(mem.Len()) {
@@ -50,7 +53,7 @@ func gasCallDataCopy(evm *EVM, contract *Contract, stack *Stack, mem *Memory, me
 	}
 
 	var overflow bool
-	if gas, overflow = SafeAdd(gas, GasFastestStep); overflow {
+	if gas, overflow = common.SafeAdd(gas, GasFastestStep); overflow {
 		return 0, errGasUintOverflow
 	}
 
@@ -59,11 +62,11 @@ func gasCallDataCopy(evm *EVM, contract *Contract, stack *Stack, mem *Memory, me
 		return 0, errGasUintOverflow
 	}
 
-	if words, overflow = SafeMul(toWordSize(words), CopyGas); overflow {
+	if words, overflow = common.SafeMul(common.ToWordSize(words), CopyGas); overflow {
 		return 0, errGasUintOverflow
 	}
 
-	if gas, overflow = SafeAdd(gas, words); overflow {
+	if gas, overflow = common.SafeAdd(gas, words); overflow {
 		return 0, errGasUintOverflow
 	}
 	return gas, nil
@@ -76,7 +79,7 @@ func gasReturnDataCopy(evm *EVM, contract *Contract, stack *Stack, mem *Memory, 
 	}
 
 	var overflow bool
-	if gas, overflow = SafeAdd(gas, GasFastestStep); overflow {
+	if gas, overflow = common.SafeAdd(gas, GasFastestStep); overflow {
 		return 0, errGasUintOverflow
 	}
 
@@ -85,11 +88,11 @@ func gasReturnDataCopy(evm *EVM, contract *Contract, stack *Stack, mem *Memory, 
 		return 0, errGasUintOverflow
 	}
 
-	if words, overflow = SafeMul(toWordSize(words), CopyGas); overflow {
+	if words, overflow = common.SafeMul(common.ToWordSize(words), CopyGas); overflow {
 		return 0, errGasUintOverflow
 	}
 
-	if gas, overflow = SafeAdd(gas, words); overflow {
+	if gas, overflow = common.SafeAdd(gas, words); overflow {
 		return 0, errGasUintOverflow
 	}
 	return gas, nil
@@ -129,18 +132,18 @@ func makeGasLog(n uint64) gasFunc {
 			return 0, err
 		}
 
-		if gas, overflow = SafeAdd(gas, LogGas); overflow {
+		if gas, overflow = common.SafeAdd(gas, LogGas); overflow {
 			return 0, errGasUintOverflow
 		}
-		if gas, overflow = SafeAdd(gas, n*LogTopicGas); overflow {
+		if gas, overflow = common.SafeAdd(gas, n*LogTopicGas); overflow {
 			return 0, errGasUintOverflow
 		}
 
 		var memorySizeGas uint64
-		if memorySizeGas, overflow = SafeMul(requestedSize, LogDataGas); overflow {
+		if memorySizeGas, overflow = common.SafeMul(requestedSize, LogDataGas); overflow {
 			return 0, errGasUintOverflow
 		}
-		if gas, overflow = SafeAdd(gas, memorySizeGas); overflow {
+		if gas, overflow = common.SafeAdd(gas, memorySizeGas); overflow {
 			return 0, errGasUintOverflow
 		}
 		return gas, nil
@@ -154,7 +157,7 @@ func gasSha3(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize
 		return 0, err
 	}
 
-	if gas, overflow = SafeAdd(gas, Sha3Gas); overflow {
+	if gas, overflow = common.SafeAdd(gas, Sha3Gas); overflow {
 		return 0, errGasUintOverflow
 	}
 
@@ -162,10 +165,10 @@ func gasSha3(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize
 	if overflow {
 		return 0, errGasUintOverflow
 	}
-	if wordGas, overflow = SafeMul(toWordSize(wordGas), Sha3WordGas); overflow {
+	if wordGas, overflow = common.SafeMul(common.ToWordSize(wordGas), Sha3WordGas); overflow {
 		return 0, errGasUintOverflow
 	}
-	if gas, overflow = SafeAdd(gas, wordGas); overflow {
+	if gas, overflow = common.SafeAdd(gas, wordGas); overflow {
 		return 0, errGasUintOverflow
 	}
 	return gas, nil
@@ -178,7 +181,7 @@ func gasCodeCopy(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memory
 	}
 
 	var overflow bool
-	if gas, overflow = SafeAdd(gas, GasFastestStep); overflow {
+	if gas, overflow = common.SafeAdd(gas, GasFastestStep); overflow {
 		return 0, errGasUintOverflow
 	}
 
@@ -186,10 +189,10 @@ func gasCodeCopy(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memory
 	if overflow {
 		return 0, errGasUintOverflow
 	}
-	if wordGas, overflow = SafeMul(toWordSize(wordGas), CopyGas); overflow {
+	if wordGas, overflow = common.SafeMul(common.ToWordSize(wordGas), CopyGas); overflow {
 		return 0, errGasUintOverflow
 	}
-	if gas, overflow = SafeAdd(gas, wordGas); overflow {
+	if gas, overflow = common.SafeAdd(gas, wordGas); overflow {
 		return 0, errGasUintOverflow
 	}
 	return gas, nil
@@ -202,7 +205,7 @@ func gasExtCodeCopy(evm *EVM, contract *Contract, stack *Stack, mem *Memory, mem
 	}
 
 	var overflow bool
-	if gas, overflow = SafeAdd(gas, ExtcodeCopy); overflow {
+	if gas, overflow = common.SafeAdd(gas, ExtcodeCopy); overflow {
 		return 0, errGasUintOverflow
 	}
 
@@ -211,11 +214,11 @@ func gasExtCodeCopy(evm *EVM, contract *Contract, stack *Stack, mem *Memory, mem
 		return 0, errGasUintOverflow
 	}
 
-	if wordGas, overflow = SafeMul(toWordSize(wordGas), CopyGas); overflow {
+	if wordGas, overflow = common.SafeMul(common.ToWordSize(wordGas), CopyGas); overflow {
 		return 0, errGasUintOverflow
 	}
 
-	if gas, overflow = SafeAdd(gas, wordGas); overflow {
+	if gas, overflow = common.SafeAdd(gas, wordGas); overflow {
 		return 0, errGasUintOverflow
 	}
 	return gas, nil
@@ -231,7 +234,7 @@ func gasMLoad(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySiz
 	if err != nil {
 		return 0, errGasUintOverflow
 	}
-	if gas, overflow = SafeAdd(gas, GasFastestStep); overflow {
+	if gas, overflow = common.SafeAdd(gas, GasFastestStep); overflow {
 		return 0, errGasUintOverflow
 	}
 	return gas, nil
@@ -243,7 +246,7 @@ func gasMStore8(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memoryS
 	if err != nil {
 		return 0, errGasUintOverflow
 	}
-	if gas, overflow = SafeAdd(gas, GasFastestStep); overflow {
+	if gas, overflow = common.SafeAdd(gas, GasFastestStep); overflow {
 		return 0, errGasUintOverflow
 	}
 	return gas, nil
@@ -255,7 +258,7 @@ func gasMStore(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySi
 	if err != nil {
 		return 0, errGasUintOverflow
 	}
-	if gas, overflow = SafeAdd(gas, GasFastestStep); overflow {
+	if gas, overflow = common.SafeAdd(gas, GasFastestStep); overflow {
 		return 0, errGasUintOverflow
 	}
 	return gas, nil
@@ -267,7 +270,7 @@ func gasCreate(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySi
 	if err != nil {
 		return 0, err
 	}
-	if gas, overflow = SafeAdd(gas, CreateGas); overflow {
+	if gas, overflow = common.SafeAdd(gas, CreateGas); overflow {
 		return 0, errGasUintOverflow
 	}
 	return gas, nil
@@ -279,7 +282,7 @@ func gasCreate2(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memoryS
 	if err != nil {
 		return 0, err
 	}
-	if gas, overflow = SafeAdd(gas, Create2Gas); overflow {
+	if gas, overflow = common.SafeAdd(gas, Create2Gas); overflow {
 		return 0, errGasUintOverflow
 	}
 	return gas, nil
@@ -304,7 +307,7 @@ func gasExp(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize 
 		gas      = expByteLen * ExpByte // no overflow check required. Max is 256 * ExpByte gas
 		overflow bool
 	)
-	if gas, overflow = SafeAdd(gas, GasSlowStep); overflow {
+	if gas, overflow = common.SafeAdd(gas, GasSlowStep); overflow {
 		return 0, errGasUintOverflow
 	}
 	return gas, nil
@@ -328,7 +331,7 @@ func gasCall(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize
 		return 0, err
 	}
 	var overflow bool
-	if gas, overflow = SafeAdd(gas, memoryGas); overflow {
+	if gas, overflow = common.SafeAdd(gas, memoryGas); overflow {
 		return 0, errGasUintOverflow
 	}
 
@@ -336,7 +339,7 @@ func gasCall(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize
 	if err != nil {
 		return 0, err
 	}
-	if gas, overflow = SafeAdd(gas, evm.CallGasTemp); overflow {
+	if gas, overflow = common.SafeAdd(gas, evm.CallGasTemp); overflow {
 		return 0, errGasUintOverflow
 	}
 	return gas, nil
@@ -352,7 +355,7 @@ func gasCallCode(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memory
 		return 0, err
 	}
 	var overflow bool
-	if gas, overflow = SafeAdd(gas, memoryGas); overflow {
+	if gas, overflow = common.SafeAdd(gas, memoryGas); overflow {
 		return 0, errGasUintOverflow
 	}
 
@@ -360,7 +363,7 @@ func gasCallCode(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memory
 	if err != nil {
 		return 0, err
 	}
-	if gas, overflow = SafeAdd(gas, evm.CallGasTemp); overflow {
+	if gas, overflow = common.SafeAdd(gas, evm.CallGasTemp); overflow {
 		return 0, errGasUintOverflow
 	}
 	return gas, nil
@@ -406,7 +409,7 @@ func gasDelegateCall(evm *EVM, contract *Contract, stack *Stack, mem *Memory, me
 		return 0, err
 	}
 	var overflow bool
-	if gas, overflow = SafeAdd(gas, Calls); overflow {
+	if gas, overflow = common.SafeAdd(gas, Calls); overflow {
 		return 0, errGasUintOverflow
 	}
 
@@ -414,7 +417,7 @@ func gasDelegateCall(evm *EVM, contract *Contract, stack *Stack, mem *Memory, me
 	if err != nil {
 		return 0, err
 	}
-	if gas, overflow = SafeAdd(gas, evm.CallGasTemp); overflow {
+	if gas, overflow = common.SafeAdd(gas, evm.CallGasTemp); overflow {
 		return 0, errGasUintOverflow
 	}
 	return gas, nil
@@ -426,7 +429,7 @@ func gasStaticCall(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memo
 		return 0, err
 	}
 	var overflow bool
-	if gas, overflow = SafeAdd(gas, Calls); overflow {
+	if gas, overflow = common.SafeAdd(gas, Calls); overflow {
 		return 0, errGasUintOverflow
 	}
 
@@ -434,7 +437,7 @@ func gasStaticCall(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memo
 	if err != nil {
 		return 0, err
 	}
-	if gas, overflow = SafeAdd(gas, evm.CallGasTemp); overflow {
+	if gas, overflow = common.SafeAdd(gas, evm.CallGasTemp); overflow {
 		return 0, errGasUintOverflow
 	}
 	return gas, nil

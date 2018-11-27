@@ -7,8 +7,8 @@ import (
 
 	"BlockChainTest/core/ethcrypto"
 	"BlockChainTest/core/ethcrypto/bn256"
-	"BlockChainTest/bean"
 	"BlockChainTest/accounts"
+	"BlockChainTest/core/common"
 )
 
 var (
@@ -51,7 +51,7 @@ func (c *ecrecover) RequiredGas(input []byte) uint64 {
 func (c *ecrecover) Run(input []byte) ([]byte, error) {
 	const ecRecoverInputLength = 128
 
-	input = RightPadBytes(input, ecRecoverInputLength)
+	input = common.RightPadBytes(input, ecRecoverInputLength)
 	// "input" is (hash, v, r, s), each 32 bytes
 	// but for ecrecover we want (r, s, v)
 
@@ -60,7 +60,7 @@ func (c *ecrecover) Run(input []byte) ([]byte, error) {
 	v := input[63] - 27
 
 	// tighter sig s values input homestead only apply to tx sigs
-	if !allZero(input[32:63]) || !ethcrypto.ValidateSignatureValues(v, r, s, false) {
+	if !common.AllZero(input[32:63]) || !ethcrypto.ValidateSignatureValues(v, r, s, false) {
 		return nil, nil
 	}
 	// v needs to be at the end for libsecp256k1
@@ -71,7 +71,7 @@ func (c *ecrecover) Run(input []byte) ([]byte, error) {
 	}
 
 	// the first byte of pubkey is bitcoin heritage
-	return LeftPadBytes(ethcrypto.Keccak256(pubKey[1:])[12:], 32), nil
+	return common.LeftPadBytes(ethcrypto.Keccak256(pubKey[1:])[12:], 32), nil
 }
 
 // SHA256 implemented as a native contract.
@@ -109,9 +109,9 @@ type bigModExp struct{}
 // RequiredGas returns the gas required to execute the pre-compiled contract.
 func (c *bigModExp) RequiredGas(input []byte) uint64 {
 	var (
-		baseLen = new(big.Int).SetBytes(getData(input, 0, 32))
-		expLen  = new(big.Int).SetBytes(getData(input, 32, 32))
-		modLen  = new(big.Int).SetBytes(getData(input, 64, 32))
+		baseLen = new(big.Int).SetBytes(common.GetData(input, 0, 32))
+		expLen  = new(big.Int).SetBytes(common.GetData(input, 32, 32))
+		modLen  = new(big.Int).SetBytes(common.GetData(input, 64, 32))
 	)
 	if len(input) > 96 {
 		input = input[96:]
@@ -124,9 +124,9 @@ func (c *bigModExp) RequiredGas(input []byte) uint64 {
 		expHead = new(big.Int)
 	} else {
 		if expLen.Cmp(big32) > 0 {
-			expHead = new(big.Int).SetBytes(getData(input, baseLen.Uint64(), 32))
+			expHead = new(big.Int).SetBytes(common.GetData(input, baseLen.Uint64(), 32))
 		} else {
-			expHead = new(big.Int).SetBytes(getData(input, baseLen.Uint64(), expLen.Uint64()))
+			expHead = new(big.Int).SetBytes(common.GetData(input, baseLen.Uint64(), expLen.Uint64()))
 		}
 	}
 	// Calculate the adjusted exponent length
@@ -142,7 +142,7 @@ func (c *bigModExp) RequiredGas(input []byte) uint64 {
 	adjExpLen.Add(adjExpLen, big.NewInt(int64(msb)))
 
 	// Calculate the gas cost of the operation
-	gas := new(big.Int).Set(BigMax(modLen, baseLen))
+	gas := new(big.Int).Set(common.BigMax(modLen, baseLen))
 	switch {
 	case gas.Cmp(big64) <= 0:
 		gas.Mul(gas, gas)
@@ -157,20 +157,20 @@ func (c *bigModExp) RequiredGas(input []byte) uint64 {
 			new(big.Int).Sub(new(big.Int).Mul(big480, gas), big199680),
 		)
 	}
-	gas.Mul(gas, BigMax(adjExpLen, big1))
+	gas.Mul(gas, common.BigMax(adjExpLen, big1))
 	gas.Div(gas, new(big.Int).SetUint64(ModExpQuadCoeffDiv))
 
 	if gas.BitLen() > 64 {
-		return MaxUint64
+		return common.MaxUint64
 	}
 	return gas.Uint64()
 }
 
 func (c *bigModExp) Run(input []byte) ([]byte, error) {
 	var (
-		baseLen = new(big.Int).SetBytes(getData(input, 0, 32)).Uint64()
-		expLen  = new(big.Int).SetBytes(getData(input, 32, 32)).Uint64()
-		modLen  = new(big.Int).SetBytes(getData(input, 64, 32)).Uint64()
+		baseLen = new(big.Int).SetBytes(common.GetData(input, 0, 32)).Uint64()
+		expLen  = new(big.Int).SetBytes(common.GetData(input, 32, 32)).Uint64()
+		modLen  = new(big.Int).SetBytes(common.GetData(input, 64, 32)).Uint64()
 	)
 	if len(input) > 96 {
 		input = input[96:]
@@ -183,15 +183,15 @@ func (c *bigModExp) Run(input []byte) ([]byte, error) {
 	}
 	// Retrieve the operands and execute the exponentiation
 	var (
-		base = new(big.Int).SetBytes(getData(input, 0, baseLen))
-		exp  = new(big.Int).SetBytes(getData(input, baseLen, expLen))
-		mod  = new(big.Int).SetBytes(getData(input, baseLen + expLen, modLen))
+		base = new(big.Int).SetBytes(common.GetData(input, 0, baseLen))
+		exp  = new(big.Int).SetBytes(common.GetData(input, baseLen, expLen))
+		mod  = new(big.Int).SetBytes(common.GetData(input, baseLen + expLen, modLen))
 	)
 	if mod.BitLen() == 0 {
 		// Modulo 0 is undefined, return zero
-		return LeftPadBytes([]byte{}, int(modLen)), nil
+		return common.LeftPadBytes([]byte{}, int(modLen)), nil
 	}
-	return LeftPadBytes(base.Exp(base, exp, mod).Bytes(), int(modLen)), nil
+	return common.LeftPadBytes(base.Exp(base, exp, mod).Bytes(), int(modLen)), nil
 }
 
 // newCurvePoint unmarshals a binary blob into a bn256 elliptic curve point,
@@ -223,11 +223,11 @@ func (c *bn256Add) RequiredGas(input []byte) uint64 {
 }
 
 func (c *bn256Add) Run(input []byte) ([]byte, error) {
-	x, err := newCurvePoint(getData(input, 0, 64))
+	x, err := newCurvePoint(common.GetData(input, 0, 64))
 	if err != nil {
 		return nil, err
 	}
-	y, err := newCurvePoint(getData(input, 64, 64))
+	y, err := newCurvePoint(common.GetData(input, 64, 64))
 	if err != nil {
 		return nil, err
 	}
@@ -245,12 +245,12 @@ func (c *bn256ScalarMul) RequiredGas(input []byte) uint64 {
 }
 
 func (c *bn256ScalarMul) Run(input []byte) ([]byte, error) {
-	p, err := newCurvePoint(getData(input, 0, 64))
+	p, err := newCurvePoint(common.GetData(input, 0, 64))
 	if err != nil {
 		return nil, err
 	}
 	res := new(bn256.G1)
-	res.ScalarMult(p, new(big.Int).SetBytes(getData(input, 64, 32)))
+	res.ScalarMult(p, new(big.Int).SetBytes(common.GetData(input, 64, 32)))
 	return res.Marshal(), nil
 }
 

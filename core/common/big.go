@@ -15,7 +15,7 @@
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package math provides integer math utilities.
-package vm
+package common
 
 import (
 	"fmt"
@@ -24,12 +24,12 @@ import (
 
 // Various big integer limit values.
 var (
-	tt255     = BigPow(2, 255)
-	tt256     = BigPow(2, 256)
-	tt256m1   = new(big.Int).Sub(tt256, big.NewInt(1))
-	tt63      = BigPow(2, 63)
-	MaxBig256 = new(big.Int).Set(tt256m1)
-	MaxBig63  = new(big.Int).Sub(tt63, big.NewInt(1))
+	TT255     = BigPow(2, 255)
+	TT256     = BigPow(2, 256)
+	TT256m1   = new(big.Int).Sub(TT256, big.NewInt(1))
+	TT63      = BigPow(2, 63)
+	MaxBig256 = new(big.Int).Set(TT256m1)
+	MaxBig63  = new(big.Int).Sub(TT63, big.NewInt(1))
 
 	Big1   = big.NewInt(1)
 	Big2   = big.NewInt(2)
@@ -139,10 +139,10 @@ func PaddedBigBytes(bigint *big.Int, n int) []byte {
 	return ret
 }
 
-// bigEndianByteAt returns the byte at position n,
+// BigEndianByteAt returns the byte at position n,
 // in Big-Endian encoding
 // So n==0 returns the least significant byte
-func bigEndianByteAt(bigint *big.Int, n int) byte {
+func BigEndianByteAt(bigint *big.Int, n int) byte {
 	words := bigint.Bits()
 	// Check word-bucket the byte will reside in
 	i := n / wordBytes
@@ -164,7 +164,7 @@ func Byte(bigint *big.Int, padlength, n int) byte {
 	if n >= padlength {
 		return byte(0)
 	}
-	return bigEndianByteAt(bigint, padlength-1-n)
+	return BigEndianByteAt(bigint, padlength-1-n)
 }
 
 // ReadBits encodes the absolute value of bigint as big-endian bytes. Callers must ensure
@@ -182,7 +182,7 @@ func ReadBits(bigint *big.Int, buf []byte) {
 
 // U256 encodes as a 256 bit two's complement number. This operation is destructive.
 func U256(x *big.Int) *big.Int {
-	return x.And(x, tt256m1)
+	return x.And(x, TT256m1)
 }
 
 // S256 interprets x as a two's complement number.
@@ -193,10 +193,10 @@ func U256(x *big.Int) *big.Int {
 //   S256(2**255)   = -2**255
 //   S256(2**256-1) = -1
 func S256(x *big.Int) *big.Int {
-	if x.Cmp(tt255) < 0 {
+	if x.Cmp(TT255) < 0 {
 		return x
 	}
-	return new(big.Int).Sub(x, tt256)
+	return new(big.Int).Sub(x, TT256)
 }
 
 // Exp implements exponentiation by squaring.

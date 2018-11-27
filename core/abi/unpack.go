@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"BlockChainTest/core/vm"
 	"BlockChainTest/bean"
+	"BlockChainTest/core/common"
 )
 
 var (
@@ -206,7 +207,7 @@ func toGoType(index int, t Type, output []byte) (interface{}, error) {
 // interprets a 32 byte slice as an offset and then determines which indice to look to decode the type.
 func lengthPrefixPointsTo(index int, output []byte) (start int, length int, err error) {
 	bigOffsetEnd := big.NewInt(0).SetBytes(output[index : index+32])
-	bigOffsetEnd.Add(bigOffsetEnd, vm.Big32)
+	bigOffsetEnd.Add(bigOffsetEnd, common.Big32)
 	outputLength := big.NewInt(int64(len(output)))
 
 	if bigOffsetEnd.Cmp(outputLength) > 0 {

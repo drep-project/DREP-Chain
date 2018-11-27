@@ -4,6 +4,7 @@ import (
 	"sync/atomic"
 	"fmt"
 	"BlockChainTest/accounts"
+	"BlockChainTest/core/common"
 )
 
 type EVMInterpreter struct {
@@ -103,7 +104,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 			}
 			// memory is expanded in words of 32 bytes. Gas
 			// is also calculated in words.
-			if memorySize, overflow = SafeMul(toWordSize(memSize), 32); overflow {
+			if memorySize, overflow = common.SafeMul(common.ToWordSize(memSize), 32); overflow {
 				return nil, errGasUintOverflow
 			}
 		}
