@@ -363,6 +363,23 @@ func GetMostRecentBlocks(w http.ResponseWriter, r *http.Request) {
     writeResponse(w, resp)
 }
 
+func GetTransactionsFormBlock(w http.ResponseWriter, r *http.Request) {
+    params := analysisReqParam(r)
+    var height int64
+    if value, ok := params["height"].(int64); ok {
+        height = value
+    }
+    block := database.GetBlock(height)
+    txs := block.Data.TxList
+    var body []*TransactionWeb
+    for _, tx := range(txs) {
+        tx := ParseTransaction(tx)
+        body = append(body, tx)
+    }
+    resp := &Response{Success:true, Body:body}
+    writeResponse(w, resp)
+}
+
 var methodsMap = map[string] http.HandlerFunc {
     "/GetAllBlocks": GetAllBlocks,
     "/GetBlock": GetBlock,
@@ -381,6 +398,7 @@ var methodsMap = map[string] http.HandlerFunc {
     "/GetAccounts": GetAccounts,
     "/CurrentAccount": CurrentAccount,
     "/GetMostRecentBlocks": GetMostRecentBlocks,
+    "/GetTransactionsFormBlock": GetTransactionsFormBlock,
 }
 
 func HttpStart() {
