@@ -1,4 +1,4 @@
-package _our
+package core
 
 import (
 	"math/big"
@@ -9,25 +9,28 @@ import (
 	"bytes"
 )
 
-func ExecuteCreateCode(callerAddr accounts.CommonAddress, chainId int64, code []byte, gas uint64, value *big.Int) {
+func ExecuteCreateCode(callerAddr accounts.CommonAddress, chainId int64, code []byte, gas uint64, value *big.Int) (uint64, error) {
 	evm := vm.NewEVM()
-	ret, _, _, err := evm.CreateContractCode(callerAddr, chainId, code, gas, value)
+	ret, _, returnGas, err := evm.CreateContractCode(callerAddr, chainId, code, gas, value)
 	fmt.Println("ret: ", ret)
 	fmt.Println("err: ", err)
+	return returnGas, err
 }
 
-func ExecuteCallCode(callerAddr, contractAddr accounts.CommonAddress, chainId int64, input []byte, gas uint64, value *big.Int) {
+func ExecuteCallCode(callerAddr, contractAddr accounts.CommonAddress, chainId int64, input []byte, gas uint64, value *big.Int) (uint64, error) {
 	evm := vm.NewEVM()
-	ret, _, err := evm.CallContractCode(callerAddr, contractAddr, chainId, input, gas, value)
+	ret, returnGas, err := evm.CallContractCode(callerAddr, contractAddr, chainId, input, gas, value)
 	fmt.Println("ret: ", ret)
 	fmt.Println("err: ", err)
+	return returnGas, err
 }
 
-func ExecuteStaticCall(callerAddr, contractAddr accounts.CommonAddress, chainId int64, input []byte, gas uint64) {
+func ExecuteStaticCall(callerAddr, contractAddr accounts.CommonAddress, chainId int64, input []byte, gas uint64) (uint64, error) {
 	evm := vm.NewEVM()
-	ret, _, err := evm.StaticCall(callerAddr, contractAddr, chainId, input, gas)
+	ret, returnGas, err := evm.StaticCall(callerAddr, contractAddr, chainId, input, gas)
 	fmt.Println("ret: ", ret)
 	fmt.Println("err: ", err)
+	return returnGas, err
 }
 
 type Message struct {
@@ -63,17 +66,17 @@ func Tx2Message(tx *bean.Transaction) *Message {
 	}
 }
 
-func ApplyMessage(message *Message) {
+func ApplyMessage(message *Message) (uint64, error) {
 	contractCreation := message.To.IsEmpty()
 	if contractCreation {
-		ExecuteCreateCode(message.From, message.ChainId, message.Input, message.Gas, message.Value)
+		return ExecuteCreateCode(message.From, message.ChainId, message.Input, message.Gas, message.Value)
 	} else if !message.ReadOnly {
-		ExecuteCallCode(message.From, message.To, message.ChainId, message.Input, message.Gas, message.Value)
+		return ExecuteCallCode(message.From, message.To, message.ChainId, message.Input, message.Gas, message.Value)
 	} else {
-		ExecuteStaticCall(message.From, message.To, message.ChainId, message.Input, message.Gas)
+		return ExecuteStaticCall(message.From, message.To, message.ChainId, message.Input, message.Gas)
 	}
 }
 
-func ApplyTransaction(tx *bean.Transaction) {
-	ApplyMessage(Tx2Message(tx))
+func ApplyTransaction(tx *bean.Transaction) (uint64, error) {
+	return ApplyMessage(Tx2Message(tx))
 }

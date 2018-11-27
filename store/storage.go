@@ -7,6 +7,7 @@ import (
     "fmt"
     "BlockChainTest/database"
     "BlockChainTest/accounts"
+    "BlockChainTest/core"
 )
 
 func ExecuteTransactions(b *bean.Block) *big.Int {
@@ -86,7 +87,31 @@ func execute(t *bean.Transaction) *big.Int {
             }
         }
     case CreateContractType:
-
+        {
+            var gasFee = new(big.Int).Mul(CreateContractGas, gasPrice)
+            if gasLimit.Cmp(CreateContractGas) < 0 {
+                balance.Sub(balance,gasFee)
+            } else {
+                returnGas, _ := core.ApplyTransaction(t)
+                usedGas := new(big.Int).Sub(new(big.Int).SetBytes(t.Data.GasLimit), new(big.Int).SetUint64(returnGas))
+                gasFee.Add(gasFee, new(big.Int).Mul(usedGas, gasPrice))
+                balance.Sub(balance, gasFee)
+            }
+            database.PutBalance(addr, t.Data.ChainId, balance)
+        }
+    case CallContractType:
+        {
+            var gasFee = new(big.Int).Mul(CallContractGas, gasPrice)
+            if gasLimit.Cmp(CallContractGas) < 0 {
+                balance.Sub(balance, gasFee)
+            } else {
+                returnGas, _ := core.ApplyTransaction(t)
+                usedGas := new(big.Int).Sub(new(big.Int).SetBytes(t.Data.GasLimit), new(big.Int).SetUint64(returnGas))
+                gasFee.Add(gasFee, new(big.Int).Mul(usedGas, gasPrice))
+                balance.Sub(balance, gasFee)
+            }
+            database.PutBalance(addr, t.Data.ChainId, balance)
+        }
     }
     return gasFee
 }

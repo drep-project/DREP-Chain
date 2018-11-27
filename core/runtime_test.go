@@ -1,4 +1,4 @@
-package _our
+package core
 
 import (
 	"math/big"
