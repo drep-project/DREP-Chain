@@ -8,8 +8,7 @@ import (
 )
 
 var (
-	SeedSize = 64
-	SeedMark = []byte("Drep Coin Seed")
+	DrepMark   = []byte("Drep Coin Seed")
 	KeyBitSize = 256 >> 3
 )
 
@@ -27,11 +26,11 @@ func NewNode(parent *Node, chainId int64) *Node {
 
 	IsRoot := parent == nil
 	if IsRoot {
-		seed, err := genSeed()
+		uni, err := genUnique()
 		if err != nil {
 			return nil
 		}
-		h := hmAC(seed, SeedMark)
+		h := hmAC(uni, DrepMark)
 		fmt.Println("h: ", h)
 		fmt.Println("len h: ", len(h))
 		prvKey = genPrvKey(h[:KeyBitSize])
