@@ -22,14 +22,14 @@ type BlockWeb struct {
 
 func ParseBlock(block *bean.Block) string {
     b := &BlockWeb{}
-    b.ChainId = block.Header.ChainId
+    //b.ChainId = block.Header.ChainId
     b.Height = block.Header.Height
     b.Timestamp = block.Header.Timestamp
-    b.Hash, _ = block.BlockHash()
+    //b.Hash, _ = block.BlockHash()
     b.PreviousHash = "0x" + hex.EncodeToString(block.Header.PreviousHash)
     b.GasUsed = new(big.Int).SetBytes(block.Header.GasUsed).String()
     b.GasLimit = new(big.Int).SetBytes(block.Header.GasLimit).String()
-    b.TxHashes = block.TxHashes()
+    //b.TxHashes = block.TxHashes()
     j, _ := json.Marshal(b)
     b.Size = len(j)
     ret, _ := json.Marshal(b)
@@ -57,7 +57,7 @@ func ParseTransaction(tx *bean.Transaction) *TransactionWeb {
     t.Hash = "0x" + hex.EncodeToString(h)
     t.From = "0x" + bean.PubKey2Address(tx.Data.PubKey).Hex()
     t.To = "0x" + tx.Data.To
-    t.ChainId = tx.Data.ChainId
+    //t.ChainId = tx.Data.ChainId
     t.Amount = new(big.Int).SetBytes(tx.Data.Amount).String()
     t.GasPrice = new(big.Int).SetBytes(tx.Data.GasPrice).String()
     t.GasUsed = new(big.Int).SetInt64(rand.Int63()).String()
