@@ -82,9 +82,11 @@ func execute(t *bean.Transaction) *big.Int {
                 balance.Sub(balance, gasFee)
             } else {
                 balance.Sub(balance, gasFee)
-                AddMiner(accounts.PubKey2Address(t.Data.PubKey))
+                AddMiner(accounts.Bytes2Address(t.Data.Data))
             }
         }
+    case CreateContractType:
+
     }
     return gasFee
 }

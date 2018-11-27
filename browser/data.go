@@ -47,9 +47,10 @@ type TransactionWeb struct {
     GasPrice  string
     GasUsed   string
     GasLimit  string
+    Height    int64
 }
 
-func ParseTransaction(tx *bean.Transaction) string {
+func ParseTransaction(tx *bean.Transaction, height int64) string {
     t := &TransactionWeb{}
     t.Nonce = tx.Data.Nonce
     t.Timestamp = tx.Data.Timestamp
@@ -62,6 +63,7 @@ func ParseTransaction(tx *bean.Transaction) string {
     t.GasPrice = new(big.Int).SetBytes(tx.Data.GasPrice).String()
     t.GasUsed = new(big.Int).SetInt64(rand.Int63()).String()
     t.GasLimit = new(big.Int).SetBytes(tx.Data.GasLimit).String()
+    t.Height = height
     ret, _ := json.Marshal(t)
     return string(ret)
 }

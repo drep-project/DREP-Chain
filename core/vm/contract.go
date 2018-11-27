@@ -32,9 +32,9 @@ type Contract struct {
 	TxHash       []byte
 }
 
-func NewContract(callerAddr accounts.CommonAddress, gas uint64, value *big.Int, jumpdests destinations) *Contract {
+func NewContract(callerAddr accounts.CommonAddress, chainId int64, gas uint64, value *big.Int, jumpdests destinations) *Contract {
 	if jumpdests == nil {
-		return &Contract{CallerAddr: callerAddr, Gas: gas, Value: value, Jumpdests: NewDest()}
+		return &Contract{CallerAddr: callerAddr, ChainId: chainId, Gas: gas, Value: value, Jumpdests: NewDest()}
 	}
 	return &Contract{CallerAddr: callerAddr, Gas: gas, Value: value, Jumpdests: jumpdests}
 }

@@ -31,6 +31,7 @@ func GenTransactions() {
             Type: 1,
             To: bean.Bytes2Address(mycrypto.Hash256(new(big.Int).SetInt64(rand.Int63()).Bytes())).Hex(),
             ChainId: rand.Int63(),
+            DestChain: rand.Int63(),
             Amount: new(big.Int).SetInt64(rand.Int63()).Bytes(),
             GasPrice: new(big.Int).SetInt64(rand.Int63()).Bytes(),
             GasLimit: new(big.Int).SetInt64(rand.Int63()).Bytes(),
@@ -78,7 +79,7 @@ func RandomSelectTxWeb() string {
     ret := make([]string, m)
     for i:=0; i<m; i++ {
         k := rand.Intn(n)
-        ret[i] = ParseTransaction(transactions[k])
+        ret[i] = ParseTransaction(transactions[k], rand.Int63())
     }
     return ret[0]
 }

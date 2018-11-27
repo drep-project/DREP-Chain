@@ -297,6 +297,7 @@ func SendTransaction(w http.ResponseWriter, r *http.Request) {
     var to string
     var amount string
     var chainId int64
+    var destChain int64
     if value, ok := params["to"].(string); ok {
         to = value
     }
@@ -305,6 +306,9 @@ func SendTransaction(w http.ResponseWriter, r *http.Request) {
     }
     if value, ok := params["chainId"].(int64); ok {
         chainId = value
+    }
+    if value, ok := params["destChain"].(int64); ok {
+        destChain = value
     }
 
     a, succeed := new(big.Int).SetString(amount, 10)
@@ -315,7 +319,7 @@ func SendTransaction(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    t := node.GenerateBalanceTransaction(to, chainId, a)
+    t := node.GenerateBalanceTransaction(to, chainId, destChain, a)
 
     var body string
     if node.SendTransaction(t) != nil {

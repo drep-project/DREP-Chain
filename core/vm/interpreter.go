@@ -11,19 +11,25 @@ type EVMInterpreter struct {
 	EVM *EVM
 	JumpTable [256]operation
 	ReturnData []byte
+	ReadOnly bool
 }
 
 func NewEVMInterpreter(evm *EVM) *EVMInterpreter {
 	return &EVMInterpreter{EVM: evm, JumpTable: constantinopleInstructionSet}
 }
 
-func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err error) {
+func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (ret []byte, err error) {
 	if in.IntPool == nil {
 		in.IntPool = poolOfIntPools.get()
 		defer func() {
 			poolOfIntPools.put(in.IntPool)
 			in.IntPool = nil
 		}()
+	}
+
+	if readOnly && !in.ReadOnly {
+		in.ReadOnly = true
+		defer func() { in.ReadOnly = false }()
 	}
 
 	// Reset the previous call's return data. It's unimportant to preserve the old buffer
@@ -81,6 +87,9 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 			return nil, fmt.Errorf("invalid opcode 0x%x", int(op))
 		}
 		if err := operation.validateStack(stack); err != nil {
+			return nil, err
+		}
+		if err := in.enforceRestrictions(op, operation, stack); err != nil {
 			return nil, err
 		}
 
@@ -141,6 +150,20 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 	return nil, nil
 }
 
-func (in *EVMInterpreter) CanRun(byteCode accounts.ByteCode) bool {
+func (in *EVMInterpreter) canRun(byteCode accounts.ByteCode) bool {
 	return true
+}
+
+func (in *EVMInterpreter) enforceRestrictions(op OpCode, operation operation, stack *Stack) error {
+	if in.ReadOnly {
+		// If the interpreter is operating in readonly mode, make sure no
+		// state-modifying operation is performed. The 3rd stack item
+		// for a call operation is the value. Transferring value from one
+		// account to the others means the state is modified and should also
+		// return with an error.
+		if operation.writes || (op == CALL && stack.Back(2).BitLen() > 0) {
+			return errWriteProtection
+		}
+	}
+	return nil
 }

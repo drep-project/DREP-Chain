@@ -26,7 +26,7 @@ import (
 
 var (
 	bigZero                  = new(big.Int)
-	//errWriteProtection       = errors.New("evm: write protection")
+	errWriteProtection       = errors.New("evm: write protection")
 	errReturnDataOutOfBounds = errors.New("evm: return data out of bounds")
 	errExecutionReverted     = errors.New("evm: execution reverted")
 	//errMaxCodeSizeExceeded   = errors.New("evm: max code size exceeded")
@@ -718,7 +718,7 @@ func opCreate(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memor
 
 	contract.UseGas(gas)
 	//res, addr, returnGas, suberr := interpreter.evm.Create(contract, input, gas, value)
-	res, addr, suberr := interpreter.EVM.CreateContractCode(contract.CallerAddr, contract.ChainId, contract.ByteCode, gas, value)
+	res, addr, returnGas, suberr := interpreter.EVM.CreateContractCode(contract.CallerAddr, contract.ChainId, contract.ByteCode, gas, value)
 	// Push item on the stack based on the returned error. If the ruleset is
 	// homestead we must check for CodeStoreOutOfGasError (homestead only
 	// rule) and treat as an error, if the ruleset is frontier we must
@@ -730,6 +730,7 @@ func opCreate(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memor
 		x:= addr.Big()
 		stack.push(x)
 	}
+	contract.Gas += returnGas
 	interpreter.IntPool.put(value, offset, size)
 
 	if suberr == errExecutionReverted {
