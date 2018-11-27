@@ -40,6 +40,7 @@ type TransactionData struct {
     Type                 int32
     To                   string
     ChainId              int64
+    DestChain            int64
     Amount               []byte
     GasPrice             []byte
     GasLimit             []byte

@@ -29,14 +29,17 @@ func main()  {
 		switch cmd {
 		case "send":
 			{
-				var addr string
 				chainId := store.GetChainId()
+				var addr string
 				var amount int64
+				var destChain int64
 				fmt.Print("To: ")
 				fmt.Scanln(&addr)
+				fmt.Print("DestChain: ")
+				fmt.Scanln(&destChain)
 				fmt.Print("Amount: ")
 				fmt.Scanln(&amount)
-				t := node.GenerateBalanceTransaction(addr, chainId, big.NewInt(amount))
+				t := node.GenerateBalanceTransaction(addr, chainId, destChain, big.NewInt(amount))
 				if node.SendTransaction(t) != nil {
 					fmt.Println("Offline")
 				} else {

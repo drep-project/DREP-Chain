@@ -26,7 +26,7 @@ func SendTransaction(t *bean.Transaction) error {
     }
 }
 
-func GenerateBalanceTransaction(to string, chainId int64, amount *big.Int) *bean.Transaction {
+func GenerateBalanceTransaction(to string, chainId, destChain int64, amount *big.Int) *bean.Transaction {
     nonce := database.GetNonce(accounts.Hex2Address(to), chainId)
     nonce++
     data := &bean.TransactionData{
@@ -34,6 +34,8 @@ func GenerateBalanceTransaction(to string, chainId int64, amount *big.Int) *bean
         Nonce:nonce,
         Type:store.TransferType,
         To:to,
+        ChainId: chainId,
+        DestChain: destChain,
         Amount:amount.Bytes(),
         GasPrice:store.GasPrice.Bytes(),
         GasLimit:store.TransferGas.Bytes(),
@@ -52,10 +54,11 @@ func GenerateMinerTransaction(addr string, chainId int64) *bean.Transaction {
     data := &bean.TransactionData{
         Nonce:     nonce,
         Type:      store.MinerType,
+        ChainId:   chainId,
         GasPrice:  store.GasPrice.Bytes(),
         GasLimit:  store.MinerGas.Bytes(),
         Timestamp: time.Now().Unix(),
-        Data: []byte(addr),
+        Data: accounts.Hex2Address(addr).Bytes(),
         PubKey:store.GetPubKey()}
     // TODO Get sig bean.Transaction{}
     return &bean.Transaction{Data: data}

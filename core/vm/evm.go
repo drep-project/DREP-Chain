@@ -30,22 +30,33 @@ func NewEVM() *EVM {
 	return evm
 }
 
-func (evm *EVM) CreateContractCode(callerAddr accounts.CommonAddress, chainId int64, byteCode accounts.ByteCode, gas uint64, value *big.Int) ([]byte, accounts.CommonAddress, error) {
+func (evm *EVM) CreateContractCode(callerAddr accounts.CommonAddress, chainId int64, byteCode accounts.ByteCode, gas uint64, value *big.Int) ([]byte, accounts.CommonAddress, uint64, error) {
 	if !evm.CanTransfer(callerAddr, chainId, value) {
-		return nil, accounts.CommonAddress{}, ErrInsufficientBalance
+		return nil, accounts.CommonAddress{}, gas, ErrInsufficientBalance
 	}
 
 	nonce := evm.State.GetNonce(callerAddr, chainId)
 	account, err := evm.State.CreateContractAccount(callerAddr, chainId, nonce, byteCode)
 	if err != nil {
-		return nil, accounts.CommonAddress{}, err
+		return nil, accounts.CommonAddress{}, gas, err
 	}
 
 	contractAddr := account.Address
 	evm.State.SetNonce(callerAddr, chainId, nonce + 1)
 	evm.Transfer(callerAddr, contractAddr, chainId, value)
 
-	return nil, contractAddr, nil
+	contract := NewContract(callerAddr, chainId, gas, value, nil)
+	contract.SetCode(contractAddr, byteCode)
+	ret, err := run(evm, contract, nil, false)
+
+	if err != nil {
+		return nil, accounts.CommonAddress{}, gas, err
+	}
+
+	createDataGas := uint64(len(ret)) * CreateDataGas
+	contract.UseGas(createDataGas)
+
+	return ret, contractAddr, contract.Gas, nil
 }
 
 func (evm *EVM) CallContractCode(callerAddr, contractAddr accounts.CommonAddress, chainId int64, input []byte, gas uint64, value *big.Int) (ret []byte, returnGas uint64, err error) {
@@ -59,10 +70,10 @@ func (evm *EVM) CallContractCode(callerAddr, contractAddr accounts.CommonAddress
 	}
 	evm.Transfer(callerAddr, contractAddr, chainId, value)
 
-	contract := NewContract(callerAddr, gas, value, nil)
+	contract := NewContract(callerAddr, chainId, gas, value, nil)
 	contract.SetCode(contractAddr, byteCode)
 
-	ret, err = run(evm, contract, input)
+	ret, err = run(evm, contract, input, false)
 	return ret, contract.Gas, err
 }
 
@@ -73,10 +84,10 @@ func (evm *EVM) StaticCall(callerAddr, contractAddr accounts.CommonAddress, chai
 		return nil, gas, ErrCodeNotExists
 	}
 
-	contract := NewContract(callerAddr, gas, new(big.Int), nil)
+	contract := NewContract(callerAddr, chainId, gas, new(big.Int), nil)
 	contract.SetCode(contractAddr, byteCode)
 
-	ret, err = run(evm, contract, input)
+	ret, err = run(evm, contract, input, true)
 	return ret, contract.Gas, err
 }
 
@@ -91,15 +102,15 @@ func (evm *EVM) DelegateCall(con *Contract, contractAddr accounts.CommonAddress,
 		return nil, gas, ErrCodeNotExists
 	}
 
-	contract := NewContract(callerAddr, gas, new(big.Int), jumpdests)
+	contract := NewContract(callerAddr, chainId, gas, new(big.Int), jumpdests)
 	contract.SetCode(contractAddr, byteCode)
 
-	ret, err = run(evm, contract, input)
+	ret, err = run(evm, contract, input, false)
 	return ret, con.Gas, err
 }
 
 
-func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
+func run(evm *EVM, contract *Contract, input []byte, readOnly bool) ([]byte, error) {
 	if !contract.ContractAddr.IsEmpty() {
 		precompiles := PrecompiledContracts
 		if p := precompiles[contract.ContractAddr]; p != nil {
@@ -107,8 +118,8 @@ func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
 		}
 	}
 	interpreter := evm.Interpreter
-	if interpreter.CanRun(contract.ByteCode) {
-		return interpreter.Run(contract, input)
+	if interpreter.canRun(contract.ByteCode) {
+		return interpreter.Run(contract, input, readOnly)
 	}
 	return nil, ErrNoCompatibleInterpreter
 }
