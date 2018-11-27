@@ -4,9 +4,8 @@ import (
     "crypto/hmac"
     "crypto/sha512"
     "BlockChainTest/mycrypto"
-    "crypto/rand"
-    "BlockChainTest/log"
-    "fmt"
+    "net"
+    "time"
 )
 
 func hmAC(message, key []byte) []byte {
@@ -15,14 +14,18 @@ func hmAC(message, key []byte) []byte {
     return h.Sum(nil)
 }
 
-func genSeed() ([]byte, error) {
-    seed := make([]byte, SeedSize)
-    _, err := rand.Read(seed)
+func genUnique() ([]byte, error) {
+    interfaces, err := net.Interfaces()
     if err != nil {
-        log.Println("Error in genSeed().")
+        return nil, err
     }
-    fmt.Println("seed: ", seed)
-    return seed, err
+    uni := ""
+    for _, inter := range interfaces {
+        mac := inter.HardwareAddr
+        uni += mac.String()
+    }
+    uni += time.Now().String()
+    return mycrypto.Hash256([]byte(uni)), nil
 }
 
 func genPrvKey(prv []byte) *mycrypto.PrivateKey {
@@ -33,11 +36,11 @@ func genPrvKey(prv []byte) *mycrypto.PrivateKey {
 }
 
 func NewNodeInDebug(prv []byte) (*Node, error) {
-    seed, err := genSeed()
+    uni, err := genUnique()
     if err != nil {
         return nil, err
     }
-    h := hmAC(seed, SeedMark)
+    h := hmAC(uni, DrepMark)
     prvKey := genPrvKey(prv)
     chainCode := h[KeyBitSize:]
     node := &Node{
