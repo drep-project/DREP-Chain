@@ -5,6 +5,7 @@ import (
 	"errors"
 	"BlockChainTest/bean"
 	"BlockChainTest/accounts"
+	"fmt"
 )
 
 type EVM struct {
@@ -35,23 +36,28 @@ func (evm *EVM) CreateContractCode(callerAddr accounts.CommonAddress, chainId in
 		return nil, accounts.CommonAddress{}, gas, ErrInsufficientBalance
 	}
 
-	nonce := evm.State.GetNonce(callerAddr, chainId)
-	account, err := evm.State.CreateContractAccount(callerAddr, chainId, nonce, byteCode)
+	nonce := evm.State.GetNonce(callerAddr, chainId) + 1
+	account, err := evm.State.CreateContractAccount(callerAddr, chainId, nonce)
 	if err != nil {
 		return nil, accounts.CommonAddress{}, gas, err
 	}
 
 	contractAddr := account.Address
-	evm.State.SetNonce(callerAddr, chainId, nonce + 1)
+	evm.State.SetNonce(callerAddr, chainId, nonce)
 	evm.Transfer(callerAddr, contractAddr, chainId, value)
 
 	contract := NewContract(callerAddr, chainId, gas, value, nil)
 	contract.SetCode(contractAddr, byteCode)
 	ret, err := run(evm, contract, nil, false)
-
 	if err != nil {
 		return nil, accounts.CommonAddress{}, gas, err
 	}
+
+	err = evm.State.SetByteCode(contractAddr, chainId, ret)
+	if err != nil {
+		return nil, accounts.CommonAddress{}, gas, err
+	}
+	fmt.Println("contract address: ", contractAddr.Hex())
 
 	createDataGas := uint64(len(ret)) * CreateDataGas
 	contract.UseGas(createDataGas)
@@ -111,6 +117,9 @@ func (evm *EVM) DelegateCall(con *Contract, contractAddr accounts.CommonAddress,
 
 
 func run(evm *EVM, contract *Contract, input []byte, readOnly bool) ([]byte, error) {
+	fmt.Println()
+	fmt.Println("running!!!!")
+	fmt.Println()
 	if !contract.ContractAddr.IsEmpty() {
 		precompiles := PrecompiledContracts
 		if p := precompiles[contract.ContractAddr]; p != nil {

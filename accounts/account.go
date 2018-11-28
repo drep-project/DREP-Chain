@@ -61,14 +61,10 @@ type Storage struct {
 	CodeHash   Hash
 }
 
-func NewStorage(byteCode ByteCode) *Storage {
+func NewStorage() *Storage {
 	storage := &Storage{}
 	storage.Balance = new(big.Int)
 	storage.Nonce = 0
-	storage.ByteCode = byteCode
-	if byteCode != nil {
-		storage.CodeHash = GetByteCodeHash(byteCode)
-	}
 	return storage
 }
 
@@ -89,7 +85,7 @@ func NewNormalAccount(parent *Node, chainId int64) (*Account, error) {
 		return nil, err
 	}
 	address := node.Address()
-	storage := NewStorage(nil)
+	storage := NewStorage()
 	account := &Account{
 		Address:       address,
 		Node:          node,
@@ -98,9 +94,9 @@ func NewNormalAccount(parent *Node, chainId int64) (*Account, error) {
 	return account, nil
 }
 
-func NewContractAccount(callerAddr CommonAddress, chainId, nonce int64, byteCode ByteCode) (*Account, error) {
+func NewContractAccount(callerAddr CommonAddress, chainId, nonce int64) (*Account, error) {
 	address := GetByteCodeAddress(callerAddr, nonce)
-	storage := NewStorage(byteCode)
+	storage := NewStorage()
 	account := &Account{
 		Address: address,
 		Node: &Node{ChainId: chainId},

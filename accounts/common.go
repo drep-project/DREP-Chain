@@ -61,7 +61,7 @@ func NewAccountInDebug(prv []byte) (*Account, error) {
     account := &Account{
         Address: address,
         Node: node,
-        Storage: NewStorage(nil),
+        Storage: NewStorage(),
     }
     return account, nil
 }
