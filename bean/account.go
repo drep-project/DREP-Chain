@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"errors"
 	"encoding/json"
+	"BlockChainTest/mycrypto"
 )
 
 const (
@@ -47,6 +48,7 @@ func Big2Hash(x *big.Int) Hash {
 	return Bytes2Hash(x.Bytes())
 }
 
+//TODO
 type CommonAddress [AddressLength]byte
 
 func (addr CommonAddress) IsEmpty() bool {
@@ -89,15 +91,18 @@ func (addr CommonAddress) Hex() string {
 	return hex.EncodeToString(addr.Bytes())
 }
 
-
 func (addr CommonAddress) Big() *big.Int {
 	return new(big.Int).SetBytes(addr.Bytes())
+}
+
+func PubKey2Address(pubKey *mycrypto.Point) CommonAddress {
+	return Bytes2Address(mycrypto.Hash256(pubKey.Bytes()))
 }
 
 type Account struct {
 	Addr                 CommonAddress
 	Nonce                int64
-	Balance             *big.Int
+	Balance              *big.Int
 	IsContract           bool
 	ByteCode             []byte
 	CodeHash             []byte

@@ -1,13 +1,13 @@
 package store
 
 import (
-    "BlockChainTest/bean"
     "BlockChainTest/network"
     "BlockChainTest/mycrypto"
+    "BlockChainTest/accounts"
 )
 
 var (
-    peers                    = make(map[bean.Address]*network.Peer)
+    peers                    = make(map[accounts.CommonAddress]*network.Peer)
     curMiners   []*network.Peer
     miners                  = make([]*network.Peer, 0)
     curMiner    int
@@ -16,14 +16,14 @@ var (
 )
 
 func AddPeer(peer *network.Peer) {
-    addr := bean.Addr(peer.PubKey)
+    addr := accounts.PubKey2Address(peer.PubKey)
     if _, exists := peers[addr]; !exists {
         peers[addr] = peer
     }
 }
 
 func RemovePeer(peer *network.Peer) {
-    addr := bean.Addr(peer.PubKey)
+    addr := accounts.PubKey2Address(peer.PubKey)
     delete(peers, addr)
 }
 
@@ -74,10 +74,10 @@ func GetMiners() []*network.Peer {
     return curMiners
 }
 
-func AddMiner(addr bean.Address) {
-    a := string(addr)
+func AddMiner(addr accounts.CommonAddress) {
+    a := addr.Hex()
     for _, p := range peers {
-        if string(bean.Addr(p.PubKey)) == a {
+        if accounts.PubKey2Address(p.PubKey).Hex() == a {
             miners = append(miners, p)
         }
     }
