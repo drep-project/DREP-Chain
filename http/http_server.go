@@ -210,6 +210,7 @@ func GetBalance(w http.ResponseWriter, r *http.Request) {
 func PutBalance(w http.ResponseWriter, r *http.Request) {
     params := analysisReqParam(r)
     var address string
+    var chainId int64
     var amount int64
     if value, ok := params["address"].(string); ok {
         address = value
