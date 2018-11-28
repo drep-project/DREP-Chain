@@ -10,10 +10,12 @@ import (
     "encoding/hex"
 )
 
+var (
+    db = NewDatabase()
+)
 func GetBlock(height int64) *bean.Block {
-    db := GetDatabase()
     key := mycrypto.Hash256([]byte("block_" + strconv.FormatInt(height, 10)))
-    value, _ := db.Load(key)
+    value := db.get(key)
     block, _ := bean.UnmarshalBlock(value)
     return block
 }
@@ -43,37 +45,33 @@ func GetHighestBlock() *bean.Block {
     return GetBlock(maxHeight)
 }
 
+//TODO cannot sync
 func PutBlock(block *bean.Block) error {
-    db := GetDatabase()
     key := mycrypto.Hash256([]byte("block_" + strconv.FormatInt(block.Header.Height, 10)))
     value, _ := bean.MarshalBlock(block)
-    return db.Store(key, value)
+    return db.put(key, value)
 }
 
 func GetMaxHeight() int64 {
-    db := GetDatabase()
     key := mycrypto.Hash256([]byte("max_height"))
-    value, err := db.Load(key)
-    if err != nil {
+    if value := db.get(key); value == nil {
         return -1
+    } else {
+        return new(big.Int).SetBytes(value).Int64()
     }
-    return new(big.Int).SetBytes(value).Int64()
 }
 
 func PutMaxHeight(height int64) error {
-    db := GetDatabase()
     key := mycrypto.Hash256([]byte("max_height"))
     value := new(big.Int).SetInt64(height).Bytes()
-    err := db.Store(key, value)
+    err := db.put(key, value)
     if err != nil {
         return err
     }
-    db.Trie.Insert(key, value)
     return nil
 }
 
-func GetStorage(addr accounts.CommonAddress, chainId int64) *accounts.Storage {
-    db := GetDatabase()
+func GetStorageOutsideTransaction(addr accounts.CommonAddress, chainId int64) *accounts.Storage {
     key := mycrypto.Hash256([]byte("storage_" + addr.Hex() + strconv.FormatInt(chainId, 10)))
     value, err := db.Load(key)
     if err != nil {
@@ -87,6 +85,18 @@ func GetStorage(addr accounts.CommonAddress, chainId int64) *accounts.Storage {
     return storage
 }
 
+func GetAccountOutsideTransaction(addr bean.CommonAddress) *bean.Account {
+    key := mycrypto.Hash256([]byte("account_" + addr.Hex()))
+    if value := db.get(key); value != nil {
+        account, _ := bean.UnmarshalAccount(value)
+        return account
+    } else {
+        account := &bean.Account{Addr: addr, Nonce: 0, Balance: big.NewInt(0)}
+        PutAccountOutsideTransaction(account)
+        return account
+    }
+}
+
 func PutStorage(addr accounts.CommonAddress, chainId int64, storage *accounts.Storage) error {
     db := GetDatabase()
     key := mycrypto.Hash256([]byte("storage_" + addr.Hex() + strconv.FormatInt(chainId, 10)))
@@ -98,7 +108,27 @@ func PutStorage(addr accounts.CommonAddress, chainId int64, storage *accounts.St
     if err != nil {
         return err
     }
-    db.Trie.Insert(key, value)
+    return nil
+}
+func GetAccountInsideTransaction(t *Transaction, addr bean.CommonAddress) *bean.Account {
+    key := mycrypto.Hash256([]byte("account_" + addr.Hex()))
+    if value := t.Get(key); value != nil {
+        account, _ := bean.UnmarshalAccount(value)
+        return account
+    } else {
+        account := &bean.Account{Addr:addr, Nonce:0, Balance:big.NewInt(0)}
+        PutAccountInsideTransaction(t, account)
+        return account
+    }
+}
+
+func PutAccountOutsideTransaction(account *bean.Account) error {
+    key := mycrypto.Hash256([]byte("account_" + account.Addr.Hex()))
+    value, err := bean.MarshalAccount(account)
+    err = db.put(key, value)
+    if err != nil {
+        return err
+    }
     return nil
 }
 
@@ -198,34 +228,40 @@ func GetMostRecentBlocks(n int64) []*bean.Block {
     return GetBlocksFrom(height - n, n)
 }
 
-//func SendTransaction(from, to, amount string) error {
-//    addrFrom := bean.Hex2Address(from)
-//    sender := GetStorage(addrFrom)
-//    if sender == nil {
-//        return errors.New("sender accounts not found")
-//    }
-//    addrTo := bean.Hex2Address(to)
-//    receiver := GetStorage(addrTo)
-//    if receiver == nil {
-//        return errors.New("receiver accounts not found")
-//    }
-//    value, ok := new(big.Int).SetString(amount, 10)
-//    if !ok {
-//        return errors.New("wrong amount value")
-//    }
-//    if sender.Balance.Cmp(value) < 0 {
-//        return errors.New("do not have enough balance to send")
-//    }
-//    sender.Balance = new(big.Int).Sub(sender.Balance, value)
-//    sender.Nonce++
-//    receiver.Balance = new(big.Int).Add(receiver.Balance, value)
-//    err := PutStorage(sender)
-//    if err != nil {
-//        return errors.New("failed to modify sender accounts, error: " + err.Error())
-//    }
-//    err = PutStorage(receiver)
-//    if err != nil {
-//        return errors.New("failed to modify receiver accounts, error: " + err.Error())
-//    }
-//    return nil
-//}
+func PutAccountInsideTransaction(t *Transaction, account *bean.Account) {
+    key := mycrypto.Hash256([]byte("account_" + account.Addr.Hex()))
+    value, _ := bean.MarshalAccount(account)
+    t.Put(key, value)
+}
+
+func GetBalanceOutsideTransaction(addr bean.CommonAddress) *big.Int {
+    account := GetAccountOutsideTransaction(addr)
+    return account.Balance
+}
+
+func GetBalanceInsideTransaction(t *Transaction, addr bean.CommonAddress) *big.Int {
+    account := GetAccountInsideTransaction(t, addr)
+    return account.Balance
+}
+
+func GetNonceOutsideTransaction(addr bean.CommonAddress) int64 {
+    account := GetAccountOutsideTransaction(addr)
+    return account.Nonce
+}
+
+func GetNonceInsideTransaction(t *Transaction, addr bean.CommonAddress) int64 {
+    account := GetAccountInsideTransaction(t, addr)
+    return account.Nonce
+}
+
+func PutNonceOutsideTransaction(addr bean.CommonAddress, nonce int64) error {
+    account := GetAccountOutsideTransaction(addr)
+    account.Nonce = nonce
+    return PutAccountOutsideTransaction(account)
+}
+
+func PutNonceInsideTransaction(t *Transaction, addr bean.CommonAddress, nonce int64) {
+    account := GetAccountInsideTransaction(t, addr)
+    account.Nonce = nonce
+    PutAccountInsideTransaction(t, account)
+}
