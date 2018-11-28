@@ -8,6 +8,7 @@ import (
     "time"
     "fmt"
     "BlockChainTest/database"
+    "BlockChainTest/accounts"
 )
 
 func SendTransaction(t *bean.Transaction) error {
@@ -25,14 +26,16 @@ func SendTransaction(t *bean.Transaction) error {
     }
 }
 
-func GenerateBalanceTransaction(to bean.Address, amount *big.Int) *bean.Transaction {
-    nonce := database.GetNonce(bean.Hex2Address(store.GetAddress().String()))
+func GenerateBalanceTransaction(to string, chainId, destChain int64, amount *big.Int) *bean.Transaction {
+    nonce := database.GetNonce(accounts.Hex2Address(to), chainId)
     nonce++
     data := &bean.TransactionData{
         Version: store.Version,
         Nonce:nonce,
         Type:store.TransferType,
-        To:to.String(),
+        To:to,
+        ChainId: chainId,
+        DestChain: destChain,
         Amount:amount.Bytes(),
         GasPrice:store.GasPrice.Bytes(),
         GasLimit:store.TransferGas.Bytes(),
@@ -46,16 +49,37 @@ func GenerateBalanceTransaction(to bean.Address, amount *big.Int) *bean.Transact
     return tx
 }
 
-func GenerateMinerTransaction(addr string) *bean.Transaction {
-    nonce := database.GetNonce(bean.Hex2Address(store.GetAddress().String())) + 1
+func GenerateMinerTransaction(addr string, chainId int64) *bean.Transaction {
+    nonce := database.GetNonce(store.GetAddress(), chainId) + 1
     data := &bean.TransactionData{
         Nonce:     nonce,
         Type:      store.MinerType,
+        ChainId:   chainId,
         GasPrice:  store.GasPrice.Bytes(),
         GasLimit:  store.MinerGas.Bytes(),
         Timestamp: time.Now().Unix(),
-        Data: []byte(addr),
+        Data: accounts.Hex2Address(addr).Bytes(),
         PubKey:store.GetPubKey()}
     // TODO Get sig bean.Transaction{}
     return &bean.Transaction{Data: data}
+}
+
+func GenerateCreateContractTransaction(code []byte) *bean.Transaction {
+    chainId := store.GetChainId()
+    nonce := database.GetNonce(store.GetAddress(), chainId) + 1
+    data := &bean.TransactionData{
+        Nonce: nonce,
+        Type: store.CreateContractType,
+        ChainId: chainId,
+        GasPrice: store.GasPrice.Bytes(),
+        GasLimit: store.CreateContractGas.Bytes(),
+        Timestamp: time.Now().Unix(),
+        Data: code,
+        PubKey: store.GetPubKey(),
+    }
+    return &bean.Transaction{Data: data}
+}
+
+func GenerateCallContractTransaction(input []byte, readOnly bool) {
+
 }

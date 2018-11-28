@@ -44,7 +44,7 @@ func (p *BlockProcessor) process(peer *network.Peer, msg interface{}) {
         if block.Header.Height <= database.GetMaxHeight() {
            return
         }
-        id, _ := block.BlockID()
+        id, _ := block.BlockHash()
         if store.ForwardedBlock(id) { // if forwarded, then processed. later this will be read from db
             fmt.Println("Forwarded this block ", *block)
             return
