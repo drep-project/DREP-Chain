@@ -75,7 +75,7 @@ func PubKey2Address(pubKey *mycrypto.Point) CommonAddress {
 type ByteCode []byte
 
 func GetByteCodeHash(byteCode ByteCode) Hash {
-    return Bytes2Hash(byteCode)
+    return Bytes2Hash(mycrypto.Hash256(byteCode))
 }
 
 func GetByteCodeAddress(callerAddr CommonAddress, nonce int64) CommonAddress {

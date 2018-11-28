@@ -43,12 +43,12 @@ func GetState() *State {
 	return state
 }
 
-func (s *State) CreateContractAccount(callerAddr accounts.CommonAddress, chainId, nonce int64, byteCode accounts.ByteCode) (*accounts.Account, error) {
-	account, err := accounts.NewContractAccount(callerAddr, chainId, nonce, byteCode)
+func (s *State) CreateContractAccount(callerAddr accounts.CommonAddress, chainId, nonce int64) (*accounts.Account, error) {
+	account, err := accounts.NewContractAccount(callerAddr, chainId, nonce)
 	if err != nil {
 		return nil, err
 	}
-	return account, database.PutStorage(callerAddr, chainId, account.Storage)
+	return account, database.PutStorage(account.Address, chainId, account.Storage)
 }
 
 func (s *State) SubBalance(addr accounts.CommonAddress, chainId int64, amount *big.Int) error {
@@ -73,7 +73,6 @@ func (s *State) GetNonce(addr accounts.CommonAddress, chainId int64) int64 {
 	return database.GetNonce(addr, chainId)
 }
 
-
 func (s *State) Suicide(addr accounts.CommonAddress, chainId int64) error {
 	storage := database.GetStorage(addr, chainId)
 	storage.Balance = new(big.Int)
@@ -94,6 +93,13 @@ func (s *State) GetCodeSize(addr accounts.CommonAddress, chainId int64) int {
 func (s *State) GetCodeHash(addr accounts.CommonAddress, chainId int64) []byte {
 	storage := database.GetStorage(addr, chainId)
 	return storage.CodeHash.Bytes()
+}
+
+func (s *State) SetByteCode(addr accounts.CommonAddress, chainId int64, byteCode accounts.ByteCode) error {
+	storage := database.GetStorage(addr, chainId)
+	storage.ByteCode = byteCode
+	storage.CodeHash = accounts.GetByteCodeHash(byteCode)
+	return database.PutStorage(addr, chainId, storage)
 }
 
 func (s *State) GetLogs(txHash []byte) []*bean.Log {

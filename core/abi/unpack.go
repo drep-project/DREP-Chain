@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
-	"BlockChainTest/core/vm"
 	"BlockChainTest/bean"
 	"BlockChainTest/core/common"
 )

@@ -104,7 +104,11 @@ func PutStorage(addr accounts.CommonAddress, chainId int64, storage *accounts.St
 
 func GetBalance(addr accounts.CommonAddress, chainId int64) *big.Int {
     storage := GetStorage(addr, chainId)
-    return storage.Balance
+    balance := storage.Balance
+    if balance == nil {
+        balance = new(big.Int)
+    }
+    return balance
 }
 
 func PutBalance(addr accounts.CommonAddress, chainId int64, balance *big.Int) error {
