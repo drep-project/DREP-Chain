@@ -4,7 +4,6 @@ import (
 	"math/big"
 	"BlockChainTest/mycrypto"
 	"errors"
-	"fmt"
 )
 
 var (
@@ -31,8 +30,6 @@ func NewNode(parent *Node, chainId int64) *Node {
 			return nil
 		}
 		h := hmAC(uni, DrepMark)
-		fmt.Println("h: ", h)
-		fmt.Println("len h: ", len(h))
 		prvKey = genPrvKey(h[:KeyBitSize])
 		chainCode = h[KeyBitSize:]
 	} else {
@@ -80,10 +77,6 @@ func NewNormalAccount(parent *Node, chainId int64) (*Account, error) {
 		return nil, errors.New("missing parent account")
 	}
 	node := NewNode(parent, chainId)
-	err := store(node)
-	if err != nil {
-		return nil, err
-	}
 	address := node.Address()
 	storage := NewStorage()
 	account := &Account{

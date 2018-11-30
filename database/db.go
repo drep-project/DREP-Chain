@@ -4,11 +4,13 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"BlockChainTest/trie"
 	"fmt"
+	"BlockChainTest/util/list"
+	"bytes"
 )
 
 type Database struct {
 	db *leveldb.DB
-	trie    *trie.StateTrie
+	tries map[int64] *trie.StateTrie
 }
 
 const (
@@ -17,6 +19,7 @@ const (
 )
 
 type journal struct {
+	chainId int64
 	action int
 	key []byte
 	value []byte
@@ -30,13 +33,16 @@ type Transaction struct {
 	values map[string][]byte
 }
 
-func (t *Transaction) Put(key []byte, value []byte) {
+func (t *Transaction) Put(key []byte, value []byte, chainId int64) {
 	if t.finished {
 		return
 	}
 	t.journals = append(t.journals, &journal{action:put, key:key, value:value})
 	t.values[string(key)] = value
-	t.database.trie.Insert(key, value)
+	if t.database.tries[chainId] == nil {
+		t.database.tries[chainId] = trie.NewStateTrie()
+	}
+	t.database.tries[chainId].Insert(key, value)
 }
 
 func (t *Transaction) Get(key []byte) []byte {
@@ -54,12 +60,15 @@ func (t *Transaction) Get(key []byte) []byte {
 	}
 }
 
-func (t *Transaction) Delete(key []byte) {
+func (t *Transaction) Delete(key []byte, chainId int64) {
 	if t.finished {
 		return
 	}
 	t.journals = append(t.journals, &journal{action:del, key:key})
-	t.database.trie.Delete(key)
+	if t.database.tries[chainId] == nil {
+		t.database.tries[chainId] = trie.NewStateTrie()
+	}
+	t.database.tries[chainId].Delete(key)
 	delete(t.values, string(key))
 }
 
@@ -98,14 +107,22 @@ func (t *Transaction) Discard() {
 	for _, j := range t.journals {
 		switch j.action {
 		case del:
+			chainId := j.chainId
+			if t.database.tries[chainId] == nil {
+				t.database.tries[chainId] = trie.NewStateTrie()
+			}
 			if value, err := t.snapshot.Get(j.key, nil); err == nil {
-				t.database.trie.Insert(j.key, value)
+				t.database.tries[chainId].Insert(j.key, value)
 			}
 		case put:
+			chainId := j.chainId
+			if t.database.tries[chainId] == nil {
+				t.database.tries[chainId] = trie.NewStateTrie()
+			}
 			if value, err := t.snapshot.Get(j.key, nil); err == nil {
-				t.database.trie.Insert(j.key, value)
+				t.database.tries[chainId].Insert(j.key, value)
 			} else if err == leveldb.ErrNotFound {
-				t.database.trie.Delete(j.key)
+				t.database.tries[chainId].Delete(j.key)
 			}
 		}
 	}
@@ -118,7 +135,7 @@ func NewDatabase() *Database {
 	if err != nil {
 		return nil
 	}
-	return &Database{db:ldb, trie:trie.NewStateTrie()}
+	return &Database{db:ldb, tries: make(map[int64] *trie.StateTrie)}
 }
 
 func (db *Database) BeginTransaction() *Transaction {
@@ -136,13 +153,26 @@ func (db *Database) BeginTransaction() *Transaction {
 }
 
 func (db *Database) GetStateRoot() []byte {
-	return db.trie.Root.Value
+	sll := list.NewSortedLinkedList(func(a interface{}, b interface{}) int {
+		return bytes.Compare(a.(*trie.StateTrie).Root.Value, b.(*trie.StateTrie).Root.Value)
+	})
+	for _, t := range db.tries {
+		sll.Add(t)
+	}
+	ts := make([]*trie.StateTrie, sll.Size())
+	for i, elem := range sll.ToArray() {
+		ts[i] = elem.(*trie.StateTrie)
+	}
+	return trie.GetMerkleRoot(ts)
 }
 
-func (db *Database) put(key []byte, value []byte) error {
+func (db *Database) put(key []byte, value []byte, chainId int64) error {
 	err := db.db.Put(key, value, nil)
 	if err == nil {
-		db.trie.Insert(key, value)
+		if db.tries[chainId] == nil {
+			db.tries[chainId] = trie.NewStateTrie()
+		}
+		db.tries[chainId].Insert(key, value)
 	}
 	return err
 }

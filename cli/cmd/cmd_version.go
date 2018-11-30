@@ -11,9 +11,9 @@ var cmdVersion = &cobra.Command{
 
     Use: version,
 
-    Short: `"` + version + `" is the command to check current ` + Root + " version.",
+    Short: `"` + version + `" is command to check current ` + Root + " version.",
 
-    Long: `"` + version + `" is the command to check current ` + Root + " version and will return a version number.",
+    Long: `"` + version + `" is command to check current ` + Root + " version.",
 
     Run: func(cmd *cobra.Command, args []string) {
         fmt.Println(Root + " " + version + " 1.0")

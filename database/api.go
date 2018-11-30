@@ -73,89 +73,124 @@ func PutMaxHeight(height int64) error {
 
 func GetStorageOutsideTransaction(addr accounts.CommonAddress, chainId int64) *accounts.Storage {
     key := mycrypto.Hash256([]byte("storage_" + addr.Hex() + strconv.FormatInt(chainId, 10)))
-    value, err := db.Load(key)
-    if err != nil {
-        return &accounts.Storage{}
-    }
+    value := db.get(key)
     storage := &accounts.Storage{}
-    err = json.Unmarshal(value, storage)
-    if err != nil {
-        return &accounts.Storage{}
+    if value == nil {
+        return storage
     }
+    json.Unmarshal(value, storage)
     return storage
 }
 
-func GetAccountOutsideTransaction(addr bean.CommonAddress) *bean.Account {
-    key := mycrypto.Hash256([]byte("account_" + addr.Hex()))
-    if value := db.get(key); value != nil {
-        account, _ := bean.UnmarshalAccount(value)
-        return account
-    } else {
-        account := &bean.Account{Addr: addr, Nonce: 0, Balance: big.NewInt(0)}
-        PutAccountOutsideTransaction(account)
-        return account
-    }
-}
-
-func PutStorage(addr accounts.CommonAddress, chainId int64, storage *accounts.Storage) error {
-    db := GetDatabase()
+func PutStorageOutsideTransaction(storage *accounts.Storage, addr accounts.CommonAddress, chainId int64) error {
     key := mycrypto.Hash256([]byte("storage_" + addr.Hex() + strconv.FormatInt(chainId, 10)))
     value, err := json.Marshal(storage)
     if err != nil {
         return err
     }
-    err = db.Store(key, value)
+    return db.put(key, value, chainId)
+}
+
+
+func GetStorageInsideTransaction(t *Transaction, addr accounts.CommonAddress, chainId int64) *accounts.Storage {
+    key := mycrypto.Hash256([]byte("storage_" + addr.Hex() + strconv.FormatInt(chainId, 10)))
+    value := t.Get(key)
+    storage := &accounts.Storage{}
+    if value == nil {
+        return storage
+    }
+    json.Unmarshal(value, storage)
+    return storage
+}
+
+func PutStorageInsideTransaction(t *Transaction, storage *accounts.Storage, addr accounts.CommonAddress, chainId int64) error {
+    key := mycrypto.Hash256([]byte("storage_" + addr.Hex() + strconv.FormatInt(chainId, 10)))
+    value, err := json.Marshal(storage)
     if err != nil {
         return err
     }
-    return nil
-}
-func GetAccountInsideTransaction(t *Transaction, addr bean.CommonAddress) *bean.Account {
-    key := mycrypto.Hash256([]byte("account_" + addr.Hex()))
-    if value := t.Get(key); value != nil {
-        account, _ := bean.UnmarshalAccount(value)
-        return account
-    } else {
-        account := &bean.Account{Addr:addr, Nonce:0, Balance:big.NewInt(0)}
-        PutAccountInsideTransaction(t, account)
-        return account
-    }
-}
-
-func PutAccountOutsideTransaction(account *bean.Account) error {
-    key := mycrypto.Hash256([]byte("account_" + account.Addr.Hex()))
-    value, err := bean.MarshalAccount(account)
-    err = db.put(key, value)
-    if err != nil {
-        return err
-    }
+    t.Put(key, value, chainId)
     return nil
 }
 
-func GetBalance(addr accounts.CommonAddress, chainId int64) *big.Int {
-    storage := GetStorage(addr, chainId)
-    balance := storage.Balance
-    if balance == nil {
-        balance = new(big.Int)
+func GetMostRecentBlocks(n int64) []*bean.Block {
+    height := GetMaxHeight()
+    if height == -1 {
+        return nil
     }
-    return balance
+    return GetBlocksFrom(height - n, n)
 }
 
-func PutBalance(addr accounts.CommonAddress, chainId int64, balance *big.Int) error {
-    storage := GetStorage(addr, chainId)
+func GetBalanceOutsideTransaction(addr accounts.CommonAddress, chainId int64) *big.Int {
+    storage := GetStorageOutsideTransaction(addr, chainId)
+    if storage.Balance == nil {
+        return new(big.Int)
+    }
+    return storage.Balance
+}
+
+func PutBalanceOutSideTransaction(addr accounts.CommonAddress, chainId int64, balance *big.Int) error {
+    storage := GetStorageOutsideTransaction(addr, chainId)
     storage.Balance = balance
-    return PutStorage(addr, chainId, storage)
+    return PutStorageOutsideTransaction(storage, addr, chainId)
 }
 
-func GetNonce(addr accounts.CommonAddress, chainId int64) int64 {
-    storage := GetStorage(addr, chainId)
+func GetBalanceInsideTransaction(t *Transaction, addr accounts.CommonAddress, chainId int64) *big.Int {
+    storage := GetStorageInsideTransaction(t, addr, chainId)
+    if storage.Balance == nil {
+        return new(big.Int)
+    }
+    return storage.Balance
+}
+
+func PutBalanceInsideTransaction(t *Transaction, addr accounts.CommonAddress, chainId int64, balance *big.Int) error {
+    storage := GetStorageInsideTransaction(t, addr, chainId)
+    storage.Balance = balance
+    return PutStorageInsideTransaction(t, storage, addr, chainId)
+}
+
+func GetNonceOutsideTransaction(addr accounts.CommonAddress, chainId int64) int64 {
+    storage := GetStorageOutsideTransaction(addr, chainId)
     return storage.Nonce
 }
 
-func PutNonce(addr accounts.CommonAddress, chainId int64, nonce int64) error {
-    storage := GetStorage(addr, chainId)
+func PutNonceOutsideTransaction(addr accounts.CommonAddress, chainId, nonce int64) error {
+    storage := GetStorageOutsideTransaction(addr, chainId)
     storage.Nonce = nonce
-    return PutStorage(addr, chainId, storage)
+    return PutStorageOutsideTransaction(storage, addr, chainId)
+}
+
+func GetNonceInsideTransaction(t *Transaction, addr accounts.CommonAddress, chainId int64) int64 {
+    storage := GetStorageInsideTransaction(t, addr, chainId)
+    return storage.Nonce
+}
+
+func PutNonceInsideTransaction(t *Transaction, addr accounts.CommonAddress, chainId, nonce int64) error {
+    storage := GetStorageInsideTransaction(t, addr, chainId)
+    storage.Nonce = nonce
+    return PutStorageInsideTransaction(t, storage, addr, chainId)
+}
+
+func GetByteCodeOutsideTransaction(addr accounts.CommonAddress, chainId int64) []byte {
+    storage := GetStorageOutsideTransaction(addr, chainId)
+    return storage.ByteCode
+}
+
+func PutByteCodeOutsideTransaction(addr accounts.CommonAddress, chainId int64, byteCode []byte) error {
+    storage := GetStorageOutsideTransaction(addr, chainId)
+    storage.ByteCode = byteCode
+    return PutStorageOutsideTransaction(storage, addr, chainId)
+}
+
+func GetByteCodeInsideTransaction(t *Transaction, addr accounts.CommonAddress, chainId int64) []byte {
+    storage := GetStorageInsideTransaction(t, addr, chainId)
+    return storage.ByteCode
+}
+
+func PutByteCodeInsideTransaction(t *Transaction, addr accounts.CommonAddress, chainId int64, byteCode []byte) error {
+    storage := GetStorageInsideTransaction(t, addr, chainId)
+    storage.ByteCode = byteCode
+    return PutStorageInsideTransaction(t, storage, addr, chainId)
 }
 
 func PutLogs(txHash []byte, logs []*bean.Log) error {
@@ -187,81 +222,4 @@ func AddLog(log *bean.Log) error {
     logs := GetLogs(log.TxHash)
     logs = append(logs, log)
     return PutLogs(log.TxHash, logs)
-}
-
-func PutNodes(nodes map[string] *accounts.Node) error {
-    db := GetDatabase()
-    key := mycrypto.Hash256([]byte("nodes"))
-    value, err := json.Marshal(nodes)
-    if err != nil {
-        return err
-    }
-    return db.Store(key, value)
-}
-
-func GetNodes() map[string] *accounts.Node {
-    db := GetDatabase()
-    key := mycrypto.Hash256([]byte("nodes"))
-    value, err := db.Load(key)
-    if err != nil {
-        return make(map[string] *accounts.Node)
-    }
-    var nodes map[string] *accounts.Node
-    err = json.Unmarshal(value, &nodes)
-    if err != nil {
-        return make(map[string] *accounts.Node)
-    }
-    return nodes
-}
-
-func AddNode(node *accounts.Node) error {
-    nodes := GetNodes()
-    nodes[node.Address().Hex()] = node
-    return PutNodes(nodes)
-}
-
-func GetMostRecentBlocks(n int64) []*bean.Block {
-    height := GetMaxHeight()
-    if height == -1 {
-        return nil
-    }
-    return GetBlocksFrom(height - n, n)
-}
-
-func PutAccountInsideTransaction(t *Transaction, account *bean.Account) {
-    key := mycrypto.Hash256([]byte("account_" + account.Addr.Hex()))
-    value, _ := bean.MarshalAccount(account)
-    t.Put(key, value)
-}
-
-func GetBalanceOutsideTransaction(addr bean.CommonAddress) *big.Int {
-    account := GetAccountOutsideTransaction(addr)
-    return account.Balance
-}
-
-func GetBalanceInsideTransaction(t *Transaction, addr bean.CommonAddress) *big.Int {
-    account := GetAccountInsideTransaction(t, addr)
-    return account.Balance
-}
-
-func GetNonceOutsideTransaction(addr bean.CommonAddress) int64 {
-    account := GetAccountOutsideTransaction(addr)
-    return account.Nonce
-}
-
-func GetNonceInsideTransaction(t *Transaction, addr bean.CommonAddress) int64 {
-    account := GetAccountInsideTransaction(t, addr)
-    return account.Nonce
-}
-
-func PutNonceOutsideTransaction(addr bean.CommonAddress, nonce int64) error {
-    account := GetAccountOutsideTransaction(addr)
-    account.Nonce = nonce
-    return PutAccountOutsideTransaction(account)
-}
-
-func PutNonceInsideTransaction(t *Transaction, addr bean.CommonAddress, nonce int64) {
-    account := GetAccountInsideTransaction(t, addr)
-    account.Nonce = nonce
-    PutAccountInsideTransaction(t, account)
 }

@@ -3,7 +3,6 @@ package trie
 import (
     "math"
     "bytes"
-    "fmt"
     "BlockChainTest/mycrypto"
 )
 
@@ -25,16 +24,17 @@ type Merkle struct {
 }
 
 func NewMerkle(hashes [][]byte) *Merkle {
+    if hashes == nil || len(hashes) == 0 {
+        return nil
+    }
     merkle := &Merkle{}
     height := getHeight(len(hashes))
     merkle.Height = height
     leaves := getLeaves(hashes)
     merkle.Leaves = leaves
     layer := leaves
-    fmt.Println("1: ", len(layer))
     for i := 0; i < height- 1; i++ {
         layer = getUpperLayer(layer)
-        fmt.Println(i + 2, ": ", len(layer))
     }
     if len(layer) > 0 {
         merkle.Root = layer[0]
