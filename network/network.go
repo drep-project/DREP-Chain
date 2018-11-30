@@ -23,24 +23,25 @@ var (
 func SendMessage(peers []*Peer, msg interface{}) (error, []*Peer) {
    lock.Lock()
    defer lock.Unlock()
-   suc := false
+   //suc := false
    r := make([]*Peer, 0)
    for _, peer := range peers {
-      task := &Task{peer, msg}
-      if err := task.execute(); err != nil {
-          switch err.(type) {
-          case *util.TimeoutError, *util.ConnectionError:
-              r = append(r, peer)
-          }
-      } else {
-          suc = true
-      }
+       task := &Task{peer, msg}
+       if err := task.execute(); err != nil {
+           switch err.(type) {
+           case *util.TimeoutError, *util.ConnectionError:
+               r = append(r, peer)
+               }
+       } else {
+           //suc = true
+       }
    }
-   if suc {
-       return nil, r
-   } else {
-       return &util.OfflineError{}, r
-   }
+   //if suc {
+   //    return nil, r
+   //} else {
+   //    return &util.OfflineError{}, r
+   //}
+   return nil, r
 }
 
 func Start(process func(*Peer, int, interface{}), port Port) {

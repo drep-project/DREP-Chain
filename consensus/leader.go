@@ -44,9 +44,9 @@ func NewLeader(pubKey *mycrypto.Point, members []*network.Peer) *Leader {
     l.sigmaPubKey = &mycrypto.Point{X: []byte{0x00}, Y: []byte{0x00}}
     l.sigmaQ = &mycrypto.Point{X: []byte{0x00}, Y: []byte{0x00}}
     l.sigmaS = new(big.Int)
-    len := len(members)
-    l.commitBitmap = make([]byte, len)
-    l.responseBitmap = make([]byte, len)
+    length := len(members)
+    l.commitBitmap = make([]byte, length)
+    l.responseBitmap = make([]byte, length)
     return l
 }
 
