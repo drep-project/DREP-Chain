@@ -8,11 +8,13 @@ import (
     "encoding/json"
     "BlockChainTest/accounts"
     "encoding/hex"
+    "BlockChainTest/config"
 )
 
 var (
     db = NewDatabase()
 )
+
 func GetBlock(height int64) *bean.Block {
     key := mycrypto.Hash256([]byte("block_" + strconv.FormatInt(height, 10)))
     value := db.get(key)
@@ -49,7 +51,7 @@ func GetHighestBlock() *bean.Block {
 func PutBlock(block *bean.Block) error {
     key := mycrypto.Hash256([]byte("block_" + strconv.FormatInt(block.Header.Height, 10)))
     value, _ := bean.MarshalBlock(block)
-    return db.put(key, value)
+    return db.put(key, value, config.GetChainId())
 }
 
 func GetMaxHeight() int64 {
@@ -64,7 +66,7 @@ func GetMaxHeight() int64 {
 func PutMaxHeight(height int64) error {
     key := mycrypto.Hash256([]byte("max_height"))
     value := new(big.Int).SetInt64(height).Bytes()
-    err := db.put(key, value)
+    err := db.put(key, value, config.GetChainId())
     if err != nil {
         return err
     }
@@ -90,7 +92,6 @@ func PutStorageOutsideTransaction(storage *accounts.Storage, addr accounts.Commo
     }
     return db.put(key, value, chainId)
 }
-
 
 func GetStorageInsideTransaction(t *Transaction, addr accounts.CommonAddress, chainId int64) *accounts.Storage {
     key := mycrypto.Hash256([]byte("storage_" + addr.Hex() + strconv.FormatInt(chainId, 10)))
@@ -179,6 +180,7 @@ func GetByteCodeOutsideTransaction(addr accounts.CommonAddress, chainId int64) [
 func PutByteCodeOutsideTransaction(addr accounts.CommonAddress, chainId int64, byteCode []byte) error {
     storage := GetStorageOutsideTransaction(addr, chainId)
     storage.ByteCode = byteCode
+    storage.CodeHash = accounts.GetByteCodeHash(byteCode)
     return PutStorageOutsideTransaction(storage, addr, chainId)
 }
 
@@ -190,36 +192,60 @@ func GetByteCodeInsideTransaction(t *Transaction, addr accounts.CommonAddress, c
 func PutByteCodeInsideTransaction(t *Transaction, addr accounts.CommonAddress, chainId int64, byteCode []byte) error {
     storage := GetStorageInsideTransaction(t, addr, chainId)
     storage.ByteCode = byteCode
+    storage.CodeHash = accounts.GetByteCodeHash(byteCode)
     return PutStorageInsideTransaction(t, storage, addr, chainId)
 }
 
-func PutLogs(txHash []byte, logs []*bean.Log) error {
-    db := GetDatabase()
-    key := mycrypto.Hash256([]byte("logs_" + hex.EncodeToString(txHash)))
-    value, err := json.Marshal(logs)
-    if err != nil {
-        return err
-    }
-    return db.Store(key, value)
+func GetCodeHashOutsideTransaction(addr accounts.CommonAddress, chainId int64) accounts.Hash {
+    storage := GetStorageOutsideTransaction(addr, chainId)
+    return storage.CodeHash
 }
 
-func GetLogs(txHash []byte) []*bean.Log {
-    db := GetDatabase()
-    key := mycrypto.Hash256([]byte("logs_" + hex.EncodeToString(txHash)))
-    value, err := db.Load(key)
-    if err != nil {
+func GetCodeHashInsideTransaction(t *Transaction, addr accounts.CommonAddress, chainId int64) accounts.Hash {
+    storage := GetStorageInsideTransaction(t, addr, chainId)
+    return storage.CodeHash
+}
+
+func GetLogsOutsideTransaction(txHash []byte, chainId int64) []*bean.Log {
+    key := mycrypto.Hash256([]byte("logs_" + hex.EncodeToString(txHash) + strconv.FormatInt(chainId, 10)))
+    value := db.get(key)
+    if value == nil {
         return make([]*bean.Log, 0)
     }
     var logs []*bean.Log
-    err = json.Unmarshal(value, logs)
+    err := json.Unmarshal(value, logs)
     if err != nil {
         return make([]*bean.Log, 0)
     }
     return logs
 }
 
-func AddLog(log *bean.Log) error {
-    logs := GetLogs(log.TxHash)
+func GetLogsInsideTransaction(t *Transaction, txHash []byte, chainId int64) []*bean.Log {
+    key := mycrypto.Hash256([]byte("logs_" + hex.EncodeToString(txHash) + strconv.FormatInt(chainId, 10)))
+    value := t.Get(key)
+    if value == nil {
+        return make([]*bean.Log, 0)
+    }
+    var logs []*bean.Log
+    err := json.Unmarshal(value, logs)
+    if err != nil {
+        return make([]*bean.Log, 0)
+    }
+    return logs
+}
+
+func PutLogsInsideTransaction(t *Transaction, logs []*bean.Log, txHash []byte, chainId int64) error {
+    key := mycrypto.Hash256([]byte("logs_" + hex.EncodeToString(txHash) + strconv.FormatInt(chainId, 10)))
+    value, err := json.Marshal(logs)
+    if err != nil {
+        return err
+    }
+    t.Put(key, value, chainId)
+    return nil
+}
+
+func AddLogInsideTransaction(t *Transaction, log *bean.Log) error {
+    logs := GetLogsInsideTransaction(t, log.TxHash, log.ChainId)
     logs = append(logs, log)
-    return PutLogs(log.TxHash, logs)
+    return PutLogsInsideTransaction(t, logs, log.TxHash, log.ChainId)
 }
