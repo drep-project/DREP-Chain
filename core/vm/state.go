@@ -29,9 +29,7 @@ type State struct {
 }
 
 func NewState() *State {
-	return &State{
-		db:   database.GetDatabase(),
-	}
+	return &State{}
 }
 
 func GetState() *State {
@@ -48,6 +46,7 @@ func (s *State) CreateContractAccount(callerAddr accounts.CommonAddress, chainId
 	if err != nil {
 		return nil, err
 	}
+	t := Tran
 	return account, database.PutStorage(account.Address, chainId, account.Storage)
 }
 
