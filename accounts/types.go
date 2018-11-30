@@ -51,7 +51,7 @@ func Hex2Address(s string) CommonAddress {
     }
     b, err := hex.DecodeString(s)
     if err != nil {
-        panic(err)
+        return CommonAddress{}
     }
     return Bytes2Address(b)
 }

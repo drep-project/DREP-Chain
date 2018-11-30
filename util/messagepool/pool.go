@@ -20,13 +20,13 @@ func NewMessagePool() *MessagePool {
 }
 
 func (p *MessagePool) Obtain(num int, cp func(interface{})bool, duration time.Duration) []interface{} {
-    if num == 0 {
-        panic("num should not be 0")
-    }
     p.lock.Lock()
     defer p.lock.Unlock()
     timeout := false
     r := make([]interface{}, 0)
+    if num == 0 {
+        return r
+    }
     count := 0
     go func() {
         time.Sleep(duration)
