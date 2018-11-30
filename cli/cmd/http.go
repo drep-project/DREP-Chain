@@ -4,21 +4,18 @@ import (
     "net/http"
     "io/ioutil"
     "strconv"
+    "encoding/json"
 )
 
 var server = "http://localhost:8880/"
 
 type Response struct {
-    Code string `json:"code"`
+    Success bool `json:"success"`
     Body interface{} `json:"body"`
     ErrorMsg string `json:"errMsg"`
 }
 
-func (resp *Response) OK() bool {
-    return resp.Code == "200" && resp.ErrorMsg == ""
-}
-
-func GetRequest(url string) ([]byte, error) {
+func GetResponse(url string) (*Response, error) {
     res, err := http.Get(url)
     if err != nil {
         return nil, err
@@ -27,19 +24,20 @@ func GetRequest(url string) ([]byte, error) {
     if err != nil {
         return nil, err
     }
-    return data, nil
+    resp := &Response{}
+    err = json.Unmarshal(data, resp)
+    if err != nil {
+        return nil, err
+    }
+    return resp, nil
 }
 
-func urlAccounts() string {
-    return server + "GetAccounts"
+func urlBalance(address, chainId string) string {
+    return server + "GetBalance?address=" + address + "&chainId=" + chainId
 }
 
-func urlBalance(addr string) string {
-    return server + "GetBalance?address=" + addr
-}
-
-func urlNonce(addr string) string {
-    return server + "GetNonce?address=" + addr
+func urlNonce(address, chainId string) string {
+    return server + "GetNonce?address=" + address + "&chainId=" + chainId
 }
 
 func urlMaxHeight() string {
@@ -62,18 +60,22 @@ func urlAllBlocks() string {
     return server + "GetAllBlocks"
 }
 
-func urlCreateAccount() string {
-    return server + "CreateAccount"
+func urlCreateAccount(chainId int64, keystore string) string {
+    return server + "CreateAccount?chainId=" + strconv.FormatInt(chainId, 10) + "&keystore=" + keystore
 }
 
-func urlSwitchAccount(addr string) string {
-    return server + "SwitchAccount?address=" + addr
+func urlGetAccount() string {
+    return server + "GetAccount"
 }
 
-func urlCurrentAccount() string {
-    return server + "CurrentAccount"
+func urlSendTransferTransaction(to, destChain, amount string) string {
+    return server + "SendTransferTransaction?to=" + to + "&destChain=" + destChain + "&amount=" + amount
 }
 
-func urlSendTransaction(to, amount string) string {
-    return server + "SendTransaction?to=" + to + "&amount=" + amount
+func urlSendCreateContractTransaction(codeFile string) string {
+    return server + "SendCreateContractTransaction?codeFile=" + codeFile
+}
+
+func urlSetChain(chainId, dataDir string) string {
+    return server + "SetCurrentChain?chainId=" + chainId + "&dataDir=" + dataDir
 }

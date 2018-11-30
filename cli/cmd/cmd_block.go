@@ -36,7 +36,7 @@ height starting from the "begin" will be returned.`,
             url = urlBlocksFrom(begin, size)
         }
 
-        data, err := GetRequest(url)
+        data, err := GetResponse(url)
         if err != nil {
             errBlock(err)
             return

@@ -5,6 +5,7 @@ import (
     "BlockChainTest/mycrypto"
     "bytes"
     "encoding/hex"
+    "math"
 )
 
 var digits = [17]string{"", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"}
@@ -214,4 +215,34 @@ func (t *StateTrie) Validate() {
     copy(v0, root.Value)
     root.resetValue()
     fmt.Println("result: ", bytes.Equal(v0, root.Value))
+}
+
+func GetMerkleRoot(ts []*StateTrie) []byte {
+    if ts == nil || len(ts) == 0 {
+        return nil
+    }
+    l := len(ts)
+    height := int(math.Ceil(math.Log(float64(l)) / math.Log(2))) + 1
+    hashes := make([][]byte, l)
+    for i, t := range ts {
+        hashes[i] = t.Root.Value
+    }
+    for i := 0; i < height - 1; i++ {
+        n := len(hashes)
+        m := n / 2
+        if m * 2 < n {
+            m++
+        }
+        temp := make([][]byte, m)
+        for j := 0; j < m; j++ {
+            if 2 * j + 1 < n {
+                temp[j] = mycrypto.Hash256(hashes[2 * j], hashes[2 * j + 1])
+            } else {
+                temp[j] = mycrypto.Hash256(hashes[2 * j], hashes[2 * j])
+            }
+        }
+        hashes = make([][]byte, m)
+        copy(hashes, temp)
+    }
+    return hashes[0]
 }
