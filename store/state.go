@@ -51,7 +51,11 @@ func init()  {
     //prv3 := &mycrypto.PrivateKey{Prv: k3, PubKey: pub3}
     var ip0, ip1, ip2 network.IP
     var port0, port1, port2 network.Port
-    if LocalTest {
+    if Solo {
+        minerNum = 1
+        ip0 = network.IP("127.0.0.1")
+        port0 = network.Port(55555)
+    } else if LocalTest {
         ip0 = network.IP("127.0.0.1")
         ip1 = network.IP("127.0.0.1")
         port0 = network.Port(55555)
@@ -72,8 +76,13 @@ func init()  {
     peer2 := &network.Peer{IP: ip2, Port: port2, PubKey: pub2}
     //peer3 := &network.Peer{IP: ip3, Port: port3, PubKey: pub3}
     AddPeer(peer0)
-    AddPeer(peer1)
-    if minerNum > 2 {
+    if !Solo {
+        AddPeer(peer1)
+    }
+    if minerNum == 1 {
+        curMiners = []*network.Peer{peer0}
+        miners = []*network.Peer{peer0}
+    } else if minerNum > 2 {
         AddPeer(peer2)
         curMiners = []*network.Peer{peer0, peer1, peer2}
         miners = []*network.Peer{peer0, peer1, peer2}
