@@ -435,7 +435,7 @@ var methodsMap = map[string] http.HandlerFunc {
 }
 
 func HttpStart() {
-    //go func() {
+    go func() {
         for pattern, handleFunc := range (methodsMap) {
             http.HandleFunc(pattern, handleFunc)
         }
@@ -444,7 +444,7 @@ func HttpStart() {
         if err != nil {
             fmt.Println("http listen failed")
         }
-    //}()
+    }()
 }
 
 //func logPanics(handle http.HandlerFunc) http.HandlerFunc {
