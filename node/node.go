@@ -5,10 +5,10 @@ import (
     "BlockChainTest/bean"
     "BlockChainTest/consensus"
     "sync"
+    "strconv"
     "BlockChainTest/log"
     "BlockChainTest/network"
     "BlockChainTest/mycrypto"
-    "fmt"
     "time"
     "math/big"
     "BlockChainTest/util/concurrent"
@@ -18,6 +18,7 @@ import (
     "BlockChainTest/pool"
     "BlockChainTest/accounts"
     "BlockChainTest/config"
+    "fmt"
 )
 
 var (
@@ -77,8 +78,8 @@ func (n *Node) Start() {
                         n.processBlock(b)
                     }
                 } else {
-                    fmt.Println("Offline")
-                    return
+                   log.Error("Offline")
+                   return
                 }
             }
             log.Println("node stop")
@@ -123,7 +124,7 @@ func (n *Node) sendBlock(block *bean.Block) {
     peers := store.GetPeers()
     //todo concurrent
     if _, ps := network.SendMessage(peers, block); len(ps) > 0 {
-        fmt.Println("Offline peers: ", ps)
+        log.Info("Offline peers: ", ps)
         //store.RemovePeers(ps)
     }
 }
@@ -167,7 +168,7 @@ func (n *Node) ProcessBlock(block *bean.Block) {
     //    n.prepLock.Unlock()
     //}
     if fee := n.processBlock(block); fee == nil {
-        fmt.Println("Offline. start to fetch block")
+        log.Info("Offline. start to fetch block")
         n.fetchBlocks()
     }
     // todo receive two, should not !!! the same goes with other similar cases
@@ -178,19 +179,18 @@ func (n *Node) ProcessBlock(block *bean.Block) {
 }
 
 func (n *Node) processBlock(block *bean.Block) *big.Int {
-    log.Println("node receive block", *block)
-    fmt.Println("Process block leader = ", accounts.PubKey2Address(block.Header.LeaderPubKey).Hex(), " height = ", block.Header.Height)
+    log.Info("Process block leader.", "LeaderPubKey", accounts.PubKey2Address(block.Header.LeaderPubKey).Hex(), " height ", strconv.FormatInt(block.Header.Height,10))
     return store.ExecuteTransactions(block)
 }
 
 func (n *Node) discover() bool {
-    fmt.Println("discovering 1")
+    log.Info("discovering 1")
     // todo
     ips := network.GetIps()
     if len(ips) == 0 {
-        fmt.Println("Error")
+        log.Error("Error")
     } else if len(ips) > 1 {
-        fmt.Println("Strange")
+        log.Info("Strange")
     }
     var msg *bean.PeerInfo
     if store.LocalTest {
@@ -200,7 +200,7 @@ func (n *Node) discover() bool {
     }
     peers := []*bean.Peer{store.Admin}
     network.SendMessage(peers, msg)
-    fmt.Println("discovering 3")
+    log.Info("discovering 3")
     if msg := pool.ObtainOne(func(msg interface{}) bool {
         _, ok := msg.(*bean.FirstPeerInfoList)
         return ok
@@ -212,13 +212,13 @@ func (n *Node) discover() bool {
         }
         return true
     } else {
-        fmt.Println("Cannot get peers")
+        log.Info("Cannot get peers")
         return false
     }
 }
 
 func (n *Node) ProcessNewPeer(newcomer *bean.PeerInfo) {
-    fmt.Println("user starting process a newcomer")
+    log.Info("user starting process a newcomer")
     peers := store.GetPeers()
     newPeer := &bean.Peer{
         IP:bean.IP(newcomer.Ip),
@@ -231,13 +231,13 @@ func (n *Node) ProcessNewPeer(newcomer *bean.PeerInfo) {
         list = append(list, t)
     }
     peerList := &bean.PeerInfoList{List:list}
-    fmt.Println("ProcessNewPeer ", *peerList, peers, newcomer)
-    network.SendMessage([]*bean.Peer{newPeer}, peerList)
+    log.Info("ProcessNewPeer ", *peerList, peers, newcomer)
+    network.SendMessage([]*network.Peer{newPeer}, peerList)
     network.SendMessage(peers, &bean.FirstPeerInfoList{List:[]*bean.PeerInfo{newcomer}})
 }
 
 func (n *Node) ProcessPeerList(list *bean.PeerInfoList) {
-    fmt.Println("discovering 5 ", *list)
+    log.Info("discovering 5 ", *list)
     for _, t := range list.List {
         store.AddPeer(&bean.Peer{IP:bean.IP(t.Ip), Port:bean.Port(t.Port), PubKey:t.Pk})
     }
@@ -249,39 +249,39 @@ func (n *Node) ProcessPeerList(list *bean.PeerInfoList) {
 func (n *Node) fetchBlocks() {
     n.curMaxHeight = 2<<60
     req := &bean.BlockReq{Height:database.GetMaxHeight(), Pk:store.GetPubKey()}
-    //network.SendMessage([]*bean.Peer{peers[0]}, req)
-    network.SendMessage([]*bean.Peer{store.Admin}, req)
-    fmt.Println("fetching 1")
+    //network.SendMessage([]*network.Peer{peers[0]}, req)
+    network.SendMessage([]*network.Peer{store.Admin}, req)
+    log.Info("fetching 1")
     for n.curMaxHeight != database.GetMaxHeight() {
-        fmt.Println("fetching 2: ", n.curMaxHeight, database.GetMaxHeight())
-        if msg := pool.ObtainOne(func(msg interface{}) bool {
-            if block, ok := msg.(*bean.Block); ok {
-                return block != nil && block.Header != nil && block.Header.Height == database.GetMaxHeight() + 1
-            } else {
-                return false
-            }
-        }, 5 * time.Second); msg != nil {
-            if block, ok := msg.(*bean.Block); ok {
-                n.processBlock(block)
-            }
-        }
-        fmt.Println("fetching 3: ", n.curMaxHeight, database.GetMaxHeight())
-    }
+       log.Info("fetching 2: ", n.curMaxHeight, database.GetMaxHeight())
+       if msg := pool.ObtainOne(func(msg interface{}) bool {
+           if block, ok := msg.(*bean.Block); ok {
+               return block != nil && block.Header != nil && block.Header.Height == database.GetMaxHeight() + 1
+           } else {
+               return false
+           }
+       }, 5 * time.Second); msg != nil {
+           if block, ok := msg.(*bean.Block); ok {
+               n.processBlock(block)
+           }
+       }
+       log.Info("fetching 3: ", n.curMaxHeight, database.GetMaxHeight())
+   }
 }
 
 func (n *Node) ProcessBlockReq(req *bean.BlockReq) {
     from := req.Height + 1
     size := int64(2)
-    fmt.Println("pk = ", req.Pk)
-    peers := []*bean.Peer{store.GetPeer(req.Pk)}
-    fmt.Println("ProcessBlockReq")
+    log.Info("pk = ", req.Pk)
+    peers := []*network.Peer{store.GetPeer(req.Pk)}
+    log.Info("ProcessBlockReq")
     for i := from; i <= database.GetMaxHeight(); {
-        fmt.Println("ProcessBlockReq 1 ", i)
+        log.Info("ProcessBlockReq 1 ", i)
         bs := database.GetBlocksFrom(i, size)
         resp := &bean.BlockResp{Height:database.GetMaxHeight(), Blocks:bs}
         network.SendMessage(peers, resp)
         i += int64(len(bs))
-        fmt.Println("ProcessBlockReq 2 ", i)
+        log.Info("ProcessBlockReq 2 ", i)
     }
 }
 

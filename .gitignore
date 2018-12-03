@@ -3,5 +3,6 @@
 local_data
 /vendor
 data
+logDir
 keystore
 .vscode
