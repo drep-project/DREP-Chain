@@ -5,7 +5,6 @@ import (
 	"sync"
 	"math/big"
 	"errors"
-	"fmt"
 	"BlockChainTest/accounts"
 	"BlockChainTest/bean"
 )
@@ -24,7 +23,7 @@ var (
 )
 
 type State struct {
-	db *database.Database
+	transaction *database.Transaction
 	refund uint64
 }
 
@@ -33,11 +32,8 @@ func NewState() *State {
 }
 
 func GetState() *State {
-	once.Do(func() {
-		if state == nil {
-			state = NewState()
-		}
-	})
+	state := NewState()
+	state.transaction = database.BeginTransaction()
 	return state
 }
 
@@ -46,41 +42,40 @@ func (s *State) CreateContractAccount(callerAddr accounts.CommonAddress, chainId
 	if err != nil {
 		return nil, err
 	}
-	t := Tran
-	return account, database.PutStorage(account.Address, chainId, account.Storage)
+	return account, database.PutStorageInsideTransaction(s.transaction, account.Storage, account.Address, chainId)
 }
 
 func (s *State) SubBalance(addr accounts.CommonAddress, chainId int64, amount *big.Int) error {
-	balance := database.GetBalance(addr, chainId)
-	return database.PutBalance(addr, chainId, new(big.Int).Sub(balance, amount))
+	balance := database.GetBalanceInsideTransaction(s.transaction, addr, chainId)
+	return database.PutBalanceInsideTransaction(s.transaction, addr, chainId, new(big.Int).Sub(balance, amount))
 }
 
 func (s *State) AddBalance(addr accounts.CommonAddress, chainId int64, amount *big.Int) error {
-	balance := database.GetBalance(addr, chainId)
-	return database.PutBalance(addr, chainId, new(big.Int).Add(balance, amount))
+	balance := database.GetBalanceInsideTransaction(s.transaction, addr, chainId)
+	return database.PutBalanceInsideTransaction(s.transaction, addr, chainId, new(big.Int).Add(balance, amount))
 }
 
 func (s *State) GetBalance(addr accounts.CommonAddress, chainId int64) *big.Int {
-	return database.GetBalance(addr, chainId)
+	return database.GetBalanceInsideTransaction(s.transaction, addr, chainId)
 }
 
 func (s *State) SetNonce(addr accounts.CommonAddress, chainId int64, nonce int64) error {
-	return database.PutNonce(addr, chainId, nonce)
+	return database.PutNonceInsideTransaction(s.transaction, addr, chainId, nonce)
 }
 
 func (s *State) GetNonce(addr accounts.CommonAddress, chainId int64) int64 {
-	return database.GetNonce(addr, chainId)
+	return database.GetNonceInsideTransaction(s.transaction, addr, chainId)
 }
 
 func (s *State) Suicide(addr accounts.CommonAddress, chainId int64) error {
-	storage := database.GetStorage(addr, chainId)
+	storage := database.GetStorageInsideTransaction(s.transaction, addr, chainId)
 	storage.Balance = new(big.Int)
 	storage.Nonce = 0
-	return database.PutStorage(addr, chainId, storage)
+	return database.PutStorageInsideTransaction(s.transaction, storage, addr, chainId)
 }
 
 func (s *State) GetByteCode(addr accounts.CommonAddress, chainId int64) accounts.ByteCode {
-	storage := database.GetStorage(addr, chainId)
+	storage := database.GetStorageInsideTransaction(s.transaction, addr, chainId)
 	return storage.ByteCode
 }
 
@@ -90,19 +85,19 @@ func (s *State) GetCodeSize(addr accounts.CommonAddress, chainId int64) int {
 }
 
 func (s *State) GetCodeHash(addr accounts.CommonAddress, chainId int64) []byte {
-	storage := database.GetStorage(addr, chainId)
+	storage := database.GetStorageInsideTransaction(s.transaction, addr, chainId)
 	return storage.CodeHash.Bytes()
 }
 
 func (s *State) SetByteCode(addr accounts.CommonAddress, chainId int64, byteCode accounts.ByteCode) error {
-	storage := database.GetStorage(addr, chainId)
+	storage := database.GetStorageInsideTransaction(s.transaction, addr, chainId)
 	storage.ByteCode = byteCode
 	storage.CodeHash = accounts.GetByteCodeHash(byteCode)
-	return database.PutStorage(addr, chainId, storage)
+	return database.PutStorageInsideTransaction(s.transaction, storage, addr, chainId)
 }
 
-func (s *State) GetLogs(txHash []byte) []*bean.Log {
-	return database.GetLogs(txHash)
+func (s *State) GetLogs(txHash []byte, chainId int64) []*bean.Log {
+	return database.GetLogsInsideTransaction(s.transaction, txHash, chainId)
 }
 
 func (s *State) AddLog(contractAddr accounts.CommonAddress, chainId int64, txHash, data []byte, topics [][]byte) error {
@@ -113,7 +108,7 @@ func (s *State) AddLog(contractAddr accounts.CommonAddress, chainId int64, txHas
 		Data: data,
 		Topics: topics,
 	}
-	return database.AddLog(log)
+	return database.AddLogInsideTransaction(s.transaction, log)
 }
 
 func (s *State) AddRefund(gas uint64) {
@@ -128,18 +123,13 @@ func (s *State) SubRefund(gas uint64) {
 }
 
 func (s *State) Load(x *big.Int) []byte {
-	v, err := s.db.Load(x.Bytes())
-	if err != nil {
+	value := s.transaction.Get(x.Bytes())
+	if value == nil {
 		return new(big.Int).Bytes()
 	}
-	return v
+	return value
 }
 
-func (s *State) Store(x, y *big.Int) error {
-	fmt.Println("x: ", x, " y: ", y)
-	return s.db.Store(x.Bytes(), y.Bytes())
-}
-
-func (s *State) GetDB() *database.Database {
-	return s.db
+func (s *State) Store(x, y *big.Int, chainId int64) {
+	s.transaction.Put(x.Bytes(), y.Bytes(), chainId)
 }

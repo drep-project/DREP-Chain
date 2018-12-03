@@ -3,8 +3,6 @@ package cmd
 import (
     "github.com/spf13/cobra"
     "fmt"
-    "encoding/json"
-    "strconv"
 )
 
 var block = "block"
@@ -22,38 +20,38 @@ specified, only the most recent "size" number of blocks will be returned; if onl
 height starting from the "begin" will be returned.`,
 
     Run: func(cmd *cobra.Command, args []string) {
-        var url string
-        height, _ := strconv.ParseInt(cmd.Flag(flagHeight).Value.String(), 10, 64)
-        begin, _ := strconv.ParseInt(cmd.Flag(flagBegin).Value.String(), 10, 64)
-        size, _ := strconv.ParseInt(cmd.Flag(flagSize).Value.String(), 10, 64)
-        if height > -1 {
-            url = urlBlock(height)
-        } else if begin == -1 && size == -1 {
-            url = urlAllBlocks()
-        } else if begin == -1 {
-            url = urlMostRecentBlocks(size)
-        } else {
-            url = urlBlocksFrom(begin, size)
-        }
-
-        data, err := GetResponse(url)
-        if err != nil {
-            errBlock(err)
-            return
-        }
-
-        resp := &Response{}
-        err = json.Unmarshal(data, resp)
-        if err != nil {
-            errBlock(err)
-            return
-        }
-        if !resp.OK() {
-            errBlock(resp.ErrorMsg)
-            return
-        }
-
-        fmt.Println(resp.Body)
+        //var url string
+        //height, _ := strconv.ParseInt(cmd.Flag(flagHeight).Value.String(), 10, 64)
+        //begin, _ := strconv.ParseInt(cmd.Flag(flagBegin).Value.String(), 10, 64)
+        //size, _ := strconv.ParseInt(cmd.Flag(flagSize).Value.String(), 10, 64)
+        //if height > -1 {
+        //    url = urlBlock(height)
+        //} else if begin == -1 && size == -1 {
+        //    url = urlAllBlocks()
+        //} else if begin == -1 {
+        //    url = urlMostRecentBlocks(size)
+        //} else {
+        //    url = urlBlocksFrom(begin, size)
+        //}
+        //
+        //data, err := GetResponse(url)
+        //if err != nil {
+        //    errBlock(err)
+        //    return
+        //}
+        //
+        //resp := &Response{}
+        //err = json.Unmarshal(data, resp)
+        //if err != nil {
+        //    errBlock(err)
+        //    return
+        //}
+        //if !resp.OK() {
+        //    errBlock(resp.ErrorMsg)
+        //    return
+        //}
+        //
+        //fmt.Println(resp.Body)
     },
 }
 

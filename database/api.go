@@ -15,6 +15,10 @@ var (
     db = NewDatabase()
 )
 
+func BeginTransaction() *Transaction {
+    return db.BeginTransaction()
+}
+
 func GetBlock(height int64) *bean.Block {
     key := mycrypto.Hash256([]byte("block_" + strconv.FormatInt(height, 10)))
     value := db.get(key)
