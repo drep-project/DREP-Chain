@@ -9,11 +9,20 @@ import (
     "BlockChainTest/accounts"
     "encoding/hex"
     "BlockChainTest/config"
+    "github.com/syndtr/goleveldb/leveldb/iterator"
 )
 
 var (
     db = NewDatabase()
 )
+
+func GetDB() *Database {
+    return db
+}
+
+func GetItr() iterator.Iterator {
+    return db.db.NewIterator(nil, nil)
+}
 
 func BeginTransaction() *Transaction {
     return db.BeginTransaction()

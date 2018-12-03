@@ -8,6 +8,7 @@ import (
     "BlockChainTest/database"
     "BlockChainTest/accounts"
     "BlockChainTest/core"
+    "BlockChainTest/core/vm"
 )
 
 func ExecuteTransactions(b *bean.Block) *big.Int {
@@ -43,15 +44,15 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
 func execute(t *bean.Transaction) *big.Int {
     addr := accounts.PubKey2Address(t.Data.PubKey)
     nonce := t.Data.Nonce
-    curN := database.GetNonce(addr, t.Data.ChainId)
+    curN := database.GetNonceOutsideTransaction(addr, t.Data.ChainId)
     if curN + 1 != nonce {
         return nil
     }
-    database.PutNonce(addr, t.Data.ChainId, curN + 1)
+    database.PutNonceOutsideTransaction(addr, t.Data.ChainId, curN + 1)
     gasPrice := big.NewInt(0).SetBytes(t.Data.GasPrice)
     gasLimit := big.NewInt(0).SetBytes(t.Data.GasLimit)
     gasFee := big.NewInt(0).Mul(gasLimit, gasPrice)
-    balance := database.GetBalance(addr, t.Data.ChainId)
+    balance := database.GetBalanceOutsideTransaction(addr, t.Data.ChainId)
     if gasFee.Cmp(balance) > 0 {
         log.Fatal("Error, gas not right")
         return nil
@@ -67,14 +68,14 @@ func execute(t *bean.Transaction) *big.Int {
                 if balance.Cmp(total) >= 0 {
                     balance.Sub(balance, total)
                     to := t.Data.To
-                    balance2 := database.GetBalance(accounts.Hex2Address(to), t.Data.ChainId)
+                    balance2 := database.GetBalanceOutsideTransaction(accounts.Hex2Address(to), t.Data.ChainId)
                     balance2.Add(balance2, amount)
-                    database.PutBalance(accounts.Hex2Address(to), t.Data.ChainId, balance2)
+                    database.PutBalanceOutSideTransaction(accounts.Hex2Address(to), t.Data.ChainId, balance2)
                 } else {
                     balance.Sub(balance, gasFee)
                 }
             }
-            database.PutBalance(addr, t.Data.ChainId, balance)
+            database.PutBalanceOutSideTransaction(addr, t.Data.ChainId, balance)
         }
     case MinerType:
         {
@@ -88,29 +89,33 @@ func execute(t *bean.Transaction) *big.Int {
         }
     case CreateContractType:
         {
+            evm := vm.NewEVM()
             var gasFee = new(big.Int).Mul(CreateContractGas, gasPrice)
             if gasLimit.Cmp(CreateContractGas) < 0 {
                 balance.Sub(balance,gasFee)
             } else {
-                returnGas, _ := core.ApplyTransaction(t)
+                returnGas, _ := core.ApplyTransaction(evm, t)
                 usedGas := new(big.Int).Sub(new(big.Int).SetBytes(t.Data.GasLimit), new(big.Int).SetUint64(returnGas))
                 gasFee.Add(gasFee, new(big.Int).Mul(usedGas, gasPrice))
                 balance.Sub(balance, gasFee)
             }
-            database.PutBalance(addr, t.Data.ChainId, balance)
+            database.PutBalanceOutSideTransaction(addr, t.Data.ChainId, balance)
+            evm.State.Commit()
         }
     case CallContractType:
         {
+            evm := vm.NewEVM()
             var gasFee = new(big.Int).Mul(CallContractGas, gasPrice)
             if gasLimit.Cmp(CallContractGas) < 0 {
                 balance.Sub(balance, gasFee)
             } else {
-                returnGas, _ := core.ApplyTransaction(t)
+                returnGas, _ := core.ApplyTransaction(evm, t)
                 usedGas := new(big.Int).Sub(new(big.Int).SetBytes(t.Data.GasLimit), new(big.Int).SetUint64(returnGas))
                 gasFee.Add(gasFee, new(big.Int).Mul(usedGas, gasPrice))
                 balance.Sub(balance, gasFee)
             }
-            database.PutBalance(addr, t.Data.ChainId, balance)
+            database.PutBalanceOutSideTransaction(addr, t.Data.ChainId, balance)
+            evm.State.Commit()
         }
     }
     return gasFee
