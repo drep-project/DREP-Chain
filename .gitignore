@@ -3,3 +3,5 @@
 local_data
 /vendor
 data
+keystore
+.vscode
