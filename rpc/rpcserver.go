@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"BlockChainTest/database"
+	"BlockChainTest/rpc/rest"
 	"BlockChainTest/log"
 )
 
@@ -18,6 +19,8 @@ const (
 	DefaultHTTPPort = 15645        // Default TCP port for the HTTP RPC server
 	DefaultWSHost   = "localhost" // Default host interface for the websocket RPC server
 	DefaultWSPort   = 15646        // Default TCP port for the websocket RPC server
+	DefaultRestHost = "localhost"  // Default host interface for the REST RPC server
+	DefaultRestPort = 156457       // Default TCP port for the REST RPC server
 )
 
 type RpcConfig struct {
@@ -84,6 +87,21 @@ type RpcConfig struct {
 	// *WARNING* Only set this if the node is running in a trusted network, exposing
 	// private APIs to untrusted users is a major security risk.
 	WSExposeAll bool `toml:",omitempty"`
+
+
+	// HTTPHost is the host interface on which to start the HTTP RPC server. If this
+	// field is empty, no HTTP API endpoint will be started.
+	RESTHost string `toml:",omitempty"`
+
+	// HTTPPort is the TCP port number on which to start the HTTP RPC server. The
+	// default zero value is/ valid and will pick a port number randomly (useful
+	// for ephemeral nodes).
+	RESTPort int `toml:",omitempty"`
+
+	// HTTPCors is the Cross-Origin Resource Sharing header to send to requesting
+	// clients. Please be aware that CORS is a browser enforced security, it's fully
+	// useless for custom HTTP clients.
+	RESTCors []string `toml:",omitempty"`
 }
 
 
@@ -121,11 +139,27 @@ func (c *RpcConfig) HTTPEndpoint() string {
 	return fmt.Sprintf("%s:%d", c.HTTPHost, c.HTTPPort)
 }
 
+// HTTPEndpoint resolves an HTTP endpoint based on the configured host interface
+// and port parameters.
+func (c *RpcConfig) RestEndpoint() string {
+	if c.HTTPHost == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s:%d", c.RESTHost, c.RESTPort)
+}
+
 // DefaultHTTPEndpoint returns the HTTP endpoint used by default.
 func DefaultHTTPEndpoint() string {
 	config := &RpcConfig{HTTPHost: DefaultHTTPHost, HTTPPort: DefaultHTTPPort}
 	return config.HTTPEndpoint()
 }
+
+// DefaultHTTPEndpoint returns the HTTP endpoint used by default.
+func DefaultRestEndpoint() string {
+	config := &RpcConfig{HTTPHost: DefaultRestHost, HTTPPort: DefaultRestPort}
+	return config.RestEndpoint()
+}
+
 
 // WSEndpoint resolves a websocket endpoint based on the configured host interface
 // and port parameters.
@@ -212,7 +246,7 @@ func (rpcserver *RpcServer) StartRPC() error {
 		rpcserver.stopInProc()
 		return err
 	}
-	
+	rest.HttpStart(DefaultRestEndpoint())
 	return nil
 }
 
