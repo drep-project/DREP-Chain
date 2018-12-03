@@ -11,6 +11,7 @@ import (
 	"BlockChainTest/http"
 	"time"
 	"BlockChainTest/accounts"
+	"encoding/hex"
 )
 
 func main()  {
@@ -90,6 +91,33 @@ func main()  {
 		case "exit":
 			{
 				break
+			}
+		case "create":
+			{
+				var code string
+				fmt.Print("code: ")
+				fmt.Scanln(&code)
+				byt, _ := hex.DecodeString(code)
+				t := node.GenerateCreateContractTransaction(byt)
+				node.SendTransaction(t)
+			}
+		case "call":
+			{
+				var addr string
+				var chainId int64
+				var input string
+				var readOnly bool
+				fmt.Print("addr: ")
+				fmt.Scanln(&addr)
+				fmt.Print("chainId: ")
+				fmt.Scanln(&chainId)
+				fmt.Print("input: ")
+				fmt.Scanln(&input)
+				fmt.Print("readOnly: ")
+				fmt.Scanln(&readOnly)
+				inp, _ := hex.DecodeString(input)
+				t := node.GenerateCallContractTransaction(accounts.Hex2Address(addr), chainId, inp, readOnly)
+				node.SendTransaction(t)
 			}
 		}
 	}

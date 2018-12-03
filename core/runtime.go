@@ -7,10 +7,13 @@ import (
 	"BlockChainTest/core/vm"
 	"BlockChainTest/accounts"
 	"bytes"
+	"encoding/hex"
 )
 
 func ExecuteCreateCode(evm *vm.EVM, callerAddr accounts.CommonAddress, chainId int64, code []byte, gas uint64, value *big.Int) (uint64, error) {
 	ret, _, returnGas, err := evm.CreateContractCode(callerAddr, chainId, code, gas, value)
+	fmt.Println("gas: ", gas)
+	fmt.Println("code: ", hex.EncodeToString(code))
 	fmt.Println("ret: ", ret)
 	fmt.Println("err: ", err)
 	return returnGas, err
