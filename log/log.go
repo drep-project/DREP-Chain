@@ -1,7 +1,6 @@
 package log
 
 import (
-    "fmt"
 	"io"
     "os"
     
@@ -44,22 +43,4 @@ func SetUp(logdir string) error {
 	//glogger.BacktraceAt(ctx.GlobalString(backtraceAtFlag.Name))
 	Root().SetHandler(glogger)
 	return nil
-}
-
-func Println(a ...interface{})  {
-    if DEBUG {
-        fmt.Println(a)
-    }
-}
-
-func Printf(format string, a ...interface{})  {
-    if DEBUG {
-        fmt.Printf(format, a)
-    }
-}
-
-func Errorf(format string, a ...interface{})  {
-    if DEBUG {
-        fmt.Errorf(format, a)
-    }
 }
