@@ -92,7 +92,7 @@ func execute(t *bean.Transaction) *big.Int {
             evm := vm.NewEVM()
             var gasFee = new(big.Int).Mul(CreateContractGas, gasPrice)
             if gasLimit.Cmp(CreateContractGas) < 0 {
-                balance.Sub(balance,gasFee)
+                balance.Sub(balance, gasFee)
             } else {
                 returnGas, _ := core.ApplyTransaction(evm, t)
                 usedGas := new(big.Int).Sub(new(big.Int).SetBytes(t.Data.GasLimit), new(big.Int).SetUint64(returnGas))
@@ -106,6 +106,9 @@ func execute(t *bean.Transaction) *big.Int {
         {
             evm := vm.NewEVM()
             var gasFee = new(big.Int).Mul(CallContractGas, gasPrice)
+            fmt.Println("gasFee: ", gasFee)
+            fmt.Println("gasLimit: ", gasLimit)
+            fmt.Println("CallContractGas: ", CallContractGas)
             if gasLimit.Cmp(CallContractGas) < 0 {
                 balance.Sub(balance, gasFee)
             } else {

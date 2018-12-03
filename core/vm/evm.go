@@ -46,6 +46,8 @@ func (evm *EVM) CreateContractCode(callerAddr accounts.CommonAddress, chainId in
 	evm.State.SetNonce(callerAddr, chainId, nonce)
 	evm.Transfer(callerAddr, contractAddr, chainId, value)
 
+	fmt.Println("contract addr: ", contractAddr)
+
 	contract := NewContract(callerAddr, chainId, gas, value, nil)
 	contract.SetCode(contractAddr, byteCode)
 	ret, err := run(evm, contract, nil, false)

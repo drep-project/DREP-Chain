@@ -67,7 +67,7 @@ func GenerateMinerTransaction(addr string, chainId int64) *bean.Transaction {
 }
 
 func GenerateCreateContractTransaction(code []byte) *bean.Transaction {
-    chainId := store.GetChainId()
+    chainId := config.GetChainId()
     nonce := database.GetNonceOutsideTransaction(store.GetAddress(), chainId) + 1
     data := &bean.TransactionData{
         Nonce: nonce,
@@ -76,9 +76,11 @@ func GenerateCreateContractTransaction(code []byte) *bean.Transaction {
         GasPrice: store.GasPrice.Bytes(),
         GasLimit: store.CreateContractGas.Bytes(),
         Timestamp: time.Now().Unix(),
-        Data: code,
+        Data: make([]byte, len(code) + 1),
         PubKey: store.GetPubKey(),
     }
+    copy(data.Data[1:], code)
+    data.Data[0] = 2
     return &bean.Transaction{Data: data}
 }
 
@@ -96,7 +98,7 @@ func GenerateCallContractTransaction(addr accounts.CommonAddress, chainId int64,
         DestChain: chainId,
         To: addr.Hex(),
         GasPrice: store.GasPrice.Bytes(),
-        GasLimit: store.CreateContractGas.Bytes(),
+        GasLimit: store.CallContractGas.Bytes(),
         Timestamp: time.Now().Unix(),
         PubKey: store.GetPubKey(),
         Data: make([]byte, len(input) + 1),

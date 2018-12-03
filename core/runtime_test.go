@@ -241,9 +241,11 @@ func TestCallMyCode(t *testing.T) {
 		fmt.Println("abi json error: ", err)
 	}
 
-	s1 := "111111"
+	//s1 := "111111"
+	s1 := "c6196f8d8165c7cbb5ffc3833d4caf0c92017c5d"
 	from := accounts.Hex2Address(s1)
-	s2 := "222222"
+	//s2 := "222222"
+	s2 := "c6196f8d8165c7cbb5ffc3833d4caf0c92017c5d"
 	to := accounts.Hex2Address(s2)
 	transferFrom, err := myabi.Pack("transferFrom", from, to, new(big.Int).SetUint64(10))
 	if err != nil {
@@ -251,6 +253,7 @@ func TestCallMyCode(t *testing.T) {
 	} else {
 		fmt.Println("abi: ", transferFrom)
 	}
+	fmt.Println("test input: ", hex.EncodeToString(transferFrom))
 	ExecuteCall(transferFrom)
 }
 
