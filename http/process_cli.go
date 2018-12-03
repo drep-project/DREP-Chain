@@ -65,7 +65,7 @@ func createAccount(chainId int64, keystore string) (string, error) {
         if err != nil {
             return "", err
         }
-        database.PutStorage(account.Address, chainId, account.Storage)
+        database.PutStorageOutsideTransaction(account.Storage, account.Address, chainId)
         return account.Address.Hex(), nil
     }
 
@@ -82,7 +82,7 @@ func createAccount(chainId int64, keystore string) (string, error) {
         if err != nil {
             return "", err
         }
-        database.PutStorage(account.Address, chainId, account.Storage)
+        database.PutStorageOutsideTransaction(account.Storage, account.Address, chainId)
         return account.Address.Hex(), nil
     }
 
@@ -97,7 +97,7 @@ func getBalance(address string, chainId int64) (*big.Int, error) {
     if config.GetChainId() != config.RootChain {
         return nil, errors.New("you cannot check balance of an account on another child chain while you are running child chain")
     }
-    balance := database.GetBalance(accounts.Hex2Address(address), chainId)
+    balance := database.GetBalanceOutsideTransaction(accounts.Hex2Address(address), chainId)
     return balance, nil
 }
 
@@ -105,7 +105,7 @@ func getNonce(address string, chainId int64) (int64, error) {
     if config.GetChainId() != config.RootChain {
         return -1, errors.New("you cannot check balance of an account on another child chain while you are running child chain")
     }
-    nonce := database.GetNonce(accounts.Hex2Address(address), chainId)
+    nonce := database.GetNonceOutsideTransaction(accounts.Hex2Address(address), chainId)
     return nonce, nil
 }
 

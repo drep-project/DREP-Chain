@@ -25,7 +25,7 @@ type Merkle struct {
 
 func NewMerkle(hashes [][]byte) *Merkle {
     if hashes == nil || len(hashes) == 0 {
-        return nil
+        return &Merkle{Root: &MerkleNode{Hash: []byte{}}}
     }
     merkle := &Merkle{}
     height := getHeight(len(hashes))

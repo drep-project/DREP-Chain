@@ -29,7 +29,6 @@ func main()  {
 		switch cmd {
 		case "send":
 			{
-				chainId := store.GetChainId()
 				var addr string
 				var amount int64
 				var destChain int64
@@ -39,7 +38,7 @@ func main()  {
 				fmt.Scanln(&destChain)
 				fmt.Print("Amount: ")
 				fmt.Scanln(&amount)
-				t := node.GenerateBalanceTransaction(addr, chainId, destChain, big.NewInt(amount))
+				t := node.GenerateBalanceTransaction(addr, destChain, big.NewInt(amount))
 				if node.SendTransaction(t) != nil {
 					fmt.Println("Offline")
 				} else {
@@ -52,7 +51,7 @@ func main()  {
 				chainId := store.GetChainId()
 				fmt.Print("Who: ")
 				fmt.Scanln(&addr)
-				fmt.Println(database.GetBalance(accounts.Hex2Address(addr), chainId))
+				fmt.Println(database.GetBalanceOutsideTransaction(accounts.Hex2Address(addr), chainId))
 			}
 		case "checkNonce":
 			{
@@ -60,16 +59,16 @@ func main()  {
 				chainId := store.GetChainId()
 				fmt.Print("Who: ")
 				fmt.Scanln(&addr)
-				fmt.Println(database.GetNonce(accounts.Hex2Address(addr), chainId))
+				fmt.Println(database.GetNonceOutsideTransaction(accounts.Hex2Address(addr), chainId))
 			}
 		case "me":
 			{
 				addr := store.GetAddress()
 				chainId := store.GetChainId()
 				fmt.Println("Addr: ", addr.Hex())
-				nonce := database.GetNonce(addr, chainId)
+				nonce := database.GetNonceOutsideTransaction(addr, chainId)
 				fmt.Println("Nonce: ", nonce)
-				balance := database.GetBalance(addr, chainId)
+				balance := database.GetBalanceOutsideTransaction(addr, chainId)
 				fmt.Println("Bal: ", balance)
 			}
 		case "miner":
@@ -102,7 +101,7 @@ func main1() {
 	time.Sleep(3600 * time.Second)
 }
 
-//TODO (1)智能合约代码放进去(core文件夹, bean文件件里新加的account.go，accounts.pb.go)；接口是runtime.go里面的ApplyTransaction(*Transaction);
+//TODO (1)智能合约代码放进去(core文件夹, bean文件件里新加的account.go，accounts.pb.go)；接口是runtime.go里面的ApplyTransaction(*transaction);
 //TODO (2)数据库部分新加GetBlock, PutBlock, GetBalance, PutBalance等接口;
 //TODO (3)哈希函数改成以太坊的SHA3算法；
 //TODO (4)Block和Transaction字段填完整

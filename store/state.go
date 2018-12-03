@@ -12,6 +12,7 @@ import (
     "time"
     "BlockChainTest/trie"
     "BlockChainTest/accounts"
+    "fmt"
 )
 
 var (
@@ -119,13 +120,11 @@ func init()  {
         //member = consensus.NewMember(peer0, prvKey)
     }
     account, _ := accounts.NewAccountInDebug(prvKey.Prv)
-    database.PutStorage(address, chainId, account.Storage)
-    database.AddNode(account.Node)
-    nodes = database.GetNodes()
+    database.PutStorageOutsideTransaction(account.Storage, address, chainId)
 
-    database.PutBalance(accounts.PubKey2Address(pub0), id0, big.NewInt(10000))
-    database.PutBalance(accounts.PubKey2Address(pub1), id1, big.NewInt(10000))
-    database.PutBalance(accounts.PubKey2Address(pub2), id2, big.NewInt(10000))
+    database.PutBalanceOutSideTransaction(accounts.PubKey2Address(pub0), id0, big.NewInt(10000))
+    database.PutBalanceOutSideTransaction(accounts.PubKey2Address(pub1), id1, big.NewInt(10000))
+    database.PutBalanceOutSideTransaction(accounts.PubKey2Address(pub2), id2, big.NewInt(10000))
 
     IsStart = myIndex < minerNum
 }
@@ -134,6 +133,7 @@ func GenerateBlock() (*bean.Block, error) {
     maxHeight := database.GetMaxHeight()
     height := maxHeight + 1
     ts := PickTransactions(BlockGasLimit)
+    fmt.Println("ts: ", ts)
     previousBlock := database.GetHighestBlock()
     var b, previousHash []byte
     var err error
@@ -157,6 +157,7 @@ func GenerateBlock() (*bean.Block, error) {
     if err != nil {
         return nil, err
     }
+    fmt.Println("txHashes: ", txHashes, len(txHashes))
     merkle := trie.NewMerkle(txHashes)
     merkleRoot := merkle.Root.Hash
     return &bean.Block{
@@ -211,8 +212,7 @@ func CreateAccount(addr string, chainId int64) (string, error) {
     if err != nil {
         return "", err
     }
-    database.PutStorage(account.Address, chainId, account.Storage)
-    database.AddNode(account.Node)
+    database.PutStorageOutsideTransaction(account.Storage, account.Address, chainId)
     return account.Address.Hex(), nil
 }
 
@@ -277,7 +277,7 @@ func GetStateRoot(ts []*bean.Transaction) []byte {
     //    database.PutBalance(to, newReceiverBalance)
     //    database.PutNonce(from, nonce)
     //}
-    return database.GetStateRoot()
+    return database.GetDB().GetStateRoot()
 }
 
 func GetTxHashes(ts []*bean.Transaction) ([][]byte, error) {

@@ -211,7 +211,7 @@ func PutBalance(w http.ResponseWriter, r *http.Request) {
     }
 
     ca := accounts.Hex2Address(address)
-    err := database.PutBalance(ca, chainId, big.NewInt(amount))
+    err := database.PutBalanceOutSideTransaction(ca, chainId, big.NewInt(amount))
 
     if err != nil {
         resp := &Response{Success:false, ErrorMsg:err.Error(), Body:false}
@@ -265,7 +265,7 @@ func PutNonce(w http.ResponseWriter, r *http.Request) {
     }
     ca := accounts.Hex2Address(address)
 
-    err := database.PutNonce(ca, chainId, nonce)
+    err := database.PutNonceOutsideTransaction(ca, chainId, nonce)
     if err != nil {
         resp := &Response{Success:false, ErrorMsg:err.Error(), Body:false}
         writeResponse(w, resp)
@@ -276,7 +276,7 @@ func PutNonce(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetStateRoot(w http.ResponseWriter, _ *http.Request) {
-    b := database.GetStateRoot()
+    b := database.GetDB().GetStateRoot()
     body := string(b)
     resp := &Response{Success:true, Body:body}
     writeResponse(w, resp)

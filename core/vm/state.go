@@ -24,7 +24,7 @@ var (
 
 type State struct {
 	transaction *database.Transaction
-	refund uint64
+	refund      uint64
 }
 
 func NewState() *State {
@@ -75,8 +75,7 @@ func (s *State) Suicide(addr accounts.CommonAddress, chainId int64) error {
 }
 
 func (s *State) GetByteCode(addr accounts.CommonAddress, chainId int64) accounts.ByteCode {
-	storage := database.GetStorageInsideTransaction(s.transaction, addr, chainId)
-	return storage.ByteCode
+	return database.GetByteCodeInsideTransaction(s.transaction, addr, chainId)
 }
 
 func (s *State) GetCodeSize(addr accounts.CommonAddress, chainId int64) int {
@@ -84,16 +83,12 @@ func (s *State) GetCodeSize(addr accounts.CommonAddress, chainId int64) int {
 	return len(byteCode)
 }
 
-func (s *State) GetCodeHash(addr accounts.CommonAddress, chainId int64) []byte {
-	storage := database.GetStorageInsideTransaction(s.transaction, addr, chainId)
-	return storage.CodeHash.Bytes()
+func (s *State) GetCodeHash(addr accounts.CommonAddress, chainId int64) accounts.Hash {
+	return database.GetCodeHashInsideTransaction(s.transaction, addr, chainId)
 }
 
 func (s *State) SetByteCode(addr accounts.CommonAddress, chainId int64, byteCode accounts.ByteCode) error {
-	storage := database.GetStorageInsideTransaction(s.transaction, addr, chainId)
-	storage.ByteCode = byteCode
-	storage.CodeHash = accounts.GetByteCodeHash(byteCode)
-	return database.PutStorageInsideTransaction(s.transaction, storage, addr, chainId)
+	return database.PutByteCodeInsideTransaction(s.transaction, addr, chainId, byteCode)
 }
 
 func (s *State) GetLogs(txHash []byte, chainId int64) []*bean.Log {
@@ -132,4 +127,8 @@ func (s *State) Load(x *big.Int) []byte {
 
 func (s *State) Store(x, y *big.Int, chainId int64) {
 	s.transaction.Put(x.Bytes(), y.Bytes(), chainId)
+}
+
+func (s *State) Commit() {
+	s.transaction.Commit()
 }

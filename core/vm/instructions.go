@@ -538,7 +538,7 @@ func opExtCodeCopy(pc *uint64, interpreter *EVMInterpreter, contract *Contract, 
 // this account should be regarded as a non-existent account and zero should be returned.
 func opExtCodeHash(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	slot := stack.peek()
-	hash := interpreter.EVM.State.GetCodeHash(accounts.Big2Address(slot), contract.ChainId)
+	hash := interpreter.EVM.State.GetCodeHash(accounts.Big2Address(slot), contract.ChainId).Bytes()
 	slot.SetBytes(hash)
 	//slot.SetBytes(interpreter.evm.StateDB.GetCodeHash(BigToAddress(slot)).Bytes())
 	return nil, nil
