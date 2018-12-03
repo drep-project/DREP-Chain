@@ -117,9 +117,6 @@ func (evm *EVM) DelegateCall(con *Contract, contractAddr accounts.CommonAddress,
 
 
 func run(evm *EVM, contract *Contract, input []byte, readOnly bool) ([]byte, error) {
-	fmt.Println()
-	fmt.Println("running!!!!")
-	fmt.Println()
 	if !contract.ContractAddr.IsEmpty() {
 		precompiles := PrecompiledContracts
 		if p := precompiles[contract.ContractAddr]; p != nil {

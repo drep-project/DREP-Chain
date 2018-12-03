@@ -645,7 +645,7 @@ func opSstore(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memor
 	loc, val := stack.pop(), stack.pop()
 	//fmt.Println("loc: ", loc)
 	modifiedLoc := new(big.Int).SetBytes(mycrypto.Hash256(contract.ByteCode, loc.Bytes()))
-	interpreter.EVM.State.Store(modifiedLoc, val)
+	interpreter.EVM.State.Store(modifiedLoc, val, contract.ChainId)
 	//interpreter.EVM.State.Store(loc, val)
 	interpreter.IntPool.put(val)
 	return nil, nil
