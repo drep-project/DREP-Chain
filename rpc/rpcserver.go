@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 
 	"BlockChainTest/database"
+	"BlockChainTest/accounts"
+	"BlockChainTest/node"
 	"BlockChainTest/rpc/rest"
 	"BlockChainTest/log"
 )
@@ -206,18 +208,31 @@ func NewRpcServer()*RpcServer{
 		Service  : &database.DataBaseAPI{},
 		Public  :  true      ,
 	}
+	chainApi := API{
+		Namespace : "chain",
+		Version   :"1.0",
+		Service:	&node.ChainApi{},
+		Public  :  true      ,
+	}
+	accountApi := API{
+		Namespace : "account",
+		Version   :"1.0",
+		Service:	&accounts.AccountApi{},
+		Public  :  true      ,
+	}
 	defautConfig := &RpcConfig{
 		HTTPHost : DefaultHTTPHost ,
 		HTTPPort : DefaultHTTPPort,
 		WSHost : DefaultWSHost,
 		WSPort : DefaultWSPort,
+		HTTPVirtualHosts : []string{"localhost"},
 	}
     return &RpcServer{
 		ipcEndpoint: defautConfig.IPCEndpoint(),
 		httpEndpoint:  defautConfig.HTTPEndpoint(),
 		wsEndpoint:  defautConfig.WSEndpoint(),
 		rpcConfig: defautConfig,
-		rpcAPIs:[]API{api},
+		rpcAPIs:[]API{api,chainApi,accountApi},
     }
 }
 

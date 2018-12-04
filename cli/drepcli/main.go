@@ -15,8 +15,8 @@ func main(){
 		client *rpc.Client
 		err    error
 	)
-	// Attach to an Ethereum node over IPC or RPC
-	endpoint := "http://127.0.0.1:15645"//+rpc.DefaultHTTPEndpoint()
+	// Attach to an Ethereum node over IPC or RPC   "http://127.0.0.1:15645"//
+	endpoint :=  "http://127.0.0.1:15645"////"rpc:http://"+rpc.DefaultHTTPEndpoint()
 	if client, err = dialRPC(endpoint); err != nil {
 		log.Error("unanble to connect rpc server")
 		return
@@ -38,6 +38,7 @@ func main(){
 			iargs =append(iargs,num)
 		}
 	}
+
 	err = client.Call(result, methodName,iargs...)
 	if err != nil {
 		fmt.Println(err.Error())
