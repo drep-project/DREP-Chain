@@ -10,7 +10,7 @@ var (
 )
 
 func init()  {
-    pool = messagepool.NewMessagePool()
+    pool = messagepool.New()
 }
 
 func Obtain(num int, cp func(interface{})bool, duration time.Duration) []interface{} {
