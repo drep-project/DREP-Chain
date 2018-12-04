@@ -7,6 +7,7 @@ import (
     "path"
     "BlockChainTest/config"
     "errors"
+    "fmt"
 )
 
 var (
@@ -99,23 +100,55 @@ func SaveKeystore(node *Node, keystorePath string) error {
         return err
     }
 
+    fmt.Println(222)
+
     if keystorePath == "" {
         dataDir := config.GetDataDir()
+        fmt.Println("datadir: ", dataDir)
         if dataDir == "" {
             return errors.New("failed to get current data directory")
         }
         keystorePath = path.Join(dataDir, key.Address + ".json")
     }
+
+    fmt.Println(333)
+
     err = config.SetKeystore(keystorePath)
     if err != nil {
+        fmt.Println("999", err)
         return err
     }
+
+    fmt.Println(111)
 
     err = os.Mkdir(KeystoreDirName, os.ModeDir|os.ModePerm)
     if err != nil {
         return err
     }
     file, err := os.Create(keystorePath)
+    defer file.Close()
+    if err != nil {
+        return err
+    }
+    _, err = file.Write(b)
+    if err != nil {
+        return err
+    }
+    return nil
+}
+
+func MiniSave(node *Node) error {
+    key := &Key{
+        Address: node.Address().Hex(),
+        PrivateKey: hex.EncodeToString(node.PrvKey.Prv),
+        ChainId: node.ChainId,
+        ChainCode: hex.EncodeToString(node.ChainCode),
+    }
+    b, err := json.Marshal(key)
+    if err != nil {
+        return err
+    }
+    file, err := os.Create(key.Address + ".json")
     defer file.Close()
     if err != nil {
         return err

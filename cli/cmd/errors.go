@@ -10,5 +10,5 @@ var (
     ErrSendTransaction = "failed to transfer transaction: "
     ErrGetBlock = "get blocks error: "
     ErrCreateContract = "failed to create smart contract: "
-    ErrCallContract = "failed to call smart contract； "
+    ErrCallContract = "failed to call smart contract: "
 )

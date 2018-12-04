@@ -1,0 +1,9 @@
+{
+  "chainid": 0,
+  "datadir": "data",
+  "ip": "",
+  "keystore": "keystore",
+  "minernum": 1,
+  "myindex": 0,
+  "port": 55555
+}

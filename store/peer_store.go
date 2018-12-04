@@ -7,9 +7,9 @@ import (
 )
 
 var (
-    peers                    = make(map[accounts.CommonAddress]*network.Peer)
-    curMiners   []*network.Peer
-    miners                  = make([]*network.Peer, 0)
+    peers        = make(map[accounts.CommonAddress]*network.Peer)
+    curMiners    = make([]*network.Peer, 0)
+    miners       = make([]*network.Peer, 0)
     curMiner    int
     minerIndex  int
     adminPubKey *mycrypto.Point
