@@ -2,6 +2,7 @@ package config
 
 import (
     "github.com/spf13/viper"
+    "fmt"
     "sync"
 )
 
@@ -10,8 +11,17 @@ const (
 )
 
 var (
+    DefaultDataDir = "data"
+    DefaultKeystore = "keystore"
+    DefaultChain = RootChain
+    DefaultIP = ""
+    DefaultPort = 55555
+
+    MinerNum = 1
+    MyIndex = 0
+
     once sync.Once
-    singleton *Config
+    vip *viper.Viper
 )
 
 type Config struct {
@@ -19,20 +29,34 @@ type Config struct {
     ChainId   int64
     DataDir   string
     Keystore  string
+    IP        string
+    Port      int
+    MinerNum  int
+    MyIndex   int
 }
 
-func GetConfigInstance() *Config {
-    once.Do(func() {
-        singleton = &Config{}
-    })
-    return singleton
+func init() {
+    v := GetViper()
+    v.Set("ChainId", DefaultChain)
+    v.Set("DataDir", DefaultDataDir)
+    v.Set("Keystore", DefaultKeystore)
+    v.Set("IP", DefaultIP)
+    v.Set("Port", DefaultPort)
+    v.Set("MinerNum", MinerNum)
+    v.Set("MyIndex", MyIndex)
+    err := v.WriteConfig()
+    fmt.Println("err: ", err)
 }
 
 func GetViper() *viper.Viper {
-    v := viper.New()
-    v.SetConfigName("config")
-    v.AddConfigPath(".")
-    return v
+    once.Do(func() {
+        if vip == nil {
+            vip = viper.New()
+            vip.SetConfigName("config")
+            vip.AddConfigPath("./config")
+        }
+    })
+    return vip
 }
 
 func GetConfig() (*Config, error) {
@@ -41,7 +65,7 @@ func GetConfig() (*Config, error) {
     if err != nil {
         return nil, err
     }
-    conf := GetConfigInstance()
+    conf := &Config{}
     if err := v.Unmarshal(&conf) ; err != nil{
         return nil, err
     }
@@ -57,11 +81,13 @@ func GetChainId() int64 {
 }
 
 func GetDataDir() string {
-    conf, err := GetConfig()
-    if err != nil {
-        return ""
-    }
-    return conf.DataDir
+    return vip.GetString("datadir")
+    //conf, err := GetConfig()
+    //if err != nil {
+    //    fmt.Println(5678, err)
+    //    return ""
+    //}
+    //return conf.DataDir
 }
 
 func GetKeystore() string {
@@ -70,6 +96,22 @@ func GetKeystore() string {
         return ""
     }
     return conf.Keystore
+}
+
+func GetMinerNum() int {
+    conf, err := GetConfig()
+    if err != nil {
+        return 0
+    }
+    return conf.MinerNum
+}
+
+func GetMyIndex() int {
+    conf, err := GetConfig()
+    if err != nil {
+        return 0
+    }
+    return conf.MyIndex
 }
 
 func SetChain(chainId int64, dataDir string) error {

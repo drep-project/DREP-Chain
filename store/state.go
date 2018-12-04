@@ -13,10 +13,11 @@ import (
     "BlockChainTest/trie"
     "BlockChainTest/accounts"
     "fmt"
+    "BlockChainTest/config/debug"
+    "BlockChainTest/config"
 )
 
 var (
-    minerNum = 3
     lock     sync.Locker
     chainId  int64
     prvKey   *mycrypto.PrivateKey
@@ -24,109 +25,85 @@ var (
     address  accounts.CommonAddress
 
     port network.Port
-
-    myIndex = 0
     nodes map[string] *accounts.Node
 )
 
 func init()  {
     lock = &sync.Mutex{}
+
+    //dataDir := config.GetDataDir()
+    //keystore := config.GetKeystore()
+    //keystorePath := path.Join(dataDir, keystore)
+    keystorePath := "./docs/keystore0.json"
+    node, _ := accounts.OpenKeystore(keystorePath)
+    existed := node != nil
+    if existed {
+        prvKey = node.PrvKey
+        pubKey = node.PrvKey.PubKey
+        address = node.Address()
+    }
+
     curMiner = -1
-    //prvKey, _ = mycrypto.GetPrivateKey()
-    //pubKey = GetPubKey()
-    curve := mycrypto.GetCurve()
-    var id0 int64 = 0
-    var id1 int64 = 0
-    var id2 int64 = 0
-    k0 := []byte{0x22, 0x11}
-    k1 := []byte{0x14, 0x44}
-    k2 := []byte{0x11, 0x55}
-    //k3 := []byte{0x12, 0x55}
-    pub0 := curve.ScalarBaseMultiply(k0)
-    pub1 := curve.ScalarBaseMultiply(k1)
-    pub2 := curve.ScalarBaseMultiply(k2)
-    //pub3 := curve.ScalarBaseMultiply(k3)
-    prv0 := &mycrypto.PrivateKey{Prv: k0, PubKey: pub0}
-    prv1 := &mycrypto.PrivateKey{Prv: k1, PubKey: pub1}
-    prv2 := &mycrypto.PrivateKey{Prv: k2, PubKey: pub2}
-    //prv3 := &mycrypto.PrivateKey{Prv: k3, PubKey: pub3}
-    var ip0, ip1, ip2 network.IP
-    var port0, port1, port2 network.Port
-    if Solo {
-        minerNum = 1
-        ip0 = network.IP("127.0.0.1")
-        port0 = network.Port(55555)
-    } else if LocalTest {
-        ip0 = network.IP("127.0.0.1")
-        ip1 = network.IP("127.0.0.1")
-        port0 = network.Port(55555)
-        port1 = network.Port(55556)
-        port2 = network.Port(55557)
-    } else {
-        ip0 = network.IP("192.168.3.231")
-        ip1 = network.IP("192.168.3.197")
-        ip2 = network.IP("192.168.3.236")
-        port0 = network.Port(55555)
-        port1 = network.Port(55555)
-        port2 = network.Port(55555)
+
+    minerNum := config.GetMinerNum()
+    myIndex := config.GetMyIndex()
+    chainId = config.GetChainId()
+    deb := debug.GetDebugConfig(minerNum)
+
+    fmt.Println("miner num: ", minerNum)
+    fmt.Println("my index: ", myIndex)
+    fmt.Println("chain id: ", chainId)
+    fmt.Println("deb: ", deb)
+
+    for i := 0; i < minerNum; i++ {
+        peer := &network.Peer{
+            IP:     network.IP(deb.DebugNodes[i].IP),
+            Port:   network.Port(deb.DebugNodes[i].Port),
+        }
+        if i != myIndex {
+            peer.PubKey = debug.ParsePK(deb.DebugNodes[i].PubKey)
+        } else if existed {
+            peer.PubKey = pubKey
+        } else {
+            peer.PubKey = debug.ParsePK(deb.DebugNodes[i].PubKey)
+            prv, _ := new(big.Int).SetString(deb.DebugNodes[i].Prv, 10)
+            pubKey = debug.ParsePK(deb.DebugNodes[i].PubKey)
+            prvKey = &mycrypto.PrivateKey{Prv: prv.Bytes(), PubKey: pubKey}
+        }
+        curMiners = append(curMiners, peer)
+        miners = append(miners, peer)
+        AddPeer(peer)
+        database.PutBalanceOutSideTransaction(accounts.PubKey2Address(peer.PubKey), chainId, big.NewInt(100000000))
     }
-    //port2 := network.Port(55555)
-    //port3 := network.Port(55555)
-    peer0 := &network.Peer{IP: ip0, Port: port0, PubKey: pub0}
-    peer1 := &network.Peer{IP: ip1, Port: port1, PubKey: pub1}
-    peer2 := &network.Peer{IP: ip2, Port: port2, PubKey: pub2}
-    //peer3 := &network.Peer{IP: ip3, Port: port3, PubKey: pub3}
-    AddPeer(peer0)
-    if !Solo {
-        AddPeer(peer1)
+
+    if myIndex == 0 {
+        adminPubKey = pubKey
     }
-    if minerNum == 1 {
-        curMiners = []*network.Peer{peer0}
-        miners = []*network.Peer{peer0}
-    } else if minerNum > 2 {
-        AddPeer(peer2)
-        curMiners = []*network.Peer{peer0, peer1, peer2}
-        miners = []*network.Peer{peer0, peer1, peer2}
-    } else {
-        curMiners = []*network.Peer{peer0, peer1} //, peer2}
-        miners = []*network.Peer{peer0, peer1}
-    }
-    minerIndex = minerNum - 1
-    switch myIndex {
-    case 0:
-        chainId = id0
-        pubKey = pub0
-        prvKey = prv0
-        address = accounts.PubKey2Address(pub0)
-        adminPubKey = pub0
-        port = port0
-        //leader = consensus.NewLeader(pub0, peers)
-        //member = nil
-    case 1:
-        chainId = id1
-        pubKey = pub1
-        prvKey = prv1
-        address = accounts.PubKey2Address(pub1)
-        port = port1
-        //leader = nil
-        //member = consensus.NewMember(peer0, prvKey)
-    case 2:
-        chainId = id2
-        pubKey = pub2
-        prvKey = prv2
-        address = accounts.PubKey2Address(pub2)
-        port = port2
-        //leader = nil
-        //member = consensus.NewMember(peer0, prvKey)
-    }
+
     account, _ := accounts.NewAccountInDebug(prvKey.Prv)
     database.PutStorageOutsideTransaction(account.Storage, address, chainId)
 
-    database.PutBalanceOutSideTransaction(accounts.PubKey2Address(pub0), id0, big.NewInt(100000000))
-    database.PutBalanceOutSideTransaction(accounts.PubKey2Address(pub1), id1, big.NewInt(100000000))
-    database.PutBalanceOutSideTransaction(accounts.PubKey2Address(pub2), id2, big.NewInt(100000000))
-
     IsStart = myIndex < minerNum
+
+    //if Solo {
+    //    minerNum = 1
+    //    ip0 = network.IP("127.0.0.1")
+    //    port0 = network.Port(55555)
+    //} else if LocalTest {
+    //    ip0 = network.IP("127.0.0.1")
+    //    ip1 = network.IP("127.0.0.1")
+    //    port0 = network.Port(55555)
+    //    port1 = network.Port(55556)
+    //    port2 = network.Port(55557)
+    //} else {
+    //    ip0 = network.IP("192.168.3.231")
+    //    ip1 = network.IP("192.168.3.197")
+    //    ip2 = network.IP("192.168.3.236")
+    //    port0 = network.Port(55555)
+    //    port1 = network.Port(55555)
+    //    port2 = network.Port(55555)
+    //}
+    //
 }
 
 func GenerateBlock() (*bean.Block, error) {
@@ -214,22 +191,6 @@ func CreateAccount(addr string, chainId int64) (string, error) {
     }
     database.PutStorageOutsideTransaction(account.Storage, account.Address, chainId)
     return account.Address.Hex(), nil
-}
-
-func SwitchAccount(addr string) error {
-    if node, ok := nodes[addr]; ok {
-        chainId = node.ChainId
-        prvKey = node.PrvKey
-        pubKey = node.PrvKey.PubKey
-        address = accounts.Hex2Address(addr)
-        return nil
-    } else {
-        return errors.New("fail to switch accounts: " + addr + " not found")
-    }
-}
-
-func CurrentAccount() string {
-    return accounts.PubKey2Address(GetPubKey()).Hex()
 }
 
 func GetAccounts() []string {

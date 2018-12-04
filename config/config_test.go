@@ -4,6 +4,7 @@ import (
     "testing"
     "github.com/spf13/viper"
     "fmt"
+    "BlockChainTest/config/debug"
 )
 
 func TestConfigWrite(t *testing.T) {
@@ -20,4 +21,12 @@ func TestConfigWrite(t *testing.T) {
     v.Set("ABCdefg", "iuiu")
     v.Set("abcdefg", 34)
     v.WriteConfig()
+}
+
+func TestInit(t *testing.T) {
+    //debug.Init()
+}
+
+func TestReadConfig(t *testing.T) {
+    debug.GetDebugConfig(4)
 }

@@ -356,6 +356,7 @@ var methodsMap = map[string] http.HandlerFunc {
     "/GetStateRoot":             GetStateRoot,
     "/SendTransferTransaction":  SendTransferTransaction,
     "/SendCreateContractTransaction": SendCreateContractTransaction,
+    "/SendCallContractTransaction": SendCallContractTransaction,
     "/CreateAccount":            CreateAccount,
     "/GetAccount":               GetAccount,
     "/GetMostRecentBlocks":      GetMostRecentBlocks,

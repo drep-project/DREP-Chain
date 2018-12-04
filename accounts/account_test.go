@@ -12,6 +12,8 @@ func TestNewRootAccount(t *testing.T) {
     account, err := NewNormalAccount(parent, chainId)
     fmt.Println("err: ", err)
     fmt.Println("account: ", account)
+    err = MiniSave(account.Node)
+    fmt.Println("save err: ", err)
 }
 
 func TestNewChildAccount(t *testing.T) {
