@@ -122,25 +122,26 @@ func (c *Console) init(preload []string) error {
 	if err := c.jsre.Compile("bignumber.js", jsre.BigNumber_JS); err != nil {
 		return fmt.Errorf("bignumber.js: %v", err)
 	}
-	if err := c.jsre.Compile("web3.js", jsre.Web3_JS); err != nil {
-		return fmt.Errorf("web3.js: %v", err)
+	if err := c.jsre.Compile("drep.js", jsre.DREP_JS); err != nil {
+		return fmt.Errorf("drep.js: %v", err)
 	}
-	if _, err := c.jsre.Run("var Web3 = require('web3');"); err != nil {
-		return fmt.Errorf("web3 require: %v", err)
+	if _, err := c.jsre.Run("var Drep = require('drep');"); err != nil {
+		return fmt.Errorf("drep require: %v", err)
 	}
-	if _, err := c.jsre.Run("var web3 = new Web3(jeth);"); err != nil {
-		return fmt.Errorf("web3 provider: %v", err)
+	if _, err := c.jsre.Run("var drep = new Drep(jeth);"); err != nil {
+		return fmt.Errorf("drep provider: %v", err)
 	}
 	// Load the supported APIs into the JavaScript runtime environment
-	apis, err := c.client.SupportedModules()
+	_, err := c.client.SupportedModules()
 	if err != nil {
 		return fmt.Errorf("api modules: %v", err)
 	}
-	flatten := "var eth = web3.eth; var personal = web3.personal; "
+	flatten := "var eth = drep.eth; var personal = drep.personal; "
+	/*
 	for api := range apis {
 		continue
-		/*
-		if api == "web3" {
+		
+		if api == "drep" {
 			continue // manually mapped or ignore
 		}
 		if file, ok := web3ext.Modules[api]; ok {
@@ -148,13 +149,14 @@ func (c *Console) init(preload []string) error {
 			if err = c.jsre.Compile(fmt.Sprintf("%s.js", api), file); err != nil {
 				return fmt.Errorf("%s.js: %v", api, err)
 			}
-			flatten += fmt.Sprintf("var %s = web3.%s; ", api, api)
-		} else if obj, err := c.jsre.Run("web3." + api); err == nil && obj.IsObject() {
-			// Enable web3.js built-in extension if available.
-			flatten += fmt.Sprintf("var %s = web3.%s; ", api, api)
+			flatten += fmt.Sprintf("var %s = drep.%s; ", api, api)
+		} else if obj, err := c.jsre.Run("drep." + api); err == nil && obj.IsObject() {
+			// Enable drep.js built-in extension if available.
+			flatten += fmt.Sprintf("var %s = drep.%s; ", api, api)
 		}
-		*/
+		
 	}
+	*/
 	if _, err = c.jsre.Run(flatten); err != nil {
 		return fmt.Errorf("namespace flattening: %v", err)
 	}
@@ -170,8 +172,8 @@ func (c *Console) init(preload []string) error {
 		}
 		// Override the openWallet, unlockAccount, newAccount and sign methods since
 		// these require user interaction. Assign these method in the Console the
-		// original web3 callbacks. These will be called by the jeth.* methods after
-		// they got the password from the user and send the original web3 request to
+		// original drep callbacks. These will be called by the jeth.* methods after
+		// they got the password from the user and send the original drep request to
 		// the backend.
 		if obj := personal.Object(); obj != nil { // make sure the personal api is enabled over the interface
 			if _, err = c.jsre.Run(`jeth.openWallet = personal.openWallet;`); err != nil {
@@ -186,10 +188,7 @@ func (c *Console) init(preload []string) error {
 			if _, err = c.jsre.Run(`jeth.sign = personal.sign;`); err != nil {
 				return fmt.Errorf("personal.sign: %v", err)
 			}
-			obj.Set("openWallet", bridge.OpenWallet)
-			obj.Set("unlockAccount", bridge.UnlockAccount)
 			obj.Set("newAccount", bridge.NewAccount)
-			obj.Set("sign", bridge.Sign)
 		}
 	}
 	// The admin.sleep and admin.sleepBlocks are offered by the console and not by the RPC layer.
@@ -198,7 +197,6 @@ func (c *Console) init(preload []string) error {
 		return err
 	}
 	if obj := admin.Object(); obj != nil { // make sure the admin api is enabled over the interface
-		obj.Set("sleepBlocks", bridge.SleepBlocks)
 		obj.Set("sleep", bridge.Sleep)
 		obj.Set("clearHistory", c.clearHistory)
 	}
@@ -261,8 +259,8 @@ func (c *Console) AutoCompleteInput(line string, pos int) (string, []string, str
 		if line[start] == '.' || (line[start] >= 'a' && line[start] <= 'z') || (line[start] >= 'A' && line[start] <= 'Z') {
 			continue
 		}
-		// Handle web3 in a special way (i.e. other numbers aren't auto completed)
-		if start >= 3 && line[start-3:start] == "web3" {
+		// Handle drep in a special way (i.e. other numbers aren't auto completed)
+		if start >= 3 && line[start-3:start] == "drep" {
 			start -= 3
 			continue
 		}
@@ -279,7 +277,7 @@ func (c *Console) Welcome() {
 	// Print some generic Geth metadata
 	fmt.Fprintf(c.printer, "Welcome to the Geth JavaScript console!\n\n")
 	c.jsre.Run(`
-		console.log("instance: " + web3.version.node);
+		console.log("instance: " + drep.version.node);
 		console.log("coinbase: " + eth.coinbase);
 		console.log("at block: " + eth.blockNumber + " (" + new Date(1000 * eth.getBlock(eth.blockNumber).timestamp) + ")");
 		console.log(" datadir: " + admin.datadir);

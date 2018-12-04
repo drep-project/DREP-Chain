@@ -1,63 +1,128 @@
-package main 
+// Copyright 2014 The go-ethereum Authors
+// This file is part of go-ethereum.
+//
+// go-ethereum is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// go-ethereum is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
+
+// geth is the official command-line client for Ethereum.
+package main
 
 import (
 	"fmt"
-	"strconv"
-	"encoding/json"
+	"math"
 	"os"
-	"strings"
-	"BlockChainTest/rpc"
-	"github.com/ethereum/go-ethereum/log"
+	godebug "runtime/debug"
+	"sort"
+	"strconv"
+
+	"BlockChainTest/log"
+	"github.com/elastic/gosigar"
+	"BlockChainTest/cli/drepcli/utils"
+	"BlockChainTest/cli/drepcli/console"
+	"gopkg.in/urfave/cli.v1"
+
+
 )
 
-func main(){
-	var (
-		client *rpc.Client
-		err    error
-	)
-	// Attach to an Ethereum node over IPC or RPC   "http://127.0.0.1:15645"//
-	endpoint :=  "http://127.0.0.1:15645"////"rpc:http://"+rpc.DefaultHTTPEndpoint()
-	if client, err = dialRPC(endpoint); err != nil {
-		log.Error("unanble to connect rpc server")
-		return
-	}
-	defer client.Close()
+const (
+	clientIdentifier = "geth" // Client identifier to advertise over the network
+)
 
-	if len(os.Args) <2 {
-		log.Error("argument format error. eg: getblock 1")
+var (
+	// Git SHA1 commit hash of the release (set via linker flags)
+	gitCommit = ""
+	// The app that holds all commands and flags.
+	app = utils.NewApp(gitCommit, "the drep command line interface")
+
+	rpcFlags = []cli.Flag{
+		utils.RPCEnabledFlag,
+		utils.RPCListenAddrFlag,
+		utils.RPCPortFlag,
+		utils.RPCApiFlag,
+		utils.WSEnabledFlag,
+		utils.WSListenAddrFlag,
+		utils.WSPortFlag,
+		utils.WSApiFlag,
+		utils.WSAllowedOriginsFlag,
+		utils.IPCDisabledFlag,
+		utils.IPCPathFlag,
 	}
-	result := &json.RawMessage{}
-	methodName := os.Args[1]
-	args := os.Args[2:]
-    var iargs []interface{}
-	for _, arg := range args {
-		num, err := strconv.ParseInt(arg, 10, 64)
-		if err !=nil {
-			iargs =append(iargs,arg)
-		}else{
-			iargs =append(iargs,num)
+)
+
+func init() {
+	// Initialize the CLI app and start Geth
+	app.Action = drep
+	app.HideVersion = true // we have a command to print the version
+	app.Copyright = "Copyright 2013-2018 The drep Authors"
+	app.Commands = []cli.Command{
+		// See consolecmd.go:
+		consoleCommand,
+		attachCommand,
+	//	javascriptCommand,
+	}
+	sort.Sort(cli.CommandsByName(app.Commands))
+
+	app.Flags = append(app.Flags, rpcFlags...)
+	app.Flags = append(app.Flags, consoleFlags...)
+
+	app.Before = func(ctx *cli.Context) error {
+		err := log.SetUp(DefaultLogDir())  //logDir config here
+		if err != nil {
+			fmt.Println(err.Error())
+			return err
 		}
+		// Cap the cache allowance and tune the garbage collector
+		var mem gosigar.Mem
+		if err := mem.Get(); err == nil {
+			allowance := int(mem.Total / 1024 / 1024 / 3)
+			if cache := ctx.GlobalInt(utils.CacheFlag.Name); cache > allowance {
+				log.Warn("Sanitizing cache to Go's GC limits", "provided", cache, "updated", allowance)
+				ctx.GlobalSet(utils.CacheFlag.Name, strconv.Itoa(allowance))
+			}
+		}
+		// Ensure Go's GC ignores the database cache for trigger percentage
+		cache := ctx.GlobalInt(utils.CacheFlag.Name)
+		gogc := math.Max(20, math.Min(100, 100/(float64(cache)/1024)))
+
+		log.Debug("Sanitizing Go's GC trigger", "percent", int(gogc))
+		godebug.SetGCPercent(int(gogc))
+		return nil
 	}
 
-	err = client.Call(result, methodName,iargs...)
-	if err != nil {
-		fmt.Println(err.Error())
-		log.Error(err.Error())
-	}else {
-
-		bytes, _ := json.MarshalIndent(result, "", "\t")
-		fmt.Println(string(bytes))
+	app.After = func(ctx *cli.Context) error {
+		console.Stdin.Close() // Resets terminal mode.
+		return nil
 	}
 }
 
-// dialRPC returns a RPC client which connects to the given endpoint.
-// The check for empty endpoint implements the defaulting logic
-// for "geth attach" and "geth monitor" with no argument.
-func dialRPC(endpoint string) (*rpc.Client, error) {
-	if strings.HasPrefix(endpoint, "rpc:") || strings.HasPrefix(endpoint, "ipc:") {
-		// Backwards compatibility with geth < 1.5 which required
-		// these prefixes.
-		endpoint = endpoint[4:]
+func main() {
+	if err := app.Run(os.Args); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
-	return rpc.Dial(endpoint)
+}
+
+// geth is the main entry point into the system if no special subcommand is ran.
+// It creates a default node based on the command line arguments and runs it in
+// blocking mode, waiting for it to be shut down.
+func drep(ctx *cli.Context) error {
+	if args := ctx.Args(); len(args) > 0 {
+		return fmt.Errorf("invalid command: %q", args[0])
+	}
+	//start node and attach
+	node := &Node{}
+	//defer node.Stop()
+	node.Start()
+	node.Wait()
+	return nil
 }

@@ -178,7 +178,6 @@ func DefaultWSEndpoint() string {
 	return config.WSEndpoint()
 }
 
-
 type RpcServer struct {
 	rpcAPIs       []API   // List of APIs currently provided by the node
 	inprocHandler *Server // In-process RPC request handler to process the API requests
@@ -201,7 +200,7 @@ type RpcServer struct {
 }
 
 
-func NewRpcServer()*RpcServer{
+func NewRpcServer(rpcConfig *RpcConfig)*RpcServer{
 	api := API{
 		Namespace : "database",
 		Version   :"1.0",
@@ -220,20 +219,24 @@ func NewRpcServer()*RpcServer{
 		Service:	&accounts.AccountApi{},
 		Public  :  true      ,
 	}
-	defautConfig := &RpcConfig{
-		HTTPHost : DefaultHTTPHost ,
-		HTTPPort : DefaultHTTPPort,
-		WSHost : DefaultWSHost,
-		WSPort : DefaultWSPort,
-		HTTPVirtualHosts : []string{"localhost"},
-	}
+	
     return &RpcServer{
-		ipcEndpoint: defautConfig.IPCEndpoint(),
-		httpEndpoint:  defautConfig.HTTPEndpoint(),
-		wsEndpoint:  defautConfig.WSEndpoint(),
-		rpcConfig: defautConfig,
+		ipcEndpoint: rpcConfig.IPCEndpoint(),
+		httpEndpoint:  rpcConfig.HTTPEndpoint(),
+		wsEndpoint:  rpcConfig.WSEndpoint(),
+		rpcConfig: rpcConfig,
 		rpcAPIs:[]API{api,chainApi,accountApi},
     }
+}
+
+func (rpcserver *RpcServer) GetIpcHandler()*Server{
+     return rpcserver.ipcHandler
+}
+func (rpcserver *RpcServer) GetHttpHandler()*Server{
+	return rpcserver.httpHandler
+}
+func (rpcserver *RpcServer) GetConfig() *RpcConfig {
+	return rpcserver.rpcConfig
 }
 
 // startRPC is a helper method to start all the various RPC endpoint during node
