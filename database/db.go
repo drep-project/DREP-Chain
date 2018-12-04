@@ -5,11 +5,12 @@ import (
 	"BlockChainTest/trie"
 	"fmt"
 	"BlockChainTest/util/list"
-	"bytes"
+	"BlockChainTest/config"
 )
 
 type Database struct {
 	db *leveldb.DB
+	runningChain int64
 	tries map[int64] *trie.StateTrie
 }
 
@@ -135,7 +136,11 @@ func NewDatabase() *Database {
 	if err != nil {
 		return nil
 	}
-	return &Database{db:ldb, tries: make(map[int64] *trie.StateTrie)}
+	return &Database{
+		db:ldb,
+		runningChain: config.GetChainId(),
+		tries: make(map[int64] *trie.StateTrie),
+	}
 }
 
 func (db *Database) BeginTransaction() *Transaction {
@@ -153,15 +158,33 @@ func (db *Database) BeginTransaction() *Transaction {
 }
 
 func (db *Database) GetStateRoot() []byte {
+	if db.runningChain != config.RootChain {
+		return db.tries[db.runningChain].Root.Value
+	}
+	type trieObj struct {
+		chainId int64
+		tr *trie.StateTrie
+	}
 	sll := list.NewSortedLinkedList(func(a interface{}, b interface{}) int {
-		return bytes.Compare(a.(*trie.StateTrie).Root.Value, b.(*trie.StateTrie).Root.Value)
+		ac := a.(*trieObj).chainId
+		bc := b.(*trieObj).chainId
+		if ac > bc {
+			return 1
+		}
+		if ac == bc {
+			return 0
+		}
+		return -1
 	})
-	for _, t := range db.tries {
-		sll.Add(t)
+	for chainId, t := range db.tries {
+		sll.Add(&trieObj{
+			chainId: chainId,
+			tr: t,
+		})
 	}
 	ts := make([]*trie.StateTrie, sll.Size())
 	for i, elem := range sll.ToArray() {
-		ts[i] = elem.(*trie.StateTrie)
+		ts[i] = elem.(*trieObj).tr
 	}
 	return trie.GetMerkleRoot(ts)
 }

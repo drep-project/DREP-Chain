@@ -22,27 +22,27 @@ var Root = "./drep"
 
 var ptrAccount string
 var ptrHeight int64
-var ptrBegin int64
-var ptrSize int64
 var ptrTo string
 var ptrAmount string
 var ptrChainId int64
 var ptrDestChain int64
 var ptrDataDir string
 var ptrKeystore string
-var ptrCodeFile string
+var ptrCode string
+var ptrInput string
+var ptrReadOnly bool
 
 var flagAccount = "accounts"
 var flagHeight = "height"
-var flagBegin = "start"
-var flagSize = "size"
 var flagTo = "to"
 var flagAmount = "amount"
 var flagChainId = "chain-id"
 var flagDestChain = "dest-chain"
 var flagDataDir = "data-dir"
 var flagKeystore = "keystore"
-var flagCodeFile = "code-file"
+var flagCode = "code"
+var flagInput = "input"
+var flagReadOnly = "read-only"
 
 var CmdRoot = &cobra.Command{
 

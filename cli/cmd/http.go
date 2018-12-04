@@ -44,20 +44,8 @@ func urlMaxHeight() string {
     return server + "GetMaxHeight"
 }
 
-func urlBlock(height int64) string {
-    return server + "GetBlock?height=" + strconv.FormatInt(height, 10)
-}
-
-func urlBlocksFrom(start, size int64) string {
-    return server + "GetBlocksFrom?start=" + strconv.FormatInt(start, 10) + "&size=" + strconv.FormatInt(size, 10)
-}
-
-func urlMostRecentBlocks(n int64) string {
-    return server + "GetMostRecentBlocks?n=" + strconv.FormatInt(n, 10)
-}
-
-func urlAllBlocks() string {
-    return server + "GetAllBlocks"
+func urlGetBlock(height int64) string {
+    return server + "GetGetBlock?height=" + strconv.FormatInt(height, 10)
 }
 
 func urlCreateAccount(chainId int64, keystore string) string {
@@ -72,8 +60,12 @@ func urlSendTransferTransaction(to, destChain, amount string) string {
     return server + "SendTransferTransaction?to=" + to + "&destChain=" + destChain + "&amount=" + amount
 }
 
-func urlSendCreateContractTransaction(codeFile string) string {
-    return server + "SendCreateContractTransaction?codeFile=" + codeFile
+func urlSendCreateContractTransaction(code string) string {
+    return server + "SendCreateContractTransaction?code=" + code
+}
+
+func urlSendCallContractTransaction(addr, chainId, input, readOnly string) string {
+    return server + "SendCallContractTransaction?address=" + addr + "&chainId=" + chainId + "&input=" + input + "&readOnly=" + readOnly
 }
 
 func urlSetChain(chainId, dataDir string) string {

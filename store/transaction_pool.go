@@ -8,6 +8,7 @@ import (
     "BlockChainTest/util/list"
     "BlockChainTest/database"
     "BlockChainTest/accounts"
+    "fmt"
 )
 
 var (
@@ -83,7 +84,9 @@ func checkAndGetAddr(tran *bean.Transaction) (bool, accounts.CommonAddress) {
 }
 //func AddTransaction(id string, transaction *common.transaction) {
 func AddTransaction(transaction *bean.Transaction) bool {
+    fmt.Println("adding")
     check, addr := checkAndGetAddr(transaction)
+    fmt.Println("check: ", check)
     if !check {
         return false
     }
@@ -125,6 +128,7 @@ func removeTransaction(tran *bean.Transaction) (bool, bool) {
 }
 
 func PickTransactions(maxGas *big.Int) []*bean.Transaction {
+    fmt.Println("picking")
     r := make([]*bean.Transaction, 0) //TODO if 10
     gas := big.NewInt(0)
     tranLock.Lock()
@@ -137,7 +141,9 @@ func PickTransactions(maxGas *big.Int) []*bean.Transaction {
     it := trans.Iterator()
     tn := make(map[accounts.CommonAddress]int64)
     for it.HasNext() {
+        fmt.Println("has next")
         if t, ok := it.Next().(*bean.Transaction); ok {
+            fmt.Println("t: ", t.Data)
             if id, err := t.TxId(); err == nil {
                 if tranSet[id] {
                     addr := accounts.PubKey2Address(t.Data.PubKey)

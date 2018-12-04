@@ -9,7 +9,6 @@ import (
     "math/big"
     "BlockChainTest/node"
     "encoding/hex"
-    "io/ioutil"
 )
 
 func setChain(chainId int64, dataDir string) error {
@@ -127,16 +126,26 @@ func sendTransferTransaction(to, amount string, destChain int64) error {
     return nil
 }
 
-func sendCreateContractTransaction(codeFile string) error {
-    code, err := ioutil.ReadFile(codeFile)
-    if err != nil {
-        return nil
-    }
+func sendCreateContractTransaction(code string) error {
     byteCode, err := hex.DecodeString(string(code))
     if err != nil {
         return err
     }
     t := node.GenerateCreateContractTransaction(byteCode)
+    err = node.SendTransaction(t)
+    if err != nil {
+        return err
+    }
+    return nil
+}
+
+func sendCallContractTransaction(addr string, chainId int64, inputHex string, readOnly bool) error {
+    contractAddr := accounts.Hex2Address(addr)
+    input, err := hex.DecodeString(inputHex)
+    if err != nil {
+        return err
+    }
+    t := node.GenerateCallContractTransaction(contractAddr, chainId, input, readOnly)
     err = node.SendTransaction(t)
     if err != nil {
         return err

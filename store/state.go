@@ -122,9 +122,9 @@ func init()  {
     account, _ := accounts.NewAccountInDebug(prvKey.Prv)
     database.PutStorageOutsideTransaction(account.Storage, address, chainId)
 
-    database.PutBalanceOutSideTransaction(accounts.PubKey2Address(pub0), id0, big.NewInt(10000))
-    database.PutBalanceOutSideTransaction(accounts.PubKey2Address(pub1), id1, big.NewInt(10000))
-    database.PutBalanceOutSideTransaction(accounts.PubKey2Address(pub2), id2, big.NewInt(10000))
+    database.PutBalanceOutSideTransaction(accounts.PubKey2Address(pub0), id0, big.NewInt(100000000))
+    database.PutBalanceOutSideTransaction(accounts.PubKey2Address(pub1), id1, big.NewInt(100000000))
+    database.PutBalanceOutSideTransaction(accounts.PubKey2Address(pub2), id2, big.NewInt(100000000))
 
     IsStart = myIndex < minerNum
 }

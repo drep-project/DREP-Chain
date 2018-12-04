@@ -6,10 +6,8 @@ import (
     "BlockChainTest/database"
     "strconv"
     "encoding/json"
-    "math/big"
     "strings"
     "io/ioutil"
-    "BlockChainTest/accounts"
 )
 
 type Request struct {
@@ -143,30 +141,6 @@ func GetBlocksFrom(w http.ResponseWriter, r *http.Request){
     writeResponse(w, resp)
 }
 
-//func PutBlock(w http.ResponseWriter, r *http.Request) {
-//
-//}
-
-func PutMaxHeight(w http.ResponseWriter, r *http.Request) {
-    params := analysisReqParam(r)
-    var height int64
-    if value, ok := params["height"].(int64); ok {
-        height = value
-    }
-
-    err := database.PutMaxHeight(height)
-    if err != nil {
-        errMsg := "error occurred during database.PutMaxHeight()"
-        fmt.Println(errMsg, ": ", err)
-        resp := &Response{Success:false, ErrorMsg:errMsg, Body:false}
-        writeResponse(w, resp)
-        return
-    }
-
-    resp := &Response{Success:true, Body:true}
-    writeResponse(w, resp)
-}
-
 func GetBalance(w http.ResponseWriter, r *http.Request) {
     // find param in http.Request
     params := analysisReqParam(r)
@@ -195,33 +169,6 @@ func GetBalance(w http.ResponseWriter, r *http.Request) {
     writeResponse(w, resp)
 }
 
-func PutBalance(w http.ResponseWriter, r *http.Request) {
-    params := analysisReqParam(r)
-    var address string
-    var chainId int64
-    var amount int64
-    if value, ok := params["address"].(string); ok {
-        address = value
-    }
-    if value, ok := params["chainId"].(int64); ok {
-        chainId = value
-    }
-    if value, ok := params["amount"].(int64); ok {
-        amount = value
-    }
-
-    ca := accounts.Hex2Address(address)
-    err := database.PutBalanceOutSideTransaction(ca, chainId, big.NewInt(amount))
-
-    if err != nil {
-        resp := &Response{Success:false, ErrorMsg:err.Error(), Body:false}
-        writeResponse(w, resp)
-        return
-    }
-    resp := &Response{Success:true, Body:true}
-    writeResponse(w, resp)
-}
-
 func GetNonce(w http.ResponseWriter, r *http.Request) {
     params := analysisReqParam(r)
     var address string
@@ -246,32 +193,6 @@ func GetNonce(w http.ResponseWriter, r *http.Request) {
         return
     }
     resp := &Response{Success:true, Body:nonce}
-    writeResponse(w, resp)
-}
-
-func PutNonce(w http.ResponseWriter, r *http.Request) {
-    params := analysisReqParam(r)
-    var address string
-    var chainId int64
-    var nonce int64
-    if value, ok := params["address"].(string); ok {
-        address = value
-    }
-    if value, ok := params["chainId"].(int64); ok {
-        chainId = value
-    }
-    if value, ok := params["nonce"].(int64); ok {
-        nonce = value
-    }
-    ca := accounts.Hex2Address(address)
-
-    err := database.PutNonceOutsideTransaction(ca, chainId, nonce)
-    if err != nil {
-        resp := &Response{Success:false, ErrorMsg:err.Error(), Body:false}
-        writeResponse(w, resp)
-        return
-    }
-    resp := &Response{Success:true, Body:true}
     writeResponse(w, resp)
 }
 
@@ -309,10 +230,38 @@ func SendTransferTransaction(w http.ResponseWriter, r *http.Request) {
 func SendCreateContractTransaction(w http.ResponseWriter, r *http.Request) {
     params := analysisReqParam(r)
     var code string
-    if value, ok := params["codeFile"].(string); ok {
+    if value, ok := params["code"].(string); ok {
         code = value
     }
     err := sendCreateContractTransaction(code)
+    if err != nil {
+        resp := &Response{Success:false, ErrorMsg:err.Error(), Body:false}
+        writeResponse(w, resp)
+        return
+    }
+    resp := &Response{Success:true}
+    writeResponse(w, resp)
+}
+
+func SendCallContractTransaction(w http.ResponseWriter, r *http.Request) {
+    params := analysisReqParam(r)
+    var addr string
+    if value, ok := params["address"].(string); ok {
+        addr = value
+    }
+    var chainId int64
+    if value, ok := params["chainId"].(int64); ok {
+        chainId = value
+    }
+    var input string
+    if value, ok := params["input"].(string); ok {
+        input = value
+    }
+    var readOnly bool
+    if value, ok := params["readOnly"].(bool); ok {
+        readOnly = value
+    }
+    err := sendCallContractTransaction(addr, chainId, input, readOnly)
     if err != nil {
         resp := &Response{Success:false, ErrorMsg:err.Error(), Body:false}
         writeResponse(w, resp)
@@ -402,11 +351,8 @@ var methodsMap = map[string] http.HandlerFunc {
     "/GetHighestBlock":          GetHighestBlock,
     "/GetMaxHeight":             GetMaxHeight,
     "/GetBlocksFrom":            GetBlocksFrom,
-    "/PutMaxHeight":             PutMaxHeight,
     "/GetBalance":               GetBalance,
-    "/PutBalance":               PutBalance,
     "/GetNonce":                 GetNonce,
-    "/PutNonce":                 PutNonce,
     "/GetStateRoot":             GetStateRoot,
     "/SendTransferTransaction":  SendTransferTransaction,
     "/SendCreateContractTransaction": SendCreateContractTransaction,
