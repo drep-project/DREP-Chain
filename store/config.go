@@ -6,12 +6,12 @@ import (
 )
 
 var (
-    BlockGasLimit  = big.NewInt(50000000000)
+    BlockGasLimit  = big.NewInt(5000000000)
     GasPrice = big.NewInt(5)
     TransferGas = big.NewInt(10)
     MinerGas = big.NewInt(10)
     CreateContractGas = big.NewInt(1000)
-    CallContractGas = big.NewInt(100)
+    CallContractGas = big.NewInt(100000)
     TransferType int32 = 0
     MinerType int32 = 1
     CreateContractType int32 = 2
