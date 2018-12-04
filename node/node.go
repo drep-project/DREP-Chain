@@ -69,7 +69,7 @@ func (n *Node) Start(config *config.NodeConfig) {
                     n.runAsMember()
                 }
                 //n.wg.Wait()
-                if block := pool.ObtainOne(func(msg interface{}) bool {
+                if block := pool.ObtainOneMsg(func(msg interface{}) bool {
                     _, ok := msg.(*bean.Block)
                     return ok
                 }, 5 * time.Second); block != nil {
@@ -198,7 +198,7 @@ func (n *Node) discover() bool {
     peers := []*bean.Peer{store.Admin}
     network.SendMessage(peers, msg)
     log.Trace("discovering 3")
-    if msg := pool.ObtainOne(func(msg interface{}) bool {
+    if msg := pool.ObtainOneMsg(func(msg interface{}) bool {
         _, ok := msg.(*bean.FirstPeerInfoList)
         return ok
     }, 5 * time.Second); msg != nil {
@@ -251,7 +251,7 @@ func (n *Node) fetchBlocks() {
     log.Trace("fetching 1")
     for n.curMaxHeight != database.GetMaxHeight() {
        log.Trace("fetching 2: ", n.curMaxHeight, database.GetMaxHeight())
-       if msg := pool.ObtainOne(func(msg interface{}) bool {
+       if msg := pool.ObtainOneMsg(func(msg interface{}) bool {
            if block, ok := msg.(*bean.Block); ok {
                return block != nil && block.Header != nil && block.Header.Height == database.GetMaxHeight() + 1
            } else {

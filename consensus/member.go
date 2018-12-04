@@ -48,7 +48,7 @@ func (m *Member) ProcessConsensus(f func(setup *bean.Setup)bool) []byte {
 }
 
 func (m *Member) waitForSetUp(f func(setup *bean.Setup)bool) bool {
-    setUpMsg := pool.ObtainOne(func(msg interface{}) bool {
+    setUpMsg := pool.ObtainOneMsg(func(msg interface{}) bool {
         if setup, ok := msg.(*consmsg.SetupMsg); ok {
             fmt.Println(m.leader.PubKey, setup.Peer.PubKey)
             return m.leader.PubKey.Equal(setup.Peer.PubKey)
@@ -79,7 +79,7 @@ func (m *Member) commit()  {
 }
 
 func (m *Member) waitForChallenge() bool {
-    challengeMsg := pool.ObtainOne(func(msg interface{}) bool {
+    challengeMsg := pool.ObtainOneMsg(func(msg interface{}) bool {
         if challengeMsg, ok := msg.(*consmsg.ChallengeMsg); ok {
            return m.leader.PubKey.Equal(challengeMsg.Peer.PubKey)
         } else {

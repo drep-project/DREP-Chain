@@ -87,7 +87,7 @@ func (l *Leader) waitForCommit(peers []*bean.Peer) bool {
     memberNum := len(peers)
     //r := make([]bool, memberNum)
     log.Trace("waitForCommit 1")
-    commits := pool.Obtain(memberNum, func(msg interface{}) bool {
+    commits := pool.ObtainMsg(memberNum, func(msg interface{}) bool {
         if m, ok := msg.(*consmsg.CommitmentMsg); ok {
             if !contains(m.Peer.PubKey, peers) {
                 return false
@@ -123,7 +123,7 @@ func (l *Leader) waitForCommit(peers []*bean.Peer) bool {
 }
 
 func (l *Leader) waitForResponse(peers []*bean.Peer)  {
-    responses := pool.Obtain(len(l.members), func(msg interface{}) bool {
+    responses := pool.ObtainMsg(len(l.members), func(msg interface{}) bool {
         if m, ok := msg.(*consmsg.ResponseMsg); ok {
             if !contains(m.Peer.PubKey, peers) {
                 return false

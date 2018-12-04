@@ -52,7 +52,7 @@ func (p *BlockProcessor) process(peer *bean.Peer, msg interface{}) {
         store.ForwardBlock(id)
         peers := store.GetPeers()
         network.SendMessage(peers, block)
-        pool.Push(block)
+        pool.PushMsg(block)
         // Here, two blocks will be forwarded here. so is this store enough?
     }
 }
