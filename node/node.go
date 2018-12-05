@@ -81,7 +81,7 @@ func (n *Node) Start() {
                 }
             }
             log.Println("node stop")
-            time.Sleep(30 * time.Second)
+            time.Sleep(5 * time.Second)
             log.Println("Current height ", database.GetMaxHeight())
             // todo if timeout still can go. why
         }
