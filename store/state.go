@@ -46,12 +46,13 @@ func init()  {
         return
     }
 
-    curMiner = -1
-
     minerNum := config.GetMinerNum()
     myIndex := config.GetMyIndex()
     chainId = config.GetChainId()
     debugNodes := config.GetDebugNodes()
+
+    curMiner = -1
+    minerIndex = minerNum - 1
 
     for i := 0; i < minerNum; i++ {
         peer := &network.Peer{
