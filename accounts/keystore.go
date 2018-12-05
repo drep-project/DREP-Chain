@@ -100,8 +100,6 @@ func SaveKeystore(node *Node, keystorePath string) error {
         return err
     }
 
-    fmt.Println(222)
-
     if keystorePath == "" {
         dataDir := config.GetDataDir()
         fmt.Println("datadir: ", dataDir)
@@ -111,15 +109,11 @@ func SaveKeystore(node *Node, keystorePath string) error {
         keystorePath = path.Join(dataDir, key.Address + ".json")
     }
 
-    fmt.Println(333)
-
     err = config.SetKeystore(keystorePath)
     if err != nil {
         fmt.Println("999", err)
         return err
     }
-
-    fmt.Println(111)
 
     err = os.Mkdir(KeystoreDirName, os.ModeDir|os.ModePerm)
     if err != nil {

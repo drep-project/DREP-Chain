@@ -13,8 +13,8 @@ import (
     "BlockChainTest/trie"
     "BlockChainTest/accounts"
     "fmt"
-    "BlockChainTest/config/debug"
     "BlockChainTest/config"
+    "path"
 )
 
 var (
@@ -31,16 +31,19 @@ var (
 func init()  {
     lock = &sync.Mutex{}
 
-    //dataDir := config.GetDataDir()
-    //keystore := config.GetKeystore()
-    //keystorePath := path.Join(dataDir, keystore)
-    keystorePath := "./docs/keystore0.json"
+    configDir := config.GetConfigDir()
+    keystore := config.GetKeystore()
+    keystorePath := path.Join(configDir, keystore)
+    fmt.Println("keystorePath: ", keystorePath)
     node, _ := accounts.OpenKeystore(keystorePath)
     existed := node != nil
     if existed {
         prvKey = node.PrvKey
         pubKey = node.PrvKey.PubKey
         address = node.Address()
+    } else {
+        fmt.Println("keystore file not exists!")
+        return
     }
 
     curMiner = -1
@@ -48,41 +51,26 @@ func init()  {
     minerNum := config.GetMinerNum()
     myIndex := config.GetMyIndex()
     chainId = config.GetChainId()
-    deb := debug.GetDebugConfig(minerNum)
-
-    fmt.Println("miner num: ", minerNum)
-    fmt.Println("my index: ", myIndex)
-    fmt.Println("chain id: ", chainId)
-    fmt.Println("deb: ", deb)
+    debugNodes := config.GetDebugNodes()
 
     for i := 0; i < minerNum; i++ {
         peer := &network.Peer{
-            IP:     network.IP(deb.DebugNodes[i].IP),
-            Port:   network.Port(deb.DebugNodes[i].Port),
+            IP:     network.IP(debugNodes[i].IP),
+            Port:   network.Port(debugNodes[i].Port),
         }
         if i != myIndex {
-            peer.PubKey = debug.ParsePK(deb.DebugNodes[i].PubKey)
-        } else if existed {
-            peer.PubKey = pubKey
+            peer.PubKey = config.ParsePK(debugNodes[i].PubKey)
         } else {
-            peer.PubKey = debug.ParsePK(deb.DebugNodes[i].PubKey)
-            prv, _ := new(big.Int).SetString(deb.DebugNodes[i].Prv, 10)
-            pubKey = debug.ParsePK(deb.DebugNodes[i].PubKey)
-            prvKey = &mycrypto.PrivateKey{Prv: prv.Bytes(), PubKey: pubKey}
+            peer.PubKey = pubKey
         }
         curMiners = append(curMiners, peer)
         miners = append(miners, peer)
         AddPeer(peer)
         database.PutBalanceOutSideTransaction(accounts.PubKey2Address(peer.PubKey), chainId, big.NewInt(100000000))
     }
-
     if myIndex == 0 {
         adminPubKey = pubKey
     }
-
-    account, _ := accounts.NewAccountInDebug(prvKey.Prv)
-    database.PutStorageOutsideTransaction(account.Storage, address, chainId)
-
     IsStart = myIndex < minerNum
 
     //if Solo {
