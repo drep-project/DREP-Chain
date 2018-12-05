@@ -24,7 +24,7 @@ var (
 var IsStart bool
 
 const LocalTest = false
-const Solo = true
+
 func init() {
     if LocalTest {
         Admin = &network.Peer{IP: network.IP("127.0.0.1"), Port: 55555}

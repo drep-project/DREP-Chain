@@ -3,6 +3,7 @@ package config
 import (
     "github.com/spf13/viper"
     "fmt"
+    "os"
 )
 
 const (
@@ -10,7 +11,7 @@ const (
 )
 
 var (
-    vip *viper.Viper
+    dataDir = "." + string(os.PathSeparator) + "data"
 )
 
 type Config struct {
@@ -22,64 +23,44 @@ type Config struct {
     Keystore   string
     IP         string
     Port       int
-    MinerNum   int
     MyIndex    int
     DebugNodes []*DebugNode
 }
 
 func init() {
-    if vip == nil {
-        vip = viper.New()
-        vip.SetConfigName("config")
-        vip.AddConfigPath("./config")
-    }
-    err := vip.ReadInConfig()
+    viper.SetConfigName("config")
+    viper.AddConfigPath(dataDir)
+    err := viper.ReadInConfig()
     if err != nil {
         fmt.Println("read config file error: ", err)
     }
 }
 
 func GetChainId() int64 {
-    return vip.GetInt64("ChainId")
-}
-
-func GetConfigDir() string {
-    return vip.GetString("ConfigDir")
-}
-
-func GetDataDir() string {
-    return vip.GetString("DataDir")
-}
-
-func GetDocsDir() string {
-    return vip.GetString("DocsDir")
+    return viper.GetInt64("ChainId")
 }
 
 func GetKeystore() string {
-    return vip.GetString("Keystore")
-}
-
-func GetMinerNum() int {
-    return vip.GetInt("MinerNum")
+    return dataDir + string(os.PathSeparator) + "keystore"
 }
 
 func GetMyIndex() int {
-    return vip.GetInt("MyIndex")
+    return viper.GetInt("MyIndex")
 }
 
 func GetDebugNodes() []*DebugNode {
     config := &Config{}
-    vip.Unmarshal(config)
+    viper.Unmarshal(config)
     return config.DebugNodes
 }
 
 func SetChain(chainId int64, dataDir string) error {
-    vip.Set("ChainId", chainId)
-    vip.Set("DataDir", dataDir)
-    return vip.WriteConfig()
+    viper.Set("ChainId", chainId)
+    viper.Set("DataDir", dataDir)
+    return viper.WriteConfig()
 }
 
 func SetKeystore(keystorePath string) error {
-    vip.Set("Keystore", keystorePath)
-    return vip.WriteConfig()
+    viper.Set("Keystore", keystorePath)
+    return viper.WriteConfig()
 }

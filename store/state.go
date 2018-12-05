@@ -1,7 +1,6 @@
 package store
 
 import (
-    "sync"
     "BlockChainTest/network"
     "BlockChainTest/bean"
     "BlockChainTest/mycrypto"
@@ -14,11 +13,9 @@ import (
     "BlockChainTest/accounts"
     "fmt"
     "BlockChainTest/config"
-    "path"
 )
 
 var (
-    lock     sync.Locker
     chainId  int64
     prvKey   *mycrypto.PrivateKey
     pubKey   *mycrypto.Point
@@ -29,27 +26,21 @@ var (
 )
 
 func init()  {
-    lock = &sync.Mutex{}
 
-    configDir := config.GetConfigDir()
     keystore := config.GetKeystore()
-    keystorePath := path.Join(configDir, keystore)
-    fmt.Println("keystorePath: ", keystorePath)
-    node, _ := accounts.OpenKeystore(keystorePath)
-    existed := node != nil
-    if existed {
+    node, _ := accounts.OpenKeystore(keystore)
+    if node != nil {
         prvKey = node.PrvKey
         pubKey = node.PrvKey.PubKey
         address = node.Address()
     } else {
-        fmt.Println("keystore file not exists!")
-        return
+        panic("keystore file not exists!")
     }
 
-    minerNum := config.GetMinerNum()
     myIndex := config.GetMyIndex()
     chainId = config.GetChainId()
     debugNodes := config.GetDebugNodes()
+    minerNum := len(debugNodes)
 
     curMiner = -1
     minerIndex = minerNum - 1
@@ -69,9 +60,7 @@ func init()  {
         AddPeer(peer)
         database.PutBalanceOutSideTransaction(accounts.PubKey2Address(peer.PubKey), chainId, big.NewInt(100000000))
     }
-    if myIndex == 0 {
-        adminPubKey = pubKey
-    }
+    adminPubKey = miners[0].PubKey
     IsStart = myIndex < minerNum
 
     //if Solo {

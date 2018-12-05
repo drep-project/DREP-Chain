@@ -101,7 +101,8 @@ func SaveKeystore(node *Node, keystorePath string) error {
     }
 
     if keystorePath == "" {
-        dataDir := config.GetDataDir()
+        panic("fuck")
+        dataDir := ""//config.GetDataDir()
         fmt.Println("datadir: ", dataDir)
         if dataDir == "" {
             return errors.New("failed to get current data directory")
