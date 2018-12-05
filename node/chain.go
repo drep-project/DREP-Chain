@@ -10,12 +10,13 @@ import (
     "BlockChainTest/database"
     "BlockChainTest/accounts"
     "BlockChainTest/config"
+    "BlockChainTest/util"
 )
 
 func SendTransaction(t *bean.Transaction) error {
     peers := store.GetPeers()
     fmt.Println("Send transaction")
-    if err, offline := network.SendMessage(peers, t); err == nil {
+    if _, offline := network.SendMessage(peers, t); len(offline) == 0 {
         if id, err := t.TxId(); err == nil {
             store.ForwardTransaction(id)
         }
@@ -23,7 +24,7 @@ func SendTransaction(t *bean.Transaction) error {
         store.RemovePeers(offline)
         return nil
     } else {
-        return err
+        return &util.ConnectionError{}
     }
 }
 

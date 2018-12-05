@@ -94,7 +94,11 @@ func (n *Node) runAsLeader() {
     log.Println("node leader is preparing process consensus for round 1")
     if msg, err := json.Marshal(block); err ==nil {
         log.Println("node leader is going to process consensus for round 1")
-        sig, bitmap := leader1.ProcessConsensus(msg)
+        err, sig, bitmap := leader1.ProcessConsensus(msg)
+        if err != nil {
+            fmt.Println("Error occurs", err)
+            panic(err)
+        }
         multiSig := &bean.MultiSignature{Sig: sig, Bitmap: bitmap}
         log.Println("node leader is preparing process consensus for round 2")
         if msg, err := json.Marshal(multiSig); err == nil {
@@ -112,9 +116,10 @@ func (n *Node) runAsLeader() {
 
 func (n *Node) sendBlock(block *bean.Block) {
     peers := store.GetPeers()
+    //todo concurrent
     if _, ps := network.SendMessage(peers, block); len(ps) > 0 {
         fmt.Println("Offline peers: ", ps)
-        store.RemovePeers(ps)
+        //store.RemovePeers(ps)
     }
 }
 
