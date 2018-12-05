@@ -66,6 +66,7 @@ func checkAndGetAddr(tran *bean.Transaction) (bool, accounts.CommonAddress) {
     }
     // TODO Check sig
     if database.GetNonceOutsideTransaction(addr, chainId) >= tran.Data.Nonce {
+        fmt.Println("database.GetNonceOutsideTransaction(addr, chainId)", database.GetNonceOutsideTransaction(addr, chainId))
         return false, accounts.CommonAddress{}
     }
     {

@@ -10,6 +10,7 @@ import (
     "encoding/hex"
     "BlockChainTest/config"
     "github.com/syndtr/goleveldb/leveldb/iterator"
+    "fmt"
 )
 
 var (
@@ -103,6 +104,9 @@ func PutStorageOutsideTransaction(storage *accounts.Storage, addr accounts.Commo
     if err != nil {
         return err
     }
+    fmt.Println(
+        "fkrofkrofkrofkrokfrofkr",
+    )
     return db.put(key, value, chainId)
 }
 
