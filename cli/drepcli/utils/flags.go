@@ -88,32 +88,32 @@ var (
 		Value: DirectoryString{"dataDir"},
 	}
 	// RPC settings
-	RPCEnabledFlag = cli.BoolFlag{
-		Name:  "rpc",
+	HTTPEnabledFlag = cli.BoolFlag{
+		Name:  "http",
 		Usage: "Enable the HTTP-RPC server",
 	}
-	RPCListenAddrFlag = cli.StringFlag{
-		Name:  "rpcaddr",
+	HTTPListenAddrFlag = cli.StringFlag{
+		Name:  "httpaddr",
 		Usage: "HTTP-RPC server listening interface",
 		Value: rpc.DefaultHTTPHost,
 	}
-	RPCPortFlag = cli.IntFlag{
-		Name:  "rpcport",
+	HTTPPortFlag = cli.IntFlag{
+		Name:  "httpport",
 		Usage: "HTTP-RPC server listening port",
 		Value: rpc.DefaultHTTPPort,
 	}
-	RPCCORSDomainFlag = cli.StringFlag{
-		Name:  "rpccorsdomain",
+	HTTPCORSDomainFlag = cli.StringFlag{
+		Name:  "httpcorsdomain",
 		Usage: "Comma separated list of domains from which to accept cross origin requests (browser enforced)",
 		Value: "",
 	}
-	RPCVirtualHostsFlag = cli.StringFlag{
-		Name:  "rpcvhosts",
+	HTTPVirtualHostsFlag = cli.StringFlag{
+		Name:  "httpvhosts",
 		Usage: "Comma separated list of virtual hostnames from which to accept requests (server enforced). Accepts '*' wildcard.",
 		Value: strings.Join([]string{"localhost"}, ","),
 	}
-	RPCApiFlag = cli.StringFlag{
-		Name:  "rpcapi",
+	HTTPApiFlag = cli.StringFlag{
+		Name:  "httpapi",
 		Usage: "API's offered over the HTTP-RPC interface",
 		Value: "",
 	}
@@ -149,6 +149,21 @@ var (
 		Usage: "Origins from which to accept websockets requests",
 		Value: "",
 	}
+	// RPC settings
+	RESTEnabledFlag = cli.BoolFlag{
+		Name:  "rest",
+		Usage: "Enable the REST-RPC server",
+	}
+	RESTListenAddrFlag = cli.StringFlag{
+		Name:  "restaddr",
+		Usage: "REST-RPC server listening interface",
+		Value: rpc.DefaultRestHost,
+	}
+	RESTPortFlag = cli.IntFlag{
+		Name:  "restport",
+		Usage: "REST-RPC server listening port",
+		Value: rpc.DefaultRestPort,
+	}
 
 	// ATM the url is left to the user and deployment to
 	JSpathFlag = cli.StringFlag{
@@ -178,11 +193,11 @@ var (
 // This is a temporary function used for migrating old command/flags to the
 // new format.
 //
-// e.g. geth account new --keystore /tmp/mykeystore --lightkdf
+// e.g. drep account new --keystore /tmp/mykeystore --lightkdf
 //
 // is equivalent after calling this method with:
 //
-// geth --keystore /tmp/mykeystore --lightkdf account new
+// drep --keystore /tmp/mykeystore --lightkdf account new
 //
 // This allows the use of the existing configuration functionality.
 // When all flags are migrated this function can be removed and the existing
@@ -234,7 +249,6 @@ func MakeConsolePreloads(ctx *cli.Context) []string {
 	}
 	return preloads
 }
-
 
 // AbsolutePath returns datadir + filename, or filename if it is absolute.
 func AbsolutePath(datadir string, filename string) string {

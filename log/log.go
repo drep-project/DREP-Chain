@@ -38,7 +38,7 @@ func SetUp(logdir string) error {
 		}
 		glogger.SetHandler(MultiHandler(ostream, rfh))
 	}
-	glogger.Verbosity(Lvl(5))
+	glogger.Verbosity(Lvl(3))
 	//glogger.Vmodule(ctx.GlobalString(vmoduleFlag.Name))
 	//glogger.BacktraceAt(ctx.GlobalString(backtraceAtFlag.Name))
 	Root().SetHandler(glogger)

@@ -149,10 +149,11 @@ func RotatingFileHandler(path string, limit uint, formatter Format) (Handler, er
 	}
 	var counter *countingWriter
 	if last >= 0 && files[last].Size() < int64(limit) {
+		//TODO trucate file error when runing on win
 		// Open the last file, and continue to write into it until it's size reaches the limit.
-		if counter, err = prepFile(filepath.Join(path, files[last].Name())); err != nil {
+		/*if counter, err = prepFile(filepath.Join(path, files[last].Name())); err != nil {
 			return nil, err
-		}
+		}*/
 	}
 	if counter == nil {
 		counter = new(countingWriter)

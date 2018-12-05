@@ -29,6 +29,7 @@ import (
 	"syscall"
 
 	"BlockChainTest/cli/drepcli/jsre"
+	"BlockChainTest/cli/drepcli/consoleextend"
 	"BlockChainTest/rpc"
 	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"
@@ -132,19 +133,14 @@ func (c *Console) init(preload []string) error {
 		return fmt.Errorf("drep provider: %v", err)
 	}
 	// Load the supported APIs into the JavaScript runtime environment
-	_, err := c.client.SupportedModules()
+	apis, err := c.client.SupportedModules()
 	if err != nil {
 		return fmt.Errorf("api modules: %v", err)
 	}
-	flatten := "var eth = drep.eth; var personal = drep.personal; "
-	/*
+
+	flatten :=""
 	for api := range apis {
-		continue
-		
-		if api == "drep" {
-			continue // manually mapped or ignore
-		}
-		if file, ok := web3ext.Modules[api]; ok {
+		if file, ok := consoleextend.Modules[api]; ok {
 			// Load our extension for the module.
 			if err = c.jsre.Compile(fmt.Sprintf("%s.js", api), file); err != nil {
 				return fmt.Errorf("%s.js: %v", api, err)
@@ -154,17 +150,19 @@ func (c *Console) init(preload []string) error {
 			// Enable drep.js built-in extension if available.
 			flatten += fmt.Sprintf("var %s = drep.%s; ", api, api)
 		}
-		
 	}
-	*/
+
 	if _, err = c.jsre.Run(flatten); err != nil {
 		return fmt.Errorf("namespace flattening: %v", err)
 	}
+
 	// Initialize the global name register (disabled for now)
 	//c.jsre.Run(`var GlobalRegistrar = eth.contract(` + registrar.GlobalRegistrarAbi + `);   registrar = GlobalRegistrar.at("` + registrar.GlobalRegistrarAddr + `");`)
 
 	// If the console is in interactive mode, instrument password related methods to query the user
 	if c.prompter != nil {
+		/*
+		//TODO   account manage
 		// Retrieve the account management object to instrument
 		personal, err := c.jsre.Get("personal")
 		if err != nil {
@@ -190,6 +188,7 @@ func (c *Console) init(preload []string) error {
 			}
 			obj.Set("newAccount", bridge.NewAccount)
 		}
+		*/
 	}
 	// The admin.sleep and admin.sleepBlocks are offered by the console and not by the RPC layer.
 	admin, err := c.jsre.Get("admin")
@@ -271,16 +270,14 @@ func (c *Console) AutoCompleteInput(line string, pos int) (string, []string, str
 	return line[:start], c.jsre.CompleteKeywords(line[start:pos]), line[pos:]
 }
 
-// Welcome show summary of current Geth instance and some metadata about the
+// Welcome show summary of current Drep instance and some metadata about the
 // console's available modules.
 func (c *Console) Welcome() {
-	// Print some generic Geth metadata
-	fmt.Fprintf(c.printer, "Welcome to the Geth JavaScript console!\n\n")
+	// Print some generic Drep metadata
+	fmt.Fprintf(c.printer, "Welcome to the Drep JavaScript console!\n\n")
 	c.jsre.Run(`
 		console.log("instance: " + drep.version.node);
-		console.log("coinbase: " + eth.coinbase);
-		console.log("at block: " + eth.blockNumber + " (" + new Date(1000 * eth.getBlock(eth.blockNumber).timestamp) + ")");
-		console.log(" datadir: " + admin.datadir);
+		//console.log(" datadir: " + admin.datadir);
 	`)
 	// List all the supported modules for the user to call
 	if apis, err := c.client.SupportedModules(); err == nil {

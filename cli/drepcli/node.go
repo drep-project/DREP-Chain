@@ -1,25 +1,32 @@
 package main
 
 import (
+
+	"sync"
+	"os"
+	"strings"
+	"path/filepath"
+
 	"BlockChainTest/network"
 	"BlockChainTest/node"
 	"BlockChainTest/processor"
+	"BlockChainTest/cli/drepcli/utils"
 	"BlockChainTest/rpc"
-	"BlockChainTest/store"
-	"sync"
-	"os"
-	
-	"strings"
-	"path/filepath"
 )
 
 type Node struct {
 	lock sync.RWMutex
 	rpcServer *rpc.RpcServer
+	nodeConfig *nodeConfig
 	StartComplete  chan struct{}
 	stopChanel   chan struct{}
 }
 
+func NewNode(nCfg *nodeConfig) Node{
+	return Node{
+		nodeConfig:nCfg,
+	}
+}
 
 func (n *Node) Start() {
 	n.StartComplete =  make(chan struct{},1)
@@ -30,18 +37,8 @@ func (n *Node) Start() {
 			if msg != nil {
 				p.Process(peer, t, msg)
 			}
-		}, store.GetPort())
-
-		defautConfig := &rpc.RpcConfig{
-			IPCPath:DefaultIPCEndpoint(clientIdentifier),
-			HTTPHost : rpc.DefaultHTTPHost ,
-			HTTPPort : rpc.DefaultHTTPPort,
-			WSHost : rpc.DefaultWSHost,
-			WSPort : rpc.DefaultWSPort,
-			HTTPVirtualHosts : []string{"localhost"},
-		}
-
-		n.rpcServer = rpc.NewRpcServer(defautConfig)
+		}, network.DefaultPort())
+		n.rpcServer = rpc.NewRpcServer(&n.nodeConfig.RpcConfig)
 		n.rpcServer.StartRPC()
 		processor.GetInstance().Start()
 		node.GetNode().Start()
@@ -69,24 +66,11 @@ func (n *Node) Attach() (*rpc.Client, error) {
 	n.lock.RLock()
 	defer n.lock.RUnlock()
 
-	return rpc.DialInProc(n.GetIpcHandler()), nil
-}
-
-
-
-func (n *Node) GetIpcHandler()*rpc.Server{
-	return n.rpcServer.GetIpcHandler()
-}
-func (n *Node) GetHttpHandler()*rpc.Server{
-	return n.rpcServer.GetHttpHandler()
+	return rpc.DialInProc(n.rpcServer.IpcHandler), nil
 }
 
 func DefaultDataDir() string {
-	return "dataDir"
-}
-
-func DefaultLogDir() string {
-	return "logDir"
+	return utils.AppDataDir("drep", false)
 }
 
 // DefaultIPCEndpoint returns the IPC path used by default.

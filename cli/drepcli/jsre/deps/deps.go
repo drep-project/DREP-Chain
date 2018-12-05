@@ -17,5 +17,6 @@
 // Package deps contains the console JavaScript dependencies Go embedded.
 package deps
 
+// eth version v0.20.6
 //go:generate go-bindata -nometadata -pkg deps -o bindata.go bignumber.js drep.js
 //go:generate gofmt -w -s bindata.go

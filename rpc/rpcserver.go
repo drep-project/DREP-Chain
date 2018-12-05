@@ -22,16 +22,22 @@ const (
 	DefaultWSHost   = "localhost" // Default host interface for the websocket RPC server
 	DefaultWSPort   = 15646        // Default TCP port for the websocket RPC server
 	DefaultRestHost = "localhost"  // Default host interface for the REST RPC server
-	DefaultRestPort = 156457       // Default TCP port for the REST RPC server
+	DefaultRestPort = 15647       // Default TCP port for the REST RPC server
 )
 
 type RpcConfig struct {
+
+	// IPCEnabled 
+	IPCEnabled bool
+
 	// IPCPath is the requested location to place the IPC endpoint. If the path is
 	// a simple file name, it is placed inside the data directory (or on the root
 	// pipe path on Windows), whereas if it's a resolvable path name (absolute or
 	// relative), then that specific path is enforced. An empty path disables IPC.
 	IPCPath string `toml:",omitempty"`
 
+	// HTTPEnabled  
+	HTTPEnabled bool
 	// HTTPHost is the host interface on which to start the HTTP RPC server. If this
 	// field is empty, no HTTP API endpoint will be started.
 	HTTPHost string `toml:",omitempty"`
@@ -64,6 +70,8 @@ type RpcConfig struct {
 	// interface.
 	HTTPTimeouts HTTPTimeouts
 
+	// WSEnabled  
+	WSEnabled bool
 	// WSHost is the host interface on which to start the websocket RPC server. If
 	// this field is empty, no websocket API endpoint will be started.
 	WSHost string `toml:",omitempty"`
@@ -90,7 +98,8 @@ type RpcConfig struct {
 	// private APIs to untrusted users is a major security risk.
 	WSExposeAll bool `toml:",omitempty"`
 
-
+	// RESTEnabled  
+	RESTEnabled bool
 	// HTTPHost is the host interface on which to start the HTTP RPC server. If this
 	// field is empty, no HTTP API endpoint will be started.
 	RESTHost string `toml:",omitempty"`
@@ -144,7 +153,7 @@ func (c *RpcConfig) HTTPEndpoint() string {
 // HTTPEndpoint resolves an HTTP endpoint based on the configured host interface
 // and port parameters.
 func (c *RpcConfig) RestEndpoint() string {
-	if c.HTTPHost == "" {
+	if c.RESTHost == "" {
 		return ""
 	}
 	return fmt.Sprintf("%s:%d", c.RESTHost, c.RESTPort)
@@ -179,30 +188,33 @@ func DefaultWSEndpoint() string {
 }
 
 type RpcServer struct {
-	rpcAPIs       []API   // List of APIs currently provided by the node
+	RpcAPIs       []API   // List of APIs currently provided by the node
 	inprocHandler *Server // In-process RPC request handler to process the API requests
 
-	ipcEndpoint string       // IPC endpoint to listen at (empty = IPC disabled)
-	ipcListener net.Listener // IPC RPC listener socket to serve API requests
-	ipcHandler  *Server  // IPC RPC request handler to process the API requests
+	IpcEndpoint string       // IPC endpoint to listen at (empty = IPC disabled)
+	IpcListener net.Listener // IPC RPC listener socket to serve API requests
+	IpcHandler  *Server  // IPC RPC request handler to process the API requests
 
-	httpEndpoint  string       // HTTP endpoint (interface + port) to listen at (empty = HTTP disabled)
-	httpWhitelist []string     // HTTP RPC modules to allow through this endpoint
-	httpListener  net.Listener // HTTP RPC listener socket to server API requests
-	httpHandler   *Server  // HTTP RPC request handler to process the API requests
+	HttpEndpoint  string       // HTTP endpoint (interface + port) to listen at (empty = HTTP disabled)
+	HttpWhitelist []string     // HTTP RPC modules to allow through this endpoint
+	HttpListener  net.Listener // HTTP RPC listener socket to server API requests
+	HttpHandler   *Server  // HTTP RPC request handler to process the API requests
 
-	wsEndpoint string       // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
-	wsListener net.Listener // Websocket RPC listener socket to server API requests
-	wsHandler  *Server  // Websocket RPC request handler to process the API requests
+	WsEndpoint string       // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
+	WsListener net.Listener // Websocket RPC listener socket to server API requests
+	WsHandler  *Server  // Websocket RPC request handler to process the API requests
 	
+	RestEndpoint string       // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
+	RestListener net.Listener // Websocket RPC listener socket to server API requests
+
 	lock sync.RWMutex
-	rpcConfig *RpcConfig
+	RpcConfig *RpcConfig
 }
 
 
-func NewRpcServer(rpcConfig *RpcConfig)*RpcServer{
+func NewRpcServer(RpcConfig *RpcConfig)*RpcServer{
 	api := API{
-		Namespace : "database",
+		Namespace : "db",
 		Version   :"1.0",
 		Service  : &database.DataBaseAPI{},
 		Public  :  true      ,
@@ -221,22 +233,13 @@ func NewRpcServer(rpcConfig *RpcConfig)*RpcServer{
 	}
 	
     return &RpcServer{
-		ipcEndpoint: rpcConfig.IPCEndpoint(),
-		httpEndpoint:  rpcConfig.HTTPEndpoint(),
-		wsEndpoint:  rpcConfig.WSEndpoint(),
-		rpcConfig: rpcConfig,
-		rpcAPIs:[]API{api,chainApi,accountApi},
+		IpcEndpoint: RpcConfig.IPCEndpoint(),
+		HttpEndpoint:  RpcConfig.HTTPEndpoint(),
+		WsEndpoint:  RpcConfig.WSEndpoint(),
+		RestEndpoint: RpcConfig.RestEndpoint(),
+		RpcConfig: RpcConfig,
+		RpcAPIs:[]API{api,chainApi,accountApi},
     }
-}
-
-func (rpcserver *RpcServer) GetIpcHandler()*Server{
-     return rpcserver.ipcHandler
-}
-func (rpcserver *RpcServer) GetHttpHandler()*Server{
-	return rpcserver.httpHandler
-}
-func (rpcserver *RpcServer) GetConfig() *RpcConfig {
-	return rpcserver.rpcConfig
 }
 
 // startRPC is a helper method to start all the various RPC endpoint during node
@@ -244,32 +247,36 @@ func (rpcserver *RpcServer) GetConfig() *RpcConfig {
 // assumptions about the state of the node.
 func (rpcserver *RpcServer) StartRPC() error {
 	// All API endpoints started successfully
-	//rpcserver.rpcAPIs = apis
+	//rpcserver.RpcAPIs = apis
 	// Start the various API endpoints, terminating all in case of errors
-	if err := rpcserver.startInProc(rpcserver.rpcAPIs); err != nil {
+	if err := rpcserver.StartInProc(rpcserver.RpcAPIs); err != nil {
 		return err
 	}
-	if err := rpcserver.startIPC(rpcserver.rpcAPIs); err != nil {
-		rpcserver.stopInProc()
+	if err := rpcserver.StartIPC(rpcserver.RpcAPIs); err != nil {
+		rpcserver.StopInProc()
 		return err
 	}
-	if err := rpcserver.startHTTP(rpcserver.httpEndpoint, rpcserver.rpcAPIs, rpcserver.rpcConfig.HTTPModules, rpcserver.rpcConfig.HTTPCors, rpcserver.rpcConfig.HTTPVirtualHosts, rpcserver.rpcConfig.HTTPTimeouts); err != nil {
-		rpcserver.stopIPC()
-		rpcserver.stopInProc()
+	if err := rpcserver.StartHTTP(rpcserver.HttpEndpoint, rpcserver.RpcAPIs, rpcserver.RpcConfig.HTTPModules, rpcserver.RpcConfig.HTTPCors, rpcserver.RpcConfig.HTTPVirtualHosts, rpcserver.RpcConfig.HTTPTimeouts); err != nil {
+		rpcserver.StopIPC()
+		rpcserver.StopInProc()
 		return err
 	}
-	if err := rpcserver.startWS(rpcserver.wsEndpoint, rpcserver.rpcAPIs, rpcserver.rpcConfig.WSModules, rpcserver.rpcConfig.WSOrigins, rpcserver.rpcConfig.WSExposeAll); err != nil {
-		rpcserver.stopHTTP()
-		rpcserver.stopIPC()
-		rpcserver.stopInProc()
+	if err := rpcserver.StartWS(rpcserver.WsEndpoint, rpcserver.RpcAPIs, rpcserver.RpcConfig.WSModules, rpcserver.RpcConfig.WSOrigins, rpcserver.RpcConfig.WSExposeAll); err != nil {
+		rpcserver.StopHTTP()
+		rpcserver.StopIPC()
+		rpcserver.StopInProc()
 		return err
 	}
-	rest.HttpStart(DefaultRestEndpoint())
+
+	if err := rpcserver.StartREST(rpcserver.RestEndpoint); err != nil {
+		rpcserver.StopREST()
+		return err
+	}
 	return nil
 }
 
-// startInProc initializes an in-process RPC endpoint.
-func (rpcserver *RpcServer) startInProc(apis []API) error {
+// StartInProc initializes an in-process RPC endpoint.
+func (rpcserver *RpcServer) StartInProc(apis []API) error {
 	// Register all the APIs exposed by the services
 	handler := NewServer()
 	for _, api := range apis {
@@ -282,45 +289,51 @@ func (rpcserver *RpcServer) startInProc(apis []API) error {
 	return nil
 }
 
-// stopInProc terminates the in-process RPC endpoint.
-func (rpcserver *RpcServer) stopInProc() {
+// StopInProc terminates the in-process RPC endpoint.
+func (rpcserver *RpcServer) StopInProc() {
 	if rpcserver.inprocHandler != nil {
 		rpcserver.inprocHandler.Stop()
 		rpcserver.inprocHandler = nil
 	}
 }
 
-// startIPC initializes and starts the IPC RPC endpoint.
-func (rpcserver *RpcServer) startIPC(apis []API) error {
-	if rpcserver.ipcEndpoint == "" {
+// StartIPC initializes and starts the IPC RPC endpoint.
+func (rpcserver *RpcServer) StartIPC(apis []API) error {
+	if !rpcserver.RpcConfig.IPCEnabled {
+		return nil
+	}
+	if rpcserver.IpcEndpoint == "" {
 		return nil // IPC disabled.
 	}
-	listener, handler, err := StartIPCEndpoint(rpcserver.ipcEndpoint, apis)
+	listener, handler, err := StartIPCEndpoint(rpcserver.IpcEndpoint, apis)
 	if err != nil {
 		return err
 	}
-	rpcserver.ipcListener = listener
-	rpcserver.ipcHandler = handler
-	log.Info("IPC endpoint opened", "url", rpcserver.ipcEndpoint)
+	rpcserver.IpcListener = listener
+	rpcserver.IpcHandler = handler
+	log.Info("IPC endpoint opened", "url", rpcserver.IpcEndpoint)
 	return nil
 }
 
-// stopIPC terminates the IPC RPC endpoint.
-func (rpcserver *RpcServer) stopIPC() {
-	if rpcserver.ipcListener != nil {
-		rpcserver.ipcListener.Close()
-		rpcserver.ipcListener = nil
+// StopIPC terminates the IPC RPC endpoint.
+func (rpcserver *RpcServer) StopIPC() {
+	if rpcserver.IpcListener != nil {
+		rpcserver.IpcListener.Close()
+		rpcserver.IpcListener = nil
 
-		log.Info("IPC endpoint closed", "endpoint", rpcserver.ipcEndpoint)
+		log.Info("IPC endpoint closed", "endpoint", rpcserver.IpcEndpoint)
 	}
-	if rpcserver.ipcHandler != nil {
-		rpcserver.ipcHandler.Stop()
-		rpcserver.ipcHandler = nil
+	if rpcserver.IpcHandler != nil {
+		rpcserver.IpcHandler.Stop()
+		rpcserver.IpcHandler = nil
 	}
 }
 
-// startHTTP initializes and starts the HTTP RPC endpoint.
-func (rpcserver *RpcServer) startHTTP(endpoint string, apis []API, modules []string, cors []string, vhosts []string, timeouts HTTPTimeouts) error {
+// StartHTTP initializes and starts the HTTP RPC endpoint.
+func (rpcserver *RpcServer) StartHTTP(endpoint string, apis []API, modules []string, cors []string, vhosts []string, timeouts HTTPTimeouts) error {
+	if !rpcserver.RpcConfig.HTTPEnabled {
+		return nil
+	}
 	// Short circuit if the HTTP endpoint isn't being exposed
 	if endpoint == "" {
 		return nil
@@ -331,29 +344,32 @@ func (rpcserver *RpcServer) startHTTP(endpoint string, apis []API, modules []str
 	}
 	log.Info("HTTP endpoint opened", "url", fmt.Sprintf("http://%s", endpoint), "cors", strings.Join(cors, ","), "vhosts", strings.Join(vhosts, ","))
 	// All listeners booted successfully
-	rpcserver.httpEndpoint = endpoint
-	rpcserver.httpListener = listener
-	rpcserver.httpHandler = handler
+	rpcserver.HttpEndpoint = endpoint
+	rpcserver.HttpListener = listener
+	rpcserver.HttpHandler = handler
 
 	return nil
 }
 
-// stopHTTP terminates the HTTP RPC endpoint.
-func (rpcserver *RpcServer) stopHTTP() {
-	if rpcserver.httpListener != nil {
-		rpcserver.httpListener.Close()
-		rpcserver.httpListener = nil
+// StopHTTP terminates the HTTP RPC endpoint.
+func (rpcserver *RpcServer) StopHTTP() {
+	if rpcserver.HttpListener != nil {
+		rpcserver.HttpListener.Close()
+		rpcserver.HttpListener = nil
 
-		log.Info("HTTP endpoint closed", "url", fmt.Sprintf("http://%s", rpcserver.httpEndpoint))
+		log.Info("HTTP endpoint closed", "url", fmt.Sprintf("http://%s", rpcserver.HttpEndpoint))
 	}
-	if rpcserver.httpHandler != nil {
-		rpcserver.httpHandler.Stop()
-		rpcserver.httpHandler = nil
+	if rpcserver.HttpHandler != nil {
+		rpcserver.HttpHandler.Stop()
+		rpcserver.HttpHandler = nil
 	}
 }
 
-// startWS initializes and starts the websocket RPC endpoint.
-func (rpcserver *RpcServer) startWS(endpoint string, apis []API, modules []string, wsOrigins []string, exposeAll bool) error {
+// StartWS initializes and starts the websocket RPC endpoint.
+func (rpcserver *RpcServer) StartWS(endpoint string, apis []API, modules []string, wsOrigins []string, exposeAll bool) error {
+	if !rpcserver.RpcConfig.WSEnabled {
+		return nil
+	}
 	// Short circuit if the WS endpoint isn't being exposed
 	if endpoint == "" {
 		return nil
@@ -364,24 +380,24 @@ func (rpcserver *RpcServer) startWS(endpoint string, apis []API, modules []strin
 	}
 	log.Info("WebSocket endpoint opened", "url", fmt.Sprintf("ws://%s", listener.Addr()))
 	// All listeners booted successfully
-	rpcserver.wsEndpoint = endpoint
-	rpcserver.wsListener = listener
-	rpcserver.wsHandler = handler
+	rpcserver.WsEndpoint = endpoint
+	rpcserver.WsListener = listener
+	rpcserver.WsHandler = handler
 
 	return nil
 }
 
-// stopWS terminates the websocket RPC endpoint.
-func (rpcserver *RpcServer) stopWS() {
-	if rpcserver.wsListener != nil {
-		rpcserver.wsListener.Close()
-		rpcserver.wsListener = nil
+// StopWS terminates the websocket RPC endpoint.
+func (rpcserver *RpcServer) StopWS() {
+	if rpcserver.WsListener != nil {
+		rpcserver.WsListener.Close()
+		rpcserver.WsListener = nil
 
-		log.Info("WebSocket endpoint closed", "url", fmt.Sprintf("ws://%s", rpcserver.wsEndpoint))
+		log.Info("WebSocket endpoint closed", "url", fmt.Sprintf("ws://%s", rpcserver.WsEndpoint))
 	}
-	if rpcserver.wsHandler != nil {
-		rpcserver.wsHandler.Stop()
-		rpcserver.wsHandler = nil
+	if rpcserver.WsHandler != nil {
+		rpcserver.WsHandler.Stop()
+		rpcserver.WsHandler = nil
 	}
 }
 
@@ -391,9 +407,34 @@ func (rpcserver *RpcServer) Stop() error {
 	rpcserver.lock.Lock()
 	defer rpcserver.lock.Unlock()
 	// Terminate the API, services and the p2p server.
-	rpcserver.stopWS()
-	rpcserver.stopHTTP()
-	rpcserver.stopIPC()
-	rpcserver.rpcAPIs = nil
+	rpcserver.StopWS()
+	rpcserver.StopHTTP()
+	rpcserver.StopIPC()
+	rpcserver.RpcAPIs = nil
 	return nil
+}
+
+
+// StartHTTP initializes and starts the HTTP RPC endpoint.
+func (rpcserver *RpcServer) StartREST(endpoint string) error {
+	if !rpcserver.RpcConfig.RESTEnabled {
+		return nil
+	}
+	listener, err := rest.HttpStart(endpoint)
+	if err != nil {
+		return err
+	}
+	rpcserver.RestEndpoint = endpoint
+	rpcserver.RestListener = listener
+	return nil
+}
+
+// StopHTTP terminates the HTTP RPC endpoint.
+func (rpcserver *RpcServer) StopREST()  {
+	if rpcserver.RestListener != nil {
+		rpcserver.RestListener.Close()
+		rpcserver.RestListener = nil
+
+		log.Info("REST endpoint closed", "url", fmt.Sprintf("http://%s", rpcserver.HttpEndpoint))
+	}
 }
