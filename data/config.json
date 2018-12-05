@@ -2,7 +2,7 @@
   "chainid": 0,
   "ip": "127.0.0.1",
   "port": 55555,
-  "myindex": 0,
+  "myindex": 1,
   "debugnodes": [
     {
       "PubKey": {

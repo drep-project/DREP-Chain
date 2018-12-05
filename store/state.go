@@ -11,7 +11,6 @@ import (
     "time"
     "BlockChainTest/trie"
     "BlockChainTest/accounts"
-    "fmt"
     "BlockChainTest/config"
 )
 
@@ -89,7 +88,6 @@ func GenerateBlock() (*bean.Block, error) {
     maxHeight := database.GetMaxHeight()
     height := maxHeight + 1
     ts := PickTransactions(BlockGasLimit)
-    fmt.Println("ts: ", ts)
     previousBlock := database.GetHighestBlock()
     var b, previousHash []byte
     var err error
@@ -113,7 +111,6 @@ func GenerateBlock() (*bean.Block, error) {
     if err != nil {
         return nil, err
     }
-    fmt.Println("txHashes: ", txHashes, len(txHashes))
     merkle := trie.NewMerkle(txHashes)
     merkleRoot := merkle.Root.Hash
     return &bean.Block{
