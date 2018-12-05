@@ -30,6 +30,7 @@ func SendTransaction(t *bean.Transaction) error {
 func GenerateBalanceTransaction(to string, destChain int64, amount *big.Int) *bean.Transaction {
     chainId := config.GetChainId()
     nonce := database.GetNonceOutsideTransaction(accounts.Hex2Address(to), chainId)
+    fmt.Println("fefefekfoekfoefkeof", nonce)
     nonce++
     data := &bean.TransactionData{
         Version: store.Version,
