@@ -27,8 +27,6 @@ func ParsePK(pk *PK) *mycrypto.Point {
 }
 
 type DebugNode struct {
-    Index   int
-    Prv     string
     PubKey  *PK
     Address string
     IP      string
