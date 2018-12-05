@@ -119,6 +119,18 @@ func main()  {
 				t := node.GenerateCallContractTransaction(accounts.Hex2Address(addr), chainId, inp, readOnly)
 				node.SendTransaction(t)
 			}
+		case "check":
+			{
+				var addr string
+				var chainId int64
+				fmt.Print("addr: ")
+				fmt.Scanln(&addr)
+				fmt.Print("chainId: ")
+				fmt.Scanln(&chainId)
+				fmt.Print("input: ")
+				storage := database.GetStorageOutsideTransaction(accounts.Hex2Address(addr), chainId)
+				fmt.Println("contract storage: ", storage)
+			}
 		}
 	}
 }
