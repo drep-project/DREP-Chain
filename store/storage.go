@@ -42,6 +42,7 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
 }
 
 func execute(t *bean.Transaction) *big.Int {
+    fmt.Println("tttt: ", t.Data)
     addr := accounts.PubKey2Address(t.Data.PubKey)
     nonce := t.Data.Nonce
     curN := database.GetNonceOutsideTransaction(addr, t.Data.ChainId)
@@ -91,6 +92,10 @@ func execute(t *bean.Transaction) *big.Int {
         {
             evm := vm.NewEVM()
             var gasFee = new(big.Int).Mul(CreateContractGas, gasPrice)
+            fmt.Println("gas limit: ", gasLimit)
+            fmt.Println("gas fee:   ", gasFee)
+            fmt.Println("create contract gas: ", CreateContractGas)
+            fmt.Println("balance: ", balance)
             if gasLimit.Cmp(CreateContractGas) < 0 {
                 balance.Sub(balance, gasFee)
             } else {
@@ -98,9 +103,18 @@ func execute(t *bean.Transaction) *big.Int {
                 usedGas := new(big.Int).Sub(new(big.Int).SetBytes(t.Data.GasLimit), new(big.Int).SetUint64(returnGas))
                 gasFee.Add(gasFee, new(big.Int).Mul(usedGas, gasPrice))
                 balance.Sub(balance, gasFee)
+                fmt.Println("returnGas: ", returnGas)
+                fmt.Println("usedGas: ", usedGas)
+                fmt.Println("gasFee: ", gasFee)
+                fmt.Println("balance: ", balance)
             }
-            database.PutBalanceOutSideTransaction(addr, t.Data.ChainId, balance)
             evm.State.Commit()
+            fmt.Println("db balance after commit: ", database.GetBalanceOutsideTransaction(addr, t.Data.ChainId))
+            database.PutBalanceOutSideTransaction(addr, t.Data.ChainId, balance)
+            fmt.Println("addr: ", addr.Hex())
+            fmt.Println("t.Data.ChainId: ", t.Data.ChainId)
+            fmt.Println("balance: ", balance)
+            fmt.Println("db balance before commit: ", database.GetBalanceOutsideTransaction(addr, t.Data.ChainId))
         }
     case CallContractType:
         {
@@ -114,8 +128,8 @@ func execute(t *bean.Transaction) *big.Int {
                 gasFee.Add(gasFee, new(big.Int).Mul(usedGas, gasPrice))
                 balance.Sub(balance, gasFee)
             }
-            database.PutBalanceOutSideTransaction(addr, t.Data.ChainId, balance)
             evm.State.Commit()
+            database.PutBalanceOutSideTransaction(addr, t.Data.ChainId, balance)
         }
     }
     return gasFee

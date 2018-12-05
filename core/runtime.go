@@ -46,9 +46,6 @@ type Message struct {
 }
 
 func Tx2Message(tx *bean.Transaction) *Message {
-	gasLimit := new(big.Int).SetBytes(tx.Data.GasLimit)
-	gasValue := new(big.Int).SetBytes(tx.Data.GasPrice)
-	gas := new(big.Int).Mul(gasLimit, gasValue)
 	readOnly := false
 	if bytes.Equal(tx.Data.Data[:1], []byte{1}) {
 		readOnly = true
@@ -58,7 +55,7 @@ func Tx2Message(tx *bean.Transaction) *Message {
 		To: accounts.Hex2Address(tx.Data.To),
 		ChainId: tx.Data.ChainId,
 		DestChain: tx.Data.DestChain,
-		Gas: gas.Uint64(),
+		Gas: new(big.Int).SetBytes(tx.Data.GasLimit).Uint64(),
 		Value: new(big.Int).SetBytes(tx.Data.Amount),
 		Nonce: uint64(tx.Data.Nonce),
 		Input: tx.Data.Data[1:],
