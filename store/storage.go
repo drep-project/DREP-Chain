@@ -45,10 +45,12 @@ func execute(t *bean.Transaction) *big.Int {
     addr := accounts.PubKey2Address(t.Data.PubKey)
     nonce := t.Data.Nonce
     curN := database.GetNonceOutsideTransaction(addr, t.Data.ChainId)
+    fmt.Println("curN", curN, "nonce", nonce)
     if curN + 1 != nonce {
         return nil
     }
     database.PutNonceOutsideTransaction(addr, t.Data.ChainId, curN + 1)
+    fmt.Println("retain agin", database.GetNonceOutsideTransaction(addr, t.Data.ChainId))
     gasPrice := big.NewInt(0).SetBytes(t.Data.GasPrice)
     gasLimit := big.NewInt(0).SetBytes(t.Data.GasLimit)
     gasFee := big.NewInt(0).Mul(gasLimit, gasPrice)
