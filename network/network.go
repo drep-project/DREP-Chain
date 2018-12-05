@@ -20,28 +20,23 @@ var (
     lock sync.Mutex
 )
 
-func SendMessage(peers []*Peer, msg interface{}) (error, []*Peer) {
+func SendMessage(peers []*Peer, msg interface{}) (sucPeers []*Peer, failPeers []*Peer) {
    lock.Lock()
    defer lock.Unlock()
-   //suc := false
-   r := make([]*Peer, 0)
+   sucPeers = make([]*Peer, 0)
+   failPeers = make([]*Peer, 0)
    for _, peer := range peers {
        task := &Task{peer, msg}
        if err := task.execute(); err != nil {
            switch err.(type) {
            case *util.TimeoutError, *util.ConnectionError:
-               r = append(r, peer)
-               }
+               failPeers = append(failPeers, peer)
+           }
        } else {
-           //suc = true
+           sucPeers = append(sucPeers, peer)
        }
    }
-   //if suc {
-   //    return nil, r
-   //} else {
-   //    return &util.OfflineError{}, r
-   //}
-   return nil, r
+   return
 }
 
 func Start(process func(*Peer, int, interface{}), port Port) {
