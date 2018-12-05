@@ -12,6 +12,10 @@ func TestNewRootAccount(t *testing.T) {
     account, err := NewNormalAccount(parent, chainId)
     fmt.Println("err: ", err)
     fmt.Println("account: ", account)
+    fmt.Println("prv:   ", hex.EncodeToString(account.Node.PrvKey.Prv))
+    fmt.Println("pub x: ", hex.EncodeToString(account.Node.PrvKey.PubKey.X))
+    fmt.Println("pub y: ", hex.EncodeToString(account.Node.PrvKey.PubKey.Y))
+    fmt.Println("address: ", account.Node.Address().Hex())
     err = MiniSave(account.Node)
     fmt.Println("save err: ", err)
 }
