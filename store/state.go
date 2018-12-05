@@ -63,6 +63,7 @@ func init()  {
     adminPubKey = miners[0].PubKey
     IsStart = myIndex < minerNum
 
+    port = network.Port(config.GetPort())
     //if Solo {
     //    minerNum = 1
     //    ip0 = network.IP("127.0.0.1")

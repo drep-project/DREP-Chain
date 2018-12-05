@@ -17,11 +17,6 @@ var (
 type Config struct {
     RelayNode  []string
     ChainId    int64
-    ConfigDir  string
-    DataDir    string
-    DocsDir    string
-    Keystore   string
-    IP         string
     Port       int
     MyIndex    int
     DebugNodes []*DebugNode
@@ -63,4 +58,8 @@ func SetChain(chainId int64, dataDir string) error {
 func SetKeystore(keystorePath string) error {
     viper.Set("Keystore", keystorePath)
     return viper.WriteConfig()
+}
+
+func GetPort() int {
+    return viper.GetInt("Port")
 }
