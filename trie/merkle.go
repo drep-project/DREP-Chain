@@ -4,7 +4,6 @@ import (
     "math"
     "bytes"
     "BlockChainTest/mycrypto"
-    "BlockChainTest/log"
 )
 
 type MerkleNode struct {

@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 
-// geth is the official command-line client for Ethereum.
+// drep is the official command-line client for Ethereum.
 package main
 
 import (
@@ -23,6 +23,7 @@ import (
 	"os"
 	godebug "runtime/debug"
 	"sort"
+	"path"
 	"strconv"
 
 	"BlockChainTest/log"
@@ -35,7 +36,7 @@ import (
 )
 
 const (
-	clientIdentifier = "geth" // Client identifier to advertise over the network
+	clientIdentifier = "drep" // Client identifier to advertise over the network
 )
 
 var (
@@ -43,12 +44,16 @@ var (
 	gitCommit = ""
 	// The app that holds all commands and flags.
 	app = utils.NewApp(gitCommit, "the drep command line interface")
-
+	nCfg *nodeConfig
+	nodeFlags = []cli.Flag{
+		utils.DataDirFlag,
+		configFileFlag,
+	}
 	rpcFlags = []cli.Flag{
-		utils.RPCEnabledFlag,
-		utils.RPCListenAddrFlag,
-		utils.RPCPortFlag,
-		utils.RPCApiFlag,
+		utils.HTTPEnabledFlag,
+		utils.HTTPListenAddrFlag,
+		utils.HTTPPortFlag,
+		utils.HTTPApiFlag,
 		utils.WSEnabledFlag,
 		utils.WSListenAddrFlag,
 		utils.WSPortFlag,
@@ -56,11 +61,14 @@ var (
 		utils.WSAllowedOriginsFlag,
 		utils.IPCDisabledFlag,
 		utils.IPCPathFlag,
+		utils.RESTEnabledFlag,
+		utils.RESTListenAddrFlag,
+		utils.RESTPortFlag,
 	}
 )
 
 func init() {
-	// Initialize the CLI app and start Geth
+	// Initialize the CLI app and start Drep
 	app.Action = drep
 	app.HideVersion = true // we have a command to print the version
 	app.Copyright = "Copyright 2013-2018 The drep Authors"
@@ -72,11 +80,13 @@ func init() {
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
+	app.Flags = append(app.Flags, nodeFlags...)
 	app.Flags = append(app.Flags, rpcFlags...)
 	app.Flags = append(app.Flags, consoleFlags...)
 
 	app.Before = func(ctx *cli.Context) error {
-		err := log.SetUp(DefaultLogDir())  //logDir config here
+		nCfg = makeConfig(ctx)
+		err := log.SetUp(path.Join(nCfg.DataDir, "log"))  //logDir config here
 		if err != nil {
 			fmt.Println(err.Error())
 			return err
@@ -112,15 +122,16 @@ func main() {
 	}
 }
 
-// geth is the main entry point into the system if no special subcommand is ran.
+// drep is the main entry point into the system if no special subcommand is ran.
 // It creates a default node based on the command line arguments and runs it in
 // blocking mode, waiting for it to be shut down.
 func drep(ctx *cli.Context) error {
 	if args := ctx.Args(); len(args) > 0 {
 		return fmt.Errorf("invalid command: %q", args[0])
 	}
+	nCfg := makeConfig(ctx)
 	//start node and attach
-	node := &Node{}
+	node := NewNode(nCfg)
 	//defer node.Stop()
 	node.Start()
 	node.Wait()
