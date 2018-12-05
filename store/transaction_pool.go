@@ -8,7 +8,6 @@ import (
     "BlockChainTest/util/list"
     "BlockChainTest/database"
     "BlockChainTest/accounts"
-    "fmt"
 )
 
 var (
@@ -66,11 +65,6 @@ func checkAndGetAddr(tran *bean.Transaction) (bool, accounts.CommonAddress) {
     }
     // TODO Check sig
     if database.GetNonceOutsideTransaction(addr, chainId) >= tran.Data.Nonce {
-        fmt.Println(
-            "database.GetNonceOutsideTransaction(addr, chainId)",
-            database.GetNonceOutsideTransaction(addr, chainId),
-            tran.Data.Nonce,
-        )
         return false, accounts.CommonAddress{}
     }
     {
@@ -89,9 +83,7 @@ func checkAndGetAddr(tran *bean.Transaction) (bool, accounts.CommonAddress) {
 }
 //func AddTransaction(id string, transaction *common.transaction) {
 func AddTransaction(transaction *bean.Transaction) bool {
-    fmt.Println("adding")
     check, addr := checkAndGetAddr(transaction)
-    fmt.Println("check: ", check)
     if !check {
         return false
     }
