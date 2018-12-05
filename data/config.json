@@ -3,8 +3,17 @@
   "ip": "127.0.0.1",
   "port": 55555,
   "minernum": 2,
-  "myindex": 0,
+  "myindex": 1,
   "debugnodes": [
+    {
+      "PubKey": {
+        "X": "ff23066c1af1227139b399d9b7cadef23829851958e114287524876737bf845d",
+        "Y": "b02c9f32b110a17acf1677066ac205e3ec6b8215885def0db6e65ecd584bbc70"
+      },
+      "Address": "5ab50440596c7c1069bb1c751368936b245d0216",
+      "IP": "192.168.0.108",
+      "Port": 55555
+    },
     {
       "PubKey": {
         "X": "75eb43a353c7ebadbf72d227a716852e0de1bc124e532c6565adafdf4ff7cf51",
@@ -12,15 +21,6 @@
       },
       "Address": "4dc955d67c1ca9214105c352c23d12cb355086fc",
       "IP": "192.168.0.152",
-      "Port": 55555
-    },
-    {
-      "PubKey": {
-        "X": "ff23066c1af1227139b399d9b7cadef23829851958e114287524876737bf845d",
-        "Y": "b02c9f32b110a17acf1677066ac205e3ec6b8215885def0db6e65ecd584bbc70"
-      },
-      "Address": "5ab50440596c7c1069bb1c751368936b245d0216",
-      "IP": "192.168.0.197",
       "Port": 55555
     }
   ]
