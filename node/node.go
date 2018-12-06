@@ -127,7 +127,13 @@ func (n *Node) runAsMember() {
     member1 := consensus.NewMember(store.GetLeader(), store.GetPrvKey())
     log.Println("node member is going to process consensus for round 1")
     bytes := member1.ProcessConsensus(func(setup *bean.Setup) bool {
-        return true
+        block := &bean.Block{}
+        if err := json.Unmarshal(setup.Msg, block); err == nil {
+            //TODO block
+            return true
+        } else {
+            return false
+        }
     })
     log.Println("node member finishes consensus for round 1")
     block := &bean.Block{}
