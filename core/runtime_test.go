@@ -28,8 +28,8 @@ func ExecuteCreate(code []byte) {
 	callerAddr2 := accounts.Hex2Address(s2)
 	caller1 := &accounts.Account{Address: callerAddr1, Storage: &accounts.Storage{Balance: new(big.Int).SetInt64(100)}}
 	caller2 := &accounts.Account{Address: callerAddr2, Storage: &accounts.Storage{Balance: new(big.Int).SetInt64(200)}}
-	errPut1 := database.PutStorage(callerAddr1, chainId, caller1.Storage)
-	errPut2 := database.PutStorage(callerAddr2, chainId, caller2.Storage)
+	errPut1 := database.PutStorageOutsideTransaction(caller1.Storage, callerAddr1, chainId)
+	errPut2 := database.PutStorageOutsideTransaction(caller2.Storage, callerAddr2, chainId)
 	fmt.Println("errPut1: ", errPut1)
 	fmt.Println("errPut2: ", errPut2)
 	gas := uint64(1000000)
@@ -241,9 +241,11 @@ func TestCallMyCode(t *testing.T) {
 		fmt.Println("abi json error: ", err)
 	}
 
-	s1 := "111111"
+	//s1 := "111111"
+	s1 := "c6196f8d8165c7cbb5ffc3833d4caf0c92017c5d"
 	from := accounts.Hex2Address(s1)
-	s2 := "222222"
+	//s2 := "222222"
+	s2 := "c6196f8d8165c7cbb5ffc3833d4caf0c92017c5d"
 	to := accounts.Hex2Address(s2)
 	transferFrom, err := myabi.Pack("transferFrom", from, to, new(big.Int).SetUint64(10))
 	if err != nil {
@@ -251,6 +253,7 @@ func TestCallMyCode(t *testing.T) {
 	} else {
 		fmt.Println("abi: ", transferFrom)
 	}
+	fmt.Println("test input: ", hex.EncodeToString(transferFrom))
 	ExecuteCall(transferFrom)
 }
 
@@ -259,9 +262,7 @@ func TestThis(t *testing.T) {
 }
 
 func TestMain123(t *testing.T) {
-	s := vm.GetState()
-	db := s.GetDB()
-	itr := db.NewIterator()
+	itr := database.GetItr()
 	for itr.Next() {
 		key := itr.Key()
 		value := itr.Value()

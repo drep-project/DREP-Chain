@@ -64,7 +64,7 @@ func checkAndGetAddr(tran *bean.Transaction) (bool, accounts.CommonAddress) {
         return false, accounts.CommonAddress{}
     }
     // TODO Check sig
-    if database.GetNonce(addr, chainId) >= tran.Data.Nonce {
+    if database.GetNonceOutsideTransaction(addr, chainId) >= tran.Data.Nonce {
         return false, accounts.CommonAddress{}
     }
     {
@@ -74,14 +74,14 @@ func checkAndGetAddr(tran *bean.Transaction) (bool, accounts.CommonAddress) {
         total := big.NewInt(0)
         total.Mul(gasLimit, gasPrice)
         total.Add(total, amount)
-        if database.GetBalance(addr, chainId).Cmp(total) < 0 {
+        if database.GetBalanceOutsideTransaction(addr, chainId).Cmp(total) < 0 {
             return false, accounts.CommonAddress{}
             // TODO Remove this
         }
     }
     return true, addr
 }
-//func AddTransaction(id string, transaction *common.Transaction) {
+//func AddTransaction(id string, transaction *common.transaction) {
 func AddTransaction(transaction *bean.Transaction) bool {
     check, addr := checkAndGetAddr(transaction)
     if !check {
@@ -93,7 +93,7 @@ func AddTransaction(transaction *bean.Transaction) bool {
     }
     tranLock.Lock()
     if _, exists := tranSet[id]; exists {
-        log.Errorf("Transaction %s exists", id)
+        log.Errorf("transaction %s exists", id)
         tranLock.Unlock()
         return false
     } else {
@@ -148,7 +148,7 @@ func PickTransactions(maxGas *big.Int) []*bean.Transaction {
                             if t2, ok := it2.Next().(*bean.Transaction); ok {
                                 cn, e := tn[addr]
                                 if !e {
-                                    cn = database.GetNonce(addr, chainId)
+                                    cn = database.GetNonceOutsideTransaction(addr, chainId)
                                 }
                                 if t2.Data.Nonce != cn + 1 {
                                     continue

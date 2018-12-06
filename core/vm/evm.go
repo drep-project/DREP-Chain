@@ -43,11 +43,14 @@ func (evm *EVM) CreateContractCode(callerAddr accounts.CommonAddress, chainId in
 	}
 
 	contractAddr := account.Address
-	evm.State.SetNonce(callerAddr, chainId, nonce)
 	evm.Transfer(callerAddr, contractAddr, chainId, value)
+
+	fmt.Println("contract addr: ", contractAddr.Hex())
 
 	contract := NewContract(callerAddr, chainId, gas, value, nil)
 	contract.SetCode(contractAddr, byteCode)
+	fmt.Println("contract gas: ", contract.Gas)
+
 	ret, err := run(evm, contract, nil, false)
 	if err != nil {
 		return nil, accounts.CommonAddress{}, gas, err
@@ -58,6 +61,7 @@ func (evm *EVM) CreateContractCode(callerAddr accounts.CommonAddress, chainId in
 		return nil, accounts.CommonAddress{}, gas, err
 	}
 	fmt.Println("contract address: ", contractAddr.Hex())
+	fmt.Println("contract gas: ", contract.Gas)
 
 	createDataGas := uint64(len(ret)) * CreateDataGas
 	contract.UseGas(createDataGas)
@@ -117,9 +121,6 @@ func (evm *EVM) DelegateCall(con *Contract, contractAddr accounts.CommonAddress,
 
 
 func run(evm *EVM, contract *Contract, input []byte, readOnly bool) ([]byte, error) {
-	fmt.Println()
-	fmt.Println("running!!!!")
-	fmt.Println()
 	if !contract.ContractAddr.IsEmpty() {
 		precompiles := PrecompiledContracts
 		if p := precompiles[contract.ContractAddr]; p != nil {

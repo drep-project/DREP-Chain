@@ -3,8 +3,9 @@ package cmd
 import (
     "github.com/spf13/cobra"
     "fmt"
-    "encoding/json"
     "strconv"
+    "BlockChainTest/bean"
+    "encoding/json"
 )
 
 var block = "block"
@@ -15,55 +16,43 @@ var cmdBlock = &cobra.Command{
 
     Short: `"` + block + `" is the command to fetch and print local block details`,
 
-    Long: `"` + block + `" is the command to fetch and print local block details, if --height, --begin, --size are all omitted, 
-all blocks will be returned; if --height is specified, only the block of that specific height will be returned; otherwise, if both 
---begin and --size are specified, the blocks of height from "begin" to "begin + size - 1" will be returned; if only --size are 
-specified, only the most recent "size" number of blocks will be returned; if only --begin are specified, all the most recent blocks of 
-height starting from the "begin" will be returned.`,
+    Long: `"` + block + `" is the command to fetch and print local block details, if --height is specified, only the block 
+of that specific height will be returned; otherwise, --height will be set to default value 0 and most recent blocks are returned.`,
 
     Run: func(cmd *cobra.Command, args []string) {
-        var url string
         height, _ := strconv.ParseInt(cmd.Flag(flagHeight).Value.String(), 10, 64)
-        begin, _ := strconv.ParseInt(cmd.Flag(flagBegin).Value.String(), 10, 64)
-        size, _ := strconv.ParseInt(cmd.Flag(flagSize).Value.String(), 10, 64)
-        if height > -1 {
-            url = urlBlock(height)
-        } else if begin == -1 && size == -1 {
-            url = urlAllBlocks()
-        } else if begin == -1 {
-            url = urlMostRecentBlocks(size)
-        } else {
-            url = urlBlocksFrom(begin, size)
+        if height < -1 {
+            fmt.Println(ErrGetBlock, "--height value should be positive ")
+            return
         }
-
-        data, err := GetRequest(url)
+        url := urlGetBlock(height)
+        resp, err := GetResponse(url)
         if err != nil {
-            errBlock(err)
-            return
+            fmt.Println(ErrGetBlock, err)
         }
-
-        resp := &Response{}
-        err = json.Unmarshal(data, resp)
+        if !resp.Success {
+            fmt.Println(ErrGetBlock, resp.ErrorMsg)
+        }
+        block := &bean.Block{}
+        err = json.Unmarshal([]byte(resp.Body.(string)), block)
         if err != nil {
-            errBlock(err)
+            fmt.Println(ErrGetBlock, err)
             return
         }
-        if !resp.OK() {
-            errBlock(resp.ErrorMsg)
-            return
-        }
-
-        fmt.Println(resp.Body)
+        fmt.Println("block info:")
+        fmt.Println("version: ", block.Header.Version)
+        fmt.Println("height: ", block.Header.Height)
+        fmt.Println("chain id: ", block.Header.ChainId)
+        fmt.Println("previous hash: ", block.Header.PreviousHash)
+        fmt.Println("gas limit: ", block.Header.GasLimit)
+        fmt.Println("gas used: ", block.Header.GasUsed)
+        fmt.Println("timestamp: ", block.Header.Timestamp)
+        fmt.Println("transaction hash: ", block.Header.TxHashes)
+        fmt.Println("merkle root: ", block.Header.MerkleRoot)
     },
 }
 
 func init() {
-    cmdBlock.Flags().Int64VarP(&ptrHeight, flagHeight, "H", -1, "height of the fetched block")
-    cmdBlock.Flags().Int64VarP(&ptrBegin, flagBegin, "b", -1, "starting height of fetched blocks")
-    cmdBlock.Flags().Int64VarP(&ptrSize, flagSize, "s", -1, "number of fetched blocks")
+    cmdBlock.Flags().Int64VarP(&ptrHeight, flagHeight, "h", -1, "block height")
     CmdRoot.AddCommand(cmdBlock)
-}
-
-func errBlock(err interface{}) {
-    fmt.Println("get blocks error: ", err)
 }

@@ -5,6 +5,9 @@ import (
     "encoding/hex"
     "encoding/json"
     "path"
+    "BlockChainTest/config"
+    "errors"
+    "fmt"
 )
 
 var (
@@ -30,18 +33,6 @@ func genKeystore(keyAddr string, jsonBytes []byte) error {
     return nil
 }
 
-func load(keyAddr string) ([]byte, error) {
-    filename := getFilename(keyAddr)
-    file, err := os.Open(filename)
-    if err != nil {
-        return nil, err
-    }
-    jsonObj := make([]byte, 1024)
-    n, err := file.Read(jsonObj)
-    file.Close()
-    return jsonObj[:n], err
-}
-
 func store(node *Node) error {
     key := &Key{
         Address: node.Address().Hex(),
@@ -57,27 +48,39 @@ func store(node *Node) error {
 }
 
 func getFilename(keyAddr string) string {
-    return path.Join(KeystoreDirName, keyAddr)
+    return path.Join(KeystoreDirName, keyAddr + ".json")
 }
 
-func OpenKeystore(addr string) (*Node, error) {
-    jsonBytes, err := load(addr)
+func OpenKeystore(keystorePath string) (*Node, error) {
+    file, err := os.Open(keystorePath)
+    defer file.Close()
     if err != nil {
         return nil, err
     }
+
+    jsonBytes := make([]byte, 1024)
+    n, err := file.Read(jsonBytes)
+    if err != nil {
+        return nil, err
+    }
+
+    jsonBytes = jsonBytes[:n]
     key := &Key{}
     err = json.Unmarshal(jsonBytes, key)
     if err != nil {
         return nil, err
     }
+
     prv, err := hex.DecodeString(key.PrivateKey)
     if err != nil {
         return nil, err
     }
+
     chainCode, err := hex.DecodeString(key.ChainCode)
     if err != nil {
         return nil, err
     }
+
     node := &Node{
         PrvKey:  genPrvKey(prv),
         ChainCode: chainCode,
@@ -85,19 +88,69 @@ func OpenKeystore(addr string) (*Node, error) {
     return node, nil
 }
 
-//func getFilename(keyAddr string) string {
-//    ts := time.Now().UTC()
-//    return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), keyAddr)
-//}
-//
-//func toISO8601(t time.Time) string {
-//    var timeZone string
-//    name, offset := t.Zone()
-//    if name == "UTC" {
-//        timeZone = "Z"
-//    } else {
-//        timeZone = fmt.Sprintf("%03d00", offset/3600)
-//    }
-//    return fmt.Sprintf("%04d-%02d-%02dT%02d-%02d-%02d.%09d%s", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), timeZone)
-//
-//}
+func SaveKeystore(node *Node, keystorePath string) error {
+    key := &Key{
+        Address: node.Address().Hex(),
+        PrivateKey: hex.EncodeToString(node.PrvKey.Prv),
+        ChainId: node.ChainId,
+        ChainCode: hex.EncodeToString(node.ChainCode),
+    }
+    b, err := json.Marshal(key)
+    if err != nil {
+        return err
+    }
+
+    if keystorePath == "" {
+        panic("fuck")
+        dataDir := ""//config.GetDataDir()
+        fmt.Println("datadir: ", dataDir)
+        if dataDir == "" {
+            return errors.New("failed to get current data directory")
+        }
+        keystorePath = path.Join(dataDir, key.Address + ".json")
+    }
+
+    err = config.SetKeystore(keystorePath)
+    if err != nil {
+        fmt.Println("999", err)
+        return err
+    }
+
+    err = os.Mkdir(KeystoreDirName, os.ModeDir|os.ModePerm)
+    if err != nil {
+        return err
+    }
+    file, err := os.Create(keystorePath)
+    defer file.Close()
+    if err != nil {
+        return err
+    }
+    _, err = file.Write(b)
+    if err != nil {
+        return err
+    }
+    return nil
+}
+
+func MiniSave(node *Node) error {
+    key := &Key{
+        Address: node.Address().Hex(),
+        PrivateKey: hex.EncodeToString(node.PrvKey.Prv),
+        ChainId: node.ChainId,
+        ChainCode: hex.EncodeToString(node.ChainCode),
+    }
+    b, err := json.Marshal(key)
+    if err != nil {
+        return err
+    }
+    file, err := os.Create(key.Address + ".json")
+    defer file.Close()
+    if err != nil {
+        return err
+    }
+    _, err = file.Write(b)
+    if err != nil {
+        return err
+    }
+    return nil
+}

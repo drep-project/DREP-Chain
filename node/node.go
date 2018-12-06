@@ -81,7 +81,7 @@ func (n *Node) Start() {
                 }
             }
             log.Println("node stop")
-            time.Sleep(3 * time.Second)
+            time.Sleep(10 * time.Second)
             log.Println("Current height ", database.GetMaxHeight())
             // todo if timeout still can go. why
         }
@@ -121,7 +121,9 @@ func (n *Node) sendBlock(block *bean.Block) {
 func (n *Node) runAsMember() {
     member1 := consensus.NewMember(store.GetLeader(), store.GetPrvKey())
     log.Println("node member is going to process consensus for round 1")
-    bytes := member1.ProcessConsensus()
+    bytes := member1.ProcessConsensus(func(setup *bean.Setup) bool {
+        return true
+    })
     log.Println("node member finishes consensus for round 1")
     block := &bean.Block{}
     //n.wg = &sync.WaitGroup{}
@@ -129,7 +131,9 @@ func (n *Node) runAsMember() {
     if json.Unmarshal(bytes, block) == nil {
         member2 := consensus.NewMember(store.GetLeader(), store.GetPrvKey())
         log.Println("node member is going to process consensus for round 2")
-        member2.ProcessConsensus()
+        member2.ProcessConsensus(func(setup *bean.Setup) bool {
+            return true
+        })
         log.Println("node member finishes consensus for round 2")
     }
     //log.Println("node member is going to wait")

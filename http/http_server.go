@@ -6,12 +6,8 @@ import (
     "BlockChainTest/database"
     "strconv"
     "encoding/json"
-    "math/big"
     "strings"
     "io/ioutil"
-    "BlockChainTest/node"
-    "BlockChainTest/store"
-    "BlockChainTest/accounts"
 )
 
 type Request struct {
@@ -102,11 +98,9 @@ func GetHighestBlock(w http.ResponseWriter, _ *http.Request) {
 }
 
 func GetMaxHeight(w http.ResponseWriter, _ *http.Request) {
-
-    height := database.GetMaxHeight()
+    height := getMaxHeight()
     if height == -1 {
         errMsg := "error occurred during database.GetMaxHeight()"
-        fmt.Println(errMsg)
         resp := &Response{Success:false, Body:errMsg}
         writeResponse(w, resp)
         return
@@ -147,30 +141,6 @@ func GetBlocksFrom(w http.ResponseWriter, r *http.Request){
     writeResponse(w, resp)
 }
 
-//func PutBlock(w http.ResponseWriter, r *http.Request) {
-//
-//}
-
-func PutMaxHeight(w http.ResponseWriter, r *http.Request) {
-    params := analysisReqParam(r)
-    var height int64
-    if value, ok := params["height"].(int64); ok {
-        height = value
-    }
-
-    err := database.PutMaxHeight(height)
-    if err != nil {
-        errMsg := "error occurred during database.PutMaxHeight()"
-        fmt.Println(errMsg, ": ", err)
-        resp := &Response{Success:false, ErrorMsg:errMsg, Body:false}
-        writeResponse(w, resp)
-        return
-    }
-
-    resp := &Response{Success:true, Body:true}
-    writeResponse(w, resp)
-}
-
 func GetBalance(w http.ResponseWriter, r *http.Request) {
     // find param in http.Request
     params := analysisReqParam(r)
@@ -189,48 +159,13 @@ func GetBalance(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    fmt.Println("BalanceAddress: ", address)
-    ca := accounts.Hex2Address(address)
-    //database.PutBalance(ca, big.NewInt(1314))
-    //fmt.Println("[database PutBalance] succeed!")
-
-    b := database.GetBalance(ca, chainId)
-    defer func() {
-        if x := recover(); x != nil {
-            fmt.Printf("[database GetBalance] caught panic: %v", x)
-            resp := &Response{Success:false, ErrorMsg:"[database GetBalance] caught panic!"}
-            writeResponse(w, resp)
-        }
-    }()
-    body := strconv.FormatInt(b.Int64(), 10)
-    resp := &Response{Success:true, Body:body}
-    writeResponse(w, resp)
-}
-
-func PutBalance(w http.ResponseWriter, r *http.Request) {
-    params := analysisReqParam(r)
-    var address string
-    var chainId int64
-    var amount int64
-    if value, ok := params["address"].(string); ok {
-        address = value
-    }
-    if value, ok := params["chainId"].(int64); ok {
-        chainId = value
-    }
-    if value, ok := params["amount"].(int64); ok {
-        amount = value
-    }
-
-    ca := accounts.Hex2Address(address)
-    err := database.PutBalance(ca, chainId, big.NewInt(amount))
-
+    balance, err := getBalance(address, chainId)
     if err != nil {
-        resp := &Response{Success:false, ErrorMsg:err.Error(), Body:false}
+        resp := &Response{Success:false, ErrorMsg:err.Error()}
         writeResponse(w, resp)
         return
     }
-    resp := &Response{Success:true, Body:true}
+    resp := &Response{Success:true, Body:balance.String()}
     writeResponse(w, resp)
 }
 
@@ -250,54 +185,28 @@ func GetNonce(w http.ResponseWriter, r *http.Request) {
         writeResponse(w, resp)
         return
     }
-    fmt.Println("NonceAddress: ", address)
 
-    ca := accounts.Hex2Address(address)
-
-    nonce := database.GetNonce(ca, chainId)
-    body := strconv.FormatInt(nonce, 10)
-    resp := &Response{Success:true, Body:body}
-    writeResponse(w, resp)
-}
-
-func PutNonce(w http.ResponseWriter, r *http.Request) {
-    params := analysisReqParam(r)
-    var address string
-    var chainId int64
-    var nonce int64
-    if value, ok := params["address"].(string); ok {
-        address = value
-    }
-    if value, ok := params["chainId"].(int64); ok {
-        chainId = value
-    }
-    if value, ok := params["nonce"].(int64); ok {
-        nonce = value
-    }
-    ca := accounts.Hex2Address(address)
-
-    err := database.PutNonce(ca, chainId, nonce)
+    nonce, err := getNonce(address, chainId)
     if err != nil {
         resp := &Response{Success:false, ErrorMsg:err.Error(), Body:false}
         writeResponse(w, resp)
         return
     }
-    resp := &Response{Success:true, Body:true}
+    resp := &Response{Success:true, Body:nonce}
     writeResponse(w, resp)
 }
 
 func GetStateRoot(w http.ResponseWriter, _ *http.Request) {
-    b := database.GetStateRoot()
+    b := database.GetDB().GetStateRoot()
     body := string(b)
     resp := &Response{Success:true, Body:body}
     writeResponse(w, resp)
 }
 
-func SendTransaction(w http.ResponseWriter, r *http.Request) {
+func SendTransferTransaction(w http.ResponseWriter, r *http.Request) {
     params := analysisReqParam(r)
     var to string
     var amount string
-    var chainId int64
     var destChain int64
     if value, ok := params["to"].(string); ok {
         to = value
@@ -305,48 +214,77 @@ func SendTransaction(w http.ResponseWriter, r *http.Request) {
     if value, ok := params["amount"].(string); ok {
         amount = value
     }
-    if value, ok := params["chainId"].(int64); ok {
-        chainId = value
-    }
     if value, ok := params["destChain"].(int64); ok {
         destChain = value
     }
-
-    a, succeed := new(big.Int).SetString(amount, 10)
-    if succeed == false {
-        errorMsg := "params amount parsing error"
-        resp := &Response{Success:true, ErrorMsg:errorMsg}
+    err := sendTransferTransaction(to, amount, destChain)
+    if err != nil {
+        resp := &Response{Success:false, ErrorMsg:err.Error(), Body:false}
         writeResponse(w, resp)
         return
     }
+    resp := &Response{Success:true}
+    writeResponse(w, resp)
+}
 
-    t := node.GenerateBalanceTransaction(to, chainId, destChain, a)
-
-    var body string
-    if node.SendTransaction(t) != nil {
-        body = "Offline"
-    } else {
-        body = "Send finish"
+func SendCreateContractTransaction(w http.ResponseWriter, r *http.Request) {
+    params := analysisReqParam(r)
+    var code string
+    if value, ok := params["code"].(string); ok {
+        code = value
     }
+    err := sendCreateContractTransaction(code)
+    if err != nil {
+        resp := &Response{Success:false, ErrorMsg:err.Error(), Body:false}
+        writeResponse(w, resp)
+        return
+    }
+    resp := &Response{Success:true}
+    writeResponse(w, resp)
+}
 
-    resp := &Response{Success:true, Body:body}
+func SendCallContractTransaction(w http.ResponseWriter, r *http.Request) {
+    params := analysisReqParam(r)
+    var addr string
+    if value, ok := params["address"].(string); ok {
+        addr = value
+    }
+    var chainId int64
+    if value, ok := params["chainId"].(int64); ok {
+        chainId = value
+    }
+    var input string
+    if value, ok := params["input"].(string); ok {
+        input = value
+    }
+    var readOnly bool
+    if value, ok := params["readOnly"].(bool); ok {
+        readOnly = value
+    }
+    err := sendCallContractTransaction(addr, chainId, input, readOnly)
+    if err != nil {
+        resp := &Response{Success:false, ErrorMsg:err.Error(), Body:false}
+        writeResponse(w, resp)
+        return
+    }
+    resp := &Response{Success:true}
     writeResponse(w, resp)
 }
 
 func CreateAccount(w http.ResponseWriter, r *http.Request) {
     params := analysisReqParam(r)
-    var address string
     var chainId int64
-    if value, ok := params["address"].(string); ok {
-        address = value
-    }
+    var keystore string
     if value, ok := params["chainId"].(int64); ok {
         chainId = value
     }
-    hexStr, err := store.CreateAccount(address, chainId)
+    if value, ok := params["keystore"].(string); ok {
+        keystore = value
+    }
+    hexStr, err := createAccount(chainId, keystore)
     var resp *Response
     if err != nil {
-        resp = &Response{Success:true, ErrorMsg:err.Error()}
+        resp = &Response{Success:false, ErrorMsg:err.Error()}
         writeResponse(w, resp)
         return
     }
@@ -354,33 +292,8 @@ func CreateAccount(w http.ResponseWriter, r *http.Request) {
     writeResponse(w, resp)
 }
 
-func SwitchAccount(w http.ResponseWriter, r *http.Request) {
-    params := analysisReqParam(r)
-    var addr string
-    if value, ok := params["address"].(string); ok {
-        addr = value
-    }
-
-    err := store.SwitchAccount(addr)
-    var resp *Response
-    if err != nil {
-        resp = &Response{Success:true, ErrorMsg:err.Error()}
-        writeResponse(w, resp)
-        return
-    }
-    resp = &Response{Success:true, Body:"Switch account succeed!"}
-
-    writeResponse(w, resp)
-}
-
-func GetAccounts(w http.ResponseWriter, _ *http.Request) {
-    accounts := store.GetAccounts()
-    resp := &Response{Success:true, Body:accounts}
-    writeResponse(w, resp)
-}
-
-func CurrentAccount(w http.ResponseWriter, _ *http.Request) {
-    account := store.CurrentAccount()
+func GetAccount(w http.ResponseWriter, _ *http.Request) {
+    account := getAccount()
     resp := &Response{Success:true, Body:account}
     writeResponse(w, resp)
 }
@@ -413,25 +326,42 @@ func GetTransactionsFormBlock(w http.ResponseWriter, r *http.Request) {
     writeResponse(w, resp)
 }
 
+func SetChain(w http.ResponseWriter, r *http.Request) {
+    params := analysisReqParam(r)
+    var chainId int64
+    var dataDir string
+    if value, ok := params["chainId"].(int64); ok {
+        chainId = value
+    }
+    if value, ok := params["dataDir"].(string); ok {
+        dataDir = value
+    }
+    err := setChain(chainId, dataDir)
+    if err != nil {
+        resp := &Response{Success: false, ErrorMsg: err.Error()}
+        writeResponse(w, resp)
+    }
+    resp := &Response{Success: true}
+    writeResponse(w, resp)
+}
+
 var methodsMap = map[string] http.HandlerFunc {
-    "/GetAllBlocks": GetAllBlocks,
-    "/GetBlock": GetBlock,
-    "/GetHighestBlock": GetHighestBlock,
-    "/GetMaxHeight": GetMaxHeight,
-    "/GetBlocksFrom": GetBlocksFrom,
-    "/PutMaxHeight": PutMaxHeight,
-    "/GetBalance": GetBalance,
-    "/PutBalance": PutBalance,
-    "/GetNonce": GetNonce,
-    "/PutNonce": PutNonce,
-    "/GetStateRoot": GetStateRoot,
-    "/SendTransaction": SendTransaction,
-    "/CreateAccount": CreateAccount,
-    "/SwitchAccount": SwitchAccount,
-    "/GetAccounts": GetAccounts,
-    "/CurrentAccount": CurrentAccount,
-    "/GetMostRecentBlocks": GetMostRecentBlocks,
+    "/GetAllBlocks":             GetAllBlocks,
+    "/GetBlock":                 GetBlock,
+    "/GetHighestBlock":          GetHighestBlock,
+    "/GetMaxHeight":             GetMaxHeight,
+    "/GetBlocksFrom":            GetBlocksFrom,
+    "/GetBalance":               GetBalance,
+    "/GetNonce":                 GetNonce,
+    "/GetStateRoot":             GetStateRoot,
+    "/SendTransferTransaction":  SendTransferTransaction,
+    "/SendCreateContractTransaction": SendCreateContractTransaction,
+    "/SendCallContractTransaction": SendCallContractTransaction,
+    "/CreateAccount":            CreateAccount,
+    "/GetAccount":               GetAccount,
+    "/GetMostRecentBlocks":      GetMostRecentBlocks,
     "/GetTransactionsFormBlock": GetTransactionsFormBlock,
+    "/SetChain":                 SetChain,
 }
 
 func HttpStart() {
