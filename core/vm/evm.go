@@ -6,6 +6,7 @@ import (
 	"BlockChainTest/bean"
 	"BlockChainTest/accounts"
 	"fmt"
+	"BlockChainTest/database"
 )
 
 type EVM struct {
@@ -24,9 +25,9 @@ var (
 	ErrNoCompatibleInterpreter  = errors.New("no compatible interpreter")
 )
 
-func NewEVM() *EVM {
+func NewEVM(dbTran *database.Transaction) *EVM {
 	evm := &EVM{}
-	evm.State = GetState()
+	evm.State = NewState(dbTran)
 	evm.Interpreter = NewEVMInterpreter(evm)
 	return evm
 }
