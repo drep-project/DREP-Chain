@@ -11,6 +11,7 @@ import (
     "BlockChainTest/pool"
     "BlockChainTest/util"
     "BlockChainTest/consensus/consmsg"
+    "fmt"
 )
 
 type Leader struct {
@@ -50,7 +51,8 @@ func (l *Leader) ProcessConsensus(msg []byte) (error, *mycrypto.Signature, []byt
     log.Println("Leader is going to setup")
     ps := l.setUp(msg)
     if len(ps) == 0 {
-        return &util.OfflineError{}, nil, nil
+        //return &util.OfflineError{}, nil, nil
+        fmt.Println("It seems that you are solo.")
     }
     log.Println("Leader wait for commit")
     if !l.waitForCommit(ps) {
@@ -81,6 +83,7 @@ func (l *Leader) setUp(msg []byte) []*network.Peer {
 func (l *Leader) waitForCommit(peers []*network.Peer) bool {
     memberNum := len(peers)
     //r := make([]bool, memberNum)
+    fmt.Println("waitForCommit 1")
     commits := pool.Obtain(memberNum, func(msg interface{}) bool {
         if m, ok := msg.(*consmsg.CommitmentMsg); ok {
             if !contains(m.Peer.PubKey, peers) {
@@ -96,17 +99,24 @@ func (l *Leader) waitForCommit(peers []*network.Peer) bool {
             return false
         }
     }, 5 * time.Second)
-    if len(commits) < memberNum * 3 / 2 {
+    fmt.Println("waitForCommit 2")
+    if len(commits) + 1 < memberNum * 3 / 2 {
+        fmt.Println(len(commits), memberNum, "FFFFFFFF")
         return false
     }
+    fmt.Println("waitForCommit 3")
     curve := mycrypto.GetCurve()
     for _, c := range commits {
         if commit, ok := c.(*consmsg.CommitmentMsg); ok {
+            fmt.Println("waitForCommit 4")
             l.sigmaPubKey = curve.Add(l.sigmaPubKey, commit.Peer.PubKey)
             l.sigmaQ = curve.Add(l.sigmaQ, commit.Msg.Q)
         }
+        fmt.Println("waitForCommit 5")
     }
-    return false
+    fmt.Println("waitForCommit 6")
+
+    return true
 }
 
 func (l *Leader) waitForResponse(peers []*network.Peer)  {
@@ -171,10 +181,13 @@ func (l *Leader) getMinerIndex(p *mycrypto.Point) int {
 }
 
 func (l *Leader) Validate(sig *mycrypto.Signature, msg []byte) bool {
+    fmt.Println(l.responseBitmap, l.commitBitmap)
     if len(l.responseBitmap) < len(l.commitBitmap) {
+        fmt.Println("Validate 1")
         return false
     }
     if float64(len(l.responseBitmap)) < math.Ceil(float64(len(l.members)*2.0/3.0)+1) {
+        fmt.Println("Validate 2")
         return false
     }
     return mycrypto.Verify(sig, l.sigmaPubKey, msg)
