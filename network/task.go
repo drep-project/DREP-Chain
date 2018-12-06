@@ -41,8 +41,9 @@ func (t *Task) cipher() ([]byte, error) {
     //   return nil, err
     //}
     //return cipher, nil
+    // TODO sig
     serializable.Sig = &mycrypto.Signature{R: []byte{0x00}, S: []byte{0x00}}
-    serializable.PubKey = &mycrypto.Point{X: []byte{0x00}, Y: []byte{0x00}}
+    serializable.PubKey = t.Peer.PubKey
     return json.Marshal(serializable)
 }
 
