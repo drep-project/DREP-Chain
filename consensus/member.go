@@ -80,13 +80,11 @@ func (m *Member) commit()  {
 
 func (m *Member) waitForChallenge() bool {
     challengeMsg := pool.ObtainOne(func(msg interface{}) bool {
-        //if challengeMsg, ok := msg.(*bean.Challenge); ok {
-        //    return m.leader.PubKey.Equal(challengeMsg..PubKey)
-        //} else {
-        //    return false
-        //}
-        _, ok := msg.(*bean.Challenge)
-        return ok
+        if challengeMsg, ok := msg.(*bean.Challenge); ok {
+           return m.leader.PubKey.Equal(challengeMsg..PubKey)
+        } else {
+           return false
+        }
     }, 5 * time.Second)
     if challengeMsg == nil {
         return false

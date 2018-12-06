@@ -6,6 +6,27 @@ import (
     "BlockChainTest/pool"
 )
 
+
+type SetupMsg struct {
+    Msg *bean.Setup
+    Peer *network.Peer
+}
+
+type CommitmentMsg struct {
+    Msg *bean.Commitment
+    Peer *network.Peer
+}
+
+type ChallengeMsg struct {
+    Msg *bean.Challenge
+    Peer *network.Peer
+}
+
+type ResponseMsg struct {
+    Msg *bean.Response
+    Peer *network.Peer
+}
+
 type SetUpProcessor struct {
 }
 
@@ -30,7 +51,7 @@ func (p *CommitProcessor) process(peer *network.Peer, msg interface{}) {
         //if leader := store.GetItSelfOnLeader(); leader != nil {
         //    leader.ProcessCommit(commitment)
         //}
-        pool.Push(commitment)
+        pool.Push(&CommitmentMsg{Msg: commitment, Peer:peer})
     }
 }
 
