@@ -80,16 +80,10 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
     //    dbTran.Discard()
     //}
     dbTran.Commit()
-    if len(b.Data.TxList) > 0 {
-        fmt.Println("commited")
-    }
     return total
 }
 
 func execute(dbTran *database.Transaction, t *bean.Transaction) (gasUsed, gasFee *big.Int) {
-    if dbTran == nil {
-        dbTran = database.BeginTransaction()
-    }
     switch t.Data.Type {
     case TransferType:
         return executeTransferTransaction(dbTran, t)
@@ -134,7 +128,7 @@ func preExecute(dbTran *database.Transaction, t *bean.Transaction, gasWant *big.
     gasFee = new(big.Int).Set(amountWant)
     balance = new(big.Int).Sub(balance, gasFee)
     database.PutBalanceInsideTransaction(dbTran, addr, t.Data.ChainId, balance)
-    database.PutNonceInsideTransaction(dbTran, addr, t.Data.ChainId, nonce)
+    database.PutNonceInsideTransaction(dbTran, addr, t.Data.ChainId, nonce + 1)
     return
 }
 
@@ -145,14 +139,10 @@ func executeTransferTransaction(dbTran *database.Transaction, t *bean.Transactio
         balance *big.Int
     )
 
-    fmt.Println("transfer11111")
-
     canExecute, addr, balance, _, gasUsed, gasFee = preExecute(dbTran, t, TransferGas)
     if !canExecute {
         return
     }
-
-    fmt.Println("transfer22222")
 
     amount := new(big.Int).SetBytes(t.Data.Amount)
     if balance.Cmp(amount) >= 0 {
@@ -161,10 +151,7 @@ func executeTransferTransaction(dbTran *database.Transaction, t *bean.Transactio
         balance2 := database.GetBalanceInsideTransaction(dbTran, to, t.Data.ChainId)
         balance2 = new(big.Int).Add(balance2, amount)
         database.PutBalanceInsideTransaction(dbTran, addr, t.Data.ChainId, balance)
-        database.PutBalanceInsideTransaction(dbTran, to, t.Data.ChainId, balance2)
-
-        fmt.Println("transfer33333")
-        fmt.Println("inside: ", database.GetBalanceInsideTransaction(dbTran, addr, chainId))
+        database.PutBalanceInsideTransaction(dbTran, to, t.Data.DestChain, balance2)
     }
     return
 }
@@ -243,35 +230,24 @@ func executeCrossChainTransaction(dbTran *database.Transaction, t *bean.Transact
         balance, gasPrice *big.Int
     )
 
-    fmt.Println(11111)
-
     canExecute, addr, balance, gasPrice, gasUsed, gasFee = preExecute(dbTran, t, CrossChainGas)
     if !canExecute {
         return
     }
 
-    fmt.Println(22222)
-
     sumGas := new(big.Int)
     data := t.Data.Data
     var trans []*bean.Transaction
     err := json.Unmarshal(data, &trans)
-    //fmt.Println("data: ", data)
-    fmt.Println("unmarshal error: ", err)
-    fmt.Println("trans: ", trans)
-    fmt.Println("trans size: ", len(trans))
     if err == nil {
         for _, tx := range trans {
             if tx.Data.Type == CrossChainType {
                 continue
             }
-            fmt.Println("running")
             g, _ := execute(dbTran, tx)
             sumGas = new(big.Int).Add(sumGas, g)
         }
     }
-
-    fmt.Println(33333)
 
     sumAmount := new(big.Int).Mul(sumGas, gasPrice)
     if balance.Cmp(sumAmount) >= 0 {
