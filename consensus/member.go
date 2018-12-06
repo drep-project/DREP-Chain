@@ -28,20 +28,26 @@ func NewMember(leader *network.Peer, prvKey *mycrypto.PrivateKey) *Member {
     m.pubKey = prvKey.PubKey
     return m
 }
-func (m *Member) ProcessConsensus() []byte {
+
+func (m *Member) ProcessConsensus(f func(setup *bean.Setup)bool) []byte {
     log.Println("Member set up wait")
-    m.waitForSetUp()
+    if !m.waitForSetUp(f) {
+        return nil
+    }
     log.Println("Member is going to commit")
     m.commit()
 
     log.Println("Member challenge wait")
-    m.waitForChallenge()
-    log.Println("Member is going to response")
-    m.response()
-    return m.msg
+    if m.waitForChallenge() {
+        log.Println("Member is going to response")
+        m.response()
+        return m.msg
+    } else {
+        return nil
+    }
 }
 
-func (m *Member) waitForSetUp() bool {
+func (m *Member) waitForSetUp(f func(setup *bean.Setup)bool) bool {
     setUpMsg := pool.ObtainOne(func(msg interface{}) bool {
         if setup, ok := msg.(*bean.Setup); ok {
             return m.leader.PubKey.Equal(setup.PubKey)
@@ -54,7 +60,7 @@ func (m *Member) waitForSetUp() bool {
     }
     if setUp, ok := setUpMsg.(*bean.Setup); ok {
         m.msg = setUp.Msg
-        return true
+        return f(setUp)
     } else {
         return false
     }
@@ -72,11 +78,19 @@ func (m *Member) commit()  {
     network.SendMessage([]*network.Peer{m.leader}, commitment)
 }
 
-func (m *Member) waitForChallenge() {
+func (m *Member) waitForChallenge() bool {
     challengeMsg := pool.ObtainOne(func(msg interface{}) bool {
+        //if challengeMsg, ok := msg.(*bean.Challenge); ok {
+        //    return m.leader.PubKey.Equal(challengeMsg..PubKey)
+        //} else {
+        //    return false
+        //}
         _, ok := msg.(*bean.Challenge)
         return ok
     }, 5 * time.Second)
+    if challengeMsg == nil {
+        return false
+    }
     if challenge, ok := challengeMsg.(*bean.Challenge); ok {
         log.Println("Member process challenge ", *challenge)
         r := mycrypto.ConcatHash256(challenge.SigmaQ.Bytes(), challenge.SigmaPubKey.Bytes(), m.msg)
@@ -85,13 +99,13 @@ func (m *Member) waitForChallenge() {
         curve := mycrypto.GetCurve()
         rInt.Mod(rInt, curve.N)
         m.r = rInt
-        if r0.Cmp(m.r) != 0 {
-            return // errors.New("wrong hash value")
-        }
+        return r0.Cmp(m.r) == 0
+    } else {
+        return false
     }
 }
 
-func (m *Member) response()  {
+func (m *Member) response() {
     curve := mycrypto.GetCurve()
     prvKey := m.prvKey
     k := new(big.Int).SetBytes(m.k)

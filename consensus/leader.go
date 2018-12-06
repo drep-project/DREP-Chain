@@ -14,7 +14,7 @@ import (
 type Leader struct {
     members    []*network.Peer
     pubKey     *mycrypto.Point
-    LeaderPeer *network.Peer
+    leaderPeer *network.Peer
 
     commitBitmap []byte
     sigmaPubKey *mycrypto.Point
@@ -73,8 +73,10 @@ func (l *Leader) setUp(msg []byte, pubKey *mycrypto.Point) {
     network.SendMessage(l.members, setup)
 }
 
-func (l *Leader) waitForCommit()  {
-    commits := pool.Obtain(len(l.members), func(msg interface{}) bool {
+func (l *Leader) waitForCommit() bool {
+    memberNum := len(l.members)
+    //r := make([]bool, memberNum)
+    commits := pool.Obtain(memberNum, func(msg interface{}) bool {
         if m, ok := msg.(*bean.Commitment); ok {
             index := l.getMinerIndex(m.PubKey)
             if !isLegalIndex(index, l.commitBitmap) {
@@ -86,6 +88,9 @@ func (l *Leader) waitForCommit()  {
             return false
         }
     }, 5 * time.Second)
+    if len(commits) < memberNum * 3 / 2 {
+        return false
+    }
     curve := mycrypto.GetCurve()
     for _, c := range commits {
         if commit, ok := c.(*bean.Commitment); ok {
@@ -93,6 +98,7 @@ func (l *Leader) waitForCommit()  {
             l.sigmaQ = curve.Add(l.sigmaQ, commit.Q)
         }
     }
+    return false
 }
 
 func (l *Leader) waitForResponse()  {

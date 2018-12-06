@@ -538,7 +538,7 @@ func opExtCodeCopy(pc *uint64, interpreter *EVMInterpreter, contract *Contract, 
 // this account should be regarded as a non-existent account and zero should be returned.
 func opExtCodeHash(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	slot := stack.peek()
-	hash := interpreter.EVM.State.GetCodeHash(accounts.Big2Address(slot), contract.ChainId)
+	hash := interpreter.EVM.State.GetCodeHash(accounts.Big2Address(slot), contract.ChainId).Bytes()
 	slot.SetBytes(hash)
 	//slot.SetBytes(interpreter.evm.StateDB.GetCodeHash(BigToAddress(slot)).Bytes())
 	return nil, nil
@@ -645,7 +645,7 @@ func opSstore(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memor
 	loc, val := stack.pop(), stack.pop()
 	//fmt.Println("loc: ", loc)
 	modifiedLoc := new(big.Int).SetBytes(mycrypto.Hash256(contract.ByteCode, loc.Bytes()))
-	interpreter.EVM.State.Store(modifiedLoc, val)
+	interpreter.EVM.State.Store(modifiedLoc, val, contract.ChainId)
 	//interpreter.EVM.State.Store(loc, val)
 	interpreter.IntPool.put(val)
 	return nil, nil

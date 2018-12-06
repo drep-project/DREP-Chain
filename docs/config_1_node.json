@@ -1,0 +1,17 @@
+{
+  "chainid": 0,
+  "ip": "127.0.0.1",
+  "port": 55555,
+  "myindex": 0,
+  "debugnodes": [
+    {
+      "PubKey": {
+        "X": "75eb43a353c7ebadbf72d227a716852e0de1bc124e532c6565adafdf4ff7cf51",
+        "Y": "32aae9a9ae48962c33d05433d187a5f05fadc27171ac0b077390df693da6181a"
+      },
+      "Address": "4dc955d67c1ca9214105c352c23d12cb355086fc",
+      "IP": "127.0.0.1",
+      "Port": 55555
+    }
+  ]
+}

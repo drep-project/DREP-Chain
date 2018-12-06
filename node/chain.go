@@ -9,6 +9,7 @@ import (
     "fmt"
     "BlockChainTest/database"
     "BlockChainTest/accounts"
+    "BlockChainTest/config"
 )
 
 func SendTransaction(t *bean.Transaction) error {
@@ -26,8 +27,9 @@ func SendTransaction(t *bean.Transaction) error {
     }
 }
 
-func GenerateBalanceTransaction(to string, chainId, destChain int64, amount *big.Int) *bean.Transaction {
-    nonce := database.GetNonce(accounts.Hex2Address(to), chainId)
+func GenerateBalanceTransaction(to string, destChain int64, amount *big.Int) *bean.Transaction {
+    chainId := config.GetChainId()
+    nonce := database.GetNonceOutsideTransaction(accounts.PubKey2Address(store.GetPubKey()), chainId)
     nonce++
     data := &bean.TransactionData{
         Version: store.Version,
@@ -41,7 +43,7 @@ func GenerateBalanceTransaction(to string, chainId, destChain int64, amount *big
         GasLimit:store.TransferGas.Bytes(),
         Timestamp:time.Now().Unix(),
         PubKey:store.GetPubKey()}
-    // TODO Get sig bean.Transaction{}
+    // TODO Get sig bean.transaction{}
     tx := &bean.Transaction{Data: data}
     prvKey := store.GetPrvKey()
     sig, _ := tx.TxSig(prvKey)
@@ -50,7 +52,7 @@ func GenerateBalanceTransaction(to string, chainId, destChain int64, amount *big
 }
 
 func GenerateMinerTransaction(addr string, chainId int64) *bean.Transaction {
-    nonce := database.GetNonce(store.GetAddress(), chainId) + 1
+    nonce := database.GetNonceOutsideTransaction(store.GetAddress(), chainId) + 1
     data := &bean.TransactionData{
         Nonce:     nonce,
         Type:      store.MinerType,
@@ -60,13 +62,13 @@ func GenerateMinerTransaction(addr string, chainId int64) *bean.Transaction {
         Timestamp: time.Now().Unix(),
         Data: accounts.Hex2Address(addr).Bytes(),
         PubKey:store.GetPubKey()}
-    // TODO Get sig bean.Transaction{}
+    // TODO Get sig bean.transaction{}
     return &bean.Transaction{Data: data}
 }
 
 func GenerateCreateContractTransaction(code []byte) *bean.Transaction {
-    chainId := store.GetChainId()
-    nonce := database.GetNonce(store.GetAddress(), chainId) + 1
+    chainId := config.GetChainId()
+    nonce := database.GetNonceOutsideTransaction(store.GetAddress(), chainId) + 1
     data := &bean.TransactionData{
         Nonce: nonce,
         Type: store.CreateContractType,
@@ -74,12 +76,38 @@ func GenerateCreateContractTransaction(code []byte) *bean.Transaction {
         GasPrice: store.GasPrice.Bytes(),
         GasLimit: store.CreateContractGas.Bytes(),
         Timestamp: time.Now().Unix(),
-        Data: code,
+        Data: make([]byte, len(code) + 1),
         PubKey: store.GetPubKey(),
     }
+    copy(data.Data[1:], code)
+    data.Data[0] = 2
     return &bean.Transaction{Data: data}
 }
 
-func GenerateCallContractTransaction(input []byte, readOnly bool) {
-
+func GenerateCallContractTransaction(addr accounts.CommonAddress, chainId int64, input []byte, readOnly bool) *bean.Transaction {
+    runningChain := config.GetChainId()
+    nonce := database.GetNonceOutsideTransaction(store.GetAddress(), runningChain) + 1
+    if runningChain != chainId && !readOnly {
+        fmt.Println("you can only call view/pure functions of contract of another chain")
+        return &bean.Transaction{}
+    }
+    data := &bean.TransactionData{
+        Nonce: nonce,
+        Type: store.CallContractType,
+        ChainId: runningChain,
+        DestChain: chainId,
+        To: addr.Hex(),
+        GasPrice: store.GasPrice.Bytes(),
+        GasLimit: store.CallContractGas.Bytes(),
+        Timestamp: time.Now().Unix(),
+        PubKey: store.GetPubKey(),
+        Data: make([]byte, len(input) + 1),
+    }
+    copy(data.Data[1:], input)
+    if readOnly {
+        data.Data[0] = 1
+    } else {
+        data.Data[0] = 0
+    }
+    return &bean.Transaction{Data: data}
 }
