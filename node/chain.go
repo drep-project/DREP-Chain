@@ -12,7 +12,7 @@ import (
     "BlockChainTest/network"
     "BlockChainTest/database"
     "BlockChainTest/accounts"
-  
+    "BlockChainTest/mycrypto"
 )
 
 func SendTransaction(t *bean.Transaction) error {
@@ -113,4 +113,27 @@ func GenerateCallContractTransaction(addr accounts.CommonAddress, chainId int64,
         data.Data[0] = 0
     }
     return &bean.Transaction{Data: data}
+}
+
+func ForgeTransferTransaction(pubKey *mycrypto.Point, chainId int64, to string, destChain int64, amount *big.Int) *bean.Transaction {
+    nonce := database.GetNonceOutsideTransaction(accounts.PubKey2Address(pubKey), chainId)
+    nonce++
+    data := &bean.TransactionData{
+        Version: store.Version,
+        Nonce: nonce,
+        Type: store.TransferType,
+        To: to,
+        ChainId: chainId,
+        DestChain: destChain,
+        Amount: amount.Bytes(),
+        GasPrice: store.GasPrice.Bytes(),
+        GasLimit: store.TransferGas.Bytes(),
+        Timestamp: time.Now().Unix(),
+        PubKey: pubKey,
+    }
+    tx := &bean.Transaction{Data: data}
+    prvKey := store.GetPrvKey()
+    sig, _ := tx.TxSig(prvKey)
+    tx.Sig = sig
+    return tx
 }

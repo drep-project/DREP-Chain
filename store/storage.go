@@ -11,6 +11,7 @@ import (
     "BlockChainTest/database"
     "BlockChainTest/accounts"
     "BlockChainTest/core/vm"
+    "encoding/json"
 )
 
 func ExecuteTransactions(b *bean.Block) *big.Int {
@@ -162,6 +163,38 @@ func execute(t *bean.Transaction) *big.Int {
                 balance.Sub(balance, gasFee)
             }
             evm.State.Commit()
+            database.PutBalanceOutSideTransaction(addr, t.Data.ChainId, balance)
+        }
+    case CrossChainType:
+        {
+            gasLimit := t.Data.GasLimit
+            gasWant := new(big.Int)
+            var trans []*bean.Transaction
+            err := json.Unmarshal(t.Data.Data, trans)
+            if err == nil {
+                for _, t := range trans {
+                    if t.Data.Type == CrossChainType {
+                        continue
+                    }
+                    gasWant += new(big.Int).Add(gasWant, )
+                }
+            }
+
+            if gasLimit.Cmp(CrossChainGas) < 0 {
+                balance.Sub(balance, gasFee)
+            } else {
+                data := t.Data.Data
+                var trans []*bean.Transaction
+                err := json.Unmarshal(data, trans)
+                if err == nil {
+                    for _, t := range trans {
+                        if t.Data.Type == CrossChainType {
+                            continue
+                        }
+                        execute(t)
+                    }
+                }
+            }
             database.PutBalanceOutSideTransaction(addr, t.Data.ChainId, balance)
         }
     }
