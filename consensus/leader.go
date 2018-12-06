@@ -10,11 +10,11 @@ import (
     "time"
     "BlockChainTest/pool"
     "BlockChainTest/util"
+    "BlockChainTest/processor"
 )
 
 type Leader struct {
     members    []*network.Peer
-    pubKey     *mycrypto.Point
 
     commitBitmap []byte
     sigmaPubKey *mycrypto.Point
@@ -28,7 +28,6 @@ type Leader struct {
 
 func NewLeader(pubKey *mycrypto.Point, members []*network.Peer) *Leader {
     l := &Leader{}
-    l.pubKey = pubKey
     l.members = make([]*network.Peer, len(members) - 1)
     last := -1
     for _, v := range members {
@@ -49,7 +48,7 @@ func NewLeader(pubKey *mycrypto.Point, members []*network.Peer) *Leader {
 
 func (l *Leader) ProcessConsensus(msg []byte) (error, *mycrypto.Signature, []byte) {
     log.Println("Leader is going to setup")
-    ps := l.setUp(msg, l.pubKey)
+    ps := l.setUp(msg)
     if len(ps) == 0 {
         return &util.OfflineError{}, nil, nil
     }
@@ -72,8 +71,8 @@ func (l *Leader) ProcessConsensus(msg []byte) (error, *mycrypto.Signature, []byt
     }
 }
 
-func (l *Leader) setUp(msg []byte, pubKey *mycrypto.Point) []*network.Peer {
-    setup := &bean.Setup{Msg: msg, PubKey: pubKey}
+func (l *Leader) setUp(msg []byte) []*network.Peer {
+    setup := &bean.Setup{Msg: msg}
     log.Println("Leader setup ", *setup)
     s, _ := network.SendMessage(l.members, setup)
     return s
@@ -83,11 +82,11 @@ func (l *Leader) waitForCommit(peers []*network.Peer) bool {
     memberNum := len(peers)
     //r := make([]bool, memberNum)
     commits := pool.Obtain(memberNum, func(msg interface{}) bool {
-        if m, ok := msg.(*bean.Commitment); ok {
-            if !contains(m.PubKey, peers) {
+        if m, ok := msg.(*processor.CommitmentMsg); ok {
+            if !contains(m.Peer.PubKey, peers) {
                 return false
             }
-            index := l.getMinerIndex(m.PubKey)
+            index := l.getMinerIndex(m.Peer.PubKey)
             if !isLegalIndex(index, l.commitBitmap) {
                 return false
             }
@@ -102,9 +101,9 @@ func (l *Leader) waitForCommit(peers []*network.Peer) bool {
     }
     curve := mycrypto.GetCurve()
     for _, c := range commits {
-        if commit, ok := c.(*bean.Commitment); ok {
-            l.sigmaPubKey = curve.Add(l.sigmaPubKey, commit.PubKey)
-            l.sigmaQ = curve.Add(l.sigmaQ, commit.Q)
+        if commit, ok := c.(*processor.CommitmentMsg); ok {
+            l.sigmaPubKey = curve.Add(l.sigmaPubKey, commit.Peer.PubKey)
+            l.sigmaQ = curve.Add(l.sigmaQ, commit.Msg.Q)
         }
     }
     return false
@@ -112,11 +111,11 @@ func (l *Leader) waitForCommit(peers []*network.Peer) bool {
 
 func (l *Leader) waitForResponse(peers []*network.Peer)  {
     responses := pool.Obtain(len(l.members), func(msg interface{}) bool {
-        if m, ok := msg.(*bean.Response); ok {
-            if !contains(m.PubKey, peers) {
+        if m, ok := msg.(*processor.ResponseMsg); ok {
+            if !contains(m.Peer.PubKey, peers) {
                 return false
             }
-            index := l.getMinerIndex(m.PubKey)
+            index := l.getMinerIndex(m.Peer.PubKey)
             if !isLegalIndex(index, l.responseBitmap) {
                 return false
             }
@@ -127,8 +126,8 @@ func (l *Leader) waitForResponse(peers []*network.Peer)  {
         }
     }, 5 * time.Second)
     for _, r := range responses {
-        if response, ok := r.(*bean.Response); ok {
-            s := new(big.Int).SetBytes(response.S)
+        if response, ok := r.(*processor.ResponseMsg); ok {
+            s := new(big.Int).SetBytes(response.Msg.S)
             l.sigmaS = l.sigmaS.Add(l.sigmaS, s)
             l.sigmaS.Mod(l.sigmaS, mycrypto.GetCurve().N)
         }
@@ -162,9 +161,7 @@ func isLegalIndex(index int, bitmap []byte) bool {
 }
 
 func (l *Leader) getMinerIndex(p *mycrypto.Point) int {
-    if l.pubKey.Equal(p) {
-        return -1
-    }
+    // TODO if it is itself
     for i, v := range l.members {
         if v.PubKey.Equal(p) {
             return i
