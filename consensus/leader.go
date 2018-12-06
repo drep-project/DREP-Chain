@@ -67,10 +67,10 @@ func (l *Leader) ProcessConsensus(msg []byte) (error, *mycrypto.Signature, []byt
     valid := l.Validate(sig, msg)
     log.Println("valid? ", valid)
     if !valid {
-        return &util.ConnectionError{}, nil, nil
-    } else {
-        return nil, sig, l.responseBitmap
+        //return &util.ConnectionError{}, nil, nil
+        fmt.Println("Error!!!!!!! If you are solo, ignore this.")
     }
+    return nil, sig, l.responseBitmap
 }
 
 func (l *Leader) setUp(msg []byte) []*network.Peer {
