@@ -27,14 +27,8 @@ type State struct {
 	refund      uint64
 }
 
-func NewState() *State {
-	return &State{}
-}
-
-func GetState() *State {
-	state := NewState()
-	state.transaction = database.BeginTransaction()
-	return state
+func NewState(dbTran *database.Transaction) *State {
+	return &State{transaction: dbTran}
 }
 
 func (s *State) CreateContractAccount(callerAddr accounts.CommonAddress, chainId, nonce int64) (*accounts.Account, error) {

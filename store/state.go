@@ -210,7 +210,7 @@ func GetStateRoot(ts []*bean.Transaction) []byte {
     //    database.PutBalance(to, newReceiverBalance)
     //    database.PutNonce(from, nonce)
     //}
-    return database.GetDB().GetStateRoot()
+    return database.GetStateRoot()
 }
 
 func GetTxHashes(ts []*bean.Transaction) ([][]byte, error) {

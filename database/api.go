@@ -10,20 +10,11 @@ import (
     "BlockChainTest/config"
     "encoding/hex"
     "github.com/syndtr/goleveldb/leveldb/iterator"
-    "fmt"
 )
 
 var (
     db *Database
 )
-
-func InitDataBase(config *config.NodeConfig){
-    db = NewDatabase(config)
-}
-
-func GetDB() *Database {
-    return db
-}
 
 func GetItr() iterator.Iterator {
     return db.db.NewIterator(nil, nil)
@@ -124,9 +115,6 @@ func GetStorageInsideTransaction(t *Transaction, addr accounts.CommonAddress, ch
 
 func PutStorageInsideTransaction(t *Transaction, storage *accounts.Storage, addr accounts.CommonAddress, chainId int64) error {
     key := mycrypto.Hash256([]byte("storage_" + addr.Hex() + strconv.FormatInt(chainId, 10)))
-    if addr.Hex() == "5ab50440596c7c1069bb1c751368936b245d0216" {
-        fmt.Println("ssssskey: ", key)
-    }
     value, err := json.Marshal(storage)
     if err != nil {
         return err
@@ -283,4 +271,8 @@ func AddLogInsideTransaction(t *Transaction, log *bean.Log) error {
     logs := GetLogsInsideTransaction(t, log.TxHash, log.ChainId)
     logs = append(logs, log)
     return PutLogsInsideTransaction(t, logs, log.TxHash, log.ChainId)
+}
+
+func GetStateRoot() []byte {
+    return db.GetStateRoot()
 }
