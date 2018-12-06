@@ -10,7 +10,7 @@ import (
     "time"
     "BlockChainTest/pool"
     "BlockChainTest/util"
-    "BlockChainTest/processor"
+    "BlockChainTest/consensus/consmsg"
 )
 
 type Leader struct {
@@ -82,7 +82,7 @@ func (l *Leader) waitForCommit(peers []*network.Peer) bool {
     memberNum := len(peers)
     //r := make([]bool, memberNum)
     commits := pool.Obtain(memberNum, func(msg interface{}) bool {
-        if m, ok := msg.(*processor.CommitmentMsg); ok {
+        if m, ok := msg.(*consmsg.CommitmentMsg); ok {
             if !contains(m.Peer.PubKey, peers) {
                 return false
             }
@@ -101,7 +101,7 @@ func (l *Leader) waitForCommit(peers []*network.Peer) bool {
     }
     curve := mycrypto.GetCurve()
     for _, c := range commits {
-        if commit, ok := c.(*processor.CommitmentMsg); ok {
+        if commit, ok := c.(*consmsg.CommitmentMsg); ok {
             l.sigmaPubKey = curve.Add(l.sigmaPubKey, commit.Peer.PubKey)
             l.sigmaQ = curve.Add(l.sigmaQ, commit.Msg.Q)
         }
@@ -111,7 +111,7 @@ func (l *Leader) waitForCommit(peers []*network.Peer) bool {
 
 func (l *Leader) waitForResponse(peers []*network.Peer)  {
     responses := pool.Obtain(len(l.members), func(msg interface{}) bool {
-        if m, ok := msg.(*processor.ResponseMsg); ok {
+        if m, ok := msg.(*consmsg.ResponseMsg); ok {
             if !contains(m.Peer.PubKey, peers) {
                 return false
             }
@@ -126,7 +126,7 @@ func (l *Leader) waitForResponse(peers []*network.Peer)  {
         }
     }, 5 * time.Second)
     for _, r := range responses {
-        if response, ok := r.(*processor.ResponseMsg); ok {
+        if response, ok := r.(*consmsg.ResponseMsg); ok {
             s := new(big.Int).SetBytes(response.Msg.S)
             l.sigmaS = l.sigmaS.Add(l.sigmaS, s)
             l.sigmaS.Mod(l.sigmaS, mycrypto.GetCurve().N)
