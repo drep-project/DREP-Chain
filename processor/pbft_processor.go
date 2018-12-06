@@ -4,28 +4,8 @@ import (
     "BlockChainTest/bean"
     "BlockChainTest/network"
     "BlockChainTest/pool"
+    "BlockChainTest/consensus/consmsg"
 )
-
-
-type SetupMsg struct {
-    Msg *bean.Setup
-    Peer *network.Peer
-}
-
-type CommitmentMsg struct {
-    Msg *bean.Commitment
-    Peer *network.Peer
-}
-
-type ChallengeMsg struct {
-    Msg *bean.Challenge
-    Peer *network.Peer
-}
-
-type ResponseMsg struct {
-    Msg *bean.Response
-    Peer *network.Peer
-}
 
 type SetUpProcessor struct {
 }
@@ -40,7 +20,7 @@ func (p *SetUpProcessor) process(peer *network.Peer, msg interface{}) {
         //} else {
         //    store.SetRemainingSetup(setUp)
         //}
-        pool.Push(setUp)
+        pool.Push(&consmsg.SetupMsg{Msg:setUp, Peer:peer})
     }
 }
 
@@ -51,7 +31,7 @@ func (p *CommitProcessor) process(peer *network.Peer, msg interface{}) {
         //if leader := store.GetItSelfOnLeader(); leader != nil {
         //    leader.ProcessCommit(commitment)
         //}
-        pool.Push(&CommitmentMsg{Msg: commitment, Peer:peer})
+        pool.Push(&consmsg.CommitmentMsg{Msg: commitment, Peer:peer})
     }
 }
 
@@ -62,7 +42,7 @@ func (p *ChallengeProcessor) process(peer *network.Peer, msg interface{}) {
         //if member := store.GetItSelfOnMember(); member != nil {
         //    member.ProcessChallenge(challenge)
         //}
-        pool.Push(challenge)
+        pool.Push(&consmsg.ChallengeMsg{Msg:challenge, Peer:peer})
     }
 }
 
@@ -73,6 +53,6 @@ func (p *ResponseProcessor) process(peer *network.Peer, msg interface{}) {
         //if leader := store.GetItSelfOnLeader(); leader != nil {
         //    leader.ProcessResponse(response)
         //}
-        pool.Push(response)
+        pool.Push(&consmsg.ResponseMsg{Msg:response, Peer:peer})
     }
 }

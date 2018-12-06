@@ -8,7 +8,7 @@ import (
     "BlockChainTest/log"
     "BlockChainTest/pool"
     "time"
-    "BlockChainTest/processor"
+    "BlockChainTest/consensus/consmsg"
 )
 
 type Member struct {
@@ -48,7 +48,7 @@ func (m *Member) ProcessConsensus(f func(setup *bean.Setup)bool) []byte {
 
 func (m *Member) waitForSetUp(f func(setup *bean.Setup)bool) bool {
     setUpMsg := pool.ObtainOne(func(msg interface{}) bool {
-        if setup, ok := msg.(*processor.SetupMsg); ok {
+        if setup, ok := msg.(*consmsg.SetupMsg); ok {
             return m.leader.PubKey.Equal(setup.Peer.PubKey)
         } else {
             return false
@@ -57,7 +57,7 @@ func (m *Member) waitForSetUp(f func(setup *bean.Setup)bool) bool {
     if setUpMsg == nil {
         return false
     }
-    if setUp, ok := setUpMsg.(*processor.SetupMsg); ok {
+    if setUp, ok := setUpMsg.(*consmsg.SetupMsg); ok {
         m.msg = setUp.Msg.Msg
         return f(setUp.Msg)
     } else {
@@ -78,7 +78,7 @@ func (m *Member) commit()  {
 
 func (m *Member) waitForChallenge() bool {
     challengeMsg := pool.ObtainOne(func(msg interface{}) bool {
-        if challengeMsg, ok := msg.(*processor.ChallengeMsg); ok {
+        if challengeMsg, ok := msg.(*consmsg.ChallengeMsg); ok {
            return m.leader.PubKey.Equal(challengeMsg.Peer.PubKey)
         } else {
            return false
@@ -87,7 +87,7 @@ func (m *Member) waitForChallenge() bool {
     if challengeMsg == nil {
         return false
     }
-    if challenge, ok := challengeMsg.(*processor.ChallengeMsg); ok {
+    if challenge, ok := challengeMsg.(*consmsg.ChallengeMsg); ok {
         log.Println("Member process challenge ", *challenge)
         r := mycrypto.ConcatHash256(challenge.Msg.SigmaQ.Bytes(), challenge.Msg.SigmaPubKey.Bytes(), m.msg)
         r0 := new(big.Int).SetBytes(challenge.Msg.R)
