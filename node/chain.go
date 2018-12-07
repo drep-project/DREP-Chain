@@ -14,27 +14,30 @@ import (
     "BlockChainTest/accounts"
     "BlockChainTest/mycrypto"
     "math/rand"
-    "encoding/hex"
+    "fmt"
+)
+
+const (
+    cnt = 50
 )
 
 var (
-    rp [100]*mycrypto.PrivateKey
-    ra [100]accounts.CommonAddress
-
-    cp [100]*mycrypto.PrivateKey
-    ca [100]accounts.CommonAddress
-    cc [100]int64
-
-    amount [100]*big.Int
+    rp [cnt]*mycrypto.PrivateKey
+    ra [cnt]accounts.CommonAddress
+    cp [cnt]*mycrypto.PrivateKey
+    ca [cnt]accounts.CommonAddress
+    cc [cnt]int64
+    amount [cnt]*big.Int
 )
 
 func init() {
-    for i := 0; i < 100; i++ {
+    for i := 0; i < cnt; i++ {
         rp[i], _ = mycrypto.GeneratePrivateKey()
         ra[i] = accounts.PubKey2Address(rp[i].PubKey)
         cp[i], _ = mycrypto.GeneratePrivateKey()
         ca[i] = accounts.PubKey2Address(cp[i].PubKey)
         cc[i] = rand.Int63n(1000) + 123
+        //cc[i] = 0
         amount[i] = new(big.Int).SetInt64(10000 + int64(i) * 100)
         database.PutBalanceOutSideTransaction(ra[i], accounts.RootChainID, new(big.Int).SetInt64(100000000))
         database.PutBalanceOutSideTransaction(ca[i], cc[i], new(big.Int).SetInt64(100000000))
@@ -144,12 +147,12 @@ func GenerateCallContractTransaction(addr accounts.CommonAddress, chainId int64,
 }
 
 func ForgeTransferTransaction() []*bean.Transaction {
-    stateRoot := hex.EncodeToString(database.GetStateRoot())
     dbTran := database.BeginTransaction()
-    trans := make([]*bean.Transaction, 10)
-    for i := 0; i < 10; i ++ {
+    num := 100
+    trans := make([]*bean.Transaction, num)
+    for i := 0; i < num; i ++ {
         transferDirection := rand.Intn(2)
-        k := rand.Intn(100)
+        k := rand.Intn(cnt)
         var data *bean.TransactionData
         if transferDirection == 1 {
             nonce := database.GetNonceInsideTransaction(dbTran, ra[k], accounts.RootChainID) + 1
@@ -169,8 +172,8 @@ func ForgeTransferTransaction() []*bean.Transaction {
             }
             fmt.Println()
             fmt.Println("transaction ", i, ":")
-            fmt.Println("from:   ", ra[k], " ", accounts.RootChainID)
-            fmt.Println("to:     ", ca[k], " ", cc[k])
+            fmt.Println("from:   ", ra[k].Hex(), " ", accounts.RootChainID)
+            fmt.Println("to:     ", ca[k].Hex(), " ", cc[k])
             fmt.Println("amount: ", amount[k])
             fmt.Println()
         } else {
@@ -203,8 +206,6 @@ func ForgeTransferTransaction() []*bean.Transaction {
         trans[i] = tx
     }
     dbTran.Discard()
-    fmt.Println("before forge: ", stateRoot)
-    fmt.Println("after forge: ", hex.EncodeToString(database.GetStateRoot()))
     return trans
 }
 

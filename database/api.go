@@ -60,7 +60,7 @@ func PutBlockInsideTransaction(t *Transaction, block *bean.Block, chainId int64)
     if err != nil {
         return err
     }
-    t.Put(key, value, chainId)
+    t.Put(key, value, chainId, false)
     return nil
 }
 
@@ -125,7 +125,7 @@ func GetMaxHeightInsideTransaction(t *Transaction) int64  {
 func PutMaxHeightInsideTransaction(t *Transaction, height, chainId int64) error {
     key := mycrypto.Hash256([]byte("max_height"))
     value := new(big.Int).SetInt64(height).Bytes()
-    t.Put(key, value, chainId)
+    t.Put(key, value, chainId, false)
     return nil
 }
 
@@ -166,7 +166,7 @@ func PutStorageInsideTransaction(t *Transaction, storage *accounts.Storage, addr
     if err != nil {
         return err
     }
-    t.Put(key, value, chainId)
+    t.Put(key, value, chainId, true)
     return nil
 }
 
@@ -310,7 +310,7 @@ func PutLogsInsideTransaction(t *Transaction, logs []*bean.Log, txHash []byte, c
     if err != nil {
         return err
     }
-    t.Put(key, value, chainId)
+    t.Put(key, value, chainId, false)
     return nil
 }
 

@@ -78,7 +78,6 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
     //}
     dbTran.Commit()
     stateRoot := database.GetStateRoot()
-    fmt.Println("state root 2: ", hex.EncodeToString(stateRoot))
     if bytes.Equal(b.Header.StateRoot, stateRoot) {
         fmt.Println()
         fmt.Println("matched ", hex.EncodeToString(b.Header.StateRoot), " vs ", hex.EncodeToString(stateRoot))
@@ -107,7 +106,6 @@ func execute(dbTran *database.Transaction, t *bean.Transaction) (gasUsed, gasFee
     case CallContractType:
         return executeCallContractTransaction(dbTran, t)
     case CrossChainType:
-        fmt.Println("execute crossed")
         return executeCrossChainTransaction(dbTran, t)
     }
     return nil, nil
@@ -162,7 +160,7 @@ func executeTransferTransaction(dbTran *database.Transaction, t *bean.Transactio
     if balance.Cmp(amount) >= 0 {
         to := accounts.Hex2Address(t.Data.To)
         balance = new(big.Int).Sub(balance, amount)
-        balance2 := database.GetBalanceInsideTransaction(dbTran, to, t.Data.ChainId)
+        balance2 := database.GetBalanceInsideTransaction(dbTran, to, t.Data.DestChain)
         balance2 = new(big.Int).Add(balance2, amount)
         database.PutBalanceInsideTransaction(dbTran, addr, t.Data.ChainId, balance)
         database.PutBalanceInsideTransaction(dbTran, to, t.Data.DestChain, balance2)
