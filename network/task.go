@@ -9,11 +9,11 @@ import (
     "time"
     "BlockChainTest/util"
     "encoding/json"
-    "BlockChainTest/store"
 )
 
 type Task struct {
-    Peer *Peer
+    PrvKey *mycrypto.PrivateKey
+    Peer *bean.Peer
     Msg  interface{}
 }
 
@@ -23,12 +23,12 @@ func (t *Task) cipher() ([]byte, error) {
         fmt.Println("there's an error during the serialize", err)
         return nil, err
     }
-    sig, err := mycrypto.Sign(store.GetPrvKey(), serializable.Body)
+    sig, err := mycrypto.Sign(t.PrvKey, serializable.Body)
     if err != nil {
       return nil, err
     }
     serializable.Sig = sig
-    serializable.PubKey = store.GetPubKey()
+    serializable.PubKey = t.PrvKey.PubKey
     return json.Marshal(serializable)
 }
 

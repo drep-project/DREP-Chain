@@ -12,10 +12,11 @@ import (
 	"time"
 	"BlockChainTest/accounts"
 	"encoding/hex"
+	"BlockChainTest/bean"
 )
 
 func main()  {
-	network.Start(func(peer *network.Peer, t int, msg interface{}) {
+	network.Start(func(peer *bean.Peer, t int, msg interface{}) {
 		p := processor.GetInstance()
 		if msg != nil {
 			p.Process(peer, t, msg)

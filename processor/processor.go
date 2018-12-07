@@ -4,15 +4,14 @@ import (
     "sync"
     "fmt"
     "BlockChainTest/bean"
-    "BlockChainTest/network"
 )
 
 type processor interface {
-    process(peer *network.Peer, msg interface{})
+    process(peer *bean.Peer, msg interface{})
 }
 
 type message struct {
-    peer *network.Peer
+    peer *bean.Peer
     t int
     msg interface{}
 }
@@ -60,7 +59,7 @@ func (p *Processor) Start() {
     }()
 }
 
-func (p *Processor) Process(peer *network.Peer, t int, msg interface{}) {
+func (p *Processor) Process(peer *bean.Peer, t int, msg interface{}) {
     p.channel <- &message{peer:peer, t: t, msg:msg}
 }
 
