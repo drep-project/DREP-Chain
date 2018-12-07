@@ -9,6 +9,7 @@ import (
     "BlockChainTest/log"
     "BlockChainTest/util"
     "BlockChainTest/network/nat"
+    "errors"
 )
 
 const (
@@ -105,9 +106,9 @@ func decryptIntoTask(cipher []byte) (*Task, error) {
     if err != nil {
         return nil, err
     }
-    //if !mycrypto.Verify(serializable.Sig, serializable.PubKey, serializable.Body) {
-    //   return nil, errors.New("decrypt fail")
-    //}
+    if !mycrypto.Verify(serializable.Sig, serializable.PubKey, serializable.Body) {
+      return nil, errors.New("wrong signature")
+    }
     peer := &Peer{PubKey: serializable.PubKey}
     task := &Task{Peer: peer, Msg: msg}
     return task, nil

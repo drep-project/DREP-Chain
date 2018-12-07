@@ -9,6 +9,7 @@ import (
     "time"
     "BlockChainTest/util"
     "encoding/json"
+    "BlockChainTest/store"
 )
 
 type Task struct {
@@ -22,28 +23,12 @@ func (t *Task) cipher() ([]byte, error) {
         fmt.Println("there's an error during the serialize", err)
         return nil, err
     }
-    //sig, err := mycrypto.Sign(serializable.Body)
-    //if err != nil {
-    //   return nil, err
-    //}
-    //serializable.Sig = sig
-    //pubKey, err := mycrypto.GetPubKey()
-    //if err != nil {
-    //   return nil, err
-    //}
-    //serializable.PubKey = pubKey
-    //plaintext, err := proto.Marshal(serializable)
-    //if err != nil {
-    //   return nil, err
-    //}
-    //cipher, err := mycrypto.Encrypt(m.Peer.PubKey, plaintext)
-    //if err != nil {
-    //   return nil, err
-    //}
-    //return cipher, nil
-    // TODO sig
-    serializable.Sig = &mycrypto.Signature{R: []byte{0x00}, S: []byte{0x00}}
-    serializable.PubKey = t.Peer.PubKey
+    sig, err := mycrypto.Sign(store.GetPrvKey(), serializable.Body)
+    if err != nil {
+      return nil, err
+    }
+    serializable.Sig = sig
+    serializable.PubKey = store.GetPubKey()
     return json.Marshal(serializable)
 }
 
