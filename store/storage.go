@@ -12,6 +12,8 @@ import (
     "BlockChainTest/core/vm"
     "encoding/json"
     "BlockChainTest/config"
+    "bytes"
+    "encoding/hex"
 )
 
 func ExecuteTransactions(b *bean.Block) *big.Int {
@@ -19,21 +21,16 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
         log.Error("error block nil or header nil")
         return nil
     }
-    height := database.GetMaxHeight()
+    dbTran := database.BeginTransaction()
+    height := database.GetMaxHeightInsideTransaction(dbTran)
     if height + 1 != b.Header.Height {
         fmt.Println("error", height, b.Header.Height)
         return nil
     }
-    // TODO check height
-    height = b.Header.Height
-    database.PutMaxHeight(height)
-    //blocks = append(blocks, b)
-    database.PutBlock(b)
     total := big.NewInt(0)
     if b.Data == nil || b.Data.TxList == nil {
         return total
     }
-    dbTran := database.BeginTransaction()
     for _, t := range b.Data.TxList {
         _, gasFee := execute(dbTran, t)
         fmt.Println("Delete transaction ", *t)
@@ -80,6 +77,18 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
     //    dbTran.Discard()
     //}
     dbTran.Commit()
+    stateRoot := database.GetStateRoot()
+    fmt.Println("state root 2: ", hex.EncodeToString(stateRoot))
+    if bytes.Equal(b.Header.StateRoot, stateRoot) {
+        fmt.Println("matched ", hex.EncodeToString(b.Header.StateRoot), " vs ", hex.EncodeToString(stateRoot))
+        height++
+        database.PutMaxHeightInsideTransaction(dbTran, height, GetChainId())
+        database.PutBlockInsideTransaction(dbTran, b, GetChainId())
+        dbTran.Commit()
+    } else {
+        fmt.Println("matched ", hex.EncodeToString(b.Header.StateRoot), " vs ", hex.EncodeToString(stateRoot))
+        dbTran.Discard()
+    }
     return total
 }
 

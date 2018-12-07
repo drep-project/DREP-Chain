@@ -6,6 +6,6 @@ import (
 )
 
 func TestGetBlock(t *testing.T) {
-    block := GetBlock(135)
+    block := GetBlockOutsideTransaction(135)
     fmt.Println(block)
 }

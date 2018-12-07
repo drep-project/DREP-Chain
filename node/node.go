@@ -83,7 +83,7 @@ func (n *Node) Start(config *config.NodeConfig) {
             }
             log.Trace("node stop")
             time.Sleep(10 * time.Second)
-            log.Trace("Block Produce ", "Height",database.GetMaxHeight())
+            log.Println("Current height ", database.GetMaxHeightOutsideTransaction())
             // todo if timeout still can go. why
         }
     }()
@@ -245,15 +245,15 @@ func (n *Node) ProcessPeerList(list *bean.PeerInfoList) {
 
 func (n *Node) fetchBlocks() {
     n.curMaxHeight = 2<<60
-    req := &bean.BlockReq{Height:database.GetMaxHeight(), Pk:store.GetPubKey()}
-    //network.SendMessage([]*bean.Peer{peers[0]}, req)
+    req := &bean.BlockReq{Height:database.GetMaxHeightOutsideTransaction(), Pk:store.GetPubKey()}
+    //network.SendMessage([]*network.Peer{peers[0]}, req)
     network.SendMessage([]*bean.Peer{store.Admin}, req)
     log.Trace("fetching 1")
     for n.curMaxHeight != database.GetMaxHeight() {
        log.Trace("fetching 2: ", n.curMaxHeight, database.GetMaxHeight())
        if msg := pool.ObtainOneMsg(func(msg interface{}) bool {
            if block, ok := msg.(*bean.Block); ok {
-               return block != nil && block.Header != nil && block.Header.Height == database.GetMaxHeight() + 1
+               return block != nil && block.Header != nil && block.Header.Height == database.GetMaxHeightOutsideTransaction() + 1
            } else {
                return false
            }
@@ -330,7 +330,7 @@ func (n *Node) ProcessOfflinePeers(peers []*bean.PeerInfo)  {
 }
 
 func (n *Node) initState() {
-    bs := database.GetAllBlocks()
+    bs := database.GetAllBlocksOutsideTransaction()
     for _, b := range bs {
         store.ExecuteTransactions(b)
     }
