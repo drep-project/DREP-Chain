@@ -13,7 +13,33 @@ import (
     "BlockChainTest/database"
     "BlockChainTest/accounts"
     "BlockChainTest/mycrypto"
+    "math/rand"
+    "encoding/hex"
 )
+
+var (
+    rp [100]*mycrypto.PrivateKey
+    ra [100]accounts.CommonAddress
+
+    cp [100]*mycrypto.PrivateKey
+    ca [100]accounts.CommonAddress
+    cc [100]int64
+
+    amount [100]*big.Int
+)
+
+func init() {
+    for i := 0; i < 100; i++ {
+        rp[i], _ = mycrypto.GeneratePrivateKey()
+        ra[i] = accounts.PubKey2Address(rp[i].PubKey)
+        cp[i], _ = mycrypto.GeneratePrivateKey()
+        ca[i] = accounts.PubKey2Address(cp[i].PubKey)
+        cc[i] = rand.Int63n(1000) + 123
+        amount[i] = new(big.Int).SetInt64(10000 + int64(i) * 100)
+        database.PutBalanceOutSideTransaction(ra[i], accounts.RootChainID, new(big.Int).SetInt64(100000000))
+        database.PutBalanceOutSideTransaction(ca[i], cc[i], new(big.Int).SetInt64(100000000))
+    }
+}
 
 func SendTransaction(t *bean.Transaction) error {
     peers := store.GetPeers()
@@ -30,10 +56,12 @@ func SendTransaction(t *bean.Transaction) error {
     }
 }
 
+//TODO
+//发送交易本地nonce, balance 变动
+
 func GenerateBalanceTransaction(to string, destChain int64, amount *big.Int) *bean.Transaction {
-    chainId := config.GetConfig().ChainId
-    nonce := database.GetNonceOutsideTransaction(accounts.PubKey2Address(store.GetPubKey()), chainId)
-    nonce++
+    chainId := config.GetChainId()
+    nonce := database.GetNonceOutsideTransaction(store.GetAddress(), chainId) + 1
     data := &bean.TransactionData{
         Version: store.Version,
         Nonce:nonce,
@@ -115,25 +143,70 @@ func GenerateCallContractTransaction(addr accounts.CommonAddress, chainId int64,
     return &bean.Transaction{Data: data}
 }
 
-func ForgeTransferTransaction(pubKey *mycrypto.Point, chainId int64, to string, destChain int64, amount *big.Int) *bean.Transaction {
-    nonce := database.GetNonceOutsideTransaction(accounts.PubKey2Address(pubKey), chainId)
-    nonce++
-    data := &bean.TransactionData{
-        Version: store.Version,
-        Nonce: nonce,
-        Type: store.TransferType,
-        To: to,
-        ChainId: chainId,
-        DestChain: destChain,
-        Amount: amount.Bytes(),
-        GasPrice: store.GasPrice.Bytes(),
-        GasLimit: store.TransferGas.Bytes(),
-        Timestamp: time.Now().Unix(),
-        PubKey: pubKey,
+func ForgeTransferTransaction() []*bean.Transaction {
+    stateRoot := hex.EncodeToString(database.GetStateRoot())
+    dbTran := database.BeginTransaction()
+    trans := make([]*bean.Transaction, 10)
+    for i := 0; i < 10; i ++ {
+        transferDirection := rand.Intn(2)
+        k := rand.Intn(100)
+        var data *bean.TransactionData
+        if transferDirection == 1 {
+            nonce := database.GetNonceInsideTransaction(dbTran, ra[k], accounts.RootChainID) + 1
+            database.PutNonceInsideTransaction(dbTran, ra[k], accounts.RootChainID, nonce)
+            data = &bean.TransactionData{
+                Version:   store.Version,
+                Nonce:     nonce,
+                Type:      store.TransferType,
+                To:        ca[k].Hex(),
+                ChainId:   accounts.RootChainID,
+                DestChain: cc[k],
+                Amount:    amount[k].Bytes(),
+                GasPrice:  store.GasPrice.Bytes(),
+                GasLimit:  store.TransferGas.Bytes(),
+                Timestamp: time.Now().Unix(),
+                PubKey:    rp[k].PubKey,
+            }
+            fmt.Println()
+            fmt.Println("transaction ", i, ":")
+            fmt.Println("from:   ", ra[k], " ", accounts.RootChainID)
+            fmt.Println("to:     ", ca[k], " ", cc[k])
+            fmt.Println("amount: ", amount[k])
+            fmt.Println()
+        } else {
+            nonce := database.GetNonceInsideTransaction(dbTran, ca[k], cc[k]) + 1
+            database.PutNonceInsideTransaction(dbTran, ra[k], accounts.RootChainID, nonce)
+            data = &bean.TransactionData{
+                Version:   store.Version,
+                Nonce:     nonce,
+                Type:      store.TransferType,
+                To:        ra[k].Hex(),
+                ChainId:   cc[k],
+                DestChain: accounts.RootChainID,
+                Amount:    amount[k].Bytes(),
+                GasPrice:  store.GasPrice.Bytes(),
+                GasLimit:  store.TransferGas.Bytes(),
+                Timestamp: time.Now().Unix(),
+                PubKey:    cp[k].PubKey,
+            }
+            fmt.Println()
+            fmt.Println("transaction ", i, ":")
+            fmt.Println("from:   ", ca[k].Hex(), " ", cc[k])
+            fmt.Println("to:     ", ra[k].Hex(), " ", accounts.RootChainID)
+            fmt.Println("amount: ", amount[k])
+            fmt.Println()
+        }
+        tx := &bean.Transaction{Data: data}
+        prvKey := store.GetPrvKey()
+        sig, _ := tx.TxSig(prvKey)
+        tx.Sig = sig
+        trans[i] = tx
     }
-    tx := &bean.Transaction{Data: data}
-    prvKey := store.GetPrvKey()
-    sig, _ := tx.TxSig(prvKey)
-    tx.Sig = sig
-    return tx
+    dbTran.Discard()
+    fmt.Println("before forge: ", stateRoot)
+    fmt.Println("after forge: ", hex.EncodeToString(database.GetStateRoot()))
+    return trans
 }
+
+//TODO
+//删除trie上的非account信息
