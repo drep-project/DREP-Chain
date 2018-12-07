@@ -41,10 +41,10 @@ type BlockProcessor struct {
 
 func (p *BlockProcessor) process(peer *bean.Peer, msg interface{}) {
     if block, ok := msg.(*bean.Block); ok {
-        if block.Header.Height <= database.GetMaxHeight() {
+        if block.Header.Height <= database.GetMaxHeightOutsideTransaction() {
            return
         }
-        id, _ := block.BlockHash()
+        id, _ := block.BlockHashHex()
         if store.ForwardedBlock(id) { // if forwarded, then processed. later this will be read from db
             fmt.Println("Forwarded this block ", *block)
             return

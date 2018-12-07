@@ -24,21 +24,54 @@ func BeginTransaction() *Transaction {
     return db.BeginTransaction()
 }
 
-func GetBlock(height int64) *bean.Block {
+func GetBlockOutsideTransaction(height int64) *bean.Block {
     key := mycrypto.Hash256([]byte("block_" + strconv.FormatInt(height, 10)))
     value := db.get(key)
-    block, _ := bean.UnmarshalBlock(value)
+    block, err := bean.UnmarshalBlock(value)
+    if err != nil {
+        return nil
+    }
     return block
 }
 
-func GetBlocksFrom(start, size int64) []*bean.Block {
+//TODO cannot sync
+func PutBlockOutsideTransaction(block *bean.Block) error {
+    key := mycrypto.Hash256([]byte("block_" + strconv.FormatInt(block.Header.Height, 10)))
+    value, err := bean.MarshalBlock(block)
+    if err != nil {
+        return err
+    }
+    return db.put(key, value, config.GetChainId())
+}
+
+func GetBlockInsideTransaction(t *Transaction, height int64) *bean.Block {
+    key := mycrypto.Hash256([]byte("block_" + strconv.FormatInt(height, 10)))
+    value := t.Get(key)
+    block, err := bean.UnmarshalBlock(value)
+    if err != nil {
+        return nil
+    }
+    return block
+}
+
+func PutBlockInsideTransaction(t *Transaction, block *bean.Block, chainId int64) error {
+    key := mycrypto.Hash256([]byte("block_" + strconv.FormatInt(block.Header.Height, 10)))
+    value, err := bean.MarshalBlock(block)
+    if err != nil {
+        return err
+    }
+    t.Put(key, value, chainId)
+    return nil
+}
+
+func GetBlocksFromOutsideTransaction(start, size int64) []*bean.Block {
     var (
         currentBlock =&bean.Block{}
         height = start
         blocks = make([]*bean.Block, 0)
     )
     for currentBlock != nil && (height < start + size || size == -1)  {
-        currentBlock = GetBlock(height)
+        currentBlock = GetBlockOutsideTransaction(height)
         if currentBlock != nil {
             blocks = append(blocks, currentBlock)
         }
@@ -47,38 +80,52 @@ func GetBlocksFrom(start, size int64) []*bean.Block {
     return blocks
 }
 
-func GetAllBlocks() []*bean.Block {
-    return GetBlocksFrom(int64(0), int64(-1))
+func GetAllBlocksOutsideTransaction() []*bean.Block {
+    return GetBlocksFromOutsideTransaction(int64(0), int64(-1))
 }
 
-func GetHighestBlock() *bean.Block {
-    maxHeight := GetMaxHeight()
-    return GetBlock(maxHeight)
+func GetHighestBlockOutsideTransaction() *bean.Block {
+    maxHeight := GetMaxHeightOutsideTransaction()
+    return GetBlockOutsideTransaction(maxHeight)
 }
 
-//TODO cannot sync
+
 func PutBlock(block *bean.Block) error {
     key := mycrypto.Hash256([]byte("block_" + strconv.FormatInt(block.Header.Height, 10)))
     value, _ := bean.MarshalBlock(block)
     return db.put(key, value, config.GetConfig().ChainId)
 }
 
-func GetMaxHeight() int64 {
+func GetMaxHeightOutsideTransaction() int64 {
     key := mycrypto.Hash256([]byte("max_height"))
-    if value := db.get(key); value == nil {
+    value := db.get(key)
+    if value == nil {
         return -1
     } else {
         return new(big.Int).SetBytes(value).Int64()
     }
 }
 
-func PutMaxHeight(height int64) error {
+func PutMaxHeightOutsideTransaction(height int64) error {
     key := mycrypto.Hash256([]byte("max_height"))
     value := new(big.Int).SetInt64(height).Bytes()
-    err := db.put(key, value, config.GetConfig().ChainId)
-    if err != nil {
-        return err
+    return db.put(key, value, config.GetChainId())
+}
+
+func GetMaxHeightInsideTransaction(t *Transaction) int64  {
+    key := mycrypto.Hash256([]byte("max_height"))
+    value := t.Get(key)
+    if value == nil {
+        return -1
+    } else {
+        return new(big.Int).SetBytes(value).Int64()
     }
+}
+
+func PutMaxHeightInsideTransaction(t *Transaction, height, chainId int64) error {
+    key := mycrypto.Hash256([]byte("max_height"))
+    value := new(big.Int).SetInt64(height).Bytes()
+    t.Put(key, value, chainId)
     return nil
 }
 
@@ -124,11 +171,11 @@ func PutStorageInsideTransaction(t *Transaction, storage *accounts.Storage, addr
 }
 
 func GetMostRecentBlocks(n int64) []*bean.Block {
-    height := GetMaxHeight()
+    height := GetMaxHeightOutsideTransaction()
     if height == -1 {
         return nil
     }
-    return GetBlocksFrom(height - n, n)
+    return GetBlocksFromOutsideTransaction(height - n, n)
 }
 
 func GetBalanceOutsideTransaction(addr accounts.CommonAddress, chainId int64) *big.Int {

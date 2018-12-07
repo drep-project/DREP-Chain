@@ -5,7 +5,6 @@ import (
     "errors"
     "math/big"
     "encoding/json"
-
     "BlockChainTest/trie"
     "BlockChainTest/bean"
     "BlockChainTest/config"
@@ -13,6 +12,8 @@ import (
     "BlockChainTest/database"
     "BlockChainTest/accounts"
     "BlockChainTest/core/common"
+    "fmt"
+    "encoding/hex"
 )
 
 var (
@@ -84,20 +85,14 @@ func InitState(config *config.NodeConfig)  {
 }
 
 func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
-    maxHeight := database.GetMaxHeight()
-    height := maxHeight + 1
+    dbTran := database.BeginTransaction()
+    height := database.GetMaxHeightInsideTransaction(dbTran) + 1
+
     ts := PickTransactions(BlockGasLimit)
-    previousBlock := database.GetHighestBlock()
-    var b, previousHash []byte
-    var err error
-    if previousBlock != nil {
-        b, err = json.Marshal(previousBlock.Header)
-        if err != nil {
-            return nil, err
-        }
-        previousHash = mycrypto.Hash256(b)
-    } else {
-        previousHash = []byte{}
+    gasSum := new(big.Int)
+    for _, t := range ts {
+        g, _ := execute(dbTran, t)
+        gasSum = new(big.Int).Add(gasSum, g)
     }
     gasUsed := GetGasSum(ts).Bytes()
     //if ExceedGasLimit(gasUsed, gasLimit) {
@@ -105,6 +100,7 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
     //}
     timestamp := time.Now().Unix()
     stateRoot := GetStateRoot(ts)
+    gasUsed := gasSum.Bytes()
     txHashes, err := GetTxHashes(ts)
     if err != nil {
         return nil, err
@@ -116,9 +112,28 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
         memberPks = append(memberPks, p.PubKey)
     }
     return &bean.Block{
+        stateRoot := database.GetStateRoot()
+    }
+
+    timestamp := time.Now().Unix()
+
+    var previousHash []byte
+    previousBlock := database.GetHighestBlockInsideTransaction(dbTran)
+    if previousBlock == nil {
+        previousHash = []byte{}
+    } else {
+        h, err := previousBlock.BlockHash()
+        if err != nil {
+            return nil, err
+        }
+        previousHash = h
+    }
+
+    block := &bean.Block{
         Header: &bean.BlockHeader{
-            Version: Version,
+            Version:      Version,
             PreviousHash: previousHash,
+
             GasLimit: BlockGasLimit.Bytes(),
             GasUsed: gasUsed,
             Timestamp: timestamp,
@@ -129,11 +144,15 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
             LeaderPubKey:GetPubKey(),
             MinorPubKeys:memberPks,
         },
-        Data:&bean.BlockData{
-            TxCount:int32(len(ts)),
-            TxList:ts,
+        Data: &bean.BlockData{
+            TxCount: int32(len(ts)),
+            TxList:  ts,
         },
-    }, nil
+    }
+    fmt.Println("state root 1: ", hex.EncodeToString(stateRoot))
+    dbTran.Discard()
+    fmt.Println("state root 0: ", hex.EncodeToString(database.GetStateRoot()))
+    return block, nil
 }
 
 func GetPubKey() *mycrypto.Point {

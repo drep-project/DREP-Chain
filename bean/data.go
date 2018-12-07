@@ -104,13 +104,20 @@ func (tx *Transaction) GetGas() *big.Int {
     return gasUsed
 }
 
-func (block *Block) BlockHash() (string, error) {
+func (block *Block) BlockHash() ([]byte, error) {
     b, err := json.Marshal(block.Header)
+    if err != nil {
+        return nil, err
+    }
+    return mycrypto.Hash256(b), nil
+}
+
+func (block *Block) BlockHashHex() (string, error) {
+    h, err := block.BlockHash()
     if err != nil {
         return "", err
     }
-    h := "0x" + hex.EncodeToString(mycrypto.Hash256(b))
-    return h, nil
+    return "0x" + hex.EncodeToString(h), nil
 }
 
 func (block *Block) TxHashes() []string {

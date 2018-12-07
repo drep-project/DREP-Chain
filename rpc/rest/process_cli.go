@@ -105,7 +105,7 @@ func getNonce(address string, chainId int64) (int64, error) {
 }
 
 func getMaxHeight() int64 {
-    maxHeight := database.GetMaxHeight()
+    maxHeight := database.GetMaxHeightOutsideTransaction()
     return maxHeight
 }
 
