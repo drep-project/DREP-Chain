@@ -20,6 +20,7 @@ type BlockHeader struct {
     MerkleRoot           []byte
     TxHashes             [][]byte
     LeaderPubKey         *mycrypto.Point
+    Bitmap               []int
     MinorPubKeys         []*mycrypto.Point
 }
 
