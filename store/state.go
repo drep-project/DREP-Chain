@@ -87,12 +87,11 @@ func InitState(config *config.NodeConfig)  {
 func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
     dbTran := database.BeginTransaction()
     height := database.GetMaxHeightInsideTransaction(dbTran) + 1
-
     ts := PickTransactions(BlockGasLimit)
     gasSum := new(big.Int)
     for _, t := range ts {
-        g, _ := execute(dbTran, t)
-        gasSum = new(big.Int).Add(gasSum, g)
+       g, _ := execute(dbTran, t)
+       gasSum = new(big.Int).Add(gasSum, g)
     }
     gasUsed := GetGasSum(ts).Bytes()
     //if ExceedGasLimit(gasUsed, gasLimit) {
@@ -111,12 +110,9 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
     for _, p := range members {
         memberPks = append(memberPks, p.PubKey)
     }
-    return &bean.Block{
-        stateRoot := database.GetStateRoot()
-    }
 
+    stateRoot := database.GetStateRoot()
     timestamp := time.Now().Unix()
-
     var previousHash []byte
     previousBlock := database.GetHighestBlockInsideTransaction(dbTran)
     if previousBlock == nil {
@@ -128,7 +124,6 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
         }
         previousHash = h
     }
-
     block := &bean.Block{
         Header: &bean.BlockHeader{
             Version:      Version,
@@ -149,9 +144,7 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
             TxList:  ts,
         },
     }
-    fmt.Println("state root 1: ", hex.EncodeToString(stateRoot))
     dbTran.Discard()
-    fmt.Println("state root 0: ", hex.EncodeToString(database.GetStateRoot()))
     return block, nil
 }
 

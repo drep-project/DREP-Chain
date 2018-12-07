@@ -3,7 +3,6 @@ package trie
 import (
     "fmt"
     "BlockChainTest/mycrypto"
-    "bytes"
     "encoding/hex"
     "math"
 )
@@ -214,7 +213,6 @@ func (t *StateTrie) Validate() {
     v0 := make([]byte, len(root.Value))
     copy(v0, root.Value)
     root.resetValue()
-    fmt.Println("result: ", bytes.Equal(v0, root.Value))
 }
 
 func GetMerkleRoot(ts []*StateTrie) []byte {

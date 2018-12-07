@@ -21,6 +21,7 @@ const (
 
 type journal struct {
 	chainId int64
+	onTrie bool
 	action int
 	key []byte
 	value []byte
@@ -34,12 +35,21 @@ type Transaction struct {
 	values map[string][]byte
 }
 
-func (t *Transaction) Put(key []byte, value []byte, chainId int64) {
+func (t *Transaction) Put(key []byte, value []byte, chainId int64, onTrie bool) {
 	if t.finished {
 		return
 	}
-	t.journals = append(t.journals, &journal{action:put, key:key, value:value})
+	t.journals = append(t.journals, &journal{
+		chainId: chainId,
+		onTrie: onTrie,
+		action: put,
+		key: key,
+		value: value,
+	})
 	t.values[string(key)] = value
+	if !onTrie {
+		return
+	}
 	if t.database.tries[chainId] == nil {
 		t.database.tries[chainId] = trie.NewStateTrie()
 	}
@@ -61,11 +71,19 @@ func (t *Transaction) Get(key []byte) []byte {
 	}
 }
 
-func (t *Transaction) Delete(key []byte, chainId int64) {
+func (t *Transaction) Delete(key []byte, chainId int64, onTrie bool) {
 	if t.finished {
 		return
 	}
-	t.journals = append(t.journals, &journal{action:del, key:key})
+	t.journals = append(t.journals, &journal{
+		chainId: chainId,
+		onTrie: onTrie,
+		action: del,
+		key: key,
+	})
+	if !onTrie {
+		return
+	}
 	if t.database.tries[chainId] == nil {
 		t.database.tries[chainId] = trie.NewStateTrie()
 	}
@@ -106,6 +124,9 @@ func (t *Transaction) Discard() {
 	}
 	t.finished = true
 	for _, j := range t.journals {
+		if !j.onTrie {
+			continue
+		}
 		switch j.action {
 		case del:
 			chainId := j.chainId

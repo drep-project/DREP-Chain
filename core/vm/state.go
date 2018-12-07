@@ -120,7 +120,7 @@ func (s *State) Load(x *big.Int) []byte {
 }
 
 func (s *State) Store(x, y *big.Int, chainId int64) {
-	s.transaction.Put(x.Bytes(), y.Bytes(), chainId)
+	s.transaction.Put(x.Bytes(), y.Bytes(), chainId, false)
 }
 
 func (s *State) Commit() {
