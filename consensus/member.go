@@ -13,7 +13,7 @@ import (
 )
 
 type Member struct {
-    leader *network.Peer
+    leader *bean.Peer
     prvKey *mycrypto.PrivateKey
     msg []byte
 
@@ -22,7 +22,7 @@ type Member struct {
 
 }
 
-func NewMember(leader *network.Peer, prvKey *mycrypto.PrivateKey) *Member {
+func NewMember(leader *bean.Peer, prvKey *mycrypto.PrivateKey) *Member {
     m := &Member{}
     m.leader = leader
     m.prvKey = prvKey
@@ -75,7 +75,7 @@ func (m *Member) commit()  {
     m.k = k
     commitment := &bean.Commitment{Q: q}
     log.Println("Member commit ", *commitment)
-    network.SendMessage([]*network.Peer{m.leader}, commitment)
+    network.SendMessage([]*bean.Peer{m.leader}, commitment)
 }
 
 func (m *Member) waitForChallenge() bool {
@@ -112,5 +112,5 @@ func (m *Member) response() {
     s.Mod(s, curve.N)
     response := &bean.Response{S: s.Bytes()}
     log.Println("Member response ", *response)
-    network.SendMessage([]*network.Peer{m.leader}, response)
+    network.SendMessage([]*bean.Peer{m.leader}, response)
 }

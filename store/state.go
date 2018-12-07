@@ -1,7 +1,6 @@
 package store
 
 import (
-    "BlockChainTest/network"
     "BlockChainTest/bean"
     "BlockChainTest/mycrypto"
     "math/big"
@@ -20,7 +19,7 @@ var (
     pubKey   *mycrypto.Point
     address  accounts.CommonAddress
 
-    port network.Port
+    port bean.Port
     nodes map[string] *accounts.Node
 )
 
@@ -45,9 +44,9 @@ func init()  {
     minerIndex = minerNum - 1
 
     for i := 0; i < minerNum; i++ {
-        peer := &network.Peer{
-            IP:     network.IP(debugNodes[i].IP),
-            Port:   network.Port(debugNodes[i].Port),
+        peer := &bean.Peer{
+            IP:     bean.IP(debugNodes[i].IP),
+            Port:   bean.Port(debugNodes[i].Port),
         }
         if i != myIndex {
             peer.PubKey = config.ParsePK(debugNodes[i].PubKey)
@@ -62,7 +61,7 @@ func init()  {
     adminPubKey = miners[0].PubKey
     IsStart = myIndex < minerNum
 
-    port = network.Port(config.GetPort())
+    port = bean.Port(config.GetPort())
     //if Solo {
     //    minerNum = 1
     //    ip0 = network.IP("127.0.0.1")
@@ -179,7 +178,7 @@ func GetAccounts() []string {
     return acs
 }
 
-func GetPort() network.Port {
+func GetPort() bean.Port {
     return port
 }
 

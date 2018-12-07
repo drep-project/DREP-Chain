@@ -15,7 +15,7 @@ import (
 )
 
 type Leader struct {
-    members    []*network.Peer
+    members    []*bean.Peer
 
     commitBitmap []byte
     sigmaPubKey *mycrypto.Point
@@ -27,9 +27,9 @@ type Leader struct {
 
 }
 
-func NewLeader(pubKey *mycrypto.Point, members []*network.Peer) *Leader {
+func NewLeader(pubKey *mycrypto.Point, members []*bean.Peer) *Leader {
     l := &Leader{}
-    l.members = make([]*network.Peer, len(members) - 1)
+    l.members = make([]*bean.Peer, len(members) - 1)
     last := -1
     for _, v := range members {
         if v.PubKey.Equal(pubKey) {
@@ -73,14 +73,14 @@ func (l *Leader) ProcessConsensus(msg []byte) (error, *mycrypto.Signature, []byt
     return nil, sig, l.responseBitmap
 }
 
-func (l *Leader) setUp(msg []byte) []*network.Peer {
+func (l *Leader) setUp(msg []byte) []*bean.Peer {
     setup := &bean.Setup{Msg: msg}
     log.Println("Leader setup ", *setup)
     s, _ := network.SendMessage(l.members, setup)
     return s
 }
 
-func (l *Leader) waitForCommit(peers []*network.Peer) bool {
+func (l *Leader) waitForCommit(peers []*bean.Peer) bool {
     memberNum := len(peers)
     //r := make([]bool, memberNum)
     fmt.Println("waitForCommit 1")
@@ -119,7 +119,7 @@ func (l *Leader) waitForCommit(peers []*network.Peer) bool {
     return true
 }
 
-func (l *Leader) waitForResponse(peers []*network.Peer)  {
+func (l *Leader) waitForResponse(peers []*bean.Peer)  {
     responses := pool.Obtain(len(l.members), func(msg interface{}) bool {
         if m, ok := msg.(*consmsg.ResponseMsg); ok {
             if !contains(m.Peer.PubKey, peers) {
@@ -152,11 +152,11 @@ func (l *Leader) getR(msg []byte) []byte {
     return rInt.Bytes()
 }
 
-func (l *Leader) challenge(msg []byte) []*network.Peer {
+func (l *Leader) challenge(msg []byte) []*bean.Peer {
     l.r = l.getR(msg)
     challenge := &bean.Challenge{SigmaPubKey: l.sigmaPubKey, SigmaQ: l.sigmaQ, R: l.r}
     log.Println("Leader challenge ", *challenge)
-    ps := make([]*network.Peer, 0)
+    ps := make([]*bean.Peer, 0)
     for i, b := range l.commitBitmap {
         if b == 1 {
             ps = append(ps, l.members[i])
@@ -193,7 +193,7 @@ func (l *Leader) Validate(sig *mycrypto.Signature, msg []byte) bool {
     return mycrypto.Verify(sig, l.sigmaPubKey, msg)
 }
 
-func contains(pk *mycrypto.Point, peers []*network.Peer) bool {
+func contains(pk *mycrypto.Point, peers []*bean.Peer) bool {
     for _, p := range peers {
         if pk.Equal(p.PubKey) {
             return true

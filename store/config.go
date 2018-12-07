@@ -2,7 +2,7 @@ package store
 
 import (
     "math/big"
-    "BlockChainTest/network"
+    "BlockChainTest/bean"
 )
 
 var (
@@ -17,7 +17,7 @@ var (
     CreateContractType int32 = 2
     CallContractType int32 = 3
     // TODO
-    Admin *network.Peer
+    Admin *bean.Peer
     Version int32 = 1
 )
 
@@ -27,9 +27,9 @@ const LocalTest = false
 
 func init() {
     if LocalTest {
-        Admin = &network.Peer{IP: network.IP("127.0.0.1"), Port: 55555}
+        Admin = &bean.Peer{IP: bean.IP("127.0.0.1"), Port: 55555}
     } else {
-        Admin = &network.Peer{IP: network.IP("192.168.3.231"), Port: 55555}
+        Admin = &bean.Peer{IP: bean.IP("192.168.3.231"), Port: 55555}
     }
 }
 

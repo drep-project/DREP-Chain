@@ -193,7 +193,7 @@ func (n *Node) discover() bool {
     } else {
         msg = &bean.PeerInfo{Pk: n.prvKey.PubKey, Ip: ips[0], Port: 55555}
     }
-    peers := []*network.Peer{store.Admin}
+    peers := []*bean.Peer{store.Admin}
     network.SendMessage(peers, msg)
     fmt.Println("discovering 3")
     if msg := pool.ObtainOne(func(msg interface{}) bool {
@@ -202,7 +202,7 @@ func (n *Node) discover() bool {
     }, 5 * time.Second); msg != nil {
         if pil, ok := msg.(*bean.FirstPeerInfoList); ok {
             for _, t := range pil.List {
-                store.AddPeer(&network.Peer{IP:network.IP(t.Ip), Port:network.Port(t.Port), PubKey:t.Pk})
+                store.AddPeer(&bean.Peer{IP:bean.IP(t.Ip), Port:bean.Port(t.Port), PubKey:t.Pk})
             }
         }
         return true
@@ -215,9 +215,9 @@ func (n *Node) discover() bool {
 func (n *Node) ProcessNewPeer(newcomer *bean.PeerInfo) {
     fmt.Println("user starting process a newcomer")
     peers := store.GetPeers()
-    newPeer := &network.Peer{
-        IP:network.IP(newcomer.Ip),
-        Port: network.Port(newcomer.Port),
+    newPeer := &bean.Peer{
+        IP:bean.IP(newcomer.Ip),
+        Port: bean.Port(newcomer.Port),
         PubKey: newcomer.Pk}
     store.AddPeer(newPeer)
     list := make([]*bean.PeerInfo, 0)
@@ -227,14 +227,14 @@ func (n *Node) ProcessNewPeer(newcomer *bean.PeerInfo) {
     }
     peerList := &bean.PeerInfoList{List:list}
     fmt.Println("ProcessNewPeer ", *peerList, peers, newcomer)
-    network.SendMessage([]*network.Peer{newPeer}, peerList)
+    network.SendMessage([]*bean.Peer{newPeer}, peerList)
     network.SendMessage(peers, &bean.FirstPeerInfoList{List:[]*bean.PeerInfo{newcomer}})
 }
 
 func (n *Node) ProcessPeerList(list *bean.PeerInfoList) {
     fmt.Println("discovering 5 ", *list)
     for _, t := range list.List {
-        store.AddPeer(&network.Peer{IP:network.IP(t.Ip), Port:network.Port(t.Port), PubKey:t.Pk})
+        store.AddPeer(&bean.Peer{IP:bean.IP(t.Ip), Port:bean.Port(t.Port), PubKey:t.Pk})
     }
     //if n.discovering {
     //    n.discoverWg.Done()
@@ -244,8 +244,8 @@ func (n *Node) ProcessPeerList(list *bean.PeerInfoList) {
 func (n *Node) fetchBlocks() {
     n.curMaxHeight = 2<<60
     req := &bean.BlockReq{Height:database.GetMaxHeight(), Pk:store.GetPubKey()}
-    //network.SendMessage([]*network.Peer{peers[0]}, req)
-    network.SendMessage([]*network.Peer{store.Admin}, req)
+    //network.SendMessage([]*bean.Peer{peers[0]}, req)
+    network.SendMessage([]*bean.Peer{store.Admin}, req)
     fmt.Println("fetching 1")
     for n.curMaxHeight != database.GetMaxHeight() {
        fmt.Println("fetching 2: ", n.curMaxHeight, database.GetMaxHeight())
@@ -268,7 +268,7 @@ func (n *Node) ProcessBlockReq(req *bean.BlockReq) {
     from := req.Height + 1
     size := int64(2)
     fmt.Println("pk = ", req.Pk)
-    peers := []*network.Peer{store.GetPeer(req.Pk)}
+    peers := []*bean.Peer{store.GetPeer(req.Pk)}
     fmt.Println("ProcessBlockReq")
     for i := from; i <= database.GetMaxHeight(); {
         fmt.Println("ProcessBlockReq 1 ", i)
@@ -280,15 +280,15 @@ func (n *Node) ProcessBlockReq(req *bean.BlockReq) {
     }
 }
 
-func (n *Node) ReportOfflinePeers(peers []*network.Peer) {
+func (n *Node) ReportOfflinePeers(peers []*bean.Peer) {
     msg := make([]*bean.PeerInfo, len(peers))
     for i, p := range peers {
         msg[i] = &bean.PeerInfo{Pk:p.PubKey, Ip:string(p.IP), Port:int32(p.Port)}
     }
-    network.SendMessage([]*network.Peer{store.Admin}, msg)
+    network.SendMessage([]*bean.Peer{store.Admin}, msg)
 }
 
-func (n *Node) Ping(peer *network.Peer) error {
+func (n *Node) Ping(peer *bean.Peer) error {
     addr := accounts.PubKey2Address(peer.PubKey)
     if latch, exist := n.pingLatches[addr]; exist {
         return &util.DupOpError{}
@@ -296,7 +296,7 @@ func (n *Node) Ping(peer *network.Peer) error {
         latch = concurrent.NewCountDownLatch(1)
         n.pingLatches[addr] = latch
         ping := &bean.Ping{Pk:store.GetPubKey()}
-        network.SendMessage([]*network.Peer{peer}, ping)
+        network.SendMessage([]*bean.Peer{peer}, ping)
         if latch.WaitTimeout(5 * time.Second) {
             return &util.TimeoutError{}
         } else {
@@ -305,11 +305,11 @@ func (n *Node) Ping(peer *network.Peer) error {
     }
 }
 
-func (n *Node) ProcessPing(peer *network.Peer, ping *bean.Ping)  {
-    network.SendMessage([]*network.Peer{peer}, &bean.Pong{Pk:store.GetPubKey()})
+func (n *Node) ProcessPing(peer *bean.Peer, ping *bean.Ping)  {
+    network.SendMessage([]*bean.Peer{peer}, &bean.Pong{Pk:store.GetPubKey()})
 }
 
-func (n *Node) ProcessPong(peer *network.Peer, ping *bean.Ping) {
+func (n *Node) ProcessPong(peer *bean.Peer, ping *bean.Ping) {
     addr := accounts.PubKey2Address(peer.PubKey)
     if latch, exist := n.pingLatches[addr]; exist {
         latch.Done()
@@ -323,7 +323,7 @@ func (n *Node) ProcessOfflinePeers(peers []*bean.PeerInfo)  {
         return
     }
     for _, p := range peers {
-        store.RemovePeer(&network.Peer{PubKey:p.Pk, IP:network.IP(p.Ip), Port:network.Port(p.Port)})
+        store.RemovePeer(&bean.Peer{PubKey:p.Pk, IP:bean.IP(p.Ip), Port:bean.Port(p.Port)})
     }
 }
 

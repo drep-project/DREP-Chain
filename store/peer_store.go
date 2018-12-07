@@ -1,40 +1,40 @@
 package store
 
 import (
-    "BlockChainTest/network"
     "BlockChainTest/mycrypto"
     "BlockChainTest/accounts"
+    "BlockChainTest/bean"
 )
 
 var (
-    peers        = make(map[accounts.CommonAddress]*network.Peer)
-    curMiners    = make([]*network.Peer, 0)
-    miners       = make([]*network.Peer, 0)
+    peers        = make(map[accounts.CommonAddress]*bean.Peer)
+    curMiners    = make([]*bean.Peer, 0)
+    miners       = make([]*bean.Peer, 0)
     curMiner    int
     minerIndex  int
     adminPubKey *mycrypto.Point
 )
 
-func AddPeer(peer *network.Peer) {
+func AddPeer(peer *bean.Peer) {
     addr := accounts.PubKey2Address(peer.PubKey)
     if _, exists := peers[addr]; !exists {
         peers[addr] = peer
     }
 }
 
-func RemovePeer(peer *network.Peer) {
+func RemovePeer(peer *bean.Peer) {
     addr := accounts.PubKey2Address(peer.PubKey)
     delete(peers, addr)
 }
 
-func RemovePeers(peers []*network.Peer) {
+func RemovePeers(peers []*bean.Peer) {
     for _, p := range peers {
         RemovePeer(p)
     }
 }
 
-func GetPeers() []*network.Peer {
-    result := make([]*network.Peer, 0)
+func GetPeers() []*bean.Peer {
+    result := make([]*bean.Peer, 0)
     for _, v := range peers {
         if !v.PubKey.Equal(pubKey) {
             result = append(result, v)
@@ -63,12 +63,12 @@ func MoveToNextMiner() (bool, bool) {
     return isM, curMiners[curMiner].PubKey.Equal(GetPubKey())
 }
 
-func GetLeader() *network.Peer {
+func GetLeader() *bean.Peer {
     return curMiners[curMiner]
 }
 
 
-func GetMiners() []*network.Peer {
+func GetMiners() []*bean.Peer {
     return curMiners
 }
 
@@ -89,7 +89,7 @@ func IsAdmin() bool {
     return adminPubKey.Equal(pubKey)
 }
 
-func GetPeer(pk *mycrypto.Point) *network.Peer {
+func GetPeer(pk *mycrypto.Point) *bean.Peer {
     for _, p := range peers {
         if p.PubKey.Equal(pk) {
             return p
