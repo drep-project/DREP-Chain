@@ -80,13 +80,17 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
     stateRoot := database.GetStateRoot()
     fmt.Println("state root 2: ", hex.EncodeToString(stateRoot))
     if bytes.Equal(b.Header.StateRoot, stateRoot) {
+        fmt.Println()
         fmt.Println("matched ", hex.EncodeToString(b.Header.StateRoot), " vs ", hex.EncodeToString(stateRoot))
+        fmt.Println()
         height++
         database.PutMaxHeightInsideTransaction(dbTran, height, GetChainId())
         database.PutBlockInsideTransaction(dbTran, b, GetChainId())
         dbTran.Commit()
     } else {
-        fmt.Println("matched ", hex.EncodeToString(b.Header.StateRoot), " vs ", hex.EncodeToString(stateRoot))
+        fmt.Println()
+        fmt.Println("not matched ", hex.EncodeToString(b.Header.StateRoot), " vs ", hex.EncodeToString(stateRoot))
+        fmt.Println()
         dbTran.Discard()
     }
     return total
@@ -103,6 +107,7 @@ func execute(dbTran *database.Transaction, t *bean.Transaction) (gasUsed, gasFee
     case CallContractType:
         return executeCallContractTransaction(dbTran, t)
     case CrossChainType:
+        fmt.Println("execute crossed")
         return executeCrossChainTransaction(dbTran, t)
     }
     return nil, nil
