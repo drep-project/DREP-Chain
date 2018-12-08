@@ -9,6 +9,8 @@ import (
     "BlockChainTest/log"
     "BlockChainTest/util"
     "BlockChainTest/network/nat"
+    "errors"
+    "BlockChainTest/store"
 )
 
 const (
@@ -20,35 +22,30 @@ var (
     lock sync.Mutex
 )
 
-func SendMessage(peers []*Peer, msg interface{}) (error, []*Peer) {
+func SendMessage(peers []*bean.Peer, msg interface{}) (sucPeers []*bean.Peer, failPeers []*bean.Peer) {
    lock.Lock()
    defer lock.Unlock()
-   //suc := false
-   r := make([]*Peer, 0)
+   sucPeers = make([]*bean.Peer, 0)
+   failPeers = make([]*bean.Peer, 0)
    for _, peer := range peers {
-       task := &Task{peer, msg}
+       task := &Task{PrvKey:store.GetPrvKey(), Peer:peer, Msg:msg}
        if err := task.execute(); err != nil {
            switch err.(type) {
            case *util.TimeoutError, *util.ConnectionError:
-               r = append(r, peer)
-               }
+               failPeers = append(failPeers, peer)
+           }
        } else {
-           //suc = true
+           sucPeers = append(sucPeers, peer)
        }
    }
-   //if suc {
-   //    return nil, r
-   //} else {
-   //    return &util.OfflineError{}, r
-   //}
-   return nil, r
+   return
 }
 
-func Start(process func(*Peer, int, interface{}), port Port) {
+func Start(process func(*bean.Peer, int, interface{}), port bean.Port) {
     startListen(process, port)
 }
 
-func startListen(process func(*Peer, int, interface{}), port Port) {
+func startListen(process func(*bean.Peer, int, interface{}), port bean.Port) {
     go func() {
         //room for modification addr := &net.TCPAddr{IP: net.ParseIP("x.x.x.x"), Port: receiver.listeningPort()}
         addr := &net.TCPAddr{Port: int(port)}
@@ -88,7 +85,7 @@ func startListen(process func(*Peer, int, interface{}), port Port) {
             }
             fromAddr := conn.RemoteAddr().String()
             ip := fromAddr[:strings.LastIndex(fromAddr, ":")]
-            task.Peer.IP = IP(ip)
+            task.Peer.IP = bean.IP(ip)
             //queue := GetReceiverQueue()
             //queue <- message
             //p := processor.GetInstance()
@@ -110,10 +107,10 @@ func decryptIntoTask(cipher []byte) (*Task, error) {
     if err != nil {
         return nil, err
     }
-    //if !mycrypto.Verify(serializable.Sig, serializable.PubKey, serializable.Body) {
-    //   return nil, errors.New("decrypt fail")
-    //}
-    peer := &Peer{PubKey: serializable.PubKey}
+    if !mycrypto.Verify(serializable.Sig, serializable.PubKey, serializable.Body) {
+      return nil, errors.New("wrong signature")
+    }
+    peer := &bean.Peer{PubKey: serializable.PubKey}
     task := &Task{Peer: peer, Msg: msg}
     return task, nil
 }

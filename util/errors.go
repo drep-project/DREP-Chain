@@ -35,3 +35,7 @@ type DupOpError struct {
 type OfflineError struct {
     MyError
 }
+
+type ConsensusError struct {
+    MyError
+}

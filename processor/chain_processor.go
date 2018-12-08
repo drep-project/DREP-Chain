@@ -15,7 +15,7 @@ type transactionProcessor struct {}
 //    return false
 //}
 
-func (p *transactionProcessor) process(peer *network.Peer, msg interface{})  {
+func (p *transactionProcessor) process(peer *bean.Peer, msg interface{})  {
     if transaction, ok := msg.(*bean.Transaction); ok {
         fmt.Println(transaction)
         id, _ := transaction.TxId()
@@ -39,7 +39,7 @@ type BlockProcessor struct {
     processor *Processor
 }
 
-func (p *BlockProcessor) process(peer *network.Peer, msg interface{}) {
+func (p *BlockProcessor) process(peer *bean.Peer, msg interface{}) {
     if block, ok := msg.(*bean.Block); ok {
         if block.Header.Height <= database.GetMaxHeight() {
            return

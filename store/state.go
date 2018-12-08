@@ -1,7 +1,6 @@
 package store
 
 import (
-    "BlockChainTest/network"
     "BlockChainTest/bean"
     "BlockChainTest/mycrypto"
     "math/big"
@@ -20,7 +19,7 @@ var (
     pubKey   *mycrypto.Point
     address  accounts.CommonAddress
 
-    port network.Port
+    port bean.Port
     nodes map[string] *accounts.Node
 )
 
@@ -45,9 +44,9 @@ func init()  {
     minerIndex = minerNum - 1
 
     for i := 0; i < minerNum; i++ {
-        peer := &network.Peer{
-            IP:     network.IP(debugNodes[i].IP),
-            Port:   network.Port(debugNodes[i].Port),
+        peer := &bean.Peer{
+            IP:     bean.IP(debugNodes[i].IP),
+            Port:   bean.Port(debugNodes[i].Port),
         }
         if i != myIndex {
             peer.PubKey = config.ParsePK(debugNodes[i].PubKey)
@@ -57,12 +56,12 @@ func init()  {
         curMiners = append(curMiners, peer)
         miners = append(miners, peer)
         AddPeer(peer)
-        database.PutBalanceOutSideTransaction(accounts.PubKey2Address(peer.PubKey), chainId, big.NewInt(100000000))
+        //database.PutBalanceOutSideTransaction(accounts.PubKey2Address(peer.PubKey), chainId, big.NewInt(100000000))
     }
     adminPubKey = miners[0].PubKey
     IsStart = myIndex < minerNum
 
-    port = network.Port(config.GetPort())
+    port = bean.Port(config.GetPort())
     //if Solo {
     //    minerNum = 1
     //    ip0 = network.IP("127.0.0.1")
@@ -84,7 +83,7 @@ func init()  {
     //
 }
 
-func GenerateBlock() (*bean.Block, error) {
+func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
     maxHeight := database.GetMaxHeight()
     height := maxHeight + 1
     ts := PickTransactions(BlockGasLimit)
@@ -100,11 +99,10 @@ func GenerateBlock() (*bean.Block, error) {
     } else {
         previousHash = []byte{}
     }
-    gasLimit := new(big.Int).SetInt64(int64(10000000)).Bytes()
     gasUsed := GetGasSum(ts).Bytes()
-    if ExceedGasLimit(gasUsed, gasLimit) {
-        return nil, errors.New("gas used exceeds gas limit")
-    }
+    //if ExceedGasLimit(gasUsed, gasLimit) {
+    //    return nil, errors.New("gas used exceeds gas limit")
+    //}
     timestamp := time.Now().Unix()
     stateRoot := GetStateRoot(ts)
     txHashes, err := GetTxHashes(ts)
@@ -113,11 +111,15 @@ func GenerateBlock() (*bean.Block, error) {
     }
     merkle := trie.NewMerkle(txHashes)
     merkleRoot := merkle.Root.Hash
+    var memberPks []*mycrypto.Point = nil
+    for _, p := range members {
+        memberPks = append(memberPks, p.PubKey)
+    }
     return &bean.Block{
         Header: &bean.BlockHeader{
             Version: Version,
             PreviousHash: previousHash,
-            GasLimit: gasLimit,
+            GasLimit: BlockGasLimit.Bytes(),
             GasUsed: gasUsed,
             Timestamp: timestamp,
             StateRoot: stateRoot,
@@ -125,6 +127,7 @@ func GenerateBlock() (*bean.Block, error) {
             TxHashes: txHashes,
             Height: height,
             LeaderPubKey:GetPubKey(),
+            MinorPubKeys:memberPks,
         },
         Data:&bean.BlockData{
             TxCount:int32(len(ts)),
@@ -179,7 +182,7 @@ func GetAccounts() []string {
     return acs
 }
 
-func GetPort() network.Port {
+func GetPort() bean.Port {
     return port
 }
 
@@ -189,13 +192,6 @@ func GetGasSum(ts []*bean.Transaction) *big.Int {
         gasSum = gasSum.Add(gasSum, tx.GetGas())
     }
     return gasSum
-}
-
-func ExceedGasLimit(used, limit []byte) bool {
-    if new(big.Int).SetBytes(used).Cmp(new(big.Int).SetBytes(limit)) > 0 {
-        return true
-    }
-    return false
 }
 
 func GetStateRoot(ts []*bean.Transaction) []byte {

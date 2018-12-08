@@ -17,36 +17,36 @@ func TestPickTransactions(t *testing.T) {
     //balances[a3] = big.NewInt(20000)
     //var tran *bean.Transaction
     //tran = &bean.Transaction{Data:&bean.TransactionData{
-    //    To:"0x1", Amount:big.NewInt(1).Bytes(),Nonce:1, GasLimit:TransferGas.Bytes(), GasPrice:GasPrice.Bytes(), PubKey:peers[0].PubKey}}
+    //    To:"0x1", Amount:big.NewInt(1).Bytes(),Nonce:1, GasLimit:TransferGas.Bytes(), DefaultGasPrice:DefaultGasPrice.Bytes(), PubKey:peers[0].PubKey}}
     //AddTransaction(tran)
     //tran = &bean.Transaction{Data:&bean.TransactionData{
-    //    To:"0x2", Amount:big.NewInt(3).Bytes(),Nonce:3, GasLimit:TransferGas.Bytes(), GasPrice:GasPrice.Bytes(), PubKey:peers[1].PubKey}}
+    //    To:"0x2", Amount:big.NewInt(3).Bytes(),Nonce:3, GasLimit:TransferGas.Bytes(), DefaultGasPrice:DefaultGasPrice.Bytes(), PubKey:peers[1].PubKey}}
     //AddTransaction(tran)
     //tran = &bean.Transaction{Data:&bean.TransactionData{
-    //    To:"0x3", Amount:big.NewInt(3).Bytes(),Nonce:3, GasLimit:TransferGas.Bytes(), GasPrice:GasPrice.Bytes(), PubKey:peers[0].PubKey}}
+    //    To:"0x3", Amount:big.NewInt(3).Bytes(),Nonce:3, GasLimit:TransferGas.Bytes(), DefaultGasPrice:DefaultGasPrice.Bytes(), PubKey:peers[0].PubKey}}
     //AddTransaction(tran)
     //tran = &bean.Transaction{Data:&bean.TransactionData{
-    //    To:"0x4", Amount:big.NewInt(2).Bytes(),Nonce:2, GasLimit:TransferGas.Bytes(), GasPrice:GasPrice.Bytes(), PubKey:peers[0].PubKey}}
+    //    To:"0x4", Amount:big.NewInt(2).Bytes(),Nonce:2, GasLimit:TransferGas.Bytes(), DefaultGasPrice:DefaultGasPrice.Bytes(), PubKey:peers[0].PubKey}}
     //AddTransaction(tran)
     //tran = &bean.Transaction{Data:&bean.TransactionData{
-    //    To:"0x5", Amount:big.NewInt(2).Bytes(),Nonce:2, GasLimit:TransferGas.Bytes(), GasPrice:GasPrice.Bytes(), PubKey:peers[1].PubKey}}
+    //    To:"0x5", Amount:big.NewInt(2).Bytes(),Nonce:2, GasLimit:TransferGas.Bytes(), DefaultGasPrice:DefaultGasPrice.Bytes(), PubKey:peers[1].PubKey}}
     //AddTransaction(tran)
     //tran = &bean.Transaction{Data:&bean.TransactionData{
-    //    To:"0x6", Amount:big.NewInt(2).Bytes(),Nonce:3, GasLimit:TransferGas.Bytes(), GasPrice:GasPrice.Bytes(), PubKey:peers[2].PubKey}}
+    //    To:"0x6", Amount:big.NewInt(2).Bytes(),Nonce:3, GasLimit:TransferGas.Bytes(), DefaultGasPrice:DefaultGasPrice.Bytes(), PubKey:peers[2].PubKey}}
     //AddTransaction(tran)
     //tran = &bean.Transaction{Data:&bean.TransactionData{
-    //    To:"0x7", Amount:big.NewInt(2).Bytes(),Nonce:1, GasLimit:TransferGas.Bytes(), GasPrice:GasPrice.Bytes(), PubKey:peers[2].PubKey}}
+    //    To:"0x7", Amount:big.NewInt(2).Bytes(),Nonce:1, GasLimit:TransferGas.Bytes(), DefaultGasPrice:DefaultGasPrice.Bytes(), PubKey:peers[2].PubKey}}
     //AddTransaction(tran)
     //tran = &bean.Transaction{Data:&bean.TransactionData{
-    //    To:"0x8", Amount:big.NewInt(2).Bytes(),Nonce:2, GasLimit:TransferGas.Bytes(), GasPrice:GasPrice.Bytes(), PubKey:peers[3].PubKey}}
+    //    To:"0x8", Amount:big.NewInt(2).Bytes(),Nonce:2, GasLimit:TransferGas.Bytes(), DefaultGasPrice:DefaultGasPrice.Bytes(), PubKey:peers[3].PubKey}}
     //AddTransaction(tran)
     //tran = &bean.Transaction{Data:&bean.TransactionData{
-    //    To:"0x9", Amount:big.NewInt(2).Bytes(),Nonce:1, GasLimit:TransferGas.Bytes(), GasPrice:GasPrice.Bytes(), PubKey:peers[3].PubKey}}
+    //    To:"0x9", Amount:big.NewInt(2).Bytes(),Nonce:1, GasLimit:TransferGas.Bytes(), DefaultGasPrice:DefaultGasPrice.Bytes(), PubKey:peers[3].PubKey}}
     //AddTransaction(tran)
     //print()
     //fmt.Println("Remove")
     //tran = &bean.Transaction{Data:&bean.TransactionData{
-    //    To:"0x2", Amount:big.NewInt(2).Bytes(),Nonce:3, GasLimit:TransferGas.Bytes(), GasPrice:GasPrice.Bytes(), PubKey:peers[1].PubKey}}
+    //    To:"0x2", Amount:big.NewInt(2).Bytes(),Nonce:3, GasLimit:TransferGas.Bytes(), DefaultGasPrice:DefaultGasPrice.Bytes(), PubKey:peers[1].PubKey}}
     //removeTransaction(tran)
     //print()
     //fmt.Println("Pick")
