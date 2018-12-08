@@ -119,7 +119,7 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
         Header: &bean.BlockHeader{
             Version: Version,
             PreviousHash: previousHash,
-            GasLimit: BlockGasLimit,
+            GasLimit: BlockGasLimit.Bytes(),
             GasUsed: gasUsed,
             Timestamp: timestamp,
             StateRoot: stateRoot,
