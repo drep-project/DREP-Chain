@@ -56,7 +56,7 @@ func init()  {
         curMiners = append(curMiners, peer)
         miners = append(miners, peer)
         AddPeer(peer)
-        database.PutBalanceOutSideTransaction(accounts.PubKey2Address(peer.PubKey), chainId, big.NewInt(100000000))
+        //database.PutBalanceOutSideTransaction(accounts.PubKey2Address(peer.PubKey), chainId, big.NewInt(100000000))
     }
     adminPubKey = miners[0].PubKey
     IsStart = myIndex < minerNum
