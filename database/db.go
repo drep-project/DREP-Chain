@@ -6,6 +6,7 @@ import (
 	"BlockChainTest/config"
 	"fmt"
 	"BlockChainTest/util/list"
+	"encoding/hex"
 )
 
 type Database struct {
@@ -54,6 +55,11 @@ func (t *Transaction) Put(key []byte, value []byte, chainId int64, onTrie bool) 
 		t.database.tries[chainId] = trie.NewStateTrie()
 	}
 	t.database.tries[chainId].Insert(key, value)
+	fmt.Println()
+	fmt.Println("key: ", hex.EncodeToString(key))
+	fmt.Println("value: ", hex.EncodeToString(value))
+	fmt.Println("state root: ", hex.EncodeToString(GetStateRoot()))
+	fmt.Println()
 }
 
 func (t *Transaction) Get(key []byte) []byte {
