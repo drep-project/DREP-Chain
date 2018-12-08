@@ -117,6 +117,7 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
         }
         previousHash = h
     }
+    fmt.Println("generate block height: ", height)
     block := &bean.Block{
         Header: &bean.BlockHeader{
             Version:      Version,

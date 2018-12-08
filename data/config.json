@@ -4,7 +4,9 @@
   "port": 55555,
   "boot": true,
   "myindex": 0,
-  "bootnodes": [
+  "bootnodes": true,
+  "myindex": 1,
+  "debugnodes": [
     {
       "PubKey": {
         "X": "1624f4a65ead37468b8e2270437fe23d69dac11bba85a8ed4cf241185048fd41",
