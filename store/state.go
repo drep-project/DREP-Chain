@@ -83,7 +83,7 @@ func init()  {
     //
 }
 
-func GenerateBlock() (*bean.Block, error) {
+func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
     maxHeight := database.GetMaxHeight()
     height := maxHeight + 1
     ts := PickTransactions(BlockGasLimit)
@@ -112,6 +112,10 @@ func GenerateBlock() (*bean.Block, error) {
     }
     merkle := trie.NewMerkle(txHashes)
     merkleRoot := merkle.Root.Hash
+    var memberPks []*mycrypto.Point = nil
+    for _, p := range members {
+        memberPks = append(memberPks, p.PubKey)
+    }
     return &bean.Block{
         Header: &bean.BlockHeader{
             Version: Version,
@@ -124,6 +128,7 @@ func GenerateBlock() (*bean.Block, error) {
             TxHashes: txHashes,
             Height: height,
             LeaderPubKey:GetPubKey(),
+            MinorPubKeys:memberPks,
         },
         Data:&bean.BlockData{
             TxCount:int32(len(ts)),

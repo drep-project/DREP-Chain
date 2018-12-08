@@ -47,6 +47,10 @@ func NewLeader(pubKey *mycrypto.Point, members []*bean.Peer) *Leader {
     return l
 }
 
+func (l *Leader) GetMembers() []*bean.Peer {
+    return l.members
+}
+
 func (l *Leader) ProcessConsensus(msg []byte) (error, *mycrypto.Signature, []byte) {
     log.Println("Leader is going to setup")
     ps := l.setUp(msg)
