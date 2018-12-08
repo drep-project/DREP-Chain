@@ -91,7 +91,7 @@ func (n *Node) Start() {
 func (n *Node) runAsLeader() {
     leader1 := consensus.NewLeader(n.prvKey.PubKey, store.GetMiners())
     block, _ := store.GenerateBlock(leader1.GetMembers())
-    log.Println("node leader is preparing process consensus for round 1")
+    log.Println("node leader is preparing process consensus for round 1", block)
     if msg, err := json.Marshal(block); err ==nil {
         log.Println("node leader is going to process consensus for round 1")
         err, sig, bitmap := leader1.ProcessConsensus(msg)
@@ -107,6 +107,9 @@ func (n *Node) runAsLeader() {
             leader2.ProcessConsensus(msg)
             log.Println("node leader finishes process consensus for round 2")
             log.Println("node leader is going to send block")
+            fmt.Println(block)
+            fmt.Println(block.MultiSig)
+            fmt.Println(multiSig)
             block.MultiSig = multiSig
             n.ProcessBlock(block) // process before sending
             n.sendBlock(block)
