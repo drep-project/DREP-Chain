@@ -43,22 +43,29 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
     prize := new(big.Int).Mul(new(big.Int).Add(total, shift), ratio)
     prize = new(big.Int).Mul(prize, GWei)
     leaderPrize := new(big.Int).Rsh(prize, 1)
-    database.PutBalanceOutSideTransaction(accounts.PubKey2Address(b.Header.LeaderPubKey), b.Header.ChainId, leaderPrize)
+    fmt.Println("leader prize: ", leaderPrize)
+    leaderAddr := accounts.PubKey2Address(b.Header.LeaderPubKey)
+    balance := database.GetBalanceOutsideTransaction(leaderAddr, b.Header.ChainId)
+    balance = new(big.Int).Add(balance, leaderPrize)
+    database.PutBalanceOutSideTransaction(leaderAddr, b.Header.ChainId, balance)
     leftPrize := new(big.Int).Sub(prize, leaderPrize)
     minerNum := 0
     for _, elem := range b.MultiSig.Bitmap {
-        if elem == 1 {
-            minerNum++
-        }
+       if elem == 1 {
+           minerNum++
+       }
     }
     if minerNum == 0 {
-        return total
+       return total
     }
     minerPrize := new(big.Int).Div(leftPrize, new(big.Int).SetInt64(int64(minerNum)))
     for i, e := range b.MultiSig.Bitmap {
-        if e == 1 {
-            database.PutBalanceOutSideTransaction(accounts.PubKey2Address(b.Header.MinorPubKeys[i]), b.Header.ChainId, minerPrize)
-        }
+       if e == 1 {
+           minerAddr := accounts.PubKey2Address(b.Header.MinorPubKeys[i])
+           bal := database.GetBalanceOutsideTransaction(minerAddr, b.Header.ChainId)
+           bal = new(big.Int).Add(bal, minerPrize)
+           database.PutBalanceOutSideTransaction(minerAddr, b.Header.ChainId, bal)
+       }
     }
     return total
 }
