@@ -99,11 +99,10 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
     } else {
         previousHash = []byte{}
     }
-    gasLimit := new(big.Int).SetInt64(int64(10000000)).Bytes()
     gasUsed := GetGasSum(ts).Bytes()
-    if ExceedGasLimit(gasUsed, gasLimit) {
-        return nil, errors.New("gas used exceeds gas limit")
-    }
+    //if ExceedGasLimit(gasUsed, gasLimit) {
+    //    return nil, errors.New("gas used exceeds gas limit")
+    //}
     timestamp := time.Now().Unix()
     stateRoot := GetStateRoot(ts)
     txHashes, err := GetTxHashes(ts)
@@ -120,7 +119,7 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
         Header: &bean.BlockHeader{
             Version: Version,
             PreviousHash: previousHash,
-            GasLimit: gasLimit,
+            GasLimit: BlockGasLimit,
             GasUsed: gasUsed,
             Timestamp: timestamp,
             StateRoot: stateRoot,
@@ -193,13 +192,6 @@ func GetGasSum(ts []*bean.Transaction) *big.Int {
         gasSum = gasSum.Add(gasSum, tx.GetGas())
     }
     return gasSum
-}
-
-func ExceedGasLimit(used, limit []byte) bool {
-    if new(big.Int).SetBytes(used).Cmp(new(big.Int).SetBytes(limit)) > 0 {
-        return true
-    }
-    return false
 }
 
 func GetStateRoot(ts []*bean.Transaction) []byte {
