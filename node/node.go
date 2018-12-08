@@ -90,7 +90,7 @@ func (n *Node) Start() {
 
 func (n *Node) runAsLeader() {
     leader1 := consensus.NewLeader(n.prvKey.PubKey, store.GetMiners())
-    block, _ := store.GenerateBlock()
+    block, _ := store.GenerateBlock(leader1.GetMembers())
     log.Println("node leader is preparing process consensus for round 1")
     if msg, err := json.Marshal(block); err ==nil {
         log.Println("node leader is going to process consensus for round 1")

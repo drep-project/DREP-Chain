@@ -6,13 +6,12 @@ import (
 )
 
 var (
-    GWei                     = new(big.Int).SetInt64(1000000000)
     BlockGasLimit            = big.NewInt(5000000000)
-    DefaultGasPrice          = big.NewInt(10)
-    TransferGas              = big.NewInt(10)
-    MinerGas                 = big.NewInt(10)
-    CreateContractGas        = big.NewInt(10)
-    CallContractGas          = big.NewInt(10)
+    DefaultGasPrice          *big.Int
+    TransferGas              = big.NewInt(20000)
+    MinerGas                 = big.NewInt(20000)
+    CreateContractGas        = big.NewInt(1000000)
+    CallContractGas          = big.NewInt(10000000)
     TransferType       int32 = 0
     MinerType          int32 = 1
     CreateContractType int32 = 2
@@ -27,6 +26,7 @@ var IsStart bool
 const LocalTest = false
 
 func init() {
+    DefaultGasPrice, _ = new(big.Int).SetString("20000000000", 10)
     if LocalTest {
         Admin = &bean.Peer{IP: bean.IP("127.0.0.1"), Port: 55555}
     } else {
