@@ -39,45 +39,6 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
             total.Add(total, gasFee)
         }
     }
-
-    prize := new(big.Int).Add(total, config.GetBlockPrize())
-
-    leaderPrize := new(big.Int).Rsh(prize, 1)
-    log.Trace("leader prize: ","Prize", leaderPrize)
-    leaderAddr := accounts.PubKey2Address(b.Header.LeaderPubKey)
-    balance := database.GetBalanceOutsideTransaction(leaderAddr, b.Header.ChainId)
-    balance = new(big.Int).Add(balance, leaderPrize)
-    database.PutBalanceOutSideTransaction(leaderAddr, b.Header.ChainId, balance)
-    leftPrize := new(big.Int).Sub(prize, leaderPrize)
-    minerNum := 0
-    for _, elem := range b.MultiSig.Bitmap {
-        if elem == 1 {
-            minerNum++
-        }
-    }
-    if minerNum == 0 {
-        return total
-    }
-    minerPrize := new(big.Int).Div(leftPrize, new(big.Int).SetInt64(int64(minerNum)))
-    for i, e := range b.MultiSig.Bitmap {
-        if e == 1 {
-            minerAddr := accounts.PubKey2Address(b.Header.MinorPubKeys[i])
-            bal := database.GetBalanceOutsideTransaction(minerAddr, b.Header.ChainId)
-            bal = new(big.Int).Add(bal, minerPrize)
-            database.PutBalanceOutSideTransaction(minerAddr, b.Header.ChainId, bal)
-        }
-    }
-
-    //stateRoot := database.GetStateRoot()
-    //if bytes.Equal(b.Header.StateRoot, stateRoot) {
-    //    fmt.Println("well ", len(b.Data.TxList))
-    //    dbTran.Commit()
-    //} else {
-    //    fmt.Println("bad: ", len(b.Data.TxList))
-    //    dbTran.Discard()
-    //}
-    dbTran.Commit()
-
     stateRoot := database.GetStateRoot()
     if bytes.Equal(b.Header.StateRoot, stateRoot) {
         fmt.Println()
