@@ -107,6 +107,7 @@ func (n *Node) runAsLeader() {
             leader2.ProcessConsensus(msg)
             log.Println("node leader finishes process consensus for round 2")
             log.Println("node leader is going to send block")
+            block.MultiSig = multiSig
             n.ProcessBlock(block) // process before sending
             n.sendBlock(block)
             log.Println("node leader finishes sending block")
