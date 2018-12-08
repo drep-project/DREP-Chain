@@ -51,20 +51,20 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
     leftPrize := new(big.Int).Sub(prize, leaderPrize)
     minerNum := 0
     for _, elem := range b.MultiSig.Bitmap {
-       if elem == 1 {
-           minerNum++
-       }
+        if elem == 1 {
+            minerNum++
+        }
     }
     if minerNum == 0 {
-       return total
+        return total
     }
     minerPrize := new(big.Int).Div(leftPrize, new(big.Int).SetInt64(int64(minerNum)))
     for i, e := range b.MultiSig.Bitmap {
-       if e == 1 {
-           minerAddr := accounts.PubKey2Address(b.Header.MinorPubKeys[i])
-           bal := database.GetBalanceOutsideTransaction(minerAddr, b.Header.ChainId)
-           bal = new(big.Int).Add(bal, minerPrize)
-           database.PutBalanceOutSideTransaction(minerAddr, b.Header.ChainId, bal)
+        if e == 1 {
+            minerAddr := accounts.PubKey2Address(b.Header.MinorPubKeys[i])
+            bal := database.GetBalanceOutsideTransaction(minerAddr, b.Header.ChainId)
+            bal = new(big.Int).Add(bal, minerPrize)
+            database.PutBalanceOutSideTransaction(minerAddr, b.Header.ChainId, bal)
        }
     }
     return total
