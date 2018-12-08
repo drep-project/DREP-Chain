@@ -9,6 +9,7 @@ import (
     "BlockChainTest/accounts"
     "BlockChainTest/core"
     "BlockChainTest/core/vm"
+    "BlockChainTest/config"
 )
 
 func ExecuteTransactions(b *bean.Block) *big.Int {
@@ -38,10 +39,7 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
             total.Add(total, gasFee)
         }
     }
-    shift := new(big.Int).SetInt64(1000)
-    ratio := new(big.Int).SetInt64(5)
-    prize := new(big.Int).Mul(new(big.Int).Add(total, shift), ratio)
-    prize = new(big.Int).Mul(prize, GWei)
+    prize := new(big.Int).Add(total, config.GetBlockPrize())
     leaderPrize := new(big.Int).Rsh(prize, 1)
     fmt.Println("leader prize: ", leaderPrize)
     leaderAddr := accounts.PubKey2Address(b.Header.LeaderPubKey)
