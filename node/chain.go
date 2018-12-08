@@ -10,12 +10,13 @@ import (
     "BlockChainTest/database"
     "BlockChainTest/accounts"
     "BlockChainTest/config"
+    "BlockChainTest/util"
 )
 
 func SendTransaction(t *bean.Transaction) error {
     peers := store.GetPeers()
     fmt.Println("Send transaction")
-    if err, offline := network.SendMessage(peers, t); err == nil {
+    if _, offline := network.SendMessage(peers, t); len(offline) == 0 {
         if id, err := t.TxId(); err == nil {
             store.ForwardTransaction(id)
         }
@@ -23,7 +24,7 @@ func SendTransaction(t *bean.Transaction) error {
         store.RemovePeers(offline)
         return nil
     } else {
-        return err
+        return &util.ConnectionError{}
     }
 }
 
@@ -39,7 +40,7 @@ func GenerateBalanceTransaction(to string, destChain int64, amount *big.Int) *be
         ChainId: chainId,
         DestChain: destChain,
         Amount:amount.Bytes(),
-        GasPrice:store.GasPrice.Bytes(),
+        GasPrice:store.DefaultGasPrice.Bytes(),
         GasLimit:store.TransferGas.Bytes(),
         Timestamp:time.Now().Unix(),
         PubKey:store.GetPubKey()}
@@ -57,7 +58,7 @@ func GenerateMinerTransaction(addr string, chainId int64) *bean.Transaction {
         Nonce:     nonce,
         Type:      store.MinerType,
         ChainId:   chainId,
-        GasPrice:  store.GasPrice.Bytes(),
+        GasPrice:  store.DefaultGasPrice.Bytes(),
         GasLimit:  store.MinerGas.Bytes(),
         Timestamp: time.Now().Unix(),
         Data: accounts.Hex2Address(addr).Bytes(),
@@ -73,7 +74,7 @@ func GenerateCreateContractTransaction(code []byte) *bean.Transaction {
         Nonce: nonce,
         Type: store.CreateContractType,
         ChainId: chainId,
-        GasPrice: store.GasPrice.Bytes(),
+        GasPrice: store.DefaultGasPrice.Bytes(),
         GasLimit: store.CreateContractGas.Bytes(),
         Timestamp: time.Now().Unix(),
         Data: make([]byte, len(code) + 1),
@@ -97,7 +98,7 @@ func GenerateCallContractTransaction(addr accounts.CommonAddress, chainId int64,
         ChainId: runningChain,
         DestChain: chainId,
         To: addr.Hex(),
-        GasPrice: store.GasPrice.Bytes(),
+        GasPrice: store.DefaultGasPrice.Bytes(),
         GasLimit: store.CallContractGas.Bytes(),
         Timestamp: time.Now().Unix(),
         PubKey: store.GetPubKey(),

@@ -12,7 +12,8 @@ import (
 )
 
 type Task struct {
-    Peer *Peer
+    PrvKey *mycrypto.PrivateKey
+    Peer *bean.Peer
     Msg  interface{}
 }
 
@@ -22,27 +23,12 @@ func (t *Task) cipher() ([]byte, error) {
         fmt.Println("there's an error during the serialize", err)
         return nil, err
     }
-    //sig, err := mycrypto.Sign(serializable.Body)
-    //if err != nil {
-    //   return nil, err
-    //}
-    //serializable.Sig = sig
-    //pubKey, err := mycrypto.GetPubKey()
-    //if err != nil {
-    //   return nil, err
-    //}
-    //serializable.PubKey = pubKey
-    //plaintext, err := proto.Marshal(serializable)
-    //if err != nil {
-    //   return nil, err
-    //}
-    //cipher, err := mycrypto.Encrypt(m.Peer.PubKey, plaintext)
-    //if err != nil {
-    //   return nil, err
-    //}
-    //return cipher, nil
-    serializable.Sig = &mycrypto.Signature{R: []byte{0x00}, S: []byte{0x00}}
-    serializable.PubKey = &mycrypto.Point{X: []byte{0x00}, Y: []byte{0x00}}
+    sig, err := mycrypto.Sign(t.PrvKey, serializable.Body)
+    if err != nil {
+      return nil, err
+    }
+    serializable.Sig = sig
+    serializable.PubKey = t.PrvKey.PubKey
     return json.Marshal(serializable)
 }
 

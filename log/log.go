@@ -2,7 +2,7 @@ package log
 
 import "fmt"
 
-var DEBUG = false
+var DEBUG = true
 
 func Println(a ...interface{})  {
     if DEBUG {

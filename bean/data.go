@@ -31,7 +31,7 @@ type BlockData struct {
 type Block struct {
     Header               *BlockHeader
     Data                 *BlockData
-    MultiSig             *mycrypto.Signature
+    MultiSig             *MultiSignature
 }
 
 type TransactionData struct {

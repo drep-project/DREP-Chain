@@ -4,6 +4,7 @@ import (
     "github.com/spf13/viper"
     "fmt"
     "os"
+    "math/big"
 )
 
 const (
@@ -62,4 +63,10 @@ func SetKeystore(keystorePath string) error {
 
 func GetPort() int {
     return viper.GetInt("Port")
+}
+
+func GetBlockPrize() *big.Int {
+    blockPrize := viper.GetString("BlockPrize")
+    prize, _ := new(big.Int).SetString(blockPrize, 10)
+    return prize
 }
