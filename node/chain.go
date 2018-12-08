@@ -30,19 +30,19 @@ var (
     amount [cnt]*big.Int
 )
 
-func init() {
-    for i := 0; i < cnt; i++ {
-        rp[i], _ = mycrypto.GeneratePrivateKey()
-        ra[i] = accounts.PubKey2Address(rp[i].PubKey)
-        cp[i], _ = mycrypto.GeneratePrivateKey()
-        ca[i] = accounts.PubKey2Address(cp[i].PubKey)
-        cc[i] = rand.Int63n(1000) + 123
-        //cc[i] = 0
-        amount[i] = new(big.Int).SetInt64(10000 + int64(i) * 100)
-        database.PutBalanceOutSideTransaction(ra[i], accounts.RootChainID, new(big.Int).SetInt64(100000000))
-        database.PutBalanceOutSideTransaction(ca[i], cc[i], new(big.Int).SetInt64(100000000))
-    }
-}
+//func init() {
+//    for i := 0; i < cnt; i++ {
+//        rp[i], _ = mycrypto.GeneratePrivateKey()
+//        ra[i] = accounts.PubKey2Address(rp[i].PubKey)
+//        cp[i], _ = mycrypto.GeneratePrivateKey()
+//        ca[i] = accounts.PubKey2Address(cp[i].PubKey)
+//        cc[i] = rand.Int63n(1000) + 123
+//        //cc[i] = 0
+//        amount[i] = new(big.Int).SetInt64(10000 + int64(i) * 100)
+//        database.PutBalanceOutSideTransaction(ra[i], accounts.RootChainID, new(big.Int).SetInt64(100000000))
+//        database.PutBalanceOutSideTransaction(ca[i], cc[i], new(big.Int).SetInt64(100000000))
+//    }
+//}
 
 func SendTransaction(t *bean.Transaction) error {
     peers := store.GetPeers()
