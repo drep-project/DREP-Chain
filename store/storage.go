@@ -41,6 +41,7 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
     shift := new(big.Int).SetInt64(1000)
     ratio := new(big.Int).SetInt64(5)
     prize := new(big.Int).Mul(new(big.Int).Add(total, shift), ratio)
+    prize = new(big.Int).Mul(prize, GWei)
     leaderPrize := new(big.Int).Rsh(prize, 1)
     database.PutBalanceOutSideTransaction(accounts.PubKey2Address(b.Header.LeaderPubKey), b.Header.ChainId, leaderPrize)
     leftPrize := new(big.Int).Sub(prize, leaderPrize)
