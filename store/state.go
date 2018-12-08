@@ -58,7 +58,6 @@ func InitState(config *config.NodeConfig)  {
         curMiners = append(curMiners, peer)
         miners = append(miners, peer)
         AddPeer(peer)
-        //database.PutBalanceOutSideTransaction(accounts.PubKey2Address(peer.PubKey), chainId, big.NewInt(100000000))
     }
     adminPubKey = miners[0].PubKey
 
@@ -90,15 +89,11 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
     ts := PickTransactions(BlockGasLimit)
     gasSum := new(big.Int)
     for _, t := range ts {
-       g, _ := execute(dbTran, t)
-       gasSum = new(big.Int).Add(gasSum, g)
+        g, _ := execute(dbTran, t)
+        gasSum = new(big.Int).Add(gasSum, g)
     }
-    gasUsed := GetGasSum(ts).Bytes()
-    //if ExceedGasLimit(gasUsed, gasLimit) {
-    //    return nil, errors.New("gas used exceeds gas limit")
-    //}
     timestamp := time.Now().Unix()
-    stateRoot := GetStateRoot(ts)
+    stateRoot := database.GetStateRoot()
     gasUsed := gasSum.Bytes()
     txHashes, err := GetTxHashes(ts)
     if err != nil {
@@ -111,8 +106,6 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
         memberPks = append(memberPks, p.PubKey)
     }
 
-    stateRoot := database.GetStateRoot()
-    timestamp := time.Now().Unix()
     var previousHash []byte
     previousBlock := database.GetHighestBlockInsideTransaction(dbTran)
     if previousBlock == nil {
@@ -128,7 +121,7 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
         Header: &bean.BlockHeader{
             Version:      Version,
             PreviousHash: previousHash,
-
+            ChainId: GetChainId(),
             GasLimit: BlockGasLimit.Bytes(),
             GasUsed: gasUsed,
             Timestamp: timestamp,
@@ -184,45 +177,8 @@ func CreateAccount(addr string, chainId int64) (string, error) {
     return account.Address.Hex(), nil
 }
 
-func GetAccounts() []string {
-    acs := make([]string, len(nodes))
-    i := 0
-    for addr, _ := range nodes {
-        acs[i] = addr
-        i++
-    }
-    return acs
-}
-
 func GetPort() bean.Port {
     return port
-}
-
-func GetGasSum(ts []*bean.Transaction) *big.Int {
-    gasSum := new(big.Int)
-    for _, tx := range ts {
-        gasSum = gasSum.Add(gasSum, tx.GetGas())
-    }
-    return gasSum
-}
-
-func GetStateRoot(ts []*bean.Transaction) []byte {
-    //for _, tx := range ts {
-    //    from := bean.PubKey2Address(tx.Data.PubKey)
-    //    to := bean.Hex2Address(tx.Data.To)
-    //    gasUsed := tx.GetGas()
-    //    nonce := tx.Data.Nonce
-    //    amount := new(big.Int).SetBytes(tx.Data.Amount)
-    //    prevSenderBalance := database.GetBalance(from)
-    //    prevReceiverBalance := database.GetBalance(to)
-    //    newSenderBalance := new(big.Int).Sub(prevSenderBalance, amount)
-    //    newSenderBalance = newSenderBalance.Sub(newSenderBalance, gasUsed)
-    //    newReceiverBalance := new(big.Int).Add(prevReceiverBalance, amount)
-    //    database.PutBalance(from, newSenderBalance)
-    //    database.PutBalance(to, newReceiverBalance)
-    //    database.PutNonce(from, nonce)
-    //}
-    return database.GetStateRoot()
 }
 
 func GetTxHashes(ts []*bean.Transaction) ([][]byte, error) {
