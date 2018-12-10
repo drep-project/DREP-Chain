@@ -147,7 +147,6 @@ func (controller *MainController)GetBalance() {
         resp.ErrorMsg = "param format incorrect"
         return
     }
-
     c := controller.GetString("chainId")
     chainId, err := strconv.ParseInt(c, 10, 64)
     if err != nil {
@@ -160,48 +159,9 @@ func (controller *MainController)GetBalance() {
     fmt.Println("BalanceAddress: ", address)
     ca := accounts.Hex2Address(address)
     b := database.GetBalanceOutsideTransaction(ca, chainId)
-    if (b.Int64() == 0) {
-        defaultRep := viper.GetInt64("default_rep")
-        fmt.Println("default reputation is :", defaultRep)
-        database.PutReputationOutSideTransaction(ca, chainId, big.NewInt(defaultRep))
-        resp.Success = true
-        resp.Data = defaultRep
-        controller.ServeJSON()
-    }
     resp.Success = true
     resp.Data = b.String()
 
-    controller.ServeJSON()
-}
-
-func (controller *MainController)GetReputation() {
-    // find param in http.Request
-    resp := &Response{Success:false}
-    controller.Data["json"] = resp
-    address := controller.GetString("address")
-    address = address[2:]
-
-    if len(address) == 0 {
-        resp.ErrorMsg = "param format incorrect"
-        return
-    }
-
-    c := controller.GetString("chainId")
-    chainId, err := strconv.ParseInt(c, 10, 64)
-    if err != nil {
-        resp.ErrorMsg = err.Error()
-        resp.Data = c
-        controller.ServeJSON()
-        return
-    }
-
-    fmt.Println("BalanceAddress: ", address)
-    ca := accounts.Hex2Address(address)
-    b := database.GetReputationOutsideTransaction(ca, chainId)
-    resp.Success = true
-    resp.Data = b.String()
-
-    fmt.Println(resp)
     controller.ServeJSON()
 }
 
@@ -304,6 +264,45 @@ func (controller *MainController)SendTransactionsToMainChain() {
             node.SendTransaction(tx)
         }
     }()
+}
+
+func (controller *MainController)GetReputation() {
+    // find param in http.Request
+    resp := &Response{Success:false}
+    controller.Data["json"] = resp
+    address := controller.GetString("address")
+    address = address[2:]
+
+    if len(address) == 0 {
+        resp.ErrorMsg = "param format incorrect"
+        return
+    }
+
+    c := controller.GetString("chainId")
+    chainId, err := strconv.ParseInt(c, 10, 64)
+    if err != nil {
+        resp.ErrorMsg = err.Error()
+        resp.Data = c
+        controller.ServeJSON()
+        return
+    }
+
+    fmt.Println("BalanceAddress: ", address)
+    ca := accounts.Hex2Address(address)
+    b := database.GetReputationOutsideTransaction(ca, chainId)
+    if (b.Int64() == 0) {
+        defaultRep := viper.GetInt64("default_rep")
+        fmt.Println("default reputation is :", defaultRep)
+        database.PutReputationOutSideTransaction(ca, chainId, big.NewInt(defaultRep))
+        resp.Success = true
+        resp.Data = viper.GetString("default_rep")
+        controller.ServeJSON()
+    }
+    resp.Success = true
+    resp.Data = b.String()
+
+    fmt.Println(resp)
+    controller.ServeJSON()
 }
 
 func Start() {
