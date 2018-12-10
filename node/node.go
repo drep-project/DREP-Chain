@@ -17,6 +17,7 @@ import (
     "encoding/json"
     "BlockChainTest/pool"
     "BlockChainTest/accounts"
+    "BlockChainTest/config"
 )
 
 var (
@@ -45,7 +46,7 @@ func GetNode() *Node {
 }
 
 func (n *Node) Start() {
-    if store.IsStart {
+    if config.IsBootNode() {
         //n.discovering = false
     } else {
         //n.discovering = true

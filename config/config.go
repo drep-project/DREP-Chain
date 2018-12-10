@@ -15,14 +15,6 @@ var (
     dataDir = "." + string(os.PathSeparator) + "data"
 )
 
-type Config struct {
-    RelayNode  []string
-    ChainId    int64
-    Port       int
-    MyIndex    int
-    DebugNodes []*DebugNode
-}
-
 func init() {
     viper.SetConfigName("config")
     viper.AddConfigPath(dataDir)
@@ -33,40 +25,52 @@ func init() {
 }
 
 func GetChainId() int64 {
-    return viper.GetInt64("ChainId")
+    return viper.GetInt64("chainid")
 }
 
 func GetKeystore() string {
     return dataDir + string(os.PathSeparator) + "keystore"
 }
 
+func GetDb() string {
+    return dataDir + string(os.PathSeparator) + "database"
+}
+
 func GetMyIndex() int {
-    return viper.GetInt("MyIndex")
+    boot := IsBootNode()
+    if boot {
+        return viper.GetInt("myindex")
+    } else {
+        return -1
+    }
 }
 
-func GetDebugNodes() []*DebugNode {
-    config := &Config{}
+func GetDebugNodes() []*BootNode {
+    config := &struct {
+        BootNodes []*BootNode
+    }{}
     viper.Unmarshal(config)
-    return config.DebugNodes
-}
-
-func SetChain(chainId int64, dataDir string) error {
-    viper.Set("ChainId", chainId)
-    viper.Set("DataDir", dataDir)
-    return viper.WriteConfig()
-}
-
-func SetKeystore(keystorePath string) error {
-    viper.Set("Keystore", keystorePath)
-    return viper.WriteConfig()
+    return config.BootNodes
 }
 
 func GetPort() int {
-    return viper.GetInt("Port")
+    port := viper.GetInt("port")
+    if port == 0 {
+        return defaultPort
+    } else {
+        return port
+    }
 }
 
 func GetBlockPrize() *big.Int {
-    blockPrize := viper.GetString("BlockPrize")
+    blockPrize := viper.GetString("blockprize")
+    if blockPrize == "" {
+        blockPrize = defaultBlockPrize
+    }
     prize, _ := new(big.Int).SetString(blockPrize, 10)
     return prize
+}
+
+func IsBootNode() bool {
+    return viper.GetBool("boot")
 }

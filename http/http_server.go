@@ -326,25 +326,6 @@ func GetTransactionsFormBlock(w http.ResponseWriter, r *http.Request) {
     writeResponse(w, resp)
 }
 
-func SetChain(w http.ResponseWriter, r *http.Request) {
-    params := analysisReqParam(r)
-    var chainId int64
-    var dataDir string
-    if value, ok := params["chainId"].(int64); ok {
-        chainId = value
-    }
-    if value, ok := params["dataDir"].(string); ok {
-        dataDir = value
-    }
-    err := setChain(chainId, dataDir)
-    if err != nil {
-        resp := &Response{Success: false, ErrorMsg: err.Error()}
-        writeResponse(w, resp)
-    }
-    resp := &Response{Success: true}
-    writeResponse(w, resp)
-}
-
 var methodsMap = map[string] http.HandlerFunc {
     "/GetAllBlocks":             GetAllBlocks,
     "/GetBlock":                 GetBlock,
@@ -361,7 +342,6 @@ var methodsMap = map[string] http.HandlerFunc {
     "/GetAccount":               GetAccount,
     "/GetMostRecentBlocks":      GetMostRecentBlocks,
     "/GetTransactionsFormBlock": GetTransactionsFormBlock,
-    "/SetChain":                 SetChain,
 }
 
 func HttpStart() {

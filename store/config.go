@@ -21,8 +21,6 @@ var (
     Admin *bean.Peer
 )
 
-var IsStart bool
-
 const LocalTest = false
 
 func init() {

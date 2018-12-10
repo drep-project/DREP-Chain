@@ -5,7 +5,6 @@ import (
     "encoding/hex"
     "encoding/json"
     "path"
-    "BlockChainTest/config"
     "errors"
     "fmt"
 )
@@ -108,12 +107,6 @@ func SaveKeystore(node *Node, keystorePath string) error {
             return errors.New("failed to get current data directory")
         }
         keystorePath = path.Join(dataDir, key.Address + ".json")
-    }
-
-    err = config.SetKeystore(keystorePath)
-    if err != nil {
-        fmt.Println("999", err)
-        return err
     }
 
     err = os.Mkdir(KeystoreDirName, os.ModeDir|os.ModePerm)
