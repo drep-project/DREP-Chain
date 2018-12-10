@@ -77,8 +77,8 @@ func (n *Node) Start() {
                         n.processBlock(b)
                     }
                 } else {
-                   fmt.Println("Offline")
-                   return
+                    fmt.Println("Offline")
+                    return
                 }
             }
             log.Println("node stop")
@@ -253,20 +253,20 @@ func (n *Node) fetchBlocks() {
     network.SendMessage([]*bean.Peer{store.Admin}, req)
     fmt.Println("fetching 1")
     for n.curMaxHeight != database.GetMaxHeight() {
-       fmt.Println("fetching 2: ", n.curMaxHeight, database.GetMaxHeight())
-       if msg := pool.ObtainOne(func(msg interface{}) bool {
-           if block, ok := msg.(*bean.Block); ok {
-               return block != nil && block.Header != nil && block.Header.Height == database.GetMaxHeight() + 1
-           } else {
-               return false
-           }
-       }, 5 * time.Second); msg != nil {
-           if block, ok := msg.(*bean.Block); ok {
-               n.processBlock(block)
-           }
-       }
-       fmt.Println("fetching 3: ", n.curMaxHeight, database.GetMaxHeight())
-   }
+        fmt.Println("fetching 2: ", n.curMaxHeight, database.GetMaxHeight())
+        if msg := pool.ObtainOne(func(msg interface{}) bool {
+            if block, ok := msg.(*bean.Block); ok {
+                return block != nil && block.Header != nil && block.Header.Height == database.GetMaxHeight() + 1
+            } else {
+                return false
+            }
+        }, 5 * time.Second); msg != nil {
+            if block, ok := msg.(*bean.Block); ok {
+                n.processBlock(block)
+            }
+        }
+        fmt.Println("fetching 3: ", n.curMaxHeight, database.GetMaxHeight())
+    }
 }
 
 func (n *Node) ProcessBlockReq(req *bean.BlockReq) {
