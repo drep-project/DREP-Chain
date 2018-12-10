@@ -139,13 +139,6 @@ func GetBalance(w http.ResponseWriter, r *http.Request) {
     //fmt.Println("[database PutBalance] succeed!")
 
     b := database.GetBalanceOutsideTransaction(ca, chainId)
-    defer func() {
-        if x := recover(); x != nil {
-            fmt.Printf("[database GetBalance] caught panic: %v", x)
-            resp := &Response{Success:false, ErrorMsg:"[database GetBalance] caught panic!"}
-            writeResponse(w, resp)
-        }
-    }()
     resp := &Response{Success:true, Data:b.String()}
     writeResponse(w, resp)
 }
@@ -247,12 +240,13 @@ func GetReputation(w http.ResponseWriter, r *http.Request) {
 
     ca := accounts.Hex2Address(address)
     b:= database.GetReputationOutsideTransaction(ca, chainId)
+    resp := &Response{Success:true, Data:b.String()}
     if (b.Int64() == 0) {
         defaultRep := viper.GetInt64("default_rep")
         fmt.Println("default reputation is :", defaultRep)
         database.PutReputationOutSideTransaction(ca, chainId, big.NewInt(defaultRep))
+        resp.Data = viper.GetString("default_rep")
     }
-    resp := &Response{Success:true, Data:b.String()}
     writeResponse(w, resp)
 }
 
