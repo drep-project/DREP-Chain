@@ -11,6 +11,7 @@ import (
     "math/big"
     "BlockChainTest/node"
     "BlockChainTest/accounts"
+    "github.com/spf13/viper"
 )
 
 var mappingMethodMap = map[string] string {
@@ -24,7 +25,7 @@ var mappingMethodMap = map[string] string {
     "/SendTransaction": "*:SendTransaction",
     //"/CreateAccount": "*:CreateAccount",
     //"/SwitchAccount": "*:SwitchAccount",
-    //"/GetAccounts": "*:GetAccounts",
+    "/GetReputation": "*:GetReputation",
     //"/CurrentAccount": "*:CurrentAccount",
     "/GetTransactionsFromBlock": "*:GetTransactionsFromBlock",
     "/SendTransactionsToMainChain": "*:SendTransactionsToMainChain",
@@ -158,7 +159,45 @@ func (controller *MainController)GetBalance() {
 
     fmt.Println("BalanceAddress: ", address)
     ca := accounts.Hex2Address(address)
-    b := database.GetBalance(ca, chainId)
+    b := database.GetBalanceOutsideTransaction(ca, chainId)
+    if (b.Int64() == 0) {
+        defaultRep := viper.GetInt64("default_rep")
+        fmt.Println("default reputation is :", defaultRep)
+        database.PutReputationOutSideTransaction(ca, chainId, big.NewInt(defaultRep))
+        resp.Success = true
+        resp.Data = defaultRep
+        controller.ServeJSON()
+    }
+    resp.Success = true
+    resp.Data = b.String()
+
+    controller.ServeJSON()
+}
+
+func (controller *MainController)GetReputation() {
+    // find param in http.Request
+    resp := &Response{Success:false}
+    controller.Data["json"] = resp
+    address := controller.GetString("address")
+    address = address[2:]
+
+    if len(address) == 0 {
+        resp.ErrorMsg = "param format incorrect"
+        return
+    }
+
+    c := controller.GetString("chainId")
+    chainId, err := strconv.ParseInt(c, 10, 64)
+    if err != nil {
+        resp.ErrorMsg = err.Error()
+        resp.Data = c
+        controller.ServeJSON()
+        return
+    }
+
+    fmt.Println("BalanceAddress: ", address)
+    ca := accounts.Hex2Address(address)
+    b := database.GetReputationOutsideTransaction(ca, chainId)
     resp.Success = true
     resp.Data = b.String()
 
@@ -182,7 +221,7 @@ func (controller *MainController)GetNonce() {
     }
 
     ca := accounts.Hex2Address(address)
-    nonce := database.GetNonce(ca, chainId)
+    nonce := database.GetNonceOutsideTransaction(ca, chainId)
     resp.Data = nonce
     controller.ServeJSON()
 }
@@ -192,19 +231,11 @@ func (controller *MainController)SendTransaction() {
     controller.Data["json"] = resp
     to := controller.Input().Get("to")
     a := controller.Input().Get("amount")
-    c := controller.Input().Get("chainId")
     d := controller.Input().Get("destChain")
 
     amount, succeed := new(big.Int).SetString(a, 10)
     if succeed == false {
         resp.ErrorMsg = "params amount parsing error"
-        controller.ServeJSON()
-        return
-    }
-
-    chainId, err := strconv.ParseInt(c, 10, 64)
-    if err != nil {
-        resp.ErrorMsg = err.Error()
         controller.ServeJSON()
         return
     }
@@ -216,7 +247,7 @@ func (controller *MainController)SendTransaction() {
         return
     }
 
-    t := node.GenerateBalanceTransaction(to, chainId, destChain, amount)
+    t := node.GenerateBalanceTransaction(to, destChain, amount)
 
     var body string
     if node.SendTransaction(t) != nil {

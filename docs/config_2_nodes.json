@@ -3,7 +3,6 @@
   "port": 55555,
   "boot": true,
   "myindex": 0,
-  "blockprize": "20000000000000000000",
   "bootNodes":  [
     {
       "pubKey": {
@@ -56,5 +55,7 @@
     "logLevel": 3,
     "vmodule": "",
     "backtraceAt": ""
-  }
+  },
+  "blockprize": "20000000000000000000",
+  "default_rep": "10"
 }
