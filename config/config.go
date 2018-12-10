@@ -33,7 +33,7 @@ func init() {
 }
 
 func GetChainId() int64 {
-    return viper.GetInt64("ChainId")
+    return viper.GetInt64("chainid")
 }
 
 func GetKeystore() string {
@@ -41,7 +41,12 @@ func GetKeystore() string {
 }
 
 func GetMyIndex() int {
-    return viper.GetInt("MyIndex")
+    boot := IsBootNode()
+    if boot {
+        return viper.GetInt("myindex")
+    } else {
+        return -1
+    }
 }
 
 func GetDebugNodes() []*DebugNode {
@@ -50,23 +55,16 @@ func GetDebugNodes() []*DebugNode {
     return config.DebugNodes
 }
 
-func SetChain(chainId int64, dataDir string) error {
-    viper.Set("ChainId", chainId)
-    viper.Set("DataDir", dataDir)
-    return viper.WriteConfig()
-}
-
-func SetKeystore(keystorePath string) error {
-    viper.Set("Keystore", keystorePath)
-    return viper.WriteConfig()
-}
-
 func GetPort() int {
-    return viper.GetInt("Port")
+    return viper.GetInt("port")
 }
 
 func GetBlockPrize() *big.Int {
-    blockPrize := viper.GetString("BlockPrize")
+    blockPrize := viper.GetString("blockprize")
     prize, _ := new(big.Int).SetString(blockPrize, 10)
     return prize
+}
+
+func IsBootNode() bool {
+    return viper.GetBool("boot")
 }

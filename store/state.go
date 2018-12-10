@@ -59,7 +59,6 @@ func init()  {
         //database.PutBalanceOutSideTransaction(accounts.PubKey2Address(peer.PubKey), chainId, big.NewInt(100000000))
     }
     adminPubKey = miners[0].PubKey
-    IsStart = myIndex < minerNum
 
     port = bean.Port(config.GetPort())
     //if Solo {
