@@ -129,10 +129,8 @@ func (t *Transaction) Discard() {
 	}
 }
 
-const databaseName = "local_data"
-
 func NewDatabase() *Database {
-	ldb, err := leveldb.OpenFile(databaseName, nil)
+	ldb, err := leveldb.OpenFile(config.GetDb(), nil)
 	if err != nil {
 		return nil
 	}

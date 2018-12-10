@@ -11,10 +11,6 @@ import (
     "encoding/hex"
 )
 
-func setChain(chainId int64, dataDir string) error {
-    return config.SetChain(chainId, dataDir)
-}
-
 func createAccount(chainId int64, keystore string) (string, error) {
     runningChain := config.GetChainId()
     existingKeystore := config.GetKeystore()
