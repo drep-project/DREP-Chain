@@ -15,14 +15,6 @@ var (
     dataDir = "." + string(os.PathSeparator) + "data"
 )
 
-type Config struct {
-    RelayNode  []string
-    ChainId    int64
-    Port       int
-    MyIndex    int
-    DebugNodes []*DebugNode
-}
-
 func init() {
     viper.SetConfigName("config")
     viper.AddConfigPath(dataDir)
@@ -49,18 +41,28 @@ func GetMyIndex() int {
     }
 }
 
-func GetDebugNodes() []*DebugNode {
-    config := &Config{}
+func GetDebugNodes() []*BootNode {
+    config := &struct {
+        BootNodes []*BootNode
+    }{}
     viper.Unmarshal(config)
-    return config.DebugNodes
+    return config.BootNodes
 }
 
 func GetPort() int {
-    return viper.GetInt("port")
+    port := viper.GetInt("port")
+    if port == 0 {
+        return defaultPort
+    } else {
+        return port
+    }
 }
 
 func GetBlockPrize() *big.Int {
     blockPrize := viper.GetString("blockprize")
+    if blockPrize == "" {
+        blockPrize = defaultBlockPrize
+    }
     prize, _ := new(big.Int).SetString(blockPrize, 10)
     return prize
 }
