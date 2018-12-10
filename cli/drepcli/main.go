@@ -23,7 +23,6 @@ import (
 	"os"
 	godebug "runtime/debug"
 	"sort"
-	"path"
 	"strconv"
 
 	"BlockChainTest/log"
@@ -48,6 +47,10 @@ var (
 	nodeFlags = []cli.Flag{
 		utils.DataDirFlag,
 		configFileFlag,
+		utils.LogLevelFlag,
+		utils.VmoduleFlag,
+		utils.BacktraceAtFlag,
+		utils.ConsensusModeFlag,
 	}
 	rpcFlags = []cli.Flag{
 		utils.HTTPEnabledFlag,
@@ -86,7 +89,7 @@ func init() {
 
 	app.Before = func(ctx *cli.Context) error {
 		nCfg = makeConfig(ctx)
-		err := log.SetUp(path.Join(nCfg.DataDir, "log"))  //logDir config here
+		err := log.SetUp(&nCfg.LogConfig)  //logDir config here
 		if err != nil {
 			fmt.Println(err.Error())
 			return err

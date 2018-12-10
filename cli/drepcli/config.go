@@ -3,6 +3,7 @@ package main
 import (
 	"strings"
 	"fmt"
+	"path"
 	"gopkg.in/urfave/cli.v1"
 	"BlockChainTest/rpc"
 	"BlockChainTest/log"
@@ -18,14 +19,18 @@ var (
 
 type nodeConfig struct {
 	DataDir string
+	ConsensusMode string
 	RpcConfig rpc.RpcConfig
+	LogConfig log.Config
 }
 
 
 func makeConfig(ctx *cli.Context) ( *nodeConfig) {
 	// Load defaults.
 	cfg := &nodeConfig{}
-	
+	//data dir setting
+	setDataDir(ctx, cfg)
+	setConsensus(ctx, cfg)
 	// TODO Load config file here.
 	if file := ctx.GlobalString(configFileFlag.Name); file != "" {
 		log.Info("specific file ","PATH", file)
@@ -36,14 +41,16 @@ func makeConfig(ctx *cli.Context) ( *nodeConfig) {
 		*/
 	}
 	
+	// log
+	setLogConfig(ctx,cfg)
+
 	//TODO
 	//SetP2PConfig(ctx, &cfg.P2P)  
 
 	//rpc Config
 	setRpc(ctx, cfg)
 
-	//data dir setting
-	setDataDir(ctx, cfg)
+
 	return cfg
 }
 
@@ -53,6 +60,25 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	
 }
 */
+// setLogConfig creates an log configuration from the set command line flags,
+func setLogConfig(ctx *cli.Context, cfg *nodeConfig) {
+	if ctx.GlobalIsSet(utils.LogLevelFlag.Name) {
+		cfg.LogConfig.LogLevel = ctx.GlobalInt(utils.LogLevelFlag.Name)
+	}else{
+		cfg.LogConfig.LogLevel = 3
+	}
+
+	if ctx.GlobalIsSet(utils.VmoduleFlag.Name) {
+		cfg.LogConfig.Vmodule = ctx.GlobalString(utils.VmoduleFlag.Name)
+	}
+
+	if ctx.GlobalIsSet(utils.BacktraceAtFlag.Name) {
+		cfg.LogConfig.BacktraceAt = ctx.GlobalString(utils.BacktraceAtFlag.Name)
+	}
+
+	cfg.LogConfig.DataDir = path.Join(cfg.DataDir, "log")
+}
+
 
 // setRpc creates an rpc configuration from the set command line flags,
 func setRpc(ctx *cli.Context, cfg *nodeConfig) {
@@ -169,6 +195,14 @@ func setWS(ctx *cli.Context, cfg *nodeConfig) {
 	}
 }
 
+func setConsensus(ctx *cli.Context, cfg *nodeConfig) {
+	if ctx.GlobalIsSet(utils.ConsensusModeFlag.Name) {
+		cfg.ConsensusMode = ctx.GlobalString(utils.ConsensusModeFlag.Name)
+	} else{
+		cfg.ConsensusMode = "bft"
+	}
+}
+
 func setDataDir(ctx *cli.Context, cfg *nodeConfig) {
 	if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
 		cfg.DataDir = ctx.GlobalString(utils.DataDirFlag.Name)
@@ -176,7 +210,6 @@ func setDataDir(ctx *cli.Context, cfg *nodeConfig) {
 		cfg.DataDir = DefaultDataDir()
 	}
 }
-
 // checkExclusive verifies that only a single instance of the provided flags was
 // set by the user. Each flag might optionally be followed by a string type to
 // specialize it further.

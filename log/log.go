@@ -25,11 +25,17 @@ func init() {
 	glogger = NewGlogHandler(ostream)
 }
 
+type Config struct {
+	DataDir string
+	LogLevel int 
+	Vmodule string
+	BacktraceAt string
+}
 
-func SetUp(logdir string) error {
-	if logdir != "" {
+func SetUp(cfg *Config) error {
+	if cfg.DataDir != "" {
 		rfh, err := RotatingFileHandler(
-			logdir,
+			cfg.DataDir,
 			262144,
 			JSONFormatOrderedEx(false, true),
 		)
@@ -38,9 +44,9 @@ func SetUp(logdir string) error {
 		}
 		glogger.SetHandler(MultiHandler(ostream, rfh))
 	}
-	glogger.Verbosity(Lvl(3))
-	//glogger.Vmodule(ctx.GlobalString(vmoduleFlag.Name))
-	//glogger.BacktraceAt(ctx.GlobalString(backtraceAtFlag.Name))
+	glogger.Verbosity(Lvl(cfg.LogLevel))
+	glogger.Vmodule(cfg.Vmodule)
+	glogger.BacktraceAt(cfg.BacktraceAt)
 	Root().SetHandler(glogger)
 	return nil
 }
