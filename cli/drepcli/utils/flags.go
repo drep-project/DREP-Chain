@@ -187,6 +187,27 @@ var (
 		Usage: "Megabytes of memory allocated to internal caching",
 		Value: 1024,
 	}
+	//Consensus Mode
+	ConsensusModeFlag = cli.StringFlag{
+		Name:  "consensus",
+		Usage: "Consensus mode: solo, bft",
+	}
+    //debug
+	LogLevelFlag = cli.IntFlag{
+		Name:  "loglevel",
+		Usage: "Logging level: 0=silent, 1=error, 2=warn, 3=info, 4=debug, 5=detail",
+		Value: 3,
+	}
+	VmoduleFlag = cli.StringFlag{
+		Name:  "vmodule",
+		Usage: "Per-module verbosity: comma-separated list of <pattern>=<level> (e.g. eth/*=5,p2p=4)",
+		Value: "",
+	}
+	BacktraceAtFlag = cli.StringFlag{
+		Name:  "backtrace",
+		Usage: "Request a stack trace at a specific logging statement (e.g. \"block.go:271\")",
+		Value: "",
+	}
 )
 
 // MigrateFlags sets the global flag from a local flag when it's set.
