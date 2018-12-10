@@ -32,6 +32,10 @@ func GetKeystore() string {
     return dataDir + string(os.PathSeparator) + "keystore"
 }
 
+func GetDb() string {
+    return dataDir + string(os.PathSeparator) + "database"
+}
+
 func GetMyIndex() int {
     boot := IsBootNode()
     if boot {
