@@ -22,7 +22,7 @@ func main()  {
 			p.Process(peer, t, msg)
 		}
 	}, store.GetPort())
-	//http.HttpStart()
+	http.Start()
 	processor.GetInstance().Start()
 	node.GetNode().Start()
 	for {
@@ -138,7 +138,7 @@ func main()  {
 
 
 func main1() {
-	http.HttpStart()
+	http.Start()
 	time.Sleep(3600 * time.Second)
 }
 
