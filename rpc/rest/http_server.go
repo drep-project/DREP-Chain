@@ -13,6 +13,7 @@ import (
     "BlockChainTest/log"
     "BlockChainTest/node"
     "BlockChainTest/accounts"
+    "github.com/spf13/viper"
 )
 
 type Request struct {
@@ -227,6 +228,34 @@ func GetTransactionsFromBlock(w http.ResponseWriter, r *http.Request) {
    writeResponse(w, resp)
 }
 
+func GetReputation(w http.ResponseWriter, r *http.Request) {
+    params := analysisReqParam(r)
+    var address string
+    var chainId int64
+    if value, ok := params["address"].(string); ok {
+        address = value[2:]
+    }
+    if value, ok := params["chainId"].(string); ok {
+        chainId, _ = strconv.ParseInt(value, 10, 64)
+    }
+
+    if len(address) == 0 {
+        resp := &Response{Success:false, ErrorMsg:"param format incorrect"}
+        writeResponse(w, resp)
+        return
+    }
+
+    ca := accounts.Hex2Address(address)
+    b:= database.GetReputationOutsideTransaction(ca, chainId)
+    if (b.Int64() == 0) {
+        defaultRep := viper.GetInt64("default_rep")
+        fmt.Println("default reputation is :", defaultRep)
+        database.PutReputationOutSideTransaction(ca, chainId, big.NewInt(defaultRep))
+    }
+    resp := &Response{Success:true, Data:b.String()}
+    writeResponse(w, resp)
+}
+
 var methodsMap = map[string] http.HandlerFunc {
     "/GetAllBlocks": GetAllBlocks,
     "/GetBlock": GetBlock,
@@ -236,6 +265,7 @@ var methodsMap = map[string] http.HandlerFunc {
     "/GetBalance": GetBalance,
     "/GetNonce": GetNonce,
     "/SendTransaction": SendTransaction,
+    "/GetReputation": GetReputation,
     "/GetTransactionsFromBlock": GetTransactionsFromBlock,
 }
 
