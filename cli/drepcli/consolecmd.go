@@ -18,20 +18,22 @@ package main
 
 import (
 	"fmt"
+	"path"
 	"errors"
 	"strings"
 
-	"BlockChainTest/cli/drepcli/utils"
-	"BlockChainTest/cli/drepcli/console"
 	"BlockChainTest/rpc"
+	"BlockChainTest/config"
 	"gopkg.in/urfave/cli.v1"
+	"BlockChainTest/util/flags"
+	"BlockChainTest/cli/drepcli/console"
 )
 
 var (
-	consoleFlags = []cli.Flag{utils.JSpathFlag, utils.ExecFlag, utils.PreloadJSFlag}
+	consoleFlags = []cli.Flag{flags.JSpathFlag, flags.ExecFlag, flags.PreloadJSFlag}
 
 	consoleCommand = cli.Command{
-		Action:   utils.MigrateFlags(localConsole),
+		Action:   flags.MigrateFlags(localConsole),
 		Name:     "console",
 		Usage:    "Start an interactive JavaScript environment",
 		Flags:    append(append(nodeFlags, rpcFlags...), consoleFlags...),
@@ -43,11 +45,11 @@ See https://github.com/ethereum/go-ethereum/wiki/JavaScript-Console.`,
 	}
 
 	attachCommand = cli.Command{
-		Action:    utils.MigrateFlags(remoteConsole),
+		Action:    flags.MigrateFlags(remoteConsole),
 		Name:      "attach",
 		Usage:     "Start an interactive JavaScript environment (connect to node)",
 		ArgsUsage: "[endpoint]",
-		Flags:     append(consoleFlags, utils.DataDirFlag),
+		Flags:     append(consoleFlags, flags.DataDirFlag),
 		Category:  "CONSOLE COMMANDS",
 		Description: `
 The Drep console is an interactive shell for the JavaScript runtime environment
@@ -58,7 +60,7 @@ This command allows to open a console on a running drep node.`,
 
 	/*
 	javascriptCommand = cli.Command{
-		Action:    utils.MigrateFlags(ephemeralConsole),
+		Action:    flags.MigrateFlags(ephemeralConsole),
 		Name:      "js",
 		Usage:     "Execute the specified JavaScript files",
 		ArgsUsage: "<jsfile> [jsfile...]",
@@ -84,23 +86,23 @@ func localConsole(ctx *cli.Context) error {
 	// Attach to the newly started node and start the JavaScript console
 	client, err := node.Attach()
 	if err != nil {
-		utils.Fatalf("Failed to attach to the inproc drep: %v", err)
+		flags.Fatalf("Failed to attach to the inproc drep: %v", err)
 	}
 	config := console.Config{
-		DataDir: nCfg.DataDir,
-		DocRoot: ctx.GlobalString(utils.JSpathFlag.Name),
+		HomeDir: nCfg.HomeDir,
+		DocRoot: ctx.GlobalString(flags.JSpathFlag.Name),
 		Client:  client,
-		Preload: utils.MakeConsolePreloads(ctx),
+		Preload: flags.MakeConsolePreloads(ctx),
 	}
 
 	console, err := console.New(config)
 	if err != nil {
-		utils.Fatalf("Failed to start the JavaScript console: %v", err)
+		flags.Fatalf("Failed to start the JavaScript console: %v", err)
 	}
 	defer console.Stop(false)
 
 	// If only a short execution was requested, evaluate and return
-	if script := ctx.GlobalString(utils.ExecFlag.Name); script != "" {
+	if script := ctx.GlobalString(flags.ExecFlag.Name); script != "" {
 		console.Evaluate(script)
 		return nil
 	}
@@ -116,31 +118,31 @@ func localConsole(ctx *cli.Context) error {
 func remoteConsole(ctx *cli.Context) error {
 	// Attach to a remotely running drep instance and start the JavaScript console
 	endpoint := ctx.Args().First()
-	path := DefaultDataDir()
+	path := config.DefaultDataDir()
 	if endpoint == "" {
-		if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
-			path = ctx.GlobalString(utils.DataDirFlag.Name)
+		if ctx.GlobalIsSet(flags.DataDirFlag.Name) {
+			path = ctx.GlobalString(flags.DataDirFlag.Name)
 		}
 		endpoint = fmt.Sprintf("%s/drep.ipc", path)
 	}
-	client, err := dialRPC(endpoint)
+	client, err := dialRPC(nCfg, endpoint)
 	if err != nil {
-		utils.Fatalf("Unable to attach to remote drep: %v", err)
+		flags.Fatalf("Unable to attach to remote drep: %v", err)
 	}
 	config := console.Config{
-		DataDir: path,
-		DocRoot: ctx.GlobalString(utils.JSpathFlag.Name),
+		HomeDir: path,
+		DocRoot: ctx.GlobalString(flags.JSpathFlag.Name),
 		Client:  client,
-		Preload: utils.MakeConsolePreloads(ctx),
+		Preload: flags.MakeConsolePreloads(ctx),
 	}
 
 	console, err := console.New(config)
 	if err != nil {
-		utils.Fatalf("Failed to start the JavaScript console: %v", err)
+		flags.Fatalf("Failed to start the JavaScript console: %v", err)
 	}
 	defer console.Stop(false)
 
-	if script := ctx.GlobalString(utils.ExecFlag.Name); script != "" {
+	if script := ctx.GlobalString(flags.ExecFlag.Name); script != "" {
 		console.Evaluate(script)
 		return nil
 	}
@@ -155,9 +157,9 @@ func remoteConsole(ctx *cli.Context) error {
 // dialRPC returns a RPC client which connects to the given endpoint.
 // The check for empty endpoint implements the defaulting logic
 // for "drep attach" and "drep monitor" with no argument.
-func dialRPC(endpoint string) (*rpc.Client, error) {
+func dialRPC(cfg *config.NodeConfig, endpoint string) (*rpc.Client, error) {
 	if endpoint == "" {
-		endpoint = DefaultIPCEndpoint(clientIdentifier)
+		endpoint = path.Join(cfg.HomeDir, config.DefaultIPCEndpoint(config.ClientIdentifier))  
 	} else if strings.HasPrefix(endpoint, "rpc:") || strings.HasPrefix(endpoint, "ipc:") {
 		// Backwards compatibility with drep < 1.5 which required
 		// these prefixes.
@@ -179,25 +181,25 @@ func ephemeralConsole(ctx *cli.Context) error {
 	// Attach to the newly started node and start the JavaScript console
 	client, err := node.Attach()
 	if err != nil {
-		utils.Fatalf("Failed to attach to the inproc drep: %v", err)
+		flags.Fatalf("Failed to attach to the inproc drep: %v", err)
 	}
 	config := console.Config{
-		DataDir: utils.MakeDataDir(ctx),
-		DocRoot: ctx.GlobalString(utils.JSpathFlag.Name),
+		HomeDir: flags.MakeDataDir(ctx),
+		DocRoot: ctx.GlobalString(flags.JSpathFlag.Name),
 		Client:  client,
-		Preload: utils.MakeConsolePreloads(ctx),
+		Preload: flags.MakeConsolePreloads(ctx),
 	}
 
 	console, err := console.New(config)
 	if err != nil {
-		utils.Fatalf("Failed to start the JavaScript console: %v", err)
+		flags.Fatalf("Failed to start the JavaScript console: %v", err)
 	}
 	defer console.Stop(false)
 
 	// Evaluate each of the specified JavaScript files
 	for _, file := range ctx.Args() {
 		if err = console.Execute(file); err != nil {
-			utils.Fatalf("Failed to execute %s: %v", file, err)
+			flags.Fatalf("Failed to execute %s: %v", file, err)
 		}
 	}
 	// Wait for pending callbacks, but stop for Ctrl-C.

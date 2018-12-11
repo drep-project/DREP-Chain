@@ -30,16 +30,16 @@ func NewMember(leader *bean.Peer, prvKey *mycrypto.PrivateKey) *Member {
 }
 
 func (m *Member) ProcessConsensus(f func(setup *bean.Setup)bool) []byte {
-    log.Println("Member set up wait")
+    log.Trace("Member set up wait")
     if !m.waitForSetUp(f) {
         return nil
     }
-    log.Println("Member is going to commit")
+    log.Trace("Member is going to commit")
     m.commit()
 
-    log.Println("Member challenge wait")
+    log.Trace("Member challenge wait")
     if m.waitForChallenge() {
-        log.Println("Member is going to response")
+        log.Trace("Member is going to response")
         m.response()
         return m.msg
     } else {
@@ -74,7 +74,7 @@ func (m *Member) commit()  {
     }
     m.k = k
     commitment := &bean.Commitment{Q: q}
-    log.Println("Member commit ", *commitment)
+    log.Trace("Member commit ", *commitment)
     network.SendMessage([]*bean.Peer{m.leader}, commitment)
 }
 
@@ -90,7 +90,7 @@ func (m *Member) waitForChallenge() bool {
         return false
     }
     if challenge, ok := challengeMsg.(*consmsg.ChallengeMsg); ok {
-        log.Println("Member process challenge ", *challenge)
+        log.Trace("Member process challenge ", *challenge)
         r := mycrypto.ConcatHash256(challenge.Msg.SigmaQ.Bytes(), challenge.Msg.SigmaPubKey.Bytes(), m.msg)
         r0 := new(big.Int).SetBytes(challenge.Msg.R)
         rInt := new(big.Int).SetBytes(r)
@@ -111,6 +111,6 @@ func (m *Member) response() {
     s.Sub(k, s)
     s.Mod(s, curve.N)
     response := &bean.Response{S: s.Bytes()}
-    log.Println("Member response ", *response)
+    log.Trace("Member response ", *response)
     network.SendMessage([]*bean.Peer{m.leader}, response)
 }

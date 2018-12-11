@@ -3,7 +3,7 @@ package main
 import(
 	"fmt"
 	"strings"
-	"BlockChainTest/rpc"
+	"BlockChainTest/config"
 )
 // PrivateAdminAPI is the collection of administrative API methods exposed only
 // over a secure RPC channel.
@@ -23,7 +23,7 @@ func (api *PrivateAdminAPI) StartRPC(host *string, port *int, cors *string, apis
 	}
 
 	if host == nil {
-		h := rpc.DefaultHTTPHost
+		h := config.DefaultHTTPHost
 		if rpcConfig.HTTPHost != "" {
 			h = rpcConfig.HTTPHost
 		}
@@ -86,7 +86,7 @@ func (api *PrivateAdminAPI) StartWS(host *string, port *int, allowedOrigins *str
 	rpcServer := api.node.rpcServer
 	rpcConfig := api.node.nodeConfig.RpcConfig
 	if host == nil {
-		h := rpc.DefaultWSHost
+		h := config.DefaultWSHost
 		if rpcConfig.WSHost != "" {
 			h = rpcConfig.WSHost
 		}

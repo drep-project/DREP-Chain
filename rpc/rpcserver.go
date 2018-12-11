@@ -4,188 +4,12 @@ import (
 	"fmt"
 	"sync"
 	"net"
-	"os"
 	"strings"
-	"runtime"
-	"path/filepath"
 
-	"BlockChainTest/database"
-	"BlockChainTest/accounts"
-	"BlockChainTest/node"
 	"BlockChainTest/rpc/rest"
 	"BlockChainTest/log"
+	"BlockChainTest/config"
 )
-
-const (
-	DefaultHTTPHost = "localhost" // Default host interface for the HTTP RPC server
-	DefaultHTTPPort = 15645        // Default TCP port for the HTTP RPC server
-	DefaultWSHost   = "localhost" // Default host interface for the websocket RPC server
-	DefaultWSPort   = 15646        // Default TCP port for the websocket RPC server
-	DefaultRestHost = "localhost"  // Default host interface for the REST RPC server
-	DefaultRestPort = 15647       // Default TCP port for the REST RPC server
-)
-
-type RpcConfig struct {
-
-	// IPCEnabled 
-	IPCEnabled bool
-
-	// IPCPath is the requested location to place the IPC endpoint. If the path is
-	// a simple file name, it is placed inside the data directory (or on the root
-	// pipe path on Windows), whereas if it's a resolvable path name (absolute or
-	// relative), then that specific path is enforced. An empty path disables IPC.
-	IPCPath string `toml:",omitempty"`
-
-	// HTTPEnabled  
-	HTTPEnabled bool
-	// HTTPHost is the host interface on which to start the HTTP RPC server. If this
-	// field is empty, no HTTP API endpoint will be started.
-	HTTPHost string `toml:",omitempty"`
-
-	// HTTPPort is the TCP port number on which to start the HTTP RPC server. The
-	// default zero value is/ valid and will pick a port number randomly (useful
-	// for ephemeral nodes).
-	HTTPPort int `toml:",omitempty"`
-
-	// HTTPCors is the Cross-Origin Resource Sharing header to send to requesting
-	// clients. Please be aware that CORS is a browser enforced security, it's fully
-	// useless for custom HTTP clients.
-	HTTPCors []string `toml:",omitempty"`
-
-	// HTTPVirtualHosts is the list of virtual hostnames which are allowed on incoming requests.
-	// This is by default {'localhost'}. Using this prevents attacks like
-	// DNS rebinding, which bypasses SOP by simply masquerading as being within the same
-	// origin. These attacks do not utilize CORS, since they are not cross-domain.
-	// By explicitly checking the Host-header, the server will not allow requests
-	// made against the server with a malicious host domain.
-	// Requests using ip address directly are not affected
-	HTTPVirtualHosts []string `toml:",omitempty"`
-
-	// HTTPModules is a list of API modules to expose via the HTTP RPC interface.
-	// If the module list is empty, all RPC API endpoints designated public will be
-	// exposed.
-	HTTPModules []string `toml:",omitempty"`
-
-	// HTTPTimeouts allows for customization of the timeout values used by the HTTP RPC
-	// interface.
-	HTTPTimeouts HTTPTimeouts
-
-	// WSEnabled  
-	WSEnabled bool
-	// WSHost is the host interface on which to start the websocket RPC server. If
-	// this field is empty, no websocket API endpoint will be started.
-	WSHost string `toml:",omitempty"`
-
-	// WSPort is the TCP port number on which to start the websocket RPC server. The
-	// default zero value is/ valid and will pick a port number randomly (useful for
-	// ephemeral nodes).
-	WSPort int `toml:",omitempty"`
-
-	// WSOrigins is the list of domain to accept websocket requests from. Please be
-	// aware that the server can only act upon the HTTP request the client sends and
-	// cannot verify the validity of the request header.
-	WSOrigins []string `toml:",omitempty"`
-
-	// WSModules is a list of API modules to expose via the websocket RPC interface.
-	// If the module list is empty, all RPC API endpoints designated public will be
-	// exposed.
-	WSModules []string `toml:",omitempty"`
-
-	// WSExposeAll exposes all API modules via the WebSocket RPC interface rather
-	// than just the public ones.
-	//
-	// *WARNING* Only set this if the node is running in a trusted network, exposing
-	// private APIs to untrusted users is a major security risk.
-	WSExposeAll bool `toml:",omitempty"`
-
-	// RESTEnabled  
-	RESTEnabled bool
-	// HTTPHost is the host interface on which to start the HTTP RPC server. If this
-	// field is empty, no HTTP API endpoint will be started.
-	RESTHost string `toml:",omitempty"`
-
-	// HTTPPort is the TCP port number on which to start the HTTP RPC server. The
-	// default zero value is/ valid and will pick a port number randomly (useful
-	// for ephemeral nodes).
-	RESTPort int `toml:",omitempty"`
-
-	// HTTPCors is the Cross-Origin Resource Sharing header to send to requesting
-	// clients. Please be aware that CORS is a browser enforced security, it's fully
-	// useless for custom HTTP clients.
-	RESTCors []string `toml:",omitempty"`
-}
-
-
-// IPCEndpoint resolves an IPC endpoint based on a configured value, taking into
-// account the set data folders as well as the designated platform we're currently
-// running on.
-func (c *RpcConfig) IPCEndpoint() string {
-	// Short circuit if IPC has not been enabled
-	if c.IPCPath == "" {
-		return ""
-	}
-	// On windows we can only use plain top-level pipes
-	if runtime.GOOS == "windows" {
-		if strings.HasPrefix(c.IPCPath, `\\.\pipe\`) {
-			return c.IPCPath
-		}
-		return `\\.\pipe\` + c.IPCPath
-	}
-	// Resolve names into the data directory full paths otherwise
-	if filepath.Base(c.IPCPath) == c.IPCPath {
-		//if c.DataDir == "" {
-			return filepath.Join(os.TempDir(), c.IPCPath)
-		//}
-		//return filepath.Join(c.DataDir, c.IPCPath)
-	}
-	return c.IPCPath
-}
-
-// HTTPEndpoint resolves an HTTP endpoint based on the configured host interface
-// and port parameters.
-func (c *RpcConfig) HTTPEndpoint() string {
-	if c.HTTPHost == "" {
-		return ""
-	}
-	return fmt.Sprintf("%s:%d", c.HTTPHost, c.HTTPPort)
-}
-
-// HTTPEndpoint resolves an HTTP endpoint based on the configured host interface
-// and port parameters.
-func (c *RpcConfig) RestEndpoint() string {
-	if c.RESTHost == "" {
-		return ""
-	}
-	return fmt.Sprintf("%s:%d", c.RESTHost, c.RESTPort)
-}
-
-// DefaultHTTPEndpoint returns the HTTP endpoint used by default.
-func DefaultHTTPEndpoint() string {
-	config := &RpcConfig{HTTPHost: DefaultHTTPHost, HTTPPort: DefaultHTTPPort}
-	return config.HTTPEndpoint()
-}
-
-// DefaultHTTPEndpoint returns the HTTP endpoint used by default.
-func DefaultRestEndpoint() string {
-	config := &RpcConfig{HTTPHost: DefaultRestHost, HTTPPort: DefaultRestPort}
-	return config.RestEndpoint()
-}
-
-
-// WSEndpoint resolves a websocket endpoint based on the configured host interface
-// and port parameters.
-func (c *RpcConfig) WSEndpoint() string {
-	if c.WSHost == "" {
-		return ""
-	}
-	return fmt.Sprintf("%s:%d", c.WSHost, c.WSPort)
-}
-
-// DefaultWSEndpoint returns the websocket endpoint used by default.
-func DefaultWSEndpoint() string {
-	config := &RpcConfig{WSHost: DefaultWSHost, WSPort: DefaultWSPort}
-	return config.WSEndpoint()
-}
 
 type RpcServer struct {
 	RpcAPIs       []API   // List of APIs currently provided by the node
@@ -208,37 +32,18 @@ type RpcServer struct {
 	RestListener net.Listener // Websocket RPC listener socket to server API requests
 
 	lock sync.RWMutex
-	RpcConfig *RpcConfig
+	RpcConfig *config.RpcConfig
 }
 
 
-func NewRpcServer(RpcConfig *RpcConfig)*RpcServer{
-	api := API{
-		Namespace : "db",
-		Version   :"1.0",
-		Service  : &database.DataBaseAPI{},
-		Public  :  true      ,
-	}
-	chainApi := API{
-		Namespace : "chain",
-		Version   :"1.0",
-		Service:	&node.ChainApi{},
-		Public  :  true      ,
-	}
-	accountApi := API{
-		Namespace : "account",
-		Version   :"1.0",
-		Service:	&accounts.AccountApi{},
-		Public  :  true      ,
-	}
-	
+func NewRpcServer(apis []API, RpcConfig *config.RpcConfig)*RpcServer{
     return &RpcServer{
 		IpcEndpoint: RpcConfig.IPCEndpoint(),
 		HttpEndpoint:  RpcConfig.HTTPEndpoint(),
 		WsEndpoint:  RpcConfig.WSEndpoint(),
 		RestEndpoint: RpcConfig.RestEndpoint(),
 		RpcConfig: RpcConfig,
-		RpcAPIs:[]API{api,chainApi,accountApi},
+		RpcAPIs: apis,
     }
 }
 
@@ -330,7 +135,7 @@ func (rpcserver *RpcServer) StopIPC() {
 }
 
 // StartHTTP initializes and starts the HTTP RPC endpoint.
-func (rpcserver *RpcServer) StartHTTP(endpoint string, apis []API, modules []string, cors []string, vhosts []string, timeouts HTTPTimeouts) error {
+func (rpcserver *RpcServer) StartHTTP(endpoint string, apis []API, modules []string, cors []string, vhosts []string, timeouts config.HTTPTimeouts) error {
 	if !rpcserver.RpcConfig.HTTPEnabled {
 		return nil
 	}
