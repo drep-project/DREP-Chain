@@ -1,10 +1,12 @@
 package log
 
 import (
+	"BlockChainTest/util"
 	"io"
-    "os"
-    
-	colorable "github.com/mattn/go-colorable"
+	"os"
+
+	"BlockChainTest/config"
+	"github.com/mattn/go-colorable"
 	"github.com/mattn/go-isatty"
 )
 var DEBUG = false
@@ -25,15 +27,15 @@ func init() {
 	glogger = NewGlogHandler(ostream)
 }
 
-type Config struct {
-	DataDir string
-	LogLevel int 
-	Vmodule string
-	BacktraceAt string
-}
-
-func SetUp(cfg *Config) error {
+func SetUp(cfg *config.LogConfig) error {
 	if cfg.DataDir != "" {
+		if !util.IsDirExists(cfg.DataDir) {
+			err :=os.Mkdir(cfg.DataDir,0777)
+			if err!=nil{
+				return err
+			}
+		}
+
 		rfh, err := RotatingFileHandler(
 			cfg.DataDir,
 			262144,

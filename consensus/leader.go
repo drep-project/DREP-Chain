@@ -11,7 +11,6 @@ import (
     "BlockChainTest/pool"
     "BlockChainTest/util"
     "BlockChainTest/consensus/consmsg"
-    "fmt"
 )
 
 type Leader struct {
@@ -52,34 +51,34 @@ func (l *Leader) GetMembers() []*bean.Peer {
 }
 
 func (l *Leader) ProcessConsensus(msg []byte) (error, *mycrypto.Signature, []byte) {
-    log.Println("Leader is going to setup")
+    log.Trace("Leader is going to setup")
     ps := l.setUp(msg)
     if len(ps) == 0 {
         //return &util.OfflineError{}, nil, nil
-        fmt.Println("It seems that you are solo.")
+        log.Trace("It seems that you are solo.")
     }
-    log.Println("Leader wait for commit")
+    log.Trace("Leader wait for commit")
     if !l.waitForCommit(ps) {
         return &util.ConnectionError{}, nil, nil
     }
-    log.Println("Leader is going to challenge")
+    log.Trace("Leader is going to challenge")
     ps = l.challenge(msg)
-    log.Println("Leader wait for response")
+    log.Trace("Leader wait for response")
     l.waitForResponse(ps)
-    log.Println("Leader finish")
+    log.Trace("Leader finish")
     sig := &mycrypto.Signature{R: l.r, S: l.sigmaS.Bytes()}
     valid := l.Validate(sig, msg)
-    log.Println("valid? ", valid)
+    log.Trace("valid? ","valid", valid)
     if !valid {
         //return &util.ConnectionError{}, nil, nil
-        fmt.Println("Error!!!!!!! If you are solo, ignore this.")
+        log.Error("Error!!!!!!! If you are solo, ignore this.")
     }
     return nil, sig, l.responseBitmap
 }
 
 func (l *Leader) setUp(msg []byte) []*bean.Peer {
     setup := &bean.Setup{Msg: msg}
-    log.Println("Leader setup ", *setup)
+    log.Trace("Leader setup ", *setup)
     s, _ := network.SendMessage(l.members, setup)
     return s
 }
@@ -87,7 +86,7 @@ func (l *Leader) setUp(msg []byte) []*bean.Peer {
 func (l *Leader) waitForCommit(peers []*bean.Peer) bool {
     memberNum := len(peers)
     //r := make([]bool, memberNum)
-    fmt.Println("waitForCommit 1")
+    log.Trace("waitForCommit 1")
     commits := pool.Obtain(memberNum, func(msg interface{}) bool {
         if m, ok := msg.(*consmsg.CommitmentMsg); ok {
             if !contains(m.Peer.PubKey, peers) {
@@ -103,22 +102,22 @@ func (l *Leader) waitForCommit(peers []*bean.Peer) bool {
             return false
         }
     }, 5 * time.Second)
-    fmt.Println("waitForCommit 2")
+    log.Trace("waitForCommit 2")
     if len(commits) + 1 < memberNum * 3 / 2 {
-        fmt.Println(len(commits), memberNum, "FFFFFFFF")
+        log.Trace("waitForCommit", "Commits", len(commits),"memberNum", memberNum)
         return false
     }
-    fmt.Println("waitForCommit 3")
+    log.Trace("waitForCommit 3")
     curve := mycrypto.GetCurve()
     for _, c := range commits {
         if commit, ok := c.(*consmsg.CommitmentMsg); ok {
-            fmt.Println("waitForCommit 4")
+            log.Trace("waitForCommit 4")
             l.sigmaPubKey = curve.Add(l.sigmaPubKey, commit.Peer.PubKey)
             l.sigmaQ = curve.Add(l.sigmaQ, commit.Msg.Q)
         }
-        fmt.Println("waitForCommit 5")
+        log.Trace("waitForCommit 5")
     }
-    fmt.Println("waitForCommit 6")
+    log.Trace("waitForCommit 6")
 
     return true
 }
@@ -159,7 +158,7 @@ func (l *Leader) getR(msg []byte) []byte {
 func (l *Leader) challenge(msg []byte) []*bean.Peer {
     l.r = l.getR(msg)
     challenge := &bean.Challenge{SigmaPubKey: l.sigmaPubKey, SigmaQ: l.sigmaQ, R: l.r}
-    log.Println("Leader challenge ", *challenge)
+    log.Trace("Leader challenge ", *challenge)
     ps := make([]*bean.Peer, 0)
     for i, b := range l.commitBitmap {
         if b == 1 {
@@ -185,13 +184,13 @@ func (l *Leader) getMinerIndex(p *mycrypto.Point) int {
 }
 
 func (l *Leader) Validate(sig *mycrypto.Signature, msg []byte) bool {
-    fmt.Println(l.responseBitmap, l.commitBitmap)
+    log.Trace("验证", "ResponseBitmap",l.responseBitmap,"CommitBitmap" ,l.commitBitmap)
     if len(l.responseBitmap) < len(l.commitBitmap) {
-        fmt.Println("Validate 1")
+        log.Trace("Validate 1")
         return false
     }
     if float64(len(l.responseBitmap)) < math.Ceil(float64(len(l.members)*2.0/3.0)+1) {
-        fmt.Println("Validate 2")
+        log.Trace("Validate 2")
         return false
     }
     return mycrypto.Verify(sig, l.sigmaPubKey, msg)

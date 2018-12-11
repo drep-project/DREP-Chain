@@ -3,6 +3,8 @@ package main
 import(
 	"fmt"
 	"reflect"
+	"BlockChainTest/accounts"
+	"BlockChainTest/database"
 	"BlockChainTest/node"
 )
 
@@ -27,15 +29,28 @@ func Capitalize(str string) string {
 }
 
 func main() {
-	vType:=reflect.TypeOf(&node.ChainApi{})
+	fmt.Println("***********account**************")
+	vType:=reflect.TypeOf(&database.DataBaseAPI{})
+	generateCode("account",vType)
 
-    methods := vType.NumMethod()
+	fmt.Println("**********database***************")
+	vType=reflect.TypeOf(&accounts.AccountApi{})
+	generateCode("db",vType)
+
+	fmt.Println("***********chain**************")
+	vType=reflect.TypeOf(&node.ChainApi{})
+	generateCode("chain",vType)
+  
+}
+
+func generateCode(prefix string, vType reflect.Type){
+	methods := vType.NumMethod()
 
 
 	template := `
 var %s = new Method({
 	name: '%s',
-	call: 'db_%s',
+	call: '%s_%s',
 	params: %d
 });
 	`
@@ -47,7 +62,7 @@ var %s = new Method({
 		oNmae := m.Name
 		methodName := Capitalize(oNmae)
 		
-		code += fmt.Sprintf(template,methodName, methodName, methodName,numIn)
+		code += fmt.Sprintf(template,methodName, methodName,prefix, methodName,numIn-1)
 		methodNames += methodName +","
 	}
 

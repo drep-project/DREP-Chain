@@ -51,7 +51,7 @@ const DefaultPrompt = "> "
 // Config is the collection of configurations to fine tune the behavior of the
 // JavaScript console.
 type Config struct {
-	DataDir  string       // Data directory to store the console history at
+	HomeDir  string       // Data directory to store the console history at
 	DocRoot  string       // Filesystem path from where to load JavaScript files from
 	Client   *rpc.Client  // RPC client to execute Ethereum requests through
 	Prompt   string       // Input prompt prefix string (defaults to DefaultPrompt)
@@ -93,9 +93,9 @@ func New(config Config) (*Console, error) {
 		prompt:   config.Prompt,
 		prompter: config.Prompter,
 		printer:  config.Printer,
-		histPath: filepath.Join(config.DataDir, HistoryFile),
+		histPath: filepath.Join(config.HomeDir, HistoryFile),
 	}
-	if err := os.MkdirAll(config.DataDir, 0700); err != nil {
+	if err := os.MkdirAll(config.HomeDir, 0700); err != nil {
 		return nil, err
 	}
 	if err := console.init(config.Preload); err != nil {

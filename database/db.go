@@ -3,9 +3,9 @@ package database
 import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"BlockChainTest/trie"
+	"BlockChainTest/config"
 	"fmt"
 	"BlockChainTest/util/list"
-	"BlockChainTest/config"
 )
 
 type Database struct {
@@ -129,14 +129,14 @@ func (t *Transaction) Discard() {
 	}
 }
 
-func NewDatabase() *Database {
-	ldb, err := leveldb.OpenFile(config.GetDb(), nil)
+func NewDatabase(config *config.NodeConfig) *Database {
+	ldb, err := leveldb.OpenFile(config.DbPath, nil)
 	if err != nil {
 		return nil
 	}
 	return &Database{
 		db:ldb,
-		runningChain: config.GetChainId(),
+		runningChain: config.ChainId,
 		tries: make(map[int64] *trie.StateTrie),
 	}
 }

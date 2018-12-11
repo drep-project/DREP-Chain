@@ -1,9 +1,10 @@
 {
+  "logDir": "",
   "chainId": 0,
   "port": 55555,
-  "boot": true,
+  "boot": false,
   "myindex": 0,
-  "blockprize": "20000000000000000000",
+  "blockprize": "1158e460913d00000",
   "bootNodes":  [
     {
       "pubKey": {
@@ -11,25 +12,7 @@
         "y": "32aae9a9ae48962c33d05433d187a5f05fadc27171ac0b077390df693da6181a"
       },
       "address": "4dc955d67c1ca9214105c352c23d12cb355086fc",
-      "iP": "192.168.0.152",
-      "port": 55555
-    },
-    {
-      "pubKey": {
-        "x": "ff23066c1af1227139b399d9b7cadef23829851958e114287524876737bf845d",
-        "y": "b02c9f32b110a17acf1677066ac205e3ec6b8215885def0db6e65ecd584bbc70"
-      },
-      "address": "5ab50440596c7c1069bb1c751368936b245d0216",
-      "iP": "192.168.0.108",
-      "port": 55555
-    },
-    {
-      "pubKey": {
-        "x": "1624f4a65ead37468b8e2270437fe23d69dac11bba85a8ed4cf241185048fd41",
-        "y": "ad3476ec1e620258a45bb108a2f3e4e1fbcea2322e0c21f6840226959f347607"
-      },
-      "address": "9350b290329c3295dae906ba4eaf16b6c7b870f4",
-      "iP": "192.168.0.141",
+      "iP": "127.0.0.1",
       "port": 55555
     }
   ],

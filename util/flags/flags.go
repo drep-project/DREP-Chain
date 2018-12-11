@@ -15,7 +15,7 @@
 // along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 
 // Package utils contains internal helper functions for go-ethereum commands.
-package utils
+package flags
 
 import (
 	"os"
@@ -24,8 +24,18 @@ import (
 	"io"
 	"strings"
 	"path/filepath"
-	"BlockChainTest/rpc"
 	"gopkg.in/urfave/cli.v1"
+)
+
+const (
+	//TODO
+	//aim to resolve import cycle ,remove after code refactoring 
+	DefaultHTTPHost = "localhost" // Default host interface for the HTTP RPC server
+	DefaultHTTPPort = 15645        // Default TCP port for the HTTP RPC server
+	DefaultWSHost   = "localhost" // Default host interface for the websocket RPC server
+	DefaultWSPort   = 15646        // Default TCP port for the websocket RPC server
+	DefaultRestHost = "localhost"  // Default host interface for the REST RPC server
+	DefaultRestPort = 15647       // Default TCP port for the REST RPC server
 )
 
 var (
@@ -82,11 +92,23 @@ func NewApp(gitCommit, usage string) *cli.App {
 
 var (
 	// General settings
+	HomeDirFlag = DirectoryFlag{
+		Name:  "homedir",
+		Usage: "Home directory for the datadir logdir and keystore",
+	}
+	KeyStoreDirFlag = DirectoryFlag{
+		Name:  "keystore",
+		Usage: "Directory for the keystore (default = inside the homedir)",
+	}
 	DataDirFlag = DirectoryFlag{
 		Name:  "datadir",
-		Usage: "Data directory for the databases and keystore",
-		Value: DirectoryString{"dataDir"},
+		Usage: "Directory for the database dir (default = inside the homedir)",
 	}
+	LogDirFlag = DirectoryFlag{
+		Name:  "logdir",
+		Usage: "Directory for the logdir (default = inside the homedir)",
+	}
+	
 	// RPC settings
 	HTTPEnabledFlag = cli.BoolFlag{
 		Name:  "http",
@@ -95,12 +117,12 @@ var (
 	HTTPListenAddrFlag = cli.StringFlag{
 		Name:  "httpaddr",
 		Usage: "HTTP-RPC server listening interface",
-		Value: rpc.DefaultHTTPHost,
+		Value: DefaultHTTPHost,
 	}
 	HTTPPortFlag = cli.IntFlag{
 		Name:  "httpport",
 		Usage: "HTTP-RPC server listening port",
-		Value: rpc.DefaultHTTPPort,
+		Value: DefaultHTTPPort,
 	}
 	HTTPCORSDomainFlag = cli.StringFlag{
 		Name:  "httpcorsdomain",
@@ -132,12 +154,12 @@ var (
 	WSListenAddrFlag = cli.StringFlag{
 		Name:  "wsaddr",
 		Usage: "WS-RPC server listening interface",
-		Value: rpc.DefaultWSHost,
+		Value: DefaultWSHost,
 	}
 	WSPortFlag = cli.IntFlag{
 		Name:  "wsport",
 		Usage: "WS-RPC server listening port",
-		Value: rpc.DefaultWSPort,
+		Value: DefaultWSPort,
 	}
 	WSApiFlag = cli.StringFlag{
 		Name:  "wsapi",
@@ -157,12 +179,12 @@ var (
 	RESTListenAddrFlag = cli.StringFlag{
 		Name:  "restaddr",
 		Usage: "REST-RPC server listening interface",
-		Value: rpc.DefaultRestHost,
+		Value: DefaultRestHost,
 	}
 	RESTPortFlag = cli.IntFlag{
 		Name:  "restport",
 		Usage: "REST-RPC server listening port",
-		Value: rpc.DefaultRestPort,
+		Value: DefaultRestPort,
 	}
 
 	// ATM the url is left to the user and deployment to

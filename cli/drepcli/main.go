@@ -25,48 +25,46 @@ import (
 	"sort"
 	"strconv"
 
-	"BlockChainTest/log"
-	"github.com/elastic/gosigar"
-	"BlockChainTest/cli/drepcli/utils"
 	"BlockChainTest/cli/drepcli/console"
+	"BlockChainTest/config"
+	"BlockChainTest/log"
+	"BlockChainTest/util/flags"
+	"github.com/elastic/gosigar"
 	"gopkg.in/urfave/cli.v1"
-
-
-)
-
-const (
-	clientIdentifier = "drep" // Client identifier to advertise over the network
 )
 
 var (
 	// Git SHA1 commit hash of the release (set via linker flags)
 	gitCommit = ""
 	// The app that holds all commands and flags.
-	app = utils.NewApp(gitCommit, "the drep command line interface")
-	nCfg *nodeConfig
+	app = flags.NewApp(gitCommit, "the drep command line interface")
+	nCfg *config.NodeConfig
 	nodeFlags = []cli.Flag{
-		utils.DataDirFlag,
-		configFileFlag,
-		utils.LogLevelFlag,
-		utils.VmoduleFlag,
-		utils.BacktraceAtFlag,
-		utils.ConsensusModeFlag,
+		flags.HomeDirFlag,
+		flags.DataDirFlag,
+		flags.LogDirFlag,
+		flags.KeyStoreDirFlag,
+		config.ConfigFileFlag,
+		flags.LogLevelFlag,
+		flags.VmoduleFlag,
+		flags.BacktraceAtFlag,
+		flags.ConsensusModeFlag,
 	}
 	rpcFlags = []cli.Flag{
-		utils.HTTPEnabledFlag,
-		utils.HTTPListenAddrFlag,
-		utils.HTTPPortFlag,
-		utils.HTTPApiFlag,
-		utils.WSEnabledFlag,
-		utils.WSListenAddrFlag,
-		utils.WSPortFlag,
-		utils.WSApiFlag,
-		utils.WSAllowedOriginsFlag,
-		utils.IPCDisabledFlag,
-		utils.IPCPathFlag,
-		utils.RESTEnabledFlag,
-		utils.RESTListenAddrFlag,
-		utils.RESTPortFlag,
+		flags.HTTPEnabledFlag,
+		flags.HTTPListenAddrFlag,
+		flags.HTTPPortFlag,
+		flags.HTTPApiFlag,
+		flags.WSEnabledFlag,
+		flags.WSListenAddrFlag,
+		flags.WSPortFlag,
+		flags.WSApiFlag,
+		flags.WSAllowedOriginsFlag,
+		flags.IPCDisabledFlag,
+		flags.IPCPathFlag,
+		flags.RESTEnabledFlag,
+		flags.RESTListenAddrFlag,
+		flags.RESTPortFlag,
 	}
 )
 
@@ -77,6 +75,7 @@ func init() {
 	app.Copyright = "Copyright 2013-2018 The drep Authors"
 	app.Commands = []cli.Command{
 		// See consolecmd.go:
+		accountCommand,
 		consoleCommand,
 		attachCommand,
 	//	javascriptCommand,
@@ -88,8 +87,13 @@ func init() {
 	app.Flags = append(app.Flags, consoleFlags...)
 
 	app.Before = func(ctx *cli.Context) error {
-		nCfg = makeConfig(ctx)
-		err := log.SetUp(&nCfg.LogConfig)  //logDir config here
+		var err error
+		nCfg, err = config.MakeConfig(ctx)
+		if err != nil {
+			fmt.Println(err.Error())
+			return err
+		}
+		err = log.SetUp(&nCfg.LogConfig)  //logDir config here
 		if err != nil {
 			fmt.Println(err.Error())
 			return err
@@ -98,13 +102,13 @@ func init() {
 		var mem gosigar.Mem
 		if err := mem.Get(); err == nil {
 			allowance := int(mem.Total / 1024 / 1024 / 3)
-			if cache := ctx.GlobalInt(utils.CacheFlag.Name); cache > allowance {
+			if cache := ctx.GlobalInt(flags.CacheFlag.Name); cache > allowance {
 				log.Warn("Sanitizing cache to Go's GC limits", "provided", cache, "updated", allowance)
-				ctx.GlobalSet(utils.CacheFlag.Name, strconv.Itoa(allowance))
+				ctx.GlobalSet(flags.CacheFlag.Name, strconv.Itoa(allowance))
 			}
 		}
 		// Ensure Go's GC ignores the database cache for trigger percentage
-		cache := ctx.GlobalInt(utils.CacheFlag.Name)
+		cache := ctx.GlobalInt(flags.CacheFlag.Name)
 		gogc := math.Max(20, math.Min(100, 100/(float64(cache)/1024)))
 
 		log.Debug("Sanitizing Go's GC trigger", "percent", int(gogc))
@@ -132,7 +136,11 @@ func drep(ctx *cli.Context) error {
 	if args := ctx.Args(); len(args) > 0 {
 		return fmt.Errorf("invalid command: %q", args[0])
 	}
-	nCfg := makeConfig(ctx)
+	nCfg, err := config.MakeConfig(ctx)
+	if err != nil {
+		fmt.Println(err.Error())
+		return err
+	}
 	//start node and attach
 	node := NewNode(nCfg)
 	//defer node.Stop()
