@@ -1,14 +1,16 @@
-package http
+package rest
 
 import (
     "net/http"
     "fmt"
+    "net"
     "BlockChainTest/database"
     "strconv"
     "encoding/json"
     "math/big"
     "strings"
     "io/ioutil"
+    "BlockChainTest/log"
     "BlockChainTest/node"
     "BlockChainTest/accounts"
 )
@@ -237,19 +239,22 @@ var methodsMap = map[string] http.HandlerFunc {
     "/GetTransactionsFromBlock": GetTransactionsFromBlock,
 }
 
-func Start() {
-    go func() {
-        for pattern, handleFunc := range (methodsMap) {
-            http.HandleFunc(pattern, handleFunc)
-        }
-        fmt.Println("http server is ready for listen port: 55550")
-        err := http.ListenAndServe(":55550", nil)
-        if err != nil {
-            fmt.Println("http listen failed")
-        }
-    }()
-}
+func HttpStart(restEndPoint string) (net.Listener, error){
+    for pattern, handleFunc := range (methodsMap) {
+        http.HandleFunc(pattern, handleFunc)
+    }
 
+    listen, err := net.Listen("tcp", restEndPoint)
+    if err != nil {
+        log.Error("start reset server errpr :", err.Error())
+        return nil, err
+    }
+    log.Info("rest server is ready for listen，","endpoint" ,restEndPoint)
+
+    svr := http.Server{}
+    go svr.Serve(listen)
+    return listen, nil
+}
 //func logPanics(handle http.HandlerFunc) http.HandlerFunc {
 //    return func(writer http.ResponseWriter, request *http.Request) {
 //        defer func() {
