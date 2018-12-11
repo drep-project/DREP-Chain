@@ -169,6 +169,7 @@ func (controller *MainController)GetNonce() {
     resp := &Response{Success:true}
     controller.Data["json"] = resp
     address := controller.Input().Get("address")
+    address = address[2:]
     fmt.Println("NonceAddress: ", address)
 
     c := controller.Input().Get("chainId")
@@ -190,6 +191,7 @@ func (controller *MainController)SendTransaction() {
     resp := &Response{Success:false}
     controller.Data["json"] = resp
     to := controller.Input().Get("to")
+    to = to[2:]
     a := controller.Input().Get("amount")
     d := controller.Input().Get("destChain")
 

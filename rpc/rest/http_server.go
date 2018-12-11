@@ -159,6 +159,7 @@ func GetNonce(w http.ResponseWriter, r *http.Request) {
         writeResponse(w, resp)
         return
     }
+    address = address[2:]
     fmt.Println("NonceAddress: ", address)
 
     ca := accounts.Hex2Address(address)
@@ -174,7 +175,7 @@ func SendTransaction(w http.ResponseWriter, r *http.Request) {
     var amount string
     var destChain int64
     if value, ok := params["to"].(string); ok {
-        to = value
+        to = value[2:]
     }
     if value, ok := params["amount"].(string); ok {
         amount = value
