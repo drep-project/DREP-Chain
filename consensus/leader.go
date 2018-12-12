@@ -78,7 +78,7 @@ func (l *Leader) ProcessConsensus(msg []byte) (error, *mycrypto.Signature, []byt
 
 func (l *Leader) setUp(msg []byte) []*bean.Peer {
     setup := &bean.Setup{Msg: msg}
-    log.Trace("Leader setup ", *setup)
+    log.Trace("Leader setup ", "msg", *setup)
     s, _ := network.SendMessage(l.members, setup)
     return s
 }

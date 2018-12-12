@@ -97,7 +97,8 @@ func (n *Node) runAsLeader() {
         log.Trace("node leader is going to process consensus for round 1")
         err, sig, bitmap := leader1.ProcessConsensus(msg)
         if err != nil {
-            log.Trace("Error occurs", err)
+            var str = err.Error()
+            log.Error("Error occurs","msg", str)
             panic(err)
         }
         multiSig := &bean.MultiSignature{Sig: sig, Bitmap: bitmap}
