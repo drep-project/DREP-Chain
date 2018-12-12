@@ -76,10 +76,10 @@ func startListen(process func(*bean.Peer, int, interface{}), port bean.Port) {
                     b = cipher[offset:]
                 }
             }
-            log.Info("Receive ", cipher[:offset])
+            log.Info("Receive ", "msg",cipher[:offset])
             log.Info("Receive byte :", "bytes ",offset)
             task, err := decryptIntoTask(cipher[:offset]) // TODO what the fuck is this???
-            log.Info("Receive after decrypt", task)
+            log.Info("Receive after decrypt","msg", task)
             if err != nil {
                 return
             }
