@@ -37,6 +37,7 @@ type Transaction struct {
 }
 
 func (t *Transaction) Put(key []byte, value []byte, chainId int64, onTrie bool) {
+	fmt.Println("transaction put, key: ", hex.EncodeToString(key))
 	if t.finished {
 		return
 	}
@@ -55,11 +56,11 @@ func (t *Transaction) Put(key []byte, value []byte, chainId int64, onTrie bool) 
 		t.database.tries[chainId] = trie.NewStateTrie()
 	}
 	t.database.tries[chainId].Insert(key, value)
-	fmt.Println()
-	fmt.Println("key: ", hex.EncodeToString(key))
-	fmt.Println("value: ", hex.EncodeToString(value))
-	fmt.Println("state root: ", hex.EncodeToString(GetStateRoot()))
-	fmt.Println()
+	//fmt.Println()
+	//fmt.Println("key: ", hex.EncodeToString(key))
+	//fmt.Println("value: ", hex.EncodeToString(value))
+	//fmt.Println("state root: ", hex.EncodeToString(GetStateRoot()))
+	//fmt.Println()
 }
 
 func (t *Transaction) Get(key []byte) []byte {
@@ -216,6 +217,7 @@ func (db *Database) GetStateRoot() []byte {
 
 func (db *Database) put(key []byte, value []byte, chainId int64) error {
 	err := db.db.Put(key, value, nil)
+	fmt.Println("db put, key: ", hex.EncodeToString(key))
 	if err == nil {
 		if db.tries[chainId] == nil {
 			db.tries[chainId] = trie.NewStateTrie()

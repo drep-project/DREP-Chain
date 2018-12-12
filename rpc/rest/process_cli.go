@@ -135,13 +135,12 @@ func sendCreateContractTransaction(code string) error {
     return nil
 }
 
-func sendCallContractTransaction(addr string, chainId int64, inputHex string, readOnly bool) error {
-    contractAddr := accounts.Hex2Address(addr)
+func sendCallContractTransaction(addr string, chainId int64, inputHex, amount string, readOnly bool) error {
     input, err := hex.DecodeString(inputHex)
     if err != nil {
         return err
     }
-    t := node.GenerateCallContractTransaction(contractAddr, chainId, input, readOnly)
+    t := node.GenerateCallContractTransaction(addr, chainId, input, amount, readOnly)
     err = node.SendTransaction(t)
     if err != nil {
         return err

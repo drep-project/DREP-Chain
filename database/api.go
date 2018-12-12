@@ -27,7 +27,8 @@ func BeginTransaction() *Transaction {
 func GetBlockOutsideTransaction(height int64) *bean.Block {
     key := mycrypto.Hash256([]byte("block_" + strconv.FormatInt(height, 10)))
     value := db.get(key)
-    block, err := bean.UnmarshalBlock(value)
+    block := &bean.Block{}
+    err := json.Unmarshal(value, block)
     if err != nil {
         return nil
     }
@@ -37,7 +38,7 @@ func GetBlockOutsideTransaction(height int64) *bean.Block {
 //TODO cannot sync
 func PutBlockOutsideTransaction(block *bean.Block) error {
     key := mycrypto.Hash256([]byte("block_" + strconv.FormatInt(block.Header.Height, 10)))
-    value, err := bean.MarshalBlock(block)
+    value, err := json.Marshal(block)
     if err != nil {
         return err
     }
@@ -47,7 +48,8 @@ func PutBlockOutsideTransaction(block *bean.Block) error {
 func GetBlockInsideTransaction(t *Transaction, height int64) *bean.Block {
     key := mycrypto.Hash256([]byte("block_" + strconv.FormatInt(height, 10)))
     value := t.Get(key)
-    block, err := bean.UnmarshalBlock(value)
+    block := &bean.Block{}
+    err := json.Unmarshal(value, block)
     if err != nil {
         return nil
     }
@@ -56,7 +58,7 @@ func GetBlockInsideTransaction(t *Transaction, height int64) *bean.Block {
 
 func PutBlockInsideTransaction(t *Transaction, block *bean.Block, chainId int64) error {
     key := mycrypto.Hash256([]byte("block_" + strconv.FormatInt(block.Header.Height, 10)))
-    value, err := bean.MarshalBlock(block)
+    value, err := json.Marshal(block)
     if err != nil {
         return err
     }
@@ -133,9 +135,6 @@ func GetStorageOutsideTransaction(addr accounts.CommonAddress, chainId int64) *a
     key := mycrypto.Hash256([]byte("storage_" + addr.Hex() + strconv.FormatInt(chainId, 10)))
     value := db.get(key)
     storage := &accounts.Storage{}
-    if value == nil {
-        return storage
-    }
     json.Unmarshal(value, storage)
     return storage
 }
@@ -153,9 +152,6 @@ func GetStorageInsideTransaction(t *Transaction, addr accounts.CommonAddress, ch
     key := mycrypto.Hash256([]byte("storage_" + addr.Hex() + strconv.FormatInt(chainId, 10)))
     value := t.Get(key)
     storage := &accounts.Storage{}
-    if value == nil {
-        return storage
-    }
     json.Unmarshal(value, storage)
     return storage
 }
@@ -172,9 +168,6 @@ func PutStorageInsideTransaction(t *Transaction, storage *accounts.Storage, addr
 
 func GetMostRecentBlocks(n int64) []*bean.Block {
     height := GetMaxHeightOutsideTransaction()
-    if height == -1 {
-        return nil
-    }
     return GetBlocksFromOutsideTransaction(height - n, n)
 }
 
@@ -279,11 +272,8 @@ func GetCodeHashInsideTransaction(t *Transaction, addr accounts.CommonAddress, c
 func GetLogsOutsideTransaction(txHash []byte, chainId int64) []*bean.Log {
     key := mycrypto.Hash256([]byte("logs_" + hex.EncodeToString(txHash) + strconv.FormatInt(chainId, 10)))
     value := db.get(key)
-    if value == nil {
-        return make([]*bean.Log, 0)
-    }
     var logs []*bean.Log
-    err := json.Unmarshal(value, logs)
+    err := json.Unmarshal(value, &logs)
     if err != nil {
         return make([]*bean.Log, 0)
     }
@@ -293,11 +283,8 @@ func GetLogsOutsideTransaction(txHash []byte, chainId int64) []*bean.Log {
 func GetLogsInsideTransaction(t *Transaction, txHash []byte, chainId int64) []*bean.Log {
     key := mycrypto.Hash256([]byte("logs_" + hex.EncodeToString(txHash) + strconv.FormatInt(chainId, 10)))
     value := t.Get(key)
-    if value == nil {
-        return make([]*bean.Log, 0)
-    }
     var logs []*bean.Log
-    err := json.Unmarshal(value, logs)
+    err := json.Unmarshal(value, &logs)
     if err != nil {
         return make([]*bean.Log, 0)
     }

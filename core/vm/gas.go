@@ -10,17 +10,17 @@ const (
 	GasFastestStep  uint64 = 3
 	GasFastStep     uint64 = 5
 	GasMidStep      uint64 = 8
-	GasSlowStep     uint64 = 1 //10
-	GasExtStep      uint64 = 2 //20
-	ExtcodeSize     uint64 = 7 //70 //700
-    ExtcodeCopy     uint64 = 7 //700
-    ExtcodeHash     uint64 = 4 //400
-    Balance         uint64 = 4 //400
-    SLoad           uint64 = 2 //200
-    Calls           uint64 = 7 //700
-    Suicide         uint64 = 5 //5000
+	GasSlowStep     uint64 = 10
+	GasExtStep      uint64 = 20
+	ExtcodeSize     uint64 = 700
+    ExtcodeCopy     uint64 = 700
+    ExtcodeHash     uint64 = 400
+    Balance         uint64 = 400
+    SLoad           uint64 = 200
+    Calls           uint64 = 700
+    Suicide         uint64 = 5000
     ExpByte         uint64 = 50
-    CreateBySuicide uint64 = 25 //25000
+    CreateBySuicide uint64 = 25000
 )
 
 // calcGas returns the actual gas cost of the call.
