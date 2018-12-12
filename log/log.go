@@ -30,7 +30,7 @@ func init() {
 func SetUp(cfg *config.LogConfig) error {
 	if cfg.DataDir != "" {
 		if !util.IsDirExists(cfg.DataDir) {
-			err :=os.Mkdir(cfg.DataDir,0777)
+			err :=os.MkdirAll(cfg.DataDir,0777)
 			if err!=nil{
 				return err
 			}
