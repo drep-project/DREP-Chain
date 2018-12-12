@@ -125,7 +125,7 @@ func Bytes2Hash(b []byte) Hash {
     return h
 }
 
-func (h Hash) SetBytes(b []byte) {
+func (h *Hash) SetBytes(b []byte) {
     if len(b) > len(h) {
         panic(ErrExceedHashLength)
     }

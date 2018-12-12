@@ -118,19 +118,22 @@ func GenerateCreateContractTransaction(code []byte) *bean.Transaction {
     return &bean.Transaction{Data: data}
 }
 
-func GenerateCallContractTransaction(addr accounts.CommonAddress, chainId int64, input []byte, readOnly bool) *bean.Transaction {
-    runningChain := config.GetConfig().ChainId
+
+func GenerateCallContractTransaction(addr string, chainId int64, input []byte, value string, readOnly bool) *bean.Transaction {
+    runningChain := config.GetChainId()
     nonce := database.GetNonceOutsideTransaction(store.GetAddress(), runningChain) + 1
     if runningChain != chainId && !readOnly {
         log.Info("you can only call view/pure functions of contract of another chain")
         return &bean.Transaction{}
     }
+    amount, _ := new(big.Int).SetString(value, 10)
     data := &bean.TransactionData{
         Nonce: nonce,
         Type: store.CallContractType,
         ChainId: runningChain,
         DestChain: chainId,
-        To: addr.Hex(),
+        To: addr,
+        Amount: amount.Bytes(),
         GasPrice: store.DefaultGasPrice.Bytes(),
         GasLimit: store.CallContractGas.Bytes(),
         Timestamp: time.Now().Unix(),

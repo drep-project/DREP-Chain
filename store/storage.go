@@ -39,20 +39,22 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
             total.Add(total, gasFee)
         }
     }
+
     stateRoot := database.GetStateRoot()
     if bytes.Equal(b.Header.StateRoot, stateRoot) {
         fmt.Println()
         fmt.Println("matched ", hex.EncodeToString(b.Header.StateRoot), " vs ", hex.EncodeToString(stateRoot))
-        fmt.Println()
+        //fmt.Println()
         height++
         database.PutMaxHeightInsideTransaction(dbTran, height, GetChainId())
         database.PutBlockInsideTransaction(dbTran, b, GetChainId())
+        fmt.Println("received block: ", b.Header, " ", b.Data, " ", b.MultiSig)
         dbTran.Commit()
         distributeBlockPrize(b, total)
     } else {
         fmt.Println()
         fmt.Println("not matched ", hex.EncodeToString(b.Header.StateRoot), " vs ", hex.EncodeToString(stateRoot))
-        fmt.Println()
+        //fmt.Println()
         dbTran.Discard()
     }
     return total
@@ -167,7 +169,8 @@ func executeCreateContractTransaction(dbTran *database.Transaction, t *bean.Tran
    if balance.Cmp(consumedAmount) >= 0 {
        gasUsed = new(big.Int).Add(gasUsed, consumedGas)
        gasFee = new(big.Int).Add(gasFee, consumedAmount)
-       balance = new(big.Int).Sub(balance, consumedAmount)
+       bal := database.GetBalanceInsideTransaction(dbTran, addr, t.Data.ChainId)
+       balance = new(big.Int).Sub(bal, consumedAmount)
        database.PutBalanceInsideTransaction(dbTran, addr, t.Data.ChainId, balance)
    }
    return
@@ -192,7 +195,8 @@ func executeCallContractTransaction(dbTran *database.Transaction, t *bean.Transa
    if balance.Cmp(consumedAmount) >= 0 {
        gasUsed = new(big.Int).Add(gasUsed, consumedGas)
        gasFee = new(big.Int).Add(gasFee, consumedAmount)
-       balance = new(big.Int).Sub(balance, consumedAmount)
+       bal := database.GetBalanceInsideTransaction(dbTran, addr, t.Data.ChainId)
+       balance = new(big.Int).Sub(bal, consumedAmount)
        database.PutBalanceInsideTransaction(dbTran, addr, t.Data.ChainId, balance)
    }
    return
@@ -236,6 +240,9 @@ func executeCrossChainTransaction(dbTran *database.Transaction, t *bean.Transact
 
 func distributeBlockPrize(b *bean.Block, total *big.Int) {
     prize := new(big.Int).Add(total, config.GetBlockPrize())
+    if b.Header.Height > 2 {
+        prize = new(big.Int)
+    }
     leaderPrize := new(big.Int).Rsh(prize, 1)
     fmt.Println("leader prize: ", leaderPrize)
     leaderAddr := accounts.PubKey2Address(b.Header.LeaderPubKey)

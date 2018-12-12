@@ -118,7 +118,6 @@ func (l *Leader) waitForCommit(peers []*bean.Peer) bool {
         log.Trace("waitForCommit 5")
     }
     log.Trace("waitForCommit 6")
-
     return true
 }
 

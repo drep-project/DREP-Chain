@@ -88,12 +88,12 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
     height := database.GetMaxHeightInsideTransaction(dbTran) + 1
     ts := PickTransactions(BlockGasLimit)
     gasSum := new(big.Int)
-    fmt.Println("before generate block: ", hex.EncodeToString(database.GetStateRoot()))
+    //fmt.Println("before generate block: ", hex.EncodeToString(database.GetStateRoot()))
     for _, t := range ts {
         g, _ := execute(dbTran, t)
         gasSum = new(big.Int).Add(gasSum, g)
     }
-    fmt.Println("after generate block: ", hex.EncodeToString(database.GetStateRoot()))
+    //fmt.Println("after generate block: ", hex.EncodeToString(database.GetStateRoot()))
     timestamp := time.Now().Unix()
     stateRoot := database.GetStateRoot()
     gasUsed := gasSum.Bytes()
@@ -119,7 +119,7 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
         }
         previousHash = h
     }
-    fmt.Println("generate block height: ", height)
+    //fmt.Println("generate block height: ", height)
     block := &bean.Block{
         Header: &bean.BlockHeader{
             Version:      Version,
