@@ -1,16 +1,18 @@
 package store
 
 import (
-    "BlockChainTest/bean"
-    "BlockChainTest/mycrypto"
-    "math/big"
-    "BlockChainTest/database"
-    "encoding/json"
-    "errors"
     "time"
+    "errors"
+    "math/big"
+    "encoding/json"
+
     "BlockChainTest/trie"
-    "BlockChainTest/accounts"
+    "BlockChainTest/bean"
     "BlockChainTest/config"
+    "BlockChainTest/mycrypto"
+    "BlockChainTest/database"
+    "BlockChainTest/accounts"
+    "BlockChainTest/core/common"
 )
 
 var (
@@ -23,9 +25,8 @@ var (
     nodes map[string] *accounts.Node
 )
 
-func init()  {
-
-    keystore := config.GetKeystore()
+func InitState(config *config.NodeConfig)  {
+    keystore := config.Keystore
     node, _ := accounts.OpenKeystore(keystore)
     if node != nil {
         prvKey = node.PrvKey
@@ -36,8 +37,8 @@ func init()  {
     }
 
     myIndex := config.GetMyIndex()
-    chainId = config.GetChainId()
-    debugNodes := config.GetDebugNodes()
+    chainId = config.ChainId
+    debugNodes := config.BootNodes
     minerNum := len(debugNodes)
 
     curMiner = -1
@@ -49,7 +50,7 @@ func init()  {
             Port:   bean.Port(debugNodes[i].Port),
         }
         if i != myIndex {
-            peer.PubKey = config.ParsePK(debugNodes[i].PubKey)
+            peer.PubKey = common.ParsePK(debugNodes[i].PubKey)
         } else {
             peer.PubKey = pubKey
         }
@@ -60,7 +61,7 @@ func init()  {
     }
     adminPubKey = miners[0].PubKey
 
-    port = bean.Port(config.GetPort())
+    port = bean.Port(config.Port)
     //if Solo {
     //    minerNum = 1
     //    ip0 = network.IP("127.0.0.1")

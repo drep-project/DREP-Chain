@@ -1,4 +1,4 @@
-package http
+package rest
 
 import (
     "BlockChainTest/config"
@@ -12,8 +12,8 @@ import (
 )
 
 func createAccount(chainId int64, keystore string) (string, error) {
-    runningChain := config.GetChainId()
-    existingKeystore := config.GetKeystore()
+    runningChain := config.GetConfig().ChainId
+    existingKeystore := config.GetConfig().Keystore
 
     IsOnRoot := runningChain == config.RootChain
     IsOnChild := !IsOnRoot
@@ -89,7 +89,7 @@ func getAccount() string {
 }
 
 func getBalance(address string, chainId int64) (*big.Int, error) {
-    if config.GetChainId() != config.RootChain {
+    if config.GetConfig().ChainId != config.RootChain {
         return nil, errors.New("you cannot check balance of an account on another child chain while you are running child chain")
     }
     balance := database.GetBalanceOutsideTransaction(accounts.Hex2Address(address), chainId)
@@ -97,7 +97,7 @@ func getBalance(address string, chainId int64) (*big.Int, error) {
 }
 
 func getNonce(address string, chainId int64) (int64, error) {
-    if config.GetChainId() != config.RootChain {
+    if config.GetConfig().ChainId != config.RootChain {
         return -1, errors.New("you cannot check balance of an account on another child chain while you are running child chain")
     }
     nonce := database.GetNonceOutsideTransaction(accounts.Hex2Address(address), chainId)

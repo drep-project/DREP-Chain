@@ -26,3 +26,7 @@ type Peer struct {
 func (peer *Peer) ToString() string {
     return peer.IP.String() + ":" + peer.Port.String()
 }
+
+func DefaultPort() Port{
+    return Port(5555)
+}

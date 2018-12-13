@@ -93,7 +93,7 @@ func AddTransaction(transaction *bean.Transaction) bool {
     }
     tranLock.Lock()
     if _, exists := tranSet[id]; exists {
-        log.Errorf("transaction %s exists", id)
+        log.Error("transaction %s exists", id)
         tranLock.Unlock()
         return false
     } else {
@@ -171,7 +171,7 @@ func PickTransactions(maxGas *big.Int) []*bean.Transaction {
                             }
                         }
                     } else {
-                        log.Errorf("Fuck")
+                        log.Error("Fuck")
                     }
                 } else {
                     it.Remove()

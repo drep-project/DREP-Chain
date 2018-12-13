@@ -1,23 +1,54 @@
 package log
 
-import "fmt"
+import (
+	"BlockChainTest/util"
+	"io"
+	"os"
 
-var DEBUG = true
+	"BlockChainTest/config"
+	"github.com/mattn/go-colorable"
+	"github.com/mattn/go-isatty"
+)
+var DEBUG = false
 
-func Println(a ...interface{})  {
-    if DEBUG {
-        fmt.Println(a)
-    }
+
+var (
+	ostream Handler
+	glogger *GlogHandler
+)
+
+func init() {
+	usecolor := (isatty.IsTerminal(os.Stderr.Fd()) || isatty.IsCygwinTerminal(os.Stderr.Fd())) && os.Getenv("TERM") != "dumb"
+	output := io.Writer(os.Stderr)
+	if usecolor {
+		output = colorable.NewColorableStderr()
+	}
+	ostream = StreamHandler(output, TerminalFormat(usecolor))
+	glogger = NewGlogHandler(ostream)
 }
 
-func Printf(format string, a ...interface{})  {
-    if DEBUG {
-        fmt.Printf(format, a)
-    }
-}
+func SetUp(cfg *config.LogConfig) error {
+	if cfg.DataDir != "" {
+		if !util.IsDirExists(cfg.DataDir) {
+			err :=os.MkdirAll(cfg.DataDir,0777)
+			if err!=nil{
+				return err
+			}
+		}
 
-func Errorf(format string, a ...interface{})  {
-    if DEBUG {
-        fmt.Errorf(format, a)
-    }
+		rfh, err := RotatingFileHandler(
+			cfg.DataDir,
+			262144,
+			JSONFormatOrderedEx(false, true),
+		)
+		if err != nil {
+			return err
+		}
+		glogger.SetHandler(MultiHandler(ostream, rfh))
+	}
+	glogger.Verbosity(Lvl(cfg.LogLevel))
+	glogger.Vmodule(cfg.Vmodule)
+	glogger.BacktraceAt(cfg.BacktraceAt)
+	Root().SetHandler(glogger)
+	return nil
 }

@@ -7,15 +7,19 @@ import (
     "strconv"
     "encoding/json"
     "BlockChainTest/accounts"
-    "encoding/hex"
     "BlockChainTest/config"
+    "encoding/hex"
     "github.com/syndtr/goleveldb/leveldb/iterator"
     "fmt"
 )
 
 var (
-    db = NewDatabase()
+    db *Database
 )
+
+func InitDataBase(config *config.NodeConfig){
+    db = NewDatabase(config)
+}
 
 func GetDB() *Database {
     return db
@@ -65,7 +69,7 @@ func GetHighestBlock() *bean.Block {
 func PutBlock(block *bean.Block) error {
     key := mycrypto.Hash256([]byte("block_" + strconv.FormatInt(block.Header.Height, 10)))
     value, _ := bean.MarshalBlock(block)
-    return db.put(key, value, config.GetChainId())
+    return db.put(key, value, config.GetConfig().ChainId)
 }
 
 func GetMaxHeight() int64 {
@@ -80,7 +84,7 @@ func GetMaxHeight() int64 {
 func PutMaxHeight(height int64) error {
     key := mycrypto.Hash256([]byte("max_height"))
     value := new(big.Int).SetInt64(height).Bytes()
-    err := db.put(key, value, config.GetChainId())
+    err := db.put(key, value, config.GetConfig().ChainId)
     if err != nil {
         return err
     }

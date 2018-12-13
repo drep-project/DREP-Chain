@@ -1,20 +1,21 @@
 package store
 
 import (
-    "math/big"
-    "BlockChainTest/bean"
-    "log"
     "fmt"
+    "math/big"
+
+    "BlockChainTest/log"
+    "BlockChainTest/core"
+    "BlockChainTest/bean"
+    "BlockChainTest/config"
     "BlockChainTest/database"
     "BlockChainTest/accounts"
-    "BlockChainTest/core"
     "BlockChainTest/core/vm"
-    "BlockChainTest/config"
 )
 
 func ExecuteTransactions(b *bean.Block) *big.Int {
     if b == nil || b.Header == nil { // || b.Data == nil || b.Data.TxList == nil {
-        fmt.Errorf("error block nil or header nil")
+        log.Error("error block nil or header nil")
         return nil
     }
     height := database.GetMaxHeight()
@@ -39,9 +40,14 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
             total.Add(total, gasFee)
         }
     }
-    prize := new(big.Int).Add(total, config.GetBlockPrize())
+    // TODO Need a more elegant way to Implemente
+    str := config.GetConfig().Blockprize.String()
+    val := new (big.Int)
+    val.SetString(str,10)
+
+    prize := new(big.Int).Add(total, val)
     leaderPrize := new(big.Int).Rsh(prize, 1)
-    fmt.Println("leader prize: ", leaderPrize)
+    log.Trace("leader prize: ","Prize", leaderPrize)
     leaderAddr := accounts.PubKey2Address(b.Header.LeaderPubKey)
     balance := database.GetBalanceOutsideTransaction(leaderAddr, b.Header.ChainId)
     balance = new(big.Int).Add(balance, leaderPrize)
@@ -82,7 +88,7 @@ func execute(t *bean.Transaction) *big.Int {
     gasFee := big.NewInt(0).Mul(gasLimit, gasPrice)
     balance := database.GetBalanceOutsideTransaction(addr, t.Data.ChainId)
     if gasFee.Cmp(balance) > 0 {
-        log.Fatal("Error, gas not right")
+        log.Error("Error, gas not right")
         return nil
     }
     switch t.Data.Type {
