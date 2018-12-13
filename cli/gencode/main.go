@@ -2,12 +2,37 @@ package main
 
 import(
 	"fmt"
+	"os"
+	"io"
 	"reflect"
+	"strings"
 	"BlockChainTest/accounts"
 	"BlockChainTest/database"
 	"BlockChainTest/node"
 )
 
+const codeFile = 
+`
+var Method = require('../method');
+
+var %s = function (drep) {
+    this._requestManager = drep._requestManager;
+
+    var self = this;
+    
+    methods().forEach(function(method) { 
+        method.attachToObject(self);
+        method.setRequestManager(drep._requestManager);
+    });
+};
+
+var methods = function () {
+	%s
+    return [%s]
+}
+
+module.exports = %s;
+`
 
 func Capitalize(str string) string {
     var upperStr string
@@ -29,21 +54,35 @@ func Capitalize(str string) string {
 }
 
 func main() {
-	fmt.Println("***********account**************")
+
+	output  := "std"
+	if len(os.Args) >0 {
+		if os.Args[1] == "file" {
+			output = "file"
+		}
+	}
+
 	vType:=reflect.TypeOf(&database.DataBaseAPI{})
-	generateCode("account",vType)
+	resolveType(output,"db", "DB", "db",vType)
 
-	fmt.Println("**********database***************")
 	vType=reflect.TypeOf(&accounts.AccountApi{})
-	generateCode("db",vType)
+	resolveType(output,"account", "ACCOUNT", "account",vType)
 
-	fmt.Println("***********chain**************")
 	vType=reflect.TypeOf(&node.ChainApi{})
-	generateCode("chain",vType)
-  
+	resolveType(output,"chain", "CHAIN", "chain",vType)
 }
 
-func generateCode(prefix string, vType reflect.Type){
+func resolveType(output string,fileName, className string,prefix string, vType reflect.Type){
+	fmt.Println("**********"+fileName+"***************")
+	vType=reflect.TypeOf(&accounts.AccountApi{})
+	code := generateCode(className, prefix,vType)
+	if output == "std" {
+		fmt.Println(code)
+	}else{
+		WriteFile(fileName+".js",code)
+	}
+}
+func generateCode(className string,prefix string, vType reflect.Type) string{
 	methods := vType.NumMethod()
 
 
@@ -65,7 +104,19 @@ var %s = new Method({
 		code += fmt.Sprintf(template,methodName, methodName,prefix, methodName,numIn-1)
 		methodNames += methodName +","
 	}
+	methodNames = strings.Trim(methodNames,",")
 
-	fmt.Println(code)
-	fmt.Println(methodNames)
+	codestr := fmt.Sprintf(codeFile, className, code, methodNames, className)
+	return codestr
+}
+
+func WriteFile(name,content string) {
+    fileObj,err := os.OpenFile(name,os.O_RDWR|os.O_CREATE,0644)
+    if err != nil {
+        fmt.Println("Failed to open the file",err.Error())
+        os.Exit(2)
+    }
+    if  _,err := io.WriteString(fileObj,content);err == nil {
+        fmt.Println("Successful appending to the file with os.OpenFile and io.WriteString.",content)
+    }
 }

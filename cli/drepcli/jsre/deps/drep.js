@@ -1536,7 +1536,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 		var create = new Method({
 				name: 'create',
 				call: 'chain_create',
-				params: 2
+				params: 1
 		});
 	
 		var me = new Method({
@@ -1598,22 +1598,10 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 	};
 	
 	var methods = function () {
-		var addLogInsideTransaction = new Method({
-			name: 'addLogInsideTransaction',
-			call: 'db_addLogInsideTransaction',
-			params: 2
-		});
-			
 		var getAllBlocks = new Method({
 			name: 'getAllBlocks',
 			call: 'db_getAllBlocks',
 			params: 0
-		});
-			
-		var getBalanceInsideTransaction = new Method({
-			name: 'getBalanceInsideTransaction',
-			call: 'db_getBalanceInsideTransaction',
-			params: 3
 		});
 			
 		var getBalanceOutsideTransaction = new Method({
@@ -1646,12 +1634,6 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 			params: 2
 		});
 			
-		var getCodeHashInsideTransaction = new Method({
-			name: 'getCodeHashInsideTransaction',
-			call: 'db_getCodeHashInsideTransaction',
-			params: 3
-		});
-			
 		var getCodeHashOutsideTransaction = new Method({
 			name: 'getCodeHashOutsideTransaction',
 			call: 'db_getCodeHashOutsideTransaction',
@@ -1662,12 +1644,6 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 			name: 'getHighestBlock',
 			call: 'db_getHighestBlock',
 			params: 0
-		});
-			
-		var getLogsInsideTransaction = new Method({
-			name: 'getLogsInsideTransaction',
-			call: 'db_getLogsInsideTransaction',
-			params: 3
 		});
 			
 		var getLogsOutsideTransaction = new Method({
@@ -1688,104 +1664,15 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 			params: 1
 		});
 			
-		var getNonceInsideTransaction = new Method({
-			name: 'getNonceInsideTransaction',
-			call: 'db_getNonceInsideTransaction',
-			params: 3
-		});
-			
 		var getNonceOutsideTransaction = new Method({
 			name: 'getNonceOutsideTransaction',
 			call: 'db_getNonceOutsideTransaction',
 			params: 2
 		});
-			
-		var getStorageInsideTransaction = new Method({
-			name: 'getStorageInsideTransaction',
-			call: 'db_getStorageInsideTransaction',
-			params: 3
-		});
-			
-		var getStorageOutsideTransaction = new Method({
-			name: 'getStorageOutsideTransaction',
-			call: 'db_getStorageOutsideTransaction',
-			params: 2
-		});
-			
-		var putBalanceInsideTransaction = new Method({
-			name: 'putBalanceInsideTransaction',
-			call: 'db_putBalanceInsideTransaction',
-			params: 4
-		});
-			
-		var putBalanceOutSideTransaction = new Method({
-			name: 'putBalanceOutSideTransaction',
-			call: 'db_putBalanceOutSideTransaction',
-			params: 3
-		});
-			
-		var putBlock = new Method({
-			name: 'putBlock',
-			call: 'db_putBlock',
-			params: 1
-		});
-			
-		var putByteCodeInsideTransaction = new Method({
-			name: 'putByteCodeInsideTransaction',
-			call: 'db_putByteCodeInsideTransaction',
-			params: 4
-		});
-			
-		var putByteCodeOutsideTransaction = new Method({
-			name: 'putByteCodeOutsideTransaction',
-			call: 'db_putByteCodeOutsideTransaction',
-			params: 3
-		});
-			
-		var putLogsInsideTransaction = new Method({
-			name: 'putLogsInsideTransaction',
-			call: 'db_putLogsInsideTransaction',
-			params: 4
-		});
-			
-		var putMaxHeight = new Method({
-			name: 'putMaxHeight',
-			call: 'db_putMaxHeight',
-			params: 1
-		});
-			
-		var putNonceInsideTransaction = new Method({
-			name: 'putNonceInsideTransaction',
-			call: 'db_putNonceInsideTransaction',
-			params: 4
-		});
-			
-		var putNonceOutsideTransaction = new Method({
-			name: 'putNonceOutsideTransaction',
-			call: 'db_putNonceOutsideTransaction',
-			params: 3
-		});
-			
-		var putStorageInsideTransaction = new Method({
-			name: 'putStorageInsideTransaction',
-			call: 'db_putStorageInsideTransaction',
-			params: 4
-		});
-			
-		var putStorageOutsideTransaction = new Method({
-			name: 'putStorageOutsideTransaction',
-			call: 'db_putStorageOutsideTransaction',
-			params: 3
-		});
 		return [
-			addLogInsideTransaction,getAllBlocks,getBalanceInsideTransaction,
-			getBalanceOutsideTransaction,getBlock,getBlocksFrom,getByteCodeInsideTransaction,
-			getByteCodeOutsideTransaction,getCodeHashInsideTransaction,getCodeHashOutsideTransaction,
-			getHighestBlock,getLogsInsideTransaction,getLogsOutsideTransaction,getMaxHeight,getMostRecentBlocks,
-			getNonceInsideTransaction,getNonceOutsideTransaction,getStorageInsideTransaction,
-			getStorageOutsideTransaction,putBalanceInsideTransaction,putBalanceOutSideTransaction,putBlock,putByteCodeInsideTransaction,
-			putByteCodeOutsideTransaction,putLogsInsideTransaction,putMaxHeight,putNonceInsideTransaction,putNonceOutsideTransaction,
-			putStorageInsideTransaction,putStorageOutsideTransaction
+			getAllBlocks,getBalanceOutsideTransaction,getBlock,getBlocksFrom,getByteCodeInsideTransaction,
+			getByteCodeOutsideTransaction,getCodeHashOutsideTransaction,getHighestBlock,getLogsOutsideTransaction,
+			getMaxHeight,getMostRecentBlocks,getNonceOutsideTransaction
 		];
 	};
 	
