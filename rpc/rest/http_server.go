@@ -1,20 +1,35 @@
 package rest
 
 import (
-    "net/http"
     "fmt"
-    "net"
-    "BlockChainTest/database"
+    "flag"
     "strconv"
     "encoding/json"
     "math/big"
-    "strings"
-    "io/ioutil"
-    "BlockChainTest/log"
-    "BlockChainTest/node"
-    "BlockChainTest/accounts"
     "github.com/spf13/viper"
+    "github.com/astaxie/beego"
+    "BlockChainTest/node"
+    "BlockChainTest/database"
+    "BlockChainTest/accounts"
+    "BlockChainTest/bean"
 )
+
+var mappingMethodMap = map[string] string {
+    "/GetAllBlocks": "*:GetAllBlocks",
+    "/GetBlock": "*:GetBlock",
+    "/GetHighestBlock": "*:GetHighestBlock",
+    "/GetMaxHeight": "*:GetMaxHeight",
+    "/GetBlocksFrom": "*:GetBlocksFrom",
+    "/GetBalance": "*:GetBalance",
+    "/GetNonce": "*:GetNonce",
+    "/SendTransaction": "*:SendTransaction",
+    //"/CreateAccount": "*:CreateAccount",
+    //"/SwitchAccount": "*:SwitchAccount",
+    "/GetReputation": "*:GetReputation",
+    //"/CurrentAccount": "*:CurrentAccount",
+    "/GetTransactionsFromBlock": "*:GetTransactionsFromBlock",
+    "/SendTransactionsToMainChain": "*:SendTransactionsToMainChain",
+}
 
 type Request struct {
     Method string `json:"method"`
@@ -24,349 +39,284 @@ type Request struct {
 type Response struct {
     Success bool `json:"success"`
     ErrorMsg string `json:"errMsg"`
-    Data interface{} `json:"data"`
+    Data interface{} `json:"body"`
 }
 
-func GetAllBlocks(w http.ResponseWriter, _ *http.Request) {
-    fmt.Println("get all blocks running")
+type MainController struct {
+    beego.Controller
+    actionName *string
+}
+
+func (controller *MainController) Get() {
+    controller.Ctx.WriteString("Hello World!")
+}
+
+func (controller *MainController) GetAllBlocks() {
+    resp := &Response{Success:true}
+    controller.Data["json"] = resp
+
     blocks := database.GetAllBlocks()
-
-    if blocks == nil || len(blocks) == 0 {
-        errMsg := "error occurred during database.GetAllBlocks"
-        fmt.Println(errMsg)
-        resp := &Response{Success:false, Data:errMsg}
-        writeResponse(w, resp)
-        return
-    }
-
+    fmt.Println(blocks)
     var body []*BlockWeb
     for _, block := range(blocks) {
         item := ParseBlock(block)
         body = append(body, item)
     }
-    resp := &Response{Success:true, Data:body}
-    writeResponse(w, resp)
+    resp.Data = body
+    fmt.Println(resp)
+    controller.ServeJSON()
 }
 
-func GetBlock(w http.ResponseWriter, r *http.Request) {
-    params := analysisReqParam(r)
-    var height int64
-    if value, ok := params["height"].(string); ok {
-        height, _ = strconv.ParseInt(value, 10, 64)
-    }
+func (controller *MainController) GetBlock() {
+    //var height int64
+    value := controller.Input().Get("height")
+    height, _ := strconv.ParseInt(value, 10, 64)
+    //fmt.Println(height)
+    resp := &Response{Success:true}
+    controller.Data["json"] = resp
 
-    block := database.GetBlock(height)
-    if block == nil {
-        errMsg := "block is nil"
-        fmt.Println(errMsg)
-        resp := &Response{Success:false, Data:errMsg}
-        writeResponse(w, resp)
-        return
-    }
-    blockWeb := ParseBlock(block)
-    resp := &Response{Success:true, Data:blockWeb}
-    writeResponse(w, resp)
+    b := database.GetBlock(height)
+    block := ParseBlock(b)
+    resp.Data = block
+    controller.ServeJSON()
 }
 
-func GetHighestBlock(w http.ResponseWriter, _ *http.Request) {
+func (controller *MainController)GetHighestBlock() {
+    resp := &Response{Success:true}
+    controller.Data["json"] = resp
     block := database.GetHighestBlock()
-    if block == nil {
-        errMsg := "error occurred during database.GetHighestBlock"
-        fmt.Println(errMsg)
-        resp := &Response{Success:false, Data:errMsg}
-        writeResponse(w, resp)
-        return
-    }
-    blockWeb := ParseBlock(block)
-    resp := &Response{Success:true, Data:blockWeb}
-    writeResponse(w, resp)
+    resp.Data = ParseBlock(block)
+    controller.ServeJSON()
 }
 
-func GetMaxHeight(w http.ResponseWriter, _ *http.Request) {
+func (controller *MainController)GetMaxHeight() {
+    resp := &Response{Success:true}
+    controller.Data["json"] = resp
     height := database.GetMaxHeight()
+
     if height == -1 {
         errMsg := "error occurred during database.GetMaxHeight()"
         fmt.Println(errMsg)
-        resp := &Response{Success:false, Data:errMsg}
-        writeResponse(w, resp)
+        resp.Success = false
+        resp.ErrorMsg = errMsg
+        resp.Data = height
+        controller.ServeJSON()
         return
     }
-    resp := &Response{Success:true, Data:height}
-    writeResponse(w, resp)
+    resp.Data = height
+    controller.ServeJSON()
 }
 
-func GetBlocksFrom(w http.ResponseWriter, r *http.Request){
-    params := analysisReqParam(r)
-    var start, size int64
-    if value, ok := params["start"].(string); ok {
-        start, _ = strconv.ParseInt(value, 10, 64)
+func (controller *MainController)GetBlocksFrom(){
+    resp := &Response{Success:true}
+    controller.Data["json"] = resp
+    st := controller.Input().Get("start")
+    sz := controller.Input().Get("size")
+    start, err := strconv.ParseInt(st, 10, 64)
+    if err != nil {
+        resp.ErrorMsg = "error occurred: param start is not an integer."
+        controller.ServeJSON()
+        return
     }
-    if value, ok := params["size"].(string); ok {
-        size, _ = strconv.ParseInt(value, 10, 64)
+    size, err := strconv.ParseInt(sz, 10, 64)
+    if err != nil {
+        resp.Success = false
+        resp.ErrorMsg = "error occurred: param size is not an integer."
+        controller.ServeJSON()
+        return
     }
-
     blocks := database.GetBlocksFrom(start, size)
     var body []*BlockWeb
     for _, block := range(blocks) {
         item := ParseBlock(block)
         body = append(body, item)
     }
-    resp := &Response{Success:true, Data:body}
-    writeResponse(w, resp)
+    resp.Data = body
+    fmt.Println(resp)
+    controller.ServeJSON()
 }
 
-func GetBalance(w http.ResponseWriter, r *http.Request) {
+func (controller *MainController)GetBalance() {
     // find param in http.Request
-    params := analysisReqParam(r)
-    var address string
-    var chainId int64
-    if value, ok := params["address"].(string); ok {
-        address = value[2:]
-    }
-    if value, ok := params["chainId"].(string); ok {
-        chainId, _ = strconv.ParseInt(value, 10, 64)
-    }
+    resp := &Response{Success:false}
+    controller.Data["json"] = resp
+    address := controller.GetString("address")
+    address = address[2:]
 
     if len(address) == 0 {
-        resp := &Response{Success:false, ErrorMsg:"param format incorrect"}
-        writeResponse(w, resp)
+        resp.ErrorMsg = "param format incorrect"
+        return
+    }
+    c := controller.GetString("chainId")
+    chainId, err := strconv.ParseInt(c, 10, 64)
+    if err != nil {
+        resp.ErrorMsg = err.Error()
+        resp.Data = c
+        controller.ServeJSON()
         return
     }
 
     fmt.Println("BalanceAddress: ", address)
     ca := accounts.Hex2Address(address)
-    //database.PutBalance(ca, big.NewInt(1314))
-    //fmt.Println("[database PutBalance] succeed!")
-
     b := database.GetBalanceOutsideTransaction(ca, chainId)
-    resp := &Response{Success:true, Data:b.String()}
-    writeResponse(w, resp)
+    resp.Success = true
+    resp.Data = b.String()
+
+    controller.ServeJSON()
 }
 
-func GetNonce(w http.ResponseWriter, r *http.Request) {
-    params := analysisReqParam(r)
-    var address string
-    var chainId int64
-    if value, ok := params["address"].(string); ok {
-        address = value
-    }
-    if value, ok := params["chainId"].(string); ok {
-        chainId, _ = strconv.ParseInt(value, 10, 64)
-    }
-
-    if len(address) == 0 {
-        resp := &Response{Success:false, ErrorMsg:"param format incorrect"}
-        writeResponse(w, resp)
-        return
-    }
+func (controller *MainController)GetNonce() {
+    resp := &Response{Success:true}
+    controller.Data["json"] = resp
+    address := controller.Input().Get("address")
     address = address[2:]
     fmt.Println("NonceAddress: ", address)
 
-    ca := accounts.Hex2Address(address)
-
-    nonce := database.GetNonceOutsideTransaction(ca, chainId)
-    resp := &Response{Success:true, Data:nonce}
-    writeResponse(w, resp)
-}
-
-func SendTransaction(w http.ResponseWriter, r *http.Request) {
-    params := analysisReqParam(r)
-    var to string
-    var amount string
-    var destChain int64
-    if value, ok := params["to"].(string); ok {
-        to = value[2:]
-    }
-    if value, ok := params["amount"].(string); ok {
-        amount = value
-    }
-    if value, ok := params["destChain"].(string); ok {
-        destChain, _ = strconv.ParseInt(value, 10, 64)
-    }
-
-    a, succeed := new(big.Int).SetString(amount, 10)
-    if succeed == false {
-        errorMsg := "params amount parsing error"
-        resp := &Response{Success:true, ErrorMsg:errorMsg}
-        writeResponse(w, resp)
+    c := controller.Input().Get("chainId")
+    chainId, err := strconv.ParseInt(c, 10, 64)
+    if err != nil {
+        resp.Success = false
+        resp.ErrorMsg = err.Error()
+        controller.ServeJSON()
         return
     }
 
-    t := node.GenerateBalanceTransaction(to, destChain, a)
+    ca := accounts.Hex2Address(address)
+    nonce := database.GetNonceOutsideTransaction(ca, chainId)
+    resp.Data = nonce
+    controller.ServeJSON()
+}
+
+func (controller *MainController)SendTransaction() {
+    resp := &Response{Success:false}
+    controller.Data["json"] = resp
+    to := controller.Input().Get("to")
+    to = to[2:]
+    a := controller.Input().Get("amount")
+    d := controller.Input().Get("destChain")
+
+    amount, succeed := new(big.Int).SetString(a, 10)
+    if succeed == false {
+        resp.ErrorMsg = "params amount parsing error"
+        controller.ServeJSON()
+        return
+    }
+
+    destChain, err := strconv.ParseInt(d, 10, 64)
+    if err != nil {
+        resp.ErrorMsg = err.Error()
+        controller.ServeJSON()
+        return
+    }
+
+    t := node.GenerateBalanceTransaction(to, destChain, amount)
 
     var body string
     if node.SendTransaction(t) != nil {
-        body = "Offline"
+        body = "offline!"
     } else {
-        body = "Send finish"
+        body = "Send finished!"
     }
-
-    resp := &Response{Success:true, Data:body}
-    writeResponse(w, resp)
+    resp.Success = true
+    resp.Data = body
+    controller.ServeJSON()
 }
 
-func GetTransactionsFromBlock(w http.ResponseWriter, r *http.Request) {
-   params := analysisReqParam(r)
-   var height int64
-   if value, ok := params["height"].(string); ok {
-       height, _ = strconv.ParseInt(value, 10, 64)
-   }
-   block := database.GetBlock(height)
-   txs := block.Data.TxList
-   var txsWeb []*TransactionWeb
-   for _, tx := range(txs) {
-       tx := ParseTransaction(tx)
-       txsWeb = append(txsWeb, tx)
-   }
-   resp := &Response{Success:true, Data:txsWeb}
-   writeResponse(w, resp)
+func (controller *MainController)GetTransactionsFromBlock() {
+    resp := &Response{Success:true}
+    controller.Data["json"] = resp
+    value := controller.Input().Get("height")
+
+    height, err := strconv.ParseInt(value, 10, 64)
+    if err != nil {
+        resp.Success = false
+        resp.ErrorMsg = err.Error()
+        controller.ServeJSON()
+        return
+    }
+    block := database.GetBlock(height)
+    txs := block.Data.TxList
+    var body []*TransactionWeb
+    for _, tx := range(txs) {
+        tx := ParseTransaction(tx)
+        body = append(body, tx)
+    }
+    resp.Data = body
+    controller.ServeJSON()
 }
 
-func GetReputation(w http.ResponseWriter, r *http.Request) {
-    params := analysisReqParam(r)
-    var address string
-    var chainId int64
-    if value, ok := params["address"].(string); ok {
-        address = value[2:]
+
+func (controller *MainController)SendTransactionsToMainChain() {
+    resp := &Response{Success:true}
+    controller.Data["json"] = resp
+    value := controller.Input().Get("tx_pkg")
+    txsBytes := []byte(value)
+    var txs []*bean.Transaction
+    err := json.Unmarshal(txsBytes, txs)
+    if err != nil {
+        resp.Success = false
+        resp.ErrorMsg = err.Error()
+        controller.ServeJSON()
+        return
     }
-    if value, ok := params["chainId"].(string); ok {
-        chainId, _ = strconv.ParseInt(value, 10, 64)
-    }
+    resp.Data = "send transactions succeed!"
+    controller.ServeJSON()
+    go func() {
+        for _, tx := range(txs) {
+            node.SendTransaction(tx)
+        }
+    }()
+}
+
+func (controller *MainController)GetReputation() {
+    // find param in http.Request
+    resp := &Response{Success:false}
+    controller.Data["json"] = resp
+    address := controller.GetString("address")
+    address = address[2:]
 
     if len(address) == 0 {
-        resp := &Response{Success:false, ErrorMsg:"param format incorrect"}
-        writeResponse(w, resp)
+        resp.ErrorMsg = "param format incorrect"
         return
     }
 
+    c := controller.GetString("chainId")
+    chainId, err := strconv.ParseInt(c, 10, 64)
+    if err != nil {
+        resp.ErrorMsg = err.Error()
+        resp.Data = c
+        controller.ServeJSON()
+        return
+    }
+
+    fmt.Println("BalanceAddress: ", address)
     ca := accounts.Hex2Address(address)
-    b:= database.GetReputationOutsideTransaction(ca, chainId)
-    resp := &Response{Success:true, Data:b.String()}
+    b := database.GetReputationOutsideTransaction(ca, chainId)
     if (b.Int64() == 0) {
         defaultRep := viper.GetInt64("default_rep")
         fmt.Println("default reputation is :", defaultRep)
         database.PutReputationOutSideTransaction(ca, chainId, big.NewInt(defaultRep))
+        resp.Success = true
         resp.Data = viper.GetString("default_rep")
+        controller.ServeJSON()
     }
-    writeResponse(w, resp)
+    resp.Success = true
+    resp.Data = b.String()
+
+    fmt.Println(resp)
+    controller.ServeJSON()
 }
 
-var methodsMap = map[string] http.HandlerFunc {
-    "/GetAllBlocks": GetAllBlocks,
-    "/GetBlock": GetBlock,
-    "/GetHighestBlock": GetHighestBlock,
-    "/GetMaxHeight": GetMaxHeight,
-    "/GetBlocksFrom": GetBlocksFrom,
-    "/GetBalance": GetBalance,
-    "/GetNonce": GetNonce,
-    "/SendTransaction": SendTransaction,
-    "/GetReputation": GetReputation,
-    "/GetTransactionsFromBlock": GetTransactionsFromBlock,
-}
-
-func HttpStart(restEndPoint string) (net.Listener, error){
-    for pattern, handleFunc := range (methodsMap) {
-        http.HandleFunc(pattern, handleFunc)
+func Start() *MainController{
+    controller := &MainController{}
+    port := flag.String("port", "55550", "port:default is 55551")
+    fmt.Println("http server is ready for listen port:", port)
+    beego.Router("/", controller)
+    for pattern, mappingMethods := range (mappingMethodMap) {
+        //fmt.Println(pattern, ": ", mappingMethods)
+        beego.Router(pattern, controller, mappingMethods)
     }
-
-    listen, err := net.Listen("tcp", restEndPoint)
-    if err != nil {
-        log.Error("start reset server errpr :", err.Error())
-        return nil, err
-    }
-    log.Info("rest server is ready for listen，","endpoint" ,restEndPoint)
-
-    svr := http.Server{}
-    go svr.Serve(listen)
-    return listen, nil
+    //beego.Router("/api/list", &MainController{}, "*:List")
+    beego.Run(":" + *port)
+    return controller
 }
-//func logPanics(handle http.HandlerFunc) http.HandlerFunc {
-//    return func(writer http.ResponseWriter, request *http.Request) {
-//        defer func() {
-//            if x := recover(); x != nil {
-//                fmt.Printf("[%v] caught panic: %v", request.RemoteAddr, x)
-//            }
-//        }()
-//        handle(writer, request)
-//    }
-//}
-
-func writeResponse(w http.ResponseWriter, resp *Response) {
-    b, err := json.Marshal(resp)
-    if err != nil {
-        fmt.Println("error occured resp marshal:", err)
-    }
-    w.Write(b)
-}
-
-func analysisReqParam(r *http.Request) map[string] interface{} {
-    params := make(map[string] interface{}, 50)
-    switch r.Method {
-    case "GET":
-        //fmt.Println("method: GET")
-        r.ParseForm()
-        //fmt.Println("methodName: ", analysisReqMethodName(r.RequestURI))
-        for k, v := range(r.Form) {
-            // url.values is a slice of string
-            params[k] = v[0]
-        }
-    case "POST":
-        fmt.Println("method: POST")
-        result, _ := ioutil.ReadAll(r.Body)
-        r.Body.Close()
-        fmt.Printf("%s\n", result)
-        json.Unmarshal(result, &params)
-        //m := f.(map[string]interface{})
-        analysisParamsType(params)
-    }
-    fmt.Println("params: ", params)
-    return params
-}
-
-func analysisReqMethodName(uri string) (methodName string) {
-    s := strings.Split(uri, "?")
-    methodName = strings.Trim(s[0], "/")
-    return methodName
-}
-
-func analysisParamsType(params map[string] interface{})  {
-    for k, v := range params {
-        switch vType := v.(type) {
-        case string:
-            fmt.Println(k, "is string", vType)
-        case int:
-            fmt.Println(k, "is int", vType)
-        case float64:
-            fmt.Println(k, "is float64", vType)
-        case []interface{}:
-            fmt.Println(k, "is an array:")
-            for i, u := range vType {
-                fmt.Println(i, u)
-            }
-        default:
-            fmt.Println(k, "is an unkown Type to handle")
-        }
-    }
-}
-
-//func analysisGetReqParamWithUri(uri string) (methodName string, params map[string] string)  {
-//    s := strings.Split(uri, "?")
-//    p := s[1]
-//    parts := strings.Split(p, "&")
-//
-//    dict := make(map[string] string, 50)
-//    for _, param := range parts {
-//        argument := strings.Split(param, "=")
-//
-//        key := argument[0]
-//        value := argument[1]
-//        dict[key] = value
-//    }
-//    name := strings.Trim(s[0], "/")
-//    fmt.Println("MethodName: ", name)
-//
-//    jsonBytes, _ := json.Marshal(dict)
-//    j := string(jsonBytes)
-//    fmt.Printf("Params:\n %s\n", j)
-//    return name, dict
-//}
