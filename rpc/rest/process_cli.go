@@ -11,7 +11,7 @@ import (
     "encoding/hex"
 )
 
-func createAccount(chainId int64, keystore string) (string, error) {
+func createAccount(chainId config.ChainIdType, keystore string) (string, error) {
     runningChain := config.GetConfig().ChainId
     existingKeystore := config.GetConfig().Keystore
 

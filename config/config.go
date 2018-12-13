@@ -17,11 +17,17 @@ import (
 	"github.com/spf13/viper"
 )
 
+
+const ChainIdSize = 64
+
+type ChainIdType [ChainIdSize]byte
+
+var  RootChain ChainIdType
+
 const (
     defaultPort = 55555
 	defaultBlockPrize = "20000000000000000000"
 	ClientIdentifier = "drep" // Client identifier to advertise over the network
-	RootChain = 0
 )
 
 var (
@@ -44,7 +50,7 @@ type NodeConfig struct {
 	Keystore string				`json:"keystore"`
 	DbPath string  				`json:"dataDir"`
 	LogDir string  				`json:"logDir"`
-	ChainId int64   			`json:"chainId"`
+	ChainId ChainIdType   		`json:"chainId"`
 
 	//p2p
 	Port int		 			`json:"port"`
