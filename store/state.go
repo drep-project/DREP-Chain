@@ -38,20 +38,20 @@ func InitState(config *config.NodeConfig)  {
     }
 
     myIndex := config.GetMyIndex()
-    chainId = config.ChainId
-    debugNodes := config.BootNodes
-    minerNum := len(debugNodes)
+    chainId = config.GetChainId()
+    bootNodes := config.GetBootNodes()
+    minerNum := len(bootNodes)
 
     curMiner = -1
     minerIndex = minerNum - 1
 
     for i := 0; i < minerNum; i++ {
         peer := &bean.Peer{
-            IP:     bean.IP(debugNodes[i].IP),
-            Port:   bean.Port(debugNodes[i].Port),
+            IP:     bean.IP(bootNodes[i].IP),
+            Port:   bean.Port(bootNodes[i].Port),
         }
         if i != myIndex {
-            peer.PubKey = common.ParsePK(debugNodes[i].PubKey)
+            peer.PubKey = config.ParsePK(bootNodes[i].PubKey)
         } else {
             peer.PubKey = pubKey
         }

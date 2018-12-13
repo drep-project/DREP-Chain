@@ -26,7 +26,7 @@ func ParseBlock(block *bean.Block) *BlockWeb {
     b.ChainId = block.Header.ChainId
     b.Height = block.Header.Height
     b.Timestamp = block.Header.Timestamp * 1000
-    b.Hash, _ = block.BlockHash()
+    b.Hash, _ = block.BlockHashHex()
     b.PreviousHash = "0x" + hex.EncodeToString(block.Header.PreviousHash)
     b.GasUsed = new(big.Int).SetBytes(block.Header.GasUsed).String()
     b.GasLimit = new(big.Int).SetBytes(block.Header.GasLimit).String()
