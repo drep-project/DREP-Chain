@@ -101,10 +101,10 @@ func MakeConfig(ctx *cli.Context) ( *NodeConfig, error) {
 	return nodeConfig, nil
 }
 
-func loadConfigFile(ctx *cli.Context, nodeConfig *NodeConfig) error{
-	configFile := filepath.Join(nodeConfig.HomeDir,"config.json")
+func loadConfigFile(ctx *cli.Context, nodeConfig *NodeConfig) error {
+	configFile := filepath.Join(nodeConfig.HomeDir, "config.json")
 
-	if ctx.GlobalIsSet(ConfigFileFlag.Name)  {
+	if ctx.GlobalIsSet(ConfigFileFlag.Name) {
 		file := ctx.GlobalString(ConfigFileFlag.Name)
 		if util.IsFileExists(file) {
 			//report error when user specify
@@ -118,10 +118,18 @@ func loadConfigFile(ctx *cli.Context, nodeConfig *NodeConfig) error{
 		return nil
 	}
 	content, err := ioutil.ReadFile(configFile)
-	if err !=  nil {
+	if err != nil {
 		return err
 	}
 	return json.Unmarshal(content, nodeConfig)
+}
+
+func GetBootNodes() []*BootNode {
+    config := &struct {
+        BootNodes []*BootNode
+    }{}
+    viper.Unmarshal(config)
+    return config.BootNodes
 }
 
 /*
