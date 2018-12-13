@@ -1,4 +1,4 @@
-package config
+package common
 
 import (
     "BlockChainTest/mycrypto"
@@ -6,8 +6,8 @@ import (
 )
 
 type PK struct {
-    X string
-    Y string
+    X string    `json:"x"`
+    Y string    `json:"y"`
 }
 
 func FormatPubKey(pubKey *mycrypto.Point) *PK {
@@ -27,8 +27,8 @@ func ParsePK(pk *PK) *mycrypto.Point {
 }
 
 type BootNode struct {
-    PubKey  *PK
-    Address string
-    IP      string
-    Port    int
+    PubKey  *PK         `json:"pubKey"`
+    Address string      `json:"address"`
+    IP      string      `json:"ip"`
+    Port    int         `json:"port"`
 }

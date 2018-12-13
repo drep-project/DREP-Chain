@@ -1,21 +1,23 @@
 package node
 
 import (
-    "BlockChainTest/bean"
-    "BlockChainTest/store"
-    "BlockChainTest/network"
     "math/big"
     "time"
-    "fmt"
+
+    "BlockChainTest/log"
+    "BlockChainTest/util"
+    "BlockChainTest/bean"
+    "BlockChainTest/store"
+    "BlockChainTest/config"
+    "BlockChainTest/network"
     "BlockChainTest/database"
     "BlockChainTest/accounts"
-    "BlockChainTest/config"
-    "BlockChainTest/util"
+  
 )
 
 func SendTransaction(t *bean.Transaction) error {
     peers := store.GetPeers()
-    fmt.Println("Send transaction")
+    log.Info("Send transaction")
     if _, offline := network.SendMessage(peers, t); len(offline) == 0 {
         if id, err := t.TxId(); err == nil {
             store.ForwardTransaction(id)
@@ -29,7 +31,7 @@ func SendTransaction(t *bean.Transaction) error {
 }
 
 func GenerateBalanceTransaction(to string, destChain int64, amount *big.Int) *bean.Transaction {
-    chainId := config.GetChainId()
+    chainId := config.GetConfig().ChainId
     nonce := database.GetNonceOutsideTransaction(accounts.PubKey2Address(store.GetPubKey()), chainId)
     nonce++
     data := &bean.TransactionData{
@@ -68,7 +70,7 @@ func GenerateMinerTransaction(addr string, chainId int64) *bean.Transaction {
 }
 
 func GenerateCreateContractTransaction(code []byte) *bean.Transaction {
-    chainId := config.GetChainId()
+    chainId := config.GetConfig().ChainId
     nonce := database.GetNonceOutsideTransaction(store.GetAddress(), chainId) + 1
     data := &bean.TransactionData{
         Nonce: nonce,
@@ -86,10 +88,10 @@ func GenerateCreateContractTransaction(code []byte) *bean.Transaction {
 }
 
 func GenerateCallContractTransaction(addr accounts.CommonAddress, chainId int64, input []byte, readOnly bool) *bean.Transaction {
-    runningChain := config.GetChainId()
+    runningChain := config.GetConfig().ChainId
     nonce := database.GetNonceOutsideTransaction(store.GetAddress(), runningChain) + 1
     if runningChain != chainId && !readOnly {
-        fmt.Println("you can only call view/pure functions of contract of another chain")
+        log.Info("you can only call view/pure functions of contract of another chain")
         return &bean.Transaction{}
     }
     data := &bean.TransactionData{

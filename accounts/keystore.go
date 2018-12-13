@@ -21,7 +21,7 @@ type Key struct {
 }
 
 func genKeystore(keyAddr string, jsonBytes []byte) error {
-    os.Mkdir(KeystoreDirName, os.ModeDir|os.ModePerm)
+    os.MkdirAll(KeystoreDirName, os.ModeDir|os.ModePerm)
     filename := getFilename(keyAddr)
     file, err := os.Create(filename)
     if err != nil {
@@ -109,7 +109,7 @@ func SaveKeystore(node *Node, keystorePath string) error {
         keystorePath = path.Join(dataDir, key.Address + ".json")
     }
 
-    err = os.Mkdir(KeystoreDirName, os.ModeDir|os.ModePerm)
+    err = os.MkdirAll(KeystoreDirName, os.ModeDir|os.ModePerm)
     if err != nil {
         return err
     }

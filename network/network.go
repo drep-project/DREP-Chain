@@ -54,13 +54,13 @@ func startListen(process func(*bean.Peer, int, interface{}), port bean.Port) {
         }
         listener, err := net.ListenTCP("tcp", addr)
         if err != nil {
-            log.Println("error", err)
+            log.Info("error", err)
             return
         }
         for {
-            log.Println("start listen", port)
+            log.Info("start listen", "port", port)
             conn, err := listener.AcceptTCP()
-            log.Println("listen from ", conn.RemoteAddr())
+            log.Info("listen from ", "accept address", conn.RemoteAddr())
             if err != nil {
                 continue
             }
@@ -76,10 +76,10 @@ func startListen(process func(*bean.Peer, int, interface{}), port bean.Port) {
                     b = cipher[offset:]
                 }
             }
-            log.Println("Receive ", cipher[:offset])
-            log.Println("Receive byte ", offset)
+            log.Info("Receive ", "msg",cipher[:offset])
+            log.Info("Receive byte :", "bytes ",offset)
             task, err := decryptIntoTask(cipher[:offset]) // TODO what the fuck is this???
-            log.Println("Receive after decrypt", task)
+            log.Info("Receive after decrypt","msg", task)
             if err != nil {
                 return
             }
@@ -93,7 +93,7 @@ func startListen(process func(*bean.Peer, int, interface{}), port bean.Port) {
             if msg != nil {
                 process(task.Peer, t, msg)
             }
-            log.Println("end listen")
+            log.Info("end listen")
         }
     }()
 }
