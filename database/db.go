@@ -4,7 +4,8 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"BlockChainTest/trie"
 	"BlockChainTest/util/list"
-	"encoding/hex"
+	"BlockChainTest/config"
+	"fmt"
 )
 
 type Database struct {
@@ -33,9 +34,7 @@ type Transactional interface {
 	Delete(chainId int64, key []byte)
 	Commit()
 	Discard()
-	BeginTransaction() *Transactional
-	insertTrie(chainId int64, key []byte, value []byte)
-	deleteTrie(chainId int64, key []byte)
+	BeginTransaction() Transactional
 }
 
 type Transaction struct {
@@ -55,11 +54,6 @@ func (t *Transaction) Put(chainId int64, key []byte, value []byte) {
 		t.journal = append(t.journal, &journalEntry{chainId: chainId, action: mod, key: key, prev:prev})
 	}
 	t.parent.Put(chainId, key, value)
-	t.parent.insertTrie(chainId, key, value)
-	//if t..tries[chainId] == nil {
-	//	t.database.tries[chainId] = trie.NewStateTrie()
-	//}
-	//t.database.tries[chainId].Insert(key, value)
 }
 
 func (t *Transaction) Get(key []byte) []byte {
@@ -67,14 +61,9 @@ func (t *Transaction) Get(key []byte) []byte {
 		return nil
 	}
 	return t.parent.Get(key)
-	//} else if err == leveldb.ErrNotFound{
-	//	return nil
-	//} else {
-	//	return nil
-	//}
 }
 
-func (t *Transaction) Delete(key []byte, chainId int64, onTrie bool) {
+func (t *Transaction) Delete(chainId int64, key []byte) {
 	if t.finished {
 		return
 	}
@@ -88,7 +77,6 @@ func (t *Transaction) Delete(key []byte, chainId int64, onTrie bool) {
 	//}
 	//t.database.tries[chainId].Delete(key)
 	t.parent.Delete(chainId, key)
-	t.parent.deleteTrie(chainId, key)
 }
 
 func (t *Transaction) Commit() {
@@ -108,13 +96,10 @@ func (t *Transaction) Discard() {
 		switch e.action {
 		case ins:
 			t.parent.Delete(e.chainId, e.key)
-			t.parent.deleteTrie(e.chainId, e.key)
 		case mod:
 			t.parent.Put(e.chainId, e.key, e.prev)
-			t.parent.insertTrie(e.chainId, e.key, e.prev)
 		case del:
 			t.parent.Put(e.chainId, e.key, e.prev)
-			t.parent.insertTrie(e.chainId, e.key, e.prev)
 		}
 	}
 	//for _, j := range t.journal {
@@ -142,8 +127,12 @@ func (t *Transaction) Discard() {
 	//}
 }
 
-func (t *Transaction) BeginTransaction() *Transactional {
-	return t
+func (t *Transaction) BeginTransaction() Transactional {
+	return &Transaction{
+		parent:t,
+		finished:false,
+		journal:make([]*journalEntry, 0),
+	}
 }
 
 func NewDatabase(config *config.NodeConfig) *Database {
@@ -158,17 +147,53 @@ func NewDatabase(config *config.NodeConfig) *Database {
 	}
 }
 
-func (db *Database) BeginTransaction() *Transaction {
-	if s, err := db.db.GetSnapshot(); err == nil {
-		return &Transaction{
-			database: db,
-			snapshot: s,
-			finished: false,
-			journals: make([]*journal, 0),
-			values:   make(map[string][]byte),
+func (db *Database) Put(chainId int64, key []byte, value []byte) {
+	if err := db.db.Put(key, value, nil); err == nil {
+		t, exists := db.tries[chainId]
+		if !exists {
+			t = trie.NewStateTrie()
+			db.tries[chainId] = t
 		}
+		t.Insert(key, value)
+	} else {
+		fmt.Println("error occurs", err)
+	}
+}
+
+
+func (db *Database) Get(key []byte) []byte {
+	if ret, err := db.db.Get(key, nil); err == nil {
+		return ret
 	} else {
 		return nil
+	}
+}
+
+func (db *Database) Delete(chainId int64, key []byte) {
+	if err := db.db.Delete(key, nil); err == nil {
+		t, exists := db.tries[chainId]
+		if !exists {
+			fmt.Println("What the fuck, the trie dose not exist.")
+			t = trie.NewStateTrie()
+			db.tries[chainId] = t
+		}
+		t.Delete(key)
+	} else {
+		fmt.Println("Error occurs.", err)
+	}
+}
+
+func (db *Database) Commit() {
+}
+
+func (db *Database) Discard() {
+}
+
+func (db *Database) BeginTransaction() Transactional {
+	return &Transaction{
+		parent:   db,
+		finished: false,
+		journal:  make([]*journalEntry, 0),
 	}
 }
 
@@ -202,24 +227,4 @@ func (db *Database) GetStateRoot() []byte {
 		ts[i] = elem.(*trieObj).tr
 	}
 	return trie.GetMerkleRoot(ts)
-}
-
-func (db *Database) put(key []byte, value []byte, chainId int64) error {
-	err := db.db.Put(key, value, nil)
-	fmt.Println("db put, key: ", hex.EncodeToString(key))
-	if err == nil {
-		if db.tries[chainId] == nil {
-			db.tries[chainId] = trie.NewStateTrie()
-		}
-		db.tries[chainId].Insert(key, value)
-	}
-	return err
-}
-
-func (db *Database) get(key []byte) []byte {
-	if ret, err := db.db.Get(key, nil); err == nil {
-		return ret
-	} else {
-		return nil
-	}
 }
