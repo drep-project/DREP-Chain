@@ -13,12 +13,12 @@ type ChainApi struct {
 
 }
 
-func (chain *ChainApi) Send(toAddr string, destChain int64, amount int64) error {
+func (chain *ChainApi) Send(toAddr string, destChain int64, amount int64) (string, error) {
     t := GenerateBalanceTransaction(toAddr, destChain, big.NewInt(amount))
     if SendTransaction(t) != nil {
-        return errors.New("Offline")
+        return "", errors.New("Offline")
     } else {
-        return nil
+        return t.TxId()
     }
 }
 
@@ -60,16 +60,25 @@ func (chain *ChainApi) Miner(addr string, chainId int64) error{
     return nil
 }
 
-func (chain *ChainApi) Create(addr accounts.CommonAddress, code string) error{
+func (chain *ChainApi) Create(code string) (string, error){
     byt, _ := hex.DecodeString(code)
     t := GenerateCreateContractTransaction(byt)
-    return SendTransaction(t)
+
+    if SendTransaction(t) != nil {
+        return "", errors.New("Offline")
+    } else {
+        return t.TxId()
+    }
 }
 
-func (chain *ChainApi) Call(addr accounts.CommonAddress, chainId int64, input string, readOnly bool) error{
+func (chain *ChainApi) Call(addr accounts.CommonAddress, chainId int64, input string, readOnly bool)  (string, error){
     inp, _ := hex.DecodeString(input)
     t := GenerateCallContractTransaction(addr, chainId, inp, readOnly)
-    return SendTransaction(t)
+    if SendTransaction(t) != nil {
+        return "", errors.New("Offline")
+    } else {
+        return t.TxId()
+    }
 }
 
 func (chain *ChainApi) Check(addr accounts.CommonAddress, chainId int64) *accounts.Storage{

@@ -144,3 +144,18 @@ func Big2Hash(x *big.Int) Hash {
     }
     return Bytes2Hash(x.Bytes())
 }
+
+// UnmarshalText parses a hash in hex syntax.
+func (h *Hash) UnmarshalText(input []byte) error {
+	return ethhexutil.UnmarshalFixedText("Hash", input, h[:])
+}
+
+// UnmarshalJSON parses a hash in hex syntax.
+func (h *Hash) UnmarshalJSON(input []byte) error {
+	return ethhexutil.UnmarshalFixedJSON(hashT, input, h[:])
+}
+
+// MarshalText returns the hex representation of h.
+func (h Hash) MarshalText() ([]byte, error) {
+	return ethhexutil.Bytes(h[:]).MarshalText()
+}
