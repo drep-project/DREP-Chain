@@ -242,3 +242,17 @@ func (db *Database) GetChainStateRoot(chainId config.ChainIdType) []byte {
 		return nil
 	}
 }
+
+// TODO 下面的函数操作不修改trie
+
+func (db *Database) PutNoTrie(key []byte, value []byte) {
+	if err := db.db.Put(key, value, nil); err != nil {
+		fmt.Println("error occurs", err)
+	}
+}
+
+func (db *Database) DeleteNoTrie(key []byte) {
+	if err := db.db.Delete(key, nil); err != nil {
+		fmt.Println("Error occurs.", err)
+	}
+}
