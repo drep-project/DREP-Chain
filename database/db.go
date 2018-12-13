@@ -3,16 +3,11 @@ package database
 import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"BlockChainTest/trie"
-	"BlockChainTest/util/list"
 	"BlockChainTest/config"
 	"fmt"
+	"BlockChainTest/util/list"
+	"bytes"
 )
-
-type Database struct {
-	db *leveldb.DB
-	runningChain int64
-	tries map[int64] *trie.StateTrie
-}
 
 const (
 	ins = iota
@@ -21,20 +16,22 @@ const (
 )
 
 type journalEntry struct {
-	chainId int64
-	onTrie bool
-	action int
-	key []byte
-	prev []byte
+	chainId config.ChainIdType
+	onTrie  bool
+	action  int
+	key     []byte
+	prev    []byte
 }
 
 type Transactional interface {
-	Put(chainId int64, key []byte, value []byte)
+	Put(chainId config.ChainIdType, key []byte, value []byte)
 	Get(key []byte) []byte
-	Delete(chainId int64, key []byte)
+	Delete(chainId config.ChainIdType, key []byte)
 	Commit()
 	Discard()
 	BeginTransaction() Transactional
+	GetTotalStateRoot() []byte
+	GetChainStateRoot(chainId config.ChainIdType) []byte
 }
 
 type Transaction struct {
@@ -43,7 +40,7 @@ type Transaction struct {
 	journal  []*journalEntry
 }
 
-func (t *Transaction) Put(chainId int64, key []byte, value []byte) {
+func (t *Transaction) Put(chainId config.ChainIdType, key []byte, value []byte) {
 	if t.finished {
 		return
 	}
@@ -63,7 +60,7 @@ func (t *Transaction) Get(key []byte) []byte {
 	return t.parent.Get(key)
 }
 
-func (t *Transaction) Delete(chainId int64, key []byte) {
+func (t *Transaction) Delete(chainId config.ChainIdType, key []byte) {
 	if t.finished {
 		return
 	}
@@ -135,19 +132,34 @@ func (t *Transaction) BeginTransaction() Transactional {
 	}
 }
 
-func NewDatabase(config *config.NodeConfig) *Database {
-	ldb, err := leveldb.OpenFile(config.DbPath, nil)
+func (t *Transaction) GetTotalStateRoot() []byte {
+	return t.parent.GetTotalStateRoot()
+}
+
+func (t *Transaction) GetChainStateRoot(chainId config.ChainIdType) []byte {
+	return t.parent.GetChainStateRoot(chainId)
+}
+
+type Database struct {
+	db           *leveldb.DB
+	runningChain config.ChainIdType
+	rootChain    config.ChainIdType
+	tries        map[config.ChainIdType] *trie.StateTrie
+}
+
+func NewDatabase(cfg *config.NodeConfig) *Database {
+	ldb, err := leveldb.OpenFile(cfg.DbPath, nil)
 	if err != nil {
 		return nil
 	}
 	return &Database{
 		db:ldb,
-		runningChain: config.ChainId,
-		tries: make(map[int64] *trie.StateTrie),
+		runningChain: cfg.ChainId,
+		tries: make(map[config.ChainIdType] *trie.StateTrie),
 	}
 }
 
-func (db *Database) Put(chainId int64, key []byte, value []byte) {
+func (db *Database) Put(chainId config.ChainIdType, key []byte, value []byte) {
 	if err := db.db.Put(key, value, nil); err == nil {
 		t, exists := db.tries[chainId]
 		if !exists {
@@ -169,7 +181,7 @@ func (db *Database) Get(key []byte) []byte {
 	}
 }
 
-func (db *Database) Delete(chainId int64, key []byte) {
+func (db *Database) Delete(chainId config.ChainIdType, key []byte) {
 	if err := db.db.Delete(key, nil); err == nil {
 		t, exists := db.tries[chainId]
 		if !exists {
@@ -197,24 +209,18 @@ func (db *Database) BeginTransaction() Transactional {
 	}
 }
 
-func (db *Database) GetStateRoot() []byte {
+func (db *Database) GetTotalStateRoot() []byte {
 	if db.runningChain != config.RootChain {
-		return db.tries[db.runningChain].Root.Value
+		return db.GetChainStateRoot(db.runningChain)
 	}
 	type trieObj struct {
-		chainId int64
+		chainId config.ChainIdType
 		tr *trie.StateTrie
 	}
 	sll := list.NewSortedLinkedList(func(a interface{}, b interface{}) int {
 		ac := a.(*trieObj).chainId
 		bc := b.(*trieObj).chainId
-		if ac > bc {
-			return 1
-		}//tps
-		if ac == bc {
-			return 0
-		}
-		return -1
+		return bytes.Compare(ac[:], bc[:])
 	})
 	for chainId, t := range db.tries {
 		sll.Add(&trieObj{
@@ -227,4 +233,12 @@ func (db *Database) GetStateRoot() []byte {
 		ts[i] = elem.(*trieObj).tr
 	}
 	return trie.GetMerkleRoot(ts)
+}
+
+func (db *Database) GetChainStateRoot(chainId config.ChainIdType) []byte {
+	if t, exists := db.tries[chainId]; exists {
+		return t.Root.Value
+	} else {
+		return nil
+	}
 }
