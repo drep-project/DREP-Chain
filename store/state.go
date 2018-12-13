@@ -7,13 +7,11 @@ import (
     "encoding/json"
     "BlockChainTest/trie"
     "BlockChainTest/bean"
-    "BlockChainTest/config"
     "BlockChainTest/mycrypto"
     "BlockChainTest/database"
     "BlockChainTest/accounts"
+    "BlockChainTest/config"
     "BlockChainTest/core/common"
-    "fmt"
-    "encoding/hex"
 )
 
 var (
@@ -38,8 +36,8 @@ func InitState(config *config.NodeConfig)  {
     }
 
     myIndex := config.GetMyIndex()
-    chainId = config.GetChainId()
-    bootNodes := config.GetBootNodes()
+    chainId = config.ChainId
+    bootNodes := config.BootNodes
     minerNum := len(bootNodes)
 
     curMiner = -1
@@ -51,7 +49,7 @@ func InitState(config *config.NodeConfig)  {
             Port:   bean.Port(bootNodes[i].Port),
         }
         if i != myIndex {
-            peer.PubKey = config.ParsePK(bootNodes[i].PubKey)
+            peer.PubKey = common.ParsePK(bootNodes[i].PubKey)
         } else {
             peer.PubKey = pubKey
         }

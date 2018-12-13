@@ -63,7 +63,7 @@ func SendTransaction(t *bean.Transaction) error {
 //发送交易本地nonce, balance 变动
 
 func GenerateBalanceTransaction(to string, destChain int64, amount *big.Int) *bean.Transaction {
-    chainId := config.GetChainId()
+    chainId := config.GetConfig().ChainId
     nonce := database.GetNonceOutsideTransaction(store.GetAddress(), chainId) + 1
     data := &bean.TransactionData{
         Version: store.Version,
@@ -120,7 +120,7 @@ func GenerateCreateContractTransaction(code []byte) *bean.Transaction {
 
 
 func GenerateCallContractTransaction(addr string, chainId int64, input []byte, value string, readOnly bool) *bean.Transaction {
-    runningChain := config.GetChainId()
+    runningChain := config.GetConfig().ChainId
     nonce := database.GetNonceOutsideTransaction(store.GetAddress(), runningChain) + 1
     if runningChain != chainId && !readOnly {
         log.Info("you can only call view/pure functions of contract of another chain")

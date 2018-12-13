@@ -32,7 +32,7 @@ func(dataBaseAPI *DataBaseAPI) GetBlocksFrom(start, size int64) []*bean.Block {
         blocks = make([]*bean.Block, 0)
     )
     for currentBlock != nil && (height < start + size || size == -1)  {
-        currentBlock = GetBlock(height)
+        currentBlock = GetBlockOutsideTransaction(height)
         if currentBlock != nil {
             blocks = append(blocks, currentBlock)
         }
@@ -42,12 +42,12 @@ func(dataBaseAPI *DataBaseAPI) GetBlocksFrom(start, size int64) []*bean.Block {
 }
 
 func(dataBaseAPI *DataBaseAPI) GetAllBlocks() []*bean.Block {
-    return GetBlocksFrom(int64(0), int64(-1))
+    return GetBlocksFromOutsideTransaction(int64(0), int64(-1))
 }
 
 func(dataBaseAPI *DataBaseAPI) GetHighestBlock() *bean.Block {
-    maxHeight := GetMaxHeight()
-    return GetBlock(maxHeight)
+    maxHeight := GetMaxHeightOutsideTransaction()
+    return GetBlockOutsideTransaction(maxHeight)
 }
 
 func(dataBaseAPI *DataBaseAPI) GetMaxHeight() int64 {
@@ -60,11 +60,11 @@ func(dataBaseAPI *DataBaseAPI) GetMaxHeight() int64 {
 }
 
 func(dataBaseAPI *DataBaseAPI) GetMostRecentBlocks(n int64) []*bean.Block {
-    height := GetMaxHeight()
+    height := GetMaxHeightOutsideTransaction()
     if height == -1 {
         return nil
     }
-    return GetBlocksFrom(height - n, n)
+    return GetBlocksFromOutsideTransaction(height - n, n)
 }
 
 func(dataBaseAPI *DataBaseAPI) GetBalanceOutsideTransaction(addr accounts.CommonAddress, chainId int64) *big.Int {

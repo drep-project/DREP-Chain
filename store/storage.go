@@ -239,7 +239,10 @@ func executeCrossChainTransaction(dbTran *database.Transaction, t *bean.Transact
 }
 
 func distributeBlockPrize(b *bean.Block, total *big.Int) {
-    prize := new(big.Int).Add(total, config.GetBlockPrize())
+    str := config.GetConfig().Blockprize.String()
+    val := new (big.Int)
+    val.SetString(str,10)
+    prize := new(big.Int).Add(total, val)
     if b.Header.Height > 2 {
         prize = new(big.Int)
     }
