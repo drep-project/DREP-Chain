@@ -83,7 +83,7 @@ func (n *Node) Start(config *config.NodeConfig) {
             }
             log.Trace("node stop")
             time.Sleep(10 * time.Second)
-            log.Println("Current height ", database.GetMaxHeightOutsideTransaction())
+            log.Debug("Current height ", database.GetMaxHeightOutsideTransaction())
             // todo if timeout still can go. why
         }
     }()
@@ -249,8 +249,8 @@ func (n *Node) fetchBlocks() {
     //network.SendMessage([]*network.Peer{peers[0]}, req)
     network.SendMessage([]*bean.Peer{store.Admin}, req)
     log.Trace("fetching 1")
-    for n.curMaxHeight != database.GetMaxHeight() {
-       log.Trace("fetching 2: ", n.curMaxHeight, database.GetMaxHeight())
+    for n.curMaxHeight != database.GetMaxHeightOutsideTransaction() {
+       log.Trace("fetching 2: ", n.curMaxHeight, database.GetMaxHeightOutsideTransaction())
        if msg := pool.ObtainOneMsg(func(msg interface{}) bool {
            if block, ok := msg.(*bean.Block); ok {
                return block != nil && block.Header != nil && block.Header.Height == database.GetMaxHeightOutsideTransaction() + 1
@@ -262,7 +262,7 @@ func (n *Node) fetchBlocks() {
                n.processBlock(block)
            }
        }
-       log.Trace("fetching 3: ", n.curMaxHeight, database.GetMaxHeight())
+       log.Trace("fetching 3: ", n.curMaxHeight, database.GetMaxHeightOutsideTransaction())
    }
 }
 
@@ -272,10 +272,10 @@ func (n *Node) ProcessBlockReq(req *bean.BlockReq) {
     log.Trace("pk = ", req.Pk)
     peers := []*bean.Peer{store.GetPeer(req.Pk)}
     log.Trace("ProcessBlockReq")
-    for i := from; i <= database.GetMaxHeight(); {
+    for i := from; i <= database.GetMaxHeightOutsideTransaction(); {
         log.Trace("ProcessBlockReq 1 ", i)
-        bs := database.GetBlocksFrom(i, size)
-        resp := &bean.BlockResp{Height:database.GetMaxHeight(), Blocks:bs}
+        bs := database.GetBlocksFromOutsideTransaction(i, size)
+        resp := &bean.BlockResp{Height:database.GetMaxHeightOutsideTransaction(), Blocks:bs}
         network.SendMessage(peers, resp)
         i += int64(len(bs))
         log.Trace("ProcessBlockReq 2 ", i)

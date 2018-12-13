@@ -14,6 +14,7 @@ import (
 	"BlockChainTest/util"
 	"BlockChainTest/util/flags"
 	"BlockChainTest/core/common"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -31,7 +32,7 @@ var (
 	nodeConfig  *NodeConfig
 )
 
-type Bootnodes struct {
+type BootNode struct {
 	PubKey  *common.PK	`json:"pubKey"`
 	Address string		`json:"address"`
 	IP string			`json:"ip"`
@@ -50,7 +51,7 @@ type NodeConfig struct {
 	Boot bool					`json:"boot"`
 	Myindex int					`json:"myindex"`
 	Blockprize *Blockprize		`json:"blockprize"`
-	BootNodes []*Bootnodes 		`json:"bootNodes"`
+	BootNodes []*BootNode 		`json:"bootNodes"`
 
 	ConsensusMode string		`json:"consensusMode"`
 	RpcConfig RpcConfig			`json:"rpcConfig"`
@@ -64,7 +65,7 @@ func GetConfig() *NodeConfig{
    return nodeConfig
 }
 
-func (node *NodeConfig)GetMyIndex() int {
+func (node *NodeConfig) GetMyIndex() int {
     if node.Boot {
         return node.Myindex
     } else {

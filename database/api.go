@@ -16,6 +16,10 @@ var (
     db *Database
 )
 
+func InitDataBase(config *config.NodeConfig){
+    db = NewDatabase(config)
+}
+
 func GetItr() iterator.Iterator {
     return db.db.NewIterator(nil, nil)
 }
@@ -42,7 +46,7 @@ func PutBlockOutsideTransaction(block *bean.Block) error {
     if err != nil {
         return err
     }
-    return db.put(key, value, config.GetChainId())
+    return db.put(key, value, config.GetConfig().ChainId)
 }
 
 func GetBlockInsideTransaction(t *Transaction, height int64) *bean.Block {
@@ -91,6 +95,12 @@ func GetHighestBlockOutsideTransaction() *bean.Block {
     return GetBlockOutsideTransaction(maxHeight)
 }
 
+func GetHighestBlockInsideTransaction(t *Transaction) *bean.Block {
+    height := GetMaxHeightInsideTransaction(t)
+    block := GetBlockInsideTransaction(t, height)
+    return block
+}
+
 
 func PutBlock(block *bean.Block) error {
     key := mycrypto.Hash256([]byte("block_" + strconv.FormatInt(block.Header.Height, 10)))
@@ -111,7 +121,7 @@ func GetMaxHeightOutsideTransaction() int64 {
 func PutMaxHeightOutsideTransaction(height int64) error {
     key := mycrypto.Hash256([]byte("max_height"))
     value := new(big.Int).SetInt64(height).Bytes()
-    return db.put(key, value, config.GetChainId())
+    return db.put(key, value, config.GetConfig().ChainId)
 }
 
 func GetMaxHeightInsideTransaction(t *Transaction) int64  {

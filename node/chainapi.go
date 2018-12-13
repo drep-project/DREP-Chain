@@ -71,9 +71,9 @@ func (chain *ChainApi) Create(code string) (string, error){
     }
 }
 
-func (chain *ChainApi) Call(addr accounts.CommonAddress, chainId int64, input string, readOnly bool)  (string, error){
+func (chain *ChainApi) Call(addr string, chainId int64, input, value string, readOnly bool)  (string, error){
     inp, _ := hex.DecodeString(input)
-    t := GenerateCallContractTransaction(addr, chainId, inp, readOnly)
+    t := GenerateCallContractTransaction(addr, chainId, inp, value, readOnly)
     if SendTransaction(t) != nil {
         return "", errors.New("Offline")
     } else {
