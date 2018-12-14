@@ -6,10 +6,11 @@ import (
     "math/big"
     "encoding/json"
     "BlockChainTest/accounts"
+    "BlockChainTest/config"
 )
 
 type BlockHeader struct {
-    ChainId              int64
+    ChainId              config.ChainIdType
     Version              int32
     PreviousHash         []byte
     GasLimit             []byte
@@ -39,8 +40,8 @@ type TransactionData struct {
     Nonce                int64
     Type                 int32
     To                   string
-    ChainId              int64
-    DestChain            int64
+    ChainId              config.ChainIdType
+    DestChain            config.ChainIdType
     Amount               []byte
     GasPrice             []byte
     GasLimit             []byte
@@ -54,9 +55,15 @@ type Transaction struct {
     Sig                  *mycrypto.Signature
 }
 
+type CrossChainTransaction struct {
+    ChainId   config.ChainIdType
+    StateRoot []byte
+    Trans     []*Transaction
+}
+
 type Log struct {
     Address      accounts.CommonAddress
-    ChainId      int64
+    ChainId      config.ChainIdType
     TxHash       []byte
     Topics       [][]byte
     Data         []byte
@@ -126,25 +133,4 @@ func (block *Block) TxHashes() []string {
         th[i] = "0x" + hex.EncodeToString(hash)
     }
     return th
-}
-
-func Height2Key(height int64) string {
-    return hex.EncodeToString(new(big.Int).SetInt64(height).Bytes())
-}
-
-func MarshalBlock(block *Block) ([]byte, error) {
-    b, err := json.Marshal(block)
-    if err != nil {
-        return nil, err
-    }
-    return b, nil
-}
-
-func UnmarshalBlock(b []byte) (*Block, error) {
-    block := &Block{}
-    err := json.Unmarshal(b, block)
-    if err != nil {
-        return nil, err
-    }
-    return block, nil
 }

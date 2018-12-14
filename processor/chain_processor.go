@@ -41,7 +41,7 @@ type BlockProcessor struct {
 
 func (p *BlockProcessor) process(peer *bean.Peer, msg interface{}) {
     if block, ok := msg.(*bean.Block); ok {
-        if block.Header.Height <= database.GetMaxHeightOutsideTransaction() {
+        if block.Header.Height <= database.GetMaxHeight() {
            return
         }
         id, _ := block.BlockHashHex()

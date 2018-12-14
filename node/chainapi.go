@@ -7,13 +7,12 @@ import (
     "errors"
     "BlockChainTest/database"
     "BlockChainTest/accounts"
+    "BlockChainTest/config"
 )
 
-type ChainApi struct {
+type ChainApi struct {}
 
-}
-
-func (chain *ChainApi) Send(toAddr string, destChain int64, amount int64) (string, error) {
+func (chain *ChainApi) Send(toAddr string, destChain config.ChainIdType, amount int64) (string, error) {
     t := GenerateBalanceTransaction(toAddr, destChain, big.NewInt(amount))
     if SendTransaction(t) != nil {
         return "", errors.New("Offline")
@@ -24,19 +23,19 @@ func (chain *ChainApi) Send(toAddr string, destChain int64, amount int64) (strin
 
 func (chain *ChainApi) CheckBalance(addr accounts.CommonAddress) *big.Int{
     chainId := store.GetChainId()
-    return database.GetBalanceOutsideTransaction(addr, chainId)
+    return database.GetBalance(addr, chainId)
 }
 
 func (chain *ChainApi) CheckNonce(addr accounts.CommonAddress) int64{
     chainId := store.GetChainId()
-    return database.GetNonceOutsideTransaction(addr, chainId)
+    return database.GetNonce(addr, chainId)
 }
 
 func (chain *ChainApi) Me()  MeInfo{
     addr := store.GetAddress()
     chainId := store.GetChainId()
-    nonce := database.GetNonceOutsideTransaction(addr, chainId)
-    balance := database.GetBalanceOutsideTransaction(addr, chainId)
+    nonce := database.GetNonce(addr, chainId)
+    balance := database.GetBalance(addr, chainId)
 
     return MeInfo{
         Address: addr, 
@@ -63,7 +62,6 @@ func (chain *ChainApi) Miner(addr string, chainId int64) error{
 func (chain *ChainApi) Create(code string) (string, error){
     byt, _ := hex.DecodeString(code)
     t := GenerateCreateContractTransaction(byt)
-
     if SendTransaction(t) != nil {
         return "", errors.New("Offline")
     } else {
@@ -71,7 +69,7 @@ func (chain *ChainApi) Create(code string) (string, error){
     }
 }
 
-func (chain *ChainApi) Call(addr string, chainId int64, input, value string, readOnly bool)  (string, error){
+func (chain *ChainApi) Call(addr string, chainId config.ChainIdType, input, value string, readOnly bool)  (string, error){
     inp, _ := hex.DecodeString(input)
     t := GenerateCallContractTransaction(addr, chainId, inp, value, readOnly)
     if SendTransaction(t) != nil {
@@ -81,14 +79,13 @@ func (chain *ChainApi) Call(addr string, chainId int64, input, value string, rea
     }
 }
 
-func (chain *ChainApi) Check(addr accounts.CommonAddress, chainId int64) *accounts.Storage{
-    storage := database.GetStorageOutsideTransaction(addr, chainId)
-    return storage
+func (chain *ChainApi) Check(addr accounts.CommonAddress, chainId config.ChainIdType) *accounts.Storage{
+    return database.GetStorage(addr, chainId)
 }
 
 type MeInfo struct {
     Address accounts.CommonAddress  `json:"addr"` 
-    ChainId int64                   `json:"chainId"` 
+    ChainId config.ChainIdType      `json:"chainId"`
     Nonce int64                     `json:"nonce"` 
     Balance *big.Int                `json:"balance"` 
 }

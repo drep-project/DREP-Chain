@@ -7,6 +7,7 @@ import (
 	"errors"
 	"BlockChainTest/accounts"
 	"BlockChainTest/bean"
+	"BlockChainTest/config"
 )
 
 var (
@@ -23,73 +24,73 @@ var (
 )
 
 type State struct {
-	transaction *database.Transaction
-	refund      uint64
+	dt     database.Transactional
+	refund uint64
 }
 
-func NewState(dbTran *database.Transaction) *State {
-	return &State{transaction: dbTran}
+func NewState(dt database.Transactional) *State {
+	return &State{dt: dt}
 }
 
-func (s *State) CreateContractAccount(callerAddr accounts.CommonAddress, chainId, nonce int64) (*accounts.Account, error) {
+func (s *State) CreateContractAccount(callerAddr accounts.CommonAddress, chainId config.ChainIdType, nonce int64) (*accounts.Account, error) {
 	account, err := accounts.NewContractAccount(callerAddr, chainId, nonce)
 	if err != nil {
 		return nil, err
 	}
-	return account, database.PutStorageInsideTransaction(s.transaction, account.Storage, account.Address, chainId)
+	return account, database.PutStorage(s.dt, account.Address, chainId, account.Storage)
 }
 
-func (s *State) SubBalance(addr accounts.CommonAddress, chainId int64, amount *big.Int) error {
-	balance := database.GetBalanceInsideTransaction(s.transaction, addr, chainId)
-	return database.PutBalanceInsideTransaction(s.transaction, addr, chainId, new(big.Int).Sub(balance, amount))
+func (s *State) SubBalance(addr accounts.CommonAddress, chainId config.ChainIdType, amount *big.Int) error {
+	balance := database.GetBalance(addr, chainId)
+	return database.PutBalance(s.dt, addr, chainId, new(big.Int).Sub(balance, amount))
 }
 
-func (s *State) AddBalance(addr accounts.CommonAddress, chainId int64, amount *big.Int) error {
-	balance := database.GetBalanceInsideTransaction(s.transaction, addr, chainId)
-	return database.PutBalanceInsideTransaction(s.transaction, addr, chainId, new(big.Int).Add(balance, amount))
+func (s *State) AddBalance(addr accounts.CommonAddress, chainId config.ChainIdType, amount *big.Int) error {
+	balance := database.GetBalance(addr, chainId)
+	return database.PutBalance(s.dt, addr, chainId, new(big.Int).Add(balance, amount))
 }
 
-func (s *State) GetBalance(addr accounts.CommonAddress, chainId int64) *big.Int {
-	return database.GetBalanceInsideTransaction(s.transaction, addr, chainId)
+func (s *State) GetBalance(addr accounts.CommonAddress, chainId config.ChainIdType) *big.Int {
+	return database.GetBalance(addr, chainId)
 }
 
-func (s *State) SetNonce(addr accounts.CommonAddress, chainId int64, nonce int64) error {
-	return database.PutNonceInsideTransaction(s.transaction, addr, chainId, nonce)
+func (s *State) SetNonce(addr accounts.CommonAddress, chainId config.ChainIdType, nonce int64) error {
+	return database.PutNonce(s.dt, addr, chainId, nonce)
 }
 
-func (s *State) GetNonce(addr accounts.CommonAddress, chainId int64) int64 {
-	return database.GetNonceInsideTransaction(s.transaction, addr, chainId)
+func (s *State) GetNonce(addr accounts.CommonAddress, chainId config.ChainIdType) int64 {
+	return database.GetNonce(addr, chainId)
 }
 
-func (s *State) Suicide(addr accounts.CommonAddress, chainId int64) error {
-	storage := database.GetStorageInsideTransaction(s.transaction, addr, chainId)
+func (s *State) Suicide(addr accounts.CommonAddress, chainId config.ChainIdType) error {
+	storage := database.GetStorage(addr, chainId)
 	storage.Balance = new(big.Int)
 	storage.Nonce = 0
-	return database.PutStorageInsideTransaction(s.transaction, storage, addr, chainId)
+	return database.PutStorage(s.dt, addr, chainId, storage)
 }
 
-func (s *State) GetByteCode(addr accounts.CommonAddress, chainId int64) accounts.ByteCode {
-	return database.GetByteCodeInsideTransaction(s.transaction, addr, chainId)
+func (s *State) GetByteCode(addr accounts.CommonAddress, chainId config.ChainIdType) accounts.ByteCode {
+	return database.GetByteCode(addr, chainId)
 }
 
-func (s *State) GetCodeSize(addr accounts.CommonAddress, chainId int64) int {
+func (s *State) GetCodeSize(addr accounts.CommonAddress, chainId config.ChainIdType) int {
 	byteCode := s.GetByteCode(addr, chainId)
 	return len(byteCode)
 }
 
-func (s *State) GetCodeHash(addr accounts.CommonAddress, chainId int64) accounts.Hash {
-	return database.GetCodeHashInsideTransaction(s.transaction, addr, chainId)
+func (s *State) GetCodeHash(addr accounts.CommonAddress, chainId config.ChainIdType) accounts.Hash {
+	return database.GetCodeHash(addr, chainId)
 }
 
-func (s *State) SetByteCode(addr accounts.CommonAddress, chainId int64, byteCode accounts.ByteCode) error {
-	return database.PutByteCodeInsideTransaction(s.transaction, addr, chainId, byteCode)
+func (s *State) SetByteCode(addr accounts.CommonAddress, chainId config.ChainIdType, byteCode accounts.ByteCode) error {
+	return database.PutByteCode(s.dt, addr, chainId, byteCode)
 }
 
-func (s *State) GetLogs(txHash []byte, chainId int64) []*bean.Log {
-	return database.GetLogsInsideTransaction(s.transaction, txHash, chainId)
+func (s *State) GetLogs(txHash []byte, chainId config.ChainIdType) []*bean.Log {
+	return database.GetLogs(txHash, chainId)
 }
 
-func (s *State) AddLog(contractAddr accounts.CommonAddress, chainId int64, txHash, data []byte, topics [][]byte) error {
+func (s *State) AddLog(contractAddr accounts.CommonAddress, chainId config.ChainIdType, txHash, data []byte, topics [][]byte) error {
 	log := &bean.Log{
 		Address: contractAddr,
 		ChainId: chainId,
@@ -97,7 +98,7 @@ func (s *State) AddLog(contractAddr accounts.CommonAddress, chainId int64, txHas
 		Data: data,
 		Topics: topics,
 	}
-	return database.AddLogInsideTransaction(s.transaction, log)
+	return database.AddLog(log)
 }
 
 func (s *State) AddRefund(gas uint64) {
@@ -112,17 +113,13 @@ func (s *State) SubRefund(gas uint64) {
 }
 
 func (s *State) Load(x *big.Int) []byte {
-	value := s.transaction.Get(x.Bytes())
+	value := s.dt.Get(x.Bytes())
 	if value == nil {
 		return new(big.Int).Bytes()
 	}
 	return value
 }
 
-func (s *State) Store(x, y *big.Int, chainId int64) {
-	s.transaction.Put(x.Bytes(), y.Bytes(), chainId, false)
-}
-
-func (s *State) Commit() {
-	s.transaction.Commit()
+func (s *State) Store(x, y *big.Int, chainId config.ChainIdType) {
+	s.dt.PutOutState(chainId, x.Bytes(), y.Bytes())
 }

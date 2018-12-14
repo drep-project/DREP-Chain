@@ -21,8 +21,8 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
         log.Error("error block nil or header nil")
         return nil
     }
-    dbTran := database.BeginTransaction()
-    height := database.GetMaxHeightInsideTransaction(dbTran)
+    dt := database.BeginTransaction()
+    height := database.GetMaxHeight()
     if height + 1 != b.Header.Height {
         fmt.Println("error", height, b.Header.Height)
         return nil
@@ -32,7 +32,8 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
         return total
     }
     for _, t := range b.Data.TxList {
-        _, gasFee := execute(dbTran, t)
+        subDt := dt.BeginTransaction()
+        _, gasFee := execute(subDt, t)
         fmt.Println("Delete transaction ", *t)
         fmt.Println(removeTransaction(t))
         if gasFee != nil {
@@ -40,43 +41,40 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
         }
     }
 
-    stateRoot := database.GetStateRoot()
+    stateRoot := dt.GetTotalStateRoot()
     if bytes.Equal(b.Header.StateRoot, stateRoot) {
         fmt.Println()
         fmt.Println("matched ", hex.EncodeToString(b.Header.StateRoot), " vs ", hex.EncodeToString(stateRoot))
-        //fmt.Println()
         height++
-        database.PutMaxHeightInsideTransaction(dbTran, height, GetChainId())
-        database.PutBlockInsideTransaction(dbTran, b, GetChainId())
+        database.PutMaxHeight(height)
+        database.PutBlock(b)
         fmt.Println("received block: ", b.Header, " ", b.Data, " ", b.MultiSig)
-        dbTran.Commit()
+        dt.Commit()
         distributeBlockPrize(b, total)
     } else {
-        fmt.Println()
         fmt.Println("not matched ", hex.EncodeToString(b.Header.StateRoot), " vs ", hex.EncodeToString(stateRoot))
-        //fmt.Println()
-        dbTran.Discard()
+        dt.Discard()
     }
     return total
 }
 
-func execute(dbTran *database.Transaction, t *bean.Transaction) (gasUsed, gasFee *big.Int) {
+func execute(dt database.Transactional, t *bean.Transaction) (gasUsed, gasFee *big.Int) {
    switch t.Data.Type {
    case TransferType:
-       return executeTransferTransaction(dbTran, t)
+       return executeTransferTransaction(dt, t)
    case MinerType:
-       return executeMinerTransaction(dbTran, t)
+       return executeMinerTransaction(dt, t)
    case CreateContractType:
-       return executeCreateContractTransaction(dbTran, t)
+       return executeCreateContractTransaction(dt, t)
    case CallContractType:
-       return executeCallContractTransaction(dbTran, t)
+       return executeCallContractTransaction(dt, t)
    case CrossChainType:
-       return executeCrossChainTransaction(dbTran, t)
+       return executeCrossChainTransaction(dt, t)
    }
    return nil, nil
 }
 
-func preExecute(dbTran *database.Transaction, t *bean.Transaction, gasWant *big.Int) (canExecute bool, addr accounts.CommonAddress,
+func preExecute(dt database.Transactional, t *bean.Transaction, gasWant *big.Int) (canExecute bool, addr accounts.CommonAddress,
    balance, gasPrice, gasUsed, gasFee *big.Int) {
 
    addr = accounts.PubKey2Address(t.Data.PubKey)
@@ -85,8 +83,8 @@ func preExecute(dbTran *database.Transaction, t *bean.Transaction, gasWant *big.
    gasPrice = new(big.Int).SetBytes(t.Data.GasPrice)
    gasLimit := new(big.Int).SetBytes(t.Data.GasLimit)
    amountWant := new(big.Int).Mul(gasWant, gasPrice)
-   balance = database.GetBalanceInsideTransaction(dbTran, addr, t.Data.ChainId)
-   nonce := database.GetNonceInsideTransaction(dbTran, addr, t.Data.ChainId)
+   balance = database.GetBalance(addr, t.Data.ChainId)
+   nonce := database.GetNonce(addr, t.Data.ChainId)
 
    if nonce + 1 != t.Data.Nonce || gasLimit.Cmp(gasWant) < 0 || balance.Cmp(amountWant) < 0 {
        gasUsed = new(big.Int).Set(gasLimit)
@@ -96,7 +94,7 @@ func preExecute(dbTran *database.Transaction, t *bean.Transaction, gasWant *big.
            gasFee = new(big.Int).Add(balance, gasFee)
            balance = new(big.Int)
        }
-       database.PutBalanceInsideTransaction(dbTran, addr, t.Data.ChainId, balance)
+       database.PutBalance(dt, addr, t.Data.ChainId, balance)
        return
    }
 
@@ -104,20 +102,22 @@ func preExecute(dbTran *database.Transaction, t *bean.Transaction, gasWant *big.
    gasUsed = new(big.Int).Set(gasWant)
    gasFee = new(big.Int).Set(amountWant)
    balance = new(big.Int).Sub(balance, gasFee)
-   database.PutBalanceInsideTransaction(dbTran, addr, t.Data.ChainId, balance)
-   database.PutNonceInsideTransaction(dbTran, addr, t.Data.ChainId, nonce + 1)
+   database.PutBalance(dt, addr, t.Data.ChainId, balance)
+   database.PutNonce(dt, addr, t.Data.ChainId, nonce + 1)
    return
 }
 
-func executeTransferTransaction(dbTran *database.Transaction, t *bean.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
+func executeTransferTransaction(dt database.Transactional, t *bean.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
    var (
        canExecute = false
        addr accounts.CommonAddress
        balance *big.Int
    )
 
-   canExecute, addr, balance, _, gasUsed, gasFee = preExecute(dbTran, t, TransferGas)
+   subDt := dt.BeginTransaction()
+   canExecute, addr, balance, _, gasUsed, gasFee = preExecute(subDt, t, TransferGas)
    if !canExecute {
+       subDt.Commit()
        return
    }
 
@@ -125,120 +125,152 @@ func executeTransferTransaction(dbTran *database.Transaction, t *bean.Transactio
    if balance.Cmp(amount) >= 0 {
        to := accounts.Hex2Address(t.Data.To)
        balance = new(big.Int).Sub(balance, amount)
-       balance2 := database.GetBalanceInsideTransaction(dbTran, to, t.Data.DestChain)
+       balance2 := database.GetBalance(to, t.Data.DestChain)
        balance2 = new(big.Int).Add(balance2, amount)
-       database.PutBalanceInsideTransaction(dbTran, addr, t.Data.ChainId, balance)
-       database.PutBalanceInsideTransaction(dbTran, to, t.Data.DestChain, balance2)
+       database.PutBalance(subDt, addr, t.Data.ChainId, balance)
+       database.PutBalance(subDt, to, t.Data.DestChain, balance2)
+       subDt.Commit()
    }
+
+   dt.Commit()
    return
 }
 
-func executeMinerTransaction(dbTran *database.Transaction, t *bean.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
+func executeMinerTransaction(dt database.Transactional, t *bean.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
    var (
        canExecute = false
        balance *big.Int
    )
 
-   canExecute, _, balance, _, gasUsed, gasFee = preExecute(dbTran, t, MinerGas)
+   subDt := dt.BeginTransaction()
+   canExecute, _, balance, _, gasUsed, gasFee = preExecute(subDt, t, MinerGas)
    if !canExecute {
+       subDt.Commit()
        return
    }
 
    if balance.Sign() >= 0 {
        AddMiner(accounts.Bytes2Address(t.Data.Data))
    }
+
+   dt.Commit()
    return
 }
 
-func executeCreateContractTransaction(dbTran *database.Transaction, t *bean.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
+func executeCreateContractTransaction(dt database.Transactional, t *bean.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
    var (
        canExecute = false
        addr accounts.CommonAddress
        balance, gasPrice *big.Int
    )
 
-   canExecute, addr, balance, gasPrice, gasUsed, gasFee = preExecute(dbTran, t, CreateContractGas)
+   subDt := dt.BeginTransaction()
+   canExecute, addr, _, gasPrice, gasUsed, gasFee = preExecute(subDt, t, CreateContractGas)
    if !canExecute {
+       subDt.Commit()
        return
    }
 
-   evm := vm.NewEVM(dbTran)
-   returnGas, _ := core.ApplyTransaction(evm, t)
+   evm := vm.NewEVM(subDt)
+   returnGas, err := core.ApplyTransaction(evm, t)
    consumedGas := new(big.Int).Sub(new(big.Int).SetBytes(t.Data.GasLimit), new(big.Int).SetUint64(returnGas))
    consumedAmount := new(big.Int).Mul(consumedGas, gasPrice)
-   if balance.Cmp(consumedAmount) >= 0 {
+   if err != nil && balance.Cmp(consumedAmount) >= 0 {
        gasUsed = new(big.Int).Add(gasUsed, consumedGas)
        gasFee = new(big.Int).Add(gasFee, consumedAmount)
-       bal := database.GetBalanceInsideTransaction(dbTran, addr, t.Data.ChainId)
-       balance = new(big.Int).Sub(bal, consumedAmount)
-       database.PutBalanceInsideTransaction(dbTran, addr, t.Data.ChainId, balance)
+       balance = database.GetBalance(addr, t.Data.ChainId)
+       balance = new(big.Int).Sub(balance, consumedAmount)
+       database.PutBalance(subDt, addr, t.Data.ChainId, balance)
+       subDt.Commit()
+   } else {
+       subDt.Discard()
    }
+   dt.Commit()
    return
 }
 
-func executeCallContractTransaction(dbTran *database.Transaction, t *bean.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
+func executeCallContractTransaction(dt database.Transactional, t *bean.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
    var (
        canExecute = false
        addr accounts.CommonAddress
        balance, gasPrice *big.Int
    )
 
-   canExecute, addr, balance, gasPrice, gasUsed, gasFee = preExecute(dbTran, t, CallContractGas)
+   subDt := dt.BeginTransaction()
+   canExecute, addr, _, gasPrice, gasUsed, gasFee = preExecute(dt, t, CallContractGas)
    if !canExecute {
+       subDt.Commit()
        return
    }
 
-   evm := vm.NewEVM(dbTran)
-   returnGas, _ := core.ApplyTransaction(evm, t)
+   evm := vm.NewEVM(subDt)
+   returnGas, err := core.ApplyTransaction(evm, t)
    consumedGas := new(big.Int).Sub(new(big.Int).SetBytes(t.Data.GasLimit), new(big.Int).SetUint64(returnGas))
    consumedAmount := new(big.Int).Mul(consumedGas, gasPrice)
-   if balance.Cmp(consumedAmount) >= 0 {
+   balance = database.GetBalance(addr, t.Data.ChainId)
+   if err != nil && balance.Cmp(consumedAmount) >= 0 {
        gasUsed = new(big.Int).Add(gasUsed, consumedGas)
        gasFee = new(big.Int).Add(gasFee, consumedAmount)
-       bal := database.GetBalanceInsideTransaction(dbTran, addr, t.Data.ChainId)
-       balance = new(big.Int).Sub(bal, consumedAmount)
-       database.PutBalanceInsideTransaction(dbTran, addr, t.Data.ChainId, balance)
+       balance = new(big.Int).Sub(balance, consumedAmount)
+       database.PutBalance(subDt, addr, t.Data.ChainId, balance)
+       subDt.Commit()
+   } else {
+       subDt.Discard()
    }
+   dt.Commit()
    return
 }
 
-func executeCrossChainTransaction(dbTran *database.Transaction, t *bean.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
+func executeCrossChainTransaction(dt database.Transactional, t *bean.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
    var (
        canExecute = false
        addr accounts.CommonAddress
-       balance, gasPrice *big.Int
+       gasPrice *big.Int
    )
 
-   canExecute, addr, balance, gasPrice, gasUsed, gasFee = preExecute(dbTran, t, CrossChainGas)
+   subDt := dt.BeginTransaction()
+   canExecute, addr, _, gasPrice, gasUsed, gasFee = preExecute(dt, t, CrossChainGas)
    if !canExecute {
+       subDt.Commit()
+       return
+   }
+
+   cct := &bean.CrossChainTransaction{}
+   err := json.Unmarshal(t.Data.Data, cct)
+   if err != nil {
+       subDt.Commit()
        return
    }
 
    sumGas := new(big.Int)
-   data := t.Data.Data
-   var trans []*bean.Transaction
-   err := json.Unmarshal(data, &trans)
-   if err == nil {
-       for _, tx := range trans {
-           if tx.Data.Type == CrossChainType {
-               continue
-           }
-           g, _ := execute(dbTran, tx)
-           sumGas = new(big.Int).Add(sumGas, g)
+   for _, tx := range cct.Trans {
+       if tx.Data.Type == CrossChainType {
+           continue
        }
+       g, _ := execute(subDt, tx)
+       sumGas = new(big.Int).Add(sumGas, g)
+   }
+   if !bytes.Equal(subDt.GetChainStateRoot(cct.ChainId), cct.StateRoot) {
+       subDt.Discard()
    }
 
    sumAmount := new(big.Int).Mul(sumGas, gasPrice)
+   balance := database.GetBalance(addr, t.Data.ChainId)
    if balance.Cmp(sumAmount) >= 0 {
        gasUsed = new(big.Int).Add(gasUsed, sumGas)
        gasFee = new(big.Int).Add(gasFee, sumAmount)
        balance = new(big.Int).Sub(balance, sumAmount)
-       database.PutBalanceInsideTransaction(dbTran, addr, t.Data.ChainId, balance)
+       database.PutBalance(subDt, addr, t.Data.ChainId, balance)
+       subDt.Commit()
+   } else {
+       subDt.Discard()
    }
+   dt.Commit()
    return
 }
 
 func distributeBlockPrize(b *bean.Block, total *big.Int) {
+    dt := database.BeginTransaction()
     str := config.GetConfig().Blockprize.String()
     val := new (big.Int)
     val.SetString(str,10)
@@ -249,9 +281,9 @@ func distributeBlockPrize(b *bean.Block, total *big.Int) {
     leaderPrize := new(big.Int).Rsh(prize, 1)
     fmt.Println("leader prize: ", leaderPrize)
     leaderAddr := accounts.PubKey2Address(b.Header.LeaderPubKey)
-    balance := database.GetBalanceOutsideTransaction(leaderAddr, b.Header.ChainId)
+    balance := database.GetBalance(leaderAddr, b.Header.ChainId)
     balance = new(big.Int).Add(balance, leaderPrize)
-    database.PutBalanceOutSideTransaction(leaderAddr, b.Header.ChainId, balance)
+    database.PutBalance(dt, leaderAddr, b.Header.ChainId, balance)
     leftPrize := new(big.Int).Sub(prize, leaderPrize)
     minerNum := 0
     for _, elem := range b.MultiSig.Bitmap {
@@ -260,18 +292,18 @@ func distributeBlockPrize(b *bean.Block, total *big.Int) {
         }
     }
     if minerNum == 0 {
+        dt.Commit()
         return
     }
     minerPrize := new(big.Int).Div(leftPrize, new(big.Int).SetInt64(int64(minerNum)))
     for i, e := range b.MultiSig.Bitmap {
         if e == 1 {
             minerAddr := accounts.PubKey2Address(b.Header.MinorPubKeys[i])
-            bal := database.GetBalanceOutsideTransaction(minerAddr, b.Header.ChainId)
+            bal := database.GetBalance(minerAddr, b.Header.ChainId)
             bal = new(big.Int).Add(bal, minerPrize)
-            database.PutBalanceOutSideTransaction(minerAddr, b.Header.ChainId, bal)
+            database.PutBalance(dt, minerAddr, b.Header.ChainId, bal)
         }
     }
+    dt.Commit()
+    return
 }
-
-//TODO
-//局部回滚
