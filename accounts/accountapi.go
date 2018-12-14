@@ -3,10 +3,11 @@ package accounts
 import (
 	"os"
 	"errors"
+	"BlockChainTest/config"
 )
 type AccountApi struct {
    KeyStoreDir string
-   ChainId int64
+   ChainId config.ChainIdType
 }
 
 func (accountapi * AccountApi) AccountList() (string, error){

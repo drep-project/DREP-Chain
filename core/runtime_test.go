@@ -12,6 +12,7 @@ import (
 	"BlockChainTest/accounts"
 	"encoding/json"
 	"BlockChainTest/bean"
+	"BlockChainTest/config"
 )
 
 // Execute executes the code using the input as call data during the execution.
@@ -24,13 +25,13 @@ func ExecuteCreate(code []byte) {
 	evm := vm.NewEVM(t)
 	s1 := "111111"
 	s2 := "222222"
-	var chainId int64 = 0
+	var chainId config.ChainIdType
 	callerAddr1 := accounts.Hex2Address(s1)
 	callerAddr2 := accounts.Hex2Address(s2)
 	caller1 := &accounts.Account{Address: callerAddr1, Storage: &accounts.Storage{Balance: new(big.Int).SetInt64(100)}}
 	caller2 := &accounts.Account{Address: callerAddr2, Storage: &accounts.Storage{Balance: new(big.Int).SetInt64(200)}}
-	errPut1 := database.PutStorageOutsideTransaction(caller1.Storage, callerAddr1, chainId)
-	errPut2 := database.PutStorageOutsideTransaction(caller2.Storage, callerAddr2, chainId)
+	errPut1 := database.PutStorage(t, callerAddr1, chainId, caller1.Storage)
+	errPut2 := database.PutStorage(t, callerAddr2, chainId, caller2.Storage)
 	fmt.Println("errPut1: ", errPut1)
 	fmt.Println("errPut2: ", errPut2)
 	gas := uint64(1000000)
@@ -54,7 +55,7 @@ func ExecuteCall(input []byte) {
 	gas := uint64(1000000)
 	value := new(big.Int).SetInt64(0)
 	contractAddr := accounts.Hex2Address(s2)
-	var chainId int64 = 0
+	var chainId config.ChainIdType
 	evm.CallContractCode(callerAddr, contractAddr, chainId, input, gas, value)
 }
 

@@ -7,26 +7,31 @@ import (
 	"fmt"
 	"BlockChainTest/util/list"
 	"bytes"
+    "errors"
 )
 
 const (
-	ins = iota
-	mod
-	del
+	insOut = iota
+	insIn
+	modOut
+	modIn
+	delOut
+	delIn
 )
 
 type journalEntry struct {
-	chainId config.ChainIdType
-	onTrie  bool
-	action  int
-	key     []byte
-	prev    []byte
+	chainId     config.ChainIdType
+	action      int
+	key         []byte
+	prev        []byte
 }
 
 type Transactional interface {
-	Put(chainId config.ChainIdType, key []byte, value []byte)
+	PutOutState(chainId config.ChainIdType, key []byte, value []byte) error
+	PutInState(chainId config.ChainIdType, key []byte, value []byte) error
 	Get(key []byte) []byte
-	Delete(chainId config.ChainIdType, key []byte)
+	DeleteOutState(chainId config.ChainIdType, key []byte) error
+	DeleteInState(chainId config.ChainIdType, key []byte) error
 	Commit()
 	Discard()
 	BeginTransaction() Transactional
@@ -40,17 +45,30 @@ type Transaction struct {
 	journal  []*journalEntry
 }
 
-func (t *Transaction) Put(chainId config.ChainIdType, key []byte, value []byte) {
+func (t *Transaction) PutOutState(chainId config.ChainIdType, key []byte, value []byte) error {
 	if t.finished {
-		return
+		return nil
 	}
 	prev := t.parent.Get(key)
 	if prev == nil {
-		t.journal = append(t.journal, &journalEntry{chainId: chainId, action: ins, key: key})
+		t.journal = append(t.journal, &journalEntry{chainId: chainId, action: insOut, key: key})
 	} else {
-		t.journal = append(t.journal, &journalEntry{chainId: chainId, action: mod, key: key, prev:prev})
+		t.journal = append(t.journal, &journalEntry{chainId: chainId, action: modOut, key: key, prev:prev})
 	}
-	t.parent.Put(chainId, key, value)
+	return t.parent.PutOutState(chainId, key, value)
+}
+
+func (t *Transaction) PutInState(chainId config.ChainIdType, key []byte, value []byte) error {
+    if t.finished {
+        return nil
+    }
+    prev := t.parent.Get(key)
+    if prev == nil {
+        t.journal = append(t.journal, &journalEntry{chainId: chainId, action: insIn, key: key})
+    } else {
+        t.journal = append(t.journal, &journalEntry{chainId: chainId, action: modIn, key: key, prev:prev})
+    }
+    return t.parent.PutInState(chainId, key, value)
 }
 
 func (t *Transaction) Get(key []byte) []byte {
@@ -60,20 +78,28 @@ func (t *Transaction) Get(key []byte) []byte {
 	return t.parent.Get(key)
 }
 
-func (t *Transaction) Delete(chainId config.ChainIdType, key []byte) {
+func (t *Transaction) DeleteOutState(chainId config.ChainIdType, key []byte) error {
 	if t.finished {
-		return
+		return nil
 	}
 	prev := t.parent.Get(key)
 	if prev == nil {
-		return
+		return errors.New("no such key found in database")
 	}
-	t.journal = append(t.journal, &journalEntry{chainId:chainId, action: del, key:key, prev:prev})
-	//if t.database.tries[chainId] == nil {
-	//	t.database.tries[chainId] = trie.NewStateTrie()
-	//}
-	//t.database.tries[chainId].Delete(key)
-	t.parent.Delete(chainId, key)
+	t.journal = append(t.journal, &journalEntry{chainId:chainId, action: delOut, key:key, prev:prev})
+	return t.parent.DeleteOutState(chainId, key)
+}
+
+func (t *Transaction) DeleteInState(chainId config.ChainIdType, key []byte) error {
+    if t.finished {
+        return nil
+    }
+    prev := t.parent.Get(key)
+    if prev == nil {
+        return errors.New("no such key found in database")
+    }
+    t.journal = append(t.journal, &journalEntry{chainId:chainId, action: delIn, key:key, prev:prev})
+    return t.parent.DeleteInState(chainId, key)
 }
 
 func (t *Transaction) Commit() {
@@ -88,40 +114,23 @@ func (t *Transaction) Discard() {
 		return
 	}
 	t.finished = true
-	for i := len(t.journal); i >= 0; i-- {
+	for i := len(t.journal) - 1; i >= 0; i-- {
 		e := t.journal[i]
 		switch e.action {
-		case ins:
-			t.parent.Delete(e.chainId, e.key)
-		case mod:
-			t.parent.Put(e.chainId, e.key, e.prev)
-		case del:
-			t.parent.Put(e.chainId, e.key, e.prev)
+		case insOut:
+			t.parent.DeleteOutState(e.chainId, e.key)
+        case insIn:
+            t.parent.DeleteInState(e.chainId, e.key)
+		case modOut:
+			t.parent.PutOutState(e.chainId, e.key, e.prev)
+        case modIn:
+            t.parent.PutInState(e.chainId, e.key, e.prev)
+		case delOut:
+			t.parent.PutOutState(e.chainId, e.key, e.prev)
+        case delIn:
+            t.parent.PutInState(e.chainId, e.key, e.prev)
 		}
 	}
-	//for _, j := range t.journal {
-	//
-	//	switch j.action {
-	//	case del:
-	//		chainId := j.chainId
-	//		if t.database.tries[chainId] == nil {
-	//			t.database.tries[chainId] = trie.NewStateTrie()
-	//		}
-	//		if value, err := t.snapshot.Get(j.key, nil); err == nil {
-	//			t.database.tries[chainId].Insert(j.key, value)
-	//		}
-	//	case put:
-	//		chainId := j.chainId
-	//		if t.database.tries[chainId] == nil {
-	//			t.database.tries[chainId] = trie.NewStateTrie()
-	//		}
-	//		if value, err := t.snapshot.Get(j.key, nil); err == nil {
-	//			t.database.tries[chainId].Insert(j.key, value)
-	//		} else if err == leveldb.ErrNotFound {
-	//			t.database.tries[chainId].Delete(j.key)
-	//		}
-	//	}
-	//}
 }
 
 func (t *Transaction) BeginTransaction() Transactional {
@@ -159,7 +168,15 @@ func NewDatabase(cfg *config.NodeConfig) *Database {
 	}
 }
 
-func (db *Database) Put(chainId config.ChainIdType, key []byte, value []byte) {
+func (db *Database) PutOutState(chainId config.ChainIdType, key []byte, value []byte) error {
+    if err := db.db.Put(key, value, nil); err != nil {
+        fmt.Println("error occurs", err)
+        return err
+    }
+    return nil
+}
+
+func (db *Database) PutInState(chainId config.ChainIdType, key []byte, value []byte) error {
 	if err := db.db.Put(key, value, nil); err == nil {
 		t, exists := db.tries[chainId]
 		if !exists {
@@ -167,11 +184,12 @@ func (db *Database) Put(chainId config.ChainIdType, key []byte, value []byte) {
 			db.tries[chainId] = t
 		}
 		t.Insert(key, value)
+		return nil
 	} else {
 		fmt.Println("error occurs", err)
+		return err
 	}
 }
-
 
 func (db *Database) Get(key []byte) []byte {
 	if ret, err := db.db.Get(key, nil); err == nil {
@@ -181,7 +199,15 @@ func (db *Database) Get(key []byte) []byte {
 	}
 }
 
-func (db *Database) Delete(chainId config.ChainIdType, key []byte) {
+func (db *Database) DeleteOutState(chainId config.ChainIdType, key []byte) error {
+    if err := db.db.Delete(key, nil); err != nil {
+        fmt.Println("Error occurs.", err)
+        return err
+    }
+    return nil
+}
+
+func (db *Database) DeleteInState(chainId config.ChainIdType, key []byte) error {
 	if err := db.db.Delete(key, nil); err == nil {
 		t, exists := db.tries[chainId]
 		if !exists {
@@ -190,16 +216,16 @@ func (db *Database) Delete(chainId config.ChainIdType, key []byte) {
 			db.tries[chainId] = t
 		}
 		t.Delete(key)
+		return nil
 	} else {
 		fmt.Println("Error occurs.", err)
+		return err
 	}
 }
 
-func (db *Database) Commit() {
-}
+func (db *Database) Commit() {}
 
-func (db *Database) Discard() {
-}
+func (db *Database) Discard() {}
 
 func (db *Database) BeginTransaction() Transactional {
 	return &Transaction{
@@ -240,19 +266,5 @@ func (db *Database) GetChainStateRoot(chainId config.ChainIdType) []byte {
 		return t.Root.Value
 	} else {
 		return nil
-	}
-}
-
-// TODO 下面的函数操作不修改trie
-
-func (db *Database) PutNoTrie(key []byte, value []byte) {
-	if err := db.db.Put(key, value, nil); err != nil {
-		fmt.Println("error occurs", err)
-	}
-}
-
-func (db *Database) DeleteNoTrie(key []byte) {
-	if err := db.db.Delete(key, nil); err != nil {
-		fmt.Println("Error occurs.", err)
 	}
 }

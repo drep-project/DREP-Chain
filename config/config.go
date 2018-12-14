@@ -15,28 +15,58 @@ import (
 	"BlockChainTest/util/flags"
 	"BlockChainTest/core/common"
 	"github.com/spf13/viper"
+	"encoding/hex"
 )
 
-
-const ChainIdSize = 64
-
-type ChainIdType [ChainIdSize]byte
-
-var  RootChain ChainIdType
-
 const (
+    ChainIdSize = 64
     defaultPort = 55555
 	defaultBlockPrize = "20000000000000000000"
 	ClientIdentifier = "drep" // Client identifier to advertise over the network
 )
 
 var (
+	RootChain ChainIdType
 	ConfigFileFlag = cli.StringFlag{
 		Name:  "config",
 		Usage: "TODO add config description",
 	}
 	nodeConfig  *NodeConfig
 )
+
+type ChainIdType [ChainIdSize]byte
+
+func (c ChainIdType) Hex() string {
+	return hex.EncodeToString(c[:])
+}
+
+func (c *ChainIdType) SetBytes(b []byte) {
+	if len(b) > len(c) {
+		copy(c[:], b[len(b) - ChainIdSize:])
+	} else {
+		copy(c[ChainIdSize - len(b):], b)
+	}
+}
+
+func Bytes2ChainId(b []byte) ChainIdType {
+	if b == nil {
+		return ChainIdType{}
+	}
+	var chainId ChainIdType
+	chainId.SetBytes(b)
+	return chainId
+}
+
+func Hex2ChainId(s string) ChainIdType {
+	if s == "" {
+		return ChainIdType{}
+	}
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		return ChainIdType{}
+	}
+	return Bytes2ChainId(b)
+}
 
 type BootNode struct {
 	PubKey  *common.PK	`json:"pubKey"`

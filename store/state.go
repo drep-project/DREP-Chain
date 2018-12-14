@@ -2,7 +2,6 @@ package store
 
 import (
     "time"
-    "errors"
     "math/big"
     "encoding/json"
     "BlockChainTest/trie"
@@ -15,13 +14,12 @@ import (
 )
 
 var (
-    chainId  int64
+    chainId  config.ChainIdType
     prvKey   *mycrypto.PrivateKey
     pubKey   *mycrypto.Point
     address  accounts.CommonAddress
 
     port bean.Port
-    nodes map[string] *accounts.Node
 )
 
 func InitState(config *config.NodeConfig)  {
@@ -58,42 +56,23 @@ func InitState(config *config.NodeConfig)  {
         AddPeer(peer)
     }
     adminPubKey = miners[0].PubKey
-
     port = bean.Port(config.Port)
-    //if Solo {
-    //    minerNum = 1
-    //    ip0 = network.IP("127.0.0.1")
-    //    port0 = network.Port(55555)
-    //} else if LocalTest {
-    //    ip0 = network.IP("127.0.0.1")
-    //    ip1 = network.IP("127.0.0.1")
-    //    port0 = network.Port(55555)
-    //    port1 = network.Port(55556)
-    //    port2 = network.Port(55557)
-    //} else {
-    //    ip0 = network.IP("192.168.3.231")
-    //    ip1 = network.IP("192.168.3.197")
-    //    ip2 = network.IP("192.168.3.236")
-    //    port0 = network.Port(55555)
-    //    port1 = network.Port(55555)
-    //    port2 = network.Port(55555)
-    //}
-    //
 }
 
 func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
-    dbTran := database.BeginTransaction()
-    height := database.GetMaxHeightInsideTransaction(dbTran) + 1
+    dt := database.BeginTransaction()
+    height := database.GetMaxHeight() + 1
     ts := PickTransactions(BlockGasLimit)
     gasSum := new(big.Int)
     //fmt.Println("before generate block: ", hex.EncodeToString(database.GetStateRoot()))
     for _, t := range ts {
-        g, _ := execute(dbTran, t)
+        subDt := dt.BeginTransaction()
+        g, _ := execute(subDt, t)
         gasSum = new(big.Int).Add(gasSum, g)
     }
     //fmt.Println("after generate block: ", hex.EncodeToString(database.GetStateRoot()))
     timestamp := time.Now().Unix()
-    stateRoot := database.GetStateRoot()
+    stateRoot := dt.GetTotalStateRoot()
     gasUsed := gasSum.Bytes()
     txHashes, err := GetTxHashes(ts)
     if err != nil {
@@ -107,7 +86,7 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
     }
 
     var previousHash []byte
-    previousBlock := database.GetHighestBlockInsideTransaction(dbTran)
+    previousBlock := database.GetHighestBlock()
     if previousBlock == nil {
         previousHash = []byte{}
     } else {
@@ -138,7 +117,7 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
             TxList:  ts,
         },
     }
-    dbTran.Discard()
+    dt.Discard()
     return block, nil
 }
 
@@ -150,32 +129,12 @@ func GetAddress() accounts.CommonAddress {
     return address
 }
 
-func GetChainId() int64 {
+func GetChainId() config.ChainIdType {
     return chainId
 }
 
 func GetPrvKey() *mycrypto.PrivateKey {
     return prvKey
-}
-
-func CreateAccount(addr string, chainId int64) (string, error) {
-    IsRoot := chainId == accounts.RootChainID
-    var (
-        parent *accounts.Node
-        parentFound bool
-    )
-    if !IsRoot {
-        parent, parentFound = nodes[addr]
-        if !parentFound {
-            return "", errors.New("no parent account " + addr + " is found on the root chain")
-        }
-    }
-    account, err := accounts.NewNormalAccount(parent, chainId)
-    if err != nil {
-        return "", err
-    }
-    database.PutStorageOutsideTransaction(account.Storage, account.Address, chainId)
-    return account.Address.Hex(), nil
 }
 
 func GetPort() bean.Port {

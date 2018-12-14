@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"BlockChainTest/mycrypto"
 	"errors"
+	"BlockChainTest/config"
 )
 
 var (
@@ -13,11 +14,11 @@ var (
 
 type Node struct {
 	PrvKey    *mycrypto.PrivateKey
-	ChainId   int64
+	ChainId   config.ChainIdType
 	ChainCode []byte
 }
 
-func NewNode(parent *Node, chainId int64) *Node {
+func NewNode(parent *Node, chainId config.ChainIdType) *Node {
 	var (
 		prvKey *mycrypto.PrivateKey
 		chainCode []byte
@@ -34,7 +35,7 @@ func NewNode(parent *Node, chainId int64) *Node {
 		chainCode = h[KeyBitSize:]
 	} else {
 		pid := new(big.Int).SetBytes(parent.ChainCode)
-		cid := new(big.Int).SetInt64(int64(chainId))
+		cid := new(big.Int).SetBytes(chainId[:])
 		msg := new(big.Int).Xor(pid, cid).Bytes()
 		h := hmAC(msg, parent.PrvKey.Prv)
 		prvKey = genPrvKey(h[:KeyBitSize])
@@ -72,8 +73,8 @@ type Account struct {
 	Storage       *Storage
 }
 
-func NewNormalAccount(parent *Node, chainId int64) (*Account, error) {
-	IsRoot := chainId == RootChainID
+func NewNormalAccount(parent *Node, chainId config.ChainIdType) (*Account, error) {
+	IsRoot := chainId == config.RootChain
 	if !IsRoot && parent == nil {
 		return nil, errors.New("missing parent account")
 	}
@@ -88,7 +89,7 @@ func NewNormalAccount(parent *Node, chainId int64) (*Account, error) {
 	return account, nil
 }
 
-func NewContractAccount(callerAddr CommonAddress, chainId, nonce int64) (*Account, error) {
+func NewContractAccount(callerAddr CommonAddress, chainId config.ChainIdType, nonce int64) (*Account, error) {
 	address := GetByteCodeAddress(callerAddr, nonce)
 	storage := NewStorage()
 	account := &Account{

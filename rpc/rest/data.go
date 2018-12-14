@@ -5,10 +5,12 @@ import (
     "encoding/hex"
     "math/big"
     "math/rand"
+    "BlockChainTest/config"
+    "BlockChainTest/accounts"
 )
 
 type BlockWeb struct {
-    ChainId      int64
+    ChainId      config.ChainIdType
     Height       int64
     Timestamp    int64
     Hash         string
@@ -33,9 +35,9 @@ func ParseBlock(block *bean.Block) *BlockWeb {
 
     var minorPubKeys []string
 
-    var leaderPubKey = "0x" + bean.PubKey2Address(block.Header.LeaderPubKey).Hex()
+    var leaderPubKey = "0x" + accounts.PubKey2Address(block.Header.LeaderPubKey).Hex()
     for _, key := range(block.Header.MinorPubKeys) {
-        minorPubKeys = append(minorPubKeys, "0x" + bean.PubKey2Address(key).Hex())
+        minorPubKeys = append(minorPubKeys, "0x" + accounts.PubKey2Address(key).Hex())
     }
     b.MiningMember = minorPubKeys
     b.MiningLeader = leaderPubKey
@@ -50,7 +52,7 @@ type TransactionWeb struct {
     Hash      string
     From      string
     To        string
-    ChainId   int64
+    ChainId   config.ChainIdType
     Amount    string
     GasPrice  string
     GasUsed   string
@@ -64,8 +66,13 @@ func ParseTransaction(tx *bean.Transaction) *TransactionWeb {
     t.Timestamp = tx.Data.Timestamp * 1000
     h, _ := tx.TxHash()
     t.Hash = "0x" + hex.EncodeToString(h)
+<<<<<<< HEAD
     t.From = "0x" + bean.PubKey2Address(tx.Data.PubKey).Hex()
     t.To = tx.Data.To
+=======
+    t.From = "0x" + accounts.PubKey2Address(tx.Data.PubKey).Hex()
+    t.To = "0x" + tx.Data.To
+>>>>>>> 39bb07a... modify chainId type and add revert
     t.Data = "0x" + hex.EncodeToString(tx.Data.Data)
     t.ChainId = tx.Data.ChainId
     t.Amount = new(big.Int).SetBytes(tx.Data.Amount).String()

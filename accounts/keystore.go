@@ -16,7 +16,7 @@ var (
 type Key struct {
     Address string
     PrivateKey string
-    ChainId int64
+    ChainId string
     ChainCode string
 }
 
@@ -36,7 +36,7 @@ func store(node *Node) error {
     key := &Key{
         Address: node.Address().Hex(),
         PrivateKey: hex.EncodeToString(node.PrvKey.Prv),
-        ChainId: node.ChainId,
+        ChainId: node.ChainId.Hex(),
         ChainCode: hex.EncodeToString(node.ChainCode),
     }
     b, err := json.Marshal(key)
@@ -91,7 +91,7 @@ func SaveKeystore(node *Node, keystorePath string) error {
     key := &Key{
         Address: node.Address().Hex(),
         PrivateKey: hex.EncodeToString(node.PrvKey.Prv),
-        ChainId: node.ChainId,
+        ChainId: node.ChainId.Hex(),
         ChainCode: hex.EncodeToString(node.ChainCode),
     }
     b, err := json.Marshal(key)
@@ -129,7 +129,7 @@ func MiniSave(node *Node) error {
     key := &Key{
         Address: node.Address().Hex(),
         PrivateKey: hex.EncodeToString(node.PrvKey.Prv),
-        ChainId: node.ChainId,
+        ChainId: node.ChainId.Hex(),
         ChainCode: hex.EncodeToString(node.ChainCode),
     }
     b, err := json.Marshal(key)

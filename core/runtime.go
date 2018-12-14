@@ -8,9 +8,10 @@ import (
 	"BlockChainTest/accounts"
 	"bytes"
 	"encoding/hex"
+	"BlockChainTest/config"
 )
 
-func ExecuteCreateCode(evm *vm.EVM, callerAddr accounts.CommonAddress, chainId int64, code []byte, gas uint64, value *big.Int) (uint64, error) {
+func ExecuteCreateCode(evm *vm.EVM, callerAddr accounts.CommonAddress, chainId config.ChainIdType, code []byte, gas uint64, value *big.Int) (uint64, error) {
 	ret, _, returnGas, err := evm.CreateContractCode(callerAddr, chainId, code, gas, value)
 	fmt.Println("gas: ", gas)
 	fmt.Println("code: ", hex.EncodeToString(code))
@@ -19,14 +20,14 @@ func ExecuteCreateCode(evm *vm.EVM, callerAddr accounts.CommonAddress, chainId i
 	return returnGas, err
 }
 
-func ExecuteCallCode(evm *vm.EVM, callerAddr, contractAddr accounts.CommonAddress, chainId int64, input []byte, gas uint64, value *big.Int) (uint64, error) {
+func ExecuteCallCode(evm *vm.EVM, callerAddr, contractAddr accounts.CommonAddress, chainId config.ChainIdType, input []byte, gas uint64, value *big.Int) (uint64, error) {
 	ret, returnGas, err := evm.CallContractCode(callerAddr, contractAddr, chainId, input, gas, value)
 	fmt.Println("ret: ", ret)
 	fmt.Println("err: ", err)
 	return returnGas, err
 }
 
-func ExecuteStaticCall(evm *vm.EVM, callerAddr, contractAddr accounts.CommonAddress, chainId int64, input []byte, gas uint64) (uint64, error) {
+func ExecuteStaticCall(evm *vm.EVM, callerAddr, contractAddr accounts.CommonAddress, chainId config.ChainIdType, input []byte, gas uint64) (uint64, error) {
 	ret, returnGas, err := evm.StaticCall(callerAddr, contractAddr, chainId, input, gas)
 	fmt.Println("ret: ", ret)
 	fmt.Println("err: ", err)
@@ -36,8 +37,8 @@ func ExecuteStaticCall(evm *vm.EVM, callerAddr, contractAddr accounts.CommonAddr
 type Message struct {
 	From accounts.CommonAddress
 	To accounts.CommonAddress
-	ChainId int64
-	DestChain int64
+	ChainId config.ChainIdType
+	DestChain config.ChainIdType
 	Gas uint64
 	Value *big.Int
 	Nonce uint64

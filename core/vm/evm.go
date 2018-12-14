@@ -3,10 +3,10 @@ package vm
 import (
 	"math/big"
 	"errors"
-	"BlockChainTest/bean"
 	"BlockChainTest/accounts"
 	"fmt"
 	"BlockChainTest/database"
+	"BlockChainTest/config"
 )
 
 type EVM struct {
@@ -14,9 +14,9 @@ type EVM struct {
 	Interpreter *EVMInterpreter
 	CallGasTemp uint64
 	GasLimit uint64
-	Origin bean.CommonAddress
+	Origin accounts.CommonAddress
 	GasPrice *big.Int
-	CoinBase bean.CommonAddress
+	CoinBase accounts.CommonAddress
 	Time *big.Int
 	Abort int32
 }
@@ -25,14 +25,14 @@ var (
 	ErrNoCompatibleInterpreter  = errors.New("no compatible interpreter")
 )
 
-func NewEVM(dbTran *database.Transaction) *EVM {
+func NewEVM(dt database.Transactional) *EVM {
 	evm := &EVM{}
-	evm.State = NewState(dbTran)
+	evm.State = NewState(dt)
 	evm.Interpreter = NewEVMInterpreter(evm)
 	return evm
 }
 
-func (evm *EVM) CreateContractCode(callerAddr accounts.CommonAddress, chainId int64, byteCode accounts.ByteCode, gas uint64, value *big.Int) ([]byte, accounts.CommonAddress, uint64, error) {
+func (evm *EVM) CreateContractCode(callerAddr accounts.CommonAddress, chainId config.ChainIdType, byteCode accounts.ByteCode, gas uint64, value *big.Int) ([]byte, accounts.CommonAddress, uint64, error) {
 	if !evm.CanTransfer(callerAddr, chainId, value) {
 		return nil, accounts.CommonAddress{}, gas, ErrInsufficientBalance
 	}
@@ -70,7 +70,7 @@ func (evm *EVM) CreateContractCode(callerAddr accounts.CommonAddress, chainId in
 	return ret, contractAddr, contract.Gas, nil
 }
 
-func (evm *EVM) CallContractCode(callerAddr, contractAddr accounts.CommonAddress, chainId int64, input []byte, gas uint64, value *big.Int) (ret []byte, returnGas uint64, err error) {
+func (evm *EVM) CallContractCode(callerAddr, contractAddr accounts.CommonAddress, chainId config.ChainIdType, input []byte, gas uint64, value *big.Int) (ret []byte, returnGas uint64, err error) {
 	if !evm.CanTransfer(callerAddr, chainId, value) {
 		return nil, gas, ErrInsufficientBalance
 	}
@@ -88,7 +88,7 @@ func (evm *EVM) CallContractCode(callerAddr, contractAddr accounts.CommonAddress
 	return ret, contract.Gas, err
 }
 
-func (evm *EVM) StaticCall(callerAddr, contractAddr accounts.CommonAddress, chainId int64, input []byte, gas uint64) (ret []byte, returnGas uint64, err error) {
+func (evm *EVM) StaticCall(callerAddr, contractAddr accounts.CommonAddress, chainId config.ChainIdType, input []byte, gas uint64) (ret []byte, returnGas uint64, err error) {
 
 	byteCode := evm.State.GetByteCode(contractAddr, chainId)
 	if byteCode == nil {
@@ -135,12 +135,12 @@ func run(evm *EVM, contract *Contract, input []byte, readOnly bool) ([]byte, err
 	return nil, ErrNoCompatibleInterpreter
 }
 
-func (evm *EVM) CanTransfer(addr accounts.CommonAddress, chainId int64, amount *big.Int) bool {
+func (evm *EVM) CanTransfer(addr accounts.CommonAddress, chainId config.ChainIdType, amount *big.Int) bool {
 	balance := evm.State.GetBalance(addr, chainId)
 	return balance.Cmp(amount) >= 0
 }
 
-func (evm *EVM) Transfer(from, to accounts.CommonAddress, chainId int64, amount *big.Int) error {
+func (evm *EVM) Transfer(from, to accounts.CommonAddress, chainId config.ChainIdType, amount *big.Int) error {
 	err := evm.State.SubBalance(from, chainId, amount)
 	if err != nil {
 		return err

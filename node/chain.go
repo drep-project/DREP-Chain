@@ -26,22 +26,24 @@ var (
     ra [cnt]accounts.CommonAddress
     cp [cnt]*mycrypto.PrivateKey
     ca [cnt]accounts.CommonAddress
-    cc [cnt]int64
+    cc [cnt]config.ChainIdType
     amount [cnt]*big.Int
 )
-
+//
 //func init() {
-//    for i := 0; i < cnt; i++ {
-//        rp[i], _ = mycrypto.GeneratePrivateKey()
-//        ra[i] = accounts.PubKey2Address(rp[i].PubKey)
-//        cp[i], _ = mycrypto.GeneratePrivateKey()
-//        ca[i] = accounts.PubKey2Address(cp[i].PubKey)
-//        cc[i] = rand.Int63n(1000) + 123
-//        //cc[i] = 0
-//        amount[i] = new(big.Int).SetInt64(10000 + int64(i) * 100)
-//        database.PutBalanceOutSideTransaction(ra[i], accounts.RootChainID, new(big.Int).SetInt64(100000000))
-//        database.PutBalanceOutSideTransaction(ca[i], cc[i], new(big.Int).SetInt64(100000000))
-//    }
+//   for i := 0; i < cnt; i++ {
+//       rp[i], _ = mycrypto.GeneratePrivateKey()
+//       ra[i] = accounts.PubKey2Address(rp[i].PubKey)
+//       cp[i], _ = mycrypto.GeneratePrivateKey()
+//       ca[i] = accounts.PubKey2Address(cp[i].PubKey)
+//       cc[i] = config.Bytes2ChainId(new(big.Int).SetInt64(rand.Int63n(1000) + 123).Bytes())
+//       //cc[i] = 0
+//       amount[i] = new(big.Int).SetInt64(10000 + int64(i) * 100)
+//       t := database.BeginTransaction()
+//       database.PutBalance(t, ra[i], config.RootChain, new(big.Int).SetInt64(100000000))
+//       database.PutBalance(t, ca[i], cc[i], new(big.Int).SetInt64(100000000))
+//       t.Commit()
+//   }
 //}
 
 func SendTransaction(t *bean.Transaction) error {
@@ -62,9 +64,9 @@ func SendTransaction(t *bean.Transaction) error {
 //TODO
 //发送交易本地nonce, balance 变动
 
-func GenerateBalanceTransaction(to string, destChain int64, amount *big.Int) *bean.Transaction {
+func GenerateBalanceTransaction(to string, destChain config.ChainIdType, amount *big.Int) *bean.Transaction {
     chainId := config.GetConfig().ChainId
-    nonce := database.GetNonceOutsideTransaction(store.GetAddress(), chainId) + 1
+    nonce := database.GetNonce(store.GetAddress(), chainId) + 1
     data := &bean.TransactionData{
         Version: store.Version,
         Nonce:nonce,
@@ -85,8 +87,8 @@ func GenerateBalanceTransaction(to string, destChain int64, amount *big.Int) *be
     return tx
 }
 
-func GenerateMinerTransaction(addr string, chainId int64) *bean.Transaction {
-    nonce := database.GetNonceOutsideTransaction(store.GetAddress(), chainId) + 1
+func GenerateMinerTransaction(addr string, chainId config.ChainIdType) *bean.Transaction {
+    nonce := database.GetNonce(store.GetAddress(), chainId) + 1
     data := &bean.TransactionData{
         Nonce:     nonce,
         Type:      store.MinerType,
@@ -102,7 +104,7 @@ func GenerateMinerTransaction(addr string, chainId int64) *bean.Transaction {
 
 func GenerateCreateContractTransaction(code []byte) *bean.Transaction {
     chainId := config.GetConfig().ChainId
-    nonce := database.GetNonceOutsideTransaction(store.GetAddress(), chainId) + 1
+    nonce := database.GetNonce(store.GetAddress(), chainId) + 1
     data := &bean.TransactionData{
         Nonce: nonce,
         Type: store.CreateContractType,
@@ -119,9 +121,9 @@ func GenerateCreateContractTransaction(code []byte) *bean.Transaction {
 }
 
 
-func GenerateCallContractTransaction(addr string, chainId int64, input []byte, value string, readOnly bool) *bean.Transaction {
+func GenerateCallContractTransaction(addr string, chainId config.ChainIdType, input []byte, value string, readOnly bool) *bean.Transaction {
     runningChain := config.GetConfig().ChainId
-    nonce := database.GetNonceOutsideTransaction(store.GetAddress(), runningChain) + 1
+    nonce := database.GetNonce(store.GetAddress(), runningChain) + 1
     if runningChain != chainId && !readOnly {
         log.Info("you can only call view/pure functions of contract of another chain")
         return &bean.Transaction{}
@@ -158,14 +160,14 @@ func ForgeTransferTransaction() []*bean.Transaction {
         k := rand.Intn(cnt)
         var data *bean.TransactionData
         if transferDirection == 1 {
-            nonce := database.GetNonceInsideTransaction(dbTran, ra[k], accounts.RootChainID) + 1
-            database.PutNonceInsideTransaction(dbTran, ra[k], accounts.RootChainID, nonce)
+            nonce := database.GetNonce(ra[k], config.RootChain) + 1
+            database.PutNonce(dbTran, ra[k], config.RootChain, nonce)
             data = &bean.TransactionData{
                 Version:   store.Version,
                 Nonce:     nonce,
                 Type:      store.TransferType,
                 To:        ca[k].Hex(),
-                ChainId:   accounts.RootChainID,
+                ChainId:   config.RootChain,
                 DestChain: cc[k],
                 Amount:    amount[k].Bytes(),
                 GasPrice:  store.DefaultGasPrice.Bytes(),
@@ -175,20 +177,20 @@ func ForgeTransferTransaction() []*bean.Transaction {
             }
             fmt.Println()
             fmt.Println("transaction ", i, ":")
-            fmt.Println("from:   ", ra[k].Hex(), " ", accounts.RootChainID)
+            fmt.Println("from:   ", ra[k].Hex(), " ", config.RootChain)
             fmt.Println("to:     ", ca[k].Hex(), " ", cc[k])
             fmt.Println("amount: ", amount[k])
             fmt.Println()
         } else {
-            nonce := database.GetNonceInsideTransaction(dbTran, ca[k], cc[k]) + 1
-            database.PutNonceInsideTransaction(dbTran, ra[k], accounts.RootChainID, nonce)
+            nonce := database.GetNonce(ca[k], cc[k]) + 1
+            database.PutNonce(dbTran, ra[k], config.RootChain, nonce)
             data = &bean.TransactionData{
                 Version:   store.Version,
                 Nonce:     nonce,
                 Type:      store.TransferType,
                 To:        ra[k].Hex(),
                 ChainId:   cc[k],
-                DestChain: accounts.RootChainID,
+                DestChain: config.RootChain,
                 Amount:    amount[k].Bytes(),
                 GasPrice:  store.DefaultGasPrice.Bytes(),
                 GasLimit:  store.TransferGas.Bytes(),
@@ -198,7 +200,7 @@ func ForgeTransferTransaction() []*bean.Transaction {
             fmt.Println()
             fmt.Println("transaction ", i, ":")
             fmt.Println("from:   ", ca[k].Hex(), " ", cc[k])
-            fmt.Println("to:     ", ra[k].Hex(), " ", accounts.RootChainID)
+            fmt.Println("to:     ", ra[k].Hex(), " ", config.RootChain)
             fmt.Println("amount: ", amount[k])
             fmt.Println()
         }
