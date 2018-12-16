@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"BlockChainTest/database"
 	"BlockChainTest/config"
+	"github.com/ethereum/go-ethereum/params"
 )
 
 type EVM struct {
@@ -27,7 +28,8 @@ var (
 
 func NewEVM(dt database.Transactional) *EVM {
 	evm := &EVM{}
-	evm.State = NewState(dt)
+	subDt := dt.BeginTransaction()
+	evm.State = NewState(subDt)
 	evm.Interpreter = NewEVMInterpreter(evm)
 	return evm
 }
@@ -37,7 +39,7 @@ func (evm *EVM) CreateContractCode(callerAddr accounts.CommonAddress, chainId co
 		return nil, accounts.CommonAddress{}, gas, ErrInsufficientBalance
 	}
 
-	nonce := evm.State.GetNonce(callerAddr, chainId) + 1
+	nonce := evm.State.GetNonce(callerAddr, chainId)
 	account, err := evm.State.CreateContractAccount(callerAddr, chainId, nonce)
 	if err != nil {
 		return nil, accounts.CommonAddress{}, gas, err
@@ -45,29 +47,29 @@ func (evm *EVM) CreateContractCode(callerAddr accounts.CommonAddress, chainId co
 
 	contractAddr := account.Address
 	evm.Transfer(callerAddr, contractAddr, chainId, value)
-
-	fmt.Println("contract addr: ", contractAddr.Hex())
-
 	contract := NewContract(callerAddr, chainId, gas, value, nil)
 	contract.SetCode(contractAddr, byteCode)
-	fmt.Println("contract gas: ", contract.Gas)
-
 	ret, err := run(evm, contract, nil, false)
-	if err != nil {
-		return nil, accounts.CommonAddress{}, gas, err
+
+	createDataGas := uint64(len(ret)) * params.CreateDataGas
+	if contract.UseGas(createDataGas) {
+		err = evm.State.SetByteCode(contractAddr, chainId, ret)
+	} else {
+		err = ErrCodeStoreOutOfGas
 	}
 
-	err = evm.State.SetByteCode(contractAddr, chainId, ret)
-	if err != nil {
-		return nil, accounts.CommonAddress{}, gas, err
+	if err != nil && err != ErrCodeStoreOutOfGas {
+		evm.State.dt.Discard()
+		if err != errExecutionReverted {
+			contract.UseGas(contract.Gas)
+		}
+	} else {
+		evm.State.dt.Commit()
 	}
+
 	fmt.Println("contract address: ", contractAddr.Hex())
 	fmt.Println("contract gas: ", contract.Gas)
-
-	createDataGas := uint64(len(ret)) * CreateDataGas
-	contract.UseGas(createDataGas)
-
-	return ret, contractAddr, contract.Gas, nil
+	return ret, contractAddr, contract.Gas, err
 }
 
 func (evm *EVM) CallContractCode(callerAddr, contractAddr accounts.CommonAddress, chainId config.ChainIdType, input []byte, gas uint64, value *big.Int) (ret []byte, returnGas uint64, err error) {
@@ -79,17 +81,25 @@ func (evm *EVM) CallContractCode(callerAddr, contractAddr accounts.CommonAddress
 	if byteCode == nil {
 		return nil, gas, ErrCodeNotExists
 	}
-	evm.Transfer(callerAddr, contractAddr, chainId, value)
 
+	evm.Transfer(callerAddr, contractAddr, chainId, value)
 	contract := NewContract(callerAddr, chainId, gas, value, nil)
 	contract.SetCode(contractAddr, byteCode)
 
 	ret, err = run(evm, contract, input, false)
+	if err != nil {
+		evm.State.dt.Discard()
+		if err != errExecutionReverted {
+			contract.UseGas(contract.Gas)
+		}
+	} else {
+		evm.State.dt.Commit()
+	}
+
 	return ret, contract.Gas, err
 }
 
 func (evm *EVM) StaticCall(callerAddr, contractAddr accounts.CommonAddress, chainId config.ChainIdType, input []byte, gas uint64) (ret []byte, returnGas uint64, err error) {
-
 	byteCode := evm.State.GetByteCode(contractAddr, chainId)
 	if byteCode == nil {
 		return nil, gas, ErrCodeNotExists
@@ -99,11 +109,19 @@ func (evm *EVM) StaticCall(callerAddr, contractAddr accounts.CommonAddress, chai
 	contract.SetCode(contractAddr, byteCode)
 
 	ret, err = run(evm, contract, input, true)
+	if err != nil {
+		evm.State.dt.Discard()
+		if err != errExecutionReverted {
+			contract.UseGas(contract.Gas)
+		}
+	} else {
+		evm.State.dt.Commit()
+	}
+
 	return ret, contract.Gas, err
 }
 
 func (evm *EVM) DelegateCall(con *Contract, contractAddr accounts.CommonAddress, input []byte, gas uint64) (ret []byte, leftGas uint64, err error) {
-
 	callerAddr := con.CallerAddr
 	chainId := con.ChainId
 	jumpdests := con.Jumpdests
@@ -117,6 +135,15 @@ func (evm *EVM) DelegateCall(con *Contract, contractAddr accounts.CommonAddress,
 	contract.SetCode(contractAddr, byteCode)
 
 	ret, err = run(evm, contract, input, false)
+	if err != nil {
+		evm.State.dt.Discard()
+		if err != errExecutionReverted {
+			contract.UseGas(contract.Gas)
+		}
+	} else {
+		evm.State.dt.Commit()
+	}
+
 	return ret, con.Gas, err
 }
 

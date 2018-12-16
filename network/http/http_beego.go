@@ -8,7 +8,6 @@ import (
     "BlockChainTest/database"
     "BlockChainTest/bean"
     "encoding/json"
-    "math/big"
     "BlockChainTest/node"
     "BlockChainTest/accounts"
     "BlockChainTest/config"
@@ -177,16 +176,7 @@ func (controller *MainController) SendTransaction() {
     to := controller.Input().Get("to")
     a := controller.Input().Get("amount")
     d := controller.Input().Get("destChain")
-
-    amount, succeed := new(big.Int).SetString(a, 10)
-    if succeed == false {
-        resp.ErrorMsg = "params amount parsing error"
-        controller.ServeJSON()
-        return
-    }
-
-    destChain := config.Hex2ChainId(d)
-    t := node.GenerateBalanceTransaction(to, destChain, amount)
+    t := node.GenerateBalanceTransaction(to, d, a)
 
     var body string
     if node.SendTransaction(t) != nil {

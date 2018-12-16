@@ -12,7 +12,7 @@ var (
     MinerGas                 = big.NewInt(20000)
     CreateContractGas        = big.NewInt(1000000)
     CallContractGas          = big.NewInt(10000000)
-    CrossChainGas = big.NewInt(1000)
+    CrossChainGas = big.NewInt(10000000)
     TransferType       int32 = 0
     MinerType          int32 = 1
     CreateContractType int32 = 2
