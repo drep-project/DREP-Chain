@@ -23,6 +23,7 @@ var (
 )
 
 func InitState(config *config.NodeConfig)  {
+
     keystore := config.Keystore
     node, _ := accounts.OpenKeystore(keystore)
     if node != nil {
@@ -69,6 +70,7 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
         subDt := dt.BeginTransaction()
         g, _ := execute(subDt, t)
         gasSum = new(big.Int).Add(gasSum, g)
+        subDt.Commit()
     }
     //fmt.Println("after generate block: ", hex.EncodeToString(database.GetStateRoot()))
     timestamp := time.Now().Unix()

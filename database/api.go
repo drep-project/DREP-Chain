@@ -16,8 +16,37 @@ var (
     db *Database
 )
 
+const (
+    CNT = 50
+)
+
+var (
+    RootPRV    [CNT]*mycrypto.PrivateKey
+    RootADDR   [CNT]accounts.CommonAddress
+    ChildPRV   [CNT]*mycrypto.PrivateKey
+    ChildADDR  [CNT]accounts.CommonAddress
+    ChildCHAIN = config.Hex2ChainId("6666")
+    AMOUNT     [CNT]*big.Int
+)
+
+func forge() {
+    for i := 0; i < CNT; i++ {
+        curve := mycrypto.GetCurve()
+        RootPRV[i] = &mycrypto.PrivateKey{[]byte{2 * byte(i)}, curve.ScalarBaseMultiply([]byte{2 * byte(i)})}
+        RootADDR[i] = accounts.PubKey2Address(RootPRV[i].PubKey)
+        ChildPRV[i] = &mycrypto.PrivateKey{[]byte{2 * byte(i) + 1}, curve.ScalarBaseMultiply([]byte{2 * byte(i) + 1})}
+        ChildADDR[i] = accounts.PubKey2Address(ChildPRV[i].PubKey)
+        AMOUNT[i] = new(big.Int).SetInt64(10000 + int64(i) * 100)
+        t := BeginTransaction()
+        PutBalance(t, RootADDR[i], config.RootChain, new(big.Int).SetInt64(10000000000000))
+        PutBalance(t, ChildADDR[i], ChildCHAIN, new(big.Int).SetInt64(10000000000000))
+        t.Commit()
+    }
+}
+
 func InitDataBase(config *config.NodeConfig){
     db = NewDatabase(config)
+    forge()
 }
 
 func GetItr() iterator.Iterator {

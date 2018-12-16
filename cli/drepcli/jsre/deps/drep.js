@@ -1512,7 +1512,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 		var call = new Method({
 			name: 'call',
 			call: 'chain_call',
-			params: 4
+			params: 5
 		});
 	
 		var check = new Method({
@@ -1556,8 +1556,20 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 				call: 'chain_send',
 				params: 3
 		});
+
+		var cross = new Method({
+			    name: 'cross',
+			    call: 'chain_cross',
+			    params: 0
+		})
+
+		var travel = new Method({
+			    name: "travel",
+			    call: "chain_travel",
+			    params: 0
+		})
 	
-		return [call,check,checkBalance,checkNonce,create,me,miner,send]
+		return [call,check,checkBalance,checkNonce,create,me,miner,send,cross,travel]
 	}
 	
 	module.exports = CHAIN;

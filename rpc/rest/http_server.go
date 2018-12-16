@@ -5,9 +5,15 @@ import (
     "flag"
     "strconv"
     "encoding/json"
+<<<<<<< HEAD
     "math/big"
     "github.com/spf13/viper"
     "github.com/astaxie/beego"
+=======
+    "strings"
+    "io/ioutil"
+    "BlockChainTest/log"
+>>>>>>> f71151d... modify chainId type and add revert
     "BlockChainTest/node"
     "BlockChainTest/database"
     "BlockChainTest/accounts"
@@ -292,7 +298,7 @@ func SendTransaction(w http.ResponseWriter, r *http.Request) {
     params := analysisReqParam(r)
     var to string
     var amount string
-    var destChain config.ChainIdType
+    var destChain string
     if value, ok := params["to"].(string); ok {
         to = value[2:]
     }
@@ -300,8 +306,9 @@ func SendTransaction(w http.ResponseWriter, r *http.Request) {
         amount = value
     }
     if value, ok := params["destChain"].(string); ok {
-        destChain = config.Hex2ChainId(value)
+        destChain = value
     }
+<<<<<<< HEAD
 >>>>>>> 39bb07a... modify chainId type and add revert
 
     amount, succeed := new(big.Int).SetString(a, 10)
@@ -318,6 +325,8 @@ func SendTransaction(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+=======
+>>>>>>> f71151d... modify chainId type and add revert
     t := node.GenerateBalanceTransaction(to, destChain, amount)
 
     var body string
