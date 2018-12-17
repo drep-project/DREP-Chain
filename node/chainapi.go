@@ -38,15 +38,18 @@ func (chain *ChainApi) Me() *MeInfo{
     chainId := store.GetChainId()
     nonce := database.GetNonce(addr, chainId)
     balance := database.GetBalance(addr, chainId)
-    fmt.Println("check me: ", balance)
+    fmt.Println("check me: ", balance.String())
     fmt.Println("check me: ", nonce)
 
-    return &MeInfo{
+    //str,_ := json.Marshal(balance)
+    //fmt.Println(string(str))
+    mi := &MeInfo{
         Address: addr, 
         ChainId: chainId, 
         Nonce: nonce,
-        Balance: balance, 
+        Balance: new(big.Int).Set(balance),
     }
+    return mi
 }
 
 func (chain *ChainApi) Miner(addr, chainId string) error{

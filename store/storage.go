@@ -120,39 +120,6 @@ func deduct(dt database.Transactional, addr accounts.CommonAddress, chainId conf
     return leftBalance, actualFee
 }
 
-func preExecute(dt database.Transactional, t *bean.Transaction, gasWant *big.Int) (canExecute bool, addr accounts.CommonAddress,
-   balance, gasPrice, gasUsed, gasFee *big.Int) {
-
-   addr = accounts.PubKey2Address(t.Data.PubKey)
-   gasUsed, gasFee = new(big.Int), new(big.Int)
-
-   gasPrice = new(big.Int).SetBytes(t.Data.GasPrice)
-   gasLimit := new(big.Int).SetBytes(t.Data.GasLimit)
-   amountWant := new(big.Int).Mul(gasWant, gasPrice)
-   balance = database.GetBalance(addr, t.Data.ChainId)
-   nonce := database.GetNonce(addr, t.Data.ChainId)
-
-   if nonce + 1 != t.Data.Nonce || gasLimit.Cmp(gasWant) < 0 || balance.Cmp(amountWant) < 0 {
-       gasUsed = new(big.Int).Set(gasLimit)
-       gasFee = new(big.Int).Mul(gasLimit, gasPrice)
-       balance = new(big.Int).Sub(balance, gasFee)
-       if balance.Sign() < 0 {
-           gasFee = new(big.Int).Add(balance, gasFee)
-           balance = new(big.Int)
-       }
-       database.PutBalance(dt, addr, t.Data.ChainId, balance)
-       return
-   }
-
-   canExecute = true
-   gasUsed = new(big.Int).Set(gasWant)
-   gasFee = new(big.Int).Set(amountWant)
-   balance = new(big.Int).Sub(balance, gasFee)
-   database.PutBalance(dt, addr, t.Data.ChainId, balance)
-   database.PutNonce(dt, addr, t.Data.ChainId, nonce + 1)
-   return
-}
-
 func executeTransferTransaction(dt database.Transactional, t *bean.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
     var (
        can bool
@@ -297,6 +264,52 @@ func executeCrossChainTransaction(dt database.Transactional, t *bean.Transaction
             subDt.Discard()
         }
     }
+    return
+}
+
+func preExecuteCrossChainTransaction(dt database.Transactional, t *bean.Transaction) (gasUsed, gasFee *big.Int) {
+    var (
+        can bool
+        addr accounts.CommonAddress
+        balance, gasPrice *big.Int
+    )
+
+    gasUsed, gasFee = new(big.Int), new(big.Int)
+    subDt := dt.BeginTransaction()
+    can, addr,  _, _, gasPrice = canExecute(subDt, t, nil, CrossChainGas)
+    if !can {
+        return new(big.Int), new(big.Int)
+    }
+
+    cct := &bean.CrossChainTransaction{}
+    err := json.Unmarshal(t.Data.Data, &cct)
+    if err != nil {
+        return new(big.Int), new(big.Int)
+    }
+
+    gasSum := new(big.Int)
+    for _, tx := range cct.Trans {
+        if tx.Data.Type == CrossChainType {
+            continue
+        }
+        g, _ := execute(subDt, tx)
+        gasSum = new(big.Int).Add(gasSum, g)
+    }
+
+    cct.StateRoot = subDt.GetChainStateRoot(database.ChildCHAIN)
+    t.Data.Data, _ = json.Marshal(cct)
+
+    amountSum := new(big.Int).Mul(gasSum, gasPrice)
+    balance = database.GetBalance(addr, t.Data.ChainId)
+    if balance.Cmp(amountSum) >= 0 {
+        gasUsed = new(big.Int).Set(gasSum)
+        gasFee = new(big.Int).Set(amountSum)
+        _, gasFee = deduct(subDt, addr, t.Data.ChainId, balance, gasFee)
+        subDt.Commit()
+    } else {
+        subDt.Discard()
+    }
+
     return
 }
 

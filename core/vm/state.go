@@ -121,5 +121,5 @@ func (s *State) Load(x *big.Int) []byte {
 }
 
 func (s *State) Store(x, y *big.Int, chainId config.ChainIdType) {
-	s.dt.PutOutState(chainId, x.Bytes(), y.Bytes())
+	s.dt.Put(chainId, x.Bytes(), y.Bytes())
 }
