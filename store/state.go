@@ -68,7 +68,12 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
     //fmt.Println("before generate block: ", hex.EncodeToString(database.GetStateRoot()))
     for _, t := range ts {
         subDt := dt.BeginTransaction()
-        g, _ := execute(subDt, t)
+        var g *big.Int
+        if t.Data.Type == CrossChainType {
+            g, _ = preExecuteCrossChainTransaction(subDt, t)
+        } else {
+            g, _ = execute(subDt, t)
+        }
         gasSum = new(big.Int).Add(gasSum, g)
         subDt.Commit()
     }

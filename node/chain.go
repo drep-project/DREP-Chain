@@ -132,7 +132,7 @@ func GenerateCallContractTransaction(addr, cid, in, value string, readOnly bool)
 
 func ForgeCrossChainTransaction() *bean.Transaction {
     dt := database.BeginTransaction()
-    num := 5
+    num := 3
     trans := make([]*bean.Transaction, num)
     for i := 0; i < num; i ++ {
         var data *bean.TransactionData
@@ -163,23 +163,20 @@ func ForgeCrossChainTransaction() *bean.Transaction {
         sig, _ := tx.TxSig(prvKey)
         tx.Sig = sig
         trans[i] = tx
-        dt.Discard()
     }
-
-    dt = database.BeginTransaction()
-    stateRoot := dt.GetChainStateRoot(database.ChildCHAIN)
     dt.Discard()
+
     cct := &bean.CrossChainTransaction{
         ChainId: database.ChildCHAIN,
-        StateRoot: stateRoot,
+        StateRoot: nil,
         Trans: trans,
     }
     b, _ := json.Marshal(cct)
 
     ftd := &bean.TransactionData{
         Version: store.Version,
-        Nonce: database.GetNonce(store.GetAddress(), store.GetChainId()),
-        Type: store.TransferType,
+        Nonce: database.GetNonce(store.GetAddress(), store.GetChainId()) + 1,
+        Type: store.CrossChainType,
         ChainId: config.RootChain,
         GasPrice:store.DefaultGasPrice.Bytes(),
         GasLimit:store.CrossChainGas.Bytes(),
@@ -187,6 +184,7 @@ func ForgeCrossChainTransaction() *bean.Transaction {
         Data: b,
         PubKey:store.GetPubKey(),
     }
+
 
     return &bean.Transaction{Data: ftd}
 }

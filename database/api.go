@@ -17,7 +17,7 @@ var (
 )
 
 const (
-    CNT = 50
+    CNT = 2
 )
 
 var (
@@ -38,8 +38,9 @@ func forge() {
         ChildADDR[i] = accounts.PubKey2Address(ChildPRV[i].PubKey)
         AMOUNT[i] = new(big.Int).SetInt64(10000 + int64(i) * 100)
         t := BeginTransaction()
-        PutBalance(t, RootADDR[i], config.RootChain, new(big.Int).SetInt64(10000000000000))
-        PutBalance(t, ChildADDR[i], ChildCHAIN, new(big.Int).SetInt64(10000000000000))
+        initialBalance, _ := new(big.Int).SetString("5000000000000000000000", 10)
+        PutBalance(t, RootADDR[i], config.RootChain, initialBalance)
+        PutBalance(t, ChildADDR[i], ChildCHAIN, initialBalance)
         t.Commit()
     }
 }
@@ -55,6 +56,10 @@ func GetItr() iterator.Iterator {
 
 func BeginTransaction() Transactional {
     return db.BeginTransaction()
+}
+
+func PutOutState(chainId config.ChainIdType, key []byte, value []byte) error {
+    return db.PutOutState(chainId, key, value)
 }
 
 func GetBlock(height int64) *bean.Block {
@@ -140,7 +145,7 @@ func PutStorage(t Transactional, addr accounts.CommonAddress, chainId config.Cha
     if err != nil {
         return err
     }
-    return t.PutInState(chainId, key, value)
+    return t.Put(chainId, key, value)
 }
 
 
