@@ -14,6 +14,12 @@ import (
     "BlockChainTest/config"
     "bytes"
     "encoding/hex"
+    "net/http"
+    "strconv"
+)
+
+var (
+    childTrans []*bean.Transaction
 )
 
 func ExecuteTransactions(b *bean.Block) *big.Int {
@@ -51,14 +57,43 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
         database.PutBlock(b)
         fmt.Println("received block: ", b.Header, " ", b.Data, " ", b.MultiSig)
         dt.Commit()
-        //fmt.Println("11111: ", database.GetBalance(GetAddress(), GetChainId()))
         distributeBlockPrize(b, total)
-        //fmt.Println("22222: ", database.GetBalance(GetAddress(), GetChainId()))
+        preSync(b)
+        doSync(height)
     } else {
         fmt.Println("not matched ", hex.EncodeToString(b.Header.StateRoot), " vs ", hex.EncodeToString(stateRoot))
         dt.Discard()
     }
     return total
+}
+
+func preSync(block *bean.Block) {
+    if !isRelay {
+        return
+    }
+    if childTrans == nil {
+        childTrans = make([]*bean.Transaction, 0)
+    }
+    childTrans = append(childTrans, block.Data.TxList...)
+}
+
+func doSync(height int64) {
+    if !isRelay || height % 10 != 0 {
+        return
+    }
+    dt := database.BeginTransaction()
+    cct := &bean.CrossChainTransaction{
+        ChainId: GetChainId(),
+        StateRoot: dt.GetTotalStateRoot(),
+        Trans: childTrans,
+    }
+    data, err := json.Marshal(cct)
+    if err != nil {
+        return
+    }
+    http.Get("http://localhost:" + strconv.FormatInt(config.DefaultRestPort, 10) + "/SyncChildChain?data=" + string(data))
+    childTrans = nil
+    dt.Commit()
 }
 
 func execute(dt database.Transactional, t *bean.Transaction) (gasUsed, gasFee *big.Int) {
@@ -267,51 +302,51 @@ func executeCrossChainTransaction(dt database.Transactional, t *bean.Transaction
     return
 }
 
-func preExecuteCrossChainTransaction(dt database.Transactional, t *bean.Transaction) (gasUsed, gasFee *big.Int) {
-    var (
-        can bool
-        addr accounts.CommonAddress
-        balance, gasPrice *big.Int
-    )
-
-    gasUsed, gasFee = new(big.Int), new(big.Int)
-    subDt := dt.BeginTransaction()
-    can, addr,  _, _, gasPrice = canExecute(subDt, t, nil, CrossChainGas)
-    if !can {
-        return new(big.Int), new(big.Int)
-    }
-
-    cct := &bean.CrossChainTransaction{}
-    err := json.Unmarshal(t.Data.Data, &cct)
-    if err != nil {
-        return new(big.Int), new(big.Int)
-    }
-
-    gasSum := new(big.Int)
-    for _, tx := range cct.Trans {
-        if tx.Data.Type == CrossChainType {
-            continue
-        }
-        g, _ := execute(subDt, tx)
-        gasSum = new(big.Int).Add(gasSum, g)
-    }
-
-    cct.StateRoot = subDt.GetChainStateRoot(database.ChildCHAIN)
-    t.Data.Data, _ = json.Marshal(cct)
-
-    amountSum := new(big.Int).Mul(gasSum, gasPrice)
-    balance = database.GetBalance(addr, t.Data.ChainId)
-    if balance.Cmp(amountSum) >= 0 {
-        gasUsed = new(big.Int).Set(gasSum)
-        gasFee = new(big.Int).Set(amountSum)
-        _, gasFee = deduct(subDt, addr, t.Data.ChainId, balance, gasFee)
-        subDt.Commit()
-    } else {
-        subDt.Discard()
-    }
-
-    return
-}
+//func preExecuteCrossChainTransaction(dt database.Transactional, t *bean.Transaction) (gasUsed, gasFee *big.Int) {
+//    var (
+//        can bool
+//        addr accounts.CommonAddress
+//        balance, gasPrice *big.Int
+//    )
+//
+//    gasUsed, gasFee = new(big.Int), new(big.Int)
+//    subDt := dt.BeginTransaction()
+//    can, addr,  _, _, gasPrice = canExecute(subDt, t, nil, CrossChainGas)
+//    if !can {
+//        return new(big.Int), new(big.Int)
+//    }
+//
+//    cct := &bean.CrossChainTransaction{}
+//    err := json.Unmarshal(t.Data.Data, &cct)
+//    if err != nil {
+//        return new(big.Int), new(big.Int)
+//    }
+//
+//    gasSum := new(big.Int)
+//    for _, tx := range cct.Trans {
+//        if tx.Data.Type == CrossChainType {
+//            continue
+//        }
+//        g, _ := execute(subDt, tx)
+//        gasSum = new(big.Int).Add(gasSum, g)
+//    }
+//
+//    cct.StateRoot = subDt.GetChainStateRoot(database.ChildCHAIN)
+//    t.Data.Data, _ = json.Marshal(cct)
+//
+//    amountSum := new(big.Int).Mul(gasSum, gasPrice)
+//    balance = database.GetBalance(addr, t.Data.ChainId)
+//    if balance.Cmp(amountSum) >= 0 {
+//        gasUsed = new(big.Int).Set(gasSum)
+//        gasFee = new(big.Int).Set(amountSum)
+//        _, gasFee = deduct(subDt, addr, t.Data.ChainId, balance, gasFee)
+//        subDt.Commit()
+//    } else {
+//        subDt.Discard()
+//    }
+//
+//    return
+//}
 
 func distributeBlockPrize(b *bean.Block, total *big.Int) {
     dt := database.BeginTransaction()

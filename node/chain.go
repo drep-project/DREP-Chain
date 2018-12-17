@@ -12,10 +12,7 @@ import (
     "BlockChainTest/network"
     "BlockChainTest/database"
     "BlockChainTest/accounts"
-    "math/rand"
-    "fmt"
     "encoding/hex"
-    "encoding/json"
 )
 
 func SendTransaction(t *bean.Transaction) error {
@@ -130,61 +127,75 @@ func GenerateCallContractTransaction(addr, cid, in, value string, readOnly bool)
     return &bean.Transaction{Data: data}
 }
 
-func ForgeCrossChainTransaction() *bean.Transaction {
-    dt := database.BeginTransaction()
-    num := 3
-    trans := make([]*bean.Transaction, num)
-    for i := 0; i < num; i ++ {
-        var data *bean.TransactionData
-        k := rand.Intn(database.CNT)
-        nonce := database.GetNonce(database.ChildADDR[k], database.ChildCHAIN) + 1
-        database.PutNonce(dt, database.ChildADDR[k], database.ChildCHAIN, nonce)
-        data = &bean.TransactionData{
-            Version:   store.Version,
-            Nonce:     nonce,
-            Type:      store.TransferType,
-            To:        database.RootADDR[k].Hex(),
-            ChainId:   database.ChildCHAIN,
-            DestChain: config.RootChain,
-            Amount:    database.AMOUNT[k].Bytes(),
-            GasPrice:  store.DefaultGasPrice.Bytes(),
-            GasLimit:  store.TransferGas.Bytes(),
-            Timestamp: time.Now().Unix(),
-            PubKey:    database.ChildPRV[k].PubKey,
-        }
-        fmt.Println()
-        fmt.Println("transaction ", i, ":")
-        fmt.Println("from:   ", database.ChildADDR[k].Hex(), " ", database.ChildCHAIN.Hex())
-        fmt.Println("to:     ", database.RootADDR[k].Hex(), " ", config.RootChain.Hex())
-        fmt.Println("amount: ", database.AMOUNT[k])
-        fmt.Println()
-        tx := &bean.Transaction{Data: data}
-        prvKey := database.ChildPRV[k]
-        sig, _ := tx.TxSig(prvKey)
-        tx.Sig = sig
-        trans[i] = tx
-    }
-    dt.Discard()
-
-    cct := &bean.CrossChainTransaction{
-        ChainId: database.ChildCHAIN,
-        StateRoot: nil,
-        Trans: trans,
-    }
-    b, _ := json.Marshal(cct)
-
-    ftd := &bean.TransactionData{
+func GenerateCrossChainTransaction(data []byte) *bean.Transaction {
+    transactionData := &bean.TransactionData{
         Version: store.Version,
         Nonce: database.GetNonce(store.GetAddress(), store.GetChainId()) + 1,
         Type: store.CrossChainType,
-        ChainId: config.RootChain,
-        GasPrice:store.DefaultGasPrice.Bytes(),
-        GasLimit:store.CrossChainGas.Bytes(),
+        ChainId: store.GetChainId(),
+        GasPrice: store.DefaultGasPrice.Bytes(),
+        GasLimit: store.CrossChainGas.Bytes(),
         Timestamp:time.Now().Unix(),
-        Data: b,
-        PubKey:store.GetPubKey(),
+        Data: data,
+        PubKey: store.GetPubKey(),
     }
-
-
-    return &bean.Transaction{Data: ftd}
+    return &bean.Transaction{Data: transactionData}
 }
+
+//func ForgeCrossChainTransaction() *bean.Transaction {
+//    dt := database.BeginTransaction()
+//    num := 3
+//    trans := make([]*bean.Transaction, num)
+//    for i := 0; i < num; i ++ {
+//        var data *bean.TransactionData
+//        k := rand.Intn(database.CNT)
+//        nonce := database.GetNonce(database.ChildADDR[k], database.ChildCHAIN) + 1
+//        database.PutNonce(dt, database.ChildADDR[k], database.ChildCHAIN, nonce)
+//        data = &bean.TransactionData{
+//            Version:   store.Version,
+//            Nonce:     nonce,
+//            Type:      store.TransferType,
+//            To:        database.RootADDR[k].Hex(),
+//            ChainId:   database.ChildCHAIN,
+//            DestChain: config.RootChain,
+//            Amount:    database.AMOUNT[k].Bytes(),
+//            GasPrice:  store.DefaultGasPrice.Bytes(),
+//            GasLimit:  store.TransferGas.Bytes(),
+//            Timestamp: time.Now().Unix(),
+//            PubKey:    database.ChildPRV[k].PubKey,
+//        }
+//        fmt.Println()
+//        fmt.Println("transaction ", i, ":")
+//        fmt.Println("from:   ", database.ChildADDR[k].Hex(), " ", database.ChildCHAIN.Hex())
+//        fmt.Println("to:     ", database.RootADDR[k].Hex(), " ", config.RootChain.Hex())
+//        fmt.Println("amount: ", database.AMOUNT[k])
+//        fmt.Println()
+//        tx := &bean.Transaction{Data: data}
+//        prvKey := database.ChildPRV[k]
+//        sig, _ := tx.TxSig(prvKey)
+//        tx.Sig = sig
+//        trans[i] = tx
+//    }
+//    dt.Discard()
+//
+//    cct := &bean.CrossChainTransaction{
+//        ChainId: database.ChildCHAIN,
+//        StateRoot: nil,
+//        Trans: trans,
+//    }
+//    b, _ := json.Marshal(cct)
+//
+//    ftd := &bean.TransactionData{
+//        Version: store.Version,
+//        Nonce: database.GetNonce(store.GetAddress(), store.GetChainId()) + 1,
+//        Type: store.CrossChainType,
+//        ChainId: config.RootChain,
+//        GasPrice:store.DefaultGasPrice.Bytes(),
+//        GasLimit:store.CrossChainGas.Bytes(),
+//        Timestamp:time.Now().Unix(),
+//        Data: b,
+//        PubKey:store.GetPubKey(),
+//    }
+//
+//    return &bean.Transaction{Data: ftd}
+//}
