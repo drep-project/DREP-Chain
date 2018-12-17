@@ -16,38 +16,38 @@ var (
     db *Database
 )
 
-const (
-    CNT = 2
-)
-
-var (
-    RootPRV    [CNT]*mycrypto.PrivateKey
-    RootADDR   [CNT]accounts.CommonAddress
-    ChildPRV   [CNT]*mycrypto.PrivateKey
-    ChildADDR  [CNT]accounts.CommonAddress
-    ChildCHAIN = config.Hex2ChainId("6666")
-    AMOUNT     [CNT]*big.Int
-)
-
-func forge() {
-    for i := 0; i < CNT; i++ {
-        curve := mycrypto.GetCurve()
-        RootPRV[i] = &mycrypto.PrivateKey{[]byte{2 * byte(i)}, curve.ScalarBaseMultiply([]byte{2 * byte(i)})}
-        RootADDR[i] = accounts.PubKey2Address(RootPRV[i].PubKey)
-        ChildPRV[i] = &mycrypto.PrivateKey{[]byte{2 * byte(i) + 1}, curve.ScalarBaseMultiply([]byte{2 * byte(i) + 1})}
-        ChildADDR[i] = accounts.PubKey2Address(ChildPRV[i].PubKey)
-        AMOUNT[i] = new(big.Int).SetInt64(10000 + int64(i) * 100)
-        t := BeginTransaction()
-        initialBalance, _ := new(big.Int).SetString("5000000000000000000000", 10)
-        PutBalance(t, RootADDR[i], config.RootChain, initialBalance)
-        PutBalance(t, ChildADDR[i], ChildCHAIN, initialBalance)
-        t.Commit()
-    }
-}
+//const (
+//    CNT = 2
+//)
+//
+//var (
+//    RootPRV    [CNT]*mycrypto.PrivateKey
+//    RootADDR   [CNT]accounts.CommonAddress
+//    ChildPRV   [CNT]*mycrypto.PrivateKey
+//    ChildADDR  [CNT]accounts.CommonAddress
+//    ChildCHAIN = config.Hex2ChainId("6666")
+//    AMOUNT     [CNT]*big.Int
+//)
+//
+//func forge() {
+//    for i := 0; i < CNT; i++ {
+//        curve := mycrypto.GetCurve()
+//        RootPRV[i] = &mycrypto.PrivateKey{[]byte{2 * byte(i)}, curve.ScalarBaseMultiply([]byte{2 * byte(i)})}
+//        RootADDR[i] = accounts.PubKey2Address(RootPRV[i].PubKey)
+//        ChildPRV[i] = &mycrypto.PrivateKey{[]byte{2 * byte(i) + 1}, curve.ScalarBaseMultiply([]byte{2 * byte(i) + 1})}
+//        ChildADDR[i] = accounts.PubKey2Address(ChildPRV[i].PubKey)
+//        AMOUNT[i] = new(big.Int).SetInt64(10000 + int64(i) * 100)
+//        t := BeginTransaction()
+//        initialBalance, _ := new(big.Int).SetString("5000000000000000000000", 10)
+//        PutBalance(t, RootADDR[i], config.RootChain, initialBalance)
+//        PutBalance(t, ChildADDR[i], ChildCHAIN, initialBalance)
+//        t.Commit()
+//    }
+//}
 
 func InitDataBase(config *config.NodeConfig){
     db = NewDatabase(config)
-    forge()
+    //forge()
 }
 
 func GetItr() iterator.Iterator {
@@ -56,10 +56,6 @@ func GetItr() iterator.Iterator {
 
 func BeginTransaction() Transactional {
     return db.BeginTransaction()
-}
-
-func PutOutState(chainId config.ChainIdType, key []byte, value []byte) error {
-    return db.PutOutState(chainId, key, value)
 }
 
 func GetBlock(height int64) *bean.Block {

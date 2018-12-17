@@ -14,12 +14,12 @@ import (
 )
 
 var (
-    chainId  config.ChainIdType
-    prvKey   *mycrypto.PrivateKey
-    pubKey   *mycrypto.Point
-    address  accounts.CommonAddress
-
-    port bean.Port
+    chainId    config.ChainIdType
+    prvKey     *mycrypto.PrivateKey
+    pubKey     *mycrypto.Point
+    address    accounts.CommonAddress
+    port       bean.Port
+    isRelay    bool
 )
 
 func InitState(config *config.NodeConfig)  {
@@ -58,6 +58,7 @@ func InitState(config *config.NodeConfig)  {
     }
     adminPubKey = miners[0].PubKey
     port = bean.Port(config.Port)
+    isRelay = accounts.PubKey2Address(pubKey).Hex() == bootNodes[0].Address
 }
 
 func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
@@ -65,19 +66,12 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
     height := database.GetMaxHeight() + 1
     ts := PickTransactions(BlockGasLimit)
     gasSum := new(big.Int)
-    //fmt.Println("before generate block: ", hex.EncodeToString(database.GetStateRoot()))
     for _, t := range ts {
         subDt := dt.BeginTransaction()
-        var g *big.Int
-        if t.Data.Type == CrossChainType {
-            g, _ = preExecuteCrossChainTransaction(subDt, t)
-        } else {
-            g, _ = execute(subDt, t)
-        }
+        g, _ := execute(subDt, t)
         gasSum = new(big.Int).Add(gasSum, g)
         subDt.Commit()
     }
-    //fmt.Println("after generate block: ", hex.EncodeToString(database.GetStateRoot()))
     timestamp := time.Now().Unix()
     stateRoot := dt.GetTotalStateRoot()
     gasUsed := gasSum.Bytes()
