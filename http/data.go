@@ -65,7 +65,7 @@ func ParseTransaction(tx *bean.Transaction) *TransactionWeb {
     h, _ := tx.TxHash()
     t.Hash = "0x" + hex.EncodeToString(h)
     t.From = "0x" + bean.PubKey2Address(tx.Data.PubKey).Hex()
-    t.To = "0x" + tx.Data.To
+    t.To = tx.Data.To
     t.Data = "0x" + hex.EncodeToString(tx.Data.Data)
     t.ChainId = tx.Data.ChainId
     t.Amount = new(big.Int).SetBytes(tx.Data.Amount).String()
