@@ -198,6 +198,7 @@ func PutStorage(t Transactional, addr accounts.CommonAddress, chainId config.Cha
 //
 //func GetBalanceInsideTransaction(t *Transaction, addr accounts.CommonAddress, chainId int64) *big.Int {
 //    storage := GetStorageInsideTransaction(t, addr, chainId)
+
 func GetBalance(addr accounts.CommonAddress, chainId config.ChainIdType) *big.Int {
     storage := GetStorage(addr, chainId)
     if storage.Balance == nil {
@@ -238,6 +239,20 @@ func PutByteCode(t Transactional, addr accounts.CommonAddress, chainId config.Ch
 func GetCodeHash(addr accounts.CommonAddress, chainId config.ChainIdType) accounts.Hash {
     storage := GetStorage(addr, chainId)
     return storage.CodeHash
+}
+
+func GetReputation(addr accounts.CommonAddress, chainId config.ChainIdType) *big.Int {
+    storage := GetStorage(addr, chainId)
+    if storage.Balance == nil {
+        return new(big.Int)
+    }
+    return storage.Reputation
+}
+
+func PutReputation(t Transactional, addr accounts.CommonAddress, chainId config.ChainIdType, reputation *big.Int) error {
+    storage := GetStorage(addr, chainId)
+    storage.Reputation = reputation
+    return PutStorage(t, addr, chainId, storage)
 }
 
 func GetLogs(txHash []byte, chainId config.ChainIdType) []*bean.Log {

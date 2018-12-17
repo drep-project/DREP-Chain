@@ -88,14 +88,14 @@ func (chain *ChainApi) Check(addr accounts.CommonAddress, chainId config.ChainId
     return database.GetStorage(addr, chainId)
 }
 
-func (chain *ChainApi) Cross() (string, error) {
-    t := ForgeCrossChainTransaction()
-    if SendTransaction(t) != nil {
-        return "", errors.New("Offline")
-    } else {
-        return t.TxId()
-    }
-}
+//func (chain *ChainApi) Cross() (string, error) {
+//    t := ForgeCrossChainTransaction()
+//    if SendTransaction(t) != nil {
+//        return "", errors.New("Offline")
+//    } else {
+//        return t.TxId()
+//    }
+//}
 
 func (chain *ChainApi) Travel() {
     itr := database.GetItr()
