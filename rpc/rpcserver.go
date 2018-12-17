@@ -5,7 +5,6 @@ import (
 	"sync"
 	"net"
 	"strings"
-
 	"BlockChainTest/rpc/rest"
 	"BlockChainTest/log"
 	"BlockChainTest/config"
@@ -29,7 +28,7 @@ type RpcServer struct {
 	WsHandler  *Server  // Websocket RPC request handler to process the API requests
 	
 	RestEndpoint string       // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
-	RestListener net.Listener // Websocket RPC listener socket to server API requests
+	RestController *rest.MainController // Websocket RPC listener socket to server API requests
 
 	lock sync.RWMutex
 	RpcConfig *config.RpcConfig
@@ -225,21 +224,19 @@ func (rpcserver *RpcServer) StartREST(endpoint string) error {
 	if !rpcserver.RpcConfig.RESTEnabled {
 		return nil
 	}
-	listener, err := rest.HttpStart(endpoint)
-	if err != nil {
-		return err
-	}
-	rpcserver.RestEndpoint = endpoint
-	rpcserver.RestListener = listener
+    go func() {
+        mainController := rest.Start()
+        rpcserver.RestEndpoint = endpoint
+        rpcserver.RestController = mainController
+    }()
 	return nil
 }
 
 // StopHTTP terminates the HTTP RPC endpoint.
 func (rpcserver *RpcServer) StopREST()  {
-	if rpcserver.RestListener != nil {
-		rpcserver.RestListener.Close()
-		rpcserver.RestListener = nil
-
+	if rpcserver.RestController != nil {
+		rpcserver.RestController.StopRun()
+		rpcserver.RestController = nil
 		log.Info("REST endpoint closed", "url", fmt.Sprintf("http://%s", rpcserver.HttpEndpoint))
 	}
 }

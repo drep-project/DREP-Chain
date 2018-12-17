@@ -56,6 +56,7 @@ type Storage struct {
 	Nonce      int64
 	ByteCode   ByteCode
 	CodeHash   Hash
+	Reputation *big.Int
 }
 
 func NewStorage() *Storage {
@@ -69,7 +70,6 @@ type Account struct {
 	Address       CommonAddress
 	Node          *Node
 	Storage       *Storage
-	Reputation    int64
 }
 
 func NewNormalAccount(parent *Node, chainId int64) (*Account, error) {
@@ -84,7 +84,6 @@ func NewNormalAccount(parent *Node, chainId int64) (*Account, error) {
 		Address:       address,
 		Node:          node,
 		Storage:       storage,
-		Reputation:    1000,
 	}
 	return account, nil
 }

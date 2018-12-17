@@ -157,6 +157,20 @@ func PutBalanceOutSideTransaction(addr accounts.CommonAddress, chainId int64, ba
     return PutStorageOutsideTransaction(storage, addr, chainId)
 }
 
+func GetReputationOutsideTransaction(addr accounts.CommonAddress, chainId int64) *big.Int {
+    storage := GetStorageOutsideTransaction(addr, chainId)
+    if storage.Reputation == nil {
+        return new(big.Int)
+    }
+    return storage.Reputation
+}
+
+func PutReputationOutSideTransaction(addr accounts.CommonAddress, chainId int64, rep *big.Int) error {
+    storage := GetStorageOutsideTransaction(addr, chainId)
+    storage.Reputation = rep
+    return PutStorageOutsideTransaction(storage, addr, chainId)
+}
+
 func GetBalanceInsideTransaction(t *Transaction, addr accounts.CommonAddress, chainId int64) *big.Int {
     storage := GetStorageInsideTransaction(t, addr, chainId)
     if storage.Balance == nil {
