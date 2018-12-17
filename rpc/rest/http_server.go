@@ -5,23 +5,12 @@ import (
     "flag"
     "strconv"
     "encoding/json"
-<<<<<<< HEAD
-    "math/big"
-    "github.com/spf13/viper"
     "github.com/astaxie/beego"
-=======
-    "strings"
-    "io/ioutil"
-    "BlockChainTest/log"
->>>>>>> f71151d... modify chainId type and add revert
     "BlockChainTest/node"
     "BlockChainTest/database"
     "BlockChainTest/accounts"
-<<<<<<< HEAD
     "BlockChainTest/bean"
-=======
     "BlockChainTest/config"
->>>>>>> 39bb07a... modify chainId type and add revert
 )
 
 var mappingMethodMap = map[string] string {
@@ -52,16 +41,10 @@ type Response struct {
     Data interface{} `json:"body"`
 }
 
-<<<<<<< HEAD
 type MainController struct {
     beego.Controller
     actionName *string
 }
-=======
-func GetAllBlocks(w http.ResponseWriter, _ *http.Request) {
-    fmt.Println("get all blocks running")
-    blocks := database.GetAllBlocks()
->>>>>>> 39bb07a... modify chainId type and add revert
 
 func (controller *MainController) Get() {
     controller.Ctx.WriteString("Hello World!")
@@ -83,7 +66,6 @@ func (controller *MainController) GetAllBlocks() {
     controller.ServeJSON()
 }
 
-<<<<<<< HEAD
 func (controller *MainController) GetBlock() {
     //var height int64
     value := controller.Input().Get("height")
@@ -98,7 +80,7 @@ func (controller *MainController) GetBlock() {
     controller.ServeJSON()
 }
 
-func (controller *MainController)GetHighestBlock() {
+func (controller *MainController) GetHighestBlock() {
     resp := &Response{Success:true}
     controller.Data["json"] = resp
     block := database.GetHighestBlock()
@@ -106,49 +88,11 @@ func (controller *MainController)GetHighestBlock() {
     controller.ServeJSON()
 }
 
-func (controller *MainController)GetMaxHeight() {
+func (controller *MainController) GetMaxHeight() {
     resp := &Response{Success:true}
     controller.Data["json"] = resp
     height := database.GetMaxHeight()
 
-=======
-func GetBlock(w http.ResponseWriter, r *http.Request) {
-    params := analysisReqParam(r)
-    var height int64
-    if value, ok := params["height"].(string); ok {
-        height, _ = strconv.ParseInt(value, 10, 64)
-    }
-
-    block := database.GetBlock(height)
-    if block == nil {
-        errMsg := "block is nil"
-        fmt.Println(errMsg)
-        resp := &Response{Success:false, Data:errMsg}
-        writeResponse(w, resp)
-        return
-    }
-    blockWeb := ParseBlock(block)
-    resp := &Response{Success:true, Data:blockWeb}
-    writeResponse(w, resp)
-}
-
-func GetHighestBlock(w http.ResponseWriter, _ *http.Request) {
-    block := database.GetHighestBlock()
-    if block == nil {
-        errMsg := "error occurred during database.GetHighestBlock"
-        fmt.Println(errMsg)
-        resp := &Response{Success:false, Data:errMsg}
-        writeResponse(w, resp)
-        return
-    }
-    blockWeb := ParseBlock(block)
-    resp := &Response{Success:true, Data:blockWeb}
-    writeResponse(w, resp)
-}
-
-func GetMaxHeight(w http.ResponseWriter, _ *http.Request) {
-    height := database.GetMaxHeight()
->>>>>>> 39bb07a... modify chainId type and add revert
     if height == -1 {
         errMsg := "error occurred during database.GetMaxHeight()"
         fmt.Println(errMsg)
@@ -162,7 +106,7 @@ func GetMaxHeight(w http.ResponseWriter, _ *http.Request) {
     controller.ServeJSON()
 }
 
-func (controller *MainController)GetBlocksFrom(){
+func (controller *MainController) GetBlocksFrom(){
     resp := &Response{Success:true}
     controller.Data["json"] = resp
     st := controller.Input().Get("start")
@@ -180,10 +124,6 @@ func (controller *MainController)GetBlocksFrom(){
         controller.ServeJSON()
         return
     }
-<<<<<<< HEAD
-=======
-
->>>>>>> 39bb07a... modify chainId type and add revert
     blocks := database.GetBlocksFrom(start, size)
     var body []*BlockWeb
     for _, block := range(blocks) {
@@ -195,138 +135,52 @@ func (controller *MainController)GetBlocksFrom(){
     controller.ServeJSON()
 }
 
-func (controller *MainController)GetBalance() {
+func (controller *MainController) GetBalance() {
     // find param in http.Request
-<<<<<<< HEAD
     resp := &Response{Success:false}
     controller.Data["json"] = resp
     address := controller.GetString("address")
     address = address[2:]
-=======
-    params := analysisReqParam(r)
-    var address string
-    var chainId config.ChainIdType
-    if value, ok := params["address"].(string); ok {
-        address = value[2:]
-    }
-    if value, ok := params["chainId"].(string); ok {
-        chainId = config.Hex2ChainId(value)
-    }
->>>>>>> 39bb07a... modify chainId type and add revert
 
     if len(address) == 0 {
         resp.ErrorMsg = "param format incorrect"
         return
     }
     c := controller.GetString("chainId")
-    chainId, err := strconv.ParseInt(c, 10, 64)
-    if err != nil {
-        resp.ErrorMsg = err.Error()
-        resp.Data = c
-        controller.ServeJSON()
-        return
-    }
+    chainId := config.Hex2ChainId(c)
 
     fmt.Println("BalanceAddress: ", address)
     ca := accounts.Hex2Address(address)
-<<<<<<< HEAD
-    b := database.GetBalanceOutsideTransaction(ca, chainId)
+    b := database.GetBalance(ca, chainId)
     resp.Success = true
     resp.Data = b.String()
 
     controller.ServeJSON()
 }
 
-func (controller *MainController)GetNonce() {
+func (controller *MainController) GetNonce() {
     resp := &Response{Success:true}
     controller.Data["json"] = resp
     address := controller.Input().Get("address")
     address = address[2:]
     fmt.Println("NonceAddress: ", address)
-=======
-    //database.PutBalance(ca, big.NewInt(1314))
-    //fmt.Println("[database PutBalance] succeed!")
-
-    b := database.GetBalance(ca, chainId)
-    resp := &Response{Success:true, Data:b.String()}
-    writeResponse(w, resp)
-}
-
-func GetNonce(w http.ResponseWriter, r *http.Request) {
-    params := analysisReqParam(r)
-    var address string
-    var chainId config.ChainIdType
-    if value, ok := params["address"].(string); ok {
-        address = value
-    }
-    if value, ok := params["chainId"].(string); ok {
-        chainId = config.Hex2ChainId(value)
-    }
->>>>>>> 39bb07a... modify chainId type and add revert
 
     c := controller.Input().Get("chainId")
-    chainId, err := strconv.ParseInt(c, 10, 64)
-    if err != nil {
-        resp.Success = false
-        resp.ErrorMsg = err.Error()
-        controller.ServeJSON()
-        return
-    }
+    chainId := config.Hex2ChainId(c)
 
     ca := accounts.Hex2Address(address)
-<<<<<<< HEAD
-    nonce := database.GetNonceOutsideTransaction(ca, chainId)
+    nonce := database.GetNonce(ca, chainId)
     resp.Data = nonce
     controller.ServeJSON()
 }
 
-func (controller *MainController)SendTransaction() {
+func (controller *MainController) SendTransaction() {
     resp := &Response{Success:false}
     controller.Data["json"] = resp
     to := controller.Input().Get("to")
     to = to[2:]
-    a := controller.Input().Get("amount")
-    d := controller.Input().Get("destChain")
-=======
-
-    nonce := database.GetNonce(ca, chainId)
-    resp := &Response{Success:true, Data:nonce}
-    writeResponse(w, resp)
-}
-
-func SendTransaction(w http.ResponseWriter, r *http.Request) {
-    params := analysisReqParam(r)
-    var to string
-    var amount string
-    var destChain string
-    if value, ok := params["to"].(string); ok {
-        to = value[2:]
-    }
-    if value, ok := params["amount"].(string); ok {
-        amount = value
-    }
-    if value, ok := params["destChain"].(string); ok {
-        destChain = value
-    }
-<<<<<<< HEAD
->>>>>>> 39bb07a... modify chainId type and add revert
-
-    amount, succeed := new(big.Int).SetString(a, 10)
-    if succeed == false {
-        resp.ErrorMsg = "params amount parsing error"
-        controller.ServeJSON()
-        return
-    }
-
-    destChain, err := strconv.ParseInt(d, 10, 64)
-    if err != nil {
-        resp.ErrorMsg = err.Error()
-        controller.ServeJSON()
-        return
-    }
-
-=======
->>>>>>> f71151d... modify chainId type and add revert
+    amount := controller.Input().Get("amount")
+    destChain := controller.Input().Get("destChain")
     t := node.GenerateBalanceTransaction(to, destChain, amount)
 
     var body string
@@ -340,7 +194,7 @@ func SendTransaction(w http.ResponseWriter, r *http.Request) {
     controller.ServeJSON()
 }
 
-func (controller *MainController)GetTransactionsFromBlock() {
+func (controller *MainController) GetTransactionsFromBlock() {
     resp := &Response{Success:true}
     controller.Data["json"] = resp
     value := controller.Input().Get("height")
@@ -364,7 +218,7 @@ func (controller *MainController)GetTransactionsFromBlock() {
 }
 
 
-func (controller *MainController)SendTransactionsToMainChain() {
+func (controller *MainController) SendTransactionsToMainChain() {
     resp := &Response{Success:true}
     controller.Data["json"] = resp
     value := controller.Input().Get("tx_pkg")
@@ -386,7 +240,7 @@ func (controller *MainController)SendTransactionsToMainChain() {
     }()
 }
 
-func (controller *MainController)GetReputation() {
+func (controller *MainController) GetReputation() {
     // find param in http.Request
     resp := &Response{Success:false}
     controller.Data["json"] = resp
@@ -399,27 +253,13 @@ func (controller *MainController)GetReputation() {
     }
 
     c := controller.GetString("chainId")
-    chainId, err := strconv.ParseInt(c, 10, 64)
-    if err != nil {
-        resp.ErrorMsg = err.Error()
-        resp.Data = c
-        controller.ServeJSON()
-        return
-    }
+    chainId := config.Hex2ChainId(c)
 
     fmt.Println("BalanceAddress: ", address)
     ca := accounts.Hex2Address(address)
-    b := database.GetReputationOutsideTransaction(ca, chainId)
-    if (b.Int64() == 0) {
-        defaultRep := viper.GetInt64("default_rep")
-        fmt.Println("default reputation is :", defaultRep)
-        database.PutReputationOutSideTransaction(ca, chainId, big.NewInt(defaultRep))
-        resp.Success = true
-        resp.Data = viper.GetString("default_rep")
-        controller.ServeJSON()
-    }
+    rep := database.GetReputation(ca, chainId)
     resp.Success = true
-    resp.Data = b.String()
+    resp.Data = rep.String()
 
     fmt.Println(resp)
     controller.ServeJSON()
