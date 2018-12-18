@@ -169,7 +169,7 @@ func (l *Leader) challenge(msg []byte) []*bean.Peer {
 }
 
 func isLegalIndex(index int, bitmap []byte) bool {
-    return index >=0 && index <= len(bitmap) && bitmap[index] != 1
+    return index >=0 && index < len(bitmap) && bitmap[index] != 1
 }
 
 func (l *Leader) getMinerIndex(p *mycrypto.Point) int {
