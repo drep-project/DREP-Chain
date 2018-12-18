@@ -11,6 +11,8 @@ import (
     "fmt"
 )
 
+const maxSize = 100000
+
 var (
     trans       *list.LinkedList
     accountTran map[accounts.CommonAddress]*list.SortedLinkedList
@@ -104,9 +106,13 @@ func AddTransaction(transaction *bean.Transaction) bool {
         return false
     }
     tranLock.Lock()
+    defer tranLock.Unlock()
+    if trans.Size() >= maxSize {
+        log.Error("transaction pool full. %s fail to add", id)
+        return false
+    }
     if _, exists := tranSet[id]; exists {
         log.Error("transaction %s exists", id)
-        tranLock.Unlock()
         fmt.Println(3333)
         return false
     } else {
@@ -122,7 +128,6 @@ func AddTransaction(transaction *bean.Transaction) bool {
             l.Add(transaction)
         }
     }
-    tranLock.Unlock()
     return true
 }
 
