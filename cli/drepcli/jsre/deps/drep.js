@@ -1568,8 +1568,20 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 			    call: "chain_travel",
 			    params: 0
 		})
+
+		var h = new Method({
+			    name: 'h',
+			    call: 'chain_h',
+			    params: 0
+		})
+
+		var n = new Method({
+			    name: 'n',
+				call: 'chain_n',
+				params: 0
+		})
 	
-		return [call,check,checkBalance,checkNonce,create,me,miner,send,cross,travel]
+		return [call,check,checkBalance,checkNonce,create,me,miner,send,cross,travel,h,n]
 	}
 	
 	module.exports = CHAIN;
