@@ -88,6 +88,14 @@ func (chain *ChainApi) Check(addr accounts.CommonAddress, chainId config.ChainId
     return database.GetStorage(addr, chainId)
 }
 
+func (chain *ChainApi) H() {
+    GetH()
+}
+
+func (chain *ChainApi) N() {
+    GetTxn()
+}
+
 //func (chain *ChainApi) Cross() (string, error) {
 //    t := ForgeCrossChainTransaction()
 //    if SendTransaction(t) != nil {

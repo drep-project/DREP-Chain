@@ -13,6 +13,7 @@ import (
     "BlockChainTest/database"
     "BlockChainTest/accounts"
     "encoding/hex"
+    "fmt"
 )
 
 func SendTransaction(t *bean.Transaction) error {
@@ -140,6 +141,27 @@ func GenerateCrossChainTransaction(data []byte) *bean.Transaction {
         PubKey: store.GetPubKey(),
     }
     return &bean.Transaction{Data: transactionData}
+}
+
+func GetH() {
+    height := database.GetMaxHeight()
+    fmt.Println(height)
+}
+
+func GetTxn() {
+    h := database.GetMaxHeight()
+    num := make([]int, h)
+    var i int64
+    for i = 0; i < h; i++ {
+        block := database.GetBlock(i)
+        if block.Data.TxList == nil {
+            fmt.Println("nil tx list")
+            num = append(num, 0)
+        } else {
+            num = append(num, len(block.Data.TxList))
+        }
+    }
+    fmt.Println("num: ",  num)
 }
 
 //func ForgeCrossChainTransaction() *bean.Transaction {
