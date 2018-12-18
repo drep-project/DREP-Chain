@@ -85,9 +85,6 @@ func savePrizeInfo(block *bean.Block, total *big.Int) {
     base := config.GetConfig().Blockprize.String()
     basePrize, _ := new(big.Int).SetString(base, 10)
     lastPrize = new(big.Int).Add(basePrize, total)
-    if database.GetMaxHeight() > 3 {
-        lastPrize = new(big.Int)
-    }
 }
 
 func preSync(block *bean.Block) {
@@ -302,8 +299,8 @@ func executeBlockPrizeTransaction(dt database.Transactional, t *bean.Transaction
         balance := database.GetBalance(addr, t.Data.DestChain)
         balance = new(big.Int).Add(balance, new(big.Int).SetBytes(t.Data.Amount))
         database.PutBalance(subDt, addr, t.Data.DestChain, balance)
-        subDt.Commit()
     }
+    subDt.Commit()
     return new(big.Int), new(big.Int)
 }
 
