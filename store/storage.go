@@ -16,10 +16,15 @@ import (
     "encoding/hex"
     "net/http"
     "strconv"
+    "BlockChainTest/mycrypto"
+    "net/url"
 )
 
 var (
     childTrans []*bean.Transaction
+    lastLeader *mycrypto.Point
+    lastMinors []*mycrypto.Point
+    lastPrize  *big.Int
 )
 
 func ExecuteTransactions(b *bean.Block) *big.Int {
@@ -40,8 +45,10 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
     for _, t := range b.Data.TxList {
         subDt := dt.BeginTransaction()
         _, gasFee := execute(subDt, t)
-        fmt.Println("Delete transaction ", *t)
-        fmt.Println(removeTransaction(t))
+        if t.Data.Type != BlockPrizeType {
+            fmt.Println("Delete transaction ", *t)
+            fmt.Println(removeTransaction(t))
+        }
         if gasFee != nil {
             total.Add(total, gasFee)
         }
@@ -55,20 +62,36 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
         height++
         database.PutMaxHeight(height)
         database.PutBlock(b)
-        fmt.Println("received block: ", b.Header, " ", b.Data, " ", b.MultiSig)
+        //fmt.Println("received block: ", b.Header, " ", b.Data, " ", b.MultiSig)
+        fmt.Println("received block: ", true)
+        fmt.Println()
         dt.Commit()
-        distributeBlockPrize(b, total)
+        savePrizeInfo(b, total)
         preSync(b)
         doSync(height)
     } else {
+        fmt.Println()
         fmt.Println("not matched ", hex.EncodeToString(b.Header.StateRoot), " vs ", hex.EncodeToString(stateRoot))
+        fmt.Println("received block: ", false)
+        fmt.Println()
         dt.Discard()
     }
     return total
 }
 
+func savePrizeInfo(block *bean.Block, total *big.Int) {
+    lastLeader = block.Header.LeaderPubKey
+    lastMinors = block.Header.MinorPubKeys
+    base := config.GetConfig().Blockprize.String()
+    basePrize, _ := new(big.Int).SetString(base, 10)
+    lastPrize = new(big.Int).Add(basePrize, total)
+    if database.GetMaxHeight() > 3 {
+        lastPrize = new(big.Int)
+    }
+}
+
 func preSync(block *bean.Block) {
-    if !isRelay {
+    if !isRelay && GetChainId() != config.RootChain {
         return
     }
     if childTrans == nil {
@@ -78,7 +101,7 @@ func preSync(block *bean.Block) {
 }
 
 func doSync(height int64) {
-    if !isRelay || height % 10 != 0 {
+    if !isRelay || GetChainId() == config.RootChain || height % 2 != 0 || height == 0 {
         return
     }
     dt := database.BeginTransaction()
@@ -91,7 +114,16 @@ func doSync(height int64) {
     if err != nil {
         return
     }
-    http.Get("http://localhost:" + strconv.FormatInt(config.DefaultRestPort, 10) + "/SyncChildChain?data=" + string(data))
+    values := url.Values{}
+    values.Add("data", string(data))
+    body := values.Encode()
+    urlStr := "http://localhost:" + strconv.FormatInt(config.DefaultRestPort, 10) + "/SyncChildChain?" + body
+    http.Get(urlStr)
+    //fmt.Println()
+    //fmt.Println("data: ", body)
+    //fmt.Println()
+    //fmt.Println("data raw: ", string(data))
+    //fmt.Println()
     childTrans = nil
     dt.Commit()
 }
@@ -106,6 +138,8 @@ func execute(dt database.Transactional, t *bean.Transaction) (gasUsed, gasFee *b
        return executeCreateContractTransaction(dt, t)
     case CallContractType:
        return executeCallContractTransaction(dt, t)
+    case BlockPrizeType:
+        return executeBlockPrizeTransaction(dt, t)
     case CrossChainType:
        return executeCrossChainTransaction(dt, t)
     }
@@ -256,6 +290,23 @@ func executeCallContractTransaction(dt database.Transactional, t *bean.Transacti
     return
 }
 
+func executeBlockPrizeTransaction(dt database.Transactional, t *bean.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
+    gasUsed, gasFee = new(big.Int), new(big.Int)
+    var trans []*bean.Transaction
+    if err := json.Unmarshal(t.Data.Data, &trans); err != nil {
+        return
+    }
+    subDt := dt.BeginTransaction()
+    for _, t := range trans {
+        addr := accounts.Hex2Address(t.Data.To)
+        balance := database.GetBalance(addr, t.Data.DestChain)
+        balance = new(big.Int).Add(balance, new(big.Int).SetBytes(t.Data.Amount))
+        database.PutBalance(subDt, addr, t.Data.DestChain, balance)
+        subDt.Commit()
+    }
+    return new(big.Int), new(big.Int)
+}
+
 func executeCrossChainTransaction(dt database.Transactional, t *bean.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
     var (
         can bool
@@ -271,9 +322,10 @@ func executeCrossChainTransaction(dt database.Transactional, t *bean.Transaction
     }
 
     cct := &bean.CrossChainTransaction{}
-    err := json.Unmarshal(t.Data.Data, &cct)
+    err := json.Unmarshal(t.Data.Data, cct)
     if err != nil {
-       return new(big.Int), new(big.Int)
+        fmt.Println("err: ", err)
+        return new(big.Int), new(big.Int)
     }
 
     gasSum := new(big.Int)
@@ -348,41 +400,41 @@ func executeCrossChainTransaction(dt database.Transactional, t *bean.Transaction
 //    return
 //}
 
-func distributeBlockPrize(b *bean.Block, total *big.Int) {
-    dt := database.BeginTransaction()
-    str := config.GetConfig().Blockprize.String()
-    val := new (big.Int)
-    val.SetString(str,10)
-    prize := new(big.Int).Add(total, val)
-    if b.Header.Height > 2 {
-        prize = new(big.Int)
-    }
-    leaderPrize := new(big.Int).Rsh(prize, 1)
-    fmt.Println("leader prize: ", leaderPrize)
-    leaderAddr := accounts.PubKey2Address(b.Header.LeaderPubKey)
-    balance := database.GetBalance(leaderAddr, b.Header.ChainId)
-    balance = new(big.Int).Add(balance, leaderPrize)
-    database.PutBalance(dt, leaderAddr, b.Header.ChainId, balance)
-    leftPrize := new(big.Int).Sub(prize, leaderPrize)
-    minerNum := 0
-    for _, elem := range b.MultiSig.Bitmap {
-        if elem == 1 {
-            minerNum++
-        }
-    }
-    if minerNum == 0 {
-        dt.Commit()
-        return
-    }
-    minerPrize := new(big.Int).Div(leftPrize, new(big.Int).SetInt64(int64(minerNum)))
-    for i, e := range b.MultiSig.Bitmap {
-        if e == 1 {
-            minerAddr := accounts.PubKey2Address(b.Header.MinorPubKeys[i])
-            bal := database.GetBalance(minerAddr, b.Header.ChainId)
-            bal = new(big.Int).Add(bal, minerPrize)
-            database.PutBalance(dt, minerAddr, b.Header.ChainId, bal)
-        }
-    }
-    dt.Commit()
-    return
-}
+//func distributeBlockPrize(b *bean.Block, total *big.Int) {
+//    dt := database.BeginTransaction()
+//    str := config.GetConfig().Blockprize.String()
+//    val := new (big.Int)
+//    val.SetString(str,10)
+//    prize := new(big.Int).Add(total, val)
+//    if b.Header.Height > 2 {
+//        prize = new(big.Int)
+//    }
+//    leaderPrize := new(big.Int).Rsh(prize, 1)
+//    fmt.Println("leader prize: ", leaderPrize)
+//    leaderAddr := accounts.PubKey2Address(b.Header.LeaderPubKey)
+//    balance := database.GetBalance(leaderAddr, b.Header.ChainId)
+//    balance = new(big.Int).Add(balance, leaderPrize)
+//    database.PutBalance(dt, leaderAddr, b.Header.ChainId, balance)
+//    leftPrize := new(big.Int).Sub(prize, leaderPrize)
+//    minerNum := 0
+//    for _, elem := range b.MultiSig.Bitmap {
+//        if elem == 1 {
+//            minerNum++
+//        }
+//    }
+//    if minerNum == 0 {
+//        dt.Commit()
+//        return
+//    }
+//    minerPrize := new(big.Int).Div(leftPrize, new(big.Int).SetInt64(int64(minerNum)))
+//    for i, e := range b.MultiSig.Bitmap {
+//        if e == 1 {
+//            minerAddr := accounts.PubKey2Address(b.Header.MinorPubKeys[i])
+//            bal := database.GetBalance(minerAddr, b.Header.ChainId)
+//            bal = new(big.Int).Add(bal, minerPrize)
+//            database.PutBalance(dt, minerAddr, b.Header.ChainId, bal)
+//        }
+//    }
+//    dt.Commit()
+//    return
+//}

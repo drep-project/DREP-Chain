@@ -28,6 +28,7 @@ var mappingMethodMap = map[string] string {
     //"/CurrentAccount": "*:CurrentAccount",
     "/GetTransactionsFromBlock": "*:GetTransactionsFromBlock",
     "/SendTransactionsToMainChain": "*:SendTransactionsToMainChain",
+    "/SyncChildChain": "*:SyncChildChain",
 }
 
 type Request struct {
@@ -262,6 +263,26 @@ func (controller *MainController) GetReputation() {
     resp.Data = rep.String()
 
     fmt.Println(resp)
+    controller.ServeJSON()
+}
+
+func (controller *MainController) SyncChildChain() {
+    resp := &Response{Success:false}
+    controller.Data["json"] = resp
+    data := controller.GetString("data")
+    //fmt.Println()
+    //fmt.Println("data: ", data)
+    //fmt.Println()
+    tx := node.GenerateCrossChainTransaction([]byte(data))
+    err := node.SendTransaction(tx)
+
+    if err != nil {
+        resp.ErrorMsg = err.Error()
+        controller.ServeJSON()
+        return
+    }
+    resp.Success = true
+    resp.Data = "Sync subchain data succeed!"
     controller.ServeJSON()
 }
 

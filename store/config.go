@@ -17,7 +17,8 @@ var (
     MinerType          int32 = 1
     CreateContractType int32 = 2
     CallContractType   int32 = 3
-    CrossChainType int32 = 4
+    CrossChainType     int32 = 4
+    BlockPrizeType     int32 = 5
     Version            int32 = 1
     // TODO
     Admin *bean.Peer
