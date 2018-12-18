@@ -89,7 +89,7 @@ func (n *Node) Start(config *config.NodeConfig) {
         }
     }()
 
-    lalala := false
+    lalala := true
 
     if lalala {
         go func() {
