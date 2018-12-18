@@ -21,6 +21,7 @@ func SendTransaction(t *bean.Transaction) error {
     peers := store.GetPeers()
     //log.Info("Send transaction")
     if _, offline := network.SendMessage(peers, t); len(offline) == 0 {
+        fmt.Println("FFFFFFFFFF444444")
         if id, err := t.TxId(); err == nil {
             store.ForwardTransaction(id)
         }
@@ -29,6 +30,7 @@ func SendTransaction(t *bean.Transaction) error {
         store.RemovePeers(offline)
         return nil
     } else {
+        fmt.Println("FFFFFFFFFF555555555")
         return &util.ConnectionError{}
     }
 }
