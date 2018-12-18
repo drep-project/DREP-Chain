@@ -14,7 +14,6 @@ import (
     "BlockChainTest/accounts"
     "encoding/hex"
     "fmt"
-    "encoding/json"
 )
 
 func SendTransaction(t *bean.Transaction) error {
@@ -159,8 +158,8 @@ func GetTxn() {
         block := database.GetBlock(i)
         fmt.Println("height: ", i)
         fmt.Println("len: ", len(block.Data.TxList))
-        b, _ := json.Marshal(block)
-        fmt.Println(string(b))
+        //b, _ := json.Marshal(block)
+        //fmt.Println(string(b))
         fmt.Println()
     }
 }

@@ -15,7 +15,7 @@ import (
 )
 
 const (
-    bufferSize    = 1024 * 1024
+    bufferSize    = 50 * 1024 * 1024
     UPnPStart  = false
 )
 
@@ -33,6 +33,7 @@ func SendMessage(peers []*bean.Peer, msg interface{}) (sucPeers []*bean.Peer, fa
        fmt.Println("FFFFFFFFFF2")
        task := &Task{PrvKey:store.GetPrvKey(), Peer:peer, Msg:msg}
        if err := task.execute(); err != nil {
+           fmt.Println("task err: ", err)
            switch err.(type) {
            case *util.TimeoutError, *util.ConnectionError:
                failPeers = append(failPeers, peer)
