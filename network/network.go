@@ -11,6 +11,7 @@ import (
     "BlockChainTest/network/nat"
     "errors"
     "BlockChainTest/store"
+    "fmt"
 )
 
 const (
@@ -26,8 +27,10 @@ func SendMessage(peers []*bean.Peer, msg interface{}) (sucPeers []*bean.Peer, fa
    lock.Lock()
    defer lock.Unlock()
    sucPeers = make([]*bean.Peer, 0)
+   fmt.Println("FFFFFFFFFF1 ", len(peers))
    failPeers = make([]*bean.Peer, 0)
    for _, peer := range peers {
+       fmt.Println("FFFFFFFFFF2")
        task := &Task{PrvKey:store.GetPrvKey(), Peer:peer, Msg:msg}
        if err := task.execute(); err != nil {
            switch err.(type) {
@@ -38,6 +41,7 @@ func SendMessage(peers []*bean.Peer, msg interface{}) (sucPeers []*bean.Peer, fa
            sucPeers = append(sucPeers, peer)
        }
    }
+    fmt.Println("FFFFFFFFFF3")
    return
 }
 
