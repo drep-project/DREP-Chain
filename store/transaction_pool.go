@@ -60,12 +60,15 @@ func Contains(id string) bool {
 
 func checkAndGetAddr(tran *bean.Transaction) (bool, accounts.CommonAddress) {
     addr := accounts.PubKey2Address(tran.Data.PubKey)
+    fmt.Println("FFFFFFFFFF18888888888888")
     chainId := tran.Data.ChainId
     if tran.Data == nil {
+        fmt.Println("FFFFFFFFFF188888888888889999")
         return false, accounts.CommonAddress{}
     }
     // TODO Check sig
     if database.GetNonce(addr, chainId) >= tran.Data.Nonce {
+        fmt.Println("FFFFFFFFFF18888888888888999999999999999999")
         return false, accounts.CommonAddress{}
     }
     {
@@ -76,10 +79,12 @@ func checkAndGetAddr(tran *bean.Transaction) (bool, accounts.CommonAddress) {
         total.Mul(gasLimit, gasPrice)
         total.Add(total, amount)
         if database.GetBalance(addr, chainId).Cmp(total) < 0 {
+            fmt.Println("FFFFFFFFFF1888888888888899999111111111111111")
             return false, accounts.CommonAddress{}
             // TODO Remove this
         }
     }
+    fmt.Println("FFFFFFFFFF188888888888888765354667374736463664634634664")
     return true, addr
 }
 //func AddTransaction(id string, transaction *common.transaction) {
