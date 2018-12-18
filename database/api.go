@@ -75,7 +75,7 @@ func PutBlock(block *bean.Block) error {
     if err != nil {
         return err
     }
-    return db.PutOutState(config.GetConfig().ChainId, key, value)
+    return db.PutOutState(config.Hex2ChainId(config.GetConfig().ChainId), key, value)
 }
 
 func GetBlocksFrom(start, size int64) []*bean.Block {
@@ -124,7 +124,7 @@ func GetMaxHeight() int64 {
 func PutMaxHeight(height int64) error {
     key := mycrypto.Hash256([]byte("max_height"))
     value := new(big.Int).SetInt64(height).Bytes()
-    return db.PutOutState(config.GetConfig().ChainId, key, value)
+    return db.PutOutState(config.Hex2ChainId(config.GetConfig().ChainId), key, value)
 }
 
 func GetStorage(addr accounts.CommonAddress, chainId config.ChainIdType) *accounts.Storage {

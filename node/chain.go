@@ -34,7 +34,7 @@ func SendTransaction(t *bean.Transaction) error {
 //发送交易本地nonce, balance 变动
 
 func GenerateBalanceTransaction(to, dc, value string) *bean.Transaction {
-    chainId := config.GetConfig().ChainId
+    chainId := store.GetChainId()
     destChain := config.Hex2ChainId(dc)
     amount, _ := new(big.Int).SetString(value, 10)
     nonce := database.GetNonce(store.GetAddress(), chainId) + 1
@@ -76,7 +76,7 @@ func GenerateMinerTransaction(addr, cid string) *bean.Transaction {
 }
 
 func GenerateCreateContractTransaction(c string) *bean.Transaction {
-    chainId := config.GetConfig().ChainId
+    chainId := store.GetChainId()
     nonce := database.GetNonce(store.GetAddress(), chainId) + 1
     code, _ := hex.DecodeString(c)
     data := &bean.TransactionData{
@@ -96,7 +96,7 @@ func GenerateCreateContractTransaction(c string) *bean.Transaction {
 
 
 func GenerateCallContractTransaction(addr, cid, in, value string, readOnly bool) *bean.Transaction {
-    runningChain := config.GetConfig().ChainId
+    runningChain := store.GetChainId()
     chainId := config.Hex2ChainId(cid)
     if runningChain != chainId && !readOnly {
         log.Info("you can only call view/pure functions of contract of another chain")

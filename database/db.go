@@ -127,7 +127,7 @@ func NewDatabase(cfg *config.NodeConfig) *Database {
 	}
 	return &Database{
 		db:ldb,
-		runningChain: cfg.ChainId,
+		runningChain: config.Hex2ChainId(cfg.ChainId),
 		tries: make(map[config.ChainIdType] *trie.StateTrie),
 	}
 }

@@ -80,7 +80,7 @@ type NodeConfig struct {
 	Keystore string				`json:"keystore"`
 	DbPath string  				`json:"dataDir"`
 	LogDir string  				`json:"logDir"`
-	ChainId ChainIdType   		`json:"chainId"`
+	ChainId string   		    `json:"chainId"`
 
 	//p2p
 	Port int		 			`json:"port"`
