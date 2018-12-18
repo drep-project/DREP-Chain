@@ -103,7 +103,7 @@ func (l *Leader) waitForCommit(peers []*bean.Peer) bool {
         }
     }, 5 * time.Second)
     log.Trace("waitForCommit 2")
-    if len(commits) + 1 < memberNum * 3 / 2 {
+    if len(commits) + 1 < memberNum * 2 / 3 {
         log.Trace("waitForCommit", "Commits", len(commits),"memberNum", memberNum)
         return false
     }
