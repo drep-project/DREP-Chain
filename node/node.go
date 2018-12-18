@@ -89,8 +89,10 @@ func (n *Node) Start(config *config.NodeConfig) {
         }
     }()
 
-    lalala := true
+    lalala := false
 
+    //TODO
+    //100good
     if lalala {
         go func() {
             time.Sleep(30 * time.Second)
