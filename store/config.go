@@ -6,7 +6,7 @@ import (
 )
 
 var (
-    BlockGasLimit            = big.NewInt(5000000000)
+    BlockGasLimit            = big.NewInt(5000000000000000000)
     DefaultGasPrice          *big.Int
     TransferGas              = big.NewInt(20)
     MinerGas                 = big.NewInt(20000)
