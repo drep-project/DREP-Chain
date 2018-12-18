@@ -8,6 +8,7 @@ import (
     "BlockChainTest/util/list"
     "BlockChainTest/database"
     "BlockChainTest/accounts"
+    "fmt"
 )
 
 var (
@@ -128,6 +129,7 @@ func PickTransactions(maxGas *big.Int) []*bean.Transaction {
     r := make([]*bean.Transaction, 0) //TODO if 10
     gas := big.NewInt(0)
     tranLock.Lock()
+    fmt.Println("FUCK 1")
     defer func() {
         tranLock.Unlock()
         for _, t := range r {
@@ -136,27 +138,41 @@ func PickTransactions(maxGas *big.Int) []*bean.Transaction {
     }()
     it := trans.Iterator()
     tn := make(map[accounts.CommonAddress]int64)
+    fmt.Println("FUCK 2")
     for it.HasNext() {
+        fmt.Println("FUCK 3")
         if t, ok := it.Next().(*bean.Transaction); ok {
+            fmt.Println("FUCK 4")
             if id, err := t.TxId(); err == nil {
+                fmt.Println("FUCK 5")
                 if tranSet[id] {
                     addr := accounts.PubKey2Address(t.Data.PubKey)
                     chainId := t.Data.ChainId
+                    fmt.Println("FUCK 6")
                     if ts, exists := accountTran[addr]; exists {
+                        fmt.Println("FUCK 7")
                         it2 := ts.Iterator()
                         for it2.HasNext() {
+                            fmt.Println("FUCK 8")
                             if t2, ok := it2.Next().(*bean.Transaction); ok {
+                                fmt.Println("FUCK 9")
                                 cn, e := tn[addr]
                                 if !e {
+                                    fmt.Println("FUCK 10")
                                     cn = database.GetNonce(addr, chainId)
                                 }
+                                fmt.Println("FUCK 11")
                                 if t2.Data.Nonce != cn + 1 {
+                                    fmt.Println("FUCK 12")
                                     continue
                                 }
+                                fmt.Println("FUCK 13")
                                 gasLimit := big.NewInt(0).SetBytes(t2.Data.GasLimit)
                                 tmp := big.NewInt(0).Add(gas, gasLimit)
                                 if tmp.Cmp(maxGas) <= 0 {
+                                    fmt.Println("FUCK 14")
                                     if id2, err := t2.TxId(); err == nil {
+                                        fmt.Println("FUCK 15")
                                         gas = tmp
                                         r = append(r, t2)
                                         delete(tranSet, id2)
@@ -164,9 +180,11 @@ func PickTransactions(maxGas *big.Int) []*bean.Transaction {
                                         it2.Remove()
                                     }
                                 } else {
+                                    fmt.Println("FUCK 16")
                                     return r
                                 }
                             } else {
+                                fmt.Println("FUCK 17")
                                 it2.Remove()
                             }
                         }
@@ -174,12 +192,15 @@ func PickTransactions(maxGas *big.Int) []*bean.Transaction {
                         log.Error("Fuck")
                     }
                 } else {
+                    fmt.Println("FUCK 18")
                     it.Remove()
                 }
             }
         } else {
+            fmt.Println("FUCK 19")
             it.Remove()
         }
     }
+    fmt.Println("FUCK 20")
     return r
 }
