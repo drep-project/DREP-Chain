@@ -122,7 +122,8 @@ func (n *Node) Start(config *config.NodeConfig) {
                         //fmt.Println("failed")
                     }
                 }
-                time.Sleep(time.Second)
+                //time.Sleep(time.Second)
+                break
             }
         }()
     }
