@@ -88,7 +88,7 @@ func (n *Node) Start(config *config.NodeConfig) {
         }
     }()
 
-    lalala := false
+    lalala := true
 
     if lalala {
         go func() {
@@ -99,7 +99,7 @@ func (n *Node) Start(config *config.NodeConfig) {
                 destChain := store.GetChainId()
                 amount := new(big.Int).SetInt64(100000).Bytes()
                 to := "111111"
-                for i := 0; i < 100; i++ {
+                for i := 0; i < 1; i++ {
                     nonce ++
                     data := &bean.TransactionData{
                         Version:   store.Version,
@@ -115,9 +115,14 @@ func (n *Node) Start(config *config.NodeConfig) {
                         PubKey:    store.GetPubKey(),
                     }
                     t := &bean.Transaction{Data: data}
-                    SendTransaction(t)
+                    err := SendTransaction(t)
+                    if err == nil {
+                        //fmt.Println("succeed")
+                    } else {
+                        //fmt.Println("failed")
+                    }
                 }
-                time.Sleep(10 * time.Microsecond)
+                time.Sleep(time.Second)
             }
         }()
     }

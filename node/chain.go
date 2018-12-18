@@ -14,16 +14,18 @@ import (
     "BlockChainTest/accounts"
     "encoding/hex"
     "fmt"
+    "encoding/json"
 )
 
 func SendTransaction(t *bean.Transaction) error {
     peers := store.GetPeers()
-    log.Info("Send transaction")
+    //log.Info("Send transaction")
     if _, offline := network.SendMessage(peers, t); len(offline) == 0 {
         if id, err := t.TxId(); err == nil {
             store.ForwardTransaction(id)
         }
         store.AddTransaction(t)
+        fmt.Println("add success")
         store.RemovePeers(offline)
         return nil
     } else {
@@ -150,18 +152,15 @@ func GetH() {
 
 func GetTxn() {
     h := database.GetMaxHeight()
-    num := make([]int, h)
     var i int64
     for i = 0; i < h; i++ {
         block := database.GetBlock(i)
-        if block.Data.TxList == nil {
-            fmt.Println("nil tx list")
-            num = append(num, 0)
-        } else {
-            num = append(num, len(block.Data.TxList))
-        }
+        fmt.Println("height: ", i)
+        fmt.Println("len: ", len(block.Data.TxList))
+        b, _ := json.Marshal(block)
+        fmt.Println(string(b))
+        fmt.Println()
     }
-    fmt.Println("num: ",  num)
 }
 
 //func ForgeCrossChainTransaction() *bean.Transaction {
