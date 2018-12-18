@@ -22,9 +22,9 @@ var (
     isRelay    bool
 )
 
-func InitState(config *config.NodeConfig)  {
+func InitState(nodeConfig *config.NodeConfig)  {
 
-    keystore := config.Keystore
+    keystore := nodeConfig.Keystore
     node, _ := accounts.OpenKeystore(keystore)
     if node != nil {
         prvKey = node.PrvKey
@@ -34,9 +34,9 @@ func InitState(config *config.NodeConfig)  {
         panic("keystore file not exists!")
     }
 
-    myIndex := config.GetMyIndex()
-    chainId = config.ChainId
-    bootNodes := config.BootNodes
+    myIndex := nodeConfig.GetMyIndex()
+    chainId = config.Hex2ChainId(nodeConfig.ChainId)
+    bootNodes := nodeConfig.BootNodes
     minerNum := len(bootNodes)
 
     curMiner = -1
@@ -57,7 +57,7 @@ func InitState(config *config.NodeConfig)  {
         AddPeer(peer)
     }
     adminPubKey = miners[0].PubKey
-    port = bean.Port(config.Port)
+    port = bean.Port(nodeConfig.Port)
     isRelay = accounts.PubKey2Address(pubKey).Hex() == bootNodes[0].Address
 }
 

@@ -77,7 +77,7 @@ func accountList(ctx *cli.Context) error {
 	}
 	api := accounts.AccountApi{
 		KeyStoreDir : nCfg.Keystore,
-		ChainId : nCfg.ChainId,
+		ChainId : config.Hex2ChainId(nCfg.ChainId),
 	}
 	address, err := api.AccountList()
 	if err != nil {
@@ -96,7 +96,7 @@ func accountCreate(ctx *cli.Context) error {
 	
 	api := accounts.AccountApi{
 		KeyStoreDir : nCfg.Keystore,
-		ChainId : nCfg.ChainId,
+		ChainId : config.Hex2ChainId(nCfg.ChainId),
 	}
 	newAddress, err := api.CreateAccount()
 	if err != nil {
