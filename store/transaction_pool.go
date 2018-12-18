@@ -136,6 +136,8 @@ func removeTransaction(tran *bean.Transaction) (bool, bool) {
     if err != nil {
         return false, false
     }
+    tranLock.Lock()
+    defer tranLock.Unlock()
     r1 := trans.Remove(tran, tranCp)
     delete(tranSet, id)
     addr := accounts.PubKey2Address(tran.Data.PubKey)
