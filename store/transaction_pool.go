@@ -78,6 +78,10 @@ func checkAndGetAddr(tran *bean.Transaction) (bool, accounts.CommonAddress) {
         total := big.NewInt(0)
         total.Mul(gasLimit, gasPrice)
         total.Add(total, amount)
+        fmt.Println("gas limit: ", gasLimit)
+        fmt.Println("gas prize: ", gasPrice)
+        fmt.Println("total: ", total)
+        fmt.Println("balance: ", database.GetBalance(addr, chainId))
         if database.GetBalance(addr, chainId).Cmp(total) < 0 {
             fmt.Println("FFFFFFFFFF1888888888888899999111111111111111")
             return false, accounts.CommonAddress{}
