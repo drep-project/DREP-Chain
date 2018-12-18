@@ -41,7 +41,7 @@
     "WSExposeAll": false,
     "RESTEnabled": true,
     "RESTHost": "localhost",
-    "RESTPort": 15647,
+    "RESTPort": 55550,
     "RESTCors": null
   },
   "logConfig": {

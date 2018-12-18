@@ -65,6 +65,22 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
     dt := database.BeginTransaction()
     height := database.GetMaxHeight() + 1
     ts := PickTransactions(BlockGasLimit)
+    //fmt.Println()
+    //if lastLeader != nil {
+    //    fmt.Println("last leader:   ", accounts.PubKey2Address(lastLeader))
+    //} else {
+    //    fmt.Println("last leader:   ")
+    //}
+    //fmt.Println("last minors:   ", lastMinors)
+    //fmt.Println("last prize:    ", lastPrize)
+    //fmt.Println()
+    if lastPrize != nil {
+        bpt := GenerateBlockPrizeTransaction()
+        if bpt != nil {
+            ts = append(ts, bpt)
+        }
+    }
+
     gasSum := new(big.Int)
     for _, t := range ts {
         subDt := dt.BeginTransaction()
@@ -120,6 +136,57 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
     }
     dt.Discard()
     return block, nil
+}
+
+func GenerateBlockPrizeTransaction() *bean.Transaction {
+    numMinors := len(lastMinors)
+    leaderPrize := new(big.Int).Rsh(lastPrize, 1)
+    leftPrize := new(big.Int).Sub(lastPrize, leaderPrize)
+    var minorPrize *big.Int
+    if numMinors > 0 {
+        minorPrize = new(big.Int).Div(leftPrize, new(big.Int).SetInt64(int64(numMinors)))
+    }
+    trans := make([]*bean.Transaction, len(lastMinors) + 1)
+
+    dataL := &bean.TransactionData{
+        Version: Version,
+        Type: BlockPrizeType,
+        To: accounts.PubKey2Address(lastLeader).Hex(),
+        DestChain: GetChainId(),
+        Amount: leaderPrize.Bytes(),
+        Timestamp: time.Now().Unix(),
+        Data: []byte("block prize for leader"),
+    }
+    trans[0] = &bean.Transaction{Data: dataL}
+
+    for i := 1; i < len(trans); i++ {
+        dataM := &bean.TransactionData{
+            Version: Version,
+            Type: BlockPrizeType,
+            To: accounts.PubKey2Address(lastMinors[i - 1]).Hex(),
+            DestChain: GetChainId(),
+            Amount: minorPrize.Bytes(),
+            Timestamp: time.Now().Unix(),
+            Data: []byte("block prize for minor"),
+        }
+        trans[i] = &bean.Transaction{Data: dataM}
+    }
+
+    b, err := json.Marshal(trans)
+    if err != nil {
+        return nil
+    }
+    data := &bean.TransactionData{
+        Version: Version,
+        Type: BlockPrizeType,
+        Timestamp: time.Now().Unix(),
+        Data: b,
+    }
+
+    lastLeader = nil
+    lastMinors = nil
+    lastPrize = nil
+    return &bean.Transaction{Data: data}
 }
 
 func GetPubKey() *mycrypto.Point {
