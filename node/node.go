@@ -18,6 +18,7 @@ import (
     "encoding/json"
     "BlockChainTest/pool"
     "BlockChainTest/accounts"
+    "fmt"
 )
 
 var (
@@ -88,18 +89,19 @@ func (n *Node) Start(config *config.NodeConfig) {
         }
     }()
 
-    lalala := true
+    lalala := false
 
     if lalala {
         go func() {
-            time.Sleep(10 * time.Second)
+            time.Sleep(30 * time.Second)
             nonce := database.GetNonce(store.GetAddress(), store.GetChainId())
             for {
+                fmt.Println("round begin")
                 chainId := store.GetChainId()
                 destChain := store.GetChainId()
                 amount := new(big.Int).SetInt64(100000).Bytes()
                 to := "111111"
-                for i := 0; i < 1; i++ {
+                for i := 0; i < 100; i++ {
                     nonce ++
                     data := &bean.TransactionData{
                         Version:   store.Version,
@@ -115,15 +117,20 @@ func (n *Node) Start(config *config.NodeConfig) {
                         PubKey:    store.GetPubKey(),
                     }
                     t := &bean.Transaction{Data: data}
+                    fmt.Println()
+                    fmt.Println("prepare send tx")
                     err := SendTransaction(t)
+                    fmt.Println("after send tx")
+                    fmt.Println()
                     if err == nil {
                         //fmt.Println("succeed")
                     } else {
                         //fmt.Println("failed")
                     }
                 }
-                //time.Sleep(time.Second)
-                break
+                fmt.Println("round middle")
+                time.Sleep(time.Second)
+                fmt.Println("round end")
             }
         }()
     }
