@@ -69,36 +69,40 @@ func startListen(process func(*bean.Peer, int, interface{}), port bean.Port) {
             if err != nil {
                 continue
             }
-            cipher := make([]byte, bufferSize)
-            b := cipher
-            offset := 0
-            for {
-                n, err := conn.Read(b)
-                if err != nil {
-                    break
-                } else {
-                    offset += n
-                    b = cipher[offset:]
+            go func() {
+                cipher := make([]byte, bufferSize)
+                b := cipher
+                offset := 0
+                for {
+                    n, err := conn.Read(b)
+                    if err != nil {
+                        break
+                    } else {
+                        offset += n
+                        b = cipher[offset:]
+                    }
                 }
-            }
-            log.Info("Receive ", "msg",cipher[:offset])
-            log.Info("Receive byte :", "bytes ",offset)
-            task, err := decryptIntoTask(cipher[:offset]) // TODO what the fuck is this???
-            log.Info("Receive after decrypt","msg", task)
-            if err != nil {
-                return
-            }
-            fromAddr := conn.RemoteAddr().String()
-            ip := fromAddr[:strings.LastIndex(fromAddr, ":")]
-            task.Peer.IP = bean.IP(ip)
-            //queue := GetReceiverQueue()
-            //queue <- message
-            //p := processor.GetInstance()
-            t, msg := identifyMessage(task)
-            if msg != nil {
-                process(task.Peer, t, msg)
-            }
-            log.Info("end listen")
+                conn.Close()
+                log.Info("Receive ", "msg",cipher[:offset])
+                log.Info("Receive byte :", "bytes ",offset)
+                task, err := decryptIntoTask(cipher[:offset]) // TODO what the fuck is this???
+                log.Info("Receive after decrypt","msg", task)
+                if err != nil {
+                    return
+                }
+                fromAddr := conn.RemoteAddr().String()
+                ip := fromAddr[:strings.LastIndex(fromAddr, ":")]
+                task.Peer.IP = bean.IP(ip)
+                //queue := GetReceiverQueue()
+                //queue <- message
+                //p := processor.GetInstance()
+                t, msg := identifyMessage(task)
+                if msg != nil {
+                    process(task.Peer, t, msg)
+                }
+                log.Info("end listen")
+
+            }()
         }
     }()
 }
