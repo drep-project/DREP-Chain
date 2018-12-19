@@ -8,7 +8,6 @@ import (
     "BlockChainTest/util/list"
     "BlockChainTest/database"
     "BlockChainTest/accounts"
-    "fmt"
 )
 
 const maxSize = 100000
@@ -88,12 +87,10 @@ func checkAndGetAddr(tran *bean.Transaction) (bool, accounts.CommonAddress) {
 func AddTransaction(transaction *bean.Transaction) bool {
     check, addr := checkAndGetAddr(transaction)
     if !check {
-        fmt.Println(1111)
         return false
     }
     id, err := transaction.TxId()
     if err != nil {
-        fmt.Println(2222)
         return false
     }
     tranLock.Lock()
@@ -104,16 +101,13 @@ func AddTransaction(transaction *bean.Transaction) bool {
     }
     if _, exists := tranSet[id]; exists {
         log.Error("transaction %s exists", id)
-        fmt.Println(3333)
         return false
     } else {
         tranSet[id] = true
         trans.Add(transaction)
         if l, exists := accountTran[addr]; exists {
-            fmt.Println(4444)
             l.Add(transaction)
         } else {
-            fmt.Println(5555)
             l = list.NewSortedLinkedList(nonceCp)
             accountTran[addr] = l
             l.Add(transaction)

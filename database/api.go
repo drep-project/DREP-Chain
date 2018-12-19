@@ -10,7 +10,6 @@ import (
     "BlockChainTest/config"
     "encoding/hex"
     "github.com/syndtr/goleveldb/leveldb/iterator"
-    "fmt"
 )
 
 var (
@@ -67,7 +66,6 @@ func GetBlock(height int64) *bean.Block {
     if err != nil {
         return nil
     }
-    fmt.Println("get block: ", block)
     return block
 }
 
