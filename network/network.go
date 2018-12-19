@@ -1,7 +1,6 @@
 package network
 
 import (
-    "sync"
     "net"
     "strings"
     "BlockChainTest/mycrypto"
@@ -19,31 +18,25 @@ const (
     UPnPStart  = false
 )
 
-var (
-    lock sync.Mutex
-)
-
 func SendMessage(peers []*bean.Peer, msg interface{}) (sucPeers []*bean.Peer, failPeers []*bean.Peer) {
-   lock.Lock()
-   defer lock.Unlock()
-   sucPeers = make([]*bean.Peer, 0)
-   fmt.Println("FFFFFFFFFF1 ", len(peers))
-   failPeers = make([]*bean.Peer, 0)
-   for _, peer := range peers {
-       fmt.Println("FFFFFFFFFF2")
-       task := &Task{PrvKey:store.GetPrvKey(), Peer:peer, Msg:msg}
-       if err := task.execute(); err != nil {
-           fmt.Println("task err: ", err)
-           switch err.(type) {
-           case *util.TimeoutError, *util.ConnectionError:
-               failPeers = append(failPeers, peer)
-           }
-       } else {
-           sucPeers = append(sucPeers, peer)
-       }
-   }
+    sucPeers = make([]*bean.Peer, 0)
+    fmt.Println("FFFFFFFFFF1 ", len(peers))
+    failPeers = make([]*bean.Peer, 0)
+    for _, peer := range peers {
+        fmt.Println("FFFFFFFFFF2")
+        task := &Task{PrvKey:store.GetPrvKey(), Peer:peer, Msg:msg}
+        if err := task.execute(); err != nil {
+            fmt.Println("task err: ", err)
+            switch err.(type) {
+            case *util.TimeoutError, *util.ConnectionError:
+                failPeers = append(failPeers, peer)
+            }
+        } else {
+            sucPeers = append(sucPeers, peer)
+        }
+    }
     fmt.Println("FFFFFFFFFF3")
-   return
+    return
 }
 
 func Start(process func(*bean.Peer, int, interface{}), port bean.Port) {
