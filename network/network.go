@@ -1,7 +1,6 @@
 package network
 
 import (
-    "sync"
     "net"
     "strings"
     "BlockChainTest/mycrypto"
@@ -14,31 +13,25 @@ import (
 )
 
 const (
-    bufferSize    = 1024 * 1024
+    bufferSize    = 50 * 1024 * 1024
     UPnPStart  = false
 )
 
-var (
-    lock sync.Mutex
-)
-
 func SendMessage(peers []*bean.Peer, msg interface{}) (sucPeers []*bean.Peer, failPeers []*bean.Peer) {
-   lock.Lock()
-   defer lock.Unlock()
-   sucPeers = make([]*bean.Peer, 0)
-   failPeers = make([]*bean.Peer, 0)
-   for _, peer := range peers {
-       task := &Task{PrvKey:store.GetPrvKey(), Peer:peer, Msg:msg}
-       if err := task.execute(); err != nil {
-           switch err.(type) {
-           case *util.TimeoutError, *util.ConnectionError:
-               failPeers = append(failPeers, peer)
-           }
-       } else {
-           sucPeers = append(sucPeers, peer)
-       }
-   }
-   return
+    sucPeers = make([]*bean.Peer, 0)
+    failPeers = make([]*bean.Peer, 0)
+    for _, peer := range peers {
+        task := &Task{PrvKey:store.GetPrvKey(), Peer:peer, Msg:msg}
+        if err := task.execute(); err != nil {
+            switch err.(type) {
+            case *util.TimeoutError, *util.ConnectionError:
+                failPeers = append(failPeers, peer)
+            }
+        } else {
+            sucPeers = append(sucPeers, peer)
+        }
+    }
+    return
 }
 
 func Start(process func(*bean.Peer, int, interface{}), port bean.Port) {
@@ -64,36 +57,40 @@ func startListen(process func(*bean.Peer, int, interface{}), port bean.Port) {
             if err != nil {
                 continue
             }
-            cipher := make([]byte, bufferSize)
-            b := cipher
-            offset := 0
-            for {
-                n, err := conn.Read(b)
-                if err != nil {
-                    break
-                } else {
-                    offset += n
-                    b = cipher[offset:]
+            go func() {
+                cipher := make([]byte, bufferSize)
+                b := cipher
+                offset := 0
+                for {
+                    n, err := conn.Read(b)
+                    if err != nil {
+                        break
+                    } else {
+                        offset += n
+                        b = cipher[offset:]
+                    }
                 }
-            }
-            log.Info("Receive ", "msg",cipher[:offset])
-            log.Info("Receive byte :", "bytes ",offset)
-            task, err := decryptIntoTask(cipher[:offset]) // TODO what the fuck is this???
-            log.Info("Receive after decrypt","msg", task)
-            if err != nil {
-                return
-            }
-            fromAddr := conn.RemoteAddr().String()
-            ip := fromAddr[:strings.LastIndex(fromAddr, ":")]
-            task.Peer.IP = bean.IP(ip)
-            //queue := GetReceiverQueue()
-            //queue <- message
-            //p := processor.GetInstance()
-            t, msg := identifyMessage(task)
-            if msg != nil {
-                process(task.Peer, t, msg)
-            }
-            log.Info("end listen")
+                conn.Close()
+                log.Info("Receive ", "msg",cipher[:offset])
+                log.Info("Receive byte :", "bytes ",offset)
+                task, err := decryptIntoTask(cipher[:offset]) // TODO what the fuck is this???
+                log.Info("Receive after decrypt","msg", task)
+                if err != nil {
+                    return
+                }
+                fromAddr := conn.RemoteAddr().String()
+                ip := fromAddr[:strings.LastIndex(fromAddr, ":")]
+                task.Peer.IP = bean.IP(ip)
+                //queue := GetReceiverQueue()
+                //queue <- message
+                //p := processor.GetInstance()
+                t, msg := identifyMessage(task)
+                if msg != nil {
+                    process(task.Peer, t, msg)
+                }
+                log.Info("end listen")
+
+            }()
         }
     }()
 }

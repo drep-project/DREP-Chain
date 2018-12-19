@@ -4,11 +4,12 @@ import (
     "testing"
     "fmt"
     "encoding/hex"
+    "BlockChainTest/config"
 )
 
 func TestNewRootAccount(t *testing.T) {
     var parent *Node
-    var chainId int64 = 0
+    var chainId config.ChainIdType
     account, err := NewNormalAccount(parent, chainId)
     fmt.Println("err: ", err)
     fmt.Println("account: ", account)
@@ -22,7 +23,7 @@ func TestNewRootAccount(t *testing.T) {
 
 func TestNewChildAccount(t *testing.T) {
     var parent *Node
-    var chainId int64 = 0
+    var chainId config.ChainIdType
     root, err := NewNormalAccount(parent, chainId)
     fmt.Println("root err: ", err)
     fmt.Println("root: ")
@@ -33,7 +34,7 @@ func TestNewChildAccount(t *testing.T) {
     fmt.Println("byteCode: ", root.Storage.ByteCode)
     fmt.Println("codeHash: ", root.Storage.CodeHash)
     fmt.Println()
-    var cid int64 = 567283
+    var cid config.ChainIdType = [config.ChainIdSize]byte{1, 2, 3}
     child, err := NewNormalAccount(root.Node, cid)
     fmt.Println("child err: ", err)
     fmt.Println("child: ", child)

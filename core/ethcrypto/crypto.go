@@ -30,8 +30,8 @@ import (
 
 	"BlockChainTest/core/ethrlp"
 	"BlockChainTest/core/ethcrypto/sha3"
-	"BlockChainTest/bean"
 	"BlockChainTest/core/common"
+	"BlockChainTest/accounts"
 )
 
 var (
@@ -52,7 +52,7 @@ func Keccak256(data ...[]byte) []byte {
 
 // Keccak256Hash calculates and returns the Keccak256 hash of the input data,
 // converting it to an internal Hash data structure.
-func Keccak256Hash(data ...[]byte) (h bean.Hash) {
+func Keccak256Hash(data ...[]byte) (h accounts.Hash) {
 	d := sha3.NewKeccak256()
 	for _, b := range data {
 		d.Write(b)
@@ -71,15 +71,15 @@ func Keccak512(data ...[]byte) []byte {
 }
 
 // CreateAddress creates an ethereum address given the bytes and the nonce
-func CreateAddress(b bean.CommonAddress, nonce uint64) bean.CommonAddress {
+func CreateAddress(b accounts.CommonAddress, nonce uint64) accounts.CommonAddress {
 	data, _ := ethrlp.EncodeToBytes([]interface{}{b, nonce})
-	return bean.Bytes2Address(Keccak256(data)[12:])
+	return accounts.Bytes2Address(Keccak256(data)[12:])
 }
 
 // CreateAddress2 creates an ethereum address given the address bytes, initial
 // contract code and a salt.
-func CreateAddress2(b bean.CommonAddress, salt [32]byte, code []byte) bean.CommonAddress {
-	return bean.Bytes2Address(Keccak256([]byte{0xff}, b.Bytes(), salt[:], Keccak256(code))[12:])
+func CreateAddress2(b accounts.CommonAddress, salt [32]byte, code []byte) accounts.CommonAddress {
+	return accounts.Bytes2Address(Keccak256([]byte{0xff}, b.Bytes(), salt[:], Keccak256(code))[12:])
 }
 
 // ToECDSA creates a private key with the given D value.
@@ -200,9 +200,9 @@ func ValidateSignatureValues(v byte, r, s *big.Int, homestead bool) bool {
 	return r.Cmp(secp256k1N) < 0 && s.Cmp(secp256k1N) < 0 && (v == 0 || v == 1)
 }
 
-func PubkeyToAddress(p ecdsa.PublicKey) bean.CommonAddress {
+func PubkeyToAddress(p ecdsa.PublicKey) accounts.CommonAddress {
 	pubBytes := FromECDSAPub(&p)
-	return bean.Bytes2Address(Keccak256(pubBytes[1:])[12:])
+	return accounts.Bytes2Address(Keccak256(pubBytes[1:])[12:])
 }
 
 func zeroBytes(bytes []byte) {

@@ -44,7 +44,7 @@ func (p *BlockProcessor) process(peer *bean.Peer, msg interface{}) {
         if block.Header.Height <= database.GetMaxHeight() {
            return
         }
-        id, _ := block.BlockHash()
+        id, _ := block.BlockHashHex()
         if store.ForwardedBlock(id) { // if forwarded, then processed. later this will be read from db
             fmt.Println("Forwarded this block ", *block)
             return
@@ -52,7 +52,7 @@ func (p *BlockProcessor) process(peer *bean.Peer, msg interface{}) {
         store.ForwardBlock(id)
         peers := store.GetPeers()
         network.SendMessage(peers, block)
-        pool.Push(block)
+        pool.PushMsg(block)
         // Here, two blocks will be forwarded here. so is this store enough?
     }
 }

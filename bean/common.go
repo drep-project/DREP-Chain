@@ -17,5 +17,3 @@ const (
     MsgTypeOfflinePeers
     MsgTypeFirstPeerInfoList
 )
-
-type Address string

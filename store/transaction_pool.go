@@ -10,6 +10,8 @@ import (
     "BlockChainTest/accounts"
 )
 
+const maxSize = 100000
+
 var (
     trans       *list.LinkedList
     accountTran map[accounts.CommonAddress]*list.SortedLinkedList
@@ -64,7 +66,7 @@ func checkAndGetAddr(tran *bean.Transaction) (bool, accounts.CommonAddress) {
         return false, accounts.CommonAddress{}
     }
     // TODO Check sig
-    if database.GetNonceOutsideTransaction(addr, chainId) >= tran.Data.Nonce {
+    if database.GetNonce(addr, chainId) >= tran.Data.Nonce {
         return false, accounts.CommonAddress{}
     }
     {
@@ -74,7 +76,7 @@ func checkAndGetAddr(tran *bean.Transaction) (bool, accounts.CommonAddress) {
         total := big.NewInt(0)
         total.Mul(gasLimit, gasPrice)
         total.Add(total, amount)
-        if database.GetBalanceOutsideTransaction(addr, chainId).Cmp(total) < 0 {
+        if database.GetBalance(addr, chainId).Cmp(total) < 0 {
             return false, accounts.CommonAddress{}
             // TODO Remove this
         }
@@ -92,9 +94,13 @@ func AddTransaction(transaction *bean.Transaction) bool {
         return false
     }
     tranLock.Lock()
+    defer tranLock.Unlock()
+    if trans.Size() >= maxSize {
+        log.Error("transaction pool full. %s fail to add", id)
+        return false
+    }
     if _, exists := tranSet[id]; exists {
         log.Error("transaction %s exists", id)
-        tranLock.Unlock()
         return false
     } else {
         tranSet[id] = true
@@ -107,7 +113,6 @@ func AddTransaction(transaction *bean.Transaction) bool {
             l.Add(transaction)
         }
     }
-    tranLock.Unlock()
     return true
 }
 
@@ -116,6 +121,8 @@ func removeTransaction(tran *bean.Transaction) (bool, bool) {
     if err != nil {
         return false, false
     }
+    tranLock.Lock()
+    defer tranLock.Unlock()
     r1 := trans.Remove(tran, tranCp)
     delete(tranSet, id)
     addr := accounts.PubKey2Address(tran.Data.PubKey)
@@ -148,7 +155,7 @@ func PickTransactions(maxGas *big.Int) []*bean.Transaction {
                             if t2, ok := it2.Next().(*bean.Transaction); ok {
                                 cn, e := tn[addr]
                                 if !e {
-                                    cn = database.GetNonceOutsideTransaction(addr, chainId)
+                                    cn = database.GetNonce(addr, chainId)
                                 }
                                 if t2.Data.Nonce != cn + 1 {
                                     continue

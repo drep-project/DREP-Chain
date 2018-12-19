@@ -5,13 +5,12 @@ import (
     "flag"
     "strconv"
     "encoding/json"
-    "math/big"
-    "github.com/spf13/viper"
     "github.com/astaxie/beego"
     "BlockChainTest/node"
     "BlockChainTest/database"
     "BlockChainTest/accounts"
     "BlockChainTest/bean"
+    "BlockChainTest/config"
 )
 
 var mappingMethodMap = map[string] string {
@@ -29,6 +28,7 @@ var mappingMethodMap = map[string] string {
     //"/CurrentAccount": "*:CurrentAccount",
     "/GetTransactionsFromBlock": "*:GetTransactionsFromBlock",
     "/SendTransactionsToMainChain": "*:SendTransactionsToMainChain",
+    "/SyncChildChain": "*:SyncChildChain",
 }
 
 type Request struct {
@@ -81,7 +81,7 @@ func (controller *MainController) GetBlock() {
     controller.ServeJSON()
 }
 
-func (controller *MainController)GetHighestBlock() {
+func (controller *MainController) GetHighestBlock() {
     resp := &Response{Success:true}
     controller.Data["json"] = resp
     block := database.GetHighestBlock()
@@ -89,7 +89,7 @@ func (controller *MainController)GetHighestBlock() {
     controller.ServeJSON()
 }
 
-func (controller *MainController)GetMaxHeight() {
+func (controller *MainController) GetMaxHeight() {
     resp := &Response{Success:true}
     controller.Data["json"] = resp
     height := database.GetMaxHeight()
@@ -107,7 +107,7 @@ func (controller *MainController)GetMaxHeight() {
     controller.ServeJSON()
 }
 
-func (controller *MainController)GetBlocksFrom(){
+func (controller *MainController) GetBlocksFrom(){
     resp := &Response{Success:true}
     controller.Data["json"] = resp
     st := controller.Input().Get("start")
@@ -136,7 +136,7 @@ func (controller *MainController)GetBlocksFrom(){
     controller.ServeJSON()
 }
 
-func (controller *MainController)GetBalance() {
+func (controller *MainController) GetBalance() {
     // find param in http.Request
     resp := &Response{Success:false}
     controller.Data["json"] = resp
@@ -148,24 +148,18 @@ func (controller *MainController)GetBalance() {
         return
     }
     c := controller.GetString("chainId")
-    chainId, err := strconv.ParseInt(c, 10, 64)
-    if err != nil {
-        resp.ErrorMsg = err.Error()
-        resp.Data = c
-        controller.ServeJSON()
-        return
-    }
+    chainId := config.Hex2ChainId(c)
 
     fmt.Println("BalanceAddress: ", address)
     ca := accounts.Hex2Address(address)
-    b := database.GetBalanceOutsideTransaction(ca, chainId)
+    b := database.GetBalance(ca, chainId)
     resp.Success = true
     resp.Data = b.String()
 
     controller.ServeJSON()
 }
 
-func (controller *MainController)GetNonce() {
+func (controller *MainController) GetNonce() {
     resp := &Response{Success:true}
     controller.Data["json"] = resp
     address := controller.Input().Get("address")
@@ -173,42 +167,21 @@ func (controller *MainController)GetNonce() {
     fmt.Println("NonceAddress: ", address)
 
     c := controller.Input().Get("chainId")
-    chainId, err := strconv.ParseInt(c, 10, 64)
-    if err != nil {
-        resp.Success = false
-        resp.ErrorMsg = err.Error()
-        controller.ServeJSON()
-        return
-    }
+    chainId := config.Hex2ChainId(c)
 
     ca := accounts.Hex2Address(address)
-    nonce := database.GetNonceOutsideTransaction(ca, chainId)
+    nonce := database.GetNonce(ca, chainId)
     resp.Data = nonce
     controller.ServeJSON()
 }
 
-func (controller *MainController)SendTransaction() {
+func (controller *MainController) SendTransaction() {
     resp := &Response{Success:false}
     controller.Data["json"] = resp
     to := controller.Input().Get("to")
     to = to[2:]
-    a := controller.Input().Get("amount")
-    d := controller.Input().Get("destChain")
-
-    amount, succeed := new(big.Int).SetString(a, 10)
-    if succeed == false {
-        resp.ErrorMsg = "params amount parsing error"
-        controller.ServeJSON()
-        return
-    }
-
-    destChain, err := strconv.ParseInt(d, 10, 64)
-    if err != nil {
-        resp.ErrorMsg = err.Error()
-        controller.ServeJSON()
-        return
-    }
-
+    amount := controller.Input().Get("amount")
+    destChain := controller.Input().Get("destChain")
     t := node.GenerateBalanceTransaction(to, destChain, amount)
 
     var body string
@@ -222,7 +195,7 @@ func (controller *MainController)SendTransaction() {
     controller.ServeJSON()
 }
 
-func (controller *MainController)GetTransactionsFromBlock() {
+func (controller *MainController) GetTransactionsFromBlock() {
     resp := &Response{Success:true}
     controller.Data["json"] = resp
     value := controller.Input().Get("height")
@@ -246,7 +219,7 @@ func (controller *MainController)GetTransactionsFromBlock() {
 }
 
 
-func (controller *MainController)SendTransactionsToMainChain() {
+func (controller *MainController) SendTransactionsToMainChain() {
     resp := &Response{Success:true}
     controller.Data["json"] = resp
     value := controller.Input().Get("tx_pkg")
@@ -268,7 +241,7 @@ func (controller *MainController)SendTransactionsToMainChain() {
     }()
 }
 
-func (controller *MainController)GetReputation() {
+func (controller *MainController) GetReputation() {
     // find param in http.Request
     resp := &Response{Success:false}
     controller.Data["json"] = resp
@@ -281,29 +254,35 @@ func (controller *MainController)GetReputation() {
     }
 
     c := controller.GetString("chainId")
-    chainId, err := strconv.ParseInt(c, 10, 64)
-    if err != nil {
-        resp.ErrorMsg = err.Error()
-        resp.Data = c
-        controller.ServeJSON()
-        return
-    }
+    chainId := config.Hex2ChainId(c)
 
     fmt.Println("BalanceAddress: ", address)
     ca := accounts.Hex2Address(address)
-    b := database.GetReputationOutsideTransaction(ca, chainId)
-    if (b.Int64() == 0) {
-        defaultRep := viper.GetInt64("default_rep")
-        fmt.Println("default reputation is :", defaultRep)
-        database.PutReputationOutSideTransaction(ca, chainId, big.NewInt(defaultRep))
-        resp.Success = true
-        resp.Data = viper.GetString("default_rep")
-        controller.ServeJSON()
-    }
+    rep := database.GetReputation(ca, chainId)
     resp.Success = true
-    resp.Data = b.String()
+    resp.Data = rep.String()
 
     fmt.Println(resp)
+    controller.ServeJSON()
+}
+
+func (controller *MainController) SyncChildChain() {
+    resp := &Response{Success:false}
+    controller.Data["json"] = resp
+    data := controller.GetString("data")
+    //fmt.Println()
+    //fmt.Println("data: ", data)
+    //fmt.Println()
+    tx := node.GenerateCrossChainTransaction([]byte(data))
+    err := node.SendTransaction(tx)
+
+    if err != nil {
+        resp.ErrorMsg = err.Error()
+        controller.ServeJSON()
+        return
+    }
+    resp.Success = true
+    resp.Data = "Sync subchain data succeed!"
     controller.ServeJSON()
 }
 

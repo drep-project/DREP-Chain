@@ -14,16 +14,19 @@ import (
 	"BlockChainTest/util"
 	"BlockChainTest/util/flags"
 	"BlockChainTest/core/common"
+	"github.com/spf13/viper"
+	"encoding/hex"
 )
 
 const (
+    ChainIdSize = 64
     defaultPort = 55555
 	defaultBlockPrize = "20000000000000000000"
 	ClientIdentifier = "drep" // Client identifier to advertise over the network
-	RootChain = 0
 )
 
 var (
+	RootChain ChainIdType
 	ConfigFileFlag = cli.StringFlag{
 		Name:  "config",
 		Usage: "TODO add config description",
@@ -31,7 +34,41 @@ var (
 	nodeConfig  *NodeConfig
 )
 
-type Bootnodes struct {
+type ChainIdType [ChainIdSize]byte
+
+func (c ChainIdType) Hex() string {
+	return hex.EncodeToString(c[:])
+}
+
+func (c *ChainIdType) SetBytes(b []byte) {
+	if len(b) > len(c) {
+		copy(c[:], b[len(b) - ChainIdSize:])
+	} else {
+		copy(c[ChainIdSize - len(b):], b)
+	}
+}
+
+func Bytes2ChainId(b []byte) ChainIdType {
+	if b == nil {
+		return ChainIdType{}
+	}
+	var chainId ChainIdType
+	chainId.SetBytes(b)
+	return chainId
+}
+
+func Hex2ChainId(s string) ChainIdType {
+	if s == "" {
+		return ChainIdType{}
+	}
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		return ChainIdType{}
+	}
+	return Bytes2ChainId(b)
+}
+
+type BootNode struct {
 	PubKey  *common.PK	`json:"pubKey"`
 	Address string		`json:"address"`
 	IP string			`json:"ip"`
@@ -43,14 +80,14 @@ type NodeConfig struct {
 	Keystore string				`json:"keystore"`
 	DbPath string  				`json:"dataDir"`
 	LogDir string  				`json:"logDir"`
-	ChainId int64   			`json:"chainId"`
+	ChainId string   		    `json:"chainId"`
 
 	//p2p
 	Port int		 			`json:"port"`
 	Boot bool					`json:"boot"`
 	Myindex int					`json:"myindex"`
 	Blockprize *Blockprize		`json:"blockprize"`
-	BootNodes []*Bootnodes 		`json:"bootNodes"`
+	BootNodes []*BootNode 		`json:"bootNodes"`
 
 	ConsensusMode string		`json:"consensusMode"`
 	RpcConfig RpcConfig			`json:"rpcConfig"`
@@ -64,7 +101,7 @@ func GetConfig() *NodeConfig{
    return nodeConfig
 }
 
-func (node *NodeConfig)GetMyIndex() int {
+func (node *NodeConfig) GetMyIndex() int {
     if node.Boot {
         return node.Myindex
     } else {
@@ -101,10 +138,10 @@ func MakeConfig(ctx *cli.Context) ( *NodeConfig, error) {
 	return nodeConfig, nil
 }
 
-func loadConfigFile(ctx *cli.Context, nodeConfig *NodeConfig) error{
-	configFile := filepath.Join(nodeConfig.HomeDir,"config.json")
+func loadConfigFile(ctx *cli.Context, nodeConfig *NodeConfig) error {
+	configFile := filepath.Join(nodeConfig.HomeDir, "config.json")
 
-	if ctx.GlobalIsSet(ConfigFileFlag.Name)  {
+	if ctx.GlobalIsSet(ConfigFileFlag.Name) {
 		file := ctx.GlobalString(ConfigFileFlag.Name)
 		if util.IsFileExists(file) {
 			//report error when user specify
@@ -118,10 +155,18 @@ func loadConfigFile(ctx *cli.Context, nodeConfig *NodeConfig) error{
 		return nil
 	}
 	content, err := ioutil.ReadFile(configFile)
-	if err !=  nil {
+	if err != nil {
 		return err
 	}
 	return json.Unmarshal(content, nodeConfig)
+}
+
+func GetBootNodes() []*BootNode {
+    config := &struct {
+        BootNodes []*BootNode
+    }{}
+    viper.Unmarshal(config)
+    return config.BootNodes
 }
 
 /*

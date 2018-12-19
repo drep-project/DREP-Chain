@@ -2,31 +2,29 @@ package store
 
 import (
     "time"
-    "errors"
     "math/big"
     "encoding/json"
-
     "BlockChainTest/trie"
     "BlockChainTest/bean"
-    "BlockChainTest/config"
     "BlockChainTest/mycrypto"
     "BlockChainTest/database"
     "BlockChainTest/accounts"
+    "BlockChainTest/config"
     "BlockChainTest/core/common"
 )
 
 var (
-    chainId  int64
-    prvKey   *mycrypto.PrivateKey
-    pubKey   *mycrypto.Point
-    address  accounts.CommonAddress
-
-    port bean.Port
-    nodes map[string] *accounts.Node
+    chainId    config.ChainIdType
+    prvKey     *mycrypto.PrivateKey
+    pubKey     *mycrypto.Point
+    address    accounts.CommonAddress
+    port       bean.Port
+    isRelay    bool
 )
 
-func InitState(config *config.NodeConfig)  {
-    keystore := config.Keystore
+func InitState(nodeConfig *config.NodeConfig)  {
+
+    keystore := nodeConfig.Keystore
     node, _ := accounts.OpenKeystore(keystore)
     if node != nil {
         prvKey = node.PrvKey
@@ -36,75 +34,64 @@ func InitState(config *config.NodeConfig)  {
         panic("keystore file not exists!")
     }
 
-    myIndex := config.GetMyIndex()
-    chainId = config.ChainId
-    debugNodes := config.BootNodes
-    minerNum := len(debugNodes)
+    myIndex := nodeConfig.GetMyIndex()
+    chainId = config.Hex2ChainId(nodeConfig.ChainId)
+    bootNodes := nodeConfig.BootNodes
+    minerNum := len(bootNodes)
 
     curMiner = -1
     minerIndex = minerNum - 1
 
     for i := 0; i < minerNum; i++ {
         peer := &bean.Peer{
-            IP:     bean.IP(debugNodes[i].IP),
-            Port:   bean.Port(debugNodes[i].Port),
+            IP:     bean.IP(bootNodes[i].IP),
+            Port:   bean.Port(bootNodes[i].Port),
         }
         if i != myIndex {
-            peer.PubKey = common.ParsePK(debugNodes[i].PubKey)
+            peer.PubKey = common.ParsePK(bootNodes[i].PubKey)
         } else {
             peer.PubKey = pubKey
         }
         curMiners = append(curMiners, peer)
         miners = append(miners, peer)
         AddPeer(peer)
-        //database.PutBalanceOutSideTransaction(accounts.PubKey2Address(peer.PubKey), chainId, big.NewInt(100000000))
     }
     adminPubKey = miners[0].PubKey
-
-    port = bean.Port(config.Port)
-    //if Solo {
-    //    minerNum = 1
-    //    ip0 = network.IP("127.0.0.1")
-    //    port0 = network.Port(55555)
-    //} else if LocalTest {
-    //    ip0 = network.IP("127.0.0.1")
-    //    ip1 = network.IP("127.0.0.1")
-    //    port0 = network.Port(55555)
-    //    port1 = network.Port(55556)
-    //    port2 = network.Port(55557)
-    //} else {
-    //    ip0 = network.IP("192.168.3.231")
-    //    ip1 = network.IP("192.168.3.197")
-    //    ip2 = network.IP("192.168.3.236")
-    //    port0 = network.Port(55555)
-    //    port1 = network.Port(55555)
-    //    port2 = network.Port(55555)
-    //}
-    //
+    port = bean.Port(nodeConfig.Port)
+    isRelay = accounts.PubKey2Address(pubKey).Hex() == bootNodes[0].Address
 }
 
 func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
-    maxHeight := database.GetMaxHeight()
-    height := maxHeight + 1
+    dt := database.BeginTransaction()
+    height := database.GetMaxHeight() + 1
     ts := PickTransactions(BlockGasLimit)
-    previousBlock := database.GetHighestBlock()
-    var b, previousHash []byte
-    var err error
-    if previousBlock != nil {
-        b, err = json.Marshal(previousBlock.Header)
-        if err != nil {
-            return nil, err
-        }
-        previousHash = mycrypto.Hash256(b)
-    } else {
-        previousHash = []byte{}
-    }
-    gasUsed := GetGasSum(ts).Bytes()
-    //if ExceedGasLimit(gasUsed, gasLimit) {
-    //    return nil, errors.New("gas used exceeds gas limit")
+    //fmt.Println()
+    //if lastLeader != nil {
+    //    fmt.Println("last leader:   ", accounts.PubKey2Address(lastLeader))
+    //} else {
+    //    fmt.Println("last leader:   ")
     //}
+    //fmt.Println("last minors:   ", lastMinors)
+    //fmt.Println("last prize:    ", lastPrize)
+    //fmt.Println()
+    var bpt *bean.Transaction
+    if lastPrize != nil {
+        bpt = GenerateBlockPrizeTransaction()
+        if bpt != nil {
+            ts = append(ts, bpt)
+        }
+    }
+
+    gasSum := new(big.Int)
+    for _, t := range ts {
+        subDt := dt.BeginTransaction()
+        g, _ := execute(subDt, t)
+        gasSum = new(big.Int).Add(gasSum, g)
+        subDt.Commit()
+    }
     timestamp := time.Now().Unix()
-    stateRoot := GetStateRoot(ts)
+    stateRoot := dt.GetTotalStateRoot()
+    gasUsed := gasSum.Bytes()
     txHashes, err := GetTxHashes(ts)
     if err != nil {
         return nil, err
@@ -115,10 +102,23 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
     for _, p := range members {
         memberPks = append(memberPks, p.PubKey)
     }
-    return &bean.Block{
+
+    var previousHash []byte
+    previousBlock := database.GetHighestBlock()
+    if previousBlock == nil {
+        previousHash = []byte{}
+    } else {
+        h, err := previousBlock.BlockHash()
+        if err != nil {
+            return nil, err
+        }
+        previousHash = h
+    }
+    block := &bean.Block{
         Header: &bean.BlockHeader{
-            Version: Version,
+            Version:      Version,
             PreviousHash: previousHash,
+            ChainId: GetChainId(),
             GasLimit: BlockGasLimit.Bytes(),
             GasUsed: gasUsed,
             Timestamp: timestamp,
@@ -129,11 +129,64 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
             LeaderPubKey:GetPubKey(),
             MinorPubKeys:memberPks,
         },
-        Data:&bean.BlockData{
-            TxCount:int32(len(ts)),
-            TxList:ts,
+        Data: &bean.BlockData{
+            TxCount: int32(len(ts)),
+            TxList:  ts,
         },
-    }, nil
+    }
+    dt.Discard()
+    return block, nil
+}
+
+func GenerateBlockPrizeTransaction() *bean.Transaction {
+    numMinors := len(lastMinors)
+    leaderPrize := new(big.Int).Rsh(lastPrize, 1)
+    leftPrize := new(big.Int).Sub(lastPrize, leaderPrize)
+    var minorPrize *big.Int
+    if numMinors > 0 {
+        minorPrize = new(big.Int).Div(leftPrize, new(big.Int).SetInt64(int64(numMinors)))
+    }
+    trans := make([]*bean.Transaction, len(lastMinors) + 1)
+
+    dataL := &bean.TransactionData{
+        Version: Version,
+        Type: BlockPrizeType,
+        To: accounts.PubKey2Address(lastLeader).Hex(),
+        DestChain: GetChainId(),
+        Amount: leaderPrize.Bytes(),
+        Timestamp: time.Now().Unix(),
+        Data: []byte("block prize for leader"),
+    }
+    trans[0] = &bean.Transaction{Data: dataL}
+
+    for i := 1; i < len(trans); i++ {
+        dataM := &bean.TransactionData{
+            Version: Version,
+            Type: BlockPrizeType,
+            To: accounts.PubKey2Address(lastMinors[i - 1]).Hex(),
+            DestChain: GetChainId(),
+            Amount: minorPrize.Bytes(),
+            Timestamp: time.Now().Unix(),
+            Data: []byte("block prize for minor"),
+        }
+        trans[i] = &bean.Transaction{Data: dataM}
+    }
+
+    b, err := json.Marshal(trans)
+    if err != nil {
+        return nil
+    }
+    data := &bean.TransactionData{
+        Version: Version,
+        Type: BlockPrizeType,
+        Timestamp: time.Now().Unix(),
+        Data: b,
+    }
+
+    //lastLeader = nil
+    //lastMinors = nil
+    //lastPrize = nil
+    return &bean.Transaction{Data: data}
 }
 
 func GetPubKey() *mycrypto.Point {
@@ -144,7 +197,7 @@ func GetAddress() accounts.CommonAddress {
     return address
 }
 
-func GetChainId() int64 {
+func GetChainId() config.ChainIdType {
     return chainId
 }
 
@@ -152,65 +205,8 @@ func GetPrvKey() *mycrypto.PrivateKey {
     return prvKey
 }
 
-func CreateAccount(addr string, chainId int64) (string, error) {
-    IsRoot := chainId == accounts.RootChainID
-    var (
-        parent *accounts.Node
-        parentFound bool
-    )
-    if !IsRoot {
-        parent, parentFound = nodes[addr]
-        if !parentFound {
-            return "", errors.New("no parent account " + addr + " is found on the root chain")
-        }
-    }
-    account, err := accounts.NewNormalAccount(parent, chainId)
-    if err != nil {
-        return "", err
-    }
-    database.PutStorageOutsideTransaction(account.Storage, account.Address, chainId)
-    return account.Address.Hex(), nil
-}
-
-func GetAccounts() []string {
-    acs := make([]string, len(nodes))
-    i := 0
-    for addr, _ := range nodes {
-        acs[i] = addr
-        i++
-    }
-    return acs
-}
-
 func GetPort() bean.Port {
     return port
-}
-
-func GetGasSum(ts []*bean.Transaction) *big.Int {
-    gasSum := new(big.Int)
-    for _, tx := range ts {
-        gasSum = gasSum.Add(gasSum, tx.GetGas())
-    }
-    return gasSum
-}
-
-func GetStateRoot(ts []*bean.Transaction) []byte {
-    //for _, tx := range ts {
-    //    from := bean.PubKey2Address(tx.Data.PubKey)
-    //    to := bean.Hex2Address(tx.Data.To)
-    //    gasUsed := tx.GetGas()
-    //    nonce := tx.Data.Nonce
-    //    amount := new(big.Int).SetBytes(tx.Data.Amount)
-    //    prevSenderBalance := database.GetBalance(from)
-    //    prevReceiverBalance := database.GetBalance(to)
-    //    newSenderBalance := new(big.Int).Sub(prevSenderBalance, amount)
-    //    newSenderBalance = newSenderBalance.Sub(newSenderBalance, gasUsed)
-    //    newReceiverBalance := new(big.Int).Add(prevReceiverBalance, amount)
-    //    database.PutBalance(from, newSenderBalance)
-    //    database.PutBalance(to, newReceiverBalance)
-    //    database.PutNonce(from, nonce)
-    //}
-    return database.GetDB().GetStateRoot()
 }
 
 func GetTxHashes(ts []*bean.Transaction) ([][]byte, error) {

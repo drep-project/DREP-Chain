@@ -87,7 +87,7 @@ func (l *Leader) waitForCommit(peers []*bean.Peer) bool {
     memberNum := len(peers)
     //r := make([]bool, memberNum)
     log.Trace("waitForCommit 1")
-    commits := pool.Obtain(memberNum, func(msg interface{}) bool {
+    commits := pool.ObtainMsg(memberNum, func(msg interface{}) bool {
         if m, ok := msg.(*consmsg.CommitmentMsg); ok {
             if !contains(m.Peer.PubKey, peers) {
                 return false
@@ -103,7 +103,7 @@ func (l *Leader) waitForCommit(peers []*bean.Peer) bool {
         }
     }, 5 * time.Second)
     log.Trace("waitForCommit 2")
-    if len(commits) + 1 < memberNum * 3 / 2 {
+    if len(commits) + 1 < memberNum * 2 / 3 {
         log.Trace("waitForCommit", "Commits", len(commits),"memberNum", memberNum)
         return false
     }
@@ -118,12 +118,11 @@ func (l *Leader) waitForCommit(peers []*bean.Peer) bool {
         log.Trace("waitForCommit 5")
     }
     log.Trace("waitForCommit 6")
-
     return true
 }
 
 func (l *Leader) waitForResponse(peers []*bean.Peer)  {
-    responses := pool.Obtain(len(l.members), func(msg interface{}) bool {
+    responses := pool.ObtainMsg(len(l.members), func(msg interface{}) bool {
         if m, ok := msg.(*consmsg.ResponseMsg); ok {
             if !contains(m.Peer.PubKey, peers) {
                 return false
@@ -170,7 +169,7 @@ func (l *Leader) challenge(msg []byte) []*bean.Peer {
 }
 
 func isLegalIndex(index int, bitmap []byte) bool {
-    return index >=0 && index <= len(bitmap) && bitmap[index] != 1
+    return index >=0 && index < len(bitmap) && bitmap[index] != 1
 }
 
 func (l *Leader) getMinerIndex(p *mycrypto.Point) int {

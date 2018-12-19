@@ -77,7 +77,7 @@ func (n *Node) GetApis() []rpc.API{
 		Version   :"1.0",
 		Service:	&accounts.AccountApi{
 			KeyStoreDir : n.nodeConfig.Keystore,
-			ChainId : n.nodeConfig.ChainId,
+			ChainId : config.Hex2ChainId(n.nodeConfig.ChainId),
 		},
 		Public  :  true      ,
 	}

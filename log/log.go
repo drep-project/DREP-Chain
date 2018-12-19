@@ -4,11 +4,11 @@ import (
 	"BlockChainTest/util"
 	"io"
 	"os"
-
 	"BlockChainTest/config"
 	"github.com/mattn/go-colorable"
 	"github.com/mattn/go-isatty"
 )
+
 var DEBUG = false
 
 

@@ -5,10 +5,12 @@ import (
     "encoding/hex"
     "math/big"
     "math/rand"
+    "BlockChainTest/config"
+    "BlockChainTest/accounts"
 )
 
 type BlockWeb struct {
-    ChainId      int64
+    ChainId      config.ChainIdType
     Height       int64
     Timestamp    int64
     Hash         string
@@ -17,6 +19,7 @@ type BlockWeb struct {
     GasLimit     string
     TxHashes     []string
     Size         int
+    TxSize       int
     MiningLeader string
     MiningMember []string
 }
@@ -26,21 +29,22 @@ func ParseBlock(block *bean.Block) *BlockWeb {
     b.ChainId = block.Header.ChainId
     b.Height = block.Header.Height
     b.Timestamp = block.Header.Timestamp * 1000
-    b.Hash, _ = block.BlockHash()
+    b.Hash, _ = block.BlockHashHex()
     b.PreviousHash = "0x" + hex.EncodeToString(block.Header.PreviousHash)
     b.GasUsed = new(big.Int).SetBytes(block.Header.GasUsed).String()
     b.GasLimit = new(big.Int).SetBytes(block.Header.GasLimit).String()
 
     var minorPubKeys []string
 
-    var leaderPubKey = "0x" + bean.PubKey2Address(block.Header.LeaderPubKey).Hex()
+    var leaderPubKey = "0x" + accounts.PubKey2Address(block.Header.LeaderPubKey).Hex()
     for _, key := range(block.Header.MinorPubKeys) {
-        minorPubKeys = append(minorPubKeys, "0x" + bean.PubKey2Address(key).Hex())
+        minorPubKeys = append(minorPubKeys, "0x" + accounts.PubKey2Address(key).Hex())
     }
     b.MiningMember = minorPubKeys
     b.MiningLeader = leaderPubKey
 
     b.TxHashes = block.TxHashes()
+    b.TxSize = len(b.TxHashes)
     return b
 }
 
@@ -50,7 +54,7 @@ type TransactionWeb struct {
     Hash      string
     From      string
     To        string
-    ChainId   int64
+    ChainId   config.ChainIdType
     Amount    string
     GasPrice  string
     GasUsed   string
@@ -64,8 +68,8 @@ func ParseTransaction(tx *bean.Transaction) *TransactionWeb {
     t.Timestamp = tx.Data.Timestamp * 1000
     h, _ := tx.TxHash()
     t.Hash = "0x" + hex.EncodeToString(h)
-    t.From = "0x" + bean.PubKey2Address(tx.Data.PubKey).Hex()
-    t.To = tx.Data.To
+    t.From = "0x" + accounts.PubKey2Address(tx.Data.PubKey).Hex()
+    t.To = "0x" + tx.Data.To
     t.Data = "0x" + hex.EncodeToString(tx.Data.Data)
     t.ChainId = tx.Data.ChainId
     t.Amount = new(big.Int).SetBytes(tx.Data.Amount).String()
