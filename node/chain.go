@@ -13,11 +13,12 @@ import (
     "BlockChainTest/database"
     "BlockChainTest/accounts"
     "encoding/hex"
+    "fmt"
 )
 
 func SendTransaction(t *bean.Transaction) error {
     peers := store.GetPeers()
-    log.Info("Send transaction")
+    //log.Info("Send transaction")
     if _, offline := network.SendMessage(peers, t); len(offline) == 0 {
         if id, err := t.TxId(); err == nil {
             store.ForwardTransaction(id)
@@ -140,6 +141,24 @@ func GenerateCrossChainTransaction(data []byte) *bean.Transaction {
         PubKey: store.GetPubKey(),
     }
     return &bean.Transaction{Data: transactionData}
+}
+
+func GetH() {
+    height := database.GetMaxHeight()
+    fmt.Println(height)
+}
+
+func GetTxn() {
+    h := database.GetMaxHeight()
+    var i int64
+    for i = 0; i < h; i++ {
+        block := database.GetBlock(i)
+        fmt.Println("height: ", i)
+        fmt.Println("len: ", len(block.Data.TxList))
+        //b, _ := json.Marshal(block)
+        //fmt.Println(string(b))
+        fmt.Println()
+    }
 }
 
 //func ForgeCrossChainTransaction() *bean.Transaction {

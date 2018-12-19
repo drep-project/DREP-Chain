@@ -8,7 +8,10 @@ import (
     "BlockChainTest/util/list"
     "BlockChainTest/database"
     "BlockChainTest/accounts"
+    "fmt"
 )
+
+const maxSize = 100000
 
 var (
     trans       *list.LinkedList
@@ -85,29 +88,37 @@ func checkAndGetAddr(tran *bean.Transaction) (bool, accounts.CommonAddress) {
 func AddTransaction(transaction *bean.Transaction) bool {
     check, addr := checkAndGetAddr(transaction)
     if !check {
+        fmt.Println(1111)
         return false
     }
     id, err := transaction.TxId()
     if err != nil {
+        fmt.Println(2222)
         return false
     }
     tranLock.Lock()
+    defer tranLock.Unlock()
+    if trans.Size() >= maxSize {
+        log.Error("transaction pool full. %s fail to add", id)
+        return false
+    }
     if _, exists := tranSet[id]; exists {
         log.Error("transaction %s exists", id)
-        tranLock.Unlock()
+        fmt.Println(3333)
         return false
     } else {
         tranSet[id] = true
         trans.Add(transaction)
         if l, exists := accountTran[addr]; exists {
+            fmt.Println(4444)
             l.Add(transaction)
         } else {
+            fmt.Println(5555)
             l = list.NewSortedLinkedList(nonceCp)
             accountTran[addr] = l
             l.Add(transaction)
         }
     }
-    tranLock.Unlock()
     return true
 }
 
@@ -116,6 +127,8 @@ func removeTransaction(tran *bean.Transaction) (bool, bool) {
     if err != nil {
         return false, false
     }
+    tranLock.Lock()
+    defer tranLock.Unlock()
     r1 := trans.Remove(tran, tranCp)
     delete(tranSet, id)
     addr := accounts.PubKey2Address(tran.Data.PubKey)

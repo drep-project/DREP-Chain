@@ -11,6 +11,7 @@ import (
     "BlockChainTest/accounts"
     "BlockChainTest/config"
     "BlockChainTest/core/common"
+    "fmt"
 )
 
 var (
@@ -65,6 +66,7 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
     dt := database.BeginTransaction()
     height := database.GetMaxHeight() + 1
     ts := PickTransactions(BlockGasLimit)
+    fmt.Println("pick: ", ts)
     //fmt.Println()
     //if lastLeader != nil {
     //    fmt.Println("last leader:   ", accounts.PubKey2Address(lastLeader))
@@ -74,11 +76,23 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
     //fmt.Println("last minors:   ", lastMinors)
     //fmt.Println("last prize:    ", lastPrize)
     //fmt.Println()
+    var bpt *bean.Transaction
     if lastPrize != nil {
-        bpt := GenerateBlockPrizeTransaction()
+        bpt = GenerateBlockPrizeTransaction()
         if bpt != nil {
             ts = append(ts, bpt)
+            fmt.Println("jia le")
+        } else {
+            fmt.Println("cuo le")
         }
+    } else {
+        fmt.Println("mei you jia")
+    }
+
+    fmt.Println("a: ", ts)
+
+    if len(ts) == 0 {
+        fmt.Println("bpt: ", bpt)
     }
 
     gasSum := new(big.Int)
@@ -92,6 +106,7 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
     stateRoot := dt.GetTotalStateRoot()
     gasUsed := gasSum.Bytes()
     txHashes, err := GetTxHashes(ts)
+    fmt.Println("b: ", ts)
     if err != nil {
         return nil, err
     }
@@ -113,6 +128,7 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
         }
         previousHash = h
     }
+    fmt.Println("c: ", ts)
     //fmt.Println("generate block height: ", height)
     block := &bean.Block{
         Header: &bean.BlockHeader{
@@ -134,6 +150,8 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
             TxList:  ts,
         },
     }
+    fmt.Println("d: ", ts)
+    fmt.Println("num: ", len(block.Data.TxList))
     dt.Discard()
     return block, nil
 }
@@ -183,9 +201,9 @@ func GenerateBlockPrizeTransaction() *bean.Transaction {
         Data: b,
     }
 
-    lastLeader = nil
-    lastMinors = nil
-    lastPrize = nil
+    //lastLeader = nil
+    //lastMinors = nil
+    //lastPrize = nil
     return &bean.Transaction{Data: data}
 }
 
