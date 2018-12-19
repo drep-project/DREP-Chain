@@ -103,7 +103,7 @@ func (l *Leader) waitForCommit(peers []*bean.Peer) bool {
         }
     }, 5 * time.Second)
     log.Trace("waitForCommit 2")
-    if len(commits) + 1 < memberNum * 3 / 2 {
+    if len(commits) + 1 < memberNum * 2 / 3 {
         log.Trace("waitForCommit", "Commits", len(commits),"memberNum", memberNum)
         return false
     }
@@ -169,7 +169,7 @@ func (l *Leader) challenge(msg []byte) []*bean.Peer {
 }
 
 func isLegalIndex(index int, bitmap []byte) bool {
-    return index >=0 && index <= len(bitmap) && bitmap[index] != 1
+    return index >=0 && index < len(bitmap) && bitmap[index] != 1
 }
 
 func (l *Leader) getMinerIndex(p *mycrypto.Point) int {
