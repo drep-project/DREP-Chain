@@ -91,6 +91,8 @@ func (n *Node) Start(config *config.NodeConfig) {
 
     lalala := false
 
+    //TODO
+    //100good
     if lalala {
         go func() {
             time.Sleep(30 * time.Second)
@@ -117,20 +119,14 @@ func (n *Node) Start(config *config.NodeConfig) {
                         PubKey:    store.GetPubKey(),
                     }
                     t := &bean.Transaction{Data: data}
-                    fmt.Println()
-                    fmt.Println("prepare send tx")
                     err := SendTransaction(t)
-                    fmt.Println("after send tx")
-                    fmt.Println()
                     if err == nil {
                         //fmt.Println("succeed")
                     } else {
                         //fmt.Println("failed")
                     }
                 }
-                fmt.Println("round middle")
                 time.Sleep(time.Second)
-                fmt.Println("round end")
             }
         }()
     }

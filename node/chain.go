@@ -14,23 +14,19 @@ import (
     "BlockChainTest/accounts"
     "encoding/hex"
     "fmt"
-    "encoding/json"
 )
 
 func SendTransaction(t *bean.Transaction) error {
     peers := store.GetPeers()
     //log.Info("Send transaction")
     if _, offline := network.SendMessage(peers, t); len(offline) == 0 {
-        fmt.Println("FFFFFFFFFF444444")
         if id, err := t.TxId(); err == nil {
             store.ForwardTransaction(id)
         }
         store.AddTransaction(t)
-        fmt.Println("add success")
         store.RemovePeers(offline)
         return nil
     } else {
-        fmt.Println("FFFFFFFFFF555555555")
         return &util.ConnectionError{}
     }
 }
@@ -159,8 +155,8 @@ func GetTxn() {
         block := database.GetBlock(i)
         fmt.Println("height: ", i)
         fmt.Println("len: ", len(block.Data.TxList))
-        b, _ := json.Marshal(block)
-        fmt.Println(string(b))
+        //b, _ := json.Marshal(block)
+        //fmt.Println(string(b))
         fmt.Println()
     }
 }
