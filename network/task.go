@@ -83,7 +83,8 @@ func (t *Task) execute() error {
         log.Info("Send error ", err)
         return &util.TransmissionError{MyError:util.MyError{Err:err}}
     } else {
-        log.Info("Send bytes ", num)
+        fmt.Println("num: ", num)
+        //log.Info("Send bytes ", num)
         return nil
     }
 }

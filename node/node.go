@@ -18,6 +18,7 @@ import (
     "encoding/json"
     "BlockChainTest/pool"
     "BlockChainTest/accounts"
+    "fmt"
 )
 
 var (
@@ -87,6 +88,48 @@ func (n *Node) Start(config *config.NodeConfig) {
             // todo if timeout still can go. why
         }
     }()
+
+    lalala := false
+
+    //TODO
+    //100good
+    if lalala {
+        go func() {
+            time.Sleep(30 * time.Second)
+            nonce := database.GetNonce(store.GetAddress(), store.GetChainId())
+            for {
+                fmt.Println("round begin")
+                chainId := store.GetChainId()
+                destChain := store.GetChainId()
+                amount := new(big.Int).SetInt64(100000).Bytes()
+                to := "111111"
+                for i := 0; i < 100; i++ {
+                    nonce ++
+                    data := &bean.TransactionData{
+                        Version:   store.Version,
+                        Nonce:     nonce,
+                        Type:      store.TransferType,
+                        To:        to,
+                        ChainId:   chainId,
+                        DestChain: destChain,
+                        Amount:    amount,
+                        GasPrice:  store.DefaultGasPrice.Bytes(),
+                        GasLimit:  store.TransferGas.Bytes(),
+                        Timestamp: time.Now().Unix(),
+                        PubKey:    store.GetPubKey(),
+                    }
+                    t := &bean.Transaction{Data: data}
+                    err := SendTransaction(t)
+                    if err == nil {
+                        //fmt.Println("succeed")
+                    } else {
+                        //fmt.Println("failed")
+                    }
+                }
+                time.Sleep(time.Second)
+            }
+        }()
+    }
 }
 
 func (n *Node) runAsLeader() {

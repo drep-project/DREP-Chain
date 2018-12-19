@@ -19,6 +19,7 @@ type BlockWeb struct {
     GasLimit     string
     TxHashes     []string
     Size         int
+    TxSize       int
     MiningLeader string
     MiningMember []string
 }
@@ -43,6 +44,7 @@ func ParseBlock(block *bean.Block) *BlockWeb {
     b.MiningLeader = leaderPubKey
 
     b.TxHashes = block.TxHashes()
+    b.TxSize = len(b.TxHashes)
     return b
 }
 
