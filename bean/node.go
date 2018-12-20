@@ -18,11 +18,11 @@ type FirstPeerInfoList struct {
 
 type BlockReq struct {
 	Pk                   *mycrypto.Point
-	Height               int64
+	Height               uint64
 }
 
 type BlockResp struct {
-	Height               int64
+	Height               uint64
 	Blocks               []*Block
 }
 

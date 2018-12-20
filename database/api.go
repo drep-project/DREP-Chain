@@ -16,38 +16,8 @@ var (
     db *Database
 )
 
-//const (
-//    CNT = 2
-//)
-//
-//var (
-//    RootPRV    [CNT]*mycrypto.PrivateKey
-//    RootADDR   [CNT]accounts.CommonAddress
-//    ChildPRV   [CNT]*mycrypto.PrivateKey
-//    ChildADDR  [CNT]accounts.CommonAddress
-//    ChildCHAIN = config.Hex2ChainId("6666")
-//    AMOUNT     [CNT]*big.Int
-//)
-//
-//func forge() {
-//    for i := 0; i < CNT; i++ {
-//        curve := mycrypto.GetCurve()
-//        RootPRV[i] = &mycrypto.PrivateKey{[]byte{2 * byte(i)}, curve.ScalarBaseMultiply([]byte{2 * byte(i)})}
-//        RootADDR[i] = accounts.PubKey2Address(RootPRV[i].PubKey)
-//        ChildPRV[i] = &mycrypto.PrivateKey{[]byte{2 * byte(i) + 1}, curve.ScalarBaseMultiply([]byte{2 * byte(i) + 1})}
-//        ChildADDR[i] = accounts.PubKey2Address(ChildPRV[i].PubKey)
-//        AMOUNT[i] = new(big.Int).SetInt64(10000 + int64(i) * 100)
-//        t := BeginTransaction()
-//        initialBalance, _ := new(big.Int).SetString("5000000000000000000000", 10)
-//        PutBalance(t, RootADDR[i], config.RootChain, initialBalance)
-//        PutBalance(t, ChildADDR[i], ChildCHAIN, initialBalance)
-//        t.Commit()
-//    }
-//}
-
 func InitDataBase(config *config.NodeConfig){
     db = NewDatabase(config)
-    //forge()
 }
 
 func GetItr() iterator.Iterator {
@@ -58,8 +28,8 @@ func BeginTransaction() Transactional {
     return db.BeginTransaction()
 }
 
-func GetBlock(height int64) *bean.Block {
-    key := mycrypto.Hash256([]byte("block_" + strconv.FormatInt(height, 10)))
+func GetBlock(height uint64) *bean.Block {
+    key := mycrypto.Hash256([]byte("block_" + strconv.FormatUint(height, 10)))
     value := db.Get(key)
     block := &bean.Block{}
     err := json.Unmarshal(value, block)
@@ -70,7 +40,7 @@ func GetBlock(height int64) *bean.Block {
 }
 
 func PutBlock(block *bean.Block) error {
-    key := mycrypto.Hash256([]byte("block_" + strconv.FormatInt(block.Header.Height, 10)))
+    key := mycrypto.Hash256([]byte("block_" + strconv.FormatUint(block.Header.Height, 10)))
     value, err := json.Marshal(block)
     if err != nil {
         return err
@@ -78,7 +48,7 @@ func PutBlock(block *bean.Block) error {
     return db.PutOutState(config.Hex2ChainId(config.GetConfig().ChainId), key, value)
 }
 
-func GetBlocksFrom(start, size int64) []*bean.Block {
+func GetBlocksFrom(start, size uint64) []*bean.Block {
     var (
         currentBlock =&bean.Block{}
         height = start
@@ -95,15 +65,16 @@ func GetBlocksFrom(start, size int64) []*bean.Block {
 }
 
 func GetAllBlocks() []*bean.Block {
-    return GetBlocksFrom(int64(0), int64(-1))
+    return GetBlocksFrom(uint64(0), uint64(-1))
 }
 
-func GetMostRecentBlocks(n int64) []*bean.Block {
+func GetMostRecentBlocks(n uint64) []*bean.Block {
     height := GetMaxHeight()
-    if height == -1 {
-        return make([]*bean.Block, 0)
+    if n <= height {
+        return GetBlocksFrom(height - n, n)
+    } else {
+        return GetBlocksFrom(0, height)
     }
-    return GetBlocksFrom(height - n, n)
 }
 
 func GetHighestBlock() *bean.Block {
@@ -111,13 +82,13 @@ func GetHighestBlock() *bean.Block {
     return GetBlock(maxHeight)
 }
 
-func GetMaxHeight() int64 {
+func GetMaxHeight() uint64 {
     key := mycrypto.Hash256([]byte("max_height"))
     value := db.Get(key)
     if value == nil {
         return -1
     } else {
-        return new(big.Int).SetBytes(value).Int64()
+        return new(big.Int).SetBytes(value).Uint64()
     }
 }
 
@@ -144,61 +115,6 @@ func PutStorage(t Transactional, addr accounts.CommonAddress, chainId config.Cha
     return t.Put(chainId, key, value)
 }
 
-
-//func GetStorageInsideTransaction(t *Transaction, addr accounts.CommonAddress, chainId int64) *accounts.Storage {
-//    key := mycrypto.Hash256([]byte("storage_" + addr.Hex() + strconv.FormatInt(chainId, 10)))
-//    value := t.Get(key)
-//    storage := &accounts.Storage{}
-//    json.Unmarshal(value, storage)
-//    return storage
-//}
-//
-//func PutStorageInsideTransaction(t *Transaction, storage *accounts.Storage, addr accounts.CommonAddress, chainId int64) error {
-//    key := mycrypto.Hash256([]byte("storage_" + addr.Hex() + strconv.FormatInt(chainId, 10)))
-//    value, err := json.Marshal(storage)
-//    if err != nil {
-//        return err
-//    }
-//    t.Put(key, value, chainId, true)
-//    return nil
-//}
-//
-//func GetMostRecentBlocks(n int64) []*bean.Block {
-//    height := GetMaxHeightOutsideTransaction()
-//    return GetBlocksFromOutsideTransaction(height - n, n)
-//}
-//
-//func GetBalanceOutsideTransaction(addr accounts.CommonAddress, chainId int64) *big.Int {
-//    storage := GetStorageOutsideTransaction(addr, chainId)
-//    if storage.Balance == nil {
-//        return new(big.Int)
-//    }
-//    return storage.Balance
-//}
-//
-//func PutBalanceOutSideTransaction(addr accounts.CommonAddress, chainId int64, balance *big.Int) error {
-//    storage := GetStorageOutsideTransaction(addr, chainId)
-//    storage.Balance = balance
-//    return PutStorageOutsideTransaction(storage, addr, chainId)
-//}
-//
-//func GetReputationOutsideTransaction(addr accounts.CommonAddress, chainId int64) *big.Int {
-//    storage := GetStorageOutsideTransaction(addr, chainId)
-//    if storage.Reputation == nil {
-//        return new(big.Int)
-//    }
-//    return storage.Reputation
-//}
-//
-//func PutReputationOutSideTransaction(addr accounts.CommonAddress, chainId int64, rep *big.Int) error {
-//    storage := GetStorageOutsideTransaction(addr, chainId)
-//    storage.Reputation = rep
-//    return PutStorageOutsideTransaction(storage, addr, chainId)
-//}
-//
-//func GetBalanceInsideTransaction(t *Transaction, addr accounts.CommonAddress, chainId int64) *big.Int {
-//    storage := GetStorageInsideTransaction(t, addr, chainId)
-
 func GetBalance(addr accounts.CommonAddress, chainId config.ChainIdType) *big.Int {
     storage := GetStorage(addr, chainId)
     if storage.Balance == nil {
@@ -213,12 +129,12 @@ func PutBalance(t Transactional, addr accounts.CommonAddress, chainId config.Cha
     return PutStorage(t, addr, chainId, storage)
 }
 
-func GetNonce(addr accounts.CommonAddress, chainId config.ChainIdType) int64 {
+func GetNonce(addr accounts.CommonAddress, chainId config.ChainIdType) uint64 {
     storage := GetStorage(addr, chainId)
     return storage.Nonce
 }
 
-func PutNonce(t Transactional, addr accounts.CommonAddress, chainId config.ChainIdType, nonce int64) error {
+func PutNonce(t Transactional, addr accounts.CommonAddress, chainId config.ChainIdType, nonce uint64) error {
     storage := GetStorage(addr, chainId)
     storage.Nonce = nonce
     return PutStorage(t, addr, chainId, storage)

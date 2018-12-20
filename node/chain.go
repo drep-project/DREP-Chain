@@ -41,16 +41,16 @@ func GenerateBalanceTransaction(to, dc, value string) *bean.Transaction {
     nonce := database.GetNonce(store.GetAddress(), chainId) + 1
     data := &bean.TransactionData{
         Version: store.Version,
-        Nonce:nonce,
-        Type:store.TransferType,
-        To:to,
+        Nonce: nonce,
+        Type: store.TransferType,
+        To: to,
         ChainId: chainId,
         DestChain: destChain,
-        Amount:amount.Bytes(),
-        GasPrice:store.DefaultGasPrice.Bytes(),
-        GasLimit:store.TransferGas.Bytes(),
-        Timestamp:time.Now().Unix(),
-        PubKey:store.GetPubKey(),
+        Amount: amount,
+        GasPrice: store.DefaultGasPrice,
+        GasLimit: store.TransferGas,
+        Timestamp: time.Now().Unix(),
+        PubKey: store.GetPubKey(),
     }
     // TODO Get sig bean.transaction{}
     tx := &bean.Transaction{Data: data}
@@ -67,11 +67,11 @@ func GenerateMinerTransaction(addr, cid string) *bean.Transaction {
         Nonce:     nonce,
         Type:      store.MinerType,
         ChainId:   chainId,
-        GasPrice:  store.DefaultGasPrice.Bytes(),
-        GasLimit:  store.MinerGas.Bytes(),
+        GasPrice:  store.DefaultGasPrice,
+        GasLimit:  store.MinerGas,
         Timestamp: time.Now().Unix(),
         Data: accounts.Hex2Address(addr).Bytes(),
-        PubKey:store.GetPubKey()}
+        PubKey: store.GetPubKey()}
     // TODO Get sig bean.transaction{}
     return &bean.Transaction{Data: data}
 }
@@ -84,8 +84,8 @@ func GenerateCreateContractTransaction(c string) *bean.Transaction {
         Nonce: nonce,
         Type: store.CreateContractType,
         ChainId: chainId,
-        GasPrice: store.DefaultGasPrice.Bytes(),
-        GasLimit: store.CreateContractGas.Bytes(),
+        GasPrice: store.DefaultGasPrice,
+        GasLimit: store.CreateContractGas,
         Timestamp: time.Now().Unix(),
         Data: make([]byte, len(code) + 1),
         PubKey: store.GetPubKey(),
@@ -112,9 +112,9 @@ func GenerateCallContractTransaction(addr, cid, in, value string, readOnly bool)
         ChainId: runningChain,
         DestChain: chainId,
         To: addr,
-        Amount: amount.Bytes(),
-        GasPrice: store.DefaultGasPrice.Bytes(),
-        GasLimit: store.CallContractGas.Bytes(),
+        Amount: amount,
+        GasPrice: store.DefaultGasPrice,
+        GasLimit: store.CallContractGas,
         Timestamp: time.Now().Unix(),
         PubKey: store.GetPubKey(),
         Data: make([]byte, len(input) + 1),
@@ -134,8 +134,8 @@ func GenerateCrossChainTransaction(data []byte) *bean.Transaction {
         Nonce: database.GetNonce(store.GetAddress(), store.GetChainId()) + 1,
         Type: store.CrossChainType,
         ChainId: store.GetChainId(),
-        GasPrice: store.DefaultGasPrice.Bytes(),
-        GasLimit: store.CrossChainGas.Bytes(),
+        GasPrice: store.DefaultGasPrice,
+        GasLimit: store.CrossChainGas,
         Timestamp:time.Now().Unix(),
         Data: data,
         PubKey: store.GetPubKey(),
@@ -150,7 +150,7 @@ func GetH() {
 
 func GetTxn() {
     h := database.GetMaxHeight()
-    var i int64
+    var i uint64
     for i = 0; i < h; i++ {
         block := database.GetBlock(i)
         fmt.Println("height: ", i)

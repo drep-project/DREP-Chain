@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"BlockChainTest/bean"
 	"BlockChainTest/core/common"
+	"BlockChainTest/accounts"
 )
 
 var (
@@ -189,9 +190,9 @@ func toGoType(index int, t Type, output []byte) (interface{}, error) {
 	case BoolTy:
 		return readBool(returnOutput)
 	case AddressTy:
-		return bean.Bytes2Address(returnOutput), nil
+		return accounts.Bytes2Address(returnOutput), nil
 	case HashTy:
-		return bean.Bytes2Hash(returnOutput), nil
+		return accounts.Bytes2Hash(returnOutput), nil
 	case BytesTy:
 		return output[begin : begin+end], nil
 	case FixedBytesTy:

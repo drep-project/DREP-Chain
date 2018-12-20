@@ -11,11 +11,11 @@ import (
 
 type BlockHeader struct {
     ChainId              config.ChainIdType
-    Version              int32
+    Version              uint32
     PreviousHash         []byte
-    GasLimit             []byte
-    GasUsed              []byte
-    Height               int64
+    GasLimit             *big.Int
+    GasUsed              *big.Int
+    Height               uint64
     Timestamp            int64
     StateRoot            []byte
     MerkleRoot           []byte
@@ -25,7 +25,7 @@ type BlockHeader struct {
 }
 
 type BlockData struct {
-    TxCount              int32
+    TxCount              uint32
     TxList               []*Transaction
 }
 
@@ -36,15 +36,15 @@ type Block struct {
 }
 
 type TransactionData struct {
-    Version              int32
-    Nonce                int64
-    Type                 int32
+    Version              uint32
+    Nonce                uint64
+    Type                 uint32
     To                   string
     ChainId              config.ChainIdType
     DestChain            config.ChainIdType
-    Amount               []byte
-    GasPrice             []byte
-    GasLimit             []byte
+    Amount               *big.Int
+    GasPrice             *big.Int
+    GasLimit             *big.Int
     Timestamp            int64
     Data                 []byte
     PubKey               *mycrypto.Point
@@ -106,7 +106,7 @@ func (tx *Transaction) GetGasUsed() *big.Int {
 
 func (tx *Transaction) GetGas() *big.Int {
     gasQuantity := tx.GetGasUsed()
-    gasPrice := new(big.Int).SetBytes(tx.Data.GasPrice)
+    gasPrice := new(big.Int).Set(tx.Data.GasPrice)
     gasUsed := new(big.Int).Mul(gasQuantity, gasPrice)
     return gasUsed
 }

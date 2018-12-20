@@ -3,8 +3,8 @@ package abi
 import (
 	"math/big"
 	"reflect"
-	"BlockChainTest/bean"
 	"BlockChainTest/core/common"
+	"BlockChainTest/accounts"
 )
 
 var (
@@ -18,7 +18,7 @@ var (
 	int16T    = reflect.TypeOf(int16(0))
 	int32T    = reflect.TypeOf(int32(0))
 	int64T    = reflect.TypeOf(int64(0))
-	addressT  = reflect.TypeOf(bean.CommonAddress{})
+	addressT  = reflect.TypeOf(accounts.CommonAddress{})
 )
 
 // U256 converts a big Int into a 256bit EVM number.

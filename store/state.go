@@ -91,7 +91,7 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
     }
     timestamp := time.Now().Unix()
     stateRoot := dt.GetTotalStateRoot()
-    gasUsed := gasSum.Bytes()
+    gasUsed := gasSum
     txHashes, err := GetTxHashes(ts)
     if err != nil {
         return nil, err
@@ -119,7 +119,7 @@ func GenerateBlock(members []*bean.Peer) (*bean.Block, error) {
             Version:      Version,
             PreviousHash: previousHash,
             ChainId: GetChainId(),
-            GasLimit: BlockGasLimit.Bytes(),
+            GasLimit: BlockGasLimit,
             GasUsed: gasUsed,
             Timestamp: timestamp,
             StateRoot: stateRoot,
@@ -153,7 +153,7 @@ func GenerateBlockPrizeTransaction() *bean.Transaction {
         Type: BlockPrizeType,
         To: accounts.PubKey2Address(lastLeader).Hex(),
         DestChain: GetChainId(),
-        Amount: leaderPrize.Bytes(),
+        Amount: leaderPrize,
         Timestamp: time.Now().Unix(),
         Data: []byte("block prize for leader"),
     }
@@ -165,7 +165,7 @@ func GenerateBlockPrizeTransaction() *bean.Transaction {
             Type: BlockPrizeType,
             To: accounts.PubKey2Address(lastMinors[i - 1]).Hex(),
             DestChain: GetChainId(),
-            Amount: minorPrize.Bytes(),
+            Amount: minorPrize,
             Timestamp: time.Now().Unix(),
             Data: []byte("block prize for minor"),
         }

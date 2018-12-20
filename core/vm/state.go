@@ -32,7 +32,7 @@ func NewState(dt database.Transactional) *State {
 	return &State{dt: dt}
 }
 
-func (s *State) CreateContractAccount(callerAddr accounts.CommonAddress, chainId config.ChainIdType, nonce int64) (*accounts.Account, error) {
+func (s *State) CreateContractAccount(callerAddr accounts.CommonAddress, chainId config.ChainIdType, nonce uint64) (*accounts.Account, error) {
 	account, err := accounts.NewContractAccount(callerAddr, chainId, nonce)
 	if err != nil {
 		return nil, err
@@ -54,11 +54,7 @@ func (s *State) GetBalance(addr accounts.CommonAddress, chainId config.ChainIdTy
 	return database.GetBalance(addr, chainId)
 }
 
-func (s *State) SetNonce(addr accounts.CommonAddress, chainId config.ChainIdType, nonce int64) error {
-	return database.PutNonce(s.dt, addr, chainId, nonce)
-}
-
-func (s *State) GetNonce(addr accounts.CommonAddress, chainId config.ChainIdType) int64 {
+func (s *State) GetNonce(addr accounts.CommonAddress, chainId config.ChainIdType) uint64 {
 	return database.GetNonce(addr, chainId)
 }
 

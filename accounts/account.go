@@ -54,7 +54,7 @@ func (node *Node) Address() CommonAddress {
 
 type Storage struct {
 	Balance    *big.Int
-	Nonce      int64
+	Nonce      uint64
 	ByteCode   ByteCode
 	CodeHash   Hash
 	Reputation *big.Int
@@ -89,7 +89,7 @@ func NewNormalAccount(parent *Node, chainId config.ChainIdType) (*Account, error
 	return account, nil
 }
 
-func NewContractAccount(callerAddr CommonAddress, chainId config.ChainIdType, nonce int64) (*Account, error) {
+func NewContractAccount(callerAddr CommonAddress, chainId config.ChainIdType, nonce uint64) (*Account, error) {
 	address := GetByteCodeAddress(callerAddr, nonce)
 	storage := NewStorage()
 	account := &Account{

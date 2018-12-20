@@ -70,9 +70,9 @@ func checkAndGetAddr(tran *bean.Transaction) (bool, accounts.CommonAddress) {
         return false, accounts.CommonAddress{}
     }
     {
-        amount := new(big.Int).SetBytes(tran.Data.Amount)
-        gasLimit := new(big.Int).SetBytes(tran.Data.GasLimit)
-        gasPrice := new(big.Int).SetBytes(tran.Data.GasPrice)
+        amount := new(big.Int).Set(tran.Data.Amount)
+        gasLimit := new(big.Int).Set(tran.Data.GasLimit)
+        gasPrice := new(big.Int).Set(tran.Data.GasPrice)
         total := big.NewInt(0)
         total.Mul(gasLimit, gasPrice)
         total.Add(total, amount)
@@ -142,7 +142,7 @@ func PickTransactions(maxGas *big.Int) []*bean.Transaction {
         }
     }()
     it := trans.Iterator()
-    tn := make(map[accounts.CommonAddress]int64)
+    tn := make(map[accounts.CommonAddress] uint64)
     for it.HasNext() {
         if t, ok := it.Next().(*bean.Transaction); ok {
             if id, err := t.TxId(); err == nil {
@@ -160,7 +160,7 @@ func PickTransactions(maxGas *big.Int) []*bean.Transaction {
                                 if t2.Data.Nonce != cn + 1 {
                                     continue
                                 }
-                                gasLimit := big.NewInt(0).SetBytes(t2.Data.GasLimit)
+                                gasLimit := big.NewInt(0).Set(t2.Data.GasLimit)
                                 tmp := big.NewInt(0).Add(gas, gasLimit)
                                 if tmp.Cmp(maxGas) <= 0 {
                                     if id2, err := t2.TxId(); err == nil {

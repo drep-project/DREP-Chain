@@ -99,11 +99,11 @@ func GetByteCodeHash(byteCode ByteCode) Hash {
     return Bytes2Hash(mycrypto.Hash256(byteCode))
 }
 
-func GetByteCodeAddress(callerAddr CommonAddress, nonce int64) CommonAddress {
+func GetByteCodeAddress(callerAddr CommonAddress, nonce uint64) CommonAddress {
     b, err := json.Marshal(
         struct {
             CallerAddr CommonAddress
-            Nonce      int64
+            Nonce      uint64
         }{
             CallerAddr: callerAddr,
             Nonce:      nonce,
