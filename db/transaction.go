@@ -28,14 +28,16 @@ type cacheEntry struct {
 }
 
 type Transaction struct {
-    parent   dbInterface
-    finished bool
-    cache    map[string]*cacheEntry
+    parent      dbInterface
+    company     Transactional
+    finished    bool
+    cache       map[string]*cacheEntry
 }
 
-func NewTransaction(parent dbInterface) *Transaction {
+func NewTransaction(parent dbInterface, company Transactional) *Transaction {
     return &Transaction{
         parent:     parent,
+        company:    company,
         finished:   false,
         cache:      make(map[string]*cacheEntry),
     }
@@ -46,6 +48,7 @@ func (t *Transaction) Put(key []byte, value []byte) error {
         return ErrFinished
     }
     t.cache[string(key)] = &cacheEntry{key: key, val: value}
+    t.company.Put(key, value)
     return nil
 }
 
@@ -65,6 +68,7 @@ func (t *Transaction) Delete(key []byte) error {
         return ErrFinished
     }
     t.cache[string(key)] = &cacheEntry{key: key}
+    t.company.Delete(key)
     return nil
 }
 
@@ -84,6 +88,7 @@ func (t *Transaction) Commit() error {
             }
         }
     }
+    t.company.Commit()
     return nil
 }
 
@@ -92,9 +97,10 @@ func (t *Transaction) Discard() error {
         return ErrFinished
     }
     t.finished = true
+    t.company.Discard()
     return nil
 }
 
 func (t *Transaction) BeginTransaction() Transactional {
-    return NewTransaction(t)
+    return NewTransaction(t, t.company)
 }
