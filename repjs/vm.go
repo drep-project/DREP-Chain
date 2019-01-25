@@ -208,11 +208,23 @@ func AddGain(platformID string, increments []map[string] interface{}) error {
 //    return err
 //}
 
-func LiquidateRepByGroup(platformID string, groupID uint64, until int) error {
+func LiquidateRepByGroup(platformID string, groupID uint64, until int) (map[string] interface{}, error) {
     fun, err := vm.Get("liquidateRepByGroup")
     if err != nil {
-        return err
+        return nil, err
     }
-    _, err = fun.Call(vm.Context().This, platformID, groupID, until)
-    return err
+    ret, err := fun.Call(vm.Context().This, platformID, groupID, until)
+    if err != nil {
+        return nil, err
+    }
+    fmt.Println("ret: ", ret)
+    data, err := ret.Export()
+    if err != nil {
+        return nil, err
+    }
+    fmt.Println("data: ", data)
+    if value, ok := data.(map[string] interface{}); ok {
+        return value, nil
+    }
+    return nil, errors.New("wrong js value type")
 }

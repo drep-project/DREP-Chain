@@ -112,6 +112,7 @@ var bottomRate = new BigNumber(rep_configs.bottomrate)
 var beta = new BigNumber(rep_configs.beta)
 var epsilon = new BigNumber(rep_configs.epsilon)
 var threshold = new BigNumber(rep_configs.threshold)
+var scalar = new BigNumber(rep_configs.scalar)
 var one = new BigNumber(1)
 
 function getProfile(platformID, uid) {
@@ -198,6 +199,13 @@ function addGain(platformID, increments) {
     }
 }
 
+function getToken(rep, gt, gtm1) {
+    var dom = gt.mul(gt)
+    var num = gt.plus(gtm1).plus(one)
+    var token = rep.mul(dom).div(num).mul(scalar).toString()
+    return {Token: token}
+}
+
 function liquidateRep(platformID, repIDs, until) {
     for (var i = 0; i < repIDs.length; i++) {
         var repID = repIDs[i]
@@ -206,6 +214,7 @@ function liquidateRep(platformID, repIDs, until) {
             continue
         }
         var active = dbPersistent.isActive(platformID, repID)
+        var tokens = {}
         for (var day = tracer.LastLiquidateDay; day < until; day++) {
             var gap = new BigNumber(day - tracer.FirstActiveDay)
             var gain = new BigNumber(0)
@@ -229,6 +238,7 @@ function liquidateRep(platformID, repIDs, until) {
                 tracer.Recent = tracer.Recent.mul(alpha1).plus(gain)
             } else {
                 var delta = new BigNumber(0).plus(r0).mul(new BigNumber(tracer.GainHistory[0]))
+                tracer.Recent = tracer.Recent.minus(delta).mul(alpha1).plus(gain)
                 tracer.Remote = tracer.Remote.plus(delta).mul(aph2)
             }
 
@@ -263,6 +273,13 @@ function liquidateRep(platformID, repIDs, until) {
                 tracer.GainHistory.shift()
                 tracer.GainHistory.push(gValue)
             }
+            if (!tracer.GainMemory[day - 1]) {
+                tokens[day] = getToken(tracer.Rep, gain, new BigNumber(0)).Token
+            } else {
+                tokens[day] = getToken(tracer.Rep, gain, tracer.GainMemory[day - 1]).Token
+            }
+        }
+        for (var day = tracer.LastLiquidateDay - 1; day < until - 1; day++) {
             delete tracer.GainMemory[day]
         }
         tracer.LastLiquidateDay = until
@@ -270,15 +287,178 @@ function liquidateRep(platformID, repIDs, until) {
         dbPersistent.putTracer(platformID, repID, tracer)
         console.log()
         console.log("tracer: ", tracer.Rep, "  ", tracer.Recent, "  ", tracer.Aliveness)
+        console.log("gain memory list:")
         var keys1 = Object.keys(tracer.GainMemory)
         for(var j = 0; j < keys1.length; j++) {
             console.log(keys1[j] + ": " + tracer.GainMemory[keys1[j]])
         }
+        console.log("tokens list:")
+        var keys2 = Object.keys(tokens)
+        for(var j = 0; j < keys2.length; j++) {
+            console.log(keys2[j] + ": " + tokens[keys2[j]])
+        }
         console.log()
+        return {Tokens: tokens}
     }
 }
 
 function liquidateRepByGroup(platformID, groupID, until) {
     var group = dbPersistent.getGroup(platformID, groupID)
-    liquidateRep(platformID, group, until)
+    var tokens = liquidateRep(platformID, group, until).Tokens
+    return {Tokens: tokens}
+}
+
+var rep_configs_alternative = require("repjs/data/rep_configs_alternative.json")
+var rep_floats_alternative = require("repjs/data/rep_floats_alternative.json")
+
+var r0_alt = new BigNumber(0)
+var t0_alt = new BigNumber(0)
+var te_alt = new BigNumber(0)
+var alpha1_alt = new BigNumber(0)
+var alpha2_alt = {}
+var coef_alt = {}
+
+var decaymode_alt = rep_configs_alternative.decaymode
+if (decaymode_alt === "faster") {
+    r0_alt = new BigNumber(rep_floats_alternative.r1)
+    t0_alt = new BigNumber(rep_floats_alternative.t1)
+    te_alt = new BigNumber(rep_floats_alternative.e1)
+    alpha1_alt = new BigNumber(rep_floats_alternative.alpha1_1)
+    for (var i = 0; i < 1000; i++) {
+        alpha2_alt[i] = rep_floats_alternative["alpha2_1_" + i]
+        coef_alt[i] = rep_floats_alternative["coef_1_" + i]
+    }
+}
+if (decaymode_alt === "fast") {
+    r0_alt = new BigNumber(rep_floats_alternative.r2)
+    t0_alt = new BigNumber(rep_floats_alternative.t2)
+    te_alt = new BigNumber(rep_floats_alternative.e2)
+    alpha1_alt = new BigNumber(rep_floats_alternative.alpha1_2)
+    for (var i = 0; i < 1000; i++) {
+        alpha2_alt[i] = rep_floats_alternative["alpha2_2_" + i]
+        coef_alt[i] = rep_floats_alternative["coef_2_" + i]
+    }
+}
+if (decaymode_alt === "medium") {
+    r0_alt = new BigNumber(rep_floats_alternative.r3)
+    t0_alt = new BigNumber(rep_floats_alternative.t3)
+    te_alt = new BigNumber(rep_floats_alternative.e3)
+    alpha1_alt = new BigNumber(rep_floats_alternative.alpha1_3)
+    for (var i = 0; i < 1000; i++) {
+        alpha2_alt[i] = rep_floats_alternative["alpha2_3_" + i]
+        coef_alt[i] = rep_floats_alternative["coef_3_" + i]
+    }
+}
+if (decaymode_alt === "slow") {
+    r0_alt = new BigNumber(rep_floats_alternative.r4)
+    t0_alt = new BigNumber(rep_floats_alternative.t4)
+    te_alt = new BigNumber(rep_floats_alternative.e4)
+    alpha1_alt = new BigNumber(rep_floats_alternative.alpha1_4)
+    for (var i = 0; i < 1000; i++) {
+        alpha2_alt[i] = rep_floats_alternative["alpha2_4_" + i]
+        coef_alt[i] = rep_floats_alternative["coef_4_" + i]
+    }
+}
+if (decaymode_alt === "slower") {
+    r0_alt = new BigNumber(rep_floats_alternative.r5)
+    t0_alt = new BigNumber(rep_floats_alternative.t5)
+    te_alt = new BigNumber(rep_floats_alternative.e5)
+    alpha1_alt = new BigNumber(rep_floats.alpha1_5)
+    for (var i = 0; i < 2000; i++) {
+        alpha2_alt[i] = rep_floats_alternative["alpha2_5_" + i]
+        coef_alt[i] = rep_floats_alternative["coef_5_" + i]
+    }
+}
+
+var bottomRate_alt = new BigNumber(rep_configs_alternative.bottomrate)
+var threshold_alt = new BigNumber(rep_configs_alternative.threshold)
+var one_alt = new BigNumber(1)
+var thousand_alt = new BigNumber(1000)
+
+function liquidateRepSimply(platformID, repIDs, until) {
+    for (var i = 0; i < repIDs.length; i++) {
+        var repID = repIDs[i]
+        var tracer = dbPersistent.getTracer(platformID, repID)
+        if (!tracer) {
+            continue
+        }
+        var active = dbPersistent.isActive(platformID, repID)
+        var tokens = {}
+        for (var day = tracer.LastLiquidateDay; day < until; day++) {
+            var gap = new BigNumber(day - tracer.FirstActiveDay)
+            var gain = new BigNumber(0)
+            var gValue = 0
+            if (tracer.GainMemory[day]) {
+                gain = new BigNumber(tracer.GainMemory[day])
+                gValue = tracer.GainMemory[day]
+            }
+
+            if (gain.greaterThanOrEqualTo(threshold_alt)) {
+                tracer.Aliveness = tracer.Aliveness.plus(one)
+            } else {
+                tracer.Aliveness = tracer.Aliveness.minus(one)
+            }
+            if (tracer.Aliveness.greaterThanOrEqualTo(thousand_alt)) {
+                tracer.Aliveness = thousand_alt.minus(thousand_alt, one_alt)
+            }
+
+            var alpha2 = alpha2_alt[tracer.Aliveness.ceil()]
+            var coef = coef_alt[tracer.Aliveness.ceil()]
+
+            if (gap.lessThan(t0)) {
+                tracer.Recent = tracer.Recent.mul(alpha1_alt).plus(gain)
+            } else {
+                var delta = new BigNumber(0).plus(r0_alt).mul(new BigNumber(tracer.GainHistory[0]))
+                tracer.Recent = tracer.Recent.minus(delta).mul(alpha1_alt).plus(gain)
+                tracer.Remote = tracer.Remote.plus(delta).mul(alpha2)
+            }
+
+            var rep = new BigNumber(0).plus(tracer.Recent).plus(tracer.Remote).mul(coef)
+            if (rep.lessThan(tracer.Bottom)) {
+                rep = new BigNumber(0).plus(tracer.Bottom)
+                if (active) {
+                    active = true
+                }
+            }
+
+            var bot = new BigNumber(0).plus(rep).mul(bottomRate_alt)
+            if (bot.greaterThan(tracer.Bottom)) {
+                tracer.Bottom = new BigNumber(0).plus(bot)
+            }
+
+            tracer.Rep = new BigNumber(0).plus(rep)
+
+            if (gap.lessThan(t0)) {
+                tracer.GainHistory.push(gValue)
+            } else {
+                tracer.GainHistory.shift()
+                tracer.GainHistory.push(gValue)
+            }
+            if (!tracer.GainMemory[day - 1]) {
+                tokens[day] = getToken(tracer.Rep, gain, new BigNumber(0)).Token
+            } else {
+                tokens[day] = getToken(tracer.Rep, gain, tracer.GainMemory[day - 1]).Token
+            }
+        }
+        for (var day = tracer.LastLiquidateDay - 1; day < until - 1; day++) {
+            delete tracer.GainMemory[day]
+        }
+        tracer.LastLiquidateDay = until
+        dbPersistent.setActive(platformID, repID, active)
+        dbPersistent.putTracer(platformID, repID, tracer)
+        console.log()
+        console.log("tracer: ", tracer.Rep, "  ", tracer.Recent, "  ", tracer.Aliveness)
+        console.log("gain memory list:")
+        var keys1 = Object.keys(tracer.GainMemory)
+        for(var j = 0; j < keys1.length; j++) {
+            console.log(keys1[j] + ": " + tracer.GainMemory[keys1[j]])
+        }
+        console.log("tokens list:")
+        var keys2 = Object.keys(tokens)
+        for(var j = 0; j < keys2.length; j++) {
+            console.log(keys2[j] + ": " + tokens[keys2[j]])
+        }
+        console.log()
+        return {Tokens: tokens}
+    }
 }

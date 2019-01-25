@@ -14,6 +14,7 @@ import (
     "encoding/json"
     "BlockChainTest/repjs"
     "strconv"
+    "reflect"
 )
 
 var (
@@ -285,5 +286,15 @@ func executeGainTransaction(t *bean.Transaction) {
 func Liquidate(height int64, until int) {
     platformID := strconv.FormatInt(GetChainId(), 10)
     groupID := uint64(height % 5)
-    repjs.LiquidateRepByGroup(platformID, groupID, until)
+    ret, err := repjs.LiquidateRepByGroup(platformID, groupID, until)
+    v, ok := ret["Tokens"].(map[string] interface{})
+    fmt.Println()
+    fmt.Println("tokens: ", v)
+    for key, value := range v {
+        fmt.Println("key: ", key, " ", reflect.TypeOf(key))
+        fmt.Println("value: ", value, " ", reflect.TypeOf(value))
+    }
+    fmt.Println("ok:     ", ok)
+    fmt.Println("err:    ", err)
+    fmt.Println()
 }
