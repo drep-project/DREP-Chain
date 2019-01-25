@@ -10,26 +10,31 @@ import (
     "BlockChainTest/database"
 )
 
-var n = 200
+var (
+    n = 200
+    vm *exec.VirtualMachine
+    r *resolv.Resolver
+)
+
+func init()  {
+    b := readWasm()
+    r, vm = setupVmAndResolv(b)
+    setupModel()
+}
 
 func main() {
-    b := readWasm()
-    r, vm := setupVmAndResolv(b)
-
-    setupModel(vm, r)
-    reg_resp := RegisterUser(vm, r)
-
+    reg_resp := RegisterUser()
     users := [] registerReturns{}
     err := json.Unmarshal([]byte(reg_resp), &users)
     if err != nil {
         fmt.Println("json ummarshal users error")
     }
 
-    AddGain(vm, r, users)
-    Liquidate(vm, r, users)
+    AddGain(users)
+    Liquidate(users)
 }
 
-func setupModel(vm *exec.VirtualMachine, r *resolv.Resolver)  {
+func setupModel()  {
     time1 := time.Now()
     params := generateAcceptModelParams()
     err := callFunc(vm, r, Function{"AcceptModel",params,""})
@@ -37,7 +42,7 @@ func setupModel(vm *exec.VirtualMachine, r *resolv.Resolver)  {
     fmt.Println("AcceptModel time:", time.Now().Sub(time1))
 }
 
-func RegisterUser(vm *exec.VirtualMachine, r *resolv.Resolver) string {
+func RegisterUser() string {
     params := []string{}
     for i := 0; i < n; i++  {
         uid := database.UID("user_" + strconv.Itoa(i))
@@ -52,7 +57,7 @@ func RegisterUser(vm *exec.VirtualMachine, r *resolv.Resolver) string {
     return resp
 }
 
-func AddGain(vm *exec.VirtualMachine, r *resolv.Resolver, users []registerReturns)  {
+func AddGain(users []registerReturns)  {
     time1 := time.Now()
     increments := []*gainIncrement{}
     for _, user := range users {
@@ -69,7 +74,7 @@ func AddGain(vm *exec.VirtualMachine, r *resolv.Resolver, users []registerReturn
     processGainReturns(resp)
 }
 
-func Liquidate(vm *exec.VirtualMachine, r *resolv.Resolver, users []registerReturns)  {
+func Liquidate(users []registerReturns)  {
     time1 := time.Now()
     ids := []database.RepID{}
     for _, user := range users {
@@ -80,43 +85,4 @@ func Liquidate(vm *exec.VirtualMachine, r *resolv.Resolver, users []registerRetu
     resp := callFunc(vm, r, Function{"LiquidateByParams",params,""})
     fmt.Println("Liquidate resp: ", resp)
     fmt.Println("Liquidate time:", time.Now().Sub(time1))
-}
-
-func demo() {
-    //time1 := time.Now()
-    //params := generateAcceptModelParams()
-    //err := callFunc(vm, r, Function{"AcceptModel",params,""})
-    //fmt.Println("AcceptModel error:", err)
-    //fmt.Println("AcceptModel time:", time.Now().Sub(time1))
-    //
-    //time1 = time.Now()
-    //p1 := generateRegisterParams("a", "eric")
-    //r1 := callFunc(vm, r, Function{"RegisterUserByParams",p1,""})
-    //fmt.Println("result1:" + r1)
-    //fmt.Println("callRegisterUser time:", time.Now().Sub(time1))
-    //
-    //id1, _ := processRegisterReturns(r1)
-    //fmt.Println("id1: ", id1)
-    //
-    //p5 := generateGainParams("a", []*gainIncrement{{id1, 20, 1}})
-    //
-    //time1 = time.Now()
-    //fmt.Println(time1)
-    //r2 := callFunc(vm, r,  Function{"GainByParams",p5,""})
-    //fmt.Println("result2:" + r2)
-    //fmt.Println("callGainByParams time:", time.Now().Sub(time1))
-    //time1 = time.Now()
-    //fmt.Println(time1)
-    //processGainReturns(r2)
-    //
-    //fmt.Println(getTracer("a", id1))
-    //p6 := generateLiquidateParams("a", 2, []RepID{id1})
-    //fmt.Println("p6: ", p6)
-    //fmt.Println("param_acpt: ", mod)
-    //
-    //time1 = time.Now()
-    //r6 := callFunc(vm, r, Function{"LiquidateByParams",p6,""})
-    //fmt.Println("r6: ", r6)
-    //time2 = time.Now()
-    //fmt.Println("callLiquidateByParams time:", time2.Sub(time1))
 }

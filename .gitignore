@@ -13,4 +13,5 @@
 .DS_Store
 .idea
 rep_db
+Data/database
 *.wasm

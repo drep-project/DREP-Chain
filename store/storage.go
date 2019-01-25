@@ -14,6 +14,7 @@ import (
     "encoding/json"
     "BlockChainTest/repjs"
     "strconv"
+    "BlockChainTest/wasm"
 )
 
 var (
@@ -273,6 +274,9 @@ func executeGainTransaction(t *bean.Transaction) {
         tracer := database.GetTracer(platformID, repID)
         if tracer == nil {
             repjs.RegisterUser(platformID, repID, groupID)
+
+            wasm.RegisterUser()
+
         }
         increments[i] = make(map[string] interface{})
         increments[i]["RepID"] = repID
