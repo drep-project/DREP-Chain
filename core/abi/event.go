@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"BlockChainTest/mycrypto"
-	"BlockChainTest/bean"
+	"BlockChainTest/accounts"
 )
 
 // Event is an event potentially triggered by the EVM's LOG mechanism. The Event
@@ -30,12 +30,12 @@ func (e Event) String() string {
 
 // Id returns the canonical representation of the event's signature used by the
 // abi definition to identify event names and types.
-func (e Event) Id() bean.Hash {
+func (e Event) Id() accounts.Hash {
 	types := make([]string, len(e.Inputs))
 	i := 0
 	for _, input := range e.Inputs {
 		types[i] = input.Type.String()
 		i++
 	}
-	return bean.Bytes2Hash(mycrypto.Hash256([]byte(fmt.Sprintf("%v(%v)", e.Name, strings.Join(types, ",")))))
+	return accounts.Bytes2Hash(mycrypto.Hash256([]byte(fmt.Sprintf("%v(%v)", e.Name, strings.Join(types, ",")))))
 }

@@ -12,7 +12,7 @@ type MessagePool struct {
     messages *list.LinkedList
 }
 
-func New() *MessagePool {
+func NewMessagePool() *MessagePool {
     p := &MessagePool{}
     p.cond = sync.NewCond(&p.lock)
     p.messages = list.NewLinkedList()

@@ -5,20 +5,19 @@ import (
     "BlockChainTest/bean"
     "BlockChainTest/consensus"
     "sync"
-    "strconv"
-    "BlockChainTest/log"
+    //"BlockChainTest/log"
     "BlockChainTest/network"
     "BlockChainTest/mycrypto"
+    "fmt"
     "time"
     "math/big"
-    "BlockChainTest/config"
     "BlockChainTest/util/concurrent"
     "BlockChainTest/util"
     "BlockChainTest/database"
     "encoding/json"
     "BlockChainTest/pool"
     "BlockChainTest/accounts"
-    "fmt"
+    "BlockChainTest/config"
 )
 
 var (
@@ -46,8 +45,8 @@ func GetNode() *Node {
     return node
 }
 
-func (n *Node) Start(config *config.NodeConfig) {
-    if config.Boot {
+func (n *Node) Start() {
+    if config.IsBootNode() {
         //n.discovering = false
     } else {
         //n.discovering = true
@@ -57,7 +56,7 @@ func (n *Node) Start(config *config.NodeConfig) {
     }
     go func() {
         for {
-            log.Trace("node start")
+            fmt.Println("node start")
             isM, isL := store.MoveToNextMiner();
             if isL {
                 n.runAsLeader()
@@ -70,7 +69,7 @@ func (n *Node) Start(config *config.NodeConfig) {
                     n.runAsMember()
                 }
                 //n.wg.Wait()
-                if block := pool.ObtainOneMsg(func(msg interface{}) bool {
+                if block := pool.ObtainOne(func(msg interface{}) bool {
                     _, ok := msg.(*bean.Block)
                     return ok
                 }, 5 * time.Second); block != nil {
@@ -78,84 +77,57 @@ func (n *Node) Start(config *config.NodeConfig) {
                         n.processBlock(b)
                     }
                 } else {
-                   log.Error("Offline")
-                   return
+                    fmt.Println("Offline")
+                    return
                 }
             }
-            log.Trace("node stop")
-            time.Sleep(10 * time.Second)
-            log.Debug("Current height ", database.GetMaxHeight())
+            fmt.Println("node stop")
+            previousBlock := database.GetHighestBlock()
+            if previousBlock == nil {
+                time.Sleep(10 * time.Second)
+            } else {
+                t0 := previousBlock.Header.Timestamp
+                t1 := time.Now().UnixNano()
+                delta := t1 - t0 * 1000000000
+                var bench int64 = 10 * 1000000000
+                if delta < bench  {
+                    s := bench - delta
+                    time.Sleep(time.Duration(s) * time.Nanosecond)
+                }
+            }
+            fmt.Println("Current height ", database.GetMaxHeight())
             // todo if timeout still can go. why
         }
     }()
-
-    lalala := false
-
-    //TODO
-    //100good
-    if lalala {
-        go func() {
-            time.Sleep(30 * time.Second)
-            nonce := database.GetNonce(store.GetAddress(), store.GetChainId())
-            for {
-                fmt.Println("round begin")
-                chainId := store.GetChainId()
-                destChain := store.GetChainId()
-                amount := new(big.Int).SetInt64(100000).Bytes()
-                to := "111111"
-                for i := 0; i < 100; i++ {
-                    nonce ++
-                    data := &bean.TransactionData{
-                        Version:   store.Version,
-                        Nonce:     nonce,
-                        Type:      store.TransferType,
-                        To:        to,
-                        ChainId:   chainId,
-                        DestChain: destChain,
-                        Amount:    amount,
-                        GasPrice:  store.DefaultGasPrice.Bytes(),
-                        GasLimit:  store.TransferGas.Bytes(),
-                        Timestamp: time.Now().Unix(),
-                        PubKey:    store.GetPubKey(),
-                    }
-                    t := &bean.Transaction{Data: data}
-                    err := SendTransaction(t)
-                    if err == nil {
-                        //fmt.Println("succeed")
-                    } else {
-                        //fmt.Println("failed")
-                    }
-                }
-                time.Sleep(time.Second)
-            }
-        }()
-    }
 }
 
 func (n *Node) runAsLeader() {
     leader1 := consensus.NewLeader(n.prvKey.PubKey, store.GetMiners())
     block, _ := store.GenerateBlock(leader1.GetMembers())
-    log.Trace("node leader is preparing process consensus for round 1", "Block",block)
+    fmt.Println("node leader is preparing process consensus for round 1", block)
     if msg, err := json.Marshal(block); err ==nil {
-        log.Trace("node leader is going to process consensus for round 1")
+        fmt.Println("node leader is going to process consensus for round 1")
         err, sig, bitmap := leader1.ProcessConsensus(msg)
         if err != nil {
-            var str = err.Error()
-            log.Error("Error occurs","msg", str)
+            fmt.Println("Error occurs", err)
+            fmt.Println("fucking error: panic(err)")
             panic(err)
         }
         multiSig := &bean.MultiSignature{Sig: sig, Bitmap: bitmap}
-        log.Trace("node leader is preparing process consensus for round 2")
+        fmt.Println("node leader is preparing process consensus for round 2")
         if msg, err := json.Marshal(multiSig); err == nil {
             leader2 := consensus.NewLeader(n.prvKey.PubKey, store.GetMiners())
-            log.Trace("node leader is going to process consensus for round 2")
+            fmt.Println("node leader is going to process consensus for round 2")
             leader2.ProcessConsensus(msg)
-            log.Trace("node leader finishes process consensus for round 2")
-            log.Trace("node leader is going to send block")
+            fmt.Println("node leader finishes process consensus for round 2")
+            fmt.Println("node leader is going to send block")
+            fmt.Println(block)
+            fmt.Println(block.MultiSig)
+            fmt.Println(multiSig)
             block.MultiSig = multiSig
             n.ProcessBlock(block) // process before sending
             n.sendBlock(block)
-            log.Trace("node leader finishes sending block")
+            fmt.Println("node leader finishes sending block")
         }
     }
 }
@@ -164,14 +136,14 @@ func (n *Node) sendBlock(block *bean.Block) {
     peers := store.GetPeers()
     //todo concurrent
     if _, ps := network.SendMessage(peers, block); len(ps) > 0 {
-        log.Trace("Offline peers: ", ps)
+        fmt.Println("Offline peers: ", ps)
         //store.RemovePeers(ps)
     }
 }
 
 func (n *Node) runAsMember() {
     member1 := consensus.NewMember(store.GetLeader(), store.GetPrvKey())
-    log.Trace("node member is going to process consensus for round 1")
+    fmt.Println("node member is going to process consensus for round 1")
     bytes := member1.ProcessConsensus(func(setup *bean.Setup) bool {
         block := &bean.Block{}
         if err := json.Unmarshal(setup.Msg, block); err == nil {
@@ -181,21 +153,21 @@ func (n *Node) runAsMember() {
             return false
         }
     })
-    log.Trace("node member finishes consensus for round 1")
+    fmt.Println("node member finishes consensus for round 1")
     block := &bean.Block{}
     //n.wg = &sync.WaitGroup{}
     //n.wg.Add(1)
     if json.Unmarshal(bytes, block) == nil {
         member2 := consensus.NewMember(store.GetLeader(), store.GetPrvKey())
-        log.Trace("node member is going to process consensus for round 2")
+        fmt.Println("node member is going to process consensus for round 2")
         member2.ProcessConsensus(func(setup *bean.Setup) bool {
             return true
         })
-        log.Trace("node member finishes consensus for round 2")
+        fmt.Println("node member finishes consensus for round 2")
     }
-    //log.Trace("node member is going to wait")
+    //fmt.Println("node member is going to wait")
     //n.wg.WaitTimeout()
-    //log.Trace("node member finishes wait")
+    //fmt.Println("node member finishes wait")
 }
 
 func (n *Node) ProcessBlock(block *bean.Block) {
@@ -208,7 +180,7 @@ func (n *Node) ProcessBlock(block *bean.Block) {
     //    n.prepLock.Unlock()
     //}
     if fee := n.processBlock(block); fee == nil {
-        log.Trace("Offline. start to fetch block")
+        fmt.Println("Offline. start to fetch block")
         n.fetchBlocks()
     }
     // todo receive two, should not !!! the same goes with other similar cases
@@ -219,18 +191,19 @@ func (n *Node) ProcessBlock(block *bean.Block) {
 }
 
 func (n *Node) processBlock(block *bean.Block) *big.Int {
-    log.Trace("Process block leader.", "LeaderPubKey", accounts.PubKey2Address(block.Header.LeaderPubKey).Hex(), " height ", strconv.FormatInt(block.Header.Height,10))
+    fmt.Println("node receive block", *block)
+    fmt.Println("Process block leader = ", accounts.PubKey2Address(block.Header.LeaderPubKey).Hex(), " height = ", block.Header.Height)
     return store.ExecuteTransactions(block)
 }
 
 func (n *Node) discover() bool {
-    log.Trace("discovering 1")
+    fmt.Println("discovering 1")
     // todo
     ips := network.GetIps()
     if len(ips) == 0 {
-        log.Error("Error")
+        fmt.Println("Error")
     } else if len(ips) > 1 {
-        log.Trace("Strange")
+        fmt.Println("Strange")
     }
     var msg *bean.PeerInfo
     if store.LocalTest {
@@ -240,8 +213,8 @@ func (n *Node) discover() bool {
     }
     peers := []*bean.Peer{store.Admin}
     network.SendMessage(peers, msg)
-    log.Trace("discovering 3")
-    if msg := pool.ObtainOneMsg(func(msg interface{}) bool {
+    fmt.Println("discovering 3")
+    if msg := pool.ObtainOne(func(msg interface{}) bool {
         _, ok := msg.(*bean.FirstPeerInfoList)
         return ok
     }, 5 * time.Second); msg != nil {
@@ -252,13 +225,13 @@ func (n *Node) discover() bool {
         }
         return true
     } else {
-        log.Trace("Cannot get peers")
+        fmt.Println("Cannot get peers")
         return false
     }
 }
 
 func (n *Node) ProcessNewPeer(newcomer *bean.PeerInfo) {
-    log.Trace("user starting process a newcomer")
+    fmt.Println("user starting process a newcomer")
     peers := store.GetPeers()
     newPeer := &bean.Peer{
         IP:bean.IP(newcomer.Ip),
@@ -271,13 +244,13 @@ func (n *Node) ProcessNewPeer(newcomer *bean.PeerInfo) {
         list = append(list, t)
     }
     peerList := &bean.PeerInfoList{List:list}
-    log.Trace("ProcessNewPeer ", *peerList, peers, newcomer)
+    fmt.Println("ProcessNewPeer ", *peerList, peers, newcomer)
     network.SendMessage([]*bean.Peer{newPeer}, peerList)
     network.SendMessage(peers, &bean.FirstPeerInfoList{List:[]*bean.PeerInfo{newcomer}})
 }
 
 func (n *Node) ProcessPeerList(list *bean.PeerInfoList) {
-    log.Trace("discovering 5 ", *list)
+    fmt.Println("discovering 5 ", *list)
     for _, t := range list.List {
         store.AddPeer(&bean.Peer{IP:bean.IP(t.Ip), Port:bean.Port(t.Port), PubKey:t.Pk})
     }
@@ -289,39 +262,39 @@ func (n *Node) ProcessPeerList(list *bean.PeerInfoList) {
 func (n *Node) fetchBlocks() {
     n.curMaxHeight = 2<<60
     req := &bean.BlockReq{Height:database.GetMaxHeight(), Pk:store.GetPubKey()}
-    //network.SendMessage([]*network.Peer{peers[0]}, req)
+    //network.SendMessage([]*bean.Peer{peers[0]}, req)
     network.SendMessage([]*bean.Peer{store.Admin}, req)
-    log.Trace("fetching 1")
+    fmt.Println("fetching 1")
     for n.curMaxHeight != database.GetMaxHeight() {
-       log.Trace("fetching 2: ", n.curMaxHeight, database.GetMaxHeight())
-       if msg := pool.ObtainOneMsg(func(msg interface{}) bool {
-           if block, ok := msg.(*bean.Block); ok {
-               return block != nil && block.Header != nil && block.Header.Height == database.GetMaxHeight() + 1
-           } else {
-               return false
-           }
-       }, 5 * time.Second); msg != nil {
-           if block, ok := msg.(*bean.Block); ok {
-               n.processBlock(block)
-           }
-       }
-       log.Trace("fetching 3: ", n.curMaxHeight, database.GetMaxHeight())
-   }
+        fmt.Println("fetching 2: ", n.curMaxHeight, database.GetMaxHeight())
+        if msg := pool.ObtainOne(func(msg interface{}) bool {
+            if block, ok := msg.(*bean.Block); ok {
+                return block != nil && block.Header != nil && block.Header.Height == database.GetMaxHeight() + 1
+            } else {
+                return false
+            }
+        }, 5 * time.Second); msg != nil {
+            if block, ok := msg.(*bean.Block); ok {
+                n.processBlock(block)
+            }
+        }
+        fmt.Println("fetching 3: ", n.curMaxHeight, database.GetMaxHeight())
+    }
 }
 
 func (n *Node) ProcessBlockReq(req *bean.BlockReq) {
     from := req.Height + 1
     size := int64(2)
-    log.Trace("pk = ", req.Pk)
+    fmt.Println("pk = ", req.Pk)
     peers := []*bean.Peer{store.GetPeer(req.Pk)}
-    log.Trace("ProcessBlockReq")
+    fmt.Println("ProcessBlockReq")
     for i := from; i <= database.GetMaxHeight(); {
-        log.Trace("ProcessBlockReq 1 ", i)
+        fmt.Println("ProcessBlockReq 1 ", i)
         bs := database.GetBlocksFrom(i, size)
         resp := &bean.BlockResp{Height:database.GetMaxHeight(), Blocks:bs}
         network.SendMessage(peers, resp)
         i += int64(len(bs))
-        log.Trace("ProcessBlockReq 2 ", i)
+        fmt.Println("ProcessBlockReq 2 ", i)
     }
 }
 
@@ -364,7 +337,7 @@ func (n *Node) ProcessPong(peer *bean.Peer, ping *bean.Ping) {
 
 func (n *Node) ProcessOfflinePeers(peers []*bean.PeerInfo)  {
     if !store.IsAdmin() {
-        log.Error("I am not admin but receive offline peers.")
+        fmt.Errorf("I am not admin but receive offline peers.")
         return
     }
     for _, p := range peers {

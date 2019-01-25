@@ -19,7 +19,7 @@ func (p *SetUpProcessor) process(peer *bean.Peer, msg interface{}) {
         //} else {
         //    store.SetRemainingSetup(setUp)
         //}
-        pool.PushMsg(&consmsg.SetupMsg{Msg:setUp, Peer:peer})
+        pool.Push(&consmsg.SetupMsg{Msg:setUp, Peer:peer})
     }
 }
 
@@ -30,7 +30,7 @@ func (p *CommitProcessor) process(peer *bean.Peer, msg interface{}) {
         //if leader := store.GetItSelfOnLeader(); leader != nil {
         //    leader.ProcessCommit(commitment)
         //}
-        pool.PushMsg(&consmsg.CommitmentMsg{Msg: commitment, Peer:peer})
+        pool.Push(&consmsg.CommitmentMsg{Msg: commitment, Peer:peer})
     }
 }
 
@@ -41,7 +41,7 @@ func (p *ChallengeProcessor) process(peer *bean.Peer, msg interface{}) {
         //if member := store.GetItSelfOnMember(); member != nil {
         //    member.ProcessChallenge(challenge)
         //}
-        pool.PushMsg(&consmsg.ChallengeMsg{Msg:challenge, Peer:peer})
+        pool.Push(&consmsg.ChallengeMsg{Msg:challenge, Peer:peer})
     }
 }
 
@@ -52,6 +52,6 @@ func (p *ResponseProcessor) process(peer *bean.Peer, msg interface{}) {
         //if leader := store.GetItSelfOnLeader(); leader != nil {
         //    leader.ProcessResponse(response)
         //}
-        pool.PushMsg(&consmsg.ResponseMsg{Msg:response, Peer:peer})
+        pool.Push(&consmsg.ResponseMsg{Msg:response, Peer:peer})
     }
 }

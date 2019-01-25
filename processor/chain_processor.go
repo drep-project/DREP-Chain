@@ -23,7 +23,7 @@ func (p *transactionProcessor) process(peer *bean.Peer, msg interface{})  {
             fmt.Println("Forwarded this transaction ", *transaction)
             return
         }
-        // TODO backup nodes should not add
+        // TODO support nodes should not add
         if store.AddTransaction(transaction) {
             fmt.Println("Succeed to add this transaction ", *transaction)
             peers := store.GetPeers()
@@ -44,7 +44,7 @@ func (p *BlockProcessor) process(peer *bean.Peer, msg interface{}) {
         if block.Header.Height <= database.GetMaxHeight() {
            return
         }
-        id, _ := block.BlockHashHex()
+        id, _ := block.BlockHash()
         if store.ForwardedBlock(id) { // if forwarded, then processed. later this will be read from db
             fmt.Println("Forwarded this block ", *block)
             return
@@ -52,7 +52,7 @@ func (p *BlockProcessor) process(peer *bean.Peer, msg interface{}) {
         store.ForwardBlock(id)
         peers := store.GetPeers()
         network.SendMessage(peers, block)
-        pool.PushMsg(block)
+        pool.Push(block)
         // Here, two blocks will be forwarded here. so is this store enough?
     }
 }

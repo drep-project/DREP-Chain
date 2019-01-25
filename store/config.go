@@ -6,19 +6,19 @@ import (
 )
 
 var (
-    BlockGasLimit            = big.NewInt(5000000000000000000)
-    DefaultGasPrice          *big.Int
-    TransferGas              = big.NewInt(20)
+    BlockGasLimit                  = big.NewInt(5000000000)
+    DefaultGasPrice    *big.Int
+    TransferGas              = big.NewInt(200)
     MinerGas                 = big.NewInt(20000)
     CreateContractGas        = big.NewInt(1000000)
     CallContractGas          = big.NewInt(10000000)
-    CrossChainGas = big.NewInt(10000000)
+    GainGas                  = big.NewInt(5)
     TransferType       int32 = 0
     MinerType          int32 = 1
     CreateContractType int32 = 2
     CallContractType   int32 = 3
-    CrossChainType     int32 = 4
-    BlockPrizeType     int32 = 5
+    BlockPrizeType     int32 = 4
+    GainType           int32 = 5
     Version            int32 = 1
     // TODO
     Admin *bean.Peer
@@ -27,7 +27,7 @@ var (
 const LocalTest = false
 
 func init() {
-    DefaultGasPrice, _ = new(big.Int).SetString("20000000000", 10)
+    DefaultGasPrice, _ = new(big.Int).SetString("2000000", 10)
     if LocalTest {
         Admin = &bean.Peer{IP: bean.IP("127.0.0.1"), Port: 55555}
     } else {

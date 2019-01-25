@@ -1,12 +1,10 @@
 package accounts
 
 import (
-    "reflect"
     "math/big"
     "errors"
     "encoding/hex"
     "BlockChainTest/mycrypto"
-    "BlockChainTest/core/ethhexutil"
     "encoding/json"
 )
 
@@ -18,8 +16,6 @@ const (
 
 var (
     ErrExceedHashLength = errors.New("bytes length exceed maximum hash length of 32")
-    hashT    = reflect.TypeOf(Hash{})
-	addressT = reflect.TypeOf(CommonAddress{})
 )
 
 type CommonAddress [AddressLength]byte
@@ -72,23 +68,6 @@ func (addr CommonAddress) Big() *big.Int {
     return new(big.Int).SetBytes(addr.Bytes())
 }
 
-
-// MarshalText returns the hex representation of a.
-func (addr CommonAddress) MarshalText() ([]byte, error) {
-	return ethhexutil.Bytes(addr[:]).MarshalText()
-}
-
-// UnmarshalText parses a hash in hex syntax.
-func (addr CommonAddress) UnmarshalText(input []byte) error {
-	return ethhexutil.UnmarshalFixedText("Address", input, addr[:])
-}
-
-// UnmarshalJSON parses a hash in hex syntax.
-func (addr *CommonAddress) UnmarshalJSON(input []byte) error {
-	return ethhexutil.UnmarshalFixedJSON(addressT, input, addr[:])
-}
-
-
 func PubKey2Address(pubKey *mycrypto.Point) CommonAddress {
     return Bytes2Address(mycrypto.Hash256(pubKey.Bytes()))
 }
@@ -125,7 +104,7 @@ func Bytes2Hash(b []byte) Hash {
     return h
 }
 
-func (h *Hash) SetBytes(b []byte) {
+func (h Hash) SetBytes(b []byte) {
     if len(b) > len(h) {
         panic(ErrExceedHashLength)
     }
@@ -143,19 +122,4 @@ func Big2Hash(x *big.Int) Hash {
         return Hash{}
     }
     return Bytes2Hash(x.Bytes())
-}
-
-// UnmarshalText parses a hash in hex syntax.
-func (h *Hash) UnmarshalText(input []byte) error {
-	return ethhexutil.UnmarshalFixedText("Hash", input, h[:])
-}
-
-// UnmarshalJSON parses a hash in hex syntax.
-func (h *Hash) UnmarshalJSON(input []byte) error {
-	return ethhexutil.UnmarshalFixedJSON(hashT, input, h[:])
-}
-
-// MarshalText returns the hex representation of h.
-func (h Hash) MarshalText() ([]byte, error) {
-	return ethhexutil.Bytes(h[:]).MarshalText()
 }

@@ -7,7 +7,7 @@ import (
 )
 
 func TestMessagePool_ObtainOne(t *testing.T) {
-    p := New()
+    p := NewMessagePool()
     p.Push(34)
     go func() {
         time.Sleep(1 * time.Second)
@@ -44,7 +44,7 @@ func TestMessagePool_ObtainOne(t *testing.T) {
 }
 
 func TestMessagePool_Obtain(t *testing.T) {
-    p := New()
+    p := NewMessagePool()
     p.Push(34)
     go func() {
         time.Sleep(1 * time.Second)
@@ -69,7 +69,7 @@ func TestMessagePool_Obtain(t *testing.T) {
 }
 
 func TestMessagePool_Obtain2(t *testing.T) {
-    p := New()
+    p := NewMessagePool()
     p.Push(34)
     fmt.Println(p.Obtain(0, func(i interface{}) bool {
         _, ok := i.(int)

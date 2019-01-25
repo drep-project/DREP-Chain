@@ -4,6 +4,7 @@ import (
     "math/big"
     "crypto/rand"
     "errors"
+    "fmt"
 )
 
 const (
@@ -98,11 +99,11 @@ func Sign(prvKey *PrivateKey, b []byte) (*Signature, error) {
 }
 
 func Verify(sig *Signature, pubKey *Point, b []byte) bool {
-    //fmt.Println("Validate 3")
+    fmt.Println("Validate 3")
     curve := curveInstance
     r, s := new(big.Int).SetBytes(sig.R), new(big.Int).SetBytes(sig.S)
     if r.Cmp(Zero) <= 0 || r.Cmp(curve.Params().N) >= 0 || s.Cmp(Zero) <=0 || s.Cmp(curve.Params().N) >=0 {
-        //fmt.Println("Validate 4", r.Cmp(Zero) <= 0, r.Cmp(curve.Params().N) >= 0 , s.Cmp(Zero) <=0 , s.Cmp(curve.Params().N) >=0 )
+        fmt.Println("Validate 4", r.Cmp(Zero) <= 0, r.Cmp(curve.Params().N) >= 0 , s.Cmp(Zero) <=0 , s.Cmp(curve.Params().N) >=0 )
         return false
     }
     N := curve.Params().N
@@ -110,19 +111,19 @@ func Verify(sig *Signature, pubKey *Point, b []byte) bool {
     rP := curve.ScalarMultiply(pubKey, sig.R)
     Q:= curve.Add(sG, rP)
     Qx, Qy := Q.Int()
-    //fmt.Println("Validate 5")
+    fmt.Println("Validate 5")
     if Qx.Cmp(Zero) == 0 && Qy.Cmp(Zero) == 0 {
-        //fmt.Println("Validate 6")
+        fmt.Println("Validate 6")
         return false
     }
     v := new(big.Int).SetBytes(ConcatHash256(Q.Bytes(), pubKey.Bytes(), b))
     v.Mod(v, N)
-    //fmt.Println("Validate 7")
+    fmt.Println("Validate 7")
     if v.Cmp(r) == 0{
-        //fmt.Println("Validate 8")
+        fmt.Println("Validate 8")
         return true
     } else {
-        //fmt.Println("Validate 9")
+        fmt.Println("Validate 9")
         return false
     }
 }

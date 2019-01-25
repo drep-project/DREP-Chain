@@ -38,7 +38,7 @@ type BlockRespProcessor struct {}
 
 func (p *BlockRespProcessor) process(peer *bean.Peer, msg interface{}) {
     if resp, ok := msg.(*bean.BlockResp); ok {
-        pool.PushMsg(resp)
+        pool.Push(resp)
     }
 }
 

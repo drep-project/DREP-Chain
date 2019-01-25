@@ -3,73 +3,74 @@ package database
 import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"BlockChainTest/trie"
-	"BlockChainTest/config"
 	"fmt"
 	"BlockChainTest/util/list"
-	"bytes"
-    "errors"
+	"BlockChainTest/config"
 )
 
-const (
-    ins = iota
-    mod
-    del
-)
-
-type journalEntry struct {
-	chainId     config.ChainIdType
-	action      int
-	key         []byte
-	prev        []byte
+type Database struct {
+	db *leveldb.DB
+	runningChain int64
+	tries map[int64] *trie.StateTrie
 }
 
-type Transactional interface {
-	Put(chainId config.ChainIdType, key []byte, value []byte) error
-	Get(key []byte) []byte
-	Delete(chainId config.ChainIdType, key []byte) error
-	Commit()
-	Discard()
-	BeginTransaction() Transactional
-	GetTotalStateRoot() []byte
-	GetChainStateRoot(chainId config.ChainIdType) []byte
+const (
+	del = iota
+	put
+)
+
+type journal struct {
+	chainId int64
+	action int
+	key []byte
+	value []byte
 }
 
 type Transaction struct {
-	parent   Transactional
+	database *Database
+	snapshot *leveldb.Snapshot
 	finished bool
-	journal  []*journalEntry
+	journals []*journal
+	values map[string][]byte
 }
 
-func (t *Transaction) Put(chainId config.ChainIdType, key []byte, value []byte) error {
-    if t.finished {
-        return nil
-    }
-    prev := t.parent.Get(key)
-    if prev == nil {
-        t.journal = append(t.journal, &journalEntry{chainId: chainId, action: ins, key: key})
-    } else {
-        t.journal = append(t.journal, &journalEntry{chainId: chainId, action: mod, key: key, prev:prev})
-    }
-    return t.parent.Put(chainId, key, value)
+func (t *Transaction) Put(key []byte, value []byte, chainId int64) {
+	if t.finished {
+		return
+	}
+	t.journals = append(t.journals, &journal{action:put, key:key, value:value})
+	t.values[string(key)] = value
+	if t.database.tries[chainId] == nil {
+		t.database.tries[chainId] = trie.NewStateTrie()
+	}
+	t.database.tries[chainId].Insert(key, value)
 }
 
 func (t *Transaction) Get(key []byte) []byte {
 	if t.finished {
 		return nil
 	}
-	return t.parent.Get(key)
+	if value, exists := t.values[string(key)]; exists {
+		return value
+	} else if value, err := t.snapshot.Get(key, nil); err == nil {
+		return value
+	} else if err == leveldb.ErrNotFound{
+		return nil
+	} else {
+		return nil
+	}
 }
 
-func (t *Transaction) Delete(chainId config.ChainIdType, key []byte) error {
-    if t.finished {
-        return nil
-    }
-    prev := t.parent.Get(key)
-    if prev == nil {
-        return errors.New("no such key found in database")
-    }
-    t.journal = append(t.journal, &journalEntry{chainId:chainId, action: del, key:key, prev:prev})
-    return t.parent.Delete(chainId, key)
+func (t *Transaction) Delete(key []byte, chainId int64) {
+	if t.finished {
+		return
+	}
+	t.journals = append(t.journals, &journal{action:del, key:key})
+	if t.database.tries[chainId] == nil {
+		t.database.tries[chainId] = trie.NewStateTrie()
+	}
+	t.database.tries[chainId].Delete(key)
+	delete(t.values, string(key))
 }
 
 func (t *Transaction) Commit() {
@@ -77,6 +78,26 @@ func (t *Transaction) Commit() {
 		return
 	}
 	t.finished = true
+	tran, err := t.database.db.OpenTransaction()
+	if err != nil {
+		fmt.Errorf("error occurs when opening transaction: %v\n", err)
+		return
+	}
+	for _, j := range t.journals {
+		switch j.action {
+		case del:
+			if err := tran.Delete(j.key, nil); err != nil {
+				fmt.Errorf("error occurs when deleting: %v\n", err)
+			}
+		case put:
+			if err := tran.Put(j.key, j.value, nil); err != nil {
+				fmt.Errorf("error occurs when puting data: %v\n", err)
+			}
+		}
+	}
+	if err := tran.Commit(); err != nil {
+		fmt.Errorf("error occurs when committing: %v\n", err)
+	}
 }
 
 func (t *Transaction) Discard() {
@@ -84,133 +105,76 @@ func (t *Transaction) Discard() {
 		return
 	}
 	t.finished = true
-	for i := len(t.journal) - 1; i >= 0; i-- {
-		e := t.journal[i]
-		switch e.action {
-        case ins:
-            t.parent.Delete(e.chainId, e.key)
-        case mod:
-            t.parent.Put(e.chainId, e.key, e.prev)
-        case del:
-            t.parent.Put(e.chainId, e.key, e.prev)
+	for _, j := range t.journals {
+		switch j.action {
+		case del:
+			chainId := j.chainId
+			if t.database.tries[chainId] == nil {
+				t.database.tries[chainId] = trie.NewStateTrie()
+			}
+			if value, err := t.snapshot.Get(j.key, nil); err == nil {
+				t.database.tries[chainId].Insert(j.key, value)
+			}
+		case put:
+			chainId := j.chainId
+			if t.database.tries[chainId] == nil {
+				t.database.tries[chainId] = trie.NewStateTrie()
+			}
+			if value, err := t.snapshot.Get(j.key, nil); err == nil {
+				t.database.tries[chainId].Insert(j.key, value)
+			} else if err == leveldb.ErrNotFound {
+				t.database.tries[chainId].Delete(j.key)
+			}
 		}
 	}
 }
 
-func (t *Transaction) BeginTransaction() Transactional {
-	return &Transaction{
-		parent:t,
-		finished:false,
-		journal:make([]*journalEntry, 0),
-	}
-}
-
-func (t *Transaction) GetTotalStateRoot() []byte {
-	return t.parent.GetTotalStateRoot()
-}
-
-func (t *Transaction) GetChainStateRoot(chainId config.ChainIdType) []byte {
-	return t.parent.GetChainStateRoot(chainId)
-}
-
-type Database struct {
-	db           *leveldb.DB
-	runningChain config.ChainIdType
-	rootChain    config.ChainIdType
-	tries        map[config.ChainIdType] *trie.StateTrie
-}
-
-func NewDatabase(cfg *config.NodeConfig) *Database {
-	ldb, err := leveldb.OpenFile(cfg.DbPath, nil)
+func NewDatabase() *Database {
+	ldb, err := leveldb.OpenFile(config.GetDb(), nil)
 	if err != nil {
 		return nil
 	}
-	return &Database{
+	db := &Database{
 		db:ldb,
-		runningChain: config.Hex2ChainId(cfg.ChainId),
-		tries: make(map[config.ChainIdType] *trie.StateTrie),
+		runningChain: config.GetChainId(),
+		tries: make(map[int64] *trie.StateTrie),
 	}
+	db.tries[db.runningChain] = trie.NewStateTrie()
+	return db
 }
 
-func (db *Database) PutOutState(chainId config.ChainIdType, key []byte, value []byte) error {
-    if err := db.db.Put(key, value, nil); err != nil {
-        fmt.Println("error occurs", err)
-        return err
-    }
-    return nil
-}
-
-func (db *Database) Put(chainId config.ChainIdType, key []byte, value []byte) error {
-	if err := db.db.Put(key, value, nil); err == nil {
-		t, exists := db.tries[chainId]
-		if !exists {
-			t = trie.NewStateTrie()
-			db.tries[chainId] = t
+func (db *Database) BeginTransaction() *Transaction {
+	if s, err := db.db.GetSnapshot(); err == nil {
+		return &Transaction{
+			database: db,
+			snapshot: s,
+			finished: false,
+			journals: make([]*journal, 0),
+			values:   make(map[string][]byte),
 		}
-		t.Insert(key, value)
-		return nil
-	} else {
-		fmt.Println("error occurs", err)
-		return err
-	}
-}
-
-func (db *Database) Get(key []byte) []byte {
-	if ret, err := db.db.Get(key, nil); err == nil {
-		return ret
 	} else {
 		return nil
 	}
 }
 
-func (db *Database) DeleteOutState(chainId config.ChainIdType, key []byte) error {
-    if err := db.db.Delete(key, nil); err != nil {
-        fmt.Println("Error occurs.", err)
-        return err
-    }
-    return nil
-}
-
-func (db *Database) Delete(chainId config.ChainIdType, key []byte) error {
-	if err := db.db.Delete(key, nil); err == nil {
-		t, exists := db.tries[chainId]
-		if !exists {
-			fmt.Println("What the fuck, the trie dose not exist.")
-			t = trie.NewStateTrie()
-			db.tries[chainId] = t
-		}
-		t.Delete(key)
-		return nil
-	} else {
-		fmt.Println("Error occurs.", err)
-		return err
-	}
-}
-
-func (db *Database) Commit() {}
-
-func (db *Database) Discard() {}
-
-func (db *Database) BeginTransaction() Transactional {
-	return &Transaction{
-		parent:   db,
-		finished: false,
-		journal:  make([]*journalEntry, 0),
-	}
-}
-
-func (db *Database) GetTotalStateRoot() []byte {
+func (db *Database) GetStateRoot() []byte {
 	if db.runningChain != config.RootChain {
-		return db.GetChainStateRoot(db.runningChain)
+		return db.tries[db.runningChain].Root.Value
 	}
 	type trieObj struct {
-		chainId config.ChainIdType
+		chainId int64
 		tr *trie.StateTrie
 	}
 	sll := list.NewSortedLinkedList(func(a interface{}, b interface{}) int {
 		ac := a.(*trieObj).chainId
 		bc := b.(*trieObj).chainId
-		return bytes.Compare(ac[:], bc[:])
+		if ac > bc {
+			return 1
+		}
+		if ac == bc {
+			return 0
+		}
+		return -1
 	})
 	for chainId, t := range db.tries {
 		sll.Add(&trieObj{
@@ -225,9 +189,20 @@ func (db *Database) GetTotalStateRoot() []byte {
 	return trie.GetMerkleRoot(ts)
 }
 
-func (db *Database) GetChainStateRoot(chainId config.ChainIdType) []byte {
-	if t, exists := db.tries[chainId]; exists {
-		return t.Root.Value
+func (db *Database) put(key []byte, value []byte, chainId int64) error {
+	err := db.db.Put(key, value, nil)
+	if err == nil {
+		if db.tries[chainId] == nil {
+			db.tries[chainId] = trie.NewStateTrie()
+		}
+		db.tries[chainId].Insert(key, value)
+	}
+	return err
+}
+
+func (db *Database) get(key []byte) []byte {
+	if ret, err := db.db.Get(key, nil); err == nil {
+		return ret
 	} else {
 		return nil
 	}

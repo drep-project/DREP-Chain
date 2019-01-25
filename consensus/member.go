@@ -5,7 +5,7 @@ import (
     "BlockChainTest/bean"
     "BlockChainTest/mycrypto"
     "math/big"
-    "BlockChainTest/log"
+    //"BlockChainTest/log"
     "BlockChainTest/pool"
     "time"
     "BlockChainTest/consensus/consmsg"
@@ -30,16 +30,16 @@ func NewMember(leader *bean.Peer, prvKey *mycrypto.PrivateKey) *Member {
 }
 
 func (m *Member) ProcessConsensus(f func(setup *bean.Setup)bool) []byte {
-    log.Trace("Member set up wait")
+    fmt.Println("Member set up wait")
     if !m.waitForSetUp(f) {
         return nil
     }
-    log.Trace("Member is going to commit")
+    fmt.Println("Member is going to commit")
     m.commit()
 
-    log.Trace("Member challenge wait")
+    fmt.Println("Member challenge wait")
     if m.waitForChallenge() {
-        log.Trace("Member is going to response")
+        fmt.Println("Member is going to response")
         m.response()
         return m.msg
     } else {
@@ -48,7 +48,7 @@ func (m *Member) ProcessConsensus(f func(setup *bean.Setup)bool) []byte {
 }
 
 func (m *Member) waitForSetUp(f func(setup *bean.Setup)bool) bool {
-    setUpMsg := pool.ObtainOneMsg(func(msg interface{}) bool {
+    setUpMsg := pool.ObtainOne(func(msg interface{}) bool {
         if setup, ok := msg.(*consmsg.SetupMsg); ok {
             fmt.Println(m.leader.PubKey, setup.Peer.PubKey)
             return m.leader.PubKey.Equal(setup.Peer.PubKey)
@@ -74,12 +74,12 @@ func (m *Member) commit()  {
     }
     m.k = k
     commitment := &bean.Commitment{Q: q}
-    log.Trace("Member commit ", *commitment)
+    fmt.Println("Member commit ", *commitment)
     network.SendMessage([]*bean.Peer{m.leader}, commitment)
 }
 
 func (m *Member) waitForChallenge() bool {
-    challengeMsg := pool.ObtainOneMsg(func(msg interface{}) bool {
+    challengeMsg := pool.ObtainOne(func(msg interface{}) bool {
         if challengeMsg, ok := msg.(*consmsg.ChallengeMsg); ok {
            return m.leader.PubKey.Equal(challengeMsg.Peer.PubKey)
         } else {
@@ -90,7 +90,7 @@ func (m *Member) waitForChallenge() bool {
         return false
     }
     if challenge, ok := challengeMsg.(*consmsg.ChallengeMsg); ok {
-        log.Trace("Member process challenge ", *challenge)
+        fmt.Println("Member process challenge ", *challenge)
         r := mycrypto.ConcatHash256(challenge.Msg.SigmaQ.Bytes(), challenge.Msg.SigmaPubKey.Bytes(), m.msg)
         r0 := new(big.Int).SetBytes(challenge.Msg.R)
         rInt := new(big.Int).SetBytes(r)
@@ -111,6 +111,6 @@ func (m *Member) response() {
     s.Sub(k, s)
     s.Mod(s, curve.N)
     response := &bean.Response{S: s.Bytes()}
-    log.Trace("Member response ", *response)
+    fmt.Println("Member response ", *response)
     network.SendMessage([]*bean.Peer{m.leader}, response)
 }

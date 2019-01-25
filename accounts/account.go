@@ -4,21 +4,21 @@ import (
 	"math/big"
 	"BlockChainTest/mycrypto"
 	"errors"
-	"BlockChainTest/config"
 )
 
 var (
 	DrepMark   = []byte("Drep Coin Seed")
 	KeyBitSize = 256 >> 3
+	DefaultRep = new(big.Int).SetInt64(10000)
 )
 
 type Node struct {
 	PrvKey    *mycrypto.PrivateKey
-	ChainId   config.ChainIdType
+	ChainId   int64
 	ChainCode []byte
 }
 
-func NewNode(parent *Node, chainId config.ChainIdType) *Node {
+func NewNode(parent *Node, chainId int64) *Node {
 	var (
 		prvKey *mycrypto.PrivateKey
 		chainCode []byte
@@ -35,7 +35,7 @@ func NewNode(parent *Node, chainId config.ChainIdType) *Node {
 		chainCode = h[KeyBitSize:]
 	} else {
 		pid := new(big.Int).SetBytes(parent.ChainCode)
-		cid := new(big.Int).SetBytes(chainId[:])
+		cid := new(big.Int).SetInt64(int64(chainId))
 		msg := new(big.Int).Xor(pid, cid).Bytes()
 		h := hmAC(msg, parent.PrvKey.Prv)
 		prvKey = genPrvKey(h[:KeyBitSize])
@@ -53,11 +53,10 @@ func (node *Node) Address() CommonAddress {
 }
 
 type Storage struct {
-	Balance    *big.Int
-	Nonce      int64
-	ByteCode   ByteCode
-	CodeHash   Hash
-	Reputation *big.Int
+	Balance   *big.Int
+	Nonce     int64
+	ByteCode  ByteCode
+	CodeHash  Hash
 }
 
 func NewStorage() *Storage {
@@ -73,8 +72,8 @@ type Account struct {
 	Storage       *Storage
 }
 
-func NewNormalAccount(parent *Node, chainId config.ChainIdType) (*Account, error) {
-	IsRoot := chainId == config.RootChain
+func NewNormalAccount(parent *Node, chainId int64) (*Account, error) {
+	IsRoot := chainId == RootChainID
 	if !IsRoot && parent == nil {
 		return nil, errors.New("missing parent account")
 	}
@@ -89,7 +88,7 @@ func NewNormalAccount(parent *Node, chainId config.ChainIdType) (*Account, error
 	return account, nil
 }
 
-func NewContractAccount(callerAddr CommonAddress, chainId config.ChainIdType, nonce int64) (*Account, error) {
+func NewContractAccount(callerAddr CommonAddress, chainId, nonce int64) (*Account, error) {
 	address := GetByteCodeAddress(callerAddr, nonce)
 	storage := NewStorage()
 	account := &Account{

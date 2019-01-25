@@ -3,14 +3,12 @@ package bean
 import (
     "encoding/hex"
     "BlockChainTest/mycrypto"
-    "math/big"
     "encoding/json"
     "BlockChainTest/accounts"
-    "BlockChainTest/config"
 )
 
 type BlockHeader struct {
-    ChainId              config.ChainIdType
+    ChainId              int64
     Version              int32
     PreviousHash         []byte
     GasLimit             []byte
@@ -20,6 +18,7 @@ type BlockHeader struct {
     StateRoot            []byte
     MerkleRoot           []byte
     TxHashes             [][]byte
+    Support              bool
     LeaderPubKey         *mycrypto.Point
     MinorPubKeys         []*mycrypto.Point
 }
@@ -40,8 +39,8 @@ type TransactionData struct {
     Nonce                int64
     Type                 int32
     To                   string
-    ChainId              config.ChainIdType
-    DestChain            config.ChainIdType
+    ChainId              int64
+    DestChain            int64
     Amount               []byte
     GasPrice             []byte
     GasLimit             []byte
@@ -55,15 +54,9 @@ type Transaction struct {
     Sig                  *mycrypto.Signature
 }
 
-type CrossChainTransaction struct {
-    ChainId   config.ChainIdType
-    StateRoot []byte
-    Trans     []*Transaction
-}
-
 type Log struct {
     Address      accounts.CommonAddress
-    ChainId      config.ChainIdType
+    ChainId      int64
     TxHash       []byte
     Topics       [][]byte
     Data         []byte
@@ -100,31 +93,13 @@ func (tx *Transaction) TxSig(prvKey *mycrypto.PrivateKey) (*mycrypto.Signature, 
     return mycrypto.Sign(prvKey, b)
 }
 
-func (tx *Transaction) GetGasUsed() *big.Int {
-    return new(big.Int).SetInt64(int64(100))
-}
-
-func (tx *Transaction) GetGas() *big.Int {
-    gasQuantity := tx.GetGasUsed()
-    gasPrice := new(big.Int).SetBytes(tx.Data.GasPrice)
-    gasUsed := new(big.Int).Mul(gasQuantity, gasPrice)
-    return gasUsed
-}
-
-func (block *Block) BlockHash() ([]byte, error) {
+func (block *Block) BlockHash() (string, error) {
     b, err := json.Marshal(block.Header)
-    if err != nil {
-        return nil, err
-    }
-    return mycrypto.Hash256(b), nil
-}
-
-func (block *Block) BlockHashHex() (string, error) {
-    h, err := block.BlockHash()
     if err != nil {
         return "", err
     }
-    return "0x" + hex.EncodeToString(h), nil
+    h := "0x" + hex.EncodeToString(mycrypto.Hash256(b))
+    return h, nil
 }
 
 func (block *Block) TxHashes() []string {
@@ -133,4 +108,21 @@ func (block *Block) TxHashes() []string {
         th[i] = "0x" + hex.EncodeToString(hash)
     }
     return th
+}
+
+func MarshalBlock(block *Block) ([]byte, error) {
+    b, err := json.Marshal(block)
+    if err != nil {
+        return nil, err
+    }
+    return b, nil
+}
+
+func UnmarshalBlock(b []byte) (*Block, error) {
+    block := &Block{}
+    err := json.Unmarshal(b, block)
+    if err != nil {
+        return nil, err
+    }
+    return block, nil
 }

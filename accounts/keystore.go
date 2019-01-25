@@ -16,12 +16,12 @@ var (
 type Key struct {
     Address string
     PrivateKey string
-    ChainId string
+    ChainId int64
     ChainCode string
 }
 
 func genKeystore(keyAddr string, jsonBytes []byte) error {
-    os.MkdirAll(KeystoreDirName, os.ModeDir|os.ModePerm)
+    os.Mkdir(KeystoreDirName, os.ModeDir|os.ModePerm)
     filename := getFilename(keyAddr)
     file, err := os.Create(filename)
     if err != nil {
@@ -36,7 +36,7 @@ func store(node *Node) error {
     key := &Key{
         Address: node.Address().Hex(),
         PrivateKey: hex.EncodeToString(node.PrvKey.Prv),
-        ChainId: node.ChainId.Hex(),
+        ChainId: node.ChainId,
         ChainCode: hex.EncodeToString(node.ChainCode),
     }
     b, err := json.Marshal(key)
@@ -91,7 +91,7 @@ func SaveKeystore(node *Node, keystorePath string) error {
     key := &Key{
         Address: node.Address().Hex(),
         PrivateKey: hex.EncodeToString(node.PrvKey.Prv),
-        ChainId: node.ChainId.Hex(),
+        ChainId: node.ChainId,
         ChainCode: hex.EncodeToString(node.ChainCode),
     }
     b, err := json.Marshal(key)
@@ -109,7 +109,7 @@ func SaveKeystore(node *Node, keystorePath string) error {
         keystorePath = path.Join(dataDir, key.Address + ".json")
     }
 
-    err = os.MkdirAll(KeystoreDirName, os.ModeDir|os.ModePerm)
+    err = os.Mkdir(KeystoreDirName, os.ModeDir|os.ModePerm)
     if err != nil {
         return err
     }
@@ -129,7 +129,7 @@ func MiniSave(node *Node) error {
     key := &Key{
         Address: node.Address().Hex(),
         PrivateKey: hex.EncodeToString(node.PrvKey.Prv),
-        ChainId: node.ChainId.Hex(),
+        ChainId: node.ChainId,
         ChainCode: hex.EncodeToString(node.ChainCode),
     }
     b, err := json.Marshal(key)

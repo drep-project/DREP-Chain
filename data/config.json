@@ -1,61 +1,65 @@
 {
-  "chainId": "00",
-  "port": 55555,
-  "boot": true,
-  "myindex": 0,
-  "bootNodes":  [
+  "adminnodes": [
     {
-      "pubKey": {
-        "x": "ff23066c1af1227139b399d9b7cadef23829851958e114287524876737bf845d",
-        "y": "b02c9f32b110a17acf1677066ac205e3ec6b8215885def0db6e65ecd584bbc70"
+      "PubKey": {
+        "X": "605e2c8286d17c9231df35d45043f8d471934cc3bd774a658c631df17a6f8c54",
+        "Y": "5da55d002bc039dfbe021aecf4bd52b356ededaf5363cbca5c4c318ad92032d8"
       },
-      "address": "5ab50440596c7c1069bb1c751368936b245d0216",
-      "iP": "192.168.3.48",
-      "port": 55555
+      "Address": "e782ac3850d654639ad052234cec1682a7b28788"
     },
     {
-      "pubKey": {
-        "x": "1624f4a65ead37468b8e2270437fe23d69dac11bba85a8ed4cf241185048fd41",
-        "y": "ad3476ec1e620258a45bb108a2f3e4e1fbcea2322e0c21f6840226959f347607"
+      "PubKey": {
+        "X": "75ef5f9395eefe20b70dc337f38c9513973c62bdc3fe1bf084405d42bb1e7b38",
+        "Y": "724cbbede86d983116ed0068a78300d7baa560421c621a27988125a3b8eb7aad"
       },
-      "address": "9350b290329c3295dae906ba4eaf16b6c7b870f4",
-      "iP": "192.168.3.63",
-      "port": 55555
+      "Address": "02dd82f96ee3094fb6d647d5d74091ed21cb3be1"
+    },
+    {
+      "PubKey": {
+        "X": "9e1da86b29bc9bbd9e594cf1084dfb29e51219801b4b4af72674b52160c222b1",
+        "Y": "0e60b1a6c5dc81ff7a298969f911be2a8caeac9cf499461b2a87c319df680dd5"
+      },
+      "Address": "99f7328c79b55357edc6d5ca57b008d387916b6b"
+    },
+    {
+      "PubKey": {
+        "X": "e9181f2b1f65a6b405ec6113bb491a3cb2337a4ba27e7f1ad3831a62f89f456e",
+        "Y": "752f1a184b845814b979335640db42bfec9367e55365f732cf08e9a0a1d96e37"
+      },
+      "Address": "eac6922faa7c60f6a527380753c6b42fe5c35295"
+    },
+    {
+      "PubKey": {
+        "X": "19da891d3f956feff5c13d883abf7874c9b60fc08eed146118225bb2d1a90199",
+        "Y": "e61d793829397e57b6d51d5f00f699dca31726ac73c1d4208c4559431c9cd7ce"
+      },
+      "Address": "628716f54e10a60030df8ed2a24860aa7e75a6a2"
+    },
+    {
+      "PubKey": {
+        "X": "1e8d3f8508ab3b3b82e945b3be159d59c8791e431dd93ad252d04ee732377205",
+        "Y": "7524e57c9a2d962265b2ca342c1ceb694bd11e59837bd2a982a11de0a6d93c58"
+      },
+      "Address": "967b3c8058e3fb6bc4bcb7bf694a8787ac0f664e"
     }
   ],
   "blockprize": "20000000000000000000",
-  "default_rep": "10",
-  "consensusMode": "bft",
-  "rpcConfig": {
-    "IPCEnabled": true,
-    "IPCPath": "drep.ipc",
-    "HTTPEnabled": true,
-    "HTTPHost": "localhost",
-    "HTTPPort": 15645,
-    "HTTPCors": null,
-    "HTTPVirtualHosts": [
-      "localhost"
-    ],
-    "HTTPModules": null,
-    "HTTPTimeouts": {
-      "ReadTimeout": 0,
-      "WriteTimeout": 0,
-      "IdleTimeout": 0
-    },
-    "WSEnabled": true,
-    "WSHost": "localhost",
-    "WSPort": 15646,
-    "WSOrigins": null,
-    "WSModules": null,
-    "WSExposeAll": false,
-    "RESTEnabled": true,
-    "RESTHost": "localhost",
-    "RESTPort": 55550,
-    "RESTCors": null
-  },
-  "logConfig": {
-    "logLevel": 3,
-    "vmodule": "",
-    "backtraceAt": ""
-  }
+  "boot": true,
+  "bootnodes": [
+    {
+      "PubKey": {
+        "X": "29f9fcfa0570d413c7e3d8e468dc4489c5754d20c1a5b1fc6016dd4b46210bc4",
+        "Y": "5b93c7d1dae166a2923cb9edbb1ddc8cb5f71fa41dfc9cc016860d5eb4bdbb0b"
+      },
+      "Address": "01d662ff80dd9ee60be74fdfe7d318e96c4c07c3",
+      "IP": "127.0.0.1",
+      "Port": 55555
+    }
+  ],
+  "chainid": 5577006791947779410,
+  "ip": "127.0.0.1",
+  "myindex": 0,
+  "port": 55555,
+  "begin": "00:00:00",
+  "end": "05:59:59"
 }

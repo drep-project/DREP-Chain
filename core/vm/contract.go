@@ -3,7 +3,6 @@ package vm
 import (
 	"math/big"
 	"BlockChainTest/accounts"
-	"BlockChainTest/config"
 )
 
 var (
@@ -23,7 +22,7 @@ var (
 type Contract struct {
 	CallerAddr   accounts.CommonAddress
 	ContractAddr accounts.CommonAddress
-	ChainId      config.ChainIdType
+	ChainId      int64
 	ByteCode     accounts.ByteCode
 	CodeHash     accounts.Hash
 	Input        []byte
@@ -33,7 +32,7 @@ type Contract struct {
 	TxHash       []byte
 }
 
-func NewContract(callerAddr accounts.CommonAddress, chainId config.ChainIdType, gas uint64, value *big.Int, jumpdests destinations) *Contract {
+func NewContract(callerAddr accounts.CommonAddress, chainId int64, gas uint64, value *big.Int, jumpdests destinations) *Contract {
 	if jumpdests == nil {
 		return &Contract{CallerAddr: callerAddr, ChainId: chainId, Gas: gas, Value: value, Jumpdests: NewDest()}
 	}

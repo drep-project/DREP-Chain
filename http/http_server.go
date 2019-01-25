@@ -1,4 +1,4 @@
-package rest
+package http
 
 import (
     "net/http"
@@ -9,11 +9,9 @@ import (
     "math/big"
     "strings"
     "io/ioutil"
-    "BlockChainTest/log"
     "BlockChainTest/node"
     "BlockChainTest/accounts"
-    "github.com/spf13/viper"
-    "net"
+    "BlockChainTest/config"
 )
 
 type Request struct {
@@ -124,7 +122,7 @@ func GetBalance(w http.ResponseWriter, r *http.Request) {
         address = value[2:]
     }
     if value, ok := params["chainId"].(string); ok {
-        chainId, _ = strconv.ParseInt(value, 10, 64)
+        chainId, _ = strconv.ParseInt(value[2:], 10, 64)
     }
 
     if len(address) == 0 {
@@ -139,6 +137,13 @@ func GetBalance(w http.ResponseWriter, r *http.Request) {
     //fmt.Println("[database PutBalance] succeed!")
 
     b := database.GetBalanceOutsideTransaction(ca, chainId)
+    defer func() {
+        if x := recover(); x != nil {
+            fmt.Printf("[database GetBalance] caught panic: %v", x)
+            resp := &Response{Success:false, ErrorMsg:"[database GetBalance] caught panic!"}
+            writeResponse(w, resp)
+        }
+    }()
     resp := &Response{Success:true, Data:b.String()}
     writeResponse(w, resp)
 }
@@ -148,10 +153,10 @@ func GetNonce(w http.ResponseWriter, r *http.Request) {
     var address string
     var chainId int64
     if value, ok := params["address"].(string); ok {
-        address = value
+        address = value[2:]
     }
     if value, ok := params["chainId"].(string); ok {
-        chainId, _ = strconv.ParseInt(value, 10, 64)
+        chainId, _ = strconv.ParseInt(value[2:], 10, 64)
     }
 
     if len(address) == 0 {
@@ -159,7 +164,6 @@ func GetNonce(w http.ResponseWriter, r *http.Request) {
         writeResponse(w, resp)
         return
     }
-    address = address[2:]
     fmt.Println("NonceAddress: ", address)
 
     ca := accounts.Hex2Address(address)
@@ -181,7 +185,7 @@ func SendTransaction(w http.ResponseWriter, r *http.Request) {
         amount = value
     }
     if value, ok := params["destChain"].(string); ok {
-        destChain, _ = strconv.ParseInt(value, 10, 64)
+        destChain, _ = strconv.ParseInt(value[2:], 10, 64)
     }
 
     a, succeed := new(big.Int).SetString(amount, 10)
@@ -211,6 +215,7 @@ func GetTransactionsFromBlock(w http.ResponseWriter, r *http.Request) {
     if value, ok := params["height"].(string); ok {
         height, _ = strconv.ParseInt(value, 10, 64)
     }
+
     block := database.GetBlock(height)
     txs := block.Data.TxList
     var txsWeb []*TransactionWeb
@@ -222,73 +227,36 @@ func GetTransactionsFromBlock(w http.ResponseWriter, r *http.Request) {
     writeResponse(w, resp)
 }
 
-func GetReputation(w http.ResponseWriter, r *http.Request) {
-    params := analysisReqParam(r)
-    var address string
-    var chainId int64
-    if value, ok := params["address"].(string); ok {
-        address = value[2:]
-    }
-    if value, ok := params["chainId"].(string); ok {
-        chainId, _ = strconv.ParseInt(value, 10, 64)
-    }
-
-    if len(address) == 0 {
-        resp := &Response{Success:false, ErrorMsg:"param format incorrect"}
-        writeResponse(w, resp)
-        return
-    }
-
-    ca := accounts.Hex2Address(address)
-    b:= database.GetReputationOutsideTransaction(ca, chainId)
-    resp := &Response{Success:true, Data:b.String()}
-    if (b.Int64() == 0) {
-        defaultRep := viper.GetInt64("default_rep")
-        fmt.Println("default reputation is :", defaultRep)
-        database.PutReputationOutSideTransaction(ca, chainId, big.NewInt(defaultRep))
-        resp.Data = viper.GetString("default_rep")
-    }
+func GetChainId(w http.ResponseWriter, _ *http.Request) {
+    chainId := "0x" + strconv.FormatInt(config.GetChainId(),10)
+    resp := &Response{Success:true, Data:chainId}
     writeResponse(w, resp)
 }
 
 var methodsMap = map[string] http.HandlerFunc {
-    "/GetAllBlocks": GetAllBlocks,
-    "/GetBlock": GetBlock,
-    "/GetHighestBlock": GetHighestBlock,
-    "/GetMaxHeight": GetMaxHeight,
-    "/GetBlocksFrom": GetBlocksFrom,
-    "/GetBalance": GetBalance,
-    "/GetNonce": GetNonce,
-    "/SendTransaction": SendTransaction,
-    "/GetReputation": GetReputation,
+    "/GetAllBlocks":             GetAllBlocks,
+    "/GetBlock":                 GetBlock,
+    "/GetHighestBlock":          GetHighestBlock,
+    "/GetMaxHeight":             GetMaxHeight,
+    "/GetBlocksFrom":            GetBlocksFrom,
+    "/GetBalance":               GetBalance,
+    "/GetNonce":                 GetNonce,
+    "/SendTransaction":          SendTransaction,
     "/GetTransactionsFromBlock": GetTransactionsFromBlock,
+    "/GetChainId":               GetChainId,
 }
 
-func Start(restEndPoint string) (net.Listener, error) {
-    //go func() {
-        //for pattern, handleFunc := range (methodsMap) {
-        //    http.HandleFunc(pattern, handleFunc)
-        //}
-        //fmt.Println("http server is ready for listen port: 55550")
-        //err := http.ListenAndServe(":55550", nil)
-        //if err != nil {
-        //    fmt.Println("http listen failed")
-        //}
-    //}()
-    for pattern, handleFunc := range (methodsMap) {
-        http.HandleFunc(pattern, handleFunc)
-    }
-
-    listen, err := net.Listen("tcp", restEndPoint)
-    if err != nil {
-        log.Error("start reset server errpr :", err.Error())
-        return nil, err
-    }
-    log.Info("rest server is ready for listen，","endpoint" ,restEndPoint)
-
-    svr := http.Server{}
-    go svr.Serve(listen)
-    return listen, nil
+func Start() {
+    go func() {
+        for pattern, handleFunc := range (methodsMap) {
+            http.HandleFunc(pattern, handleFunc)
+        }
+        fmt.Println("http server is ready for listen port: 55550")
+        err := http.ListenAndServe(":55550", nil)
+        if err != nil {
+            fmt.Println("http listen failed")
+        }
+    }()
 }
 
 //func logPanics(handle http.HandlerFunc) http.HandlerFunc {
