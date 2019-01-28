@@ -16,7 +16,7 @@ type Function struct  {
 }
 
 func readWasm() []byte {
-    b, err := ioutil.ReadFile("./app.wasm")
+    b, err := ioutil.ReadFile("wasm/app.wasm")
     if err != nil {
         log.Fatal("file read:", err)
     }

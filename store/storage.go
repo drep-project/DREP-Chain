@@ -22,6 +22,7 @@ var (
     lastMinors []*mycrypto.Point
     lastPrize  *big.Int
     lastIndex  = 0
+    users []wasm.RegisterReturns
 )
 
 func ExecuteTransactions(b *bean.Block) *big.Int {
@@ -61,7 +62,8 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
     th, _ := json.Marshal(b.Header)
     database.PutPreviousHash(mycrypto.Hash256(th))
 
-    Liquidate(b.Header.Height, int(b.Header.Height))
+    //Liquidate(b.Header.Height, int(b.Header.Height))
+    wasm.Liquidate(users)
     return total
 }
 
@@ -261,8 +263,30 @@ func executeGainTransaction(t *bean.Transaction) {
     if err != nil {
         return
     }
-    increments := make([]map[string] interface{}, len(records))
+
     platformID := strconv.FormatInt(GetChainId(), 10)
+    execWasmGainTransaction(platformID, records)
+    //execJsGainTransaction(platformID, records)
+}
+
+func execWasmGainTransaction(platformID string, records []map[string] interface{})  {
+    if len(users) == 0 {
+        var uids []string
+        for _, r := range records {
+            uid := r["Addr"].(string)
+            uids = append(uids, uid)
+        }
+        reg_resp := wasm.RegisterUser(uids)
+        err := json.Unmarshal([]byte(reg_resp), &users)
+        if err != nil {
+            fmt.Println("json ummarshal users error")
+        }
+    }
+    wasm.AddGain(users)
+}
+
+func execJsGainTransaction(platformID string, records []map[string] interface{})  {
+    increments := make([]map[string] interface{}, len(records))
     for i, r := range records {
         uid := r["Addr"].(string)
         ret := repjs.GetProfile(platformID, uid)
@@ -274,9 +298,6 @@ func executeGainTransaction(t *bean.Transaction) {
         tracer := database.GetTracer(platformID, repID)
         if tracer == nil {
             repjs.RegisterUser(platformID, repID, groupID)
-
-            wasm.RegisterUser()
-
         }
         increments[i] = make(map[string] interface{})
         increments[i]["RepID"] = repID

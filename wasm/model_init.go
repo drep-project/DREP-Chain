@@ -11,18 +11,17 @@ import (
 var (
     viper0 = viper.New()
     viper1 = viper.New()
-    mod    *model
 )
 
-func init() {
+func SetupModel() (mod *model) {
     viper0.SetConfigName("rep_configs")
-    viper0.AddConfigPath("data")
+    viper0.AddConfigPath("wasm/data")
     err := viper0.ReadInConfig()
     if err != nil {
         fmt.Println("read rep config file error: ", err)
     }
     viper1.SetConfigName("rep_floats")
-    viper1.AddConfigPath("data")
+    viper1.AddConfigPath("wasm/data")
     err = viper1.ReadInConfig()
     if err != nil {
         fmt.Println("read rep floats file error: ", err)
@@ -39,6 +38,7 @@ func init() {
     mod.Beta = GetBeta()
     mod.Epsilon = GetEpsilon()
     mod.Require = GetRequire()
+    return mod
 }
 
 func GetBottomRate() *big.Float {

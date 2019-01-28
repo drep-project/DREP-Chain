@@ -3,15 +3,15 @@ package wasm
 import (
     "fmt"
     "time"
-    "strconv"
     "rep_algorithm/resolv"
     "github.com/perlin-network/life/exec"
     "encoding/json"
     "BlockChainTest/database"
+    "strconv"
 )
 
 var (
-    n = 200
+    n = 100
     vm *exec.VirtualMachine
     r *resolv.Resolver
 )
@@ -23,8 +23,14 @@ func init()  {
 }
 
 func main() {
-    reg_resp := RegisterUser()
-    users := [] registerReturns{}
+    var uids []string
+    for i := 0; i < n; i++  {
+        uid := "user_" + strconv.Itoa(i)
+        uids = append(uids, uid)
+    }
+    reg_resp := RegisterUser(uids)
+
+    users := [] RegisterReturns{}
     err := json.Unmarshal([]byte(reg_resp), &users)
     if err != nil {
         fmt.Println("json ummarshal users error")
@@ -42,11 +48,11 @@ func setupModel()  {
     fmt.Println("AcceptModel time:", time.Now().Sub(time1))
 }
 
-func RegisterUser() string {
+func RegisterUser(uids []string) string {
     params := []string{}
-    for i := 0; i < n; i++  {
-        uid := database.UID("user_" + strconv.Itoa(i))
-        p := generateRegisterParams("a", uid)
+
+    for _, uid := range uids {
+        p := generateRegisterParams("a", database.UID(uid))
         params = append(params, p)
     }
 
@@ -57,7 +63,7 @@ func RegisterUser() string {
     return resp
 }
 
-func AddGain(users []registerReturns)  {
+func AddGain(users []RegisterReturns)  {
     time1 := time.Now()
     increments := []*gainIncrement{}
     for _, user := range users {
@@ -74,7 +80,7 @@ func AddGain(users []registerReturns)  {
     processGainReturns(resp)
 }
 
-func Liquidate(users []registerReturns)  {
+func Liquidate(users []RegisterReturns)  {
     time1 := time.Now()
     ids := []database.RepID{}
     for _, user := range users {

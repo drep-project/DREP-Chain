@@ -82,6 +82,7 @@ func generateGainParams(platformID database.PlatformID, increments []*gainIncrem
 }
 
 func generateAcceptModelParams() string{
+    mod := SetupModel()
     b, err := json.Marshal(mod)
     if err != nil {
         return "json marshal params error"

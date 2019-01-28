@@ -6,7 +6,7 @@ import (
     "BlockChainTest/database"
 )
 
-type registerReturns struct {
+type RegisterReturns struct {
     PlatformID database.PlatformID
     RepID      database.RepID
     GroupID    database.GroupID
@@ -28,7 +28,7 @@ type liquidateReturns struct {
     Error      string
 }
 
-func processRegisterReturns(ret *registerReturns) database.RepID {
+func processRegisterReturns(ret *RegisterReturns) database.RepID {
     group := database.GetGroupW(ret.PlatformID, ret.GroupID)
     group = append(group, ret.RepID)
     database.SetGroupW(ret.PlatformID, ret.GroupID, group)
