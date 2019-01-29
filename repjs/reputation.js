@@ -308,6 +308,12 @@ function liquidateRepByGroup(platformID, groupID, until) {
     return {Tokens: tokens}
 }
 
+function liquidateRepByGroupSimply(platformID, groupID, until) {
+    var group = dbPersistent.getGroup(platformID, groupID)
+    var tokens = liquidateRep(platformID, group, until).Tokens
+    return {Tokens: tokens}
+}
+
 var rep_configs_alternative = require("repjs/data/rep_configs_alternative.json")
 var rep_floats_alternative = require("repjs/data/rep_floats_alternative.json")
 
@@ -461,4 +467,15 @@ function liquidateRepSimply(platformID, repIDs, until) {
         console.log()
         return {Tokens: tokens}
     }
+}
+
+function liquidateRepSimplyByGroup(platformID, groupID, until) {
+    liquidate
+    var repIDs = getSelection()
+    repIDs.add(groupID)
+    repIDs.push(platformID)
+    console.log('what the fuck: ', repIDs)
+    console.log('what the fuch2 : ', groupID)
+    repIDs.shift()
+    consle.log("test repid shift: ", repIDs)
 }

@@ -286,7 +286,8 @@ func executeGainTransaction(t *bean.Transaction) {
 func Liquidate(height int64, until int) {
     platformID := strconv.FormatInt(GetChainId(), 10)
     groupID := uint64(height % 5)
-    ret, err := repjs.LiquidateRepByGroup(platformID, groupID, until)
+    //ret, err := repjs.LiquidateRepByGroup(platformID, groupID, until)
+    ret, err := repjs.LiquidateRepByGroupSimply(platformID, groupID, until)
     v, ok := ret["Tokens"].(map[string] interface{})
     fmt.Println()
     fmt.Println("tokens: ", v)

@@ -228,3 +228,24 @@ func LiquidateRepByGroup(platformID string, groupID uint64, until int) (map[stri
     }
     return nil, errors.New("wrong js value type")
 }
+
+func LiquidateRepByGroupSimply(platformID string, groupID uint64, until int) (map[string] interface{}, error) {
+    fun, err := vm.Get("liquidateRepByGroupSimply")
+    if err != nil {
+        return nil, err
+    }
+    ret, err := fun.Call(vm.Context().This, platformID, groupID, until)
+    if err != nil {
+        return nil, err
+    }
+    fmt.Println("ret: ", ret)
+    data, err := ret.Export()
+    if err != nil {
+        return nil, err
+    }
+    fmt.Println("data: ", data)
+    if value, ok := data.(map[string] interface{}); ok {
+        return value, nil
+    }
+    return nil, errors.New("wrong js value type")
+}

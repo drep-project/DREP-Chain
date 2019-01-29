@@ -207,3 +207,12 @@ func (db *Database) get(key []byte) []byte {
 		return nil
 	}
 }
+
+func (db *Database) reestablish() []byte {
+	iter := db.db.NewIterator(nil, nil)
+	tr := trie.NewStateTrie()
+	for iter.Next() {
+		tr.Insert(iter.Key(), iter.Value())
+	}
+	return tr.Root.Value
+}
