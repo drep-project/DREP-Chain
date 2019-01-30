@@ -14,6 +14,8 @@ var (
     n = 100
     vm *exec.VirtualMachine
     r *resolv.Resolver
+    isRegisterUser = false
+    ids = []database.RepID{}
 )
 
 func init()  {
@@ -36,8 +38,8 @@ func main() {
         fmt.Println("json ummarshal users error")
     }
 
-    AddGain(users)
-    Liquidate(users)
+    AddGain(users, 1)
+    Liquidate(users, 2)
 }
 
 func setupModel()  {
@@ -63,12 +65,17 @@ func RegisterUser(uids []string) string {
     return resp
 }
 
-func AddGain(users []RegisterReturns)  {
+func AddGain(users []RegisterReturns, height int64)  {
     time1 := time.Now()
     increments := []*gainIncrement{}
-    for _, user := range users {
-        id := processRegisterReturns(&user)
-        increment := &gainIncrement{id, 30, 1}
+
+    if !isRegisterUser {
+        writeUsersToDatabase(users)
+        isRegisterUser = true
+    }
+
+    for _, id := range ids {
+        increment := &gainIncrement{id, 30, height}
         increments = append(increments, increment)
     }
 
@@ -80,15 +87,24 @@ func AddGain(users []RegisterReturns)  {
     processGainReturns(resp)
 }
 
-func Liquidate(users []RegisterReturns)  {
+func writeUsersToDatabase(users []RegisterReturns) {
+    fmt.Println("wasm writeUsersToDatabase")
+    for _, user := range users {
+        id := processRegisterReturns(&user)
+        ids = append(ids, id)
+    }
+}
+
+func Liquidate(users []RegisterReturns, height int64)  {
     time1 := time.Now()
     ids := []database.RepID{}
     for _, user := range users {
         ids = append(ids, user.RepID)
     }
-    params := generateLiquidateParams("a", 2, ids)
+    params := generateLiquidateParams("a", height, ids)
     fmt.Println("Liquidate params: ", params)
     resp := callFunc(vm, r, Function{"LiquidateByParams",params,""})
     fmt.Println("Liquidate resp: ", resp)
     fmt.Println("Liquidate time:", time.Now().Sub(time1))
+    processLiquidateReturns(resp)
 }

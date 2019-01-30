@@ -4,6 +4,7 @@ import (
     "math/big"
     "encoding/json"
     "BlockChainTest/database"
+    "fmt"
 )
 
 type registerParams struct {
@@ -14,7 +15,7 @@ type registerParams struct {
 type gainIncrement struct {
     RepID database.RepID
     Gain  int
-    Day   int
+    Day   int64
 }
 
 type gainParams struct {
@@ -39,7 +40,7 @@ type model struct {
 
 type liquidateParams struct {
     PlatformID database.PlatformID
-    Until      int
+    Until      int64
     RepIDs     []database.RepID
     Tracers    map[database.RepID] *database.RepTracer
     Active     map[database.RepID] bool
@@ -66,6 +67,7 @@ func generateGainParams(platformID database.PlatformID, increments []*gainIncrem
     for _, inc := range increments {
         if _, ok := par.Tracers[inc.RepID]; !ok {
             tracer := database.GetTracerW(platformID, inc.RepID)
+            fmt.Println("generateGainParams :"+ string(inc.RepID) + " price : " + tracer.Rep.String())
             if tracer != nil {
                 par.Tracers[inc.RepID] = tracer
             }
@@ -90,7 +92,7 @@ func generateAcceptModelParams() string{
     return string(b)
 }
 
-func generateLiquidateParams(platformID database.PlatformID, until int, repIDs []database.RepID) string {
+func generateLiquidateParams(platformID database.PlatformID, until int64, repIDs []database.RepID) string {
     par := &liquidateParams{}
     par.PlatformID = platformID
     par.RepIDs = repIDs

@@ -1,6 +1,6 @@
 package main
 
-import "github.com/hjw6160602/wiasm"
+import "BlockChainTest/wasm/wiasm"
 
 var methodsMap = map[string] WasmFunc {
     "RegisterUserByParams": RegisterUserByParams,

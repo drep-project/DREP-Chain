@@ -4,6 +4,7 @@ import (
     "encoding/json"
     "errors"
     "BlockChainTest/database"
+    "fmt"
 )
 
 type RegisterReturns struct {
@@ -47,6 +48,8 @@ func processGainReturns(returns string) error {
         return errors.New(ret.Error)
     }
     for repID, tracer := range ret.Tracers {
+
+        fmt.Println("tracer.Rep :" + tracer.Rep.String())
         database.PutTracerW(ret.PlatformID, repID, tracer)
     }
     for repID, active := range ret.Active {
@@ -66,6 +69,8 @@ func processLiquidateReturns(returns string) error {
     }
     for repID, tracer := range ret.Tracers {
         database.PutTracerW(ret.PlatformID, repID, tracer)
+        tr := database.GetTracerW(ret.PlatformID, repID)
+        fmt.Println("liquidate database puted :" + string(repID) + " price : " + tr.Rep.String())
     }
     for repID, active := range ret.Active {
         database.SetActiveW(ret.PlatformID, repID, active)

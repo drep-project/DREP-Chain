@@ -45,7 +45,7 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
             continue
         }
         if t.Data.Type == GainType {
-            executeGainTransaction(t)
+            executeGainTransaction(t, b.Header.Height)
             continue
         }
         gasFee := execute(t)
@@ -63,7 +63,7 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
     database.PutPreviousHash(mycrypto.Hash256(th))
 
     //Liquidate(b.Header.Height, int(b.Header.Height))
-    wasm.Liquidate(users)
+    wasm.Liquidate(users, b.Header.Height)
     return total
 }
 
@@ -257,7 +257,7 @@ func savePrizeInfo(block *bean.Block, total *big.Int) {
     }
 }
 
-func executeGainTransaction(t *bean.Transaction) {
+func executeGainTransaction(t *bean.Transaction, height int64) {
     var records []map[string] interface{}
     err := json.Unmarshal(t.Data.Data, &records)
     if err != nil {
@@ -265,11 +265,11 @@ func executeGainTransaction(t *bean.Transaction) {
     }
 
     platformID := strconv.FormatInt(GetChainId(), 10)
-    execWasmGainTransaction(platformID, records)
+    execWasmGainTransaction(platformID, height, records)
     //execJsGainTransaction(platformID, records)
 }
 
-func execWasmGainTransaction(platformID string, records []map[string] interface{})  {
+func execWasmGainTransaction(platformID string,height int64, records []map[string] interface{})  {
     if len(users) == 0 {
         var uids []string
         for _, r := range records {
@@ -282,7 +282,8 @@ func execWasmGainTransaction(platformID string, records []map[string] interface{
             fmt.Println("json ummarshal users error")
         }
     }
-    wasm.AddGain(users)
+    fmt.Println("wasm.AddGain one more time !")
+    wasm.AddGain(users, height)
 }
 
 func execJsGainTransaction(platformID string, records []map[string] interface{})  {

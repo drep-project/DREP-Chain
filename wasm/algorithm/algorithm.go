@@ -2,13 +2,13 @@ package main
 
 import (
     "math/big"
-    "github.com/hjw6160602/wiasm"
+    "BlockChainTest/wasm/wiasm"
     "encoding/json"
     "math"
 )
 
 func RegisterUserByParams(p interface{}) interface{} {
-    //kwasm.Log("exec RegisterUserByParams...")
+    //wiasm.Log("exec RegisterUserByParams...")
     //wiasm.Log("params.(type) reflect: " + reflect.TypeOf(p).String())
     users := []*registerReturns{}
     switch p.(type) {
@@ -99,14 +99,14 @@ func AcceptModel(params interface{}) interface{} {
 }
 
 func LiquidateByParams(params interface{}) interface{} {
-    wiasm.Log("LiquidateByParams test :1 ")
+    wiasm.Log("LiquidateByParams test :xc ")
     par := &liquidateParams{}
     ret := &liquidateReturns{}
 
     switch params.(type) {
     case string:
         err := json.Unmarshal([]byte(params.(string)), par)
-        wiasm.Log("LiquidateByParams test : 2")
+        wiasm.Log("LiquidateByParams test :xc")
         if err != nil {
            ret.Error = "json unmarshal params error"
            return ret
