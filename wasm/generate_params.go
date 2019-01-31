@@ -4,7 +4,6 @@ import (
     "math/big"
     "encoding/json"
     "BlockChainTest/database"
-    "fmt"
 )
 
 type registerParams struct {
@@ -67,7 +66,6 @@ func generateGainParams(platformID database.PlatformID, increments []*gainIncrem
     for _, inc := range increments {
         if _, ok := par.Tracers[inc.RepID]; !ok {
             tracer := database.GetTracerW(platformID, inc.RepID)
-            fmt.Println("generateGainParams :"+ string(inc.RepID) + " price : " + tracer.Rep.String())
             if tracer != nil {
                 par.Tracers[inc.RepID] = tracer
             }

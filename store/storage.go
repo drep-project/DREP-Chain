@@ -15,6 +15,7 @@ import (
     "BlockChainTest/repjs"
     "strconv"
     "BlockChainTest/wasm"
+    "github.com/spf13/viper"
 )
 
 var (
@@ -61,9 +62,13 @@ func ExecuteTransactions(b *bean.Block) *big.Int {
     database.PutLastTimestamp(b.Header.Timestamp)
     th, _ := json.Marshal(b.Header)
     database.PutPreviousHash(mycrypto.Hash256(th))
+    wasmorjs := viper.GetBool("wasmorjs")
+    if wasmorjs {
+        wasm.Liquidate(users, b.Header.Height)
+    } else {
+        Liquidate(b.Header.Height, int(b.Header.Height))
+    }
 
-    //Liquidate(b.Header.Height, int(b.Header.Height))
-    wasm.Liquidate(users, b.Header.Height)
     return total
 }
 
@@ -265,8 +270,13 @@ func executeGainTransaction(t *bean.Transaction, height int64) {
     }
 
     platformID := strconv.FormatInt(GetChainId(), 10)
-    execWasmGainTransaction(platformID, height, records)
-    //execJsGainTransaction(platformID, records)
+
+    wasmorjs := viper.GetBool("wasmorjs")
+    if wasmorjs {
+        execWasmGainTransaction(platformID, height, records)
+    } else {
+        execJsGainTransaction(platformID, records)
+    }
 }
 
 func execWasmGainTransaction(platformID string,height int64, records []map[string] interface{})  {
