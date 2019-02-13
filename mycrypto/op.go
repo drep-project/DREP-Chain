@@ -103,6 +103,8 @@ func Verify(sig *Signature, pubKey *Point, b []byte) bool {
     curve := curveInstance
     r, s := new(big.Int).SetBytes(sig.R), new(big.Int).SetBytes(sig.S)
     if r.Cmp(Zero) <= 0 || r.Cmp(curve.Params().N) >= 0 || s.Cmp(Zero) <=0 || s.Cmp(curve.Params().N) >=0 {
+        fmt.Println(s)
+        fmt.Println(curve.Params().N)
         fmt.Println("Validate 4", r.Cmp(Zero) <= 0, r.Cmp(curve.Params().N) >= 0 , s.Cmp(Zero) <=0 , s.Cmp(curve.Params().N) >=0 )
         return false
     }
