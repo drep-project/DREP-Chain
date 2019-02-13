@@ -474,8 +474,5 @@ function liquidateRepSimplyByGroup(platformID, groupID, until) {
     var repIDs = getSelection()
     repIDs.add(groupID)
     repIDs.push(platformID)
-    console.log('what the fuck: ', repIDs)
-    console.log('what the fuch2 : ', groupID)
     repIDs.shift()
-    consle.log("test repid shift: ", repIDs)
 }
