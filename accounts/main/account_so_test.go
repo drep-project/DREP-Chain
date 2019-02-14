@@ -42,3 +42,7 @@ func TestNewSub(t *testing.T) {
     fmt.Println("ok: ", ok)
     fmt.Println()
 }
+
+func TestGen(t *testing.T) {
+    fmt.Println(genPrivateKey())
+}

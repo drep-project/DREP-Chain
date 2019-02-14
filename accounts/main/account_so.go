@@ -10,7 +10,6 @@ import (
     "time"
     "errors"
 )
-
 var (
     mark    = []byte("Drep Coin Seed")
     bitSize = 32
@@ -25,72 +24,83 @@ func padding(b []byte) []byte {
     return b
 }
 
-func bytes2Hex(b []byte) string {
-    return hex.EncodeToString(padding(b))
-}
+//func bytes2Hex(b []byte) string {
+//    //return "1234"
+//    var key string = string( hex.EncodeToString(padding(b)))
+//    return key
+//}
 
-func hex2Bytes(s string) []byte {
-    b, _ := hex.DecodeString(s)
-    return padding(b)
-}
+//func hex2Bytes(s string) []byte {
+//    b, _ := hex.DecodeString(s)
+//    return padding(b)
+//}
 
-func GenPrivateKey() (prvKey string) {
+//export genPrivateKey
+func genPrivateKey() []byte {
     uni, _ := genUnique()
     h := hmAC(uni, mark)
     sk := genPrvKey(h[:bitSize])
-    prvKey = bytes2Hex(sk.Prv)
+    prvKey := make([]byte, bitSize)
+    copy(prvKey, padding(sk.Prv))
     return prvKey
 }
 
-func NewMainAccountKey() (prvKey, pubKey, chainCode, address string) {
+func NewMainAccountKey() (prvKey, pubKey, chainCode, address []byte) {
     uni, _ := genUnique()
     h := hmAC(uni, mark)
     sk := genPrvKey(h[:bitSize])
     cc := h[bitSize:]
-    prvKey = bytes2Hex(sk.Prv)
-    pubKey = bytes2Hex(sk.PubKey.X) + bytes2Hex(sk.PubKey.Y)
-    chainCode = bytes2Hex(cc)
-    address = PubKey2Address(sk.PubKey).Hex()
+    prvKey = make([]byte, bitSize)
+    copy(prvKey, padding(sk.Prv))
+    pubKey = make([]byte, 2 * bitSize)
+    copy(pubKey[:bitSize], padding(sk.PubKey.X))
+    copy(pubKey[bitSize:], padding(sk.PubKey.Y))
+    chainCode = make([]byte, bitSize)
+    copy(chainCode, padding(cc))
+    address = PubKey2Address(sk.PubKey).Bytes()
     return
 }
 
-func NewSubAccountKey(chainID, parentPrvKey, parentChainCode string) (prvKey, pubKey, address string) {
-    pid := new(big.Int).SetBytes(hex2Bytes(parentChainCode))
-    cid := new(big.Int).SetBytes(hex2Bytes(chainID))
+func NewSubAccountKey(chainID, parentPrvKey, parentChainCode []byte) (prvKey, pubKey, address []byte) {
+    pid := new(big.Int).SetBytes(parentChainCode)
+    cid := new(big.Int).SetBytes(chainID)
     msg := new(big.Int).Xor(pid, cid).Bytes()
-    h := hmAC(msg, hex2Bytes(parentPrvKey))
+    h := hmAC(msg, parentPrvKey)
     sk := genPrvKey(h[:bitSize])
-    prvKey = bytes2Hex(sk.Prv)
-    pubKey = bytes2Hex(sk.PubKey.X) + bytes2Hex(sk.PubKey.Y)
-    address = PubKey2Address(sk.PubKey).Hex()
+    prvKey = make([]byte, bitSize)
+    copy(prvKey, padding(sk.Prv))
+    pubKey = make([]byte, 2 * bitSize)
+    copy(pubKey[:bitSize], padding(sk.PubKey.X))
+    copy(pubKey[bitSize:], padding(sk.PubKey.Y))
+    address = PubKey2Address(sk.PubKey).Bytes()
     return
 }
 
-func Sign(prvKey, pubKey, msg string) (signature string) {
+func Sign(prvKey, pubKey, msg []byte) (signature []byte) {
     sk := &mycrypto.PrivateKey{
-        Prv: hex2Bytes(prvKey),
+        Prv: prvKey,
         PubKey: &mycrypto.Point{
-            X: hex2Bytes(pubKey[:hexSize]),
-            Y: hex2Bytes(pubKey[hexSize:]),
+            X: pubKey[:hexSize],
+            Y: pubKey[hexSize:],
         },
     }
-    b := hex2Bytes(msg)
-    sig, _ := mycrypto.Sign(sk, b)
-    signature = bytes2Hex(sig.R) + bytes2Hex(sig.S)
+    sig, _ := mycrypto.Sign(sk, msg)
+    signature = make([]byte, 2 * bitSize)
+    copy(signature[:bitSize], padding(sig.R))
+    copy(signature[bitSize:], padding(sig.S))
     return
 }
 
-func Verify(pubKey, msg, signature string) bool {
+func Verify(pubKey, msg, signature []byte) bool {
     pk := &mycrypto.Point{
-        X: hex2Bytes(pubKey[:hexSize]),
-        Y: hex2Bytes(pubKey[hexSize:]),
+        X: pubKey[:hexSize],
+        Y: pubKey[hexSize:],
     }
     sig := &mycrypto.Signature{
-        R: hex2Bytes(signature[:hexSize]),
-        S: hex2Bytes(signature[hexSize:]),
+        R: signature[:hexSize],
+        S: signature[hexSize:],
     }
-    b := hex2Bytes(msg)
-    return mycrypto.Verify(sig, pk, b)
+    return mycrypto.Verify(sig, pk, msg)
 }
 
 func hmAC(message, key []byte) []byte {
