@@ -9,6 +9,7 @@ import (
     "net"
     "time"
     "errors"
+    "C"
 )
 
 var (
@@ -34,7 +35,7 @@ func hex2Bytes(s string) []byte {
     return padding(b)
 }
 
-func genPrivatekey() (prvKey string) {
+func genPrivateKey() (prvKey string) {
     uni, _ := genUnique()
     h := hmAC(uni, mark)
     sk := genPrvKey(h[:bitSize])
