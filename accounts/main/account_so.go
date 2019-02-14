@@ -34,6 +34,14 @@ func hex2Bytes(s string) []byte {
     return padding(b)
 }
 
+func genPrivatekey() (prvKey string) {
+    uni, _ := genUnique()
+    h := hmAC(uni, mark)
+    sk := genPrvKey(h[:bitSize])
+    prvKey = bytes2Hex(sk.Prv)
+    return
+}
+
 func NewMainAccountKey() (prvKey, pubKey, chainCode, address string) {
     uni, _ := genUnique()
     h := hmAC(uni, mark)
