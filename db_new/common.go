@@ -22,7 +22,9 @@ func commonValue2TrieValue(value []byte) []byte {
     return mycrypto.Hash256(value, []byte("trie_value"))
 }
 
-func getPasserBy
+func getMarkKey(key []byte) []byte {
+    return mycrypto.Hash256(key, []byte("mark"))
+}
 
 func getChildKey(key []byte, child string) []byte {
     return mycrypto.Hash256(key, []byte("child"), []byte(child))

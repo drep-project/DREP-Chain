@@ -112,7 +112,10 @@ func insertNode(n *StateNode, key string, value []byte) *StateNode {
     return n
 }
 
-func insertNode123(db *Database, curK, key string, value []byte) string {
+func insertNode123(db *Database, cur, key, value []byte, mark string) string {
+
+    b := hex2Bytes(cur)
+    value, _ := db.get(b, )
     curKB := hex2Bytes(curK)
     cur, _ := db.get(hek, true)
     if branchValue == nil {
