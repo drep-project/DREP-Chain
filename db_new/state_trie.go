@@ -118,7 +118,30 @@ func insertNode123(db *Database, cur, key, value []byte, mark string) ([]byte, s
         db.put(key, value, true)
         return nil, ""
     }
-    curMarkBytes, _  := db.get(getMarkKey(cur), true)
+    curMarkKey := getMarkKey(cur)
+    curMarkValue, _  := db.get(curMarkKey, true)
+    curMark := bytes2Hex(curMarkValue)
+    commonLen, commonPrefix := getCommonPrefix(mark, curMark)
+    dt0 := getNextDigit(commonLen, mark)
+    dt1 := getNextDigit(commonLen, curMark)
+    if commonPrefix == curMark {
+        curLeafBoolValue, _ := db.get(getLeafBoolKey(cur), true)
+        curLeafBool :=
+        if n.IsLeaf {
+            if key == n.Key {
+                n.setValue(value)
+            } else {
+                n.Children[""] = newLeaf("", n.Value)
+                n.Children[dt0] = insertNode(n.Children[dt0], key[commonLen:], value)
+                n.resetValue()
+                n.IsLeaf = false
+            }
+        } else {
+            n.Children[dt0] = insertNode(n.Children[dt0], key[commonLen:], value)
+            n.resetValue()
+        }
+        return n
+    }
 }
 
 func deleteNode(n *StateNode, key string) (*StateNode, bool) {
