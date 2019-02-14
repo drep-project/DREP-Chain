@@ -17,28 +17,18 @@ func GetTrieValue(value []byte) []byte {
     return mycrypto.Hash256(value)
 }
 
-func getCommonPrefix(s1, s2 string) (int, string) {
-    if s1 == "" || s2 == "" {
-        return 0, ""
-    }
-    for i := 0; i < len(s1); i++ {
-        if i == len(s2) {
-            return i, s2
-        }
-        if s1[i] == s2[i] {
-            continue
-        }
-        return i, s1[:i]
-    }
-    return len(s1), s1
+type Node struct {
+    mark     string
+    children [17][]byte
+    value    []byte
+    leaf     bool
 }
 
-func getNextDigit(start int, str string) string {
-    if start == len(str) {
-        return str[start:]
-    }
-    return str[start: start + 1]
-}
+
+
+
+
+
 
 type StateNode struct {
     Key      string
@@ -142,6 +132,7 @@ func insertNode123(db *Database, cur, key, value []byte, mark string) ([]byte, s
         }
         return n
     }
+
 }
 
 func deleteNode(n *StateNode, key string) (*StateNode, bool) {
