@@ -374,7 +374,7 @@ func checkExclusive(ctx *cli.Context, args ...interface{}) {
 				panic(fmt.Sprintf("invalid argument, not cli.Flag or string extension: %T", args[i+1]))
 			}
 		}
-		// Mark the flag if it's set
+		// Sequence the flag if it's set
 		if ctx.GlobalIsSet(flag.GetName()) {
 			set = append(set, "--"+name)
 		}
