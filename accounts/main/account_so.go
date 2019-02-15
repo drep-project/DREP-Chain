@@ -10,7 +10,6 @@ import (
     "time"
     "errors"
     "C"
-    "fmt"
 )
 
 type Keystore struct {
@@ -45,38 +44,23 @@ func bytes2Hex(b []byte) string {
 //    return padding(b)
 //}
 
-//export genPrivateKey
-func genPrivateKey () (*C.char,*C.char) {
-    uni, _ := genUnique()
-    h := hmAC(uni, mark)
-    sk := genPrvKey(h[:bitSize])
-    prvKey := make([]byte, bitSize)
-    copy(prvKey, padding(sk.Prv))
-    ret := bytes2Hex(prvKey)
-    fmt.Println("key: ",ret)
-    return C.CString(ret),C.CString(ret)
-}
 
-//func genPrivateKey1() Keystore {
-//    uni, _ := genUnique()
-//    h := hmAC(uni, mark)
-//    sk := genPrvKey(h[:bitSize])
-//    cc := h[bitSize:]
-//    prvKey := make([]byte, bitSize)
-//    copy(prvKey, padding(sk.Prv))
-//    pubKey := make([]byte, 2 * bitSize)
-//    copy(pubKey[:bitSize], padding(sk.PubKey.X))
-//    copy(pubKey[bitSize:], padding(sk.PubKey.Y))
-//    chainCode := make([]byte, bitSize)
-//    copy(chainCode, padding(cc))
-//    address := PubKey2Address(sk.PubKey).Bytes()
-//    return Keystore {
-//        PrvKey: C.CString(bytes2Hex(prvKey)),
-//        PubKey: C.CString(bytes2Hex(pubKey)),
-//        ChainCode: C.CString(bytes2Hex(chainCode)),
-//        Address: C.CString(bytes2Hex(address)),
-//    }
-//}
+//export genPrivateKey
+func genPrivateKey() (*C.char, *C.char, *C.char, *C.char) {
+   uni, _ := genUnique()
+   h := hmAC(uni, mark)
+   sk := genPrvKey(h[:bitSize])
+   cc := h[bitSize:]
+   prvKey := make([]byte, bitSize)
+   copy(prvKey, padding(sk.Prv))
+   pubKey := make([]byte, 2 * bitSize)
+   copy(pubKey[:bitSize], padding(sk.PubKey.X))
+   copy(pubKey[bitSize:], padding(sk.PubKey.Y))
+   chainCode := make([]byte, bitSize)
+   copy(chainCode, padding(cc))
+   address := PubKey2Address(sk.PubKey).Hex()
+   return C.CString(bytes2Hex(prvKey)), C.CString(bytes2Hex(pubKey)), C.CString(bytes2Hex(chainCode)), C.CString(address)
+}
 
 func NewSubAccountKey(chainID, parentPrvKey, parentChainCode []byte) (prvKey, pubKey, address []byte) {
     pid := new(big.Int).SetBytes(parentChainCode)
