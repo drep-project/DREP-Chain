@@ -74,7 +74,7 @@ func (db *Database) Discard() {
     db.temp = nil
 }
 
-func (db *Database) getState(key []byte) *State {
+func (db *Database) getState(key []byte) (*State, error) {
     var state *State
     if db.states == nil {
         db.states = make(map[string] *State)
@@ -82,38 +82,38 @@ func (db *Database) getState(key []byte) *State {
     hk := bytes2Hex(key)
     state, ok := db.states[hk]
     if ok {
-        return state
+        return state, nil
     }
     b, err := db.get(key, true)
     if err != nil {
-        return nil
+        return nil, err
     }
     state = &State{}
     err = json.Unmarshal(b, state)
     if err != nil {
-        return nil
+        return nil, err
     }
     db.states[hk] = state
-    return state
+    return state, nil
 }
 
-func (db *Database) putState(key []byte, state *State) {
+func (db *Database) putState(key []byte, state *State) error {
     if db.states == nil {
         db.states = make(map[string] *State)
     }
     b, err := json.Marshal(state)
     if err != nil {
-        return
+        return err
     }
     err = db.put(key, b, true)
     if err != nil {
-        return
+        return err
     }
     db.states[bytes2Hex(key)] = state
-    return
+    return err
 }
 
-func (db *Database) deleteState(key []byte) error {
+func (db *Database) delState(key []byte) error {
     if db.states == nil {
         db.states = make(map[string] *State)
     }
