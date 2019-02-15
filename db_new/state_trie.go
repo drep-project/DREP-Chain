@@ -74,6 +74,81 @@ func newLeaf(seq string, key, value []byte) (*State, error) {
     return state, nil
 }
 
+//func insertBackup(seq string, key, value []byte) (*State, error) {
+//   state, err := db.getState(key)
+//   if err != nil {
+//       return newLeaf(seq, key, value)
+//   }
+//   children := state.getChildren()
+//   length, prefix := getCommonPrefix(seq, state.Sequence)
+//   nib0 := getNextNibble(length, seq)
+//   nib1 := getNextNibble(length, state.Sequence)
+//   if prefix == state.Sequence {
+//       if state.IsLeaf {
+//           if seq == state.Sequence {
+//               state.Value = value
+//           } else {
+//               state.ChildrenKey[16] = getChildKey(key, 16)
+//               children[16], err = newLeaf("", state.ChildrenKey[16], value)
+//               if err != nil {
+//                   return nil, err
+//               }
+//               state.ChildrenKey[nib0] = getChildKey(key, nib0)
+//               children[nib0], err = insertBackup(seq[length:], state.ChildrenKey[nib0], value)
+//               if err != nil {
+//                   return nil, err
+//               }
+//               state.resetValue(children)
+//               state.IsLeaf = false
+//           }
+//       } else {
+//           state.ChildrenKey[nib0] = getChildKey(key, nib0)
+//           children[nib0], err = insertBackup(seq[length:], state.ChildrenKey[nib0], value)
+//           if err != nil {
+//               return nil, err
+//           }
+//           state.resetValue(children)
+//       }
+//       err = db.putState(key, state)
+//       if err != nil {
+//           return nil, err
+//       }
+//       if state.ChildrenKey[nib0] != nil {
+//           err = db.putState(state.ChildrenKey[nib0], children[nib0])
+//           if err != nil {
+//               return nil, err
+//           }
+//       }
+//       return state, nil
+//   } else {
+//       state.Sequence = state.Sequence[length:]
+//       st := &State{}
+//       st.Sequence = prefix
+//       st.ChildrenKey[nib0] = getChildKey(key, nib0)
+//       st.ChildrenKey[nib1] = getChildKey(key, nib1)
+//       children[nib0], err = insertBackup(seq[length:], st.ChildrenKey[nib0], value)
+//       if err != nil {
+//           return nil, err
+//       }
+//       children[nib1] = state
+//       st.resetValue(children)
+//       state = st
+//       err = db.putState(key, st)
+//       if err != nil {
+//           return nil, err
+//       }
+//       err = db.putState(st.ChildrenKey[nib0], children[nib0])
+//       if err != nil {
+//           return nil, err
+//       }
+//       err = db.putState(st.ChildrenKey[nib1], children[nib1])
+//       if err != nil {
+//           return nil, err
+//       }
+//       return state, nil
+//   }
+//}
+
 func insert(seq string, key, value []byte) (*State, error) {
     state, err := db.getState(key)
     if err != nil {
@@ -126,16 +201,25 @@ func insert(seq string, key, value []byte) (*State, error) {
         st.Sequence = prefix
         st.ChildrenKey[nib0] = getChildKey(key, nib0)
         st.ChildrenKey[nib1] = getChildKey(key, nib1)
-        children[nib0], err = insert(seq[length:], st.ChildrenKey[nib0], value)
+        children[nib0], err = insertBackup(seq[length:], st.ChildrenKey[nib0], value)
         if err != nil {
             return nil, err
         }
         children[nib1] = state
         st.resetValue(children)
         state = st
-        db.putState(key, st)
-        db.putState(st.ChildrenKey[nib0], children[nib0])
-        db.putState(st.ChildrenKey[nib1], children[nib1])
+        err = db.putState(key, st)
+        if err != nil {
+            return nil, err
+        }
+        err = db.putState(st.ChildrenKey[nib0], children[nib0])
+        if err != nil {
+            return nil, err
+        }
+        err = db.putState(st.ChildrenKey[nib1], children[nib1])
+        if err != nil {
+            return nil, err
+        }
         return state, nil
     }
 }
@@ -146,6 +230,10 @@ func del(key []byte, seq string) (*State, error) {
         return nil, err
     }
     if state.IsLeaf && seq == state.Sequence {
+        err = db.delState(key)
+        if err != nil {
+            return nil, err
+        }
         return state, nil
     }
     commonLen, _ := getCommonPrefix(seq, state.Sequence)
@@ -154,9 +242,7 @@ func del(key []byte, seq string) (*State, error) {
     }
     children := state.getChildren()
     nib := getNextNibble(commonLen, seq)
-    if state.ChildrenKey[nib] == nil {
-        state.ChildrenKey[nib] = getChildKey(key, nib)
-    }
+    state.ChildrenKey[nib] = getChildKey(key, nib)
     _, err = del(state.ChildrenKey[nib], seq[commonLen:])
     if err != nil {
         return nil, err
@@ -172,12 +258,18 @@ func del(key []byte, seq string) (*State, error) {
             }
         }
         if sum == 1 {
-            state.absorbChild(key, uniqueChild)
+            err = state.absorbChild(key, uniqueChild)
+            if err != nil {
+                return nil, err
+            }
             return state, nil
         }
     }
     state.resetValue(children)
-    db.putState(key, state)
+    err = db.putState(key, state)
+    if err != nil {
+        return nil, err
+    }
     return state, nil
 }
 
@@ -198,4 +290,42 @@ func get(key []byte, seq string) (*State, error) {
     }
     nib := getNextNibble(commonLen, seq)
     return get(state.ChildrenKey[nib], seq[commonLen:])
+}
+
+func updateLeafValue(state *State, key, value []byte) (*State, error) {
+    var err error
+    state.Value = value
+    err = db.putState(key, state)
+    if err != nil {
+        return nil, err
+    }
+    return state, nil
+}
+
+func addBranchOnLeaf(state *State, key, value []byte) (*State, error) {
+    var err error
+    children := state.getChildren()
+    state.ChildrenKey[16] = getChildKey(key, 16)
+    children[16], err = newLeaf("", state.ChildrenKey[16], value)
+    if err != nil {
+        return nil, err
+    }
+    state.ChildrenKey[nib0] = getChildKey(key, nib0)
+    children[nib0], err = insert(seq[length:], state.ChildrenKey[nib0], value)
+    if err != nil {
+        return nil, err
+    }
+    state.resetValue(children)
+    state.IsLeaf = false
+    err = db.putState(key, state)
+    if err != nil {
+        return nil, err
+    }
+    if state.ChildrenKey[nib0] != nil {
+        err = db.putState(state.ChildrenKey[nib0], children[nib0])
+        if err != nil {
+            return nil, err
+        }
+    }
+    return state, nil
 }
