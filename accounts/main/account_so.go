@@ -9,7 +9,17 @@ import (
     "net"
     "time"
     "errors"
+    "C"
+    "fmt"
 )
+
+type Keystore struct {
+    PrvKey    string
+    PubKey    string
+    ChainCode string
+    Address   string
+}
+
 var (
     mark    = []byte("Drep Coin Seed")
     bitSize = 32
@@ -24,11 +34,11 @@ func padding(b []byte) []byte {
     return b
 }
 
-//func bytes2Hex(b []byte) string {
-//    //return "1234"
-//    var key string = string( hex.EncodeToString(padding(b)))
-//    return key
-//}
+func bytes2Hex(b []byte) string {
+   //return "1234"
+   var key string = string( hex.EncodeToString(padding(b)))
+   return key
+}
 
 //func hex2Bytes(s string) []byte {
 //    b, _ := hex.DecodeString(s)
@@ -36,30 +46,37 @@ func padding(b []byte) []byte {
 //}
 
 //export genPrivateKey
-func genPrivateKey() []byte {
+func genPrivateKey () (*C.char,*C.char) {
     uni, _ := genUnique()
     h := hmAC(uni, mark)
     sk := genPrvKey(h[:bitSize])
     prvKey := make([]byte, bitSize)
     copy(prvKey, padding(sk.Prv))
-    return prvKey
+    ret := bytes2Hex(prvKey)
+    fmt.Println("key: ",ret)
+    return C.CString(ret),C.CString(ret)
 }
 
-func NewMainAccountKey() (prvKey, pubKey, chainCode, address []byte) {
-    uni, _ := genUnique()
-    h := hmAC(uni, mark)
-    sk := genPrvKey(h[:bitSize])
-    cc := h[bitSize:]
-    prvKey = make([]byte, bitSize)
-    copy(prvKey, padding(sk.Prv))
-    pubKey = make([]byte, 2 * bitSize)
-    copy(pubKey[:bitSize], padding(sk.PubKey.X))
-    copy(pubKey[bitSize:], padding(sk.PubKey.Y))
-    chainCode = make([]byte, bitSize)
-    copy(chainCode, padding(cc))
-    address = PubKey2Address(sk.PubKey).Bytes()
-    return
-}
+//func genPrivateKey1() Keystore {
+//    uni, _ := genUnique()
+//    h := hmAC(uni, mark)
+//    sk := genPrvKey(h[:bitSize])
+//    cc := h[bitSize:]
+//    prvKey := make([]byte, bitSize)
+//    copy(prvKey, padding(sk.Prv))
+//    pubKey := make([]byte, 2 * bitSize)
+//    copy(pubKey[:bitSize], padding(sk.PubKey.X))
+//    copy(pubKey[bitSize:], padding(sk.PubKey.Y))
+//    chainCode := make([]byte, bitSize)
+//    copy(chainCode, padding(cc))
+//    address := PubKey2Address(sk.PubKey).Bytes()
+//    return Keystore {
+//        PrvKey: C.CString(bytes2Hex(prvKey)),
+//        PubKey: C.CString(bytes2Hex(pubKey)),
+//        ChainCode: C.CString(bytes2Hex(chainCode)),
+//        Address: C.CString(bytes2Hex(address)),
+//    }
+//}
 
 func NewSubAccountKey(chainID, parentPrvKey, parentChainCode []byte) (prvKey, pubKey, address []byte) {
     pid := new(big.Int).SetBytes(parentChainCode)
