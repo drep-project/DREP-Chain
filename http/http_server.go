@@ -25,27 +25,6 @@ type Response struct {
     Data interface{} `json:"data"`
 }
 
-func GetAllBlocks(w http.ResponseWriter, _ *http.Request) {
-    fmt.Println("get all blocks running")
-    blocks := database.GetAllBlocks()
-
-    if blocks == nil || len(blocks) == 0 {
-        errMsg := "error occurred during database.GetAllBlocks"
-        fmt.Println(errMsg)
-        resp := &Response{Success:false, Data:errMsg}
-        writeResponse(w, resp)
-        return
-    }
-
-    var body []*BlockWeb
-    for _, block := range(blocks) {
-        item := ParseBlock(block)
-        body = append(body, item)
-    }
-    resp := &Response{Success:true, Data:body}
-    writeResponse(w, resp)
-}
-
 func GetBlock(w http.ResponseWriter, r *http.Request) {
     params := analysisReqParam(r)
     var height int64
@@ -234,7 +213,6 @@ func GetChainId(w http.ResponseWriter, _ *http.Request) {
 }
 
 var methodsMap = map[string] http.HandlerFunc {
-    "/GetAllBlocks":             GetAllBlocks,
     "/GetBlock":                 GetBlock,
     "/GetHighestBlock":          GetHighestBlock,
     "/GetMaxHeight":             GetMaxHeight,
