@@ -12,17 +12,9 @@ import (
     "C"
 )
 
-type Keystore struct {
-    PrvKey    string
-    PubKey    string
-    ChainCode string
-    Address   string
-}
-
 var (
     mark    = []byte("Drep Coin Seed")
     bitSize = 32
-    hexSize = 64
 )
 
 func padding(b []byte) []byte {
@@ -34,74 +26,95 @@ func padding(b []byte) []byte {
 }
 
 func bytes2Hex(b []byte) string {
-   //return "1234"
-   var key string = string( hex.EncodeToString(padding(b)))
-   return key
+    //return "1234"
+    var key string = string( hex.EncodeToString(padding(b)))
+    return key
 }
 
-//func hex2Bytes(s string) []byte {
-//    b, _ := hex.DecodeString(s)
-//    return padding(b)
-//}
-
-
-//export genPrivateKey
-func genPrivateKey() (*C.char, *C.char, *C.char, *C.char) {
-   uni, _ := genUnique()
-   h := hmAC(uni, mark)
-   sk := genPrvKey(h[:bitSize])
-   cc := h[bitSize:]
-   prvKey := make([]byte, bitSize)
-   copy(prvKey, padding(sk.Prv))
-   pubKey := make([]byte, 2 * bitSize)
-   copy(pubKey[:bitSize], padding(sk.PubKey.X))
-   copy(pubKey[bitSize:], padding(sk.PubKey.Y))
-   chainCode := make([]byte, bitSize)
-   copy(chainCode, padding(cc))
-   address := PubKey2Address(sk.PubKey).Hex()
-   return C.CString(bytes2Hex(prvKey)), C.CString(bytes2Hex(pubKey)), C.CString(bytes2Hex(chainCode)), C.CString(address)
+func hex2Bytes(s string) []byte {
+    b, _ := hex.DecodeString(s)
+    return padding(b)
 }
 
-func NewSubAccountKey(chainID, parentPrvKey, parentChainCode []byte) (prvKey, pubKey, address []byte) {
-    pid := new(big.Int).SetBytes(parentChainCode)
-    cid := new(big.Int).SetBytes(chainID)
-    msg := new(big.Int).Xor(pid, cid).Bytes()
-    h := hmAC(msg, parentPrvKey)
+//export NewRootChainAccount
+func NewRootChainAccount() (*C.char, *C.char, *C.char, *C.char) {
+    uni, _ := genUnique()
+    h := hmAC(uni, mark)
     sk := genPrvKey(h[:bitSize])
-    prvKey = make([]byte, bitSize)
+    cc := h[bitSize:]
+    prvKey := make([]byte, bitSize)
     copy(prvKey, padding(sk.Prv))
-    pubKey = make([]byte, 2 * bitSize)
+    pubKey := make([]byte, 2 * bitSize)
     copy(pubKey[:bitSize], padding(sk.PubKey.X))
     copy(pubKey[bitSize:], padding(sk.PubKey.Y))
-    address = PubKey2Address(sk.PubKey).Bytes()
-    return
+    chainCode := make([]byte, bitSize)
+    copy(chainCode, padding(cc))
+    address := PubKey2Address(sk.PubKey).Hex()
+    return C.CString(bytes2Hex(prvKey)), C.CString(bytes2Hex(pubKey)), C.CString(bytes2Hex(chainCode)), C.CString(address)
 }
 
-func Sign(prvKey, pubKey, msg []byte) (signature []byte) {
+//export NewSubChainAccount
+func NewSubChainAccount(chainId, parentPrvKey, parentChainCode string) (*C.char, *C.char, *C.char, *C.char) {
+    pid := new(big.Int).SetBytes(hex2Bytes(parentChainCode))
+    cid := new(big.Int).SetBytes(hex2Bytes(chainId))
+    msg := new(big.Int).Xor(pid, cid).Bytes()
+    h := hmAC(msg, hex2Bytes(parentPrvKey))
+    sk := genPrvKey(h[:bitSize])
+    cc := h[bitSize:]
+    prvKey := make([]byte, bitSize)
+    copy(prvKey, padding(sk.Prv))
+    pubKey := make([]byte, 2 * bitSize)
+    copy(pubKey[:bitSize], padding(sk.PubKey.X))
+    copy(pubKey[bitSize:], padding(sk.PubKey.Y))
+    chainCode := make([]byte, bitSize)
+    copy(chainCode, padding(cc))
+    address := PubKey2Address(sk.PubKey).Hex()
+    return C.CString(bytes2Hex(prvKey)), C.CString(bytes2Hex(pubKey)), C.CString(bytes2Hex(chainCode)), C.CString(address)
+}
+
+//export ImportKeystore
+func ImportKeystore(prvKey string) (*C.char, *C.char) {
+    curve := mycrypto.GetCurve()
+    prv := hex2Bytes(prvKey)
+    pub := curve.ScalarBaseMultiply(prv)
+    pubKey := make([]byte, 2 * bitSize)
+    copy(pubKey[:bitSize], padding(pub.X))
+    copy(pubKey[bitSize:], padding(pub.Y))
+    addr := PubKey2Address(pub).Hex()
+    return C.CString(bytes2Hex(pubKey)), C.CString(addr)
+}
+
+//export Sign
+func Sign(prvKey, pubKey, msg string) *C.char {
+    prv := hex2Bytes(prvKey)
+    pub := hex2Bytes(pubKey)
     sk := &mycrypto.PrivateKey{
-        Prv: prvKey,
+        Prv: prv,
         PubKey: &mycrypto.Point{
-            X: pubKey[:hexSize],
-            Y: pubKey[hexSize:],
+            X: pub[:bitSize],
+            Y: pub[bitSize:],
         },
     }
-    sig, _ := mycrypto.Sign(sk, msg)
-    signature = make([]byte, 2 * bitSize)
+    sig, _ := mycrypto.Sign(sk, hex2Bytes(msg))
+    signature := make([]byte, 2 * bitSize)
     copy(signature[:bitSize], padding(sig.R))
     copy(signature[bitSize:], padding(sig.S))
-    return
+    return C.CString(bytes2Hex(signature))
 }
 
-func Verify(pubKey, msg, signature []byte) bool {
+//export Verify
+func Verify(pubKey, msg, signature string) bool {
+    pub := hex2Bytes(pubKey)
+    sign := hex2Bytes(signature)
     pk := &mycrypto.Point{
-        X: pubKey[:hexSize],
-        Y: pubKey[hexSize:],
+        X: pub[:bitSize],
+        Y: pub[bitSize:],
     }
     sig := &mycrypto.Signature{
-        R: signature[:hexSize],
-        S: signature[hexSize:],
+        R: sign[:bitSize],
+        S: sign[bitSize:],
     }
-    return mycrypto.Verify(sig, pk, msg)
+    return mycrypto.Verify(sig, pk, hex2Bytes(msg))
 }
 
 func hmAC(message, key []byte) []byte {
