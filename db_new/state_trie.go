@@ -201,7 +201,7 @@ func insert(seq string, key, value []byte) (*State, error) {
         st.Sequence = prefix
         st.ChildrenKey[nib0] = getChildKey(key, nib0)
         st.ChildrenKey[nib1] = getChildKey(key, nib1)
-        children[nib0], err = insertBackup(seq[length:], st.ChildrenKey[nib0], value)
+        children[nib0], err = insert(seq[length:], st.ChildrenKey[nib0], value)
         if err != nil {
             return nil, err
         }
@@ -302,30 +302,113 @@ func updateLeafValue(state *State, key, value []byte) (*State, error) {
     return state, nil
 }
 
-func addBranchOnLeaf(state *State, key, value []byte) (*State, error) {
+func addNewBranchOnLeaf(state *State, length int, seq string, key, value []byte) (*State, error) {
     var err error
     children := state.getChildren()
+
     state.ChildrenKey[16] = getChildKey(key, 16)
     children[16], err = newLeaf("", state.ChildrenKey[16], value)
     if err != nil {
         return nil, err
     }
-    state.ChildrenKey[nib0] = getChildKey(key, nib0)
-    children[nib0], err = insert(seq[length:], state.ChildrenKey[nib0], value)
+
+    nib := getNextNibble(length, seq)
+    state.ChildrenKey[nib] = getChildKey(key, nib)
+    children[nib], err = insert(seq[length:], state.ChildrenKey[nib], value)
     if err != nil {
         return nil, err
     }
+
     state.resetValue(children)
     state.IsLeaf = false
     err = db.putState(key, state)
     if err != nil {
         return nil, err
     }
-    if state.ChildrenKey[nib0] != nil {
-        err = db.putState(state.ChildrenKey[nib0], children[nib0])
-        if err != nil {
-            return nil, err
+    err = db.putState(state.ChildrenKey[nib], children[nib])
+    if err != nil {
+        return nil, err
+    }
+    return state, nil
+}
+
+func proceedOnCurrentBranch(state *State, length int, seq string, key, value []byte) (*State, error) {
+    var err error
+    children := state.getChildren()
+
+    nib := getNextNibble(length, seq)
+    state.ChildrenKey[nib] = getChildKey(key, nib)
+    children[nib], err = insert(seq[length:], state.ChildrenKey[nib], value)
+    if err != nil {
+        return nil, err
+    }
+
+    state.resetValue(children)
+    err = db.putState(key, state)
+    if err != nil {
+        return nil, err
+    }
+    err = db.putState(state.ChildrenKey[nib], children[nib])
+    if err != nil {
+        return nil, err
+    }
+    return state, nil
+}
+
+func splitOnCurrentBranch(state *State, length int, prefix, seq string, key, value []byte) (*State, error) {
+    var err error
+    children := state.getChildren()
+
+    nib0 := getNextNibble(length, state.Sequence)
+    state.ChildrenKey[nib0] = getChildKey(key, nib0)
+    div := &State{}
+    div.Sequence = state.Sequence[length:]
+    div.IsLeaf = state.IsLeaf
+    for i, child := range children {
+        if state.ChildrenKey[i] != nil {
+            div.ChildrenKey[i] = getChildKey(state.ChildrenKey[nib0], i)
+            err = db.putState(div.ChildrenKey[i], child)
+            if err != nil {
+                return nil, err
+            }
+            err = db.delState(state.ChildrenKey[i])
+            if err != nil {
+                return nil, err
+            }
         }
     }
+    div.resetValue(children)
+    err = db.putState(state.ChildrenKey[nib0], div)
+    if err != nil {
+        return nil, err
+    }
+
+    nib1 := getNextNibble(length, seq)
+    state.ChildrenKey[nib1] = getChildKey(key, nib1)
+    leaf, err := newLeaf(seq[length:], state.ChildrenKey[nib1], value)
+    if err != nil {
+        return nil, err
+    }
+    err = db.putState(state.ChildrenKey[nib1], leaf)
+    if err != nil {
+        return nil, err
+    }
+
+    var twins [17]*State
+    twins[nib0] = div
+    twins[nib1] = leaf
+    for i, _ := range state.ChildrenKey {
+        if i != nib0 && i != nib1 {
+            state.ChildrenKey[i] = nil
+        }
+    }
+    state.resetValue(twins)
+    state.Sequence = prefix
+    state.IsLeaf = false
+    err = db.putState(key, state)
+    if err != nil {
+        return nil, err
+    }
+
     return state, nil
 }
