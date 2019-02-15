@@ -8,30 +8,30 @@ import (
 var db *Database
 
 type State struct {
-    Sequence string
-    Children [17][]byte
-    Value    []byte
-    IsLeaf   bool
+    Sequence    string
+    ChildrenKey [17][]byte
+    Value       []byte
+    IsLeaf      bool
 }
 
-func (state *State) resetValue(childStates [17]*State) {
+func (state *State) resetValue(children [17]*State) {
     stack := make([]byte, 32 * 17)
     for i := 0; i < 17; i++ {
-        if childStates[i] != nil && childStates[i].Value != nil {
-            copy(stack[i * 17: (i + 1) * 17], childStates[i].Value)
+        if children[i] != nil && children[i].Value != nil {
+            copy(stack[i * 17: (i + 1) * 17], children[i].Value)
         }
     }
     state.Value = mycrypto.Hash256(stack)
 }
 
-func (state *State) getChildNodes() [17]*State {
-    var childNodes [17]*State
+func (state *State) getChildren() [17]*State {
+    var children [17]*State
     for i := 0; i < 17; i++ {
-        if state.Children[i] != nil {
-            childNodes[i], _ = db.getState(state.Children[i])
+        if state.ChildrenKey[i] != nil {
+            children[i], _ = db.getState(state.ChildrenKey[i])
         }
     }
-    return childNodes
+    return children
 }
 
 func (state *State) absorbChild(key []byte, child *State) {
@@ -39,11 +39,12 @@ func (state *State) absorbChild(key []byte, child *State) {
     state.Value = child.Value
     state.IsLeaf = child.IsLeaf
     for i := 0; i < 17; i++ {
-        if child.Children[i] != nil {
-            n, err := db.getState(child.Children[i])
+        if child.ChildrenKey[i] != nil {
+            st, err := db.getState(child.ChildrenKey[i])
             if err == nil {
-                state.Children[i] = getChildKey(key, i)
-                db.putState(state.Children[i], n)
+                state.ChildrenKey[i] = getChildKey(key, i)
+                db.putState(state.ChildrenKey[i], st)
+                db.deleteState(child.ChildrenKey[i])
             }
         }
     }
@@ -51,126 +52,140 @@ func (state *State) absorbChild(key []byte, child *State) {
 }
 
 func newLeaf(seq string, key, value []byte) (*State, error) {
-    node := &State{
+    state := &State{
         Sequence: seq,
         Value:    value,
         IsLeaf:   true,
     }
-    err := db.putState(key, node)
+    err := db.putState(key, state)
     if err != nil {
         return nil, err
     }
-    return node, nil
+    return state, nil
 }
 
 func insert(seq string, key, value []byte) (*State, error) {
-    n, err := db.getState(key)
+    state, err := db.getState(key)
     if err != nil {
         return newLeaf(seq, key, value)
     }
-    childNodes := n.getChildNodes()
-    commonLen, commonPrefix := getCommonPrefix(seq, n.Sequence)
-    i := getNextNibble(commonLen, seq)
-    j := getNextNibble(commonLen, n.Sequence)
-    if commonPrefix == n.Sequence {
-        if n.IsLeaf {
-            if seq == n.Sequence {
-                n.Value = value
+    children := state.getChildren()
+    length, prefix := getCommonPrefix(seq, state.Sequence)
+    i := getNextNibble(length, seq)
+    j := getNextNibble(length, state.Sequence)
+    if prefix == state.Sequence {
+        if state.IsLeaf {
+            if seq == state.Sequence {
+                state.Value = value
             } else {
-                n.Children[16] = getChildKey(key, 16)
-                childNodes[16], err = newLeaf("", n.Children[16], value)
+                state.ChildrenKey[16] = getChildKey(key, 16)
+                children[16], err = newLeaf("", state.ChildrenKey[16], value)
                 if err != nil {
                     return nil, err
                 }
-                n.Children[i] = getChildKey(key, i)
-                childNodes[i], err = insert(seq[commonLen:], n.Children[i], value)
+                state.ChildrenKey[i] = getChildKey(key, i)
+                children[i], err = insert(seq[length:], state.ChildrenKey[i], value)
                 if err != nil {
                     return nil, err
                 }
-                n.resetValue(childNodes)
-                n.IsLeaf = false
+                state.resetValue(children)
+                state.IsLeaf = false
             }
         } else {
-            n.Children[i] = getChildKey(key, i)
-            childNodes[i], err = insert(seq[commonLen:], n.Children[i], value)
+            state.ChildrenKey[i] = getChildKey(key, i)
+            children[i], err = insert(seq[length:], state.ChildrenKey[i], value)
             if err != nil {
                 return nil, err
             }
-            n.resetValue(childNodes)
+            state.resetValue(children)
         }
-        return n, nil
-    } else {
-        n.Sequence = n.Sequence[commonLen:]
-        node := &State{}
-        node.Sequence = commonPrefix
-        node.Children[i] = getChildKey(key, i)
-        node.Children[j] = getChildKey(key, j)
-        childNodes[i], err = insert(seq[commonLen:], node.Children[i], value)
+        err = db.putState(key, state)
         if err != nil {
             return nil, err
         }
-        childNodes[j] = n
-        node.resetValue(childNodes)
-        n = node
-        return n, nil
+        if state.ChildrenKey[i] != nil {
+            err = db.putState(state.ChildrenKey[i], children[i])
+            if err != nil {
+                return nil, err
+            }
+        }
+        return state, nil
+    } else {
+        state.Sequence = state.Sequence[length:]
+        st := &State{}
+        st.Sequence = prefix
+        st.ChildrenKey[i] = getChildKey(key, i)
+        st.ChildrenKey[j] = getChildKey(key, j)
+        children[i], err = insert(seq[length:], st.ChildrenKey[i], value)
+        if err != nil {
+            return nil, err
+        }
+        children[j] = state
+        st.resetValue(children)
+        state = st
+        db.putState(key, st)
+        db.putState(st.ChildrenKey[i], children[i])
+        db.putState(st.ChildrenKey[j], children[j])
+        return state, nil
     }
 }
 
-func delete(nKey []byte, mark string) (*State, error) {
-    n, err := db.getState(nKey)
+func delete(key []byte, seq string) (*State, error) {
+    state, err := db.getState(key)
     if err != nil {
         return nil, err
     }
-    if n.IsLeaf && mark == n.Sequence {
-        return n, nil
+    if state.IsLeaf && seq == state.Sequence {
+        return state, nil
     }
-    commonLen, _ := getCommonPrefix(mark, n.Sequence)
-    if commonLen < len(n.Sequence) {
-        return n, nil
+    commonLen, _ := getCommonPrefix(seq, state.Sequence)
+    if commonLen < len(state.Sequence) {
+        return state, nil
     }
-    childNodes := n.getChildNodes()
-    id := getNextNibble(commonLen, mark)
-    if n.Children[id] == nil {
-        n.Children[id] = getChildKey(nKey, id)
+    children := state.getChildren()
+    nib := getNextNibble(commonLen, seq)
+    if state.ChildrenKey[nib] == nil {
+        state.ChildrenKey[nib] = getChildKey(key, nib)
     }
-    _, err = delete(n.Children[id], mark[commonLen:])
+    _, err = delete(state.ChildrenKey[nib], seq[commonLen:])
     if err != nil {
         return nil, err
     }
-    childNodes[id] = nil
+    children[nib] = nil
     if err == nil {
         sum := 0
         var uniqueChild *State
-        for _, child := range childNodes {
+        for _, child := range children {
             if child != nil {
                 sum += 1
                 uniqueChild = child
             }
         }
         if sum == 1 {
-            n.absorbChild(nKey, uniqueChild)
-            return n, nil
+            state.absorbChild(key, uniqueChild)
+            return state, nil
         }
     }
-    n.resetValue(childNodes)
-    return n, nil
+    state.resetValue(children)
+    db.putState(key, state)
+    return state, nil
 }
 
-func get(nKey []byte, mark string) (*State, error) {
-    n, err := db.getState(nKey)
+func get(key []byte, seq string) (*State, error) {
+    state, err := db.getState(key)
     if err != nil {
         return nil, err
     }
-    if n.IsLeaf {
-        if mark == n.Sequence {
-            return n, nil
+    if state.IsLeaf {
+        if seq == state.Sequence {
+            return state, nil
         }
         return nil, errors.New("node not found")
     }
-    commonLen, _ := getCommonPrefix(mark, n.Sequence)
-    if commonLen < len(n.Sequence) {
+    commonLen, _ := getCommonPrefix(seq, state.Sequence)
+    if commonLen < len(state.Sequence) {
         return nil, errors.New("node not found")
     }
-    id := getNextNibble(commonLen, mark)
-    return get(n.Children[id], mark[commonLen:])
+    nib := getNextNibble(commonLen, seq)
+    return get(state.ChildrenKey[nib], seq[commonLen:])
 }
