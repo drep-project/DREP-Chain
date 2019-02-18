@@ -10,11 +10,16 @@ import (
     "time"
     "errors"
     "C"
+    "encoding/json"
 )
 
 var (
     mark    = []byte("Drep Coin Seed")
     bitSize = 32
+    DefaultGasPrice       = big.NewInt(2000000)
+    TransferGas           = big.NewInt(200)
+    TransferType    int32 = 0
+    Version         int32 = 1
 )
 
 func padding(b []byte) []byte {
@@ -117,6 +122,25 @@ func Verify(pubKey, msg, signature string) bool {
     return mycrypto.Verify(sig, pk, hex2Bytes(msg))
 }
 
+//export GenerateTransferTransaction
+func GenerateTransferTransaction(to, chainId, amount, pubKey string, nonce int64) *C.char {
+    data := &TransactionData{
+        Version: Version,
+        Nonce:nonce,
+        Type: TransferType,
+        To:to,
+        ChainId: chainId,
+        DestChain: chainId,
+        Amount:amount,
+        GasPrice:DefaultGasPrice.String(),
+        GasLimit:TransferGas.String(),
+        Timestamp:time.Now().Unix(),
+        PubKey:pubKey,
+    }
+    b, _ := json.Marshal(data)
+    return C.CString(string(b))
+}
+
 func hmAC(message, key []byte) []byte {
     h := hmac.New(sha512.New, key)
     h.Write(message)
@@ -206,6 +230,21 @@ func (addr CommonAddress) Big() *big.Int {
 
 func PubKey2Address(pubKey *mycrypto.Point) CommonAddress {
     return Bytes2Address(mycrypto.Hash256(pubKey.Bytes()))
+}
+
+type TransactionData struct {
+    Version   int32
+    Nonce     int64
+    Type      int32
+    To        string
+    ChainId   string
+    DestChain string
+    Amount    string
+    GasPrice  string
+    GasLimit  string
+    Timestamp int64
+    Data      []byte
+    PubKey    string
 }
 
 func main() {}
