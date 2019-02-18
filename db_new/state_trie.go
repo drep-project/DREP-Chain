@@ -44,16 +44,16 @@ func getChildKey(state *State, key []byte, nib int) []byte {
 }
 
 func newLeaf(seq string, key, value []byte) (*State, error) {
-    state := &State{
+    leaf := &State{
         Sequence: seq,
         Value:    value,
         IsLeaf:   true,
     }
-    err := db.putState(key, state)
+    err := db.putState(key, leaf)
     if err != nil {
         return nil, err
     }
-    return state, nil
+    return leaf, nil
 }
 
 func insert(seq string, key, value []byte) (*State, error) {
@@ -106,18 +106,10 @@ func insertNewChildBranchOnLeaf(state *State, seq string, offset int, key, value
     if err != nil {
         return nil, err
     }
-    err = db.putState(state.ChildKeys[16], children[16])
-    if err != nil {
-        return nil, err
-    }
 
     nib := getNextNibble(seq, offset)
     state.ChildKeys[nib] = getChildKey(state, key, nib)
     children[nib], err = newLeaf(seq[offset:], state.ChildKeys[nib], value)
-    if err != nil {
-        return nil, err
-    }
-    err = db.putState(state.ChildKeys[nib], children[nib])
     if err != nil {
         return nil, err
     }
@@ -175,7 +167,7 @@ func insertDivergingBranch(state *State, prefix, seq string, offset int, key, va
     children := state.getChildren()
 
     nib0 := getNextNibble(state.Sequence, offset)
-    state.ChildKeys[nib0] = getChildKey(state, key, nib0)
+    childKey0 := getChildKey(state, key, nib0)
     div := &State{}
     div.Sequence = state.Sequence[offset:]
     for i, child := range children {
@@ -197,52 +189,33 @@ func insertDivergingBranch(state *State, prefix, seq string, offset int, key, va
     } else {
         div.resetValue(children)
     }
-    err = db.putState(state.ChildKeys[nib0], div)
+    err = db.putState(childKey0, div)
     if err != nil {
-        fmt.Println("111111111")
         return nil, err
     }
-    fmt.Println("div:       ")
-    fmt.Println("nib0:      ", nib0)
-    fmt.Println("div seq:   ", div.Sequence)
-    fmt.Println("div key:   ", bytes2Hex(state.ChildKeys[nib0]))
-    fmt.Println("div value: ", div.Value)
-    fmt.Println()
 
     nib1 := getNextNibble(seq, offset)
-    state.ChildKeys[nib1] = getChildKey(state, key, nib1)
-    leaf, err := newLeaf(seq[offset:], state.ChildKeys[nib1], value)
+    childKey1 := getChildKey(state, key, nib1)
+    leaf, err := newLeaf(seq[offset:], childKey1, value)
     if err != nil {
-        fmt.Println("222222222")
         return nil, err
     }
-    err = db.putState(state.ChildKeys[nib1], leaf)
-    if err != nil {
-        fmt.Println("33333333")
-        return nil, err
-    }
-    fmt.Println("nib1:     ", nib1)
-    fmt.Println("leaf key: ", bytes2Hex(state.ChildKeys[nib1]))
 
     var twins [17]*State
     twins[nib0] = div
     twins[nib1] = leaf
     for i, _ := range state.ChildKeys {
-        if i != nib0 && i != nib1 {
-            state.ChildKeys[i] = nil
-        }
+        state.ChildKeys[i] = nil
     }
-    fmt.Println("leaf key: ", bytes2Hex(state.ChildKeys[nib1]))
+    state.ChildKeys[nib0] = childKey0
+    state.ChildKeys[nib1] = childKey1
     state.resetValue(twins)
     state.Sequence = prefix
     state.IsLeaf = false
     err = db.putState(key, state)
     if err != nil {
-        fmt.Println("4444444444")
         return nil, err
     }
-
-    fmt.Println("555555555")
 
     return state, nil
 }
@@ -281,20 +254,15 @@ func delProceedingOnCurrentBranch(state *State, seq string, key []byte) (*State,
     if err != nil {
         return nil, err
     }
-    children := state.getChildren()
-    state.ChildKeys[nib] = nil
-    children[nib] = nil
-    childCount, onlyChild := countChildren(state, children)
-    if childCount == 0 {
-        return discardIsolatedNode(state, key)
-    }
+    childCount, onlyChild := countChildren(state)
     if childCount == 1 {
         return absorbOnlyChild(state, onlyChild, key)
     }
     return state, nil
 }
 
-func countChildren(state *State, children [17]*State) (int, *State) {
+func countChildren(state *State) (int, *State) {
+    children := state.getChildren()
     childCount := 0
     var onlyChild *State
     for i, childKey := range state.ChildKeys {
@@ -306,34 +274,12 @@ func countChildren(state *State, children [17]*State) (int, *State) {
     return childCount, onlyChild
 }
 
-func discardIsolatedNode(state *State, key []byte) (*State, error) {
-    err := db.delState(key)
-    if err != nil {
-        return nil, err
-    }
-    return state, nil
-}
-
 func absorbOnlyChild(state, onlyChild *State, key []byte) (*State, error) {
+    fmt.Println("call absorbOnlyChild")
     state.Sequence += onlyChild.Sequence
     state.Value = onlyChild.Value
     state.IsLeaf = onlyChild.IsLeaf
-    for i := 0; i < 17; i++ {
-        if onlyChild.ChildKeys[i] != nil {
-            st, err := db.getState(onlyChild.ChildKeys[i])
-            if err == nil {
-                state.ChildKeys[i] = getChildKey(state, key, i)
-                err := db.putState(state.ChildKeys[i], st)
-                if err != nil {
-                    return nil, err
-                }
-                err = db.delState(onlyChild.ChildKeys[i])
-                if err != nil {
-                    return nil, err
-                }
-            }
-        }
-    }
+    state.ChildKeys = onlyChild.ChildKeys
     err := db.putState(key, state)
     if err != nil {
         return nil, err
@@ -365,9 +311,9 @@ func getProceedingOnCurrentBranch(state *State, seq string) (*State, error) {
 }
 
 func search(key []byte, seq string, depth int) {
+
     fmt.Println("current depth: ", depth)
-    fmt.Println("key:     ", bytes2Hex(key))
-    fmt.Println()
+
     state, _ := db.getState(key)
     seq0 := seq
     seq += state.Sequence
@@ -382,7 +328,6 @@ func search(key []byte, seq string, depth int) {
     for i := 0; i < 17; i++ {
         if state.ChildKeys[i] != nil {
             search(state.ChildKeys[i], seq, depth + 1)
-            fmt.Println("searching i: ", i)
         }
     }
 }

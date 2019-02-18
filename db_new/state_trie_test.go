@@ -50,11 +50,22 @@ func TestStateTrie(t *testing.T) {
     insert("abb", db.rootKey, []byte{2})
     insert("231", db.rootKey, []byte{3})
     insert("232", db.rootKey, []byte{4})
-    //insert("23456", db.rootKey, []byte{4})
-    //insert("2ba", db.rootKey, []byte{5})
+    insert("23456", db.rootKey, []byte{4})
+    insert("2ba", db.rootKey, []byte{5})
+    insert("2bbbbb56", db.rootKey, []byte{6})
+    insert("23147", db.rootKey, []byte{7})
 
     fmt.Println()
     fmt.Println("##########################################################################################################")
+    fmt.Println()
+
+    search(db.rootKey, "", 0)
+
+    del(db.rootKey, "abb")
+    del(db.rootKey, "23147")
+
+    fmt.Println()
+    fmt.Println("***********************************************************************************************************")
     fmt.Println()
 
     search(db.rootKey, "", 0)
