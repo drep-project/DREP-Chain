@@ -3,7 +3,6 @@ package db_new
 import (
     "encoding/hex"
     "BlockChainTest/mycrypto"
-    "strconv"
 )
 
 func bytes2Hex(key []byte) string {
@@ -23,31 +22,27 @@ func commonValue2TrieValue(value []byte) []byte {
     return mycrypto.Hash256(value, []byte("trie_value"))
 }
 
-func getChildKey(key []byte, nibbleID int) []byte {
-    return mycrypto.Hash256(key, []byte("child"), []byte(strconv.Itoa(nibbleID)))
-}
-
-func getCommonPrefix(seq1, seq2 string) (int, string) {
+func getCommonPrefix(seq1, seq2 string) (string, int) {
     if seq1 == "" || seq2 == "" {
-        return 0, ""
+        return "", 0
     }
     for i := 0; i < len(seq1); i++ {
         if i == len(seq2) {
-            return i, seq2
+            return seq2, i
         }
         if seq1[i] == seq2[i] {
             continue
         }
-        return i, seq1[:i]
+        return seq1[:i], i
     }
-    return len(seq1), seq1
+    return seq1, len(seq1)
 }
 
-func getNextNibble(start int, mark string) int {
-    if start == len(mark) {
+func getNextNibble(seq string, offset int) int {
+    if offset == len(seq) {
         return 16
     }
-    return char2Nibble(mark[start: start + 1])
+    return char2Nibble(seq[offset : offset+ 1])
 }
 
 func char2Nibble(char string) int {

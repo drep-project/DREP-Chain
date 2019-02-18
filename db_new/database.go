@@ -4,6 +4,7 @@ import (
     "github.com/syndtr/goleveldb/leveldb"
     "github.com/pkg/errors"
     "encoding/json"
+    "BlockChainTest/mycrypto"
 )
 
 type Database struct {
@@ -11,6 +12,34 @@ type Database struct {
     temp         map[string] []byte
     states       map[string] *State
     runningChain string
+    root         *State
+    rootKey      []byte
+}
+
+func NewDatabase() *Database {
+    ldb, err := leveldb.OpenFile("newdb", nil)
+    if err != nil {
+        return nil
+    }
+    db := &Database{
+        db:           ldb,
+        runningChain: "",
+        temp:         nil,
+        states:       nil,
+    }
+    db.initState()
+    return db
+}
+
+func (db *Database) initState() {
+    db.rootKey = mycrypto.Hash256([]byte("state root"))
+    db.root = &State{
+        Sequence: "",
+        Value:    []byte{0},
+        IsLeaf:   true,
+    }
+    value, _ := json.Marshal(db.root)
+    db.put(db.rootKey, value, false)
 }
 
 func (db *Database) get(key []byte, temporary bool) ([]byte, error) {
@@ -29,7 +58,10 @@ func (db *Database) get(key []byte, temporary bool) ([]byte, error) {
             return nil, err
         }
         db.temp[hk] = value
+        //fmt.Println("through database")
+        //fmt.Println()
     }
+    //fmt.Println("through memory")
     return value, nil
 }
 
