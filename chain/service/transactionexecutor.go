@@ -52,7 +52,7 @@ func (chainService *ChainService) ExecuteTransactions(b *chainTypes.Block) *big.
         }
     }
 
-    stateRoot := dt.GetTotalStateRoot()
+    stateRoot := chainService.databaseService.GetStateRoot();
     if bytes.Equal(b.Header.StateRoot, stateRoot) {
         fmt.Println()
         fmt.Println("matched ", hex.EncodeToString(b.Header.StateRoot), " vs ", hex.EncodeToString(stateRoot))
@@ -62,7 +62,7 @@ func (chainService *ChainService) ExecuteTransactions(b *chainTypes.Block) *big.
         //fmt.Println("received block: ", b.Header, " ", b.Data, " ", b.MultiSig)
         fmt.Println("received block: ", true)
         fmt.Println()
-        dt.Commit()
+        //dt.Commit()
         chainService.savePrizeInfo(b, total)
         chainService.preSync(b)
         chainService.doSync(height)
@@ -71,7 +71,7 @@ func (chainService *ChainService) ExecuteTransactions(b *chainTypes.Block) *big.
         fmt.Println("not matched ", hex.EncodeToString(b.Header.StateRoot), " vs ", hex.EncodeToString(stateRoot))
         fmt.Println("received block: ", false)
         fmt.Println()
-        dt.Discard()
+        //dt.Discard()
     }
     return total
 }
@@ -100,7 +100,7 @@ func (chainService *ChainService) doSync(height int64) {
     }
     cct := &chainTypes.CrossChainTransaction{
         ChainId: chainService.chainId,
-        StateRoot: dt.GetTotalStateRoot(),
+        StateRoot: chainService.databaseService.GetTotalStateRoot(),
         Trans: childTrans,
     }
     data, err := json.Marshal(cct)
@@ -287,8 +287,8 @@ func (chainService *ChainService) executeCrossChainTransaction(t *chainTypes.Tra
        gasSum = new(big.Int).Add(gasSum, g)
     }
 
-    if !bytes.Equal(subDt.GetChainStateRoot(cct.ChainId), cct.StateRoot) {
-       subDt.Discard()
+    if !bytes.Equal(chainService.databaseService.GetStateRoot(), cct.StateRoot) {
+       //subDt.Discard()
     } else {
         amountSum := new(big.Int).Mul(gasSum, gasPrice)
         balance = chainService.databaseService.GetBalance(addr, t.Data.ChainId, true)
@@ -296,9 +296,9 @@ func (chainService *ChainService) executeCrossChainTransaction(t *chainTypes.Tra
             gasUsed = new(big.Int).Set(gasSum)
             gasFee = new(big.Int).Set(amountSum)
             _, gasFee = chainService.deduct(addr, t.Data.ChainId, balance, gasFee)
-            subDt.Commit()
+            //subDt.Commit()
         } else {
-            subDt.Discard()
+            //subDt.Discard()
         }
     }
     return

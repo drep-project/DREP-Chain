@@ -13,6 +13,10 @@ import (
     "encoding/hex"
 )
 
+func (database *DatabaseService) GetStateRoot() []byte {
+    return database.GetStateRoot()
+}
+
 func (database *DatabaseService) GetBlock(height int64) *chainType.Block {
     key := sha3.Hash256([]byte("block_" + strconv.FormatInt(height, 10)))
     value, err := db.get(key, false)

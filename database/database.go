@@ -110,6 +110,11 @@ func (db *Database) Discard() {
     db.stores = nil
 }
 
+func (db *Database) getStateRoot() []byte {
+    state, _ := db.getState(db.root)
+    return state.Value
+}
+
 func (db *Database) getState(key []byte) (*State, error) {
     var state *State
     if db.states == nil {

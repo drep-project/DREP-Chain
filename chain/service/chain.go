@@ -137,7 +137,7 @@ func (chainService *ChainService) ProcessBlockReq(peer *p2pTypes.Peer, req *chai
 }
 
 func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey, members []*secp256k1.PublicKey) (*chainTypes.Block, error) {
-    dt := database.BeginTransaction()
+    //dt := database.BeginTransaction()
     height := chainService.databaseService.GetMaxHeight() + 1
     ts := chainService.transactionPool.PickTransactions(BlockGasLimit)
     //fmt.Println()
@@ -159,20 +159,20 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey, 
 
     gasSum := new(big.Int)
     for _, t := range ts {
-        subDt := dt.BeginTransaction()
-        g, _ := execute(subDt, t)
+        //subDt := dt.BeginTransaction()
+        g, _ := chainService.execute(t)
         gasSum = new(big.Int).Add(gasSum, g)
-        subDt.Commit()
+        //subDt.Commit()
     }
     timestamp := time.Now().Unix()
-    stateRoot := dt.GetTotalStateRoot()
+    stateRoot := chainService.databaseService.GetStateRoot()
     gasUsed := gasSum.Bytes()
     txHashes, err := chainService.GetTxHashes(ts)
     if err != nil {
         return nil, err
     }
-    merkle := trie.NewMerkle(txHashes)
-    merkleRoot := merkle.Root.Hash
+    //merkle := trie.NewMerkle(txHashes)
+    //merkleRoot := merkle.Root.Hash
     var memberPks []*secp256k1.PublicKey = nil
     for _, p := range members {
         memberPks = append(memberPks, p)
@@ -198,7 +198,7 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey, 
             GasUsed: gasUsed,
             Timestamp: timestamp,
             StateRoot: stateRoot,
-            MerkleRoot: merkleRoot,
+            MerkleRoot: stateRoot,
             TxHashes: txHashes,
             Height: height,
             LeaderPubKey : leaderKey,
@@ -209,7 +209,7 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey, 
             TxList:  ts,
         },
     }
-    dt.Discard()
+    //dt.Discard()
     return block, nil
     return nil, nil
 }
