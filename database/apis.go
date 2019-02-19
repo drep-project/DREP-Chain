@@ -202,17 +202,17 @@ func (database *DatabaseService) GetLogs(txHash []byte, chainId common.ChainIdTy
     key := sha3.Hash256([]byte("logs_" + hex.EncodeToString(txHash) + chainId.Hex()))
     value, err := db.get(key, false)
     if err != nil {
-        return make([]*Log, 0)
+        return make([]*chainType.Log, 0)
     }
-    var logs []*Log
+    var logs []*chainType.Log
     err = json.Unmarshal(value, &logs)
     if err != nil {
-        return make([]*Log, 0)
+        return make([]*chainType.Log, 0)
     }
     return logs
 }
 
-func (database *DatabaseService) PutLogs(logs []*Log, txHash []byte, chainId common.ChainIdType) error {
+func (database *DatabaseService) PutLogs(logs []*chainType.Log, txHash []byte, chainId common.ChainIdType) error {
     key := sha3.Hash256([]byte("logs_" + hex.EncodeToString(txHash) + chainId.Hex()))
     value, err := json.Marshal(logs)
     if err != nil {
@@ -221,19 +221,12 @@ func (database *DatabaseService) PutLogs(logs []*Log, txHash []byte, chainId com
     return db.put(key, value, false)
 }
 
-func (database *DatabaseService) AddLog(log *Log) error {
+func (database *DatabaseService) AddLog(log *chainType.Log) error {
     logs := database.GetLogs(log.TxHash, log.ChainId)
     logs = append(logs, log)
     return database.PutLogs(logs, log.TxHash, log.ChainId)
 }
 
-type Log struct {
-    Address      crypto.CommonAddress
-    ChainId      common.ChainIdType
-    TxHash       []byte
-    Topics       [][]byte
-    Data         []byte
-}
 
 func (database *DatabaseService) Load(x *big.Int) []byte {
     value, _ := db.get(x.Bytes(), true)

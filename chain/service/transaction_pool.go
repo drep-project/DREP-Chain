@@ -6,68 +6,74 @@ import (
     "github.com/drep-project/drep-chain/log"
     "github.com/drep-project/drep-chain/crypto"
     "math/big"
-    "BlockChainTest/util/list"
-    "BlockChainTest/database"
+    "github.com/drep-project/drep-chain/common/list"
+    "github.com/drep-project/drep-chain/database"
 )
 
 const maxSize = 100000
 
-var (
+type TransactionPool struct {
+    databaseApi *database.DatabaseService
+
     trans       *list.LinkedList
     accountTran map[crypto.CommonAddress]*list.SortedLinkedList
     tranSet     map[string]bool
     tranLock    sync.Mutex
-    nonceCp     = func(a interface{}, b interface{}) int{
-        ta, oka := a.(*chainTypes.Transaction)
-        tb, okb := b.(*chainTypes.Transaction)
-        if oka && okb {
-            nonceA := ta.Data.Nonce
-            nonceB := tb.Data.Nonce
-            if nonceA < nonceB {
-                return -1
-            } else if nonceA > nonceB {
-                return 1
-            } else {
-                return 0
-            }
-        } else {
-            return 0
-        }
-    }
-    tranCp = func(a interface{}, b interface{}) bool {
-        ta, oka := a.(*chainTypes.Transaction)
-        tb, okb := b.(*chainTypes.Transaction)
-        sa, ea := ta.TxId()
-        sb, eb := tb.TxId()
-        return oka && okb && ea == nil && eb == nil && sa == sb
-    }
-)
-
-func init()  {
-    trans = list.NewLinkedList()
-    accountTran = make(map[accounts.CommonAddress]*list.SortedLinkedList)
-    tranSet = make(map[string]bool)
+    nonceCp     func(a interface{}, b interface{}) int
+    tranCp func(a interface{}, b interface{}) bool
 }
 
-func Contains(id string) bool {
-    tranLock.Lock()
-    value, exists := tranSet[id]
-    if exists && !value {
-        delete(tranSet, id)
+func NewTransactionPool() *TransactionPool {
+ pool := &TransactionPool{}
+ pool.nonceCp = func(a interface{}, b interface{}) int{
+     ta, oka := a.(*chainTypes.Transaction)
+     tb, okb := b.(*chainTypes.Transaction)
+     if oka && okb {
+         nonceA := ta.Data.Nonce
+         nonceB := tb.Data.Nonce
+         if nonceA < nonceB {
+             return -1
+         } else if nonceA > nonceB {
+             return 1
+         } else {
+             return 0
+         }
+     } else {
+         return 0
+     }
+ }
+ pool.tranCp = func(a interface{}, b interface{}) bool {
+    ta, oka := a.(*chainTypes.Transaction)
+    tb, okb := b.(*chainTypes.Transaction)
+    sa, ea := ta.TxId()
+    sb, eb := tb.TxId()
+    return oka && okb && ea == nil && eb == nil && sa == sb
     }
-    tranLock.Unlock()
+    pool.trans = list.NewLinkedList()
+    pool.accountTran = make(map[crypto.CommonAddress]*list.SortedLinkedList)
+    pool.tranSet = make(map[string]bool)
+ return pool
+}
+
+func (pool *TransactionPool) Contains(id string) bool {
+    pool.tranLock.Lock()
+    defer    pool.tranLock.Unlock()
+    value, exists :=  pool.tranSet[id]
+    if exists && !value {
+        delete( pool.tranSet, id)
+    }
     return exists || value
 }
 
-func checkAndGetAddr(tran *chainTypes.Transaction) (bool, crypto.CommonAddress) {
+func (pool *TransactionPool) checkAndGetAddr(tran *chainTypes.Transaction) (bool, crypto.CommonAddress) {
     addr := crypto.PubKey2Address(tran.Data.PubKey)
     chainId := tran.Data.ChainId
     if tran.Data == nil {
-        return false, accounts.CommonAddress{}
+        return false, crypto.CommonAddress{}
     }
     // TODO Check sig
-    if database.GetNonce(addr, chainId) >= tran.Data.Nonce {
-        return false, accounts.CommonAddress{}
+    if pool.databaseApi.GetNonce(addr, chainId, true) >= tran.Data.Nonce {
+        return false, crypto.CommonAddress{}
     }
     {
         amount := new(big.Int).SetBytes(tran.Data.Amount.Bytes())
@@ -76,7 +82,7 @@ func checkAndGetAddr(tran *chainTypes.Transaction) (bool, crypto.CommonAddress) 
         total := big.NewInt(0)
         total.Mul(gasLimit, gasPrice)
         total.Add(total, amount)
-        if database.GetBalance(addr, chainId).Cmp(total) < 0 {
+        if pool.databaseApi.GetBalance(addr, chainId,true).Cmp(total) < 0 {
             return false, crypto.CommonAddress{}
             // TODO Remove this
         }
@@ -84,8 +90,8 @@ func checkAndGetAddr(tran *chainTypes.Transaction) (bool, crypto.CommonAddress) 
     return true, addr
 }
 //func AddTransaction(id string, transaction *common.transaction) {
-func AddTransaction(transaction *chainTypes.Transaction) bool {
-    check, addr := checkAndGetAddr(transaction)
+func (pool *TransactionPool) AddTransaction(transaction *chainTypes.Transaction) bool {
+    check, addr :=  pool.checkAndGetAddr(transaction)
     if !check {
         return false
     }
@@ -93,80 +99,79 @@ func AddTransaction(transaction *chainTypes.Transaction) bool {
     if err != nil {
         return false
     }
-    tranLock.Lock()
-    defer tranLock.Unlock()
-    if trans.Size() >= maxSize {
+    pool.tranLock.Lock()
+    defer  pool.tranLock.Unlock()
+    if  pool.trans.Size() >= maxSize {
         log.Error("transaction pool full. %s fail to add", id)
         return false
     }
-    if _, exists := tranSet[id]; exists {
+    if _, exists :=  pool.tranSet[id]; exists {
         log.Error("transaction %s exists", id)
         return false
     } else {
-        tranSet[id] = true
-        trans.Add(transaction)
-        if l, exists := accountTran[addr]; exists {
+        pool.tranSet[id] = true
+        pool.trans.Add(transaction)
+        if l, exists :=  pool.accountTran[addr]; exists {
             l.Add(transaction)
         } else {
-            l = list.NewSortedLinkedList(nonceCp)
-            accountTran[addr] = l
+            l = list.NewSortedLinkedList( pool.nonceCp)
+            pool.accountTran[addr] = l
             l.Add(transaction)
         }
     }
     return true
 }
 
-func removeTransaction(tran *chainTypes.Transaction) (bool, bool) {
+func (pool *TransactionPool) removeTransaction(tran *chainTypes.Transaction) (bool, bool) {
     id, err := tran.TxId()
     if err != nil {
         return false, false
     }
-    tranLock.Lock()
-    defer tranLock.Unlock()
-    r1 := trans.Remove(tran, tranCp)
-    delete(tranSet, id)
+    pool.tranLock.Lock()
+    defer  pool.tranLock.Unlock()
+    r1 :=  pool.trans.Remove(tran,  pool.tranCp)
+    delete( pool.tranSet, id)
     addr := crypto.PubKey2Address(tran.Data.PubKey)
-    ts := accountTran[addr]
-    r2 := ts.Remove(tran, tranCp)
+    ts :=  pool.accountTran[addr]
+    r2 := ts.Remove(tran,  pool.tranCp)
     return r1, r2
 }
 
-func PickTransactions(maxGas *big.Int) []*chainTypes.Transaction {
+func (pool *TransactionPool) PickTransactions(maxGas *big.Int) []*chainTypes.Transaction {
     r := make([]*chainTypes.Transaction, 0) //TODO if 10
     gas := big.NewInt(0)
-    tranLock.Lock()
+    pool.tranLock.Lock()
     defer func() {
-        tranLock.Unlock()
+        pool.tranLock.Unlock()
         for _, t := range r {
-            trans.Remove(t, tranCp)
+            pool.trans.Remove(t,  pool.tranCp)
         }
     }()
-    it := trans.Iterator()
+    it :=  pool.trans.Iterator()
     tn := make(map[crypto.CommonAddress]int64)
     for it.HasNext() {
         if t, ok := it.Next().(*chainTypes.Transaction); ok {
             if id, err := t.TxId(); err == nil {
-                if tranSet[id] {
+                if  pool.tranSet[id] {
                     addr := crypto.PubKey2Address(t.Data.PubKey)
                     chainId := t.Data.ChainId
-                    if ts, exists := accountTran[addr]; exists {
+                    if ts, exists :=  pool.accountTran[addr]; exists {
                         it2 := ts.Iterator()
                         for it2.HasNext() {
                             if t2, ok := it2.Next().(*chainTypes.Transaction); ok {
                                 cn, e := tn[addr]
                                 if !e {
-                                    cn = database.GetNonce(addr, chainId)
+                                    cn = pool.databaseApi.GetNonce(addr, chainId, true)
                                 }
                                 if t2.Data.Nonce != cn + 1 {
                                     continue
                                 }
-                                gasLimit := big.NewInt(0).SetBytes(t2.Data.GasLimit)
-                                tmp := big.NewInt(0).Add(gas, gasLimit)
+                                tmp := big.NewInt(0).Add(gas, &t2.Data.GasLimit)
                                 if tmp.Cmp(maxGas) <= 0 {
                                     if id2, err := t2.TxId(); err == nil {
                                         gas = tmp
                                         r = append(r, t2)
-                                        delete(tranSet, id2)
+                                        delete( pool.tranSet, id2)
                                         tn[addr] = t2.Data.Nonce
                                         it2.Remove()
                                     }
