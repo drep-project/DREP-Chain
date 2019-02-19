@@ -5,19 +5,21 @@ import (
     "github.com/pkg/errors"
     "encoding/json"
     "BlockChainTest/mycrypto"
+    "BlockChainTest/accounts"
+    "BlockChainTest/config"
 )
 
 type Database struct {
     db           *leveldb.DB
     temp         map[string] []byte
     states       map[string] *State
+    stores       map[string] *accounts.Storage
     runningChain string
-    root         *State
-    rootKey      []byte
+    root         []byte
 }
 
 func NewDatabase() *Database {
-    ldb, err := leveldb.OpenFile("newdb", nil)
+    ldb, err := leveldb.OpenFile("new_db", nil)
     if err != nil {
         return nil
     }
@@ -32,18 +34,18 @@ func NewDatabase() *Database {
 }
 
 func (db *Database) initState() {
-    db.rootKey = mycrypto.Hash256([]byte("state root"))
-    db.root = &State{
+    db.root = mycrypto.Hash256([]byte("state rootState"))
+    rootState := &State{
         Sequence: "",
         Value:    []byte{0},
         IsLeaf:   true,
     }
-    value, _ := json.Marshal(db.root)
-    db.put(db.rootKey, value, false)
+    value, _ := json.Marshal(rootState)
+    db.put(db.root, value, false)
 }
 
-func (db *Database) get(key []byte, temporary bool) ([]byte, error) {
-    if !temporary {
+func (db *Database) get(key []byte, transactional bool) ([]byte, error) {
+    if !transactional {
         return db.db.Get(key, nil)
     }
     if db.temp == nil {
@@ -58,10 +60,7 @@ func (db *Database) get(key []byte, temporary bool) ([]byte, error) {
             return nil, err
         }
         db.temp[hk] = value
-        //fmt.Println("through database")
-        //fmt.Println()
     }
-    //fmt.Println("through memory")
     return value, nil
 }
 
@@ -100,10 +99,14 @@ func (db *Database) Commit() {
         }
     }
     db.temp = nil
+    db.states = nil
+    db.stores = nil
 }
 
 func (db *Database) Discard() {
     db.temp = nil
+    db.states = nil
+    db.stores = nil
 }
 
 func (db *Database) getState(key []byte) (*State, error) {
@@ -155,4 +158,24 @@ func (db *Database) delState(key []byte) error {
     }
     db.states[bytes2Hex(key)] = nil
     return nil
+}
+
+func getStorage(addr accounts.CommonAddress, chainId config.ChainIdType) *accounts.Storage {
+    storage := &accounts.Storage{}
+    key := mycrypto.Hash256([]byte("storage_" + addr.Hex() + chainId.Hex()))
+    value, err := db.get(key, false)
+    if err != nil {
+        return storage
+    }
+    json.Unmarshal(value, storage)
+    return storage
+}
+
+func putStorage(addr accounts.CommonAddress, chainId config.ChainIdType, storage *accounts.Storage) error {
+    key := mycrypto.Hash256([]byte("storage_" + addr.Hex() + chainId.Hex()))
+    value, err := json.Marshal(storage)
+    if err != nil {
+        return err
+    }
+    return db.put(key, value, true)
 }
