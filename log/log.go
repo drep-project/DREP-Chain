@@ -1,16 +1,14 @@
 package log
 
 import (
-	"BlockChainTest/util"
-	"io"
-	"os"
-	"BlockChainTest/config"
+	"github.com/drep-project/drep-chain/common"
 	"github.com/mattn/go-colorable"
 	"github.com/mattn/go-isatty"
+	"io"
+	"os"
 )
 
 var DEBUG = false
-
 
 var (
 	ostream Handler
@@ -27,16 +25,16 @@ func init() {
 	glogger = NewGlogHandler(ostream)
 }
 
-func SetUp(cfg *config.LogConfig) error {
+func SetUp(cfg *LogConfig) error {
 	if cfg.DataDir != "" {
-		if !util.IsDirExists(cfg.DataDir) {
-			err :=os.MkdirAll(cfg.DataDir,0777)
-			if err!=nil{
+		if !common.IsDirExists(cfg.DataDir) {
+			err := os.MkdirAll(cfg.DataDir, 0777)
+			if err != nil {
 				return err
 			}
 		}
 
-		rfh, err := RotatingFileHandler(
+		rfh, err := SyncRotatingFileHandler(
 			cfg.DataDir,
 			262144,
 			JSONFormatOrderedEx(false, true),
