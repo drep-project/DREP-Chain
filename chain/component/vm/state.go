@@ -38,12 +38,12 @@ func (s *State) CreateContractAccount(callerAddr crypto.CommonAddress, chainId c
 	if err != nil {
 		return nil, err
 	}
-	return account, s.databaseApi.PutStorage(account.Address, chainId, account.Storage,true)
+	return account, s.databaseApi.PutStorage(*account.Address, chainId, account.Storage,true)
 }
 
 func (s *State) SubBalance(addr crypto.CommonAddress, chainId common.ChainIdType, amount *big.Int) error {
 	balance := s.databaseApi.GetBalance(addr, chainId,true)
-	return s.databaseApi.PutBalance(addr, chainId, new(big.Int).Sub(balance, amount,true))
+	return s.databaseApi.PutBalance(addr, chainId, new(big.Int).Sub(balance, amount), true)
 }
 
 func (s *State) AddBalance(addr crypto.CommonAddress, chainId common.ChainIdType, amount *big.Int) error {
@@ -114,13 +114,9 @@ func (s *State) SubRefund(gas uint64) {
 }
 
 func (s *State) Load(x *big.Int) []byte {
-	value := s.dt.Get(x.Bytes())
-	if value == nil {
-		return new(big.Int).Bytes()
-	}
-	return value
+	return s.databaseApi.Load(x)
 }
 
 func (s *State) Store(x, y *big.Int, chainId common.ChainIdType) {
-	s.dt.Put(chainId, x.Bytes(), y.Bytes())
+	s.databaseApi.Store(x, y)
 }

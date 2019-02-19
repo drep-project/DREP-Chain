@@ -10,6 +10,7 @@ import (
     "github.com/drep-project/drep-chain/crypto"
     "math/big"
     "errors"
+    "encoding/hex"
 )
 
 func (database *DatabaseService) GetBlock(height int64) *chainType.Block {
@@ -195,4 +196,50 @@ func (database *DatabaseService) GetCodeHash(addr crypto.CommonAddress, chainId 
         return crypto.Hash{}
     }
     return storage.CodeHash
+}
+
+func (database *DatabaseService) GetLogs(txHash []byte, chainId common.ChainIdType) []*Log {
+    key := sha3.Hash256([]byte("logs_" + hex.EncodeToString(txHash) + chainId.Hex()))
+    value, err := db.get(key, false)
+    if err != nil {
+        return make([]*Log, 0)
+    }
+    var logs []*Log
+    err = json.Unmarshal(value, &logs)
+    if err != nil {
+        return make([]*Log, 0)
+    }
+    return logs
+}
+
+func (database *DatabaseService) PutLogs(logs []*Log, txHash []byte, chainId common.ChainIdType) error {
+    key := sha3.Hash256([]byte("logs_" + hex.EncodeToString(txHash) + chainId.Hex()))
+    value, err := json.Marshal(logs)
+    if err != nil {
+        return err
+    }
+    return db.put(key, value, false)
+}
+
+func (database *DatabaseService) AddLog(log *Log) error {
+    logs := database.GetLogs(log.TxHash, log.ChainId)
+    logs = append(logs, log)
+    return database.PutLogs(logs, log.TxHash, log.ChainId)
+}
+
+type Log struct {
+    Address      crypto.CommonAddress
+    ChainId      common.ChainIdType
+    TxHash       []byte
+    Topics       [][]byte
+    Data         []byte
+}
+
+func (database *DatabaseService) Load(x *big.Int) []byte {
+    value, _ := db.get(x.Bytes(), true)
+    return value
+}
+
+func (database *DatabaseService) Store(x, y *big.Int) error {
+    return db.put(x.Bytes(), y.Bytes(), true)
 }
