@@ -69,4 +69,5 @@ func TestStateTrie(t *testing.T) {
     fmt.Println()
 
     search(db.root, "", 0)
+    search(db.root, "", 1)
 }

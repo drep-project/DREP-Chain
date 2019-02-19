@@ -9,6 +9,7 @@ import (
     "BlockChainTest/config"
     "BlockChainTest/accounts"
     "errors"
+    "encoding/hex"
 )
 
 func GetBlock(height int64) *bean.Block {
@@ -194,4 +195,33 @@ func GetCodeHash(addr accounts.CommonAddress, chainId config.ChainIdType, transa
         return accounts.Hash{}
     }
     return storage.CodeHash
+}
+
+func GetLogs(txHash []byte, chainId config.ChainIdType) []*bean.Log {
+    key := mycrypto.Hash256([]byte("logs_" + hex.EncodeToString(txHash) + chainId.Hex()))
+    value, err := db.get(key, false)
+    if err != nil {
+        return make([]*bean.Log, 0)
+    }
+    var logs []*bean.Log
+    err = json.Unmarshal(value, &logs)
+    if err != nil {
+        return make([]*bean.Log, 0)
+    }
+    return logs
+}
+
+func PutLogs(logs []*bean.Log, txHash []byte, chainId config.ChainIdType) error {
+    key := mycrypto.Hash256([]byte("logs_" + hex.EncodeToString(txHash) + chainId.Hex()))
+    value, err := json.Marshal(logs)
+    if err != nil {
+        return err
+    }
+    return db.put(key, value, false)
+}
+
+func AddLog(log *bean.Log) error {
+    logs := GetLogs(log.TxHash, log.ChainId)
+    logs = append(logs, log)
+    return PutLogs(logs, log.TxHash, log.ChainId)
 }
