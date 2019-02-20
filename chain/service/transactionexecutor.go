@@ -41,10 +41,6 @@ func (chainService *ChainService) ExecuteTransactions(b *chainTypes.Block) (*big
     }
     for _, t := range b.Data.TxList {
         _, gasFee := chainService.execute(t)
-        if t.Data.Type != BlockPrizeType {
-            fmt.Println("Delete transaction ", *t)
-            fmt.Println(chainService.transactionPool.removeTransaction(t))
-        }
         if gasFee != nil {
             total.Add(total, gasFee)
         }

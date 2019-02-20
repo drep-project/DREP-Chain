@@ -44,9 +44,8 @@ type ConsensusService struct {
 	leader *Leader
 	member *Member
 	consensusUsedTime time.Duration
-	//
 
-	quitRound chan struct{}  //Now no use
+	quitRound chan struct{}
 }
 
 func (consensusService *ConsensusService) Name() string {

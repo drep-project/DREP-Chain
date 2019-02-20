@@ -6,11 +6,10 @@
 package secp256k1
 
 import (
-	"BlockChainTest/core/ethhexutil"
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/drep-project/drep-chain/common"
 	"math/big"
 )
 
@@ -191,7 +190,7 @@ func (p PublicKey) GetType() int {
 }
 
 func (p *PublicKey) UnmarshalText(input []byte) error {
-	bytes := ethhexutil.Bytes{}
+	bytes := common.Bytes{}
 	err := bytes.UnmarshalJSON(input)
 	if err != nil {
 		return err
@@ -211,5 +210,5 @@ func (p *PublicKey) UnmarshalJSON(input []byte) error {
 }
 
 func (p *PublicKey) MarshalText() ([]byte, error) {
-	return hexutil.Bytes(p.Serialize()).MarshalText()
+	return common.Bytes(p.Serialize()).MarshalText()
 }

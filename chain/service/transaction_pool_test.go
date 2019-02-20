@@ -2,7 +2,7 @@ package service
 
 import (
     "testing"
-    "BlockChainTest/bean"
+   chainTypes "github.com/drep-project/drep-chain/chain/types"
     "fmt"
 )
 
@@ -61,7 +61,7 @@ func print() {
     fmt.Println("Trans:")
     it := trans.Iterator()
     for it.HasNext() {
-        e, _ := it.Next().(*bean.Transaction)
+        e, _ := it.Next().(*chainTypes.Transaction)
         fmt.Println(e)
     }
     fmt.Println("TranSet:")

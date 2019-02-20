@@ -1,7 +1,6 @@
 package service
 
 import (
-	"BlockChainTest/util/flags"
 	"fmt"
 	"net"
 	"os"
@@ -304,37 +303,37 @@ func (rpcService *RpcService) setIPC(ctx *cli.Context, homeDir string) {
 // command line flags, returning empty if the HTTP endpoint is disabled.
 func (rpcService *RpcService) setHTTP(ctx *cli.Context, homeDir string) {
 	if !rpcService.RpcConfig.HTTPEnabled {
-		if ctx.GlobalBool(flags.HTTPEnabledFlag.Name) {
+		if ctx.GlobalBool(HTTPEnabledFlag.Name) {
 			rpcService.RpcConfig.HTTPEnabled = true
 		}
 	}
 
-	if ctx.GlobalIsSet(flags.HTTPListenAddrFlag.Name) {
-		rpcService.RpcConfig.HTTPHost = ctx.GlobalString(flags.HTTPListenAddrFlag.Name)
+	if ctx.GlobalIsSet(HTTPListenAddrFlag.Name) {
+		rpcService.RpcConfig.HTTPHost = ctx.GlobalString(HTTPListenAddrFlag.Name)
 	} else {
 		if rpcService.RpcConfig.HTTPHost == "" {
 			rpcService.RpcConfig.HTTPHost = rpcTypes.DefaultHTTPHost
 		}
 	}
 
-	if ctx.GlobalIsSet(flags.HTTPPortFlag.Name) {
-		rpcService.RpcConfig.HTTPPort = ctx.GlobalInt(flags.HTTPPortFlag.Name)
+	if ctx.GlobalIsSet(HTTPPortFlag.Name) {
+		rpcService.RpcConfig.HTTPPort = ctx.GlobalInt(HTTPPortFlag.Name)
 	}else{
 		if rpcService.RpcConfig.HTTPPort == 0 {
 			rpcService.RpcConfig.HTTPPort = rpcTypes.DefaultHTTPPort
 		}
 	}
 
-	if ctx.GlobalIsSet(flags.HTTPCORSDomainFlag.Name) {
-		rpcService.RpcConfig.HTTPCors = splitAndTrim(ctx.GlobalString(flags.HTTPCORSDomainFlag.Name))
+	if ctx.GlobalIsSet(HTTPCORSDomainFlag.Name) {
+		rpcService.RpcConfig.HTTPCors = splitAndTrim(ctx.GlobalString(HTTPCORSDomainFlag.Name))
 	}
 
-	if ctx.GlobalIsSet(flags.HTTPApiFlag.Name) {
-		rpcService.RpcConfig.HTTPModules = splitAndTrim(ctx.GlobalString(flags.HTTPApiFlag.Name))
+	if ctx.GlobalIsSet(HTTPApiFlag.Name) {
+		rpcService.RpcConfig.HTTPModules = splitAndTrim(ctx.GlobalString(HTTPApiFlag.Name))
 	}
 
-	if ctx.GlobalIsSet(flags.HTTPVirtualHostsFlag.Name) {
-		rpcService.RpcConfig.HTTPVirtualHosts = splitAndTrim(ctx.GlobalString(flags.HTTPVirtualHostsFlag.Name))
+	if ctx.GlobalIsSet(HTTPVirtualHostsFlag.Name) {
+		rpcService.RpcConfig.HTTPVirtualHosts = splitAndTrim(ctx.GlobalString(HTTPVirtualHostsFlag.Name))
 	} else {
 		if rpcService.RpcConfig.HTTPVirtualHosts == nil {
 			rpcService.RpcConfig.HTTPVirtualHosts = []string{"localhost"}
@@ -346,7 +345,7 @@ func (rpcService *RpcService) setHTTP(ctx *cli.Context, homeDir string) {
 // command line flags, returning empty if the HTTP endpoint is disabled.
 func (rpcService *RpcService) setRest(ctx *cli.Context, homeDir string) {
 	if !rpcService.RpcConfig.RESTEnabled {
-		if ctx.GlobalBool(flags.RESTEnabledFlag.Name) {
+		if ctx.GlobalBool(RESTEnabledFlag.Name) {
 			rpcService.RpcConfig.RESTEnabled = true
 		}
 	}
@@ -372,7 +371,7 @@ func (rpcService *RpcService) setRest(ctx *cli.Context, homeDir string) {
 // command line flags, returning empty if the HTTP endpoint is disabled.
 func (rpcService *RpcService) setWS(ctx *cli.Context, homeDir string) {
 	if !rpcService.RpcConfig.WSEnabled {
-		if ctx.GlobalBool(flags.WSEnabledFlag.Name) {
+		if ctx.GlobalBool(WSEnabledFlag.Name) {
 			rpcService.RpcConfig.WSEnabled = true
 		}
 	}

@@ -10,7 +10,7 @@ import (
 	"math/big"
 	"testing"
 	"fmt"
-	"BlockChainTest/database"
+	"github.com/drep-project/drep-chain/database"
 	"strings"
 	"encoding/hex"
 	"encoding/json"
@@ -22,8 +22,9 @@ import (
 // Executes sets up a in memory, temporarily, environment for the execution of
 // the given code. It makes sure that it's restored to it's original state afterwards.
 func ExecuteCreate(code []byte) {
-	t := database.BeginTransaction()
-	evm := vm.NewEVM(t)
+	databaseService := database.DatabaseService{}
+	databaseService.BeginTransaction()
+	evm := vm.NewEVM(databaseService)
 	s1 := "111111"
 	s2 := "222222"
 	var chainId common.ChainIdType
@@ -31,8 +32,8 @@ func ExecuteCreate(code []byte) {
 	callerAddr2 := crypto.Hex2Address(s2)
 	caller1 := &accountTypes.Account{Address: &callerAddr1, Storage: &accountTypes.Storage{Balance: new(big.Int).SetInt64(100)}}
 	caller2 := &accountTypes.Account{Address: &callerAddr2, Storage: &accountTypes.Storage{Balance: new(big.Int).SetInt64(200)}}
-	errPut1 := database.PutStorage(t, callerAddr1, chainId, caller1.Storage)
-	errPut2 := database.PutStorage(t, callerAddr2, chainId, caller2.Storage)
+	errPut1 := databaseService.PutStorage(callerAddr1, chainId, caller1.Storage, true)
+	errPut2 := databaseService.PutStorage(callerAddr2, chainId, caller2.Storage)
 	fmt.Println("errPut1: ", errPut1)
 	fmt.Println("errPut2: ", errPut2)
 	gas := uint64(1000000)
