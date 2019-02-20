@@ -5,8 +5,8 @@
 package schnorr
 
 import (
-	"BlockChainTest/core/crypto/secp256k1"
-	"BlockChainTest/core/crypto/sha3"
+	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/drep-chain/crypto/sha3"
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"

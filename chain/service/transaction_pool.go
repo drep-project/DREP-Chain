@@ -166,7 +166,7 @@ func (pool *TransactionPool) PickTransactions(maxGas *big.Int) []*chainTypes.Tra
                                 if t2.Data.Nonce != cn + 1 {
                                     continue
                                 }
-                                tmp := big.NewInt(0).Add(gas, &t2.Data.GasLimit)
+                                tmp := big.NewInt(0).Add(gas, t2.Data.GasLimit)
                                 if tmp.Cmp(maxGas) <= 0 {
                                     if id2, err := t2.TxId(); err == nil {
                                         gas = tmp

@@ -1,7 +1,7 @@
 package log
 
 import (
-	"encoding/json"
+	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/drep-chain/app"
 	"gopkg.in/urfave/cli.v1"
 	"path"
@@ -17,8 +17,8 @@ func (logService *LogService) Name() string {
 func (logService *LogService) Api() []app.API {
 	return []app.API{}
 }
-func (logService *LogService) Flags() []cli.Flag {
-	return []cli.Flag{LogDirFlag, LogLevelFlag, VmoduleFlag, BacktraceAtFlag}
+func (logService *LogService) CommandFlags() ([]cli.Command, []cli.Flag) {
+	return nil, []cli.Flag{LogDirFlag, LogLevelFlag, VmoduleFlag, BacktraceAtFlag}
 }
 
 func (logService *LogService)  P2pMessages() map[int]interface{} {
@@ -26,9 +26,9 @@ func (logService *LogService)  P2pMessages() map[int]interface{} {
 }
 
 func (logService *LogService) Init(executeContext *app.ExecuteContext) error {
-	phase := executeContext.GetConfig(logService.Name())
 	logService.config = &LogConfig{}
-	err := json.Unmarshal(phase, logService.config)
+	logService.config.LogLevel = 3
+	err := executeContext.UnmashalConfig(logService.Name(), logService.config)
 	if err != nil {
 		return err
 	}
@@ -40,10 +40,11 @@ func (logService *LogService) Start(executeContext *app.ExecuteContext) error {
 	return nil
 }
 
-func (logService *LogService) Stop(executeContext *app.ExecuteContext) error {
+func (logService *LogService) Stop(executeContext *app.ExecuteContext) error{
 	return nil
 }
 
+func (logService *LogService) Receive(context actor.Context) { }
 // setLogConfig creates an log configuration from the set command line flags,
 func (logService *LogService) setLogConfig(ctx *cli.Context, homeDir string) {
 	logService.config = &LogConfig{}
@@ -68,3 +69,4 @@ func (logService *LogService) setLogConfig(ctx *cli.Context, homeDir string) {
 		logService.config.DataDir = path.Join(homeDir, "log")
 	}
 }
+

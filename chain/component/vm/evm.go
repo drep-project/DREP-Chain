@@ -59,12 +59,12 @@ func (evm *EVM) CreateContractCode(callerAddr crypto.CommonAddress, chainId comm
 	}
 
 	if err != nil && err != ErrCodeStoreOutOfGas {
-		evm.State.dt.Discard()
+		//evm.State.dt.Discard()
 		if err != errExecutionReverted {
 			contract.UseGas(contract.Gas)
 		}
 	} else {
-		evm.State.dt.Commit()
+		//evm.State.dt.Commit()
 	}
 
 	fmt.Println("contract address: ", contractAddr.Hex())
@@ -88,12 +88,12 @@ func (evm *EVM) CallContractCode(callerAddr, contractAddr crypto.CommonAddress, 
 
 	ret, err = run(evm, contract, input, false)
 	if err != nil {
-		evm.State.dt.Discard()
+		//evm.State.dt.Discard()
 		if err != errExecutionReverted {
 			contract.UseGas(contract.Gas)
 		}
 	} else {
-		evm.State.dt.Commit()
+		//evm.State.dt.Commit()
 	}
 
 	return ret, contract.Gas, err
@@ -110,12 +110,12 @@ func (evm *EVM) StaticCall(callerAddr, contractAddr crypto.CommonAddress, chainI
 
 	ret, err = run(evm, contract, input, true)
 	if err != nil {
-		evm.State.dt.Discard()
+		//evm.State.dt.Discard()
 		if err != errExecutionReverted {
 			contract.UseGas(contract.Gas)
 		}
 	} else {
-		evm.State.dt.Commit()
+		//evm.State.dt.Commit()
 	}
 
 	return ret, contract.Gas, err
@@ -136,12 +136,12 @@ func (evm *EVM) DelegateCall(con *Contract, contractAddr crypto.CommonAddress, i
 
 	ret, err = run(evm, contract, input, false)
 	if err != nil {
-		evm.State.dt.Discard()
+		//evm.State.dt.Discard()
 		if err != errExecutionReverted {
 			contract.UseGas(contract.Gas)
 		}
 	} else {
-		evm.State.dt.Commit()
+		//evm.State.dt.Commit()
 	}
 
 	return ret, con.Gas, err

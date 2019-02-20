@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/drep-project/drep-chain/common"
 	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
@@ -34,7 +35,9 @@ type DrepApp struct {
 // NewApp create a new app
 func NewApp() *DrepApp {
 	return &DrepApp{
-		Context: &ExecuteContext{},
+		Context: &ExecuteContext{
+			Quit:make(chan struct{}),
+		},
 		App:     cli.NewApp(),
 	}
 }
@@ -100,7 +103,14 @@ func GetServiceTag(field reflect.StructField) string {
 func (mApp DrepApp) Run() error {
 	mApp.Before = mApp.before
 	mApp.Flags = append(mApp.Flags, ConfigFileFlag)
-	mApp.Flags = append(mApp.Flags, mApp.Context.GetFlags()...)
+
+	allCommands, allFlags := mApp.Context.AggerateFlags()
+	for _, command := range  allCommands {
+		command.Flags = append(command.Flags, allFlags...)
+		command.Action = mApp.action
+	}
+	mApp.Flags = append(mApp.Flags, allFlags...)
+
 	mApp.Action = mApp.action
 	if err := mApp.App.Run(os.Args); err != nil {
 		return err
@@ -111,6 +121,9 @@ func (mApp DrepApp) Run() error {
 // action used to init and run each services
 func (mApp DrepApp) action(ctx *cli.Context) error {
 	defer func() {
+		if err:=recover();err!=nil{
+			fmt.Println(err)
+		}
 		length := len(mApp.Context.Services)
 		for i:= length; i >0; i-- {
 			err := mApp.Context.Services[i - 1].Stop(mApp.Context)

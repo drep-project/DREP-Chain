@@ -56,7 +56,7 @@ type Leader struct {
     quitRound chan struct{}
 }
 
-func NewLeader(pubKey *secp256k1.PublicKey, quitRound chan struct{}, p2pServer *p2pTypes.Server) *Leader {
+func NewLeader(pubKey *secp256k1.PublicKey, quitRound chan struct{}, p2pServer *p2pService.P2pService) *Leader {
     l := &Leader{}
     l.waitTime = 10 * time.Second
     l.pubkey = pubKey

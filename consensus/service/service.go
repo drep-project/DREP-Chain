@@ -1,7 +1,6 @@
 package service
 
 import (
-	"BlockChainTest/database"
 	"encoding/json"
 	"github.com/AsynkronIT/protoactor-go/actor"
 	accountService "github.com/drep-project/drep-chain/accounts/service"
@@ -12,6 +11,7 @@ import (
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/secp256k1/schnorr"
 	"github.com/drep-project/drep-chain/crypto/sha3"
+	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/log"
 	p2pService "github.com/drep-project/drep-chain/network/service"
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
@@ -27,9 +27,10 @@ const (
 )
 
 type ConsensusService struct {
-	p2pServer *p2pService.P2pService  `service:"p2p"`
-	chainService *chainService.ChainService	`service:"chain"`
-	walletService *accountService.AccountService `service:"accounts"`
+	P2pServer     *p2pService.P2pService         `service:"p2p"`
+	ChainService  *chainService.ChainService     `service:"chain"`
+	DatabaseService  *database.DatabaseService     `service:"database"`
+	WalletService *accountService.AccountService `service:"accounts"`
 
 	apis   []app.API
 
@@ -39,8 +40,6 @@ type ConsensusService struct {
 	consensusConfig *consensusTypes.ConsensusConfig
 
 	pid *actor.PID
-
-	currentHeight int64
 	curMiner int
 	leader *Leader
 	member *Member
@@ -58,8 +57,8 @@ func (consensusService *ConsensusService) Api() []app.API {
 	return consensusService.apis
 }
 
-func (consensusService *ConsensusService) Flags() []cli.Flag {
-	return []cli.Flag{}
+func (consensusService *ConsensusService) CommandFlags() ([]cli.Command, []cli.Flag) {
+	return nil, []cli.Flag{}
 }
 
 func (consensusService *ConsensusService)  P2pMessages() map[int]interface{} {
@@ -73,17 +72,18 @@ func (consensusService *ConsensusService)  P2pMessages() map[int]interface{} {
 }
 
 func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContext) error {
-	phase := executeContext.GetConfig(consensusService.Name())
 	consensusService.consensusConfig = &consensusTypes.ConsensusConfig{}
-	err := json.Unmarshal(phase, consensusService.consensusConfig )
+	err := executeContext.UnmashalConfig(consensusService.Name(), consensusService.consensusConfig )
 	if err != nil {
 		return err
 	}
 
-	consensusService.currentHeight = 123 // TODO read from database
 	consensusService.pubkey = consensusService.consensusConfig.MyPk
 	consensusService.producers = consensusService.consensusConfig.Producers
-	accountNode, _  := consensusService.walletService.Wallet.GetAccountByPubkey(consensusService.pubkey)
+	accountNode, err  := consensusService.WalletService.Wallet.GetAccountByPubkey(consensusService.pubkey)
+	if err != nil {
+		return err
+	}
 	consensusService.privkey = accountNode.PrivateKey
 
 	props := actor.FromProducer(func() actor.Actor {
@@ -94,14 +94,14 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 		panic(err)
 	}
 
-	router :=  consensusService.p2pServer.Router
+	router :=  consensusService.P2pServer.Router
 	chainP2pMessage := consensusService.P2pMessages()
 	for msgType, _ := range chainP2pMessage {
 		router.RegisterMsgHandler(msgType,pid)
 	}
 	consensusService.pid = pid
-	consensusService.leader = NewLeader(consensusService.pubkey, consensusService.quitRound, consensusService.p2pServer)
-	consensusService.member = NewMember(consensusService.privkey, consensusService.quitRound , consensusService.p2pServer)
+	consensusService.leader = NewLeader(consensusService.pubkey, consensusService.quitRound, consensusService.P2pServer)
+	consensusService.member = NewMember(consensusService.privkey, consensusService.quitRound , consensusService.P2pServer)
 
 	consensusService.apis = []app.API{
 		app.API{
@@ -120,58 +120,57 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 	if !consensusService.isProduce() {
 		return nil
 	}
-	minMember := len(consensusService.consensusConfig.Producers)
-	for {
-		log.Trace("node start", "Height", consensusService.currentHeight)
-		var block *chainTypes.Block
-		var err error
-		if consensusService.consensusConfig.ConsensusMode == "solo" {
-			block, err = consensusService.runAsSolo()
-		} else {
-			//TODO a more elegant implementation is needed: select live peer ,and Determine who is the leader
-			participants := consensusService.CollectLiveMember()
-			if len(participants) > 1 {
-				isM, isL := consensusService.MoveToNextMiner(participants)
-				if isL {
-					consensusService.leader.UpdateStatus(participants, consensusService.curMiner, minMember, consensusService.currentHeight)
-					block, err = consensusService.runAsLeader()
-				}else if isM {
-					consensusService.member.UpdateStatus(participants, consensusService.curMiner, minMember, consensusService.currentHeight)
-					block, err = consensusService.runAsMember()
-				}else{
-					// backup node， return directly
-					log.Debug("backup node")
-					return nil
-				}
-			}else{
-				err = errors.New("bft node not ready")
-				time.Sleep(time.Second*10)
-			}
-		}
-		if err != nil {
-			log.Debug("Produce Block Fail", "reason", err.Error())
-		}else{
-			consensusService.chainService.ProcessBlock(block)
-			consensusService.p2pServer.Broadcast(block)
-			log.Info("Block Produced  ", "Height", database.GetMaxHeight())
-		}
 
-		time.Sleep(500*time.Millisecond)
-		nextBlockTime, waitSpan :=  consensusService.GetWaitTime()
-		log.Debug("Sleep", "nextBlockTime", nextBlockTime, "waitSpan", waitSpan)
-		time.Sleep(waitSpan)
-		consensusService.OnNewHeightUpdate(database.GetMaxHeight())
-	}
+	go func() {
+		minMember := len(consensusService.consensusConfig.Producers)
+		for {
+			log.Trace("node start", "Height", consensusService.ChainService.CurrentHeight)
+			var block *chainTypes.Block
+			var err error
+			if consensusService.consensusConfig.ConsensusMode == "solo" {
+				block, err = consensusService.runAsSolo()
+			} else {
+				//TODO a more elegant implementation is needed: select live peer ,and Determine who is the leader
+				participants := consensusService.CollectLiveMember()
+				if len(participants) > 1 {
+					isM, isL := consensusService.MoveToNextMiner(participants)
+					if isL {
+						consensusService.leader.UpdateStatus(participants, consensusService.curMiner, minMember, consensusService.ChainService.CurrentHeight)
+						block, err = consensusService.runAsLeader()
+					}else if isM {
+						consensusService.member.UpdateStatus(participants, consensusService.curMiner, minMember, consensusService.ChainService.CurrentHeight)
+						block, err = consensusService.runAsMember()
+					}else{
+						// backup node， return directly
+						log.Debug("backup node")
+						break
+					}
+				}else{
+					err = errors.New("bft node not ready")
+					time.Sleep(time.Second*10)
+				}
+			}
+			if err != nil {
+				log.Debug("Produce Block Fail", "reason", err.Error())
+			}else{
+				consensusService.ChainService.ProcessBlock(block)
+				consensusService.P2pServer.Broadcast(block)
+				log.Info("Block Produced  ", "Height", consensusService.DatabaseService.GetMaxHeight())
+			}
+
+			time.Sleep(500*time.Millisecond)
+			nextBlockTime, waitSpan :=  consensusService.GetWaitTime()
+			log.Debug("Sleep", "nextBlockTime", nextBlockTime, "waitSpan", waitSpan)
+			time.Sleep(waitSpan)
+			consensusService.OnNewHeightUpdate(consensusService.DatabaseService.GetMaxHeight())
+		}
+	}()
+
 	return nil
 }
 
 func (consensusService *ConsensusService) Stop(executeContext *app.ExecuteContext) error {
 	return nil
-}
-
-// setLogConfig creates an log configuration from the set command line flags,
-func (consensusService *ConsensusService) setLogConfig(ctx *cli.Context, homeDir string) {
-
 }
 
 func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, error) {
@@ -220,7 +219,7 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 	for _, pub := range  consensusService.leader.members {
 		membersPubkey = append(membersPubkey, pub.PubKey)
 	}
-	block, err := consensusService.chainService.GenerateBlock(membersPubkey)
+	block, err := consensusService.ChainService.GenerateBlock(consensusService.leader.pubkey, membersPubkey)
 	if err != nil {
 		log.Error("generate block fail", "msg", err )
 	}
@@ -262,7 +261,7 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 	for _, produce := range  consensusService.producers {
 		membersPubkey = append(membersPubkey, produce.Public)
 	}
-	block, _ := consensusService.chainService.GenerateBlock(membersPubkey)
+	block, _ := consensusService.ChainService.GenerateBlock(consensusService.pubkey, membersPubkey)
 	msg, err := json.Marshal(block)
 	if err != nil {
 		return block, nil
@@ -293,7 +292,7 @@ func (consensusService *ConsensusService) CollectLiveMember()[]*p2pTypes.Peer{
 		if consensusService.pubkey.IsEqual(produce.Public) {
 			liveMember = append(liveMember, nil)  // self
 		}else{
-			peer := consensusService.p2pServer.SelectPeer(produce.Public.Serialize(), produce.Ip)
+			peer := consensusService.P2pServer.SelectPeer(produce.Public.Serialize(), produce.Ip)
 			if peer != nil {
 				liveMember = append(liveMember, peer)
 			}
@@ -303,7 +302,7 @@ func (consensusService *ConsensusService) CollectLiveMember()[]*p2pTypes.Peer{
 }
 
 func (consensusService *ConsensusService) MoveToNextMiner(liveMembers []*p2pTypes.Peer) (bool, bool) {
-	consensusService.curMiner = int(consensusService.currentHeight%int64(len(liveMembers)))
+	consensusService.curMiner = int(consensusService.ChainService.CurrentHeight%int64(len(liveMembers)))
 
 	if liveMembers[consensusService.curMiner] == nil {
 		return false, true
@@ -313,8 +312,8 @@ func (consensusService *ConsensusService) MoveToNextMiner(liveMembers []*p2pType
 }
 
 func (consensusService *ConsensusService) OnNewHeightUpdate(height int64) {
-	if height > consensusService.currentHeight {
-		consensusService.currentHeight = height
+	if height > consensusService.ChainService.CurrentHeight {
+		consensusService.ChainService.CurrentHeight = height
 		log.Info("update new height","Height", height)
 	}
 }
@@ -327,7 +326,7 @@ func (consensusService *ConsensusService) GetWaitTime() (time.Time,time.Duration
 	// max_delay_time +(min_block_interval)*windows = expected_block_interval*windows
 	// 6h + 5s*windows = 10s*windows
 	// windows = 4320
-	lastBlockTime := time.Unix(database.GetHighestBlock().Header.Timestamp, 0)
+	lastBlockTime := time.Unix(consensusService.DatabaseService.GetHighestBlock().Header.Timestamp, 0)
 	targetTime := lastBlockTime.Add(blockInterval)
 	now := time.Now()
 	if targetTime.Before(now) {
@@ -337,9 +336,9 @@ func (consensusService *ConsensusService) GetWaitTime() (time.Time,time.Duration
 	}
 	/*
      window := int64(4320)
-     endBlock := database.GetHighestBlock().Header
+     endBlock := consensusService.DatabaseService.GetHighestBlock().Header
      if endBlock.Height < window {
-		 lastBlockTime := time.Unix(database.GetHighestBlock().Header.Timestamp, 0)
+		 lastBlockTime := time.Unix(consensusService.DatabaseService.GetHighestBlock().Header.Timestamp, 0)
 		 span := time.Now().Sub(lastBlockTime)
 		 if span > blockInterval {
 			 span = 0
@@ -353,7 +352,7 @@ func (consensusService *ConsensusService) GetWaitTime() (time.Time,time.Duration
 		 if startHeight <0 {
 			 startHeight = int64(0)
 		 }
-		 startBlock :=database.GetBlock(startHeight).Header
+		 startBlock :=consensusService.DatabaseService.GetBlock(startHeight).Header
 
 		 xx := window * 10 -(time.Unix(startBlock.Timestamp,0).Sub(time.Unix(endBlock.Timestamp,0))).Seconds()
 

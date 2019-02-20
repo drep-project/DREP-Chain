@@ -56,11 +56,13 @@ type outMessage struct {
 func (server *P2pService) Name() string {
 	return "p2p"
 }
+
 func (server *P2pService) Api() []app.API {
 	return []app.API{}
 }
-func (server *P2pService) Flags() []cli.Flag {
-	return []cli.Flag{}
+
+func (server *P2pService) CommandFlags() ([]cli.Command, []cli.Flag) {
+	return nil, []cli.Flag{}
 }
 
 func (server *P2pService) P2pMessages() map[int]interface{} {
@@ -83,11 +85,11 @@ func (server *P2pService) Init(executeContext *app.ExecuteContext) error {
 	}
 	// config
 	server.Config = &p2pTypes.P2pConfig{}
-	phase := executeContext.GetConfig( server.Name())
-	err = json.Unmarshal(phase, server.Config)
+	err = executeContext.UnmashalConfig(server.Name(), server.Config)
 	if err != nil {
 		return err
 	}
+
 
 	//construct service
 	server.prvKey = server.Config.PrvKey

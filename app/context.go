@@ -55,10 +55,10 @@ type API struct {
 type Service interface {
 	Name() string      // service  name must be unique
 	Api() []API        // Interfaces required for services
-	Flags() []cli.Flag // flags required for services
+	CommandFlags() ([]cli.Command, []cli.Flag) // flags required for services
 	P2pMessages() map[int]interface{}
 
-	Receive(context actor.Context) error
+	Receive(context actor.Context)
 	Init(executeContext *ExecuteContext) error
 	Start(executeContext *ExecuteContext) error
 	Stop(executeContext *ExecuteContext) error
@@ -76,6 +76,7 @@ type ExecuteContext struct {
 
 	GitCommit string
 	Usage     string
+	Quit chan struct{}
 }
 
 // AddService add a service to context, The application then initializes and starts the service.
@@ -107,12 +108,19 @@ func (econtext *ExecuteContext) GetConfig(phaseName string) json.RawMessage {
 }
 
 // GetFlags aggregate command configuration items required for each service
-func (econtext *ExecuteContext) GetFlags() []cli.Flag {
-	flags := []cli.Flag{}
+func (econtext *ExecuteContext) AggerateFlags() ([]cli.Command, []cli.Flag) {
+	allFlags := []cli.Flag{}
+	allCommands := []cli.Command{}
 	for _, service := range econtext.Services {
-		flags = append(flags, service.Flags()...)
+		commands, defaultFlags :=  service.CommandFlags()
+		if commands != nil {
+			allCommands = append(allCommands, commands...)
+		}
+		if defaultFlags != nil {
+			allFlags = append(allFlags, defaultFlags...)
+		}
 	}
-	return flags
+	return allCommands, allFlags
 }
 
 //	GetApis aggregate interface functions for each service to provide for use by RPC services
@@ -146,4 +154,17 @@ func (econtext *ExecuteContext) RequireService(name string) Service {
 		}
 	}
 	panic(errors.New(fmt.Sprintf("%s service not found", name)))
+}
+
+func (econtext *ExecuteContext) UnmashalConfig(serviceName string, config interface{}) error {
+	service := econtext.GetService(serviceName)
+	phase := econtext.GetConfig(service.Name())
+	if phase == nil {
+		return nil
+	}
+	err := json.Unmarshal(phase, config)
+	if err != nil {
+		return err
+	}
+	return nil
 }

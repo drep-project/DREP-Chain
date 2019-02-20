@@ -2,7 +2,6 @@ package service
 
 import (
 	"BlockChainTest/util/flags"
-	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -13,6 +12,7 @@ import (
 
 	"gopkg.in/urfave/cli.v1"
 
+	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/log"
 	rpcComponent "github.com/drep-project/drep-chain/rpc/component"
@@ -54,8 +54,8 @@ func (rpcService *RpcService) Name() string {
 func (rpcService *RpcService) Api() []app.API {
 	return nil
 }
-func (rpcService *RpcService) Flags() []cli.Flag {
-	return []cli.Flag{
+func (rpcService *RpcService) CommandFlags() ([]cli.Command, []cli.Flag) {
+	return nil, []cli.Flag{
 		HTTPEnabledFlag, HTTPListenAddrFlag, HTTPPortFlag, HTTPCORSDomainFlag,
 		HTTPVirtualHostsFlag, HTTPApiFlag, IPCDisabledFlag, IPCPathFlag, WSEnabledFlag,
 		WSListenAddrFlag, WSPortFlag, WSApiFlag, WSAllowedOriginsFlag, RESTEnabledFlag,
@@ -68,9 +68,8 @@ func (rpcService *RpcService) P2pMessages() map[int]interface{} {
 }
 
 func (rpcService *RpcService) Init(executeContext *app.ExecuteContext) error {
-	phase := executeContext.GetConfig(rpcService.Name())
 	rpcService.RpcConfig = &rpcTypes.RpcConfig{}
-	err := json.Unmarshal(phase, rpcService.RpcConfig)
+	err := executeContext.UnmashalConfig(rpcService.Name(), rpcService.RpcConfig)
 	if err != nil {
 		return err
 	}
@@ -125,6 +124,8 @@ func (rpcService *RpcService) Stop(executeContext *app.ExecuteContext) error {
 	rpcService.RpcAPIs = nil
 	return nil
 }
+
+func (rpcService *RpcService) Receive(context actor.Context) { }
 
 // StartHTTP initializes and starts the HTTP RPC endpoint.
 func (rpcService *RpcService) StartRest(endpoint string, restApi rpcTypes.RestDescription) error {

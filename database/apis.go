@@ -14,7 +14,7 @@ import (
 )
 
 func (database *DatabaseService) GetStateRoot() []byte {
-    return database.GetStateRoot()
+    return db.getStateRoot()
 }
 
 func (database *DatabaseService) GetBlock(height int64) *chainType.Block {
@@ -202,7 +202,7 @@ func (database *DatabaseService) GetCodeHash(addr crypto.CommonAddress, chainId 
     return storage.CodeHash
 }
 
-func (database *DatabaseService) GetLogs(txHash []byte, chainId common.ChainIdType) []*Log {
+func (database *DatabaseService) GetLogs(txHash []byte, chainId common.ChainIdType) []*chainType.Log {
     key := sha3.Hash256([]byte("logs_" + hex.EncodeToString(txHash) + chainId.Hex()))
     value, err := db.get(key, false)
     if err != nil {
@@ -239,4 +239,20 @@ func (database *DatabaseService) Load(x *big.Int) []byte {
 
 func (database *DatabaseService) Store(x, y *big.Int) error {
     return db.put(x.Bytes(), y.Bytes(), true)
+}
+
+func (database *DatabaseService) BeginTransaction() {
+    db.BeginTransaction()
+}
+
+func (database *DatabaseService) EndTransaction() {
+    db.EndTransaction()
+}
+
+func (database *DatabaseService) Commit() {
+    db.Commit()
+}
+
+func  (database *DatabaseService) Discard() {
+    db.Discard()
 }

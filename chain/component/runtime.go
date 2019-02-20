@@ -53,11 +53,10 @@ func Tx2Message(tx *chainTypes.Transaction) *Message {
 	}
 	return &Message{
 		From:      crypto.PubKey2Address(tx.Data.PubKey),
-		To:        crypto.Hex2Address(tx.Data.To),
+		To:        tx.Data.To,
 		ChainId:   tx.Data.ChainId,
-		DestChain: tx.Data.DestChain,
 		Gas:       tx.Data.GasLimit.Uint64(),
-		Value:     &tx.Data.Amount,
+		Value:     tx.Data.Amount,
 		Nonce:     uint64(tx.Data.Nonce),
 		Input:     tx.Data.Data[1:],
 		ReadOnly:  readOnly,

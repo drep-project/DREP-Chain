@@ -1,9 +1,9 @@
 package types
 
 const (
-	MsgTypeSetUp  = 8
-	MsgTypeCommitment = 9
-	MsgTypeResponse = 10
-	MsgTypeChallenge = 11
-	MsgTypeFail = 12
+	MsgTypeSetUp  = 9
+	MsgTypeCommitment = 10
+	MsgTypeResponse = 11
+	MsgTypeChallenge = 12
+	MsgTypeFail = 13
 )

@@ -1,12 +1,16 @@
 package service
 
 import (
+	"errors"
 	"fmt"
+	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/drep-chain/app"
+	chainService "github.com/drep-project/drep-chain/chain/service"
+	rpcComponet "github.com/drep-project/drep-chain/rpc/component"
 	"github.com/drep-project/drep-chain/drepclient/component/console"
 	cliTypes "github.com/drep-project/drep-chain/drepclient/types"
 	"github.com/drep-project/drep-chain/log"
-	rpcComponent "github.com/drep-project/drep-chain/rpc/component"
+	rpcService "github.com/drep-project/drep-chain/rpc/service"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -21,6 +25,8 @@ var (
 type CliService struct {
 	config *cliTypes.Config
 	Log *log.LogService `service:"log"`
+	ChainService *chainService.ChainService `service:"chain"`
+	RpcService *rpcService.RpcService `service:"rpc"`
 }
 
 // Name name
@@ -34,8 +40,32 @@ func (cliService *CliService) Api() []app.API {
 }
 
 // Flags flags  enable load js and execute before run
-func (cliService *CliService) Flags() []cli.Flag {
-	return []cli.Flag{cliTypes.JSpathFlag, cliTypes.ExecFlag, cliTypes.PreloadJSFlag}
+func (cliService *CliService) CommandFlags() ([]cli.Command, []cli.Flag) {
+	defaultFlags := []cli.Flag{cliTypes.JSpathFlag, cliTypes.ExecFlag, cliTypes.PreloadJSFlag}
+	consoleCommand := cli.Command{
+		Name:     "console",
+		Usage:    "Start an interactive JavaScript environment",
+		Flags:    []cli.Flag{},
+		Category: "CONSOLE COMMANDS",
+		Description: `
+The Drep console is an interactive shell for the JavaScript runtime environment
+which exposes a node admin interface as well as the Ðapp JavaScript API.
+See https://github.com/ethereum/go-ethereum/wiki/JavaScript-Console.`,
+	}
+
+	attachCommand := cli.Command{
+		Name:      "attach",
+		Usage:     "Start an interactive JavaScript environment (connect to node)",
+		ArgsUsage: "[endpoint]",
+		Flags:     []cli.Flag{},
+		Category:  "CONSOLE COMMANDS",
+		Description: `
+The Drep console is an interactive shell for the JavaScript runtime environment
+which exposes a node admin interface as well as the Ðapp JavaScript API.
+See https://github.com/ethereum/go-ethereum/wiki/JavaScript-Console.
+This command allows to open a console on a running drep node.`,
+	}
+	return []cli.Command{consoleCommand, attachCommand}, defaultFlags
 }
 
 func (cliService *CliService) P2pMessages() map[int]interface{} {
@@ -44,11 +74,67 @@ func (cliService *CliService) P2pMessages() map[int]interface{} {
 
 // Init  set console config
 func (cliService *CliService) Init(executeContext *app.ExecuteContext) error {
+	return nil
+}
+
+func (cliService *CliService) Start(executeContext *app.ExecuteContext) error {
+	if executeContext.CliContext.IsSet("console") {
+		return cliService.localConsole(executeContext)
+	} else if executeContext.CliContext.IsSet("attach") {
+		return cliService.remoteConsole(executeContext)
+	} else{
+		return cliService.drep(executeContext)
+	}
+}
+
+func (cliService *CliService) Stop(executeContext *app.ExecuteContext) error {
+	console.Stdin.Close()
+	return nil
+}
+
+func (cliService *CliService) Receive(context actor.Context) { }
+
+func (cliService *CliService) localConsole(executeContext *app.ExecuteContext) error {
+	if !cliService.RpcService.RpcConfig.IPCEnabled {
+		return errors.New("ipc must be enable in console mode")
+	}
+	// Attach to the newly started node and start the JavaScript console
+	client, err := cliService.ChainService.Attach()
+	if err != nil {
+		return errors.New(fmt.Sprintf("Failed to attach to the inproc drep: %v", err))
+	}
+	config := console.Config{
+		HomeDir: executeContext.CommonConfig.HomeDir,
+		DocRoot: executeContext.CliContext.GlobalString(cliTypes.JSpathFlag.Name),
+		Client:  client,
+		Preload: cliTypes.MakeConsolePreloads(executeContext.CliContext),
+	}
+
+	console, err := console.New(config)
+	if err != nil {
+		return errors.New(fmt.Sprintf("Failed to start the JavaScript console: %v", err))
+	}
+	defer console.Stop(false)
+
+	// If only a short execution was requested, evaluate and return
+	if script := executeContext.CliContext.GlobalString(cliTypes.ExecFlag.Name); script != "" {
+		console.Evaluate(script)
+		return nil
+	}
+	// Otherwise print the welcome screen and enter interactive mode
+	console.Welcome()
+	console.Interactive()
+	return nil
+}
+
+// remoteConsole will connect to a remote drep instance, attaching a JavaScript
+// console to it.
+func (cliService *CliService) remoteConsole(executeContext *app.ExecuteContext) error {
 	endpoint := executeContext.CliContext.Args().First()
 	if len(endpoint) == 0 {
 		return fmt.Errorf("You have to specify an address")
 	}
-	client, err := rpcComponent.Dial(endpoint)
+	client, err := rpcComponet.Dial(endpoint)
 	if err != nil {
 		return fmt.Errorf("Unable to attach to remote drep: %v", err)
 	}
@@ -61,21 +147,7 @@ func (cliService *CliService) Init(executeContext *app.ExecuteContext) error {
 		Client:  client,
 		Preload: cliTypes.MakeConsolePreloads(executeContext.CliContext),
 	}
-	return nil
-}
 
-func (cliService *CliService) Start(executeContext *app.ExecuteContext) error {
-	return cliService.remoteConsole(executeContext)
-}
-
-func (cliService *CliService) Stop(executeContext *app.ExecuteContext) error {
-	console.Stdin.Close()
-	return nil
-}
-
-// remoteConsole will connect to a remote drep instance, attaching a JavaScript
-// console to it.
-func (cliService *CliService) remoteConsole(executeContext *app.ExecuteContext) error {
 	console, err := console.New(cliService.config.Config)
 	if err != nil {
 		return fmt.Errorf("Failed to start the JavaScript console: %v", err)
@@ -91,5 +163,13 @@ func (cliService *CliService) remoteConsole(executeContext *app.ExecuteContext) 
 	console.Welcome()
 	console.Interactive()
 
+	return nil
+}
+
+// drep is the main entry point into the system if no special subcommand is ran.
+// It creates a default node based on the command line arguments and runs it in
+// blocking mode, waiting for it to be shut down.
+func (cliService *CliService) drep(executeContext *app.ExecuteContext) error {
+	<- executeContext.Quit
 	return nil
 }

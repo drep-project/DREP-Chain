@@ -49,7 +49,7 @@ type Member struct {
     quitRound chan struct{}
 }
 
-func NewMember(prvKey *secp256k1.PrivateKey, quitRound chan struct{}, p2pServer *network.Server) *Member {
+func NewMember(prvKey *secp256k1.PrivateKey, quitRound chan struct{}, p2pServer *p2pService.P2pService) *Member {
     m := &Member{}
 
     m.prvKey = prvKey

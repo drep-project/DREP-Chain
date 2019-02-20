@@ -17,8 +17,8 @@ type Database struct {
     root         []byte
 }
 
-func NewDatabase() *Database {
-    ldb, err := leveldb.OpenFile("new_db", nil)
+func NewDatabase(dbPath string) *Database {
+    ldb, err := leveldb.OpenFile(dbPath, nil)
     if err != nil {
         return nil
     }

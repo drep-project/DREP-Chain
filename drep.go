@@ -6,21 +6,26 @@ import (
 	"reflect"
 
 	accountService "github.com/drep-project/drep-chain/accounts/service"
-	chainService "github.com/drep-project/drep-chain/chain/service"
 	"github.com/drep-project/drep-chain/app"
-	cliService "github.com/drep-project/drep-chain/drepclient/service"
-	rpcService "github.com/drep-project/drep-chain/rpc/service"
+	chainService "github.com/drep-project/drep-chain/chain/service"
+	consensusService "github.com/drep-project/drep-chain/consensus/service"
+	"github.com/drep-project/drep-chain/database"
 	p2pService "github.com/drep-project/drep-chain/network/service"
+	rpcService "github.com/drep-project/drep-chain/rpc/service"
+	cliService "github.com/drep-project/drep-chain/drepclient/service"
 )
 
 func main() {
 	drepApp := app.NewApp()
 	err := drepApp.AddServiceType(
+		reflect.TypeOf(database.DatabaseService{}),
+		reflect.TypeOf(rpcService.RpcService{}),
 		reflect.TypeOf(log.LogService{}),
 		reflect.TypeOf(p2pService.P2pService{}),
+
 		reflect.TypeOf(chainService.ChainService{}),
 		reflect.TypeOf(accountService.AccountService{}),
-		reflect.TypeOf(rpcService.RpcService{}),
+		reflect.TypeOf(consensusService.ConsensusService{}),
 		reflect.TypeOf(cliService.CliService{}),
 	)
 	if err != nil {

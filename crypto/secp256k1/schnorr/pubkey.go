@@ -8,7 +8,7 @@ package schnorr
 import (
 	"fmt"
 
-	"BlockChainTest/core/crypto/secp256k1"
+	"github.com/drep-project/drep-chain/crypto/secp256k1"
 )
 
 // These constants define the lengths of serialized public keys.

@@ -1,25 +1,27 @@
 package service
 
 import (
+	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"time"
 )
 
 func (chainService *ChainService) fetchBlocks() {
 	go func() {
 		for{
-			chainService.p2pServer.Broadcast(&p2pTypes.ReqPeerState{
-				//Height:database.GetMaxHeight(),
+			chainService.P2pServer.Broadcast(&p2pTypes.ReqPeerState{
+				Height:chainService.DatabaseService.GetMaxHeight(),
 			})
 			time.Sleep(time.Second*5)
-			peer := chainService.p2pServer.GetBestPeer()
+			peer := chainService.P2pServer.GetBestPeer()
 			if peer == nil || peer.State == nil ||peer.State.Height<1{
 				continue
 			}
-			//if peer.State.Height > database.GetMaxHeight() {
-			//	req := &bean.BlockReq{Height:database.GetMaxHeight(), Pk: (*secp256k1.PublicKey)(&n.prvKey.PublicKey)}
-			//	n.p2pServer.Send(peer,req)
-			//}
+			if peer.State.Height > chainService.DatabaseService.GetMaxHeight() {
+				req := &chainTypes.BlockReq{Height:chainService.DatabaseService.GetMaxHeight(), Pk: (*secp256k1.PublicKey)(&chainService.prvKey.PublicKey)}
+				chainService.P2pServer.Send(peer,req)
+			}
 		}
 	}()
 }
@@ -31,7 +33,7 @@ func (chainService *ChainService) handlePeerState(peer *p2pTypes.Peer, peerState
 
 func (chainService *ChainService) handleReqPeerState(peer *p2pTypes.Peer, peerState *p2pTypes.ReqPeerState) {
 	peer.State.Height = peerState.Height
-	chainService.p2pServer.SendAsync(peer, &p2pTypes.PeerState{
-	//	Height:database.GetMaxHeight(),
+	chainService.P2pServer.SendAsync(peer, &p2pTypes.PeerState{
+		Height : chainService.DatabaseService.GetMaxHeight(),
 	})
 }

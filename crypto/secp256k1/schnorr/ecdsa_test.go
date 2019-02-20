@@ -5,13 +5,13 @@
 package schnorr
 
 import (
-	"BlockChainTest/core/crypto/sha3"
+	"github.com/drep-project/drep-chain/crypto/sha3"
 	"bytes"
 	"encoding/hex"
 	"math/rand"
 	"testing"
 
-	"BlockChainTest/core/crypto/secp256k1"
+	"github.com/drep-project/drep-chain/crypto/secp256k1"
 )
 
 type SchorrSigningTestVectorHex struct {

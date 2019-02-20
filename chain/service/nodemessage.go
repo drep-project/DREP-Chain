@@ -3,6 +3,7 @@ package service
 import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/log"
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
 )
 
@@ -24,38 +25,35 @@ func (chainService *ChainService) Receive(context actor.Context) {
 			}()
 
 		case *chainTypes.Transaction:
-			/*
 			transaction := msg
 			id, _ := transaction.TxId()
-			if store.ForwardedTransaction(id) {
+			if ForwardedTransaction(id) {
 				log.Debug("Forwarded this transaction ", "transaction", *transaction)
 				return
 			}
 			// TODO backup nodes should not add
-			if store.AddTransaction(transaction) {
+			if chainService.transactionPool.AddTransaction(transaction) {
 				log.Debug("Succeed to add this transaction ", "transaction", *transaction)
-				chainService.p2pServer.Broadcast(transaction)
-				store.ForwardTransaction(id)
+				chainService.P2pServer.Broadcast(transaction)
+				ForwardTransaction(id)
 			} else {
 				log.Debug("Fail to add this transaction ", "transaction", *transaction)
-			}*/
+			}
 		case *chainTypes.Block:
-			/*
 			block := msg
-			if block.Header.Height <= database.GetMaxHeight() {
+			if block.Header.Height <= chainService.DatabaseService.GetMaxHeight() {
 				return
 			}
 			id, _ := block.BlockHashHex()
-			if store.ForwardedBlock(id) { // if forwarded, then processed. later this will be read from db
+			if ForwardedBlock(id) { // if forwarded, then processed. later this will be read from db
 				log.Debug("Forwarded this block ", "block" ,*block)
 				return
 			}
-			store.ForwardBlock(id)
-			_, err := chainService.processBlock(block)
+			ForwardBlock(id)
+			_, err := chainService.ProcessBlock(block)
 			if err != nil {
-				//chainService.consensusEngine.OnNewHeightUpdate(block.Header.Height)
+				chainService.CurrentHeight = block.Header.Height
 			}
-			*/
 		case *p2pTypes.PeerState:
 			chainService.handlePeerState(routeMsg.Peer, msg)
 		case *p2pTypes.ReqPeerState:

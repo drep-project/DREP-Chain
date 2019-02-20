@@ -41,9 +41,7 @@ func Debug(msg string, ctx ...interface{}) {
 
 // Info is a convenient alias for Root().Info
 func Info(msg string, ctx ...interface{}) {
-	//fmt.Println("msg: ", msg)
-	//fmt.Println("ctx: ", ctx)
-	//root.write(msg, LvlInfo, ctx, skipLevel)
+	root.write(msg, LvlInfo, ctx, skipLevel)
 }
 
 // Warn is a convenient alias for Root().Warn

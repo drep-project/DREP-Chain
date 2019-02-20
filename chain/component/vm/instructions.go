@@ -735,7 +735,7 @@ func opCreate(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memor
 	interpreter.IntPool.put(value, offset, size)
 
 	if suberr == errExecutionReverted {
-		interpreter.EVM.State.dt.Discard()
+		//interpreter.EVM.State.dt.Discard()
 		return res, nil
 	}
 	return nil, nil
@@ -793,7 +793,7 @@ func opCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 	}
 	if err == nil || err == errExecutionReverted {
 		memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
-		interpreter.EVM.State.dt.Discard()
+		//interpreter.EVM.State.dt.Discard()
 	}
 	contract.Gas += returnGas
 
@@ -824,7 +824,7 @@ func opCallCode(pc *uint64, interpreter *EVMInterpreter, contract *Contract, mem
 	}
 	if err == nil || err == errExecutionReverted {
 		memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
-		interpreter.EVM.State.dt.Discard()
+		//interpreter.EVM.State.dt.Discard()
 	}
 	contract.Gas += returnGas
 
@@ -850,7 +850,7 @@ func opDelegateCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract,
 	}
 	if err == nil || err == errExecutionReverted {
 		memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
-		interpreter.EVM.State.dt.Discard()
+		//interpreter.EVM.State.dt.Discard()
 	}
 	contract.Gas += returnGas
 
@@ -877,7 +877,7 @@ func opStaticCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, m
 	}
 	if err == nil || err == errExecutionReverted {
 		memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
-		interpreter.EVM.State.dt.Discard()
+		//interpreter.EVM.State.dt.Discard()
 	}
 	contract.Gas += returnGas
 
