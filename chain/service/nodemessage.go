@@ -6,7 +6,7 @@ import (
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
 )
 
-func (chain *ChainService) Receive(context actor.Context) {
+func (chainService *ChainService) Receive(context actor.Context) {
 	var msg interface{}
 	msg = context.Message()
 	routeMsg, ok := context.Message().(*p2pTypes.RouteIn)
@@ -15,11 +15,11 @@ func (chain *ChainService) Receive(context actor.Context) {
 	}
 	switch msg := msg.(type) {
 		case *chainTypes.BlockReq:
-			chain.ProcessBlockReq(routeMsg.Peer, msg)
+			chainService.ProcessBlockReq(routeMsg.Peer, msg)
 		case *chainTypes.BlockResp:
 			go func() {
 				for _, block := range msg.Blocks {
-					chain.ProcessBlock(block)
+					chainService.ProcessBlock(block)
 				}
 			}()
 
@@ -34,7 +34,7 @@ func (chain *ChainService) Receive(context actor.Context) {
 			// TODO backup nodes should not add
 			if store.AddTransaction(transaction) {
 				log.Debug("Succeed to add this transaction ", "transaction", *transaction)
-				chain.p2pServer.Broadcast(transaction)
+				chainService.p2pServer.Broadcast(transaction)
 				store.ForwardTransaction(id)
 			} else {
 				log.Debug("Fail to add this transaction ", "transaction", *transaction)
@@ -51,14 +51,14 @@ func (chain *ChainService) Receive(context actor.Context) {
 				return
 			}
 			store.ForwardBlock(id)
-			_, err := chain.processBlock(block)
+			_, err := chainService.processBlock(block)
 			if err != nil {
-				//chain.consensusEngine.OnNewHeightUpdate(block.Header.Height)
+				//chainService.consensusEngine.OnNewHeightUpdate(block.Header.Height)
 			}
 			*/
 		case *p2pTypes.PeerState:
-			chain.handlePeerState(routeMsg.Peer, msg)
+			chainService.handlePeerState(routeMsg.Peer, msg)
 		case *p2pTypes.ReqPeerState:
-			chain.handleReqPeerState(routeMsg.Peer, msg)
+			chainService.handleReqPeerState(routeMsg.Peer, msg)
 		}
 }

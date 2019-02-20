@@ -24,14 +24,14 @@ func (chainService *ChainService) fetchBlocks() {
 	}()
 }
 
-func (n *ChainService) handlePeerState(peer *p2pTypes.Peer, peerState *p2pTypes.PeerState) {
+func (chainService *ChainService) handlePeerState(peer *p2pTypes.Peer, peerState *p2pTypes.PeerState) {
 	//get bestpeers
 	peer.State.Height = peerState.Height
 }
 
-func (n *ChainService) handleReqPeerState(peer *p2pTypes.Peer, peerState *p2pTypes.ReqPeerState) {
+func (chainService *ChainService) handleReqPeerState(peer *p2pTypes.Peer, peerState *p2pTypes.ReqPeerState) {
 	peer.State.Height = peerState.Height
-	n.p2pServer.SendAsync(peer, &p2pTypes.PeerState{
+	chainService.p2pServer.SendAsync(peer, &p2pTypes.PeerState{
 	//	Height:database.GetMaxHeight(),
 	})
 }

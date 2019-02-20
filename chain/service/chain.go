@@ -19,6 +19,9 @@ import (
     "strconv"
     "sync"
     "time"
+    "encoding/hex"
+    "github.com/drep-project/drep-chain/chain/service"
+    "BlockChainTest/chain/types"
 )
 var (
     rootChain common.ChainIdType
@@ -116,7 +119,7 @@ func (chainService *ChainService) sendBlock(block *chainTypes.Block) {
 
 func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (*big.Int, error) {
     chainService.addBlockSync.Lock()
-    chainService.addBlockSync.Unlock()
+    defer chainService.addBlockSync.Unlock()
     log.Trace("Process block leader.", "LeaderPubKey", crypto.PubKey2Address(block.Header.LeaderPubKey).Hex(), " height ", strconv.FormatInt(block.Header.Height,10))
   //  return store.ExecuteTransactions(block)
     return nil,nil
@@ -137,84 +140,63 @@ func (chainService *ChainService) ProcessBlockReq(peer *p2pTypes.Peer, req *chai
 }
 
 func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey, members []*secp256k1.PublicKey) (*chainTypes.Block, error) {
-    //dt := database.BeginTransaction()
-    height := chainService.databaseService.GetMaxHeight() + 1
+    chainService.databaseService.BeginTransaction()
+    height := chainService.databaseService.GetMaxHeight()
+    height++
+
     ts := chainService.transactionPool.PickTransactions(BlockGasLimit)
-    //fmt.Println()
-    //if lastLeader != nil {
-    //    fmt.Println("last leader:   ", accounts.PubKey2Address(lastLeader))
-    //} else {
-    //    fmt.Println("last leader:   ")
-    //}
-    //fmt.Println("last minors:   ", lastMinors)
-    //fmt.Println("last prize:    ", lastPrize)
-    //fmt.Println()
-    var bpt *chainTypes.Transaction
     if lastPrize != nil {
-        bpt = chainService.GenerateBlockPrizeTransaction()
+        bpt := chainService.GenerateBlockPrizeTransaction()
         if bpt != nil {
             ts = append(ts, bpt)
         }
     }
 
-    gasSum := new(big.Int)
+    gasUsed := new(big.Int)
     for _, t := range ts {
-        //subDt := dt.BeginTransaction()
         g, _ := chainService.execute(t)
-        gasSum = new(big.Int).Add(gasSum, g)
-        //subDt.Commit()
+        gasUsed.Add(gasUsed, g)
     }
+
     timestamp := time.Now().Unix()
+    previousHash := chainService.databaseService.GetPreviousBlockHash()
+
     stateRoot := chainService.databaseService.GetStateRoot()
-    gasUsed := gasSum.Bytes()
-    txHashes, err := chainService.GetTxHashes(ts)
-    if err != nil {
-        return nil, err
-    }
-    //merkle := trie.NewMerkle(txHashes)
-    //merkleRoot := merkle.Root.Hash
-    var memberPks []*secp256k1.PublicKey = nil
+    txHashes, _ := chainService.GetTxHashes(ts)
+    merkle := chainService.databaseService.NewMerkle(txHashes)
+    merkleRoot := merkle.Root.Hash
+
+    var memberPks []*secp256k1.PublicKey
     for _, p := range members {
         memberPks = append(memberPks, p)
     }
 
-    var previousHash []byte
-    previousBlock := chainService.databaseService.GetHighestBlock()
-    if previousBlock == nil {
-        previousHash = []byte{}
-    } else {
-        h, err := previousBlock.BlockHash()
-        if err != nil {
-            return nil, err
-        }
-        previousHash = h
-    }
     block := &chainTypes.Block{
         Header: &chainTypes.BlockHeader{
-            Version:      Version,
-            PreviousHash: previousHash,
-            ChainId: chainService.chainId,
-            GasLimit: BlockGasLimit.Bytes(),
-            GasUsed: gasUsed,
-            Timestamp: timestamp,
-            StateRoot: stateRoot,
-            MerkleRoot: stateRoot,
-            TxHashes: txHashes,
-            Height: height,
+            Version:       Version,
+            PreviousHash:  previousHash,
+            ChainId:       chainService.chainId,
+            GasLimit:      BlockGasLimit,
+            GasUsed:       gasUsed,
+            Timestamp:     timestamp,
+            StateRoot:     stateRoot,
+            MerkleRoot:    merkleRoot,
+            TxHashes:      txHashes,
+            Height:        height,
             LeaderPubKey : leaderKey,
-            MinorPubKeys:memberPks,
+            MinorPubKeys:  memberPks,
         },
         Data: &chainTypes.BlockData{
             TxCount: int32(len(ts)),
             TxList:  ts,
         },
     }
-    //dt.Discard()
+
+    chainService.databaseService.Discard()
     return block, nil
-    return nil, nil
 }
 
-func (chainService *ChainService)GenerateBlockPrizeTransaction() *chainTypes.Transaction {
+func (chainService *ChainService) GenerateBlockPrizeTransaction() *chainTypes.Transaction {
     numMinors := len(lastMinors)
     leaderPrize := new(big.Int).Rsh(lastPrize, 1)
     leftPrize := new(big.Int).Sub(lastPrize, leaderPrize)
@@ -225,25 +207,25 @@ func (chainService *ChainService)GenerateBlockPrizeTransaction() *chainTypes.Tra
     trans := make([]*chainTypes.Transaction, len(lastMinors) + 1)
 
     dataL := &chainTypes.TransactionData{
-        Version: Version,
-        Type: BlockPrizeType,
-        To: crypto.PubKey2Address(lastLeader).Hex(),
+        Version:   Version,
+        Type:      BlockPrizeType,
+        To:        crypto.PubKey2Address(lastLeader).Hex(),
         DestChain: chainService.chainId,
-        Amount: *leaderPrize,
+        Amount:    *leaderPrize,
         Timestamp: time.Now().Unix(),
-        Data: []byte("block prize for leader"),
+        Data:      []byte("block prize for leader"),
     }
     trans[0] = &chainTypes.Transaction{Data: dataL}
 
     for i := 1; i < len(trans); i++ {
         dataM := &chainTypes.TransactionData{
-            Version: Version,
-            Type: BlockPrizeType,
-            To: crypto.PubKey2Address(lastMinors[i - 1]).Hex(),
+            Version:   Version,
+            Type:      BlockPrizeType,
+            To:        crypto.PubKey2Address(lastMinors[i - 1]).Hex(),
             DestChain: chainService.chainId,
-            Amount: *minorPrize,
+            Amount:    *minorPrize,
             Timestamp: time.Now().Unix(),
-            Data: []byte("block prize for minor"),
+            Data:      []byte("block prize for minor"),
         }
         trans[i] = &chainTypes.Transaction{Data: dataM}
     }
@@ -259,9 +241,6 @@ func (chainService *ChainService)GenerateBlockPrizeTransaction() *chainTypes.Tra
         Data: b,
     }
 
-    //lastLeader = nil
-    //lastMinors = nil
-    //lastPrize = nil
     return &chainTypes.Transaction{Data: data}
 }
 
@@ -279,4 +258,66 @@ func (chainService *ChainService)GetTxHashes(ts []*chainTypes.Transaction) ([][]
 
 func (chainService *ChainService) RootChain() common.ChainIdType {
     return rootChain
+}
+
+func (chainService *ChainService) GenerateBalanceTransaction(from *secp256k1.PublicKey, to crypto.CommonAddress, chainId common.ChainIdType, amount *big.Int) *chainTypes.Transaction {
+    address := crypto.PubKey2Address(from)
+    nonce := chainService.databaseService.GetNonce(address, chainId, false)
+    data := &chainTypes.TransactionData{
+        Version:   Version,
+        Nonce:     nonce,
+        Type:      TransferType,
+        To:        to,
+        ChainId:   chainId,
+        Amount:    amount,
+        GasPrice:  DefaultGasPrice,
+        GasLimit:  TransferGas,
+        Timestamp: time.Now().Unix(),
+        PubKey:    from,
+    }
+    return &chainTypes.Transaction{Data: data}
+}
+
+func (chainService *ChainService) GenerateCreateContractTransaction(from *secp256k1.PublicKey, to crypto.CommonAddress, chainId common.ChainIdType, byteCode []byte) *chainTypes.Transaction {
+    address := crypto.PubKey2Address(from)
+    nonce := chainService.databaseService.GetNonce(address, chainId, false)
+    nonce++
+    data := &chainTypes.TransactionData{
+        Nonce:     nonce,
+        Type:      store.CreateContractType,
+        ChainId:   chainId,
+        GasPrice:  DefaultGasPrice,
+        GasLimit:  CreateContractGas,
+        Timestamp: time.Now().Unix(),
+        Data:      make([]byte, len(byteCode) + 1),
+        PubKey:    from,
+    }
+    copy(data.Data[1:], byteCode)
+    data.Data[0] = 2
+    return &chainTypes.Transaction{Data: data}
+}
+
+func (chainService *ChainService) GenerateCallContractTransaction(from *secp256k1.PublicKey, to crypto.CommonAddress, chainId common.ChainIdType, input []byte, amount *big.Int, readOnly bool) *chainTypes.Transaction {
+    address := crypto.PubKey2Address(from)
+    nonce := chainService.databaseService.GetNonce(address, chainId, false)
+    nonce++
+    data := &chainTypes.TransactionData{
+        Nonce:     nonce,
+        Type:      store.CallContractType,
+        ChainId:   chainId,
+        To:        to,
+        Amount:    amount,
+        GasPrice:  DefaultGasPrice,
+        GasLimit:  CallContractGas,
+        Timestamp: time.Now().Unix(),
+        PubKey:    from,
+        Data:      make([]byte, len(input) + 1),
+    }
+    copy(data.Data[1:], input)
+    if readOnly {
+        data.Data[0] = 1
+    } else {
+        data.Data[0] = 0
+    }
+    return &chainTypes.Transaction{Data: data}
 }

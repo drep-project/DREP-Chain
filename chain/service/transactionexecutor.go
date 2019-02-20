@@ -37,6 +37,8 @@ func (chainService *ChainService) ExecuteTransactions(b *chainTypes.Block) *big.
         fmt.Println("error", height, b.Header.Height)
         return nil
     }
+
+    chainService.databaseService.BeginTransaction()
     total := big.NewInt(0)
     if b.Data == nil || b.Data.TxList == nil {
         return total
@@ -59,19 +61,18 @@ func (chainService *ChainService) ExecuteTransactions(b *chainTypes.Block) *big.
         height++
         chainService.databaseService.PutMaxHeight(height)
         chainService.databaseService.PutBlock(b)
-        //fmt.Println("received block: ", b.Header, " ", b.Data, " ", b.MultiSig)
+        chainService.databaseService.Commit()
         fmt.Println("received block: ", true)
         fmt.Println()
-        //dt.Commit()
         chainService.savePrizeInfo(b, total)
         chainService.preSync(b)
         chainService.doSync(height)
     } else {
+        chainService.databaseService.Discard()
         fmt.Println()
         fmt.Println("not matched ", hex.EncodeToString(b.Header.StateRoot), " vs ", hex.EncodeToString(stateRoot))
         fmt.Println("received block: ", false)
         fmt.Println()
-        //dt.Discard()
     }
     return total
 }
@@ -79,7 +80,7 @@ func (chainService *ChainService) ExecuteTransactions(b *chainTypes.Block) *big.
 func (chainService *ChainService) savePrizeInfo(block *chainTypes.Block, total *big.Int) {
     lastLeader = block.Header.LeaderPubKey
     lastMinors = block.Header.MinorPubKeys
-    base := chainService.config.Blockprize.String()
+    base := chainService.config.BlockPrize.String()
     basePrize, _ := new(big.Int).SetString(base, 10)
     lastPrize = new(big.Int).Add(basePrize, total)
 }
@@ -99,9 +100,9 @@ func (chainService *ChainService) doSync(height int64) {
         return
     }
     cct := &chainTypes.CrossChainTransaction{
-        ChainId: chainService.chainId,
-        StateRoot: chainService.databaseService.GetTotalStateRoot(),
-        Trans: childTrans,
+        ChainId:   chainService.chainId,
+        StateRoot: chainService.databaseService.GetStateRoot(),
+        Trans:     childTrans,
     }
     data, err := json.Marshal(cct)
     if err != nil {
@@ -112,11 +113,6 @@ func (chainService *ChainService) doSync(height int64) {
     body := values.Encode()
     urlStr := "http://localhost:" + strconv.Itoa(chainService.config.RemotePort) + "/SyncChildChain?" + body
     http.Get(urlStr)
-    //fmt.Println()
-    //fmt.Println("data: ", body)
-    //fmt.Println()
-    //fmt.Println("data raw: ", string(data))
-    //fmt.Println()
     childTrans = nil
 }
 
@@ -130,8 +126,8 @@ func (chainService *ChainService) execute(t *chainTypes.Transaction) (gasUsed, g
        return chainService.executeCallContractTransaction(t)
     case BlockPrizeType:
         return chainService.executeBlockPrizeTransaction(t)
-    case CrossChainType:
-       return chainService.executeCrossChainTransaction(t)
+    //case CrossChainType:
+    //   return chainService.executeCrossChainTransaction(t)
     }
     return nil, nil
 }
@@ -258,51 +254,51 @@ func (chainService *ChainService) executeBlockPrizeTransaction(t *chainTypes.Tra
     return new(big.Int), new(big.Int)
 }
 
-func (chainService *ChainService) executeCrossChainTransaction(t *chainTypes.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
-    var (
-        can bool
-        addr crypto.CommonAddress
-        balance, gasPrice *big.Int
-    )
-
-    gasUsed, gasFee = new(big.Int), new(big.Int)
-    can, addr,  _, _, gasPrice = chainService.canExecute(t, nil, CrossChainGas)
-    if !can {
-        return new(big.Int), new(big.Int)
-    }
-
-    cct := &chainTypes.CrossChainTransaction{}
-    err := json.Unmarshal(t.Data.Data, cct)
-    if err != nil {
-        fmt.Println("err: ", err)
-        return new(big.Int), new(big.Int)
-    }
-
-    gasSum := new(big.Int)
-    for _, tx := range cct.Trans {
-       if tx.Data.Type == CrossChainType {
-           continue
-       }
-       g, _ := chainService.execute(tx)
-       gasSum = new(big.Int).Add(gasSum, g)
-    }
-
-    if !bytes.Equal(chainService.databaseService.GetStateRoot(), cct.StateRoot) {
-       //subDt.Discard()
-    } else {
-        amountSum := new(big.Int).Mul(gasSum, gasPrice)
-        balance = chainService.databaseService.GetBalance(addr, t.Data.ChainId, true)
-        if balance.Cmp(amountSum) >= 0 {
-            gasUsed = new(big.Int).Set(gasSum)
-            gasFee = new(big.Int).Set(amountSum)
-            _, gasFee = chainService.deduct(addr, t.Data.ChainId, balance, gasFee)
-            //subDt.Commit()
-        } else {
-            //subDt.Discard()
-        }
-    }
-    return
-}
+//func (chainService *ChainService) executeCrossChainTransaction(t *chainTypes.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
+//    var (
+//        can bool
+//        addr crypto.CommonAddress
+//        balance, gasPrice *big.Int
+//    )
+//
+//    gasUsed, gasFee = new(big.Int), new(big.Int)
+//    can, addr,  _, _, gasPrice = chainService.canExecute(t, nil, CrossChainGas)
+//    if !can {
+//        return new(big.Int), new(big.Int)
+//    }
+//
+//    cct := &chainTypes.CrossChainTransaction{}
+//    err := json.Unmarshal(t.Data.Data, cct)
+//    if err != nil {
+//        fmt.Println("err: ", err)
+//        return new(big.Int), new(big.Int)
+//    }
+//
+//    gasSum := new(big.Int)
+//    for _, tx := range cct.Trans {
+//       if tx.Data.Type == CrossChainType {
+//           continue
+//       }
+//       g, _ := chainService.execute(tx)
+//       gasSum = new(big.Int).Add(gasSum, g)
+//    }
+//
+//    if !bytes.Equal(chainService.databaseService.GetStateRoot(), cct.StateRoot) {
+//       //subDt.Discard()
+//    } else {
+//        amountSum := new(big.Int).Mul(gasSum, gasPrice)
+//        balance = chainService.databaseService.GetBalance(addr, t.Data.ChainId, true)
+//        if balance.Cmp(amountSum) >= 0 {
+//            gasUsed = new(big.Int).Set(gasSum)
+//            gasFee = new(big.Int).Set(amountSum)
+//            _, gasFee = chainService.deduct(addr, t.Data.ChainId, balance, gasFee)
+//            //subDt.Commit()
+//        } else {
+//            //subDt.Discard()
+//        }
+//    }
+//    return
+//}
 
 //func preExecuteCrossChainTransaction(dt database.Transactional, t *chainTypes.Transaction) (gasUsed, gasFee *big.Int) {
 //    var (
@@ -347,44 +343,5 @@ func (chainService *ChainService) executeCrossChainTransaction(t *chainTypes.Tra
 //        subDt.Discard()
 //    }
 //
-//    return
-//}
-
-//func distributeBlockPrize(b *chainTypes.Block, total *big.Int) {
-//    dt := database.BeginTransaction()
-//    str := config.GetConfig().Blockprize.String()
-//    val := new (big.Int)
-//    val.SetString(str,10)
-//    prize := new(big.Int).Add(total, val)
-//    if b.Header.Height > 2 {
-//        prize = new(big.Int)
-//    }
-//    leaderPrize := new(big.Int).Rsh(prize, 1)
-//    fmt.Println("leader prize: ", leaderPrize)
-//    leaderAddr := accounts.PubKey2Address(b.Header.LeaderPubKey)
-//    balance := database.GetBalance(leaderAddr, b.Header.ChainId)
-//    balance = new(big.Int).Add(balance, leaderPrize)
-//    database.PutBalance(dt, leaderAddr, b.Header.ChainId, balance)
-//    leftPrize := new(big.Int).Sub(prize, leaderPrize)
-//    minerNum := 0
-//    for _, elem := range b.MultiSig.Bitmap {
-//        if elem == 1 {
-//            minerNum++
-//        }
-//    }
-//    if minerNum == 0 {
-//        dt.Commit()
-//        return
-//    }
-//    minerPrize := new(big.Int).Div(leftPrize, new(big.Int).SetInt64(int64(minerNum)))
-//    for i, e := range b.MultiSig.Bitmap {
-//        if e == 1 {
-//            minerAddr := accounts.PubKey2Address(b.Header.MinorPubKeys[i])
-//            bal := database.GetBalance(minerAddr, b.Header.ChainId)
-//            bal = new(big.Int).Add(bal, minerPrize)
-//            database.PutBalance(dt, minerAddr, b.Header.ChainId, bal)
-//        }
-//    }
-//    dt.Commit()
 //    return
 //}

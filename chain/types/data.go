@@ -14,8 +14,8 @@ type BlockHeader struct {
     ChainId              common.ChainIdType
     Version              int32
     PreviousHash         []byte
-    GasLimit             []byte
-    GasUsed              []byte
+    GasLimit             *big.Int
+    GasUsed              *big.Int
     Height               int64
     Timestamp            int64
     StateRoot            []byte
@@ -40,12 +40,11 @@ type TransactionData struct {
     Version              int32
     Nonce                int64
     Type                 int32
-    To                   string
+    To                   crypto.CommonAddress
     ChainId              common.ChainIdType
-    DestChain            common.ChainIdType
-    Amount               big.Int
-    GasPrice             big.Int
-    GasLimit             big.Int
+    Amount               *big.Int
+    GasPrice             *big.Int
+    GasLimit             *big.Int
     Timestamp            int64
     Data                 []byte
     PubKey               *secp256k1.PublicKey
@@ -108,7 +107,7 @@ func (tx *Transaction) GetGasUsed() *big.Int {
 
 func (tx *Transaction) GetGas() *big.Int {
     gasQuantity := tx.GetGasUsed()
-    gasUsed := new(big.Int).Mul(gasQuantity, &tx.Data.GasPrice)
+    gasUsed := new(big.Int).Mul(gasQuantity, tx.Data.GasPrice)
     return gasUsed
 }
 
