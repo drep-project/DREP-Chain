@@ -1,21 +1,22 @@
 package main
 
 import (
-	accountTypes"github.com/drep-project/drep-chain/accounts/types"
-	"github.com/drep-project/drep-chain/log"
-	p2pTypes "github.com/drep-project/drep-chain/network/types"
-	chainTypes  "github.com/drep-project/drep-chain/chain/types"
-consensusTypes  "github.com/drep-project/drep-chain/consensus/types"
-rpcTypes  "github.com/drep-project/drep-chain/rpc/types"
-	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/crypto/sha3"
 	"BlockChainTest/util/flags"
 	"crypto/hmac"
 	"crypto/sha512"
 	"encoding/json"
 	"fmt"
+	accountComponent "github.com/drep-project/drep-chain/accounts/component"
+	accountTypes "github.com/drep-project/drep-chain/accounts/types"
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/common"
+	consensusTypes "github.com/drep-project/drep-chain/consensus/types"
+	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/drep-chain/crypto/sha3"
+	"github.com/drep-project/drep-chain/log"
+	p2pTypes "github.com/drep-project/drep-chain/network/types"
+	rpcTypes "github.com/drep-project/drep-chain/rpc/types"
 	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
 	"os"
@@ -56,10 +57,10 @@ func gen(ctx *cli.Context) error {
 	}else{
 		path = appPath
 	}
-	bootsNodes := []config.BootNode{}
+	bootsNodes := []p2pTypes.BootNode{}
 	standbyKey := []*secp256k1.PrivateKey{}
 	nodes := []*accountTypes.Node{}
-	produces := []*config.Produce{}
+	produces := []*consensusTypes.Produce{}
 	for i:=0; i< len(nodeItems); i++{
 		aNode := getAccount(nodeItems[i].Name)
 		nodes = append(nodes, aNode)
@@ -76,17 +77,13 @@ func gen(ctx *cli.Context) error {
 		}
 		produces = append(produces, producer)
 	}
-	cfg :=config.NodeConfig{}
-	err = json.Unmarshal([]byte(ConfTemplate),&cfg)
-	if err != nil {
-		return  err
-	}
 
 
-//	accounConfig := accountTypes.Config{}
 	logConfig := log.LogConfig{}
-	rpcConfig := rpcTypes.RpcConfig{}
+	logConfig.LogLevel = 3
 
+	rpcConfig := rpcTypes.RpcConfig{}
+	rpcConfig.IPCEnabled = true
 	p2pConfig := p2pTypes.P2pConfig{}
 	p2pConfig.ListerAddr = "0.0.0.0"
 	p2pConfig.BootNodes = bootsNodes
@@ -96,31 +93,52 @@ func gen(ctx *cli.Context) error {
 	consensusConfig.Producers = produces
 
 	chainConfig := chainTypes.ChainConfig{}
+	chainConfig.RemotePort = 55555
+
 	for i:=0; i<len(nodeItems); i++{
 		consensusConfig.MyPk = (*secp256k1.PublicKey)(&standbyKey[i].PublicKey)
-		consensusConfig.PrvKey = standbyKey[i]
+		p2pConfig.PrvKey = standbyKey[i]
 		userDir :=  path2.Join(path,nodeItems[i].Name)
 		os.MkdirAll(userDir, os.ModeDir|os.ModePerm)
 		keyStorePath := path2.Join(userDir, "keystore")
 
-		store := accounts.NewFileStore(keyStorePath)
+		store := accountComponent.NewFileStore(keyStorePath)
 		password := string(sha3.Hash256([]byte("123")))
 		store.StoreKey(nodes[i],password)
-		cfgPath := path2.Join(userDir, "config.json")
-		saveConfig(&cfg,cfgPath)
-	}
 
+		cfgPath := path2.Join(userDir, "config.json")
+		fs, _ := os.Create(cfgPath)
+		offset := int64(0)
+		fs.WriteAt([]byte("{\n"),offset)
+		offset = int64(2)
+
+		offset = writePhase(fs, "log", logConfig, offset)
+		offset = writePhase(fs, "rpc",rpcConfig, offset)
+		offset = writePhase(fs, "consensus",consensusConfig, offset)
+		offset = writePhase(fs, "p2p",p2pConfig, offset)
+		offset = writePhase(fs, "chain",chainConfig, offset)
+
+		fs.Truncate(offset-2)
+		fs.WriteAt([]byte("\n}"),offset)
+
+	}
 	return nil
+}
+
+func writePhase(fs *os.File, name string, config interface{},  offset int64) int64 {
+	bytes, _ := json.MarshalIndent(config, "	", "      ")
+	bytes = append([]byte("	\""+name+"\" : "), bytes...)
+	fs.WriteAt(bytes, offset)
+	offset += int64(len(bytes))
+
+	fs.WriteAt([]byte(",\n"),offset)
+	offset += 2
+	return offset
 }
 
 func getAccount(name string) *accountTypes.Node {
 	node := RandomNode([]byte(name))
 	return node
-}
-
-func saveConfig(cfg *config.NodeConfig, path string) {
-   content, _ := json.MarshalIndent(cfg,"","\t")
-   ioutil.WriteFile(path,content,0644)
 }
 
 func RandomNode(seed []byte) *accountTypes.Node {
