@@ -22,6 +22,14 @@ func (c *ChainIdType) SetBytes(b []byte) {
 	}
 }
 
+func String2ChainId(s string) ChainIdType {
+    if s == "" {
+        return ChainIdType{}
+    }
+    bytes := []byte(s)
+    return Bytes2ChainId(bytes)
+}
+
 func Bytes2ChainId(b []byte) ChainIdType {
 	if b == nil {
 		return ChainIdType{}
