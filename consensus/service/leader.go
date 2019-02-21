@@ -2,6 +2,7 @@ package service
 
 import (
     "errors"
+    "fmt"
     "math"
     "math/big"
     "sync"
@@ -69,7 +70,7 @@ func NewLeader(pubKey *secp256k1.PublicKey, quitRound chan struct{}, p2pServer *
 
 func (l *Leader) UpdateStatus(members []*p2pTypes.Peer, curMiner int, minMember int, curHeight int64){
     l.members = make([]*p2pTypes.Peer, len(members) - 1)
-    l.minMember = 2 //*2/3
+    l.minMember = minMember //*2/3
     l.currentHeight = curHeight
 
     last := -1
@@ -86,6 +87,7 @@ func (l *Leader) UpdateStatus(members []*p2pTypes.Peer, curMiner int, minMember 
 func (l *Leader) Reset(){
     l.sigmaPubKey = nil
     l.sigmaCommitPubkey = nil
+    fmt.Println("rrrrrrrrrrrrrrrrrrrrrrrrrrrrrr")
     l.sigmaS = nil
     length := len(l.members)
     l.commitBitmap = make([]byte, length)
@@ -117,13 +119,17 @@ func (l *Leader) ProcessConsensus(msg []byte) (error, *secp256k1.Signature, []by
     }
     log.Debug("response complete")
 
+    if l.sigmaS == nil {
+        return errors.New("signature not valid"), nil,nil
+    }
     valid := l.Validate(msg, l.sigmaS.R, l.sigmaS.S)
+    fmt.Println(l.sigmaS)
     log.Debug("vaidate result","VALID", valid)
     if !valid&&len(l.members)>0 { //solo
         //return &util.ConnectionError{}, nil, nil
        return errors.New("signature not valid"), nil,nil
     }
-    return nil, &secp256k1.Signature{R:l.sigmaS.R, S:l.sigmaS.S}, l.responseBitmap
+    return nil, &secp256k1.Signature{R : l.sigmaS.R, S : l.sigmaS.S}, l.responseBitmap
 }
 
 func (l *Leader) setUp(msg []byte) {
@@ -164,7 +170,7 @@ func (l *Leader) OnCommit(peer *p2pTypes.Peer, commit *consensusTypes.Commitment
 
     l.commitBitmap[index] = 1
     commitNum := l.getCommitNum()
-    if commitNum == l.minMember  {
+    if commitNum >= l.minMember  {
         log.Debug("OnCommit finish", "commitNum", commitNum, "members", len(l.members))
         select {
         case l.cancelWaitCommit <- struct{}{}:
@@ -180,7 +186,7 @@ func (l *Leader) waitForCommit() bool {
         case <-time.After(l.waitTime):
             commitNum := l.getCommitNum()
             log.Debug("waitForCommit  finish", "commitNum", commitNum, "members", len(l.members))
-            if commitNum == l.minMember  {
+            if commitNum >= l.minMember  {
                 return true
             }
             l.setState(WAIT_COMMITT_IMEOUT)
@@ -215,11 +221,13 @@ func (l *Leader) OnResponse(peer *p2pTypes.Peer, response *consensusTypes.Respon
     if err != nil {
         return
     }
+
     if l.sigmaS == nil {
         l.sigmaS = sig
     }else{
         l.sigmaS, err = schnorr.CombineSigs(secp256k1.S256(),[]*schnorr.Signature{l.sigmaS, sig })
         if err != nil {
+            log.Debug("schnorr CombineSigs error", "reason", err)
             return
         }
     }
@@ -227,7 +235,8 @@ func (l *Leader) OnResponse(peer *p2pTypes.Peer, response *consensusTypes.Respon
     l.responseBitmap[index] = 1
 
     responseNum := l.getResponseNum()
-    if responseNum == l.minMember{
+    if responseNum >= l.minMember{
+        l.setState(COMPLETED)
         log.Debug("OnResponse finish", "responseNum", responseNum, "members", len(l.members))
         select {
         case  l.cancelWaitChallenge <- struct{}{}:
@@ -291,7 +300,8 @@ func (l *Leader) waitForResponse() bool {
         case <-time.After(l.waitTime):
             responseNum := l.getResponseNum()
             log.Debug("waitForResponse finish", "responseNum", responseNum, "members", len(l.members))
-            if responseNum  == l.minMember{
+            if responseNum  >= l.minMember{
+                l.setState(COMPLETED)
                 return true
             }
             l.setState(WAIT_RESPONSE_TIMEOUT)
