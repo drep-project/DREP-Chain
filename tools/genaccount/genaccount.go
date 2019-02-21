@@ -86,6 +86,7 @@ func gen(ctx *cli.Context) error {
 	rpcConfig.IPCEnabled = true
 	p2pConfig := p2pTypes.P2pConfig{}
 	p2pConfig.ListerAddr = "0.0.0.0"
+	p2pConfig.Port = 55555
 	p2pConfig.BootNodes = bootsNodes
 
 	consensusConfig := consensusTypes.ConsensusConfig{}

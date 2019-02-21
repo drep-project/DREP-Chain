@@ -17,7 +17,6 @@ import (
     rpcService "github.com/drep-project/drep-chain/rpc/service"
     "gopkg.in/urfave/cli.v1"
     "math/big"
-    "reflect"
     "strconv"
     "sync"
     "time"
@@ -64,12 +63,12 @@ func (chainService *ChainService) CommandFlags() ([]cli.Command, []cli.Flag)  {
 
 func (chainService *ChainService) P2pMessages() map[int]interface{} {
     return map[int]interface{}{
-        chainTypes.MsgTypeBlockReq : reflect.TypeOf(chainTypes.BlockReq{}),
-        chainTypes.MsgTypeBlockResp : reflect.TypeOf(chainTypes.BlockResp{}),
-        chainTypes.MsgTypeBlock : reflect.TypeOf(chainTypes.Block{}),
-        chainTypes.MsgTypeTransaction : reflect.TypeOf(chainTypes.Transaction{}),
-        chainTypes.MsgTypePeerState : reflect.TypeOf(chainTypes.PeerState{}),
-        chainTypes.MsgTypeReqPeerState : reflect.TypeOf(chainTypes.ReqPeerState{}),
+        chainTypes.MsgTypeBlockReq : chainTypes.BlockReq{},
+        chainTypes.MsgTypeBlockResp : chainTypes.BlockResp{},
+        chainTypes.MsgTypeBlock : chainTypes.Block{},
+        chainTypes.MsgTypeTransaction : chainTypes.Transaction{},
+        chainTypes.MsgTypePeerState : chainTypes.PeerState{},
+        chainTypes.MsgTypeReqPeerState : chainTypes.ReqPeerState{},
     }
 }
 

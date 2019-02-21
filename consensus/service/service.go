@@ -17,7 +17,6 @@ import (
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
 	"github.com/pkg/errors"
 	"gopkg.in/urfave/cli.v1"
-	"reflect"
 	"time"
 )
 
@@ -62,11 +61,11 @@ func (consensusService *ConsensusService) CommandFlags() ([]cli.Command, []cli.F
 
 func (consensusService *ConsensusService)  P2pMessages() map[int]interface{} {
 	return map[int]interface{}{
-		consensusTypes.MsgTypeSetUp:reflect.TypeOf(consensusTypes.Setup{}),
-		consensusTypes.MsgTypeCommitment:reflect.TypeOf(consensusTypes.Commitment{}),
-		consensusTypes.MsgTypeChallenge:reflect.TypeOf(consensusTypes.Challenge{}),
-		consensusTypes.MsgTypeResponse:reflect.TypeOf(consensusTypes.Response{}),
-		consensusTypes.MsgTypeFail:reflect.TypeOf(consensusTypes.Fail{}),
+		consensusTypes.MsgTypeSetUp : consensusTypes.Setup{},
+		consensusTypes.MsgTypeCommitment :consensusTypes.Commitment{},
+		consensusTypes.MsgTypeChallenge : consensusTypes.Challenge{},
+		consensusTypes.MsgTypeResponse : consensusTypes.Response{},
+		consensusTypes.MsgTypeFail : consensusTypes.Fail{},
 	}
 }
 
@@ -291,7 +290,7 @@ func (consensusService *ConsensusService) CollectLiveMember()[]*p2pTypes.Peer{
 		if consensusService.pubkey.IsEqual(produce.Public) {
 			liveMember = append(liveMember, nil)  // self
 		}else{
-			peer := consensusService.P2pServer.SelectPeer(produce.Public.Serialize(), produce.Ip)
+			peer := consensusService.P2pServer.SelectPeer(produce.Ip)
 			if peer != nil {
 				liveMember = append(liveMember, peer)
 			}

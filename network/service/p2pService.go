@@ -1,25 +1,23 @@
 package service
 
 import (
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/log"
-	"github.com/drep-project/drep-chain/network/component/nat"
- 	p2pTypes "github.com/drep-project/drep-chain/network/types"
-	p2pComponent "github.com/drep-project/drep-chain/network/component"
-	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/app"
-	"gopkg.in/urfave/cli.v1"
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/drep-project/drep-chain/app"
+	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/drep-chain/log"
+	p2pComponent "github.com/drep-project/drep-chain/network/component"
+	"github.com/drep-project/drep-chain/network/component/nat"
+	p2pTypes "github.com/drep-project/drep-chain/network/types"
 	"github.com/pkg/errors"
+	"gopkg.in/urfave/cli.v1"
 	"io"
 	"net"
 	"strconv"
 	"strings"
 	"sync"
-	"reflect"
 	"time"
 )
 
@@ -67,8 +65,8 @@ func (server *P2pService) CommandFlags() ([]cli.Command, []cli.Flag) {
 
 func (server *P2pService) P2pMessages() map[int]interface{} {
 	return map[int]interface{}{
-		p2pTypes.MsgTypePing : reflect.TypeOf(p2pTypes.Ping{}),
-		p2pTypes.MsgTypePong : reflect.TypeOf(p2pTypes.Pong{}),
+		p2pTypes.MsgTypePing : p2pTypes.Ping{},
+		p2pTypes.MsgTypePong : p2pTypes.Pong{},
 	}
 }
 
@@ -90,9 +88,12 @@ func (server *P2pService) Init(executeContext *app.ExecuteContext) error {
 		return err
 	}
 
-
-	//construct service
-	server.prvKey = server.Config.PrvKey
+	server.prvKey, err = secp256k1.GeneratePrivateKey(nil)
+	if err != nil {
+		//TODO shoud never occur
+		log.Error("generate private key error ", "Reason", err)
+		return err
+	}
 	server.LivePeer = []*p2pTypes.Peer{}
 	server.DeadPeer = []*p2pTypes.Peer{}
 	server.inQuene = make(chan *p2pTypes.RouteIn,MaxConnections*2)
@@ -212,9 +213,9 @@ func (server *P2pService) preProcessReq(addr string, pk *secp256k1.PublicKey) (*
 	if server.isLocalIp(ipPort[0]) {
 		return nil, errors.New("not allow local ip")
 	}
-	livePeer := server.SelectPeer(pk.Serialize(),ipPort[0])
+	livePeer := server.SelectPeer(ipPort[0])
 	if livePeer == nil {
-		deadPeer := server.selectDeadPeer(pk.Serialize(),ipPort[0])
+		deadPeer := server.selectDeadPeer(ipPort[0])
 		if deadPeer != nil {
 			deadPeer.Conn.ReStart()
 			server.addPeer(deadPeer)
@@ -470,24 +471,24 @@ func (server *P2pService) GetBestPeer() *p2pTypes.Peer{
 	return curPeer
 }
 
-func (server *P2pService) SelectPeer(pubKey []byte, ip string)(*p2pTypes.Peer){
+func (server *P2pService) SelectPeer(ip string)(*p2pTypes.Peer){
 	server.peerOpLock.Lock()
 	defer server.peerOpLock.Unlock()
 
 	for _,peer := range server.LivePeer {
-		if bytes.Equal(peer.PubKey.Serialize(),pubKey)&&peer.Ip == ip {
+		if peer.Ip == ip {
 			return peer
 		}
 	}
 	return nil
 }
 
-func (server *P2pService) selectDeadPeer(pubKey []byte, ip string)(*p2pTypes.Peer){
+func (server *P2pService) selectDeadPeer(ip string)(*p2pTypes.Peer){
 	server.peerOpLock.Lock()
 	defer server.peerOpLock.Unlock()
 
 	for _,peer := range server.DeadPeer {
-		if bytes.Equal(peer.PubKey.Serialize(),pubKey)&&peer.Ip == ip {
+		if peer.Ip == ip {
 			return peer
 		}
 	}
