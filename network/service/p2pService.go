@@ -425,19 +425,24 @@ func (server *P2pService) recoverDeadPeer(){
 		case  <-server.tryTimer.C:
 			//log.Trace("start to recover dead peer")
 			// rand peer and attempt connect
-			for i :=0; i<5; i++ { //try top N(%)
-				if len(server.DeadPeer) > 0 {
-					deadPeer := server.DeadPeer[0]
-					server.DeadPeer = server.DeadPeer[1:len(server.DeadPeer)]
-					if deadPeer.Conn.Connect() {
-						deadPeer.Conn.ReStart()
-						server.addPeer(deadPeer)
-						log.Trace("try to connect peer success", "Addr", deadPeer.GetAddr())
-					}else{
-						deadPeer.Conn.Stop()
-						server.addDeadPeer(deadPeer)
-						log.Trace("try to connect peer fail", "Addr", deadPeer.GetAddr())
-					}
+			tryPeerCount := 0
+			if len(server.DeadPeer) < 40 {    //TODO   MAXPEER * RATE  200*0.2
+				tryPeerCount = len(server.DeadPeer)
+			} else {
+				tryPeerCount = len(server.DeadPeer)/5      //RATE
+			}
+
+			for i :=0; i<tryPeerCount; i++ { //try top N(%)
+				deadPeer := server.DeadPeer[0]
+				server.DeadPeer = server.DeadPeer[1:len(server.DeadPeer)]
+				if deadPeer.Conn.Connect() {
+					deadPeer.Conn.ReStart()
+					server.addPeer(deadPeer)
+					log.Trace("try to connect peer success", "Addr", deadPeer.GetAddr())
+				}else{
+					deadPeer.Conn.Stop()
+					server.addDeadPeer(deadPeer)
+					log.Trace("try to connect peer fail", "Addr", deadPeer.GetAddr())
 				}
 			}
 		}
@@ -455,20 +460,6 @@ func (server *P2pService) Receive(context actor.Context) {
 	case *p2pTypes.Pong:
 		server.handPong(routeMsg.Peer, msg)
 	}
-}
-
-func (server *P2pService) GetBestPeer() *p2pTypes.Peer{
-	if len(server.LivePeer) == 0 {
-		return nil
-	}
-	curPeer := server.LivePeer[0];
-
-	for i:=1; i <len(server.LivePeer);i++{
-		if server.LivePeer[i].State.Height > curPeer.State.Height {
-			curPeer = server.LivePeer[i]
-		}
-	}
-	return curPeer
 }
 
 func (server *P2pService) SelectPeer(ip string)(*p2pTypes.Peer){

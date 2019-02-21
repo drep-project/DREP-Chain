@@ -19,20 +19,12 @@ func (port Port) String() string {
     return strconv.Itoa(int(port))
 }
 
-type ReqPeerState struct {
-    Height int64
-}
-
-type PeerState struct {
-    Height int64
-}
-
 type Peer struct {
     Ip string
     PubKey  *secp256k1.PublicKey
 
     Port int
-    State *PeerState
+
     Conn    *ShortConnection
 
     addrUpdate sync.Mutex
@@ -43,7 +35,6 @@ func NewPeer(ip string, port int, pub *secp256k1.PublicKey, handError func(*Peer
         Ip : ip,
         Port: port,
         PubKey: pub,
-        State : &PeerState{},
     }
     onError := func(err error) {
         handError(peer, err)

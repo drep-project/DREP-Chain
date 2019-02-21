@@ -42,8 +42,9 @@ type ChainService struct {
     stopChanel   chan struct{}
 
     prvKey *secp256k1.PrivateKey
-
     CurrentHeight int64
+    peerStateMap map[string]*chainTypes.PeerState
+
     Config *chainTypes.ChainConfig
     pid *actor.PID
 }
@@ -78,7 +79,7 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
     if err != nil {
         return err
     }
-
+    chainService.peerStateMap = make(map[string]*chainTypes.PeerState)
     chainService.CurrentHeight = chainService.DatabaseService.GetMaxHeight()
     if chainService.CurrentHeight == -1 {
         //generate genisis block
@@ -115,6 +116,7 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 }
 
 func (chainService *ChainService) Start(executeContext *app.ExecuteContext) error {
+    go chainService.fetchBlocks()
     return nil
 }
 

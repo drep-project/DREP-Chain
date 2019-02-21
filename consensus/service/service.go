@@ -17,6 +17,7 @@ import (
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
 	"github.com/pkg/errors"
 	"gopkg.in/urfave/cli.v1"
+	"math"
 	"time"
 )
 
@@ -120,7 +121,8 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 	}
 
 	go func() {
-		minMember := len(consensusService.consensusConfig.Producers)
+		minMember := int(math.Ceil(float64(len(consensusService.consensusConfig.Producers))*2/3)) - 1
+
 		for {
 			log.Trace("node start", "Height", consensusService.ChainService.CurrentHeight)
 			var block *chainTypes.Block

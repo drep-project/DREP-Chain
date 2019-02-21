@@ -54,9 +54,9 @@ func (chainService *ChainService) Receive(context actor.Context) {
 			if err != nil {
 				chainService.CurrentHeight = block.Header.Height
 			}
-		case *p2pTypes.PeerState:
+		case *chainTypes.PeerState:
 			chainService.handlePeerState(routeMsg.Peer, msg)
-		case *p2pTypes.ReqPeerState:
+		case *chainTypes.ReqPeerState:
 			chainService.handleReqPeerState(routeMsg.Peer, msg)
 		}
 }

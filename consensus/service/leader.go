@@ -229,6 +229,7 @@ func (l *Leader) OnResponse(peer *p2pTypes.Peer, response *consensusTypes.Respon
         if err != nil {
             log.Debug("schnorr CombineSigs error", "reason", err)
             return
+        }else {
         }
     }
 

@@ -81,7 +81,7 @@ func GenerateMessage(message interface{}, prvKey *secp256k1.PrivateKey) (*Messag
 	msgType, ok := msgTypeMap.GetInverse(refType)
 	if !ok {
 		msgTypeMap.GetInverse(refType)
-		return nil, errors.New("Unknown peer message type ")
+		return nil, errors.New("Unknown peer message type")
 	}
 	sig, err :=  prvKey.Sign(sha3.Hash256(body))
 	if err != nil {
