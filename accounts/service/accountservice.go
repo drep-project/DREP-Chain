@@ -67,7 +67,7 @@ func (accountService *AccountService) Init(executeContext *app.ExecuteContext) e
 
 	if !path2.IsAbs(accountService.config.KeyStoreDir) {
 		if accountService.config.KeyStoreDir == "" {
-			accountService.config.KeyStoreDir = path2.Join(executeContext.CommonConfig.HomeDir, "KeyStore")
+			accountService.config.KeyStoreDir = path2.Join(executeContext.CommonConfig.HomeDir, "keystore")
 		} else {
 			accountService.config.KeyStoreDir = path2.Join(executeContext.CommonConfig.HomeDir, accountService.config.KeyStoreDir)
 		}
