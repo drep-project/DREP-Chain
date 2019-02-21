@@ -417,12 +417,12 @@ func (server *P2pService) sendMessageInternal(conn net.Conn, bytes []byte) error
 	return nil
 }
 
-
 func (server *P2pService) recoverDeadPeer(){
 	server.tryTimer = time.NewTicker(time.Second*10)
 	for {
 		select  {
 		case  <-server.tryTimer.C:
+			server.peerOpLock.Lock()
 			//log.Trace("start to recover dead peer")
 			// rand peer and attempt connect
 			tryPeerCount := 0
@@ -445,6 +445,7 @@ func (server *P2pService) recoverDeadPeer(){
 					log.Trace("try to connect peer fail", "Addr", deadPeer.GetAddr())
 				}
 			}
+			server.peerOpLock.Unlock()
 		}
 	}
 }
@@ -539,4 +540,8 @@ func (server *P2pService) isLocalIp(ip string) bool{
 		}
 	}
 	return false
+}
+
+func (server *P2pService) GetIdentifier() *secp256k1.PrivateKey{
+	return server.prvKey
 }

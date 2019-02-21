@@ -24,7 +24,7 @@ const (
 )
 
 type Member struct {
-    leader *p2pTypes.Peer
+    leader *consensusTypes.Member
     members []*secp256k1.PublicKey
     prvKey *secp256k1.PrivateKey
     p2pServer *p2pService.P2pService
@@ -62,17 +62,17 @@ func NewMember(prvKey *secp256k1.PrivateKey, quitRound chan struct{}, p2pServer 
     return m
 }
 
-func (m *Member) UpdateStatus(participants []*p2pTypes.Peer , curMiner int,minMember int, curHeight int64){
+func (m *Member) UpdateStatus(participants []*consensusTypes.Member , curMiner int,minMember int, curHeight int64){
     m.Reset()
     m.leader = participants[curMiner]
     m.members = []*secp256k1.PublicKey{}
 
     for _, participant := range participants {
-        if participant == nil {
+        if participant.Peer == nil {
             m.members = append(m.members, m.prvKey.PubKey())
         }else {
-            if !participant.PubKey.IsEqual(m.leader.PubKey) {
-                m.members = append(m.members, participant.PubKey)
+            if !participant.Produce.Public.IsEqual(m.leader.Produce.Public) {
+                m.members = append(m.members, participant.Produce.Public)
             }
         }
     }
@@ -92,7 +92,7 @@ func (m *Member) Reset(){
 }
 
 func (m *Member) ProcessConsensus() ([]byte, error) {
-    log.Debug("wait for leader's setup message", "IP",  m.leader.GetAddr())
+    log.Debug("wait for leader's setup message", "IP",  m.leader.Peer.GetAddr())
     m.setState(WAIT_SETUP)
     go m.WaitSetUp()
 
@@ -142,7 +142,7 @@ func (m *Member) OnSetUp(peer *p2pTypes.Peer, setUp *consensusTypes.Setup) {
         return
     }
     log.Debug("receive setup message")
-    if m.leader.PubKey.IsEqual( peer.PubKey) {
+    if m.leader.Peer.PubKey.IsEqual(peer.PubKey) {
         m.msg = setUp.Msg
         m.msgHash = sha3.Hash256(setUp.Msg)
         m.commit()
@@ -189,9 +189,10 @@ func (m *Member) OnChallenge(peer *p2pTypes.Peer, challengeMsg *consensusTypes.C
         return
     }
     log.Debug("recieved challenge message")
-    if m.leader.PubKey.IsEqual(peer.PubKey) {
+    if m.leader.Peer.PubKey.IsEqual(peer.PubKey) {
+        // r := sha3.ConcatHash256(challengeMsg.SigmaPubKey.Serialize(), challengeMsg.SigmaQ.Serialize(), m.msgHash)
+        r := sha3.ConcatHash256(m.msgHash)
         // log.Println("Member process challenge ")
-        r := sha3.ConcatHash256(challengeMsg.SigmaPubKey.Serialize(), challengeMsg.SigmaQ.Serialize(), m.msgHash)
         //r0 := new(big.Int).SetBytes(challengeMsg.R)
         //rInt := new(big.Int).SetBytes(r)
         //curve := secp256k1.S256()
@@ -236,7 +237,7 @@ func (m *Member) commit()  {
 
     commitment := &consensusTypes.Commitment{Q: (*secp256k1.PublicKey)(&m.randomPrivakey.PublicKey)}
     commitment.Height = m.currentHeight
-    m.p2pServer.SendAsync(m.leader, commitment)
+    m.p2pServer.SendAsync(m.leader.Peer, commitment)
 }
 
 func (m *Member) response(challengeMsg *consensusTypes.Challenge) {
@@ -251,7 +252,7 @@ func (m *Member) response(challengeMsg *consensusTypes.Challenge) {
     }
     response := &consensusTypes.Response{S: sig.Serialize()}
     response.Height = m.currentHeight
-    m.p2pServer.SendAsync(m.leader, response)
+    m.p2pServer.SendAsync(m.leader.Peer, response)
 }
 
 func (m *Member) setState(state int){

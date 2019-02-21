@@ -32,7 +32,7 @@ const (
 )
 
 type Leader struct {
-    members    []*p2pTypes.Peer
+    members    []*consensusTypes.Member
     pubkey *secp256k1.PublicKey
     p2pServer *p2pService.P2pService
 
@@ -68,14 +68,14 @@ func NewLeader(pubKey *secp256k1.PublicKey, quitRound chan struct{}, p2pServer *
     return l
 }
 
-func (l *Leader) UpdateStatus(members []*p2pTypes.Peer, curMiner int, minMember int, curHeight int64){
-    l.members = make([]*p2pTypes.Peer, len(members) - 1)
+func (l *Leader) UpdateStatus(members []*consensusTypes.Member, curMiner int, minMember int, curHeight int64){
+    l.members = make([]*consensusTypes.Member, len(members) - 1)
     l.minMember = minMember //*2/3
     l.currentHeight = curHeight
 
     last := -1
     for _, v := range members {
-        if  v == nil {
+        if  v.Peer == nil {
             continue
         }
         last++
@@ -123,9 +123,8 @@ func (l *Leader) ProcessConsensus(msg []byte) (error, *secp256k1.Signature, []by
         return errors.New("signature not valid"), nil,nil
     }
     valid := l.Validate(msg, l.sigmaS.R, l.sigmaS.S)
-    fmt.Println(l.sigmaS)
     log.Debug("vaidate result","VALID", valid)
-    if !valid&&len(l.members)>0 { //solo
+    if !valid && len(l.members)>0 { //solo
         //return &util.ConnectionError{}, nil, nil
        return errors.New("signature not valid"), nil,nil
     }
@@ -136,8 +135,8 @@ func (l *Leader) setUp(msg []byte) {
     setup := &consensusTypes.Setup{ Msg: msg}
     setup.Height = l.currentHeight
     for _, member := range l.members {
-        log.Debug("leader sent setup message", "IP", member.GetAddr(), "Height", setup.Height)
-        l.p2pServer.SendAsync(member, setup)
+        log.Debug("leader sent setup message", "IP", member.Peer.GetAddr(), "Height", setup.Height)
+        l.p2pServer.SendAsync(member.Peer, setup)
     }
 }
 
@@ -204,12 +203,6 @@ func (l *Leader) OnResponse(peer *p2pTypes.Peer, response *consensusTypes.Respon
     if l.currentHeight != response.Height {
         return
     }
-
-    index := l.getMinerIndex(peer.PubKey)
-    if !hasMarked(index, l.responseBitmap) {
-        return
-    }
-
     l.syncLock.Lock()
     defer l.syncLock.Unlock()
     /*
@@ -224,16 +217,20 @@ func (l *Leader) OnResponse(peer *p2pTypes.Peer, response *consensusTypes.Respon
 
     if l.sigmaS == nil {
         l.sigmaS = sig
+        l.markResponse(peer)
     }else{
-        l.sigmaS, err = schnorr.CombineSigs(secp256k1.S256(),[]*schnorr.Signature{l.sigmaS, sig })
+        sigmaS, err := schnorr.CombineSigs(secp256k1.S256(),[]*schnorr.Signature{l.sigmaS, sig })
         if err != nil {
+            schnorr.CombineSigs(secp256k1.S256(),[]*schnorr.Signature{l.sigmaS, sig })
             log.Debug("schnorr CombineSigs error", "reason", err)
+            fmt.Println("uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu")
             return
         }else {
+            fmt.Println("ggggggggggggggggggggggggggggggggggggggggggggggg")
+            l.sigmaS = sigmaS
+            l.markResponse(peer)
         }
     }
-
-    l.responseBitmap[index] = 1
 
     responseNum := l.getResponseNum()
     if responseNum >= l.minMember{
@@ -247,14 +244,20 @@ func (l *Leader) OnResponse(peer *p2pTypes.Peer, response *consensusTypes.Respon
     }
 }
 
+func (l *Leader) markResponse(peer *p2pTypes.Peer) {
+    index := l.getMinerIndex(peer.PubKey)
+    if !hasMarked(index, l.responseBitmap) {
+        return
+    }
+    l.responseBitmap[index] = 1
+}
+
 func (l *Leader) challenge(msg []byte) {
-   // l.r = l.getR(msg)
-   // l.r = sha3.ConcatHash256(l.sigmaCommitPubkey.Serialize(), l.sigmaPubKey.Serialize(), msg)
     for _, member := range l.members {
         memIndex := 0
         sigmaPubKeys := []*secp256k1.PublicKey{}
         for index, pubkey := range  l.sigmaPubKey {
-            if !pubkey.IsEqual(member.PubKey) {
+            if !pubkey.IsEqual(member.Produce.Public) {
                 sigmaPubKeys = append(sigmaPubKeys, pubkey)
             }else{
                 memIndex = index
@@ -270,10 +273,16 @@ func (l *Leader) challenge(msg []byte) {
         }
         commitPubkey := schnorr.CombinePubkeys(commitPubkeys)
 
-        l.r = sha3.ConcatHash256(sigmaPubKey.Serialize(), commitPubkey.Serialize(), sha3.Hash256(msg))
-        challenge := &consensusTypes.Challenge{Height:l.currentHeight, SigmaPubKey: sigmaPubKey, SigmaQ: commitPubkey, R: l.r}
-        log.Debug("leader sent hallenge message", "IP", member.GetAddr(), "Height", l.currentHeight)
-        l.p2pServer.SendAsync(member,challenge)
+        //l.r = sha3.ConcatHash256(sigmaPubKey.Serialize(), commitPubkey.Serialize(), sha3.Hash256(msg))
+        l.r = sha3.ConcatHash256(sha3.Hash256(msg))
+        challenge := &consensusTypes.Challenge{
+            Height : l.currentHeight,
+            SigmaPubKey : sigmaPubKey,
+            SigmaQ : commitPubkey,
+            R: l.r,
+        }
+        log.Debug("leader sent challenge message", "IP", member.Peer.GetAddr(), "Height", l.currentHeight)
+        l.p2pServer.SendAsync(member.Peer,challenge)
     }
 }
 
@@ -290,7 +299,7 @@ CANCEL:
     failMsg := &consensusTypes.Fail{Reason: msg}
     failMsg.Height = l.currentHeight
     for _, member := range l.members {
-        l.p2pServer.SendAsync(member, failMsg)
+        l.p2pServer.SendAsync(member.Peer, failMsg)
     }
 }
 
@@ -331,7 +340,7 @@ func hasMarked(index int, bitmap []byte) bool {
 func (l *Leader) getMinerIndex(p *secp256k1.PublicKey) int {
     // TODO if it is itself
     for i, v := range l.members {
-        if v.PubKey.IsEqual(p) {
+        if v.Peer.PubKey.IsEqual(p) {
             return i
         }
     }
@@ -347,7 +356,8 @@ func (l *Leader) Validate(msg []byte, r *big.Int, s *big.Int) bool {
     if float64(len(l.responseBitmap)) < math.Ceil(float64(len(l.members)*2.0/3.0)) {
         return false
     }
-    sigmaPubKey := schnorr.CombinePubkeys(l.sigmaPubKey)
+
+    sigmaPubKey := schnorr.CombinePubkeys(l.getResponsePubkey())
     return schnorr.Verify(sigmaPubKey, sha3.Hash256(msg), r, s)
 }
 
@@ -359,6 +369,16 @@ func (l *Leader) getCommitNum() int {
         }
     }
     return commitNum
+}
+
+func (l *Leader) getResponsePubkey() []*secp256k1.PublicKey {
+    publicKeys := []*secp256k1.PublicKey{}
+    for index, val := range l.responseBitmap {
+        if val == 1 {
+            publicKeys = append(publicKeys, l.members[index].Produce.Public)
+        }
+    }
+    return publicKeys
 }
 
 func (l *Leader) getResponseNum() int {

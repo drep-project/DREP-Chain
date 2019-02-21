@@ -19,7 +19,7 @@ func (chainService *ChainService) fetchBlocks() {
 				continue
 			}
 			if state.Height > chainService.DatabaseService.GetMaxHeight() {
-				req := &chainTypes.BlockReq{Height:chainService.DatabaseService.GetMaxHeight(), Pk: (*secp256k1.PublicKey)(&chainService.prvKey.PublicKey)}
+				req := &chainTypes.BlockReq{Height:chainService.DatabaseService.GetMaxHeight(), Pk: (*secp256k1.PublicKey)(chainService.P2pServer.GetIdentifier().PubKey())}
 				chainService.P2pServer.Send(peer,req)
 			}
 		}

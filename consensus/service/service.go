@@ -9,12 +9,10 @@ import (
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	consensusTypes "github.com/drep-project/drep-chain/consensus/types"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/crypto/secp256k1/schnorr"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/log"
 	p2pService "github.com/drep-project/drep-chain/network/service"
-	p2pTypes "github.com/drep-project/drep-chain/network/types"
 	"github.com/pkg/errors"
 	"gopkg.in/urfave/cli.v1"
 	"math"
@@ -187,7 +185,6 @@ func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, erro
 	if err != nil {
 		return nil, err
 	}
-	pubkeys := consensusService.member.GetMembers()
 	consensusService.member.Reset()
 	log.Trace("node member is going to process consensus for round 2")
 	multiSigBytes, err := consensusService.member.ProcessConsensus()
@@ -202,11 +199,13 @@ func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, erro
 	block.MultiSig = multiSig
 	//check multiSig
 
+	/*
 	sigmaPubKey := schnorr.CombinePubkeys(pubkeys)
 	isValid :=  schnorr.Verify(sigmaPubKey, sha3.Hash256(blockBytes), multiSig.Sig.R, multiSig.Sig.S)
 	if !isValid {
 		return nil, errors.New("signature not correct")
 	}
+	*/
 	consensusService.leader.Reset()
 	log.Trace("node member finishes consensus for round 2")
 	return block, nil
@@ -217,7 +216,7 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 
 	membersPubkey := []*secp256k1.PublicKey{}
 	for _, pub := range  consensusService.leader.members {
-		membersPubkey = append(membersPubkey, pub.PubKey)
+		membersPubkey = append(membersPubkey, pub.Produce.Public)
 	}
 	block, err := consensusService.ChainService.GenerateBlock(consensusService.leader.pubkey, membersPubkey)
 	if err != nil {
@@ -286,25 +285,30 @@ func (consensusService *ConsensusService) isProduce() bool {
 	return false
 }
 
-func (consensusService *ConsensusService) CollectLiveMember()[]*p2pTypes.Peer{
-	liveMember := []*p2pTypes.Peer{}
+func (consensusService *ConsensusService) CollectLiveMember()[]*consensusTypes.Member{
+	liveMembers := []*consensusTypes.Member{}
 	for _, produce := range consensusService.consensusConfig.Producers {
 		if consensusService.pubkey.IsEqual(produce.Public) {
-			liveMember = append(liveMember, nil)  // self
+			liveMembers = append(liveMembers, &consensusTypes.Member{
+				Produce : produce,
+			})  // self
 		}else{
 			peer := consensusService.P2pServer.SelectPeer(produce.Ip)
 			if peer != nil {
-				liveMember = append(liveMember, peer)
+				liveMembers = append(liveMembers, &consensusTypes.Member{
+					Produce : produce,
+					Peer : peer,
+				})
 			}
 		}
 	}
-	return liveMember
+	return liveMembers
 }
 
-func (consensusService *ConsensusService) MoveToNextMiner(liveMembers []*p2pTypes.Peer) (bool, bool) {
+func (consensusService *ConsensusService) MoveToNextMiner(liveMembers []*consensusTypes.Member) (bool, bool) {
 	consensusService.curMiner = int(consensusService.ChainService.CurrentHeight%int64(len(liveMembers)))
 
-	if liveMembers[consensusService.curMiner] == nil {
+	if liveMembers[consensusService.curMiner].Peer == nil {
 		return false, true
 	} else{
 		return true, false
