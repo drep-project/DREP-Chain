@@ -20,6 +20,9 @@ import (
     "strconv"
     "sync"
     "time"
+    "BlockChainTest/store"
+    "BlockChainTest/network"
+    "BlockChainTest/util"
 )
 var (
     rootChain common.ChainIdType
@@ -122,6 +125,21 @@ func (chainService *ChainService) Start(executeContext *app.ExecuteContext) erro
 
 func (chainService *ChainService) Stop(executeContext *app.ExecuteContext) error {
     return nil
+}
+
+func (chainService *ChainService) SendTransaction(t *chainTypes.Transaction) error {
+    peers := store.GetPeers()
+    //log.Info("Send transaction")
+    if _, offline := network.SendMessage(peers, t); len(offline) == 0 {
+        if id, err := t.TxId(); err == nil {
+            store.ForwardTransaction(id)
+        }
+        store.AddTransaction(t)
+        store.RemovePeers(offline)
+        return nil
+    } else {
+        return &util.ConnectionError{}
+    }
 }
 
 func (chainService *ChainService) sendBlock(block *chainTypes.Block) {

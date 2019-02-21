@@ -28,6 +28,14 @@ func (addr CommonAddress) IsEmpty() bool {
 	return addr == CommonAddress{}
 }
 
+func String2Address(s string) CommonAddress {
+	if s == "" {
+		return CommonAddress{}
+	}
+	bytes := []byte(s)
+	return Bytes2Address(bytes)
+}
+
 func Bytes2Address(b []byte) CommonAddress {
 	if b == nil {
 		return CommonAddress{}

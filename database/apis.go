@@ -202,6 +202,14 @@ func (database *DatabaseService) GetCodeHash(addr crypto.CommonAddress, chainId 
     return storage.CodeHash
 }
 
+func (database *DatabaseService) GetReputation(addr crypto.CommonAddress, chainId common.ChainIdType, transactional bool) *big.Int {
+    storage := database.GetStorage(addr, chainId, transactional)
+    if storage == nil {
+        return big.NewInt(0)
+    }
+    return storage.Reputation
+}
+
 func (database *DatabaseService) GetLogs(txHash []byte, chainId common.ChainIdType) []*chainType.Log {
     key := sha3.Hash256([]byte("logs_" + hex.EncodeToString(txHash) + chainId.Hex()))
     value, err := db.get(key, false)
