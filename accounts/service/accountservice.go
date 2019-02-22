@@ -3,8 +3,8 @@ package service
 import (
 	accountCommponent "github.com/drep-project/drep-chain/accounts/component"
 	accountTypes "github.com/drep-project/drep-chain/accounts/types"
-	"github.com/drep-project/drep-chain/app"
 	chainService "github.com/drep-project/drep-chain/chain/service"
+	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/common"
 	"gopkg.in/urfave/cli.v1"
 	path2 "path"
@@ -24,7 +24,7 @@ var (
 
 // CliService provides an interactive command line window
 type AccountService struct {
-	chainService chainService.ChainService  `service:"chain"`
+	ChainService *chainService.ChainService  `service:"chain"`
 	config *accountTypes.Config
 	Wallet *accountCommponent.Wallet
 	apis   []app.API
@@ -86,6 +86,7 @@ func (accountService *AccountService) Init(executeContext *app.ExecuteContext) e
 			Version:   "1.0",
 			Service: &AccountApi{
 				Wallet: accountService.Wallet,
+				chainService: accountService.ChainService,
 			},
 			Public: true,
 		},

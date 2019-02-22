@@ -32,12 +32,13 @@ func (chainService *ChainService) Receive(context actor.Context) {
 				return
 			}
 			// TODO backup nodes should not add
-			if chainService.transactionPool.AddTransaction(transaction) {
+			err := chainService.transactionPool.AddTransaction(transaction)
+			if err == nil {
 				log.Debug("Succeed to add this transaction ", "transaction", *transaction)
 				chainService.P2pServer.Broadcast(transaction)
 				ForwardTransaction(id)
 			} else {
-				log.Debug("Fail to add this transaction ", "transaction", *transaction)
+				log.Debug("Fail to add this transaction ", "reason", err, "transaction", *transaction)
 			}
 		case *chainTypes.Block:
 			block := msg

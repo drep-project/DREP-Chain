@@ -4,18 +4,18 @@ import (
 	accountCommponent "github.com/drep-project/drep-chain/accounts/component"
 	"github.com/drep-project/drep-chain/crypto"
     "github.com/drep-project/drep-chain/common"
-    "github.com/drep-project/drep-chain/chain/service"
     "github.com/drep-project/drep-chain/crypto/secp256k1"
     "github.com/pkg/errors"
     "math/big"
     "strconv"
     "encoding/json"
+   chainService "github.com/drep-project/drep-chain/chain/service"
 )
 
-var chainService = service.ChainService{}
 
 type AccountApi struct {
 	Wallet *accountCommponent.Wallet
+	chainService *chainService.ChainService
 }
 
 func (accountapi *AccountApi) AddressList() ([]*crypto.CommonAddress, error) {
@@ -99,8 +99,8 @@ func (accountapi *AccountApi) SendTransaction(from, to, chainId, amount string) 
         return "", err
     }
     a := big.NewInt(x)
-	t := chainService.GenerateBalanceTransaction(fromPubK, destAddr, destChain, a)
-    if chainService.SendTransaction(t) != nil {
+	t := accountapi.chainService.GenerateBalanceTransaction(fromPubK, destAddr, destChain, a)
+    if accountapi.chainService.SendTransaction(t) != nil {
         return "", errors.New("Offline")
     } else {
         return t.TxId()
@@ -126,8 +126,8 @@ func (accountapi *AccountApi) Call(from, to, chainId, input, amount string, read
     }
     value := big.NewInt(x)
 
-    t := chainService.GenerateCallContractTransaction(fromPubK, destAddr, destChain, inputBytes, value, readOnly)
-    if chainService.SendTransaction(t) != nil {
+    t := accountapi.chainService.GenerateCallContractTransaction(fromPubK, destAddr, destChain, inputBytes, value, readOnly)
+    if accountapi.chainService.SendTransaction(t) != nil {
         return "", errors.New("Offline")
     } else {
         return t.TxId()
