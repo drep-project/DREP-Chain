@@ -8,6 +8,7 @@ import (
     "math/big"
     "github.com/drep-project/drep-chain/common/list"
     "github.com/drep-project/drep-chain/database"
+    "github.com/pkg/errors"
 )
 
 const maxSize = 100000
@@ -90,24 +91,26 @@ func (pool *TransactionPool) checkAndGetAddr(tran *chainTypes.Transaction) (bool
     return true, addr
 }
 //func AddTransaction(id string, transaction *common.transaction) {
-func (pool *TransactionPool) AddTransaction(transaction *chainTypes.Transaction) bool {
+func (pool *TransactionPool) AddTransaction(transaction *chainTypes.Transaction) error {
     check, addr :=  pool.checkAndGetAddr(transaction)
     if !check {
-        return false
+        return errors.New("check addr failed!")
     }
     id, err := transaction.TxId()
     if err != nil {
-        return false
+        return err
     }
     pool.tranLock.Lock()
     defer  pool.tranLock.Unlock()
     if  pool.trans.Size() >= maxSize {
-        log.Error("transaction pool full. %s fail to add", id)
-        return false
+        msg := "transaction pool full. %s fail to add" + id
+        log.Error(msg)
+        return errors.New(msg)
     }
     if _, exists :=  pool.tranSet[id]; exists {
+        msg := "transaction %s exists" + id
         log.Error("transaction %s exists", id)
-        return false
+        return errors.New(msg)
     } else {
         pool.tranSet[id] = true
         pool.trans.Add(transaction)
@@ -119,7 +122,7 @@ func (pool *TransactionPool) AddTransaction(transaction *chainTypes.Transaction)
             l.Add(transaction)
         }
     }
-    return true
+    return nil
 }
 
 func (pool *TransactionPool) removeTransaction(tran *chainTypes.Transaction) (bool, bool) {
