@@ -142,7 +142,11 @@ func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (*big.In
     chainService.addBlockSync.Lock()
     defer chainService.addBlockSync.Unlock()
     log.Trace("Process block leader.", "LeaderPubKey", crypto.PubKey2Address(block.Header.LeaderPubKey).Hex(), " height ", strconv.FormatInt(block.Header.Height,10))
-    return chainService.ExecuteTransactions(block)
+    gasUsed, err :=  chainService.ExecuteTransactions(block)
+    if err != nil {
+        chainService.CurrentHeight = block.Header.Height
+    }
+    return gasUsed, err
 }
 
 func (chainService *ChainService) ProcessBlockReq(peer *p2pTypes.Peer, req *chainTypes.BlockReq) {

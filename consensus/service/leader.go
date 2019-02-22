@@ -141,6 +141,9 @@ func (l *Leader) setUp(msg []byte) {
 }
 
 func (l *Leader) OnCommit(peer *p2pTypes.Peer, commit *consensusTypes.Commitment) {
+    l.syncLock.Lock()
+    defer l.syncLock.Unlock()
+
     if l.getState() != WAIT_COMMIT {
         return
     }
@@ -152,8 +155,6 @@ func (l *Leader) OnCommit(peer *p2pTypes.Peer, commit *consensusTypes.Commitment
     if !hasMarked(index, l.commitBitmap) {
         return
     }
-    l.syncLock.Lock()
-    defer l.syncLock.Unlock()
 
     if l.sigmaPubKey == nil {
         l.sigmaPubKey = []*secp256k1.PublicKey{ peer.PubKey }
@@ -169,7 +170,7 @@ func (l *Leader) OnCommit(peer *p2pTypes.Peer, commit *consensusTypes.Commitment
 
     l.commitBitmap[index] = 1
     commitNum := l.getCommitNum()
-    if commitNum >= l.minMember  {
+    if commitNum == len(l.members){
         log.Debug("OnCommit finish", "commitNum", commitNum, "members", len(l.members))
         select {
         case l.cancelWaitCommit <- struct{}{}:
@@ -197,19 +198,15 @@ func (l *Leader) waitForCommit() bool {
 }
 
 func (l *Leader) OnResponse(peer *p2pTypes.Peer, response *consensusTypes.Response) {
+    l.syncLock.Lock()
+    defer l.syncLock.Unlock()
     if l.getState() != WAIT_RESPONSE {
         return
     }
     if l.currentHeight != response.Height {
         return
     }
-    l.syncLock.Lock()
-    defer l.syncLock.Unlock()
-    /*
-    s := new(big.Int).SetBytes(response.S)
-    l.sigmaS = l.sigmaS.Add(l.sigmaS, s)
-    l.sigmaS.Mod(l.sigmaS, secp256k1.S256().N)
-    */
+
     sig, err := schnorr.ParseSignature(response.S)
     if err != nil {
         return
@@ -233,7 +230,7 @@ func (l *Leader) OnResponse(peer *p2pTypes.Peer, response *consensusTypes.Respon
     }
 
     responseNum := l.getResponseNum()
-    if responseNum >= l.minMember{
+    if responseNum == len(l.members){
         l.setState(COMPLETED)
         log.Debug("OnResponse finish", "responseNum", responseNum, "members", len(l.members))
         select {

@@ -51,10 +51,7 @@ func (chainService *ChainService) Receive(context actor.Context) {
 				return
 			}
 			ForwardBlock(id)
-			_, err := chainService.ProcessBlock(block)
-			if err != nil {
-				chainService.CurrentHeight = block.Header.Height
-			}
+			chainService.ProcessBlock(block)
 		case *chainTypes.PeerState:
 			chainService.handlePeerState(routeMsg.Peer, msg)
 		case *chainTypes.ReqPeerState:

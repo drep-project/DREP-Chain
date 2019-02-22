@@ -60,8 +60,3 @@ func (chain *ChainApi) GetTransactionCountByBlockHeight(height int64) int {
     block := dbService.GetBlock(height)
     return len(block.Data.TxList)
 }
-
-//TODO mock a rpc to provent rpc error
-func (chainApi *ChainApi) Mock(){
-
-}
