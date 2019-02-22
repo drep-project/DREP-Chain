@@ -1,13 +1,14 @@
-package component
+package service
 
 import (
-	accountTypes "github.com/drep-project/drep-chain/accounts/types"
+	"sync/atomic"
+	"github.com/pkg/errors"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
-	"github.com/pkg/errors"
-	"sync/atomic"
+	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	accountsComponent "github.com/drep-project/drep-chain/accounts/component"
+	accountTypes "github.com/drep-project/drep-chain/accounts/types"
 )
 
 const (
@@ -21,7 +22,7 @@ const (
 )
 
 type Wallet struct {
-	cacheStore *accountCache
+	cacheStore *accountsComponent.CacheStore
 
 	chainId common.ChainIdType
 	config  *accountTypes.Config
@@ -43,7 +44,7 @@ func (wallet *Wallet) Open(password string) error {
 		return errors.New("wallet is already open")
 	}
 	cryptedPassword := wallet.cryptoPassword(password)
-	accountCacheStore, err := NewAccountCache(wallet.config.KeyStoreDir, cryptedPassword)
+	accountCacheStore, err := accountsComponent.NewCacheStore(wallet.config.KeyStoreDir, cryptedPassword)
 	if err != nil {
 		return err
 	}

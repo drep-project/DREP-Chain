@@ -24,7 +24,7 @@ const (
 )
 
 type Member struct {
-    leader *consensusTypes.Member
+    leader *consensusTypes.MemberInfo
     members []*secp256k1.PublicKey
     prvKey *secp256k1.PrivateKey
     p2pServer *p2pService.P2pService
@@ -66,7 +66,7 @@ func NewMember(prvKey *secp256k1.PrivateKey, quitRound chan struct{}, p2pServer 
     return member
 }
 
-func (member *Member) UpdateStatus(participants []*consensusTypes.Member , curMiner int,minMember int, curHeight int64){
+func (member *Member) UpdateStatus(participants []*consensusTypes.MemberInfo , curMiner int,minMember int, curHeight int64){
     member.Reset()
     member.leader = participants[curMiner]
     member.members = []*secp256k1.PublicKey{}
@@ -75,8 +75,8 @@ func (member *Member) UpdateStatus(participants []*consensusTypes.Member , curMi
         if participant.Peer == nil {
             member.members = append(member.members, member.prvKey.PubKey())
         }else {
-            if !participant.Produce.Public.IsEqual(member.leader.Produce.Public) {
-                member.members = append(member.members, participant.Produce.Public)
+            if !participant.Producer.Public.IsEqual(member.leader.Producer.Public) {
+                member.members = append(member.members, participant.Producer.Public)
             }
         }
     }
@@ -113,7 +113,6 @@ PREMSG:
             break PREMSG
         }
     }
-
 
     for {
         select {
@@ -257,6 +256,7 @@ func (member *Member) GetMembers() []*secp256k1.PublicKey{
 }
 
 func (member *Member) commit()  {
+    //TODO validate block from leader
     var err error
     member.randomPrivakey, _, err = schnorr.GenerateNoncePair(secp256k1.S256(), member.msgHash, member.prvKey,nil, schnorr.Sha256VersionStringRFC6979)
     if err != nil {

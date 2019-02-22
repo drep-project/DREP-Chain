@@ -60,7 +60,7 @@ func gen(ctx *cli.Context) error {
 	bootsNodes := []p2pTypes.BootNode{}
 	standbyKey := []*secp256k1.PrivateKey{}
 	nodes := []*accountTypes.Node{}
-	produces := []*consensusTypes.Produce{}
+	produces := []*consensusTypes.Producer{}
 	for i:=0; i< len(nodeItems); i++{
 		aNode := getAccount(nodeItems[i].Name)
 		nodes = append(nodes, aNode)
@@ -70,7 +70,7 @@ func gen(ctx *cli.Context) error {
 			Port:nodeItems[i].Port,
 		})
 		standbyKey = append(standbyKey, aNode.PrivateKey)
-		producer := &consensusTypes.Produce{
+		producer := &consensusTypes.Producer{
 			Ip:nodeItems[i].Ip,
 			Port:nodeItems[i].Port,
 			Public: (*secp256k1.PublicKey)(&aNode.PrivateKey.PublicKey),

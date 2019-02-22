@@ -1,13 +1,12 @@
 package service
 
 import (
-	accountCommponent "github.com/drep-project/drep-chain/accounts/component"
-	accountTypes "github.com/drep-project/drep-chain/accounts/types"
-	chainService "github.com/drep-project/drep-chain/chain/service"
+	path2 "path"
+	"gopkg.in/urfave/cli.v1"
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/common"
-	"gopkg.in/urfave/cli.v1"
-	path2 "path"
+	accountTypes "github.com/drep-project/drep-chain/accounts/types"
+	chainService "github.com/drep-project/drep-chain/chain/service"
 )
 
 var (
@@ -26,7 +25,7 @@ var (
 type AccountService struct {
 	ChainService *chainService.ChainService  `service:"chain"`
 	config *accountTypes.Config
-	Wallet *accountCommponent.Wallet
+	Wallet *Wallet
 	apis   []app.API
 }
 
@@ -73,7 +72,7 @@ func (accountService *AccountService) Init(executeContext *app.ExecuteContext) e
 		}
 	}
 
-	accountService.Wallet, err = accountCommponent.NewWallet(accountService.config, accountTypes.RootChain)
+	accountService.Wallet, err = NewWallet(accountService.config, accountTypes.RootChain)
 	if err != nil {
 		return err
 	}

@@ -1,12 +1,12 @@
-package component
+package service
 
 import (
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/crypto/sha3"
 	"fmt"
-	accountTypes "github.com/drep-project/drep-chain/accounts/types"
 	"log"
 	"testing"
+	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/drep-chain/crypto/sha3"
+	accountTypes "github.com/drep-project/drep-chain/accounts/types"
 )
 
 func TestWallet(t *testing.T) {

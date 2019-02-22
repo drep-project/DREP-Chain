@@ -34,7 +34,7 @@ type ConsensusService struct {
 
 	pubkey *secp256k1.PublicKey
 	privkey *secp256k1.PrivateKey
-	producers []*consensusTypes.Produce
+	producers []*consensusTypes.Producer
 	consensusConfig *consensusTypes.ConsensusConfig
 
 	pid *actor.PID
@@ -149,7 +149,7 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 				}
 			}
 			if err != nil {
-				log.Debug("Produce Block Fail", "reason", err.Error())
+				log.Debug("Producer Block Fail", "reason", err.Error())
 			}else{
 				consensusService.ChainService.ProcessBlock(block)
 				consensusService.P2pServer.Broadcast(block)
@@ -216,7 +216,7 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 
 	membersPubkey := []*secp256k1.PublicKey{}
 	for _, pub := range  consensusService.leader.members {
-		membersPubkey = append(membersPubkey, pub.Produce.Public)
+		membersPubkey = append(membersPubkey, pub.Producer.Public)
 	}
 	block, err := consensusService.ChainService.GenerateBlock(consensusService.leader.pubkey, membersPubkey)
 	if err != nil {
@@ -285,19 +285,19 @@ func (consensusService *ConsensusService) isProduce() bool {
 	return false
 }
 
-func (consensusService *ConsensusService) CollectLiveMember()[]*consensusTypes.Member{
-	liveMembers := []*consensusTypes.Member{}
+func (consensusService *ConsensusService) CollectLiveMember()[]*consensusTypes.MemberInfo{
+	liveMembers := []*consensusTypes.MemberInfo{}
 	for _, produce := range consensusService.consensusConfig.Producers {
 		if consensusService.pubkey.IsEqual(produce.Public) {
-			liveMembers = append(liveMembers, &consensusTypes.Member{
-				Produce : produce,
+			liveMembers = append(liveMembers, &consensusTypes.MemberInfo{
+				Producer: produce,
 			})  // self
 		}else{
 			peer := consensusService.P2pServer.SelectPeer(produce.Ip)
 			if peer != nil {
-				liveMembers = append(liveMembers, &consensusTypes.Member{
-					Produce : produce,
-					Peer : peer,
+				liveMembers = append(liveMembers, &consensusTypes.MemberInfo{
+					Producer: produce,
+					Peer :    peer,
 				})
 			}
 		}
@@ -305,7 +305,7 @@ func (consensusService *ConsensusService) CollectLiveMember()[]*consensusTypes.M
 	return liveMembers
 }
 
-func (consensusService *ConsensusService) MoveToNextMiner(liveMembers []*consensusTypes.Member) (bool, bool) {
+func (consensusService *ConsensusService) MoveToNextMiner(liveMembers []*consensusTypes.MemberInfo) (bool, bool) {
 	consensusService.curMiner = int(consensusService.ChainService.CurrentHeight%int64(len(liveMembers)))
 
 	if liveMembers[consensusService.curMiner].Peer == nil {

@@ -1,18 +1,17 @@
 package service
 
 import (
-	accountCommponent "github.com/drep-project/drep-chain/accounts/component"
+	"math/big"
+	"github.com/pkg/errors"
 	"github.com/drep-project/drep-chain/crypto"
     "github.com/drep-project/drep-chain/common"
     "github.com/drep-project/drep-chain/crypto/secp256k1"
-    "github.com/pkg/errors"
-    "math/big"
    chainService "github.com/drep-project/drep-chain/chain/service"
 )
 
 
 type AccountApi struct {
-	Wallet *accountCommponent.Wallet
+	Wallet *Wallet
 	chainService *chainService.ChainService
 }
 

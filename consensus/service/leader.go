@@ -22,7 +22,7 @@ const (
     WAIT_SETUP_TIMEOUT
     WAIT_COMMIT
     WAIT_COMMIT_COMPELED
-    WAIT_COMMITT_IMEOUT
+    WAIT_COMMIT_IMEOUT
     WAIT_CHALLENGE
     WAIT_CHALLENGE_TIMEOUT
     WAIT_RESPONSE
@@ -33,7 +33,7 @@ const (
 )
 
 type Leader struct {
-    members    []*consensusTypes.Member
+    members    []*consensusTypes.MemberInfo
     pubkey *secp256k1.PublicKey
     p2pServer *p2pService.P2pService
 
@@ -69,8 +69,8 @@ func NewLeader(pubKey *secp256k1.PublicKey, quitRound chan struct{}, p2pServer *
     return l
 }
 
-func (leader *Leader) UpdateStatus(members []*consensusTypes.Member, curMiner int, minMember int, curHeight int64){
-    leader.members = make([]*consensusTypes.Member, len(members) - 1)
+func (leader *Leader) UpdateStatus(members []*consensusTypes.MemberInfo, curMiner int, minMember int, curHeight int64){
+    leader.members = make([]*consensusTypes.MemberInfo, len(members) - 1)
     leader.minMember = minMember //*2/3
     leader.currentHeight = curHeight
 
@@ -190,7 +190,7 @@ func (leader *Leader) waitForCommit() bool {
             if commitNum >= leader.minMember  {
                 return true
             }
-            leader.setState(WAIT_COMMITT_IMEOUT)
+            leader.setState(WAIT_COMMIT_IMEOUT)
             return false
         case <-leader.cancelWaitCommit:
             return true
@@ -220,7 +220,7 @@ func (leader *Leader) OnResponse(peer *p2pTypes.Peer, response *consensusTypes.R
         sigmaS, err := schnorr.CombineSigs(secp256k1.S256(),[]*schnorr.Signature{leader.sigmaS, sig })
         if err != nil {
             schnorr.CombineSigs(secp256k1.S256(),[]*schnorr.Signature{leader.sigmaS, sig })
-            log.Debug("schnorr CombineSigs error", "reason", err)
+            log.Debug("schnorr combineSigs error", "reason", err)
             return
         }else {
             leader.sigmaS = sigmaS
@@ -253,7 +253,7 @@ func (leader *Leader) challenge(msg []byte) {
         memIndex := 0
         sigmaPubKeys := []*secp256k1.PublicKey{}
         for index, pubkey := range  leader.sigmaPubKey {
-            if !pubkey.IsEqual(member.Produce.Public) {
+            if !pubkey.IsEqual(member.Producer.Public) {
                 sigmaPubKeys = append(sigmaPubKeys, pubkey)
             }else{
                 memIndex = index
@@ -371,7 +371,7 @@ func (leader *Leader) getResponsePubkey() []*secp256k1.PublicKey {
     publicKeys := []*secp256k1.PublicKey{}
     for index, val := range leader.responseBitmap {
         if val == 1 {
-            publicKeys = append(publicKeys, leader.members[index].Produce.Public)
+            publicKeys = append(publicKeys, leader.members[index].Producer.Public)
         }
     }
     return publicKeys

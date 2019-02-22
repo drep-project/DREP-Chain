@@ -1,10 +1,10 @@
 package types
 
 import (
-	"encoding/hex"
 	"fmt"
-	"github.com/drep-project/drep-chain/common"
 	"testing"
+	"encoding/hex"
+	"github.com/drep-project/drep-chain/common"
 )
 
 func TestNewRootAccount(t *testing.T) {
