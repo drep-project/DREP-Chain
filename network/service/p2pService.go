@@ -340,7 +340,7 @@ func (server *P2pService) sendMessageRoutine(){
 func (server *P2pService) sendMessage(outMessage *outMessage) error {
 	message, err := p2pComponent.GenerateMessage(outMessage.Msg, server.prvKey)
 	if err != nil {
-		log.Info("error during cipher:", err)
+		log.Info("error during cipher:", "reason", err)
 		return &common.DataError{MyError:common.MyError{Err:err}}
 	}
 	d, err := time.ParseDuration("3s")
@@ -417,24 +417,25 @@ func (server *P2pService) sendMessageInternal(conn net.Conn, bytes []byte) error
 	return nil
 }
 
+// TODO p2p operate must be consider more details   1) less lock time； 2）fast query  3）correct peer and deadpeer state
 func (server *P2pService) recoverDeadPeer(){
-	server.tryTimer = time.NewTicker(time.Second*10)
+	server.tryTimer = time.NewTicker(time.Second * 30)
 	for {
 		select  {
 		case  <-server.tryTimer.C:
 			server.peerOpLock.Lock()
-			//log.Trace("start to recover dead peer")
-			// rand peer and attempt connect
 			tryPeerCount := 0
 			if len(server.DeadPeer) < 40 {    //TODO   MAXPEER * RATE  200*0.2
 				tryPeerCount = len(server.DeadPeer)
 			} else {
 				tryPeerCount = len(server.DeadPeer)/5      //RATE
 			}
-
-			for i :=0; i<tryPeerCount; i++ { //try top N(%)
-				deadPeer := server.DeadPeer[0]
-				server.DeadPeer = server.DeadPeer[1:len(server.DeadPeer)]
+			tryPeer :=  []*p2pTypes.Peer{}
+			for i :=0; i < tryPeerCount; i++ {
+				tryPeer = append(tryPeer, server.DeadPeer[i])
+			}
+			server.peerOpLock.Unlock()
+			for _, deadPeer := range tryPeer {
 				if deadPeer.Conn.Connect() {
 					deadPeer.Conn.ReStart()
 					server.addPeer(deadPeer)
@@ -445,7 +446,6 @@ func (server *P2pService) recoverDeadPeer(){
 					log.Trace("try to connect peer fail", "Addr", deadPeer.GetAddr())
 				}
 			}
-			server.peerOpLock.Unlock()
 		}
 	}
 }
@@ -464,9 +464,6 @@ func (server *P2pService) Receive(context actor.Context) {
 }
 
 func (server *P2pService) SelectPeer(ip string)(*p2pTypes.Peer){
-	server.peerOpLock.Lock()
-	defer server.peerOpLock.Unlock()
-
 	for _,peer := range server.LivePeer {
 		if peer.Ip == ip {
 			return peer
@@ -476,9 +473,6 @@ func (server *P2pService) SelectPeer(ip string)(*p2pTypes.Peer){
 }
 
 func (server *P2pService) selectDeadPeer(ip string)(*p2pTypes.Peer){
-	server.peerOpLock.Lock()
-	defer server.peerOpLock.Unlock()
-
 	for _,peer := range server.DeadPeer {
 		if peer.Ip == ip {
 			return peer
@@ -511,11 +505,15 @@ func (server *P2pService) addDeadPeer(peer *p2pTypes.Peer){
 		server.LivePeer = append(server.LivePeer[0:index],server.LivePeer[index+1:len(server.LivePeer)]...)
 	}
 
-	if len(server.DeadPeer) > MaxDeadPeer {
-		//remove top peer
-		server.DeadPeer = server.DeadPeer[1:len(server.DeadPeer)]
+
+	index = server.indexPeer(server.DeadPeer,peer)
+	if index == -1 {
+		if len(server.DeadPeer) > MaxDeadPeer {
+			//remove top peer
+			server.DeadPeer = server.DeadPeer[1:len(server.DeadPeer)]
+		}
+		server.DeadPeer = append(server.DeadPeer,peer)
 	}
-	server.DeadPeer = append(server.DeadPeer,peer)
 }
 
 func (server *P2pService) indexPeer(peers []*p2pTypes.Peer,peer *p2pTypes.Peer) int {

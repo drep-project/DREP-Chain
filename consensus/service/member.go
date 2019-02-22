@@ -1,15 +1,15 @@
 package service
 
 import (
+    "bytes"
+    "errors"
     consensusTypes "github.com/drep-project/drep-chain/consensus/types"
     "github.com/drep-project/drep-chain/crypto/secp256k1"
     "github.com/drep-project/drep-chain/crypto/secp256k1/schnorr"
     "github.com/drep-project/drep-chain/crypto/sha3"
     "github.com/drep-project/drep-chain/log"
-    p2pTypes "github.com/drep-project/drep-chain/network/types"
     p2pService "github.com/drep-project/drep-chain/network/service"
-    "bytes"
-    "errors"
+    p2pTypes "github.com/drep-project/drep-chain/network/types"
     "math/big"
     "sync"
     "time"
@@ -46,237 +46,266 @@ type Member struct {
     currentHeight int64
     stateLock sync.RWMutex
 
+    msgPool	chan *consensusTypes.RouteMsgWrap
+    isConsensus bool   // time split 2, in consensus \ wait
+
     quitRound chan struct{}
 }
 
 func NewMember(prvKey *secp256k1.PrivateKey, quitRound chan struct{}, p2pServer *p2pService.P2pService) *Member {
-    m := &Member{}
+    member := &Member{}
 
-    m.prvKey = prvKey
-    m.waitTime = 10 * time.Second
+    member.prvKey = prvKey
+    member.waitTime = 10 * time.Second
 
-    m.p2pServer = p2pServer
-    m.quitRound = quitRound
+    member.p2pServer = p2pServer
+    member.quitRound = quitRound
+    member.msgPool = make(chan *consensusTypes.RouteMsgWrap, 1000)
 
-    m.Reset()
-    return m
+    member.Reset()
+    return member
 }
 
-func (m *Member) UpdateStatus(participants []*consensusTypes.Member , curMiner int,minMember int, curHeight int64){
-    m.Reset()
-    m.leader = participants[curMiner]
-    m.members = []*secp256k1.PublicKey{}
+func (member *Member) UpdateStatus(participants []*consensusTypes.Member , curMiner int,minMember int, curHeight int64){
+    member.Reset()
+    member.leader = participants[curMiner]
+    member.members = []*secp256k1.PublicKey{}
 
     for _, participant := range participants {
         if participant.Peer == nil {
-            m.members = append(m.members, m.prvKey.PubKey())
+            member.members = append(member.members, member.prvKey.PubKey())
         }else {
-            if !participant.Produce.Public.IsEqual(m.leader.Produce.Public) {
-                m.members = append(m.members, participant.Produce.Public)
+            if !participant.Produce.Public.IsEqual(member.leader.Produce.Public) {
+                member.members = append(member.members, participant.Produce.Public)
             }
         }
     }
 
-    m.currentHeight = curHeight
+    member.currentHeight = curHeight
 }
 
-func (m *Member) Reset(){
-    m.msg  = nil
-    m.msgHash = nil
-    m.errorChanel = make(chan string,1)
-    m.completed = make(chan struct{},1)
-    m.cancelWaitSetUp = make(chan struct{},1)
-    m.timeOutChanel = make(chan struct{},1)
-    m.cancelWaitChallenge = make(chan struct{},1)
-    m.setState(INIT)
+func (member *Member) Reset(){
+    member.msg  = nil
+    member.msgHash = nil
+    member.errorChanel = make(chan string,1)
+    member.completed = make(chan struct{},1)
+    member.cancelWaitSetUp = make(chan struct{},1)
+    member.timeOutChanel = make(chan struct{},1)
+    member.cancelWaitChallenge = make(chan struct{},1)
+    member.setState(INIT)
 }
 
-func (m *Member) ProcessConsensus() ([]byte, error) {
-    log.Debug("wait for leader's setup message", "IP",  m.leader.Peer.GetAddr())
-    m.setState(WAIT_SETUP)
-    go m.WaitSetUp()
+func (member *Member) ProcessConsensus() ([]byte, error) {
+    log.Debug("wait for leader's setup message", "IP",  member.leader.Peer.GetAddr())
+    member.setState(WAIT_SETUP)
+    member.isConsensus = true
+    defer func() {
+        member.isConsensus = false
+    }()
+    go member.WaitSetUp()
+
+PREMSG:
+    for {
+        select {
+        case msg := <- member.msgPool:
+            member.OnSetUp(msg.Peer, msg.SetUpMsg)
+        default:
+            break PREMSG
+        }
+    }
+
 
     for {
         select {
-        case msg := <- m.errorChanel:
+        case msg := <- member.errorChanel:
             return nil, errors.New(msg)
-        case <- m.timeOutChanel:
-            m.setState(ERROR)
+        case <- member.timeOutChanel:
+            member.setState(ERROR)
             return nil, errors.New(TimeOoutEroor)
-        case <- m.completed:
-            m.setState(COMPLETED)
-            return m.msg, nil
+        case <- member.completed:
+            member.setState(COMPLETED)
+            return member.msg, nil
         }
     }
 }
 
-func (m *Member) WaitSetUp(){
+func (member *Member) WaitSetUp(){
     select {
-    case  <-time.After(m.waitTime):
+    case  <-time.After(member.waitTime):
         log.Debug("wait setup message timeout")
-        m.setState(WAIT_SETUP_TIMEOUT)
+        member.setState(WAIT_SETUP_TIMEOUT)
         select {
-        case m.timeOutChanel <- struct{}{}:
+        case member.timeOutChanel <- struct{}{}:
         default:
         }
         return
-    case <- m.cancelWaitSetUp:
+    case <- member.cancelWaitSetUp:
         return
     }
 }
 
-func (m *Member) OnSetUp(peer *p2pTypes.Peer, setUp *consensusTypes.Setup) {
-    if m.currentHeight < setUp.Height {
-        log.Debug("setup low height", "Receive Height", setUp.Height, "Current Height", m.currentHeight, "Status", m.getState())
-        m.pushErrorMsg(HighHeightError)
-        return
-    }else if m.currentHeight > setUp.Height {
-        log.Debug("setup high height", "Receive Height", setUp.Height, "Current Height", m.currentHeight, "Status", m.getState())
-        m.pushErrorMsg(LowHeightError)
+func (member *Member) OnSetUp(peer *p2pTypes.Peer, setUp *consensusTypes.Setup) {
+    if !member.isConsensus {
+        member.msgPool <- &consensusTypes.RouteMsgWrap{
+            Peer: peer,
+            SetUpMsg: setUp,
+        }
+        log.Debug("restore setup message")
         return
     }
 
-    if m.getState() != WAIT_SETUP{
-        log.Debug("setup error status", "Receive Height", setUp.Height, "Current Height", m.currentHeight, "Status", m.getState())
-        m.pushErrorMsg(StatusError)
+
+    if member.currentHeight < setUp.Height {
+        log.Debug("setup low height", "Receive Height", setUp.Height, "Current Height", member.currentHeight, "Status", member.getState())
+        member.pushErrorMsg(HighHeightError)
+        return
+    }else if member.currentHeight > setUp.Height {
+        log.Debug("setup high height", "Receive Height", setUp.Height, "Current Height", member.currentHeight, "Status", member.getState())
+        member.pushErrorMsg(LowHeightError)
+        return
+    }
+
+    if member.getState() != WAIT_SETUP{
+        log.Debug("setup error status", "Receive Height", setUp.Height, "Current Height", member.currentHeight, "Status", member.getState())
+        member.pushErrorMsg(StatusError)
         return
     }
     log.Debug("receive setup message")
-    if m.leader.Peer.PubKey.IsEqual(peer.PubKey) {
-        m.msg = setUp.Msg
-        m.msgHash = sha3.Hash256(setUp.Msg)
-        m.commit()
+    if member.leader.Peer.PubKey.IsEqual(peer.PubKey) {
+        member.msg = setUp.Msg
+        member.msgHash = sha3.Hash256(setUp.Msg)
+        member.commit()
         log.Debug("sent commit message to leader")
-        m.setState(WAIT_CHALLENGE)
-        go m.WaitChallenge()
+        member.setState(WAIT_CHALLENGE)
+        go member.WaitChallenge()
         select {
-        case m.cancelWaitSetUp <- struct{}{}:
+        case member.cancelWaitSetUp <- struct{}{}:
         default:
         }
     } else{
         //check fail not response and start new round
-        m.pushErrorMsg(LeaderMistakeError)
+        member.pushErrorMsg(LeaderMistakeError)
     }
 }
 
-func (m *Member) WaitChallenge(){
+func (member *Member) WaitChallenge(){
     select {
-    case  <-time.After(m.waitTime):
-        m.setState(WAIT_CHALLENGE_TIMEOUT)
+    case  <-time.After(member.waitTime):
+        member.setState(WAIT_CHALLENGE_TIMEOUT)
         select {
-        case m.timeOutChanel <- struct{}{}:
+        case member.timeOutChanel <- struct{}{}:
         default:
         }
         return
-    case <- m.cancelWaitChallenge:
+    case <- member.cancelWaitChallenge:
         return
     }
 }
 
-func (m *Member) OnChallenge(peer *p2pTypes.Peer, challengeMsg *consensusTypes.Challenge) {
-    if m.currentHeight < challengeMsg.Height {
-        log.Debug("challenge high height", "Receive Height", challengeMsg.Height, "Current Height", m.currentHeight, "Status", m.getState())
-        m.pushErrorMsg(HighHeightError)
+func (member *Member) OnChallenge(peer *p2pTypes.Peer, challengeMsg *consensusTypes.Challenge) {
+    if member.currentHeight < challengeMsg.Height {
+        log.Debug("challenge high height", "Receive Height", challengeMsg.Height, "Current Height", member.currentHeight, "Status", member.getState())
+        member.pushErrorMsg(HighHeightError)
         return
-    }else if m.currentHeight > challengeMsg.Height {
-        log.Debug("challenge high height", "Receive Height", challengeMsg.Height, "Current Height", m.currentHeight, "Status", m.getState())
-        m.pushErrorMsg(LowHeightError)
+    }else if member.currentHeight > challengeMsg.Height {
+        log.Debug("challenge high height", "Receive Height", challengeMsg.Height, "Current Height", member.currentHeight, "Status", member.getState())
+        member.pushErrorMsg(LowHeightError)
         return
     }
-    if m.getState() != WAIT_CHALLENGE{
-        log.Debug("challenge error status", "Receive Height", challengeMsg.Height, "Current Height", m.currentHeight, "Status", m.getState())
-        m.pushErrorMsg(StatusError)
+    if member.getState() != WAIT_CHALLENGE{
+        log.Debug("challenge error status", "Receive Height", challengeMsg.Height, "Current Height", member.currentHeight, "Status", member.getState())
+        member.pushErrorMsg(StatusError)
         return
     }
     log.Debug("recieved challenge message")
-    if m.leader.Peer.PubKey.IsEqual(peer.PubKey) {
-        // r := sha3.ConcatHash256(challengeMsg.SigmaPubKey.Serialize(), challengeMsg.SigmaQ.Serialize(), m.msgHash)
-        r := sha3.ConcatHash256(m.msgHash)
+    if member.leader.Peer.PubKey.IsEqual(peer.PubKey) {
+        // r := sha3.ConcatHash256(challengeMsg.SigmaPubKey.Serialize(), challengeMsg.SigmaQ.Serialize(), member.msgHash)
+        r := sha3.ConcatHash256(member.msgHash)
         // log.Println("Member process challenge ")
         //r0 := new(big.Int).SetBytes(challengeMsg.R)
         //rInt := new(big.Int).SetBytes(r)
         //curve := secp256k1.S256()
         //rInt.Mod(rInt, curve.Params().N)
-        //m.r = rInt
-        // if r0.Cmp(m.r) == 0{
+        //member.r = rInt
+        // if r0.Cmp(member.r) == 0{
         if bytes.Equal(r,challengeMsg.R) {
-            m.response(challengeMsg)
+            member.response(challengeMsg)
             log.Debug("response has sent")
-            m.setState(COMPLETED)
+            member.setState(COMPLETED)
             select {
-            case m.cancelWaitChallenge <- struct{}{}:
+            case member.cancelWaitChallenge <- struct{}{}:
             default:
             }
-            m.completed <- struct{}{}
+            member.completed <- struct{}{}
             return
         }
     }
-    m.pushErrorMsg(ChallengeError)
+    member.pushErrorMsg(ChallengeError)
     //check fail not response and start new round
 }
 
-func (m *Member) OnFail(peer *p2pTypes.Peer, failMsg *consensusTypes.Fail){
-    if m.currentHeight < failMsg.Height || m.getState() == COMPLETED || m.getState() == ERROR {
+func (member *Member) OnFail(peer *p2pTypes.Peer, failMsg *consensusTypes.Fail){
+    if member.currentHeight < failMsg.Height || member.getState() == COMPLETED || member.getState() == ERROR {
         return
     }
-    log.Error("leader sent err message", "msg", failMsg.Reason)
-    m.pushErrorMsg(failMsg.Reason)
+    log.Error("member receive leader's err message", "msg", failMsg.Reason)
+    member.pushErrorMsg(failMsg.Reason)
 }
 
-func (m *Member) GetMembers() []*secp256k1.PublicKey{
-    return m.members
+func (member *Member) GetMembers() []*secp256k1.PublicKey{
+    return member.members
 }
 
-func (m *Member) commit()  {
+func (member *Member) commit()  {
     var err error
-    m.randomPrivakey, _, err = schnorr.GenerateNoncePair(secp256k1.S256(), m.msgHash, m.prvKey,nil, schnorr.Sha256VersionStringRFC6979)
+    member.randomPrivakey, _, err = schnorr.GenerateNoncePair(secp256k1.S256(), member.msgHash, member.prvKey,nil, schnorr.Sha256VersionStringRFC6979)
     if err != nil {
         log.Error("generate private key error", "msg", err.Error())
         return
     }
 
-    commitment := &consensusTypes.Commitment{Q: (*secp256k1.PublicKey)(&m.randomPrivakey.PublicKey)}
-    commitment.Height = m.currentHeight
-    m.p2pServer.SendAsync(m.leader.Peer, commitment)
+    commitment := &consensusTypes.Commitment{Q: (*secp256k1.PublicKey)(&member.randomPrivakey.PublicKey)}
+    commitment.Height = member.currentHeight
+    member.p2pServer.SendAsync(member.leader.Peer, commitment)
 }
 
-func (m *Member) response(challengeMsg *consensusTypes.Challenge) {
+func (member *Member) response(challengeMsg *consensusTypes.Challenge) {
     //  allPksSum1 := challengeMsg.SigmaQ.
-    //  sig1, _ := schnorr.PartialSign(secp256k1.S256(), m.msgHash, m.prvKey, m.randomPrivakey, allPksSum1)
+    //  sig1, _ := schnorr.PartialSign(secp256k1.S256(), member.msgHash, member.prvKey, member.randomPrivakey, allPksSum1)
 
-    //r := sha3.ConcatHash256(challengeMsg.SigmaQ.Serialize(), challengeMsg.SigmaPubKey.Serialize(), m.msg)
-    sig, err := schnorr.PartialSign(secp256k1.S256(), m.msgHash, m.prvKey, m.randomPrivakey, challengeMsg.SigmaQ)
+    //r := sha3.ConcatHash256(challengeMsg.SigmaQ.Serialize(), challengeMsg.SigmaPubKey.Serialize(), member.msg)
+    sig, err := schnorr.PartialSign(secp256k1.S256(), member.msgHash, member.prvKey, member.randomPrivakey, challengeMsg.SigmaQ)
     if err != nil {
         log.Error("sign chanllenge error ", "msg", err.Error())
         return
     }
     response := &consensusTypes.Response{S: sig.Serialize()}
-    response.Height = m.currentHeight
-    m.p2pServer.SendAsync(m.leader.Peer, response)
+    response.Height = member.currentHeight
+    member.p2pServer.SendAsync(member.leader.Peer, response)
 }
 
-func (m *Member) setState(state int){
-    m.stateLock.Lock()
-    defer m.stateLock.Unlock()
+func (member *Member) setState(state int){
+    member.stateLock.Lock()
+    defer member.stateLock.Unlock()
 
-    m.currentState = state
+    member.currentState = state
 }
 
-func (m *Member) getState() int{
-    m.stateLock.RLock()
-    defer m.stateLock.RUnlock()
+func (member *Member) getState() int{
+    member.stateLock.RLock()
+    defer member.stateLock.RUnlock()
 
-    return m.currentState
+    return member.currentState
 }
 
-func (m *Member) pushErrorMsg(msg string) {
-    m.setState(ERROR)
+func (member *Member) pushErrorMsg(msg string) {
+    member.setState(ERROR)
 CANCEL:
     for{
         select {
-        case m.errorChanel <- msg:
-        case m.cancelWaitSetUp <- struct{}{}:
-        case m.cancelWaitChallenge <- struct{}{}:
+        case member.errorChanel <- msg:
+        case member.cancelWaitSetUp <- struct{}{}:
+        case member.cancelWaitChallenge <- struct{}{}:
         default:
             break CANCEL
         }

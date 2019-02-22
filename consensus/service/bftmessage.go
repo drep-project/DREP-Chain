@@ -1,9 +1,9 @@
 package service
 
 import (
-	"github.com/drep-project/drep-chain/log"
 	"github.com/AsynkronIT/protoactor-go/actor"
 	consensusTypes "github.com/drep-project/drep-chain/consensus/types"
+	"github.com/drep-project/drep-chain/log"
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
 )
 
@@ -12,6 +12,7 @@ func (consensusService *ConsensusService) Receive(context actor.Context) {
 	if !ok {
 		return
 	}
+
 	switch msg := routeMsg.Detail.(type) {
 	case *consensusTypes.Setup:
 		log.Debug("receive setup msg "+ routeMsg.Peer.GetAddr())

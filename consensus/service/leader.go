@@ -2,17 +2,16 @@ package service
 
 import (
     "errors"
-    "fmt"
     "math"
     "math/big"
     "sync"
     "time"
 
+    consensusTypes "github.com/drep-project/drep-chain/consensus/types"
     "github.com/drep-project/drep-chain/crypto/secp256k1"
     "github.com/drep-project/drep-chain/crypto/secp256k1/schnorr"
     "github.com/drep-project/drep-chain/crypto/sha3"
     "github.com/drep-project/drep-chain/log"
-    consensusTypes "github.com/drep-project/drep-chain/consensus/types"
     p2pService "github.com/drep-project/drep-chain/network/service"
     p2pTypes "github.com/drep-project/drep-chain/network/types"
 )
@@ -22,10 +21,12 @@ const (
     WAIT_SETUP
     WAIT_SETUP_TIMEOUT
     WAIT_COMMIT
+    WAIT_COMMIT_COMPELED
     WAIT_COMMITT_IMEOUT
     WAIT_CHALLENGE
     WAIT_CHALLENGE_TIMEOUT
     WAIT_RESPONSE
+    WAIT_RESPONSE_COMPELED
     WAIT_RESPONSE_TIMEOUT
     COMPLETED
     ERROR
@@ -68,10 +69,10 @@ func NewLeader(pubKey *secp256k1.PublicKey, quitRound chan struct{}, p2pServer *
     return l
 }
 
-func (l *Leader) UpdateStatus(members []*consensusTypes.Member, curMiner int, minMember int, curHeight int64){
-    l.members = make([]*consensusTypes.Member, len(members) - 1)
-    l.minMember = minMember //*2/3
-    l.currentHeight = curHeight
+func (leader *Leader) UpdateStatus(members []*consensusTypes.Member, curMiner int, minMember int, curHeight int64){
+    leader.members = make([]*consensusTypes.Member, len(members) - 1)
+    leader.minMember = minMember //*2/3
+    leader.currentHeight = curHeight
 
     last := -1
     for _, v := range members {
@@ -79,131 +80,131 @@ func (l *Leader) UpdateStatus(members []*consensusTypes.Member, curMiner int, mi
             continue
         }
         last++
-        l.members[last] = v
+        leader.members[last] = v
     }
-    l.Reset()
+    leader.Reset()
 }
 
-func (l *Leader) Reset(){
-    l.sigmaPubKey = nil
-    l.sigmaCommitPubkey = nil
-    fmt.Println("rrrrrrrrrrrrrrrrrrrrrrrrrrrrrr")
-    l.sigmaS = nil
-    length := len(l.members)
-    l.commitBitmap = make([]byte, length)
-    l.responseBitmap = make([]byte, length)
+func (leader *Leader) Reset(){
+    leader.sigmaPubKey = nil
+    leader.sigmaCommitPubkey = nil
+    leader.sigmaS = nil
+    length := len(leader.members)
+    leader.commitBitmap = make([]byte, length)
+    leader.responseBitmap = make([]byte, length)
 
-    l.cancelWaitCommit = make(chan struct{},1)
-    l.cancelWaitChallenge = make(chan struct{},1)
-    l.setState(INIT)
+    leader.cancelWaitCommit = make(chan struct{},1)
+    leader.cancelWaitChallenge = make(chan struct{},1)
+    leader.setState(INIT)
 }
 
 
-func (l *Leader) ProcessConsensus(msg []byte) (error, *secp256k1.Signature, []byte) {
-    l.setState(INIT)
+func (leader *Leader) ProcessConsensus(msg []byte) (error, *secp256k1.Signature, []byte) {
+    leader.setState(INIT)
     //TODO  Waiting here is just to reduce the chance of message staggering. This waiting time should be minimized or even eliminated.
     time.AfterFunc(time.Second, func() {
-        l.setUp(msg)
+        leader.setUp(msg)
     })
-    if !l.waitForCommit() {
+    if !leader.waitForCommit() {
         //send reason and reset
-        l.fail("waitForCommit fail")
+        leader.fail("waitForCommit fail")
         return errors.New("waitForCommit fail"), nil, nil
     }
 
-    l.challenge(msg)
-    if !l.waitForResponse() {
+    leader.challenge(msg)
+    if !leader.waitForResponse() {
         //send reason and reset
-        l.fail("waitForResponse fail")
+        leader.fail("waitForResponse fail")
         return errors.New("waitForResponse fail"), nil, nil
     }
     log.Debug("response complete")
 
-    if l.sigmaS == nil {
+    if leader.sigmaS == nil {
         return errors.New("signature not valid"), nil,nil
     }
-    valid := l.Validate(msg, l.sigmaS.R, l.sigmaS.S)
+    valid := leader.Validate(msg, leader.sigmaS.R, leader.sigmaS.S)
     log.Debug("vaidate result","VALID", valid)
-    if !valid && len(l.members)>0 { //solo
+    if !valid && len(leader.members)>0 { //solo
         //return &util.ConnectionError{}, nil, nil
-       return errors.New("signature not valid"), nil,nil
+        return errors.New("signature not valid"), nil,nil
     }
-    return nil, &secp256k1.Signature{R : l.sigmaS.R, S : l.sigmaS.S}, l.responseBitmap
+    return nil, &secp256k1.Signature{R : leader.sigmaS.R, S : leader.sigmaS.S}, leader.responseBitmap
 }
 
-func (l *Leader) setUp(msg []byte) {
+func (leader *Leader) setUp(msg []byte) {
     setup := &consensusTypes.Setup{ Msg: msg}
-    setup.Height = l.currentHeight
-    for _, member := range l.members {
+    setup.Height = leader.currentHeight
+    for _, member := range leader.members {
         log.Debug("leader sent setup message", "IP", member.Peer.GetAddr(), "Height", setup.Height)
-        l.p2pServer.SendAsync(member.Peer, setup)
+        leader.p2pServer.SendAsync(member.Peer, setup)
     }
 }
 
-func (l *Leader) OnCommit(peer *p2pTypes.Peer, commit *consensusTypes.Commitment) {
-    l.syncLock.Lock()
-    defer l.syncLock.Unlock()
+func (leader *Leader) OnCommit(peer *p2pTypes.Peer, commit *consensusTypes.Commitment) {
+    leader.syncLock.Lock()
+    defer leader.syncLock.Unlock()
 
-    if l.getState() != WAIT_COMMIT {
+    if leader.getState() != WAIT_COMMIT {
         return
     }
-    if l.currentHeight != commit.Height {
-        return
-    }
-
-    index := l.getMinerIndex(peer.PubKey)
-    if !hasMarked(index, l.commitBitmap) {
+    if leader.currentHeight != commit.Height {
         return
     }
 
-    if l.sigmaPubKey == nil {
-        l.sigmaPubKey = []*secp256k1.PublicKey{ peer.PubKey }
+    index := leader.getMinerIndex(peer.PubKey)
+    if !hasMarked(index, leader.commitBitmap) {
+        return
+    }
+
+    if leader.sigmaPubKey == nil {
+        leader.sigmaPubKey = []*secp256k1.PublicKey{peer.PubKey }
     } else {
-        l.sigmaPubKey = append(l.sigmaPubKey,  peer.PubKey)
+        leader.sigmaPubKey = append(leader.sigmaPubKey,  peer.PubKey)
     }
 
-    if l.sigmaCommitPubkey == nil {
-        l.sigmaCommitPubkey = []*secp256k1.PublicKey{ commit.Q }
+    if leader.sigmaCommitPubkey == nil {
+        leader.sigmaCommitPubkey = []*secp256k1.PublicKey{commit.Q }
     }else{
-        l.sigmaCommitPubkey = append(l.sigmaCommitPubkey, commit.Q)
+        leader.sigmaCommitPubkey = append(leader.sigmaCommitPubkey, commit.Q)
     }
 
-    l.commitBitmap[index] = 1
-    commitNum := l.getCommitNum()
-    if commitNum == len(l.members){
-        log.Debug("OnCommit finish", "commitNum", commitNum, "members", len(l.members))
+    leader.commitBitmap[index] = 1
+    commitNum := leader.getCommitNum()
+    if commitNum == len(leader.members){
+        leader.setState(WAIT_COMMIT_COMPELED)
+        log.Debug("OnCommit finish", "commitNum", commitNum, "members", len(leader.members))
         select {
-        case l.cancelWaitCommit <- struct{}{}:
+        case leader.cancelWaitCommit <- struct{}{}:
         default:
         }
     }
 }
 
-func (l *Leader) waitForCommit() bool {
-    l.setState(WAIT_COMMIT)
+func (leader *Leader) waitForCommit() bool {
+    leader.setState(WAIT_COMMIT)
     for {
         select {
-        case <-time.After(l.waitTime):
-            commitNum := l.getCommitNum()
-            log.Debug("waitForCommit  finish", "commitNum", commitNum, "members", len(l.members))
-            if commitNum >= l.minMember  {
+        case <-time.After(leader.waitTime):
+            commitNum := leader.getCommitNum()
+            log.Debug("waitForCommit  finish", "commitNum", commitNum, "members", len(leader.members))
+            if commitNum >= leader.minMember  {
                 return true
             }
-            l.setState(WAIT_COMMITT_IMEOUT)
+            leader.setState(WAIT_COMMITT_IMEOUT)
             return false
-        case <-l.cancelWaitCommit:
+        case <-leader.cancelWaitCommit:
             return true
         }
     }
 }
 
-func (l *Leader) OnResponse(peer *p2pTypes.Peer, response *consensusTypes.Response) {
-    l.syncLock.Lock()
-    defer l.syncLock.Unlock()
-    if l.getState() != WAIT_RESPONSE {
+func (leader *Leader) OnResponse(peer *p2pTypes.Peer, response *consensusTypes.Response) {
+    leader.syncLock.Lock()
+    defer leader.syncLock.Unlock()
+    if leader.getState() != WAIT_RESPONSE {
         return
     }
-    if l.currentHeight != response.Height {
+    if leader.currentHeight != response.Height {
         return
     }
 
@@ -212,48 +213,46 @@ func (l *Leader) OnResponse(peer *p2pTypes.Peer, response *consensusTypes.Respon
         return
     }
 
-    if l.sigmaS == nil {
-        l.sigmaS = sig
-        l.markResponse(peer)
+    if leader.sigmaS == nil {
+        leader.sigmaS = sig
+        leader.markResponse(peer)
     }else{
-        sigmaS, err := schnorr.CombineSigs(secp256k1.S256(),[]*schnorr.Signature{l.sigmaS, sig })
+        sigmaS, err := schnorr.CombineSigs(secp256k1.S256(),[]*schnorr.Signature{leader.sigmaS, sig })
         if err != nil {
-            schnorr.CombineSigs(secp256k1.S256(),[]*schnorr.Signature{l.sigmaS, sig })
+            schnorr.CombineSigs(secp256k1.S256(),[]*schnorr.Signature{leader.sigmaS, sig })
             log.Debug("schnorr CombineSigs error", "reason", err)
-            fmt.Println("uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu")
             return
         }else {
-            fmt.Println("ggggggggggggggggggggggggggggggggggggggggggggggg")
-            l.sigmaS = sigmaS
-            l.markResponse(peer)
+            leader.sigmaS = sigmaS
+            leader.markResponse(peer)
         }
     }
 
-    responseNum := l.getResponseNum()
-    if responseNum == len(l.members){
-        l.setState(COMPLETED)
-        log.Debug("OnResponse finish", "responseNum", responseNum, "members", len(l.members))
+    responseNum := leader.getResponseNum()
+    if responseNum == len(leader.members) && responseNum >= leader.minMember {
+        leader.setState(WAIT_RESPONSE_COMPELED)
+        log.Debug("OnResponse finish", "responseNum", responseNum, "members", len(leader.members))
         select {
-        case  l.cancelWaitChallenge <- struct{}{}:
+        case  leader.cancelWaitChallenge <- struct{}{}:
         default:
             return
         }
     }
 }
 
-func (l *Leader) markResponse(peer *p2pTypes.Peer) {
-    index := l.getMinerIndex(peer.PubKey)
-    if !hasMarked(index, l.responseBitmap) {
+func (leader *Leader) markResponse(peer *p2pTypes.Peer) {
+    index := leader.getMinerIndex(peer.PubKey)
+    if !hasMarked(index, leader.responseBitmap) {
         return
     }
-    l.responseBitmap[index] = 1
+    leader.responseBitmap[index] = 1
 }
 
-func (l *Leader) challenge(msg []byte) {
-    for _, member := range l.members {
+func (leader *Leader) challenge(msg []byte) {
+    for _, member := range leader.members {
         memIndex := 0
         sigmaPubKeys := []*secp256k1.PublicKey{}
-        for index, pubkey := range  l.sigmaPubKey {
+        for index, pubkey := range  leader.sigmaPubKey {
             if !pubkey.IsEqual(member.Produce.Public) {
                 sigmaPubKeys = append(sigmaPubKeys, pubkey)
             }else{
@@ -263,66 +262,66 @@ func (l *Leader) challenge(msg []byte) {
         sigmaPubKey := schnorr.CombinePubkeys(sigmaPubKeys)
 
         commitPubkeys := []*secp256k1.PublicKey{}
-        for index, pubkey := range  l.sigmaCommitPubkey {
+        for index, pubkey := range  leader.sigmaCommitPubkey {
             if memIndex != index {
                 commitPubkeys = append(commitPubkeys, pubkey)
             }
         }
         commitPubkey := schnorr.CombinePubkeys(commitPubkeys)
 
-        //l.r = sha3.ConcatHash256(sigmaPubKey.Serialize(), commitPubkey.Serialize(), sha3.Hash256(msg))
-        l.r = sha3.ConcatHash256(sha3.Hash256(msg))
+        //leader.r = sha3.ConcatHash256(sigmaPubKey.Serialize(), commitPubkey.Serialize(), sha3.Hash256(msg))
+        leader.r = sha3.ConcatHash256(sha3.Hash256(msg))
         challenge := &consensusTypes.Challenge{
-            Height : l.currentHeight,
+            Height :      leader.currentHeight,
             SigmaPubKey : sigmaPubKey,
-            SigmaQ : commitPubkey,
-            R: l.r,
+            SigmaQ :      commitPubkey,
+            R:            leader.r,
         }
-        log.Debug("leader sent challenge message", "IP", member.Peer.GetAddr(), "Height", l.currentHeight)
-        l.p2pServer.SendAsync(member.Peer,challenge)
+        log.Debug("leader sent challenge message", "IP", member.Peer.GetAddr(), "Height", leader.currentHeight)
+        leader.p2pServer.SendAsync(member.Peer,challenge)
     }
 }
 
-func (l *Leader) fail(msg string){
+func (leader *Leader) fail(msg string){
 CANCEL:
     for{
         select {
-        case l.cancelWaitChallenge <- struct{}{}:
-        case l.cancelWaitCommit <- struct{}{}:
+        case leader.cancelWaitChallenge <- struct{}{}:
+        case leader.cancelWaitCommit <- struct{}{}:
         default:
             break CANCEL
         }
     }
     failMsg := &consensusTypes.Fail{Reason: msg}
-    failMsg.Height = l.currentHeight
-    for _, member := range l.members {
-        l.p2pServer.SendAsync(member.Peer, failMsg)
+    failMsg.Height = leader.currentHeight
+    for _, member := range leader.members {
+        leader.p2pServer.SendAsync(member.Peer, failMsg)
     }
 }
 
-func (l *Leader) waitForResponse() bool {
-    l.setState(WAIT_RESPONSE)
+func (leader *Leader) waitForResponse() bool {
+    leader.setState(WAIT_RESPONSE)
     for {
         select {
-        case <-time.After(l.waitTime):
-            responseNum := l.getResponseNum()
-            log.Debug("waitForResponse finish", "responseNum", responseNum, "members", len(l.members))
-            if responseNum  >= l.minMember{
-                l.setState(COMPLETED)
+        case <-time.After(leader.waitTime):
+            responseNum := leader.getResponseNum()
+            log.Debug("waitForResponse finish", "responseNum", responseNum, "members", len(leader.members))
+            if responseNum  >= leader.minMember{
+                leader.setState(COMPLETED)
                 return true
             }
-            l.setState(WAIT_RESPONSE_TIMEOUT)
+            leader.setState(WAIT_RESPONSE_TIMEOUT)
             return false
-        case <-l.cancelWaitChallenge:
+        case <-leader.cancelWaitChallenge:
             return true
         }
     }
 }
 
-func (l *Leader) getR(msg []byte) []byte {
+func (leader *Leader) getR(msg []byte) []byte {
     /*
     curve := secp256k1.S256()
-    r := sha3.ConcatHash256(l.sigmaCommitPubkey.Serialize(), l.sigmaPubKey.Serialize(), msg)
+    r := sha3.ConcatHash256(leader.sigmaCommitPubkey.Serialize(), leader.sigmaPubKey.Serialize(), msg)
     rInt := new(big.Int).SetBytes(r)
     rInt.Mod(rInt, curve.Params().N)
     return rInt.Bytes()
@@ -334,9 +333,9 @@ func hasMarked(index int, bitmap []byte) bool {
     return index >=0 && index <= len(bitmap) && bitmap[index] != 1
 }
 
-func (l *Leader) getMinerIndex(p *secp256k1.PublicKey) int {
+func (leader *Leader) getMinerIndex(p *secp256k1.PublicKey) int {
     // TODO if it is itself
-    for i, v := range l.members {
+    for i, v := range leader.members {
         if v.Peer.PubKey.IsEqual(p) {
             return i
         }
@@ -344,23 +343,23 @@ func (l *Leader) getMinerIndex(p *secp256k1.PublicKey) int {
     return -1
 }
 
-func (l *Leader) Validate(msg []byte, r *big.Int, s *big.Int) bool {
-    log.Debug("Validate signature", "responseBitmap", l.responseBitmap, "commitBitmap", l.commitBitmap)
-    if len(l.responseBitmap) < len(l.commitBitmap) {
-        log.Debug("peer in responseBitmap and commitBitmap was not correct", "responseBitmap", len(l.responseBitmap), "commitBitmap", len(l.commitBitmap))
+func (leader *Leader) Validate(msg []byte, r *big.Int, s *big.Int) bool {
+    log.Debug("Validate signature", "responseBitmap", leader.responseBitmap, "commitBitmap", leader.commitBitmap)
+    if len(leader.responseBitmap) < len(leader.commitBitmap) {
+        log.Debug("peer in responseBitmap and commitBitmap was not correct", "responseBitmap", len(leader.responseBitmap), "commitBitmap", len(leader.commitBitmap))
         return false
     }
-    if float64(len(l.responseBitmap)) < math.Ceil(float64(len(l.members)*2.0/3.0)) {
+    if float64(len(leader.responseBitmap)) < math.Ceil(float64(len(leader.members)*2.0/3.0)) {
         return false
     }
 
-    sigmaPubKey := schnorr.CombinePubkeys(l.getResponsePubkey())
+    sigmaPubKey := schnorr.CombinePubkeys(leader.getResponsePubkey())
     return schnorr.Verify(sigmaPubKey, sha3.Hash256(msg), r, s)
 }
 
-func (l *Leader) getCommitNum() int {
+func (leader *Leader) getCommitNum() int {
     commitNum := 0
-    for _, val := range l.commitBitmap {
+    for _, val := range leader.commitBitmap {
         if val == 1 {
             commitNum = commitNum + 1
         }
@@ -368,19 +367,19 @@ func (l *Leader) getCommitNum() int {
     return commitNum
 }
 
-func (l *Leader) getResponsePubkey() []*secp256k1.PublicKey {
+func (leader *Leader) getResponsePubkey() []*secp256k1.PublicKey {
     publicKeys := []*secp256k1.PublicKey{}
-    for index, val := range l.responseBitmap {
+    for index, val := range leader.responseBitmap {
         if val == 1 {
-            publicKeys = append(publicKeys, l.members[index].Produce.Public)
+            publicKeys = append(publicKeys, leader.members[index].Produce.Public)
         }
     }
     return publicKeys
 }
 
-func (l *Leader) getResponseNum() int {
+func (leader *Leader) getResponseNum() int {
     responseNum := 0
-    for _, val := range l.responseBitmap {
+    for _, val := range leader.responseBitmap {
         if val == 1 {
             responseNum = responseNum + 1
         }
@@ -388,16 +387,16 @@ func (l *Leader) getResponseNum() int {
     return responseNum
 }
 
-func (l *Leader) setState(state int){
-    l.stateLock.Lock()
-    defer l.stateLock.Unlock()
+func (leader *Leader) setState(state int){
+    leader.stateLock.Lock()
+    defer leader.stateLock.Unlock()
 
-    l.currentState = state
+    leader.currentState = state
 }
 
-func (l *Leader) getState() int{
-    l.stateLock.RLock()
-    defer l.stateLock.RUnlock()
+func (leader *Leader) getState() int{
+    leader.stateLock.RLock()
+    defer leader.stateLock.RUnlock()
 
-    return l.currentState
+    return leader.currentState
 }

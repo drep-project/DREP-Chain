@@ -1,5 +1,7 @@
 package types
 
+import "github.com/drep-project/drep-chain/network/types"
+
 const (
 	MsgTypeSetUp  = 9
 	MsgTypeCommitment = 10
@@ -7,3 +9,8 @@ const (
 	MsgTypeChallenge = 12
 	MsgTypeFail = 13
 )
+
+type RouteMsgWrap struct {
+	Peer *types.Peer
+	SetUpMsg *Setup
+}
