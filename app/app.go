@@ -48,21 +48,26 @@ func (mApp DrepApp) addServiceInstance(service Service) {
 }
 
 // AddServiceType add many services
-func (mApp DrepApp) AddServiceType(serviceTypes ...reflect.Type) error {
+func (mApp DrepApp) AddServices(serviceInstances ...interface{}) error {
 	nilService := reflect.TypeOf((*Service)(nil)).Elem()
-	for _, serviceType := range  serviceTypes {
+
+	for _, serviceInstance := range  serviceInstances {
+		serviceType := reflect.TypeOf(serviceInstance)
+		if serviceType.Kind() == reflect.Ptr {
+			serviceType = serviceType.Elem()
+		}
 		serviceVal := reflect.New(serviceType)
 		if !serviceVal.Type().Implements(nilService) {
 			return errors.New("the service added not match service interface")
 		}
-		mApp.addServiceType(serviceVal)
+		mApp.addService(serviceVal)
 	}
 	return nil
 }
 
 // addServiceType add a service and iterator all service that has added in and fields in current service,
 // if exist , set set service in the field
-func (mApp DrepApp) addServiceType(serviceValue reflect.Value) {
+func (mApp DrepApp) addService(serviceValue reflect.Value) {
 	serviceType := serviceValue.Type()
 	serviceNumFields := serviceType.Elem().NumField()
 	for i := 0; i < serviceNumFields; i++{
@@ -98,6 +103,8 @@ func GetServiceTag(field reflect.StructField) string {
 	}
 }
 
+//TODO need a more graceful  command supporter
+//TODO how to get password from terminal in wallet
 //Run read the global configuration, parse the global command parameters,
 // initialize the main process one by one, and execute the service before the main process starts.
 func (mApp DrepApp) Run() error {
