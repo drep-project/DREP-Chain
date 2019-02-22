@@ -7,8 +7,6 @@ import (
     "github.com/drep-project/drep-chain/crypto/secp256k1"
     "github.com/pkg/errors"
     "math/big"
-    "strconv"
-    "encoding/json"
    chainService "github.com/drep-project/drep-chain/chain/service"
 )
 
@@ -83,23 +81,8 @@ func (accountapi *AccountApi) Close() {
 	accountapi.Wallet.Close()
 }
 
-func (accountapi *AccountApi) SendTransaction(from, to, chainId, amount string) (string, error) {
-    if from == "" || to == "" || chainId == "" || amount == "" {
-        return "", errors.New("param can not be nil")
-    }
-
-    fromBytes := []byte(from)
-    fromPubK := &secp256k1.PublicKey{}
-    json.Unmarshal(fromBytes, fromPubK)
-
-    destAddr := crypto.String2Address(to)
-    destChain := common.String2ChainId(chainId)
-    x, err := strconv.ParseInt(amount, 10, 64)
-    if err != nil {
-        return "", err
-    }
-    a := big.NewInt(x)
-	t := accountapi.chainService.GenerateBalanceTransaction(fromPubK, destAddr, destChain, a)
+func (accountapi *AccountApi) SendTransaction(from *secp256k1.PublicKey, to crypto.CommonAddress, chainId common.ChainIdType, amount *big.Int) (string, error) {
+	t := accountapi.chainService.GenerateBalanceTransaction(from, to, chainId, amount)
     if accountapi.chainService.SendTransaction(t) != nil {
         return "", errors.New("Offline")
     } else {
@@ -107,26 +90,8 @@ func (accountapi *AccountApi) SendTransaction(from, to, chainId, amount string) 
     }
 }
 
-func (accountapi *AccountApi) Call(from, to, chainId, input, amount string, readOnly bool)  (string, error){
-    if from == "" || to == "" || chainId == "" || input == "" || amount == "" {
-        return "", errors.New("param can not be nil")
-    }
-    fromBytes := []byte(from)
-    fromPubK := &secp256k1.PublicKey{}
-    json.Unmarshal(fromBytes, fromPubK)
-
-    destAddr := crypto.String2Address(to)
-    destChain := common.String2ChainId(chainId)
-
-    inputBytes := []byte(input)
-
-    x, err := strconv.ParseInt(amount, 10, 64)
-    if err != nil {
-        return "", err
-    }
-    value := big.NewInt(x)
-
-    t := accountapi.chainService.GenerateCallContractTransaction(fromPubK, destAddr, destChain, inputBytes, value, readOnly)
+func (accountapi *AccountApi) Call(from *secp256k1.PublicKey, to crypto.CommonAddress, chainId common.ChainIdType, input []byte, amount *big.Int, readOnly bool)  (string, error){
+    t := accountapi.chainService.GenerateCallContractTransaction(from, to, chainId, input, amount, readOnly)
     if accountapi.chainService.SendTransaction(t) != nil {
         return "", errors.New("Offline")
     } else {

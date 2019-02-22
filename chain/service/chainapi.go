@@ -25,24 +25,12 @@ func (chain *ChainApi) GetMaxHeight() int64 {
     return dbService.GetMaxHeight()
 }
 
-func (chain *ChainApi) GetBalance(addr string, chainId string) *big.Int{
-    if addr == "" {
-        return big.NewInt(0)
-    }
-    address := crypto.String2Address(addr)
-    chainid := common.String2ChainId(chainId)
-
-    return dbService.GetBalance(address, chainid, true)
+func (chain *ChainApi) GetBalance(addr crypto.CommonAddress, chainId common.ChainIdType) *big.Int{
+    return dbService.GetBalance(addr, chainId, true)
 }
 
-func (chain *ChainApi) GetNonce(addr string, chainId string) int64 {
-    if addr == "" {
-        return 0
-    }
-    address := crypto.String2Address(addr)
-    chainid := common.String2ChainId(chainId)
-
-    return dbService.GetNonce(address, chainid, true)
+func (chain *ChainApi) GetNonce(addr crypto.CommonAddress, chainId common.ChainIdType) int64 {
+    return dbService.GetNonce(addr, chainId, true)
 }
 
 func (chain *ChainApi) GetPreviousBlockHash() string {
@@ -50,13 +38,8 @@ func (chain *ChainApi) GetPreviousBlockHash() string {
     return "0x" + string(bytes)
 }
 
-func (chain *ChainApi) GetReputation(addr string, chainId string) string {
-    if addr == "" {
-        return ""
-    }
-    address := crypto.String2Address(addr)
-    chainid := common.String2ChainId(chainId)
-    rep := dbService.GetReputation(address, chainid, true)
+func (chain *ChainApi) GetReputation(addr crypto.CommonAddress, chainId common.ChainIdType) string {
+    rep := dbService.GetReputation(addr, chainId, true)
     return rep.String()
 }
 
