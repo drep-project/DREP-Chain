@@ -24,6 +24,7 @@ import (
 )
 
 var (
+	pasword = "123"
 	parentNode = accountTypes.NewNode(nil,common.ChainIdType{})
 	pathFlag = flags.DirectoryFlag{
 		Name:  "path",
@@ -90,12 +91,16 @@ func gen(ctx *cli.Context) error {
 	p2pConfig.BootNodes = bootsNodes
 
 	consensusConfig := consensusTypes.ConsensusConfig{}
+	consensusConfig.EnableConsensus = true
 	consensusConfig.ConsensusMode = "bft"
 	consensusConfig.Producers = produces
 
 	chainConfig := chainTypes.ChainConfig{}
 	chainConfig.RemotePort = 55555
 
+	walletConfig := accountTypes.Config{}
+	walletConfig.EnableWallet = true
+	walletConfig.WalletPassword = pasword
 	for i:=0; i<len(nodeItems); i++{
 		consensusConfig.MyPk = (*secp256k1.PublicKey)(&standbyKey[i].PublicKey)
 		p2pConfig.PrvKey = standbyKey[i]
@@ -104,7 +109,7 @@ func gen(ctx *cli.Context) error {
 		keyStorePath := path2.Join(userDir, "keystore")
 
 		store := accountComponent.NewFileStore(keyStorePath)
-		password := string(sha3.Hash256([]byte("123")))
+		password := string(sha3.Hash256([]byte(pasword)))
 		store.StoreKey(nodes[i],password)
 
 		cfgPath := path2.Join(userDir, "config.json")
@@ -118,6 +123,7 @@ func gen(ctx *cli.Context) error {
 		offset = writePhase(fs, "consensus",consensusConfig, offset)
 		offset = writePhase(fs, "p2p",p2pConfig, offset)
 		offset = writePhase(fs, "chain",chainConfig, offset)
+		offset = writePhase(fs, "accounts",walletConfig, offset)
 
 		fs.Truncate(offset-2)
 		fs.WriteAt([]byte("\n}"),offset)

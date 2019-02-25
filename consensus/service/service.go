@@ -19,6 +19,12 @@ import (
 	"time"
 )
 
+var (
+	EnableConsensusFlag = cli.BoolFlag{
+		Name:  "enableConsensus",
+		Usage: "enable consensus",
+	}
+)
 const (
 	blockInterval = time.Second*5
 	minWaitTime = time.Millisecond * 500
@@ -55,7 +61,7 @@ func (consensusService *ConsensusService) Api() []app.API {
 }
 
 func (consensusService *ConsensusService) CommandFlags() ([]cli.Command, []cli.Flag) {
-	return nil, []cli.Flag{}
+	return nil, []cli.Flag{EnableConsensusFlag}
 }
 
 func (consensusService *ConsensusService)  P2pMessages() map[int]interface{} {
@@ -75,6 +81,12 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 		return err
 	}
 
+	if executeContext.CliContext.IsSet(EnableConsensusFlag.Name) {
+		consensusService.consensusConfig.EnableConsensus = executeContext.CliContext.GlobalBool(EnableConsensusFlag.Name)
+	}
+	if !consensusService.consensusConfig.EnableConsensus {
+		return nil
+	}
 	consensusService.pubkey = consensusService.consensusConfig.MyPk
 	consensusService.producers = consensusService.consensusConfig.Producers
 	accountNode, err  := consensusService.WalletService.Wallet.GetAccountByPubkey(consensusService.pubkey)
@@ -114,6 +126,9 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 }
 
 func (consensusService *ConsensusService) Start(executeContext *app.ExecuteContext) error {
+	if !consensusService.consensusConfig.EnableConsensus {
+		return nil
+	}
 	if !consensusService.isProduce() {
 		return nil
 	}
@@ -168,6 +183,9 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 }
 
 func (consensusService *ConsensusService) Stop(executeContext *app.ExecuteContext) error {
+	if !consensusService.consensusConfig.EnableConsensus {
+		return nil
+	}
 	return nil
 }
 

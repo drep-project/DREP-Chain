@@ -68,6 +68,7 @@ func (rpcService *RpcService) P2pMessages() map[int]interface{} {
 
 func (rpcService *RpcService) Init(executeContext *app.ExecuteContext) error {
 	rpcService.RpcConfig = &rpcTypes.RpcConfig{}
+	rpcService.RpcConfig.HTTPTimeouts = &rpcTypes.HTTPTimeouts{}
 	err := executeContext.UnmashalConfig(rpcService.Name(), rpcService.RpcConfig)
 	if err != nil {
 		return err
@@ -88,15 +89,18 @@ func (rpcService *RpcService) Start(executeContext *app.ExecuteContext) error {
 	if err := rpcService.StartInProc(rpcService.RpcAPIs); err != nil {
 		return err
 	}
+
 	if err := rpcService.StartIPC(rpcService.RpcAPIs); err != nil {
 		rpcService.StopInProc()
 		return err
 	}
+
 	if err := rpcService.StartHTTP(rpcService.HttpEndpoint, rpcService.RpcAPIs, rpcService.RpcConfig.HTTPModules, rpcService.RpcConfig.HTTPCors, rpcService.RpcConfig.HTTPVirtualHosts, rpcService.RpcConfig.HTTPTimeouts); err != nil {
 		rpcService.StopIPC()
 		rpcService.StopInProc()
 		return err
 	}
+
 	if err := rpcService.StartWS(rpcService.WsEndpoint, rpcService.RpcAPIs, rpcService.RpcConfig.WSModules, rpcService.RpcConfig.WSOrigins, rpcService.RpcConfig.WSExposeAll); err != nil {
 		rpcService.StopHTTP()
 		rpcService.StopIPC()
@@ -104,7 +108,7 @@ func (rpcService *RpcService) Start(executeContext *app.ExecuteContext) error {
 		return err
 	}
 
-	/*
+/*
 		if err := rpcService.StartRest(rpcService.RestEndpoint,rpcService.RestApi); err != nil {
 			rpcService.StopREST()
 			return err
@@ -203,7 +207,7 @@ func (rpcService *RpcService) StopIPC() {
 }
 
 // StartHTTP initializes and starts the HTTP RPC endpoint.
-func (rpcService *RpcService) StartHTTP(endpoint string, apis []app.API, modules []string, cors []string, vhosts []string, timeouts rpcTypes.HTTPTimeouts) error {
+func (rpcService *RpcService) StartHTTP(endpoint string, apis []app.API, modules []string, cors []string, vhosts []string, timeouts *rpcTypes.HTTPTimeouts) error {
 	if !rpcService.RpcConfig.HTTPEnabled {
 		return nil
 	}
@@ -211,7 +215,7 @@ func (rpcService *RpcService) StartHTTP(endpoint string, apis []app.API, modules
 	if endpoint == "" {
 		return nil
 	}
-	listener, handler, err := StartHTTPEndpoint(endpoint, apis, modules, cors, vhosts, timeouts)
+	listener, handler, err := StartHTTPEndpoint(endpoint, apis, modules, cors, vhosts, *timeouts)
 	if err != nil {
 		return err
 	}

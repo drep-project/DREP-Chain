@@ -27,19 +27,19 @@ type HTTPTimeouts struct {
 	// decisions on each request body's acceptable deadline or
 	// upload rate, most users will prefer to use
 	// ReadHeaderTimeout. It is valid to use them both.
-	ReadTimeout time.Duration
+	ReadTimeout time.Duration	`json:"omitempty"`
 
 	// WriteTimeout is the maximum duration before timing out
 	// writes of the response. It is reset whenever a new
 	// request's header is read. Like ReadTimeout, it does not
 	// let Handlers make decisions on a per-request basis.
-	WriteTimeout time.Duration
+	WriteTimeout time.Duration	`json:"omitempty"`
 
 	// IdleTimeout is the maximum amount of time to wait for the
 	// next request when keep-alives are enabled. If IdleTimeout
 	// is zero, the value of ReadTimeout is used. If both are
 	// zero, ReadHeaderTimeout is used.
-	IdleTimeout time.Duration
+	IdleTimeout time.Duration	`json:"omitempty"`
 }
 
 type RpcConfig struct {
@@ -62,7 +62,7 @@ type RpcConfig struct {
 	// HTTPPort is the TCP port number on which to start the HTTP RPC server. The
 	// default zero value is/ valid and will pick a port number randomly (useful
 	// for ephemeral nodes).
-	HTTPPort int `json:"HTTPPort"`
+	HTTPPort int `json:"HTTPPort,omitempty"`
 
 	// HTTPCors is the Cross-Origin Resource Sharing header to send to requesting
 	// clients. Please be aware that CORS is a browser enforced security, it's fully
@@ -85,7 +85,7 @@ type RpcConfig struct {
 
 	// HTTPTimeouts allows for customization of the timeout values used by the HTTP RPC
 	// interface.
-	HTTPTimeouts HTTPTimeouts `json:"HTTPTimeouts"`
+	HTTPTimeouts *HTTPTimeouts `json:"HTTPTimeouts,omitempty"`
 
 	// WSEnabled
 	WSEnabled bool `json:"WSEnabled"`
@@ -96,7 +96,7 @@ type RpcConfig struct {
 	// WSPort is the TCP port number on which to start the websocket RPC server. The
 	// default zero value is/ valid and will pick a port number randomly (useful for
 	// ephemeral nodes).
-	WSPort int `json:"WSPort"`
+	WSPort int `json:"WSPort,omitempty"`
 
 	// WSOrigins is the list of domain to accept websocket requests from. Please be
 	// aware that the server can only act upon the HTTP request the client sends and
@@ -124,7 +124,7 @@ type RpcConfig struct {
 	// HTTPPort is the TCP port number on which to start the HTTP RPC server. The
 	// default zero value is/ valid and will pick a port number randomly (useful
 	// for ephemeral nodes).
-	RESTPort int `json:"RESTPort"`
+	RESTPort int `json:"RESTPort,omitempty"`
 
 	// HTTPCors is the Cross-Origin Resource Sharing header to send to requesting
 	// clients. Please be aware that CORS is a browser enforced security, it's fully

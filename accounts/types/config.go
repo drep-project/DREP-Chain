@@ -1,6 +1,7 @@
 package types
 
 type Config struct {
-	KeyStoreDir string
-	WalletPassword string
+	EnableWallet bool		`json:"enableWallet"`
+	KeyStoreDir string		`json:"keyStoreDir,omitempty"`
+	WalletPassword string	`json:"walletPassword,omitempty"`
 }

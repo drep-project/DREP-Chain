@@ -19,6 +19,11 @@ var (
 		Name:  "walletpassword",
 		Usage: "keep wallet open",
 	}
+
+	EnableWalletFlag = cli.BoolFlag{
+		Name:  "enableWallet",
+		Usage: "is wallet flag",
+	}
 )
 
 // CliService provides an interactive command line window
@@ -64,6 +69,14 @@ func (accountService *AccountService) Init(executeContext *app.ExecuteContext) e
 		accountService.config.KeyStoreDir = executeContext.CliContext.GlobalString(KeyStoreDirFlag.Name)
 	}
 
+	if executeContext.CliContext.IsSet(EnableWalletFlag.Name) {
+		accountService.config.EnableWallet = executeContext.CliContext.GlobalBool(EnableWalletFlag.Name)
+	}
+
+	if !accountService.config.EnableWallet {
+		return nil
+	}
+
 	if !path2.IsAbs(accountService.config.KeyStoreDir) {
 		if accountService.config.KeyStoreDir == "" {
 			accountService.config.KeyStoreDir = path2.Join(executeContext.CommonConfig.HomeDir, "keystore")
@@ -94,9 +107,15 @@ func (accountService *AccountService) Init(executeContext *app.ExecuteContext) e
 }
 
 func (accountService *AccountService) Start(executeContext *app.ExecuteContext) error {
+	if !accountService.config.EnableWallet {
+		return nil
+	}
 	return nil
 }
 
 func (accountService *AccountService) Stop(executeContext *app.ExecuteContext) error {
+	if !accountService.config.EnableWallet {
+		return nil
+	}
 	return nil
 }
