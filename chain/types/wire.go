@@ -1,8 +1,5 @@
 package types
 
-import (
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
-)
 const (
 	MsgTypeBlockReq  = 3
 	MsgTypeBlockResp = 4
@@ -12,7 +9,6 @@ const (
 	MsgTypeReqPeerState = 8
 )
 type BlockReq struct {
-	Pk                   *secp256k1.PublicKey
 	Height               int64
 }
 

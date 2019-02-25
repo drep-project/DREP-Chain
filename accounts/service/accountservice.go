@@ -61,16 +61,16 @@ func (accountService *AccountService) Init(executeContext *app.ExecuteContext) e
 		return err
 	}
 
-	if executeContext.CliContext.IsSet(WalletPasswordFlag.Name) {
-		accountService.config.WalletPassword = executeContext.CliContext.GlobalString(WalletPasswordFlag.Name)
+	if executeContext.Cli.IsSet(WalletPasswordFlag.Name) {
+		accountService.config.WalletPassword = executeContext.Cli.GlobalString(WalletPasswordFlag.Name)
 	}
 
-	if executeContext.CliContext.IsSet(KeyStoreDirFlag.Name) {
-		accountService.config.KeyStoreDir = executeContext.CliContext.GlobalString(KeyStoreDirFlag.Name)
+	if executeContext.Cli.IsSet(KeyStoreDirFlag.Name) {
+		accountService.config.KeyStoreDir = executeContext.Cli.GlobalString(KeyStoreDirFlag.Name)
 	}
 
-	if executeContext.CliContext.IsSet(EnableWalletFlag.Name) {
-		accountService.config.EnableWallet = executeContext.CliContext.GlobalBool(EnableWalletFlag.Name)
+	if executeContext.Cli.IsSet(EnableWalletFlag.Name) {
+		accountService.config.EnableWallet = executeContext.Cli.GlobalBool(EnableWalletFlag.Name)
 	}
 
 	if !accountService.config.EnableWallet {

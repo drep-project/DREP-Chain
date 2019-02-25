@@ -78,9 +78,9 @@ func (cliService *CliService) Init(executeContext *app.ExecuteContext) error {
 }
 
 func (cliService *CliService) Start(executeContext *app.ExecuteContext) error {
-	if executeContext.CliContext.IsSet("console") {
+	if executeContext.Cli.Command.Name == "console" {
 		return cliService.localConsole(executeContext)
-	} else if executeContext.CliContext.IsSet("attach") {
+	} else if executeContext.Cli.Command.Name == "attach" {
 		return cliService.remoteConsole(executeContext)
 	} else{
 		return cliService.drep(executeContext)
@@ -105,9 +105,9 @@ func (cliService *CliService) localConsole(executeContext *app.ExecuteContext) e
 	}
 	config := console.Config{
 		HomeDir: executeContext.CommonConfig.HomeDir,
-		DocRoot: executeContext.CliContext.GlobalString(cliTypes.JSpathFlag.Name),
+		DocRoot: executeContext.Cli.GlobalString(cliTypes.JSpathFlag.Name),
 		Client:  client,
-		Preload: cliTypes.MakeConsolePreloads(executeContext.CliContext),
+		Preload: cliTypes.MakeConsolePreloads(executeContext.Cli),
 	}
 
 	console, err := console.New(config)
@@ -117,7 +117,7 @@ func (cliService *CliService) localConsole(executeContext *app.ExecuteContext) e
 	defer console.Stop(false)
 
 	// If only a short execution was requested, evaluate and return
-	if script := executeContext.CliContext.GlobalString(cliTypes.ExecFlag.Name); script != "" {
+	if script := executeContext.Cli.GlobalString(cliTypes.ExecFlag.Name); script != "" {
 		console.Evaluate(script)
 		return nil
 	}
@@ -130,7 +130,7 @@ func (cliService *CliService) localConsole(executeContext *app.ExecuteContext) e
 // remoteConsole will connect to a remote drep instance, attaching a JavaScript
 // console to it.
 func (cliService *CliService) remoteConsole(executeContext *app.ExecuteContext) error {
-	endpoint := executeContext.CliContext.Args().First()
+	endpoint := executeContext.Cli.Args().First()
 	if len(endpoint) == 0 {
 		return fmt.Errorf("You have to specify an address")
 	}
@@ -143,9 +143,9 @@ func (cliService *CliService) remoteConsole(executeContext *app.ExecuteContext) 
 	cliService.config = &cliTypes.Config{}
 	cliService.config.Config = console.Config{
 		HomeDir: path,
-		DocRoot: executeContext.CliContext.GlobalString(cliTypes.JSpathFlag.Name),
+		DocRoot: executeContext.Cli.GlobalString(cliTypes.JSpathFlag.Name),
 		Client:  client,
-		Preload: cliTypes.MakeConsolePreloads(executeContext.CliContext),
+		Preload: cliTypes.MakeConsolePreloads(executeContext.Cli),
 	}
 
 	console, err := console.New(cliService.config.Config)
@@ -154,7 +154,7 @@ func (cliService *CliService) remoteConsole(executeContext *app.ExecuteContext) 
 	}
 	defer console.Stop(false)
 
-	if script := executeContext.CliContext.GlobalString(cliTypes.ExecFlag.Name); script != "" {
+	if script := executeContext.Cli.GlobalString(cliTypes.ExecFlag.Name); script != "" {
 		console.Evaluate(script)
 		return nil
 	}

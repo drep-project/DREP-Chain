@@ -44,8 +44,8 @@ func (database *DatabaseService) Init(executeContext *app.ExecuteContext) error 
 	}
 
 	path := path2.Join(executeContext.CommonConfig.HomeDir, "data")
-	if executeContext.CliContext.IsSet(DataDirFlag.Name) {
-		path = executeContext.CliContext.GlobalString(DataDirFlag.Name)
+	if executeContext.Cli.IsSet(DataDirFlag.Name) {
+		path = executeContext.Cli.GlobalString(DataDirFlag.Name)
 	}
 	db = NewDatabase(path)
 	return nil

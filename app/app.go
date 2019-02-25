@@ -112,12 +112,12 @@ func (mApp DrepApp) Run() error {
 	mApp.Flags = append(mApp.Flags, ConfigFileFlag)
 
 	allCommands, allFlags := mApp.Context.AggerateFlags()
-	for _, command := range  allCommands {
-		command.Flags = append(command.Flags, allFlags...)
-		command.Action = mApp.action
+	for i:= 0; i < len(allCommands); i++ {
+		allCommands[i].Flags = append(allCommands[i].Flags, allFlags...)
+		allCommands[i].Action = mApp.action
 	}
 	mApp.Flags = append(mApp.Flags, allFlags...)
-
+	mApp.App.Commands = allCommands
 	mApp.Action = mApp.action
 	if err := mApp.App.Run(os.Args); err != nil {
 		return err
@@ -139,7 +139,7 @@ func (mApp DrepApp) action(ctx *cli.Context) error {
 			}
 		}
 	}()
-
+	mApp.Context.Cli = ctx   //NOTE this set is for different commmands
 	for _, service := range mApp.Context.Services {
 		err := service.Init(mApp.Context)
 		if err != nil {
@@ -158,7 +158,7 @@ func (mApp DrepApp) action(ctx *cli.Context) error {
 
 //  read global config before main process
 func (mApp DrepApp) before(ctx *cli.Context) error {
-	mApp.Context.CliContext = ctx
+	mApp.Context.Cli = ctx
 
 	homeDir := ""
 	if ctx.GlobalIsSet(HomeDirFlag.Name) {

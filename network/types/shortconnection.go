@@ -37,10 +37,9 @@ type ShortConnection struct {
 	quit chan struct{}
 }
 
-func NewShortConnection(addr string, pubKey  *secp256k1.PublicKey, errorHande errorCbFunc, handPing pingCbFunc) *ShortConnection{
+func NewShortConnection(addr string, errorHande errorCbFunc, handPing pingCbFunc) *ShortConnection{
 	conn := &ShortConnection{
 		Addr:addr,
-		PubKey:pubKey,
 		PongTimeoutCh:make(chan bool,1),
 		handError:errorHande,
 		handPing: handPing,

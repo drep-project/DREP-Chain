@@ -1,9 +1,8 @@
 package service
 
 import (
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	p2pTypes "github.com/drep-project/drep-chain/network/types"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	p2pTypes "github.com/drep-project/drep-chain/network/types"
 	"time"
 )
 
@@ -19,7 +18,7 @@ func (chainService *ChainService) fetchBlocks() {
 				continue
 			}
 			if state.Height > chainService.DatabaseService.GetMaxHeight() {
-				req := &chainTypes.BlockReq{Height:chainService.DatabaseService.GetMaxHeight(), Pk: (*secp256k1.PublicKey)(chainService.P2pServer.GetIdentifier().PubKey())}
+				req := &chainTypes.BlockReq{Height:chainService.DatabaseService.GetMaxHeight()}
 				chainService.P2pServer.Send(peer,req)
 			}
 		}
@@ -49,13 +48,14 @@ func (chainService *ChainService) handleReqPeerState(peer *p2pTypes.Peer, peerSt
 }
 
 func (chainService *ChainService) GetBestPeer() (*p2pTypes.Peer, *chainTypes.PeerState){
-	if len(chainService.P2pServer.LivePeer) == 0 {
+	peers := chainService.P2pServer.Peers()
+	if len(peers) == 0 {
 		return nil, nil
 	}
-	curPeer := chainService.P2pServer.LivePeer[0];
+	curPeer := peers[0]
 
-	for i:=1; i <len(chainService.P2pServer.LivePeer);i++{
-		peerId := string(chainService.P2pServer.LivePeer[i].PubKey.Serialize())
+	for i:=1; i <len(peers);i++{
+		peerId := string(peers[i].PubKey.Serialize())
 		curPeerId := string(curPeer.PubKey.Serialize())
 		if _, ok := chainService.peerStateMap[peerId]; !ok {
 			chainService.peerStateMap[peerId] = &chainTypes.PeerState{Height : 0}
@@ -64,7 +64,7 @@ func (chainService *ChainService) GetBestPeer() (*p2pTypes.Peer, *chainTypes.Pee
 			chainService.peerStateMap[curPeerId] = &chainTypes.PeerState{Height : 0}
 		}
 		if chainService.peerStateMap[peerId].Height > chainService.peerStateMap[curPeerId].Height {
-			curPeer = chainService.P2pServer.LivePeer[i]
+			curPeer = peers[i]
 		}
 	}
 	return curPeer,  chainService.peerStateMap[string(curPeer.PubKey.Serialize())]

@@ -70,7 +70,7 @@ type ExecuteContext struct {
 	ConfigPath   string
 	CommonConfig *CommonConfig //
 	PhaseConfig  map[string]json.RawMessage
-	CliContext   *cli.Context
+	Cli          *cli.Context
 
 	Services []Service
 
@@ -125,7 +125,16 @@ func (econtext *ExecuteContext) AggerateFlags() ([]cli.Command, []cli.Flag) {
 
 //	GetApis aggregate interface functions for each service to provide for use by RPC services
 func (econtext *ExecuteContext) GetApis() []API {
-	apis := []API{}
+	apis := []API{
+		API{
+			Namespace: "chain",
+			Version:   "1.0",
+			Service: &AdminApi{
+				Context: econtext,
+			},
+			Public: true,
+		},
+	}
 	for _, service := range econtext.Services {
 		apis = append(apis, service.Api()...)
 	}

@@ -32,7 +32,7 @@ func (logService *LogService) Init(executeContext *app.ExecuteContext) error {
 	if err != nil {
 		return err
 	}
-	logService.setLogConfig(executeContext.CliContext, executeContext.CommonConfig.HomeDir)
+	logService.setLogConfig(executeContext.Cli, executeContext.CommonConfig.HomeDir)
 	return SetUp(logService.config)
 }
 

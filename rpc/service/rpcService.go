@@ -50,9 +50,11 @@ type RpcService struct {
 func (rpcService *RpcService) Name() string {
 	return "rpc"
 }
+
 func (rpcService *RpcService) Api() []app.API {
 	return nil
 }
+
 func (rpcService *RpcService) CommandFlags() ([]cli.Command, []cli.Flag) {
 	return nil, []cli.Flag{
 		HTTPEnabledFlag, HTTPListenAddrFlag, HTTPPortFlag, HTTPCORSDomainFlag,
@@ -74,7 +76,7 @@ func (rpcService *RpcService) Init(executeContext *app.ExecuteContext) error {
 		return err
 	}
 
-	rpcService.setRpcLog(executeContext.CliContext, executeContext.CommonConfig.HomeDir)
+	rpcService.setRpcLog(executeContext.Cli, executeContext.CommonConfig.HomeDir)
 	rpcService.IpcEndpoint = rpcService.RpcConfig.IPCEndpoint()
 	rpcService.HttpEndpoint = rpcService.RpcConfig.HTTPEndpoint()
 	rpcService.WsEndpoint = rpcService.RpcConfig.WSEndpoint()
@@ -130,6 +132,7 @@ func (rpcService *RpcService) Stop(executeContext *app.ExecuteContext) error {
 
 func (rpcService *RpcService) Receive(context actor.Context) { }
 
+//TODO split big rpc to  small controller （HTTP WS IPC REST
 // StartHTTP initializes and starts the HTTP RPC endpoint.
 func (rpcService *RpcService) StartRest(endpoint string, restApi rpcTypes.RestDescription) error {
 	if !rpcService.RpcConfig.RESTEnabled {

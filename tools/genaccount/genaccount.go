@@ -66,7 +66,7 @@ func gen(ctx *cli.Context) error {
 		aNode := getAccount(nodeItems[i].Name)
 		nodes = append(nodes, aNode)
 		bootsNodes = append(bootsNodes,p2pTypes.BootNode{
-			PubKey:(*secp256k1.PublicKey)(&aNode.PrivateKey.PublicKey),
+			//PubKey:(*secp256k1.PublicKey)(&aNode.PrivateKey.PublicKey),
 			IP :nodeItems[i].Ip,
 			Port:nodeItems[i].Port,
 		})

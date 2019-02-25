@@ -81,8 +81,8 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 		return err
 	}
 
-	if executeContext.CliContext.IsSet(EnableConsensusFlag.Name) {
-		consensusService.consensusConfig.EnableConsensus = executeContext.CliContext.GlobalBool(EnableConsensusFlag.Name)
+	if executeContext.Cli.IsSet(EnableConsensusFlag.Name) {
+		consensusService.consensusConfig.EnableConsensus = executeContext.Cli.GlobalBool(EnableConsensusFlag.Name)
 	}
 	if !consensusService.consensusConfig.EnableConsensus {
 		return nil
@@ -311,7 +311,7 @@ func (consensusService *ConsensusService) CollectLiveMember()[]*consensusTypes.M
 				Producer: produce,
 			})  // self
 		}else{
-			peer := consensusService.P2pServer.SelectPeer(produce.Ip)
+			peer := consensusService.P2pServer.GetPeer(produce.Ip)
 			if peer != nil {
 				liveMembers = append(liveMembers, &consensusTypes.MemberInfo{
 					Producer: produce,

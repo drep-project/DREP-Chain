@@ -7,6 +7,9 @@ import (
     "sync"
 )
 
+var (
+    DefaultPort = 55555
+)
 type IP string
 
 func (ip IP) String() string {
@@ -20,21 +23,18 @@ func (port Port) String() string {
 }
 
 type Peer struct {
-    Ip string
-    PubKey  *secp256k1.PublicKey
+    Ip string                       `json:"ip"`
+    Port int                        `json:"port"`
+    PubKey  *secp256k1.PublicKey    `json:"pubkey"`
 
-    Port int
-
-    Conn    *ShortConnection
-
-    addrUpdate sync.Mutex
+    Conn    *ShortConnection        `json:"-"`
+    addrUpdate sync.Mutex           `json:"-"`
 }
 
-func NewPeer(ip string, port int, pub *secp256k1.PublicKey, handError func(*Peer, error), sendPing func(*Peer)) *Peer {
+func NewPeer(ip string, port int,  handError func(*Peer, error), sendPing func(*Peer)) *Peer {
     peer := &Peer{
         Ip : ip,
         Port: port,
-        PubKey: pub,
     }
     onError := func(err error) {
         handError(peer, err)
@@ -42,7 +42,7 @@ func NewPeer(ip string, port int, pub *secp256k1.PublicKey, handError func(*Peer
     onPing := func() {
         sendPing(peer)
     }
-    peer.Conn = NewShortConnection(peer.GetAddr(), pub, onError, onPing)
+    peer.Conn = NewShortConnection(peer.GetAddr(), onError, onPing)
 
     return peer
 }
@@ -58,8 +58,4 @@ func (peer *Peer) UpdateAddr(ip string, port int) {
 
 func (peer *Peer) GetAddr() string {
     return  fmt.Sprintf("%s:%d",peer.Ip,peer.Port)
-}
-
-func DefaultPort() Port{
-    return Port(5555)
 }

@@ -30,8 +30,9 @@ const (
 
 type P2pService struct {
 	prvKey *secp256k1.PrivateKey
-	LivePeer []*p2pTypes.Peer
-	DeadPeer []*p2pTypes.Peer
+	livePeer []*p2pTypes.Peer
+	deadPeer []*p2pTypes.Peer
+	apis []app.API
 	Router *p2pTypes.MessageRouter
 	Config *p2pTypes.P2pConfig
 
@@ -51,26 +52,26 @@ type outMessage struct {
 	done chan error
 }
 
-func (server *P2pService) Name() string {
+func (p2pService *P2pService) Name() string {
 	return "p2p"
 }
 
-func (server *P2pService) Api() []app.API {
-	return []app.API{}
+func (p2pService *P2pService) Api() []app.API {
+	return p2pService.apis
 }
 
-func (server *P2pService) CommandFlags() ([]cli.Command, []cli.Flag) {
+func (p2pService *P2pService) CommandFlags() ([]cli.Command, []cli.Flag) {
 	return nil, []cli.Flag{}
 }
 
-func (server *P2pService) P2pMessages() map[int]interface{} {
+func (p2pService *P2pService) P2pMessages() map[int]interface{} {
 	return map[int]interface{}{
 		p2pTypes.MsgTypePing : p2pTypes.Ping{},
 		p2pTypes.MsgTypePong : p2pTypes.Pong{},
 	}
 }
 
-func (server *P2pService) Init(executeContext *app.ExecuteContext) error {
+func (p2pService *P2pService) Init(executeContext *app.ExecuteContext) error {
 	p2pMessages, err := executeContext.GetMessages()
 	if err != nil {
 		return err
@@ -82,75 +83,76 @@ func (server *P2pService) Init(executeContext *app.ExecuteContext) error {
 		}
 	}
 	// config
-	server.Config = &p2pTypes.P2pConfig{}
-	err = executeContext.UnmashalConfig(server.Name(), server.Config)
+	p2pService.Config = &p2pTypes.P2pConfig{}
+	err = executeContext.UnmashalConfig(p2pService.Name(), p2pService.Config)
 	if err != nil {
 		return err
 	}
 
-	server.prvKey, err = secp256k1.GeneratePrivateKey(nil)
+	p2pService.prvKey, err = secp256k1.GeneratePrivateKey(nil)
 	if err != nil {
 		//TODO shoud never occur
 		log.Error("generate private key error ", "Reason", err)
 		return err
 	}
-	server.LivePeer = []*p2pTypes.Peer{}
-	server.DeadPeer = []*p2pTypes.Peer{}
-	server.inQuene = make(chan *p2pTypes.RouteIn,MaxConnections*2)
-	server.outQuene = make(chan *outMessage,MaxConnections*2)
+	p2pService.livePeer = []*p2pTypes.Peer{}
+	p2pService.deadPeer = []*p2pTypes.Peer{}
+	p2pService.inQuene = make(chan *p2pTypes.RouteIn,MaxConnections*2)
+	p2pService.outQuene = make(chan *outMessage,MaxConnections*2)
 	props := actor.FromProducer(func() actor.Actor {
-		return server
+		return p2pService
 	})
 
 	pid, err := actor.SpawnNamed(props, "peer_message")
 	if err != nil {
 		panic(err)
 	}
-	server.Router = p2pTypes.NewMsgRouter(server.GetInQuene())
-	server.Router.RegisterMsgHandler(p2pTypes.MsgTypePing,pid)
-	server.Router.RegisterMsgHandler(p2pTypes.MsgTypePong,pid)
-	server.pid = pid
+	p2pService.Router = p2pTypes.NewMsgRouter(p2pService.inQuene)
+	p2pService.Router.RegisterMsgHandler(p2pTypes.MsgTypePing,pid)
+	p2pService.Router.RegisterMsgHandler(p2pTypes.MsgTypePong,pid)
+	p2pService.pid = pid
+
+	p2pService.apis =  []app.API{
+		app.API{
+			Namespace: "p2p",
+			Version:   "1.0",
+			Service: &P2PApi{
+				p2pService: p2pService,
+			},
+			Public: true,
+		},
+	}
 	return nil
 }
 
-func (server *P2pService) Start(executeContext *app.ExecuteContext) error {
-	server.initBootNodes()
-	go server.receiveRoutine()
-	go server.sendMessageRoutine()
-	go server.recoverDeadPeer()
+func (p2pService *P2pService) Start(executeContext *app.ExecuteContext) error {
+	p2pService.initBootNodes()
+	go p2pService.receiveRoutine()
+	go p2pService.sendMessageRoutine()
+	go p2pService.recoverDeadPeer()
 	return nil
 }
 
-func (server *P2pService) Stop(executeContext *app.ExecuteContext) error {
+func (p2pService *P2pService) Stop(executeContext *app.ExecuteContext) error {
 	return nil
 }
 
-func (server *P2pService) GetInQuene() chan *p2pTypes.RouteIn{
-	return server.inQuene
-}
-
-func (server *P2pService) initBootNodes(){
+func (p2pService *P2pService) initBootNodes(){
 	//init safe
-	for _, bootNode := range server.Config.BootNodes {
-		if server.isLocalIp(bootNode.IP) {
+	for _, bootNode := range p2pService.Config.BootNodes {
+		if p2pService.isLocalIp(bootNode.IP) {
 			continue
 		}
-		peer := p2pTypes.NewPeer(bootNode.IP,bootNode.Port,bootNode.PubKey,server.handError,server.sendPing)
-		if peer.Conn.Connect() {
-			peer.Conn.Start()
-			server.addPeer(peer)
-		} else{
-			server.addDeadPeer(peer)
-			log.Info("bad boot peer")
-		}
+
+		p2pService.AddPeer(bootNode.IP)
 	}
 }
 
-func (server *P2pService) receiveRoutine(){
+func (p2pService *P2pService) receiveRoutine(){
 	//room for modification addr := &net.TCPAddr{IP: net.ParseIP("x.x.x.x"), Port: receiver.listeningPort()}
-	addr := &net.TCPAddr{Port: server.Config.Port}
+	addr := &net.TCPAddr{Port: p2pService.Config.Port}
 	if UPnPStart {
-		nat.Map("tcp",server.Config.Port, server.Config.Port, "drep nat")
+		nat.Map("tcp", p2pService.Config.Port, p2pService.Config.Port, "drep nat")
 	}
 
 	listener, err := net.ListenTCP("tcp", addr)
@@ -161,7 +163,7 @@ func (server *P2pService) receiveRoutine(){
 	}
 
 	for {
-		log.Info("start listen", "port", server.Config.Port)
+		log.Info("start listen", "port", p2pService.Config.Port)
 		conn, err := listener.AcceptTCP()
 		log.Info("listen from ", "accept address", conn.RemoteAddr())
 		if err != nil {
@@ -184,7 +186,7 @@ func (server *P2pService) receiveRoutine(){
 			case conn := <- connChanels:
 				go func(connTemp *net.TCPConn){
 					addr := connTemp.RemoteAddr().String()
-					msg, msgType, pubkey, err := server.waitForMessage(connTemp)
+					msg, msgType, pubkey, err := p2pService.waitForMessage(connTemp)
 					if err != nil {
 						if err.Error() == "no msg"{
 							return
@@ -193,11 +195,11 @@ func (server *P2pService) receiveRoutine(){
 							return
 						}
 					}
-					peer, err := server.preProcessReq(addr, pubkey)
+					peer, err := p2pService.preProcessReq(addr, pubkey)
 					if err != nil {
 						return
 					}
-					server.inQuene <- &p2pTypes.RouteIn{
+					p2pService.inQuene <- &p2pTypes.RouteIn{
 						Type: msgType,
 						Peer: peer,
 						Detail: msg,
@@ -208,34 +210,34 @@ func (server *P2pService) receiveRoutine(){
 	}
 }
 
-func (server *P2pService) preProcessReq(addr string, pk *secp256k1.PublicKey) (*p2pTypes.Peer, error){
+func (p2pService *P2pService) preProcessReq(addr string, pk *secp256k1.PublicKey) (*p2pTypes.Peer, error){
 	ipPort := strings.Split(addr,":")
-	if server.isLocalIp(ipPort[0]) {
+	if p2pService.isLocalIp(ipPort[0]) {
 		return nil, errors.New("not allow local ip")
 	}
-	livePeer := server.SelectPeer(ipPort[0])
+	livePeer := p2pService.GetPeer(ipPort[0])
 	if livePeer == nil {
-		deadPeer := server.selectDeadPeer(ipPort[0])
+		deadPeer := p2pService.selectDeadPeer(ipPort[0])
 		if deadPeer != nil {
 			deadPeer.Conn.ReStart()
-			server.addPeer(deadPeer)
+			p2pService.addPeer(deadPeer)
 			livePeer = deadPeer
 		}else {
-			livePeer = p2pTypes.NewPeer( ipPort[0],55555,pk,server.handError,server.sendPing)  // //no way to find port
-			server.addPeer(livePeer)
+			livePeer = p2pTypes.NewPeer( ipPort[0], p2pTypes.DefaultPort, p2pService.handError, p2pService.sendPing) // //no way to find port
+			p2pService.addPeer(livePeer)
 		}
 	}
 	return livePeer, nil
 }
 
-func (server *P2pService) waitForMessage(conn *net.TCPConn)(interface{}, int, *secp256k1.PublicKey, error){
+func (p2pService *P2pService) waitForMessage(conn *net.TCPConn)(interface{}, int, *secp256k1.PublicKey, error){
 	defer conn.Close()
-	sizeBytes, err := server.receiveMessageInternal(conn, 4)
+	sizeBytes, err := p2pService.receiveMessageInternal(conn, 4)
 	size := (int(sizeBytes[0]) << 24) + (int(sizeBytes[1]) << 16) + (int(sizeBytes[2]) << 8) + int(sizeBytes[3])
 	if size == 0 {
 		return nil, 0, nil, errors.New("no msg")
 	}
-	bytes, err := server.receiveMessageInternal(conn, size)
+	bytes, err := p2pService.receiveMessageInternal(conn, size)
 	if err != nil {
 		return nil, 0, nil, errors.New("fail to read message ")
 	}
@@ -244,7 +246,7 @@ func (server *P2pService) waitForMessage(conn *net.TCPConn)(interface{}, int, *s
 	return p2pComponent.GetMessage(bytes)
 }
 
-func (server *P2pService) receiveMessageInternal(conn net.Conn, size int) ([]byte, error) {
+func (p2pService *P2pService) receiveMessageInternal(conn net.Conn, size int) ([]byte, error) {
 	bytes := make([]byte, size)
 	offset := 0
 	for offset < size {
@@ -259,71 +261,59 @@ func (server *P2pService) receiveMessageInternal(conn net.Conn, size int) ([]byt
 	return bytes, nil
 }
 
-func (server *P2pService) handPing(peer *p2pTypes.Peer, ping *p2pTypes.Ping){
-	server.SendAsync(peer,&p2pTypes.Pong{})
+func (p2pService *P2pService) handPing(peer *p2pTypes.Peer, ping *p2pTypes.Ping){
+	p2pService.SendAsync(peer,&p2pTypes.Pong{})
 }
 
-func (server *P2pService) handPong(peer *p2pTypes.Peer, pong *p2pTypes.Pong){
+func (p2pService *P2pService) handPong(peer *p2pTypes.Peer, pong *p2pTypes.Pong){
 	select {
 	case peer.Conn.PongTimeoutCh <- false:
 	default:
 	}
 }
 
-func (server *P2pService) handError(peer *p2pTypes.Peer, err error){
+func (p2pService *P2pService) handError(peer *p2pTypes.Peer, err error){
 	if err != nil {
 		if pErr,ok := err.(*p2pTypes.PeerError);ok {
 			log.Error(pErr.Error())
 			peer.Conn.Stop()
-			server.addDeadPeer(peer)
+			p2pService.addDeadPeer(peer)
 		}
 	}
 }
 
 
-func (server *P2pService) sendPing(peer *p2pTypes.Peer){
-	server.SendAsync(peer, &p2pTypes.Ping{})
+func (p2pService *P2pService) sendPing(peer *p2pTypes.Peer){
+	p2pService.SendAsync(peer, &p2pTypes.Ping{})
 }
 
-func (server *P2pService) SendMessage(peers []*p2pTypes.Peer, msg interface{}) (sucPeers []*p2pTypes.Peer, failPeers []*p2pTypes.Peer) {
-	sucPeers = make([]*p2pTypes.Peer, 0)
-	failPeers = make([]*p2pTypes.Peer, 0)
-	for _, pk := range peers {
-		err := server.Send(pk,msg)
-		if err != nil {
-			failPeers = append(failPeers, pk)
-		} else {
-			sucPeers = append(sucPeers, pk)
-		}
-	}
-	return
-}
-
-func (server *P2pService) SendAsync(peer *p2pTypes.Peer, msg interface{}){
-	server.outQuene <-  &outMessage{Peer:peer, Msg:msg}
-}
-
-func (server *P2pService) Send(peer *p2pTypes.Peer, msg interface{}) error{
+func (p2pService *P2pService) SendAsync(peer *p2pTypes.Peer, msg interface{}) chan error{
 	done := make(chan error,1)
-	server.outQuene <-  &outMessage{Peer:peer, Msg:msg,done:done}
+	p2pService.outQuene <-  &outMessage{Peer: peer, Msg:msg,done:done}
+	return done
+}
+
+func (p2pService *P2pService) Send(peer *p2pTypes.Peer, msg interface{}) error{
+	done := make(chan error,1)
+	p2pService.outQuene <-  &outMessage{Peer: peer, Msg:msg,done:done}
 	return <-done
 }
 
-func (server *P2pService) Broadcast(msg interface{}){
-	for _, peer := range server.LivePeer {
-		server.outQuene <-  &outMessage{Peer:peer, Msg:msg}
+func (p2pService *P2pService) Broadcast(msg interface{}){
+	for _, peer := range p2pService.livePeer {
+		p2pService.outQuene <-  &outMessage{Peer: peer, Msg:msg}
 	}
 }
 
-func (server *P2pService) sendMessageRoutine(){
+func (p2pService *P2pService) sendMessageRoutine(){
 	for {
 		select {
-		case  outMsg := <-server.outQuene:
+		case  outMsg := <-p2pService.outQuene:
 			go func() {
-				err := server.sendMessage(outMsg)//outMsg.execute()
+				err := p2pService.sendMessage(outMsg) //outMsg.execute()
 				if err != nil{
 					//dead peer
-					server.handError(outMsg.Peer,p2pTypes.NewPeerError(err))
+					p2pService.handError(outMsg.Peer,p2pTypes.NewPeerError(err))
 					log.Error("", "MSG",err.Error())
 				}
 				select {
@@ -331,14 +321,14 @@ func (server *P2pService) sendMessageRoutine(){
 				default:
 				}
 			}()
-		case <- server.quit:
+		case <- p2pService.quit:
 			return
 		}
 	}
 }
 
-func (server *P2pService) sendMessage(outMessage *outMessage) error {
-	message, err := p2pComponent.GenerateMessage(outMessage.Msg, server.prvKey)
+func (p2pService *P2pService) sendMessage(outMessage *outMessage) error {
+	message, err := p2pComponent.GenerateMessage(outMessage.Msg, p2pService.prvKey)
 	if err != nil {
 		log.Info("error during cipher:", "reason", err)
 		return &common.DataError{MyError:common.MyError{Err:err}}
@@ -389,11 +379,11 @@ func (server *P2pService) sendMessage(outMessage *outMessage) error {
 		sizeBytes[1] = byte((size & 0x00FF0000) >> 16)
 		sizeBytes[2] = byte((size & 0x0000FF00) >> 8)
 		sizeBytes[3] = byte(size & 0x000000FF)
-		if err := server.sendMessageInternal(conn, sizeBytes); err != nil {
+		if err := p2pService.sendMessageInternal(conn, sizeBytes); err != nil {
 			return &common.TransmissionError{MyError: common.MyError{Err: err}}
 		}
 		//log.Debug("send message", "IP", conn.RemoteAddr(), "Content", string(bytes))
-		if err := server.sendMessageInternal(conn, bytes); err != nil {
+		if err := p2pService.sendMessageInternal(conn, bytes); err != nil {
 			log.Error("Send error ", "Msg", err)
 			return &common.TransmissionError{MyError: common.MyError{Err: err}}
 		} else {
@@ -404,7 +394,7 @@ func (server *P2pService) sendMessage(outMessage *outMessage) error {
 	}
 }
 
-func (server *P2pService) sendMessageInternal(conn net.Conn, bytes []byte) error {
+func (p2pService *P2pService) sendMessageInternal(conn net.Conn, bytes []byte) error {
 	offset := 0
 	size := len(bytes)
 	for offset < size {
@@ -418,31 +408,31 @@ func (server *P2pService) sendMessageInternal(conn net.Conn, bytes []byte) error
 }
 
 // TODO p2p operate must be consider more details   1) less lock time； 2）fast query  3）correct peer and deadpeer state
-func (server *P2pService) recoverDeadPeer(){
-	server.tryTimer = time.NewTicker(time.Second * 30)
+func (p2pService *P2pService) recoverDeadPeer(){
+	p2pService.tryTimer = time.NewTicker(time.Second * 30)
 	for {
 		select  {
-		case  <-server.tryTimer.C:
-			server.peerOpLock.Lock()
+		case  <-p2pService.tryTimer.C:
+			p2pService.peerOpLock.Lock()
 			tryPeerCount := 0
-			if len(server.DeadPeer) < 40 {    //TODO   MAXPEER * RATE  200*0.2
-				tryPeerCount = len(server.DeadPeer)
+			if len(p2pService.deadPeer) < 40 { //TODO   MAXPEER * RATE  200*0.2
+				tryPeerCount = len(p2pService.deadPeer)
 			} else {
-				tryPeerCount = len(server.DeadPeer)/5      //RATE
+				tryPeerCount = len(p2pService.deadPeer)/5 //RATE
 			}
 			tryPeer :=  []*p2pTypes.Peer{}
 			for i :=0; i < tryPeerCount; i++ {
-				tryPeer = append(tryPeer, server.DeadPeer[i])
+				tryPeer = append(tryPeer, p2pService.deadPeer[i])
 			}
-			server.peerOpLock.Unlock()
+			p2pService.peerOpLock.Unlock()
 			for _, deadPeer := range tryPeer {
 				if deadPeer.Conn.Connect() {
 					deadPeer.Conn.ReStart()
-					server.addPeer(deadPeer)
+					p2pService.addPeer(deadPeer)
 					log.Trace("try to connect peer success", "Addr", deadPeer.GetAddr())
 				}else{
 					deadPeer.Conn.Stop()
-					server.addDeadPeer(deadPeer)
+					p2pService.addDeadPeer(deadPeer)
 					log.Trace("try to connect peer fail", "Addr", deadPeer.GetAddr())
 				}
 			}
@@ -450,21 +440,12 @@ func (server *P2pService) recoverDeadPeer(){
 	}
 }
 
-func (server *P2pService) Receive(context actor.Context) {
-	routeMsg, ok := context.Message().(*p2pTypes.RouteIn)
-	if !ok {
-		return
-	}
-	switch msg := routeMsg.Detail.(type) {
-	case *p2pTypes.Ping:
-		server.handPing(routeMsg.Peer, msg)
-	case *p2pTypes.Pong:
-		server.handPong(routeMsg.Peer, msg)
-	}
+func (p2pService *P2pService) Peers()([]*p2pTypes.Peer){
+	return p2pService.livePeer
 }
 
-func (server *P2pService) SelectPeer(ip string)(*p2pTypes.Peer){
-	for _,peer := range server.LivePeer {
+func (p2pService *P2pService) GetPeer(ip string)(*p2pTypes.Peer){
+	for _,peer := range p2pService.livePeer {
 		if peer.Ip == ip {
 			return peer
 		}
@@ -472,8 +453,8 @@ func (server *P2pService) SelectPeer(ip string)(*p2pTypes.Peer){
 	return nil
 }
 
-func (server *P2pService) selectDeadPeer(ip string)(*p2pTypes.Peer){
-	for _,peer := range server.DeadPeer {
+func (p2pService *P2pService) selectDeadPeer(ip string)(*p2pTypes.Peer){
+	for _,peer := range p2pService.deadPeer {
 		if peer.Ip == ip {
 			return peer
 		}
@@ -481,42 +462,94 @@ func (server *P2pService) selectDeadPeer(ip string)(*p2pTypes.Peer){
 	return nil
 }
 
-func (server *P2pService) addPeer(peer *p2pTypes.Peer){
-	server.peerOpLock.Lock()
-	defer server.peerOpLock.Unlock()
+func (p2pService *P2pService) AddPeer(addr string) error {
+	port := p2pTypes.DefaultPort
+	ip := addr
+	if strings.Contains(addr, ":") {
+		ipPort := strings.Split(addr, ":")
 
-	if len(server.LivePeer) > MaxLivePeer {
-		return
+		var err error
+		ip = ipPort[0]
+		port, err = strconv.Atoi(ipPort[1])
+		if err != nil {
+			return err
+		}
 	}
-	server.LivePeer = append(server.LivePeer, peer)
-
-	index := server.indexPeer(server.DeadPeer,peer)
-	if index > -1 {
-		server.DeadPeer = append(server.DeadPeer[0:index],server.DeadPeer[index+1:len(server.DeadPeer)]...)
+	if p2pService.isLocalIp(ip) {
+		return nil
+	}
+	peer := p2pTypes.NewPeer(ip, port, p2pService.handError, p2pService.sendPing)
+	if peer.Conn.Connect() {
+		peer.Conn.Start()
+		p2pService.addPeer(peer)
+		return nil
+	} else{
+		p2pService.addDeadPeer(peer)
+		return errors.New("cant not conntect ip" + ip + ":" + strconv.FormatInt(int64(port), 10))
 	}
 }
 
-func (server *P2pService) addDeadPeer(peer *p2pTypes.Peer){
-	server.peerOpLock.Lock()
-	defer server.peerOpLock.Unlock()
+func (p2pService *P2pService) RemovePeer(addr string)  {
+	ip := addr
+	if strings.Contains(addr, ":") {
+		ipPort := strings.Split(addr, ":")
+		ip = ipPort[0]
+	}
 
-	index :=  server.indexPeer(server.LivePeer,peer)
+	p2pService.peerOpLock.Lock()
+	defer p2pService.peerOpLock.Unlock()
+
+	for index, peer := range p2pService.livePeer {
+		if peer.Ip ==  ip {
+			p2pService.livePeer = append(p2pService.livePeer[0:index], p2pService.livePeer[index+1:len(p2pService.livePeer)]...)
+			break
+		}
+	}
+
+	for index, peer := range p2pService.deadPeer {
+		if peer.Ip ==  ip {
+			p2pService.deadPeer = append(p2pService.deadPeer[0:index], p2pService.deadPeer[index+1:len(p2pService.deadPeer)]...)
+			break
+		}
+	}
+}
+
+func (p2pService *P2pService) addPeer(peer *p2pTypes.Peer){
+	p2pService.peerOpLock.Lock()
+	defer p2pService.peerOpLock.Unlock()
+
+	if len(p2pService.livePeer) > MaxLivePeer {
+		return
+	}
+	p2pService.livePeer = append(p2pService.livePeer, peer)
+
+	index := p2pService.indexPeer(p2pService.deadPeer,peer)
 	if index > -1 {
-		server.LivePeer = append(server.LivePeer[0:index],server.LivePeer[index+1:len(server.LivePeer)]...)
+		p2pService.deadPeer = append(p2pService.deadPeer[0:index], p2pService.deadPeer[index+1:len(p2pService.deadPeer)]...)
+	}
+}
+
+func (p2pService *P2pService) addDeadPeer(peer *p2pTypes.Peer){
+	p2pService.peerOpLock.Lock()
+	defer p2pService.peerOpLock.Unlock()
+
+	index :=  p2pService.indexPeer(p2pService.livePeer,peer)
+	if index > -1 {
+		p2pService.livePeer = append(p2pService.livePeer[0:index], p2pService.livePeer[index+1:len(p2pService.livePeer)]...)
 	}
 
 
-	index = server.indexPeer(server.DeadPeer,peer)
+	index = p2pService.indexPeer(p2pService.deadPeer,peer)
 	if index == -1 {
-		if len(server.DeadPeer) > MaxDeadPeer {
+		if len(p2pService.deadPeer) > MaxDeadPeer {
 			//remove top peer
-			server.DeadPeer = server.DeadPeer[1:len(server.DeadPeer)]
+			p2pService.deadPeer = p2pService.deadPeer[1:len(p2pService.deadPeer)]
 		}
-		server.DeadPeer = append(server.DeadPeer,peer)
+		p2pService.deadPeer = append(p2pService.deadPeer,peer)
 	}
 }
 
-func (server *P2pService) indexPeer(peers []*p2pTypes.Peer,peer *p2pTypes.Peer) int {
+func (p2pService *P2pService) indexPeer(peers []*p2pTypes.Peer,peer *p2pTypes.Peer) int {
 	for index, _peer := range  peers {
 		if _peer == peer {
 			return index
@@ -525,7 +558,7 @@ func (server *P2pService) indexPeer(peers []*p2pTypes.Peer,peer *p2pTypes.Peer) 
 	return -1
 }
 
-func (server *P2pService) isLocalIp(ip string) bool{
+func (p2pService *P2pService) isLocalIp(ip string) bool{
 	addrs, err := net.InterfaceAddrs()
 	if err != nil{
 		return false
@@ -540,6 +573,4 @@ func (server *P2pService) isLocalIp(ip string) bool{
 	return false
 }
 
-func (server *P2pService) GetIdentifier() *secp256k1.PrivateKey{
-	return server.prvKey
-}
+
