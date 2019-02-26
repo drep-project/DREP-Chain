@@ -38,9 +38,8 @@ func (chain *ChainApi) GetPreviousBlockHash() string {
     return "0x" + string(bytes)
 }
 
-func (chain *ChainApi) GetReputation(addr crypto.CommonAddress, chainId common.ChainIdType) string {
-    rep := dbService.GetReputation(addr, chainId, true)
-    return rep.String()
+func (chain *ChainApi) GetReputation(addr crypto.CommonAddress, chainId common.ChainIdType) *big.Int {
+    return dbService.GetReputation(addr, chainId, true)
 }
 
 func (chain *ChainApi) GetTransactionsFromBlock(height int64) []*chainType.Transaction {

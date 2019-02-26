@@ -1,4 +1,6 @@
+.DS_Store
 go.sum
 .vscode
 .idea
-vendor
+account.js
+chain.js

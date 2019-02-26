@@ -99,7 +99,8 @@ func gen(ctx *cli.Context) error {
 	chainConfig := chainTypes.ChainConfig{}
 	chainConfig.RemotePort = 55555
 	chainConfig.ChainId = common.ChainIdType{}
-
+	chainConfig.GenesisPK = "0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26"
+	
 	walletConfig := accountTypes.Config{}
 	walletConfig.EnableWallet = true
 	walletConfig.WalletPassword = pasword

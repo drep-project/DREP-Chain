@@ -7,6 +7,8 @@ import (
     "github.com/drep-project/drep-chain/common"
     "github.com/drep-project/drep-chain/crypto/secp256k1"
    chainService "github.com/drep-project/drep-chain/chain/service"
+    "encoding/json"
+    "github.com/drep-project/drep-chain/database"
 )
 
 
@@ -14,6 +16,7 @@ type AccountApi struct {
 	Wallet *Wallet
 	accountService *AccountService
 	chainService *chainService.ChainService
+	databaseService *database.DatabaseService
 }
 
 func (accountapi *AccountApi) AddressList() ([]*crypto.CommonAddress, error) {
@@ -91,40 +94,34 @@ func (accountapi *AccountApi) Close() {
 
 func (accountapi *AccountApi) SendTransaction(from *secp256k1.PublicKey, to crypto.CommonAddress, chainId common.ChainIdType, amount *big.Int) (string, error) {
 	t := accountapi.chainService.GenerateBalanceTransaction(from, to, chainId, amount)
-    if accountapi.chainService.SendTransaction(t) != nil {
-        return "", errors.New("Offline")
-    } else {
-        return t.TxId()
-    }
+    accountapi.chainService.SendTransaction(t)
+    return t.TxId()
 }
 
 func (accountapi *AccountApi) Call(from *secp256k1.PublicKey, to crypto.CommonAddress, chainId common.ChainIdType, input []byte, amount *big.Int, readOnly bool)  (string, error){
     t := accountapi.chainService.GenerateCallContractTransaction(from, to, chainId, input, amount, readOnly)
-    if accountapi.chainService.SendTransaction(t) != nil {
-        return "", errors.New("Offline")
-    } else {
-        return t.TxId()
-    }
+    accountapi.chainService.SendTransaction(t)
+    return t.TxId()
 }
 
 func (accountapi *AccountApi) CreateCode(from *secp256k1.PublicKey, to crypto.CommonAddress, chainId common.ChainIdType, byteCode []byte) (string, error){
     t := accountapi.chainService.GenerateCreateContractTransaction(from, to, chainId, byteCode)
-    if accountapi.chainService.SendTransaction(t) != nil {
-        return "", errors.New("Offline")
-    } else {
-        return t.TxId()
+    accountapi.chainService.SendTransaction(t)
+    return t.TxId()
+}
+
+func (accountapi *AccountApi) Sign(prv *secp256k1.PrivateKey, msg interface{}) ([]byte, error) {
+    bytes, err := json.Marshal(msg)
+    if err != nil {
+        return nil, err
     }
+    return crypto.Sign(bytes, prv)
 }
 
-
-func (accountapi *AccountApi) Sign(addr crypto.CommonAddress, msg interface{}) string {
-    return ""
+func (accountapi *AccountApi) GasPrice() *big.Int {
+    return chainService.DefaultGasPrice
 }
 
-func (accountapi *AccountApi) GasPrice() {
-
-}
-
-func (accountapi *AccountApi) GetCode(addr crypto.CommonAddress) []byte {
-    return []byte{}
+func (accountapi *AccountApi) GetCode(addr crypto.CommonAddress, chainId common.ChainIdType) []byte {
+    return accountapi.databaseService.GetByteCode(addr, chainId, false)
 }
