@@ -8,3 +8,15 @@ type ConsensusApi struct {
 func (consensusApi *ConsensusApi) Mock(){
 
 }
+
+func (consensusApi *ConsensusApi) Minning() bool {
+	switch consensusApi.consensusService.Config.ConsensusMode {
+	case "solo":
+		return true
+	case "bft":
+		return true
+	default:
+		return false
+	}
+}
+

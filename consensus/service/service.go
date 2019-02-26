@@ -41,7 +41,7 @@ type ConsensusService struct {
 	pubkey *secp256k1.PublicKey
 	privkey *secp256k1.PrivateKey
 	producers []*consensusTypes.Producer
-	consensusConfig *consensusTypes.ConsensusConfig
+	Config *consensusTypes.ConsensusConfig
 
 	pid *actor.PID
 	curMiner int
@@ -75,20 +75,21 @@ func (consensusService *ConsensusService)  P2pMessages() map[int]interface{} {
 }
 
 func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContext) error {
-	consensusService.consensusConfig = &consensusTypes.ConsensusConfig{}
-	err := executeContext.UnmashalConfig(consensusService.Name(), consensusService.consensusConfig )
+	consensusService.Config = &consensusTypes.ConsensusConfig{}
+	err := executeContext.UnmashalConfig(consensusService.Name(), consensusService.Config )
 	if err != nil {
 		return err
 	}
 
 	if executeContext.Cli.IsSet(EnableConsensusFlag.Name) {
-		consensusService.consensusConfig.EnableConsensus = executeContext.Cli.GlobalBool(EnableConsensusFlag.Name)
+		consensusService.Config.EnableConsensus = executeContext.Cli.GlobalBool(EnableConsensusFlag.Name)
 	}
-	if !consensusService.consensusConfig.EnableConsensus {
+	if !consensusService.Config.EnableConsensus {
 		return nil
 	}
-	consensusService.pubkey = consensusService.consensusConfig.MyPk
-	consensusService.producers = consensusService.consensusConfig.Producers
+	consensusService.pubkey = consensusService.Config.MyPk
+	consensusService.producers = consensusService.Config.Producers
+
 	accountNode, err  := consensusService.WalletService.Wallet.GetAccountByPubkey(consensusService.pubkey)
 	if err != nil {
 		return err
@@ -126,7 +127,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 }
 
 func (consensusService *ConsensusService) Start(executeContext *app.ExecuteContext) error {
-	if !consensusService.consensusConfig.EnableConsensus {
+	if !consensusService.Config.EnableConsensus {
 		return nil
 	}
 	if !consensusService.isProduce() {
@@ -134,15 +135,15 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 	}
 
 	go func() {
-		minMember := int(math.Ceil(float64(len(consensusService.consensusConfig.Producers))*2/3)) - 1
+		minMember := int(math.Ceil(float64(len(consensusService.Config.Producers))*2/3)) - 1
 
 		for {
 			log.Trace("node start", "Height", consensusService.ChainService.CurrentHeight)
 			var block *chainTypes.Block
 			var err error
-			if consensusService.consensusConfig.ConsensusMode == "solo" {
+			if consensusService.Config.ConsensusMode == "solo" {
 				block, err = consensusService.runAsSolo()
-			} else {
+			} else if consensusService.Config.ConsensusMode == "bft" {
 				//TODO a more elegant implementation is needed: select live peer ,and Determine who is the leader
 				participants := consensusService.CollectLiveMember()
 				if len(participants) > 1 {
@@ -162,6 +163,8 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 					err = errors.New("bft node not ready")
 					time.Sleep(time.Second*10)
 				}
+			} else {
+				break
 			}
 			if err != nil {
 				log.Debug("Producer Block Fail", "reason", err.Error())
@@ -183,7 +186,7 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 }
 
 func (consensusService *ConsensusService) Stop(executeContext *app.ExecuteContext) error {
-	if !consensusService.consensusConfig.EnableConsensus {
+	if !consensusService.Config.EnableConsensus {
 		return nil
 	}
 	return nil
@@ -305,7 +308,7 @@ func (consensusService *ConsensusService) isProduce() bool {
 
 func (consensusService *ConsensusService) CollectLiveMember()[]*consensusTypes.MemberInfo{
 	liveMembers := []*consensusTypes.MemberInfo{}
-	for _, produce := range consensusService.consensusConfig.Producers {
+	for _, produce := range consensusService.Config.Producers {
 		if consensusService.pubkey.IsEqual(produce.Public) {
 			liveMembers = append(liveMembers, &consensusTypes.MemberInfo{
 				Producer: produce,
