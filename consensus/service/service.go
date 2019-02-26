@@ -1,22 +1,25 @@
 package service
 
 import (
-	"encoding/json"
-	"github.com/AsynkronIT/protoactor-go/actor"
-	accountService "github.com/drep-project/drep-chain/accounts/service"
-	"github.com/drep-project/drep-chain/app"
-	chainService "github.com/drep-project/drep-chain/chain/service"
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	consensusTypes "github.com/drep-project/drep-chain/consensus/types"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/crypto/sha3"
-	"github.com/drep-project/drep-chain/database"
-	"github.com/drep-project/drep-chain/log"
-	p2pService "github.com/drep-project/drep-chain/network/service"
-	"github.com/pkg/errors"
-	"gopkg.in/urfave/cli.v1"
 	"math"
 	"time"
+	"encoding/json"
+
+	"github.com/pkg/errors"
+	"gopkg.in/urfave/cli.v1"
+
+	"github.com/drep-project/drep-chain/app"
+	"github.com/drep-project/drep-chain/log"
+	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/drep-project/drep-chain/database"
+	"github.com/drep-project/drep-chain/crypto/sha3"
+	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	p2pService "github.com/drep-project/drep-chain/network/service"
+	chainService "github.com/drep-project/drep-chain/chain/service"
+	consensusTypes "github.com/drep-project/drep-chain/consensus/types"
+	accountService "github.com/drep-project/drep-chain/accounts/service"
+
 )
 
 var (
@@ -37,19 +40,13 @@ type ConsensusService struct {
 	WalletService *accountService.AccountService `service:"accounts"`
 
 	apis   []app.API
+	consensusConfig *consensusTypes.ConsensusConfig
 
 	pubkey *secp256k1.PublicKey
 	privkey *secp256k1.PrivateKey
-	producers []*consensusTypes.Producer
-	consensusConfig *consensusTypes.ConsensusConfig
-
-	pid *actor.PID
 	curMiner int
 	leader *Leader
 	member *Member
-	consensusUsedTime time.Duration
-
-	quitRound chan struct{}
 }
 
 func (consensusService *ConsensusService) Name() string {
@@ -87,8 +84,8 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	if !consensusService.consensusConfig.EnableConsensus {
 		return nil
 	}
+
 	consensusService.pubkey = consensusService.consensusConfig.MyPk
-	consensusService.producers = consensusService.consensusConfig.Producers
 	accountNode, err  := consensusService.WalletService.Wallet.GetAccountByPubkey(consensusService.pubkey)
 	if err != nil {
 		return err
@@ -108,9 +105,8 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	for msgType, _ := range chainP2pMessage {
 		router.RegisterMsgHandler(msgType,pid)
 	}
-	consensusService.pid = pid
-	consensusService.leader = NewLeader(consensusService.pubkey, consensusService.quitRound, consensusService.P2pServer)
-	consensusService.member = NewMember(consensusService.privkey, consensusService.quitRound , consensusService.P2pServer)
+	consensusService.leader = NewLeader(consensusService.pubkey, consensusService.P2pServer)
+	consensusService.member = NewMember(consensusService.privkey,consensusService.P2pServer)
 
 	consensusService.apis = []app.API{
 		app.API{
@@ -166,12 +162,11 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 			if err != nil {
 				log.Debug("Producer Block Fail", "reason", err.Error())
 			}else{
-				consensusService.ChainService.ProcessBlock(block)
 				consensusService.P2pServer.Broadcast(block)
+				consensusService.ChainService.ProcessBlock(block)
 				log.Info("Block Produced  ", "Height", consensusService.DatabaseService.GetMaxHeight())
 			}
-
-			time.Sleep(500*time.Millisecond)
+			time.Sleep(100) //delay a little time for block deliver
 			nextBlockTime, waitSpan :=  consensusService.GetWaitTime()
 			log.Debug("Sleep", "nextBlockTime", nextBlockTime, "waitSpan", waitSpan)
 			time.Sleep(waitSpan)
@@ -275,7 +270,7 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 
 func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error){
 	membersPubkey := []*secp256k1.PublicKey{}
-	for _, produce := range  consensusService.producers {
+	for _, produce := range  consensusService.consensusConfig.Producers {
 		membersPubkey = append(membersPubkey, produce.Public)
 	}
 	block, _ := consensusService.ChainService.GenerateBlock(consensusService.pubkey, membersPubkey)
@@ -295,7 +290,7 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 }
 
 func (consensusService *ConsensusService) isProduce() bool {
-	for _, produce := range  consensusService.producers {
+	for _, produce := range consensusService.consensusConfig.Producers {
 		if produce.Public.IsEqual(consensusService.pubkey){
 			return true
 		}

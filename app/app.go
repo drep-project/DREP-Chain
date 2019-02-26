@@ -1,16 +1,17 @@
 package app
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
-	"github.com/drep-project/drep-chain/common"
-	"gopkg.in/urfave/cli.v1"
-	"io/ioutil"
 	"os"
-	"path/filepath"
+	"fmt"
+	"errors"
 	"reflect"
 	"strings"
+	"io/ioutil"
+	"encoding/json"
+	"path/filepath"
+
+	"gopkg.in/urfave/cli.v1"
+	"github.com/drep-project/drep-chain/common"
 )
 
 var (

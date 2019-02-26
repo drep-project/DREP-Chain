@@ -4,6 +4,8 @@ import (
 	"fmt"
 	accountService "github.com/drep-project/drep-chain/accounts/service"
 	chainService "github.com/drep-project/drep-chain/chain/service"
+	p2pService "github.com/drep-project/drep-chain/network/service"
+	consensusService "github.com/drep-project/drep-chain/consensus/service"
 	"io"
 	"os"
 	path2 "path"
@@ -70,11 +72,17 @@ func main() {
 		output = "file"
 	}
 
-	vType:=reflect.TypeOf(&accountService.AccountApi{})
+	vType:=reflect.TypeOf(&p2pService.P2PApi{})
+	resolveType(output,"p2p", "P2P", "p2p",vType)
+
+	vType=reflect.TypeOf(&accountService.AccountApi{})
 	resolveType(output,"account", "ACCOUNT", "account",vType)
 
 	vType=reflect.TypeOf(&chainService.ChainApi{})
 	resolveType(output,"chain", "CHAIN", "chain",vType)
+
+	vType=reflect.TypeOf(&consensusService.ConsensusApi{})
+	resolveType(output,"consensus", "CONSENSUS", "consensus",vType)
 }
 
 func resolveType(output string, fileName, className string,prefix string, vType reflect.Type){
@@ -88,7 +96,6 @@ func resolveType(output string, fileName, className string,prefix string, vType 
 }
 func generateCode(className string,prefix string, vType reflect.Type) string{
 	methods := vType.NumMethod()
-
 
 	template := `
 var %s = new Method({

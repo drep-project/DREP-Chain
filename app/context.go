@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"gopkg.in/urfave/cli.v1"
+	"github.com/asaskevich/EventBus"
 	"github.com/AsynkronIT/protoactor-go/actor"
 )
 
@@ -71,7 +72,7 @@ type ExecuteContext struct {
 	CommonConfig *CommonConfig //
 	PhaseConfig  map[string]json.RawMessage
 	Cli          *cli.Context
-
+	LifeBus  EventBus.Bus
 	Services []Service
 
 	GitCommit string

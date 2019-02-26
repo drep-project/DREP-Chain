@@ -1,17 +1,17 @@
 package service
 
 import (
-    "errors"
-    "math"
-    "math/big"
     "sync"
     "time"
+    "math"
+    "errors"
+    "math/big"
 
-    consensusTypes "github.com/drep-project/drep-chain/consensus/types"
+    "github.com/drep-project/drep-chain/log"
+    "github.com/drep-project/drep-chain/crypto/sha3"
     "github.com/drep-project/drep-chain/crypto/secp256k1"
     "github.com/drep-project/drep-chain/crypto/secp256k1/schnorr"
-    "github.com/drep-project/drep-chain/crypto/sha3"
-    "github.com/drep-project/drep-chain/log"
+    consensusTypes "github.com/drep-project/drep-chain/consensus/types"
     p2pService "github.com/drep-project/drep-chain/network/service"
     p2pTypes "github.com/drep-project/drep-chain/network/types"
 )
@@ -54,16 +54,13 @@ type Leader struct {
     stateLock sync.RWMutex
     cancelWaitCommit chan struct{}
     cancelWaitChallenge chan struct{}
-
-    quitRound chan struct{}
 }
 
-func NewLeader(pubKey *secp256k1.PublicKey, quitRound chan struct{}, p2pServer *p2pService.P2pService) *Leader {
+func NewLeader(pubKey *secp256k1.PublicKey, p2pServer *p2pService.P2pService) *Leader {
     l := &Leader{}
     l.waitTime = 10 * time.Second
     l.pubkey = pubKey
     l.p2pServer = p2pServer
-    l.quitRound = quitRound
 
     l.Reset()
     return l

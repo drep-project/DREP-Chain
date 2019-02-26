@@ -1,19 +1,21 @@
 package service
 
 import (
-    "bytes"
-    "errors"
-    consensusTypes "github.com/drep-project/drep-chain/consensus/types"
-    "github.com/drep-project/drep-chain/crypto/secp256k1"
-    "github.com/drep-project/drep-chain/crypto/secp256k1/schnorr"
-    "github.com/drep-project/drep-chain/crypto/sha3"
-    "github.com/drep-project/drep-chain/log"
-    p2pService "github.com/drep-project/drep-chain/network/service"
-    p2pTypes "github.com/drep-project/drep-chain/network/types"
-    "math/big"
     "sync"
     "time"
+    "bytes"
+    "errors"
+    "math/big"
+
+    "github.com/drep-project/drep-chain/log"
+    "github.com/drep-project/drep-chain/crypto/sha3"
+    "github.com/drep-project/drep-chain/crypto/secp256k1"
+    "github.com/drep-project/drep-chain/crypto/secp256k1/schnorr"
+    p2pService "github.com/drep-project/drep-chain/network/service"
+    p2pTypes "github.com/drep-project/drep-chain/network/types"
+    consensusTypes "github.com/drep-project/drep-chain/consensus/types"
 )
+
 const (
     TimeOoutEroor = "time out"
     LowHeightError = "leader's height  lower"
@@ -48,18 +50,15 @@ type Member struct {
 
     msgPool	chan *consensusTypes.RouteMsgWrap
     isConsensus bool   // time split 2, in consensus \ wait
-
-    quitRound chan struct{}
 }
 
-func NewMember(prvKey *secp256k1.PrivateKey, quitRound chan struct{}, p2pServer *p2pService.P2pService) *Member {
+func NewMember(prvKey *secp256k1.PrivateKey, p2pServer *p2pService.P2pService) *Member {
     member := &Member{}
 
     member.prvKey = prvKey
     member.waitTime = 10 * time.Second
 
     member.p2pServer = p2pServer
-    member.quitRound = quitRound
     member.msgPool = make(chan *consensusTypes.RouteMsgWrap, 1000)
 
     member.Reset()

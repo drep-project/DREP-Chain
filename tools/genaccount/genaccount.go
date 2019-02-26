@@ -1,40 +1,41 @@
 package main
 
 import (
-	"BlockChainTest/util/flags"
+	"os"
+	"fmt"
+	path2 "path"
+	"io/ioutil"
 	"crypto/hmac"
 	"crypto/sha512"
 	"encoding/json"
-	"fmt"
-	accountComponent "github.com/drep-project/drep-chain/accounts/component"
-	accountTypes "github.com/drep-project/drep-chain/accounts/types"
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	"github.com/drep-project/drep-chain/common"
-	consensusTypes "github.com/drep-project/drep-chain/consensus/types"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/crypto/sha3"
+
+	"gopkg.in/urfave/cli.v1"
 	"github.com/drep-project/drep-chain/log"
+	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/crypto/sha3"
+	"github.com/drep-project/drep-chain/crypto/secp256k1"
+
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
 	rpcTypes "github.com/drep-project/drep-chain/rpc/types"
-	"gopkg.in/urfave/cli.v1"
-	"io/ioutil"
-	"os"
-	path2 "path"
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	accountTypes "github.com/drep-project/drep-chain/accounts/types"
+	consensusTypes "github.com/drep-project/drep-chain/consensus/types"
+	accountComponent "github.com/drep-project/drep-chain/accounts/component"
+
 )
 
 var (
 	pasword = "123"
 	parentNode = accountTypes.NewNode(nil,common.ChainIdType{})
-	pathFlag = flags.DirectoryFlag{
+	pathFlag = common.DirectoryFlag{
 		Name:  "path",
 		Usage: "keystore save to",
 	}
 )
 
 func main() {
-
-	app := flags.NewApp("", "the drep command line interface")
+	app := cli.NewApp()
 	app.Flags = []cli.Flag{
 		pathFlag,
 	}
