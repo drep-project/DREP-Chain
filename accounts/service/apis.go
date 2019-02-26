@@ -85,29 +85,20 @@ func (accountapi *AccountApi) Close() {
 
 func (accountapi *AccountApi) SendTransaction(from *secp256k1.PublicKey, to crypto.CommonAddress, chainId common.ChainIdType, amount *big.Int) (string, error) {
 	t := accountapi.chainService.GenerateBalanceTransaction(from, to, chainId, amount)
-    if accountapi.chainService.SendTransaction(t) != nil {
-        return "", errors.New("Offline")
-    } else {
-        return t.TxId()
-    }
+    accountapi.chainService.SendTransaction(t)
+    return t.TxId()
 }
 
 func (accountapi *AccountApi) Call(from *secp256k1.PublicKey, to crypto.CommonAddress, chainId common.ChainIdType, input []byte, amount *big.Int, readOnly bool)  (string, error){
     t := accountapi.chainService.GenerateCallContractTransaction(from, to, chainId, input, amount, readOnly)
-    if accountapi.chainService.SendTransaction(t) != nil {
-        return "", errors.New("Offline")
-    } else {
-        return t.TxId()
-    }
+    accountapi.chainService.SendTransaction(t)
+    return t.TxId()
 }
 
 func (accountapi *AccountApi) CreateCode(from *secp256k1.PublicKey, to crypto.CommonAddress, chainId common.ChainIdType, byteCode []byte) (string, error){
     t := accountapi.chainService.GenerateCreateContractTransaction(from, to, chainId, byteCode)
-    if accountapi.chainService.SendTransaction(t) != nil {
-        return "", errors.New("Offline")
-    } else {
-        return t.TxId()
-    }
+    accountapi.chainService.SendTransaction(t)
+    return t.TxId()
 }
 
 func (accountapi *AccountApi) Sign(prv *secp256k1.PrivateKey, msg interface{}) ([]byte, error) {
