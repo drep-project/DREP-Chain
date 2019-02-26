@@ -1,32 +1,32 @@
 package vm
 
 import (
-	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/crypto"
-	"sync"
-	"math/big"
 	"errors"
 	accountTypes "github.com/drep-project/drep-chain/accounts/types"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
+	"math/big"
+	"sync"
 )
 
 var (
-	state *State
-	once sync.Once
-	ErrNotAccountAddress = errors.New("a non account address occupied")
+	state                   *State
+	once                    sync.Once
+	ErrNotAccountAddress    = errors.New("a non account address occupied")
 	ErrAccountAlreadyExists = errors.New("account already exists")
-	ErrAccountNotExists = errors.New("account not exists")
-	ErrInsufficientBalance = errors.New("insufficient balance")
-	ErrCodeAlreadyExists = errors.New("code already exists")
-	ErrCodeNotExists = errors.New("code not exists")
-	ErrNotLogAddress = errors.New("a non log address occupied")
-	ErrLogAlreadyExists = errors.New("log already exists")
+	ErrAccountNotExists     = errors.New("account not exists")
+	ErrInsufficientBalance  = errors.New("insufficient balance")
+	ErrCodeAlreadyExists    = errors.New("code already exists")
+	ErrCodeNotExists        = errors.New("code not exists")
+	ErrNotLogAddress        = errors.New("a non log address occupied")
+	ErrLogAlreadyExists     = errors.New("log already exists")
 )
 
 type State struct {
 	databaseApi *database.DatabaseService
-	refund uint64
+	refund      uint64
 }
 
 func NewState(databaseService *database.DatabaseService) *State {
@@ -38,53 +38,56 @@ func (s *State) CreateContractAccount(callerAddr crypto.CommonAddress, chainId c
 	if err != nil {
 		return nil, err
 	}
-	return account, s.databaseApi.PutStorage(*account.Address, chainId, account.Storage,true)
+	return account, s.databaseApi.PutStorage(*account.Address, chainId, account.Storage, true)
 }
 
 func (s *State) SubBalance(addr crypto.CommonAddress, chainId common.ChainIdType, amount *big.Int) error {
-	balance := s.databaseApi.GetBalance(addr, chainId,true)
+	balance := s.databaseApi.GetBalance(addr, chainId, true)
 	return s.databaseApi.PutBalance(addr, chainId, new(big.Int).Sub(balance, amount), true)
 }
 
 func (s *State) AddBalance(addr crypto.CommonAddress, chainId common.ChainIdType, amount *big.Int) error {
-	balance := s.databaseApi.GetBalance(addr, chainId,true)
-	return s.databaseApi.PutBalance(addr, chainId, new(big.Int).Add(balance, amount),true)
+	s.databaseApi.AddBalance(addr, amount, chainId, true)
+	//balance := s.databaseApi.GetBalance(addr, chainId,true)
+	//return s.databaseApi.PutBalance(addr, chainId, new(big.Int).Add(balance, amount),true)
+	return nil
 }
 
 func (s *State) GetBalance(addr crypto.CommonAddress, chainId common.ChainIdType) *big.Int {
-	return s.databaseApi.GetBalance(addr, chainId,true)
+	return s.databaseApi.GetBalance(addr, chainId, true)
 }
 
 func (s *State) SetNonce(addr crypto.CommonAddress, chainId common.ChainIdType, nonce int64) error {
-	return s.databaseApi.PutNonce( addr, chainId, nonce,true)
+	return s.databaseApi.PutNonce(addr, chainId, nonce, true)
 }
 
 func (s *State) GetNonce(addr crypto.CommonAddress, chainId common.ChainIdType) int64 {
-	return s.databaseApi.GetNonce(addr, chainId,true)
+	return s.databaseApi.GetNonce(addr, chainId, true)
 }
 
 func (s *State) Suicide(addr crypto.CommonAddress, chainId common.ChainIdType) error {
-	storage := s.databaseApi.GetStorage(addr, chainId,true)
+	storage := s.databaseApi.GetStorage(addr, chainId, true)
 	storage.Balance = new(big.Int)
 	storage.Nonce = 0
-	return s.databaseApi.PutStorage(addr, chainId, storage,true)
+	return s.databaseApi.PutStorage(addr, chainId, storage, true)
 }
 
 func (s *State) GetByteCode(addr crypto.CommonAddress, chainId common.ChainIdType) crypto.ByteCode {
-	return s.databaseApi.GetByteCode(addr, chainId,true)
+	return s.databaseApi.GetByteCode(addr, chainId, true)
 }
 
 func (s *State) GetCodeSize(addr crypto.CommonAddress, chainId common.ChainIdType) int {
 	byteCode := s.GetByteCode(addr, chainId)
 	return len(byteCode)
+
 }
 
 func (s *State) GetCodeHash(addr crypto.CommonAddress, chainId common.ChainIdType) crypto.Hash {
-	return s.databaseApi.GetCodeHash(addr, chainId,true)
+	return s.databaseApi.GetCodeHash(addr, chainId, true)
 }
 
 func (s *State) SetByteCode(addr crypto.CommonAddress, chainId common.ChainIdType, byteCode crypto.ByteCode) error {
-	return s.databaseApi.PutByteCode(addr, chainId, byteCode,true)
+	return s.databaseApi.PutByteCode(addr, chainId, byteCode, true)
 }
 
 func (s *State) GetLogs(txHash []byte, chainId common.ChainIdType) []*chainTypes.Log {
@@ -95,9 +98,9 @@ func (s *State) AddLog(contractAddr crypto.CommonAddress, chainId common.ChainId
 	log := &chainTypes.Log{
 		Address: contractAddr,
 		ChainId: chainId,
-		TxHash: txHash,
-		Data: data,
-		Topics: topics,
+		TxHash:  txHash,
+		Data:    data,
+		Topics:  topics,
 	}
 	return s.databaseApi.AddLog(log)
 }
