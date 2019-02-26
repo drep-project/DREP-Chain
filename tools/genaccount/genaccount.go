@@ -126,8 +126,8 @@ func gen(ctx *cli.Context) error {
 		offset = writePhase(fs, "chain",chainConfig, offset)
 		offset = writePhase(fs, "accounts",walletConfig, offset)
 
-		fs.Truncate(offset-2)
-		fs.WriteAt([]byte("\n}"),offset)
+		fs.Truncate(offset - 2)
+		fs.WriteAt([]byte("\n}"), offset-2)
 
 	}
 	return nil

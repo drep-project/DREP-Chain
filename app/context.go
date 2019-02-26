@@ -168,6 +168,9 @@ func (econtext *ExecuteContext) RequireService(name string) Service {
 
 func (econtext *ExecuteContext) UnmashalConfig(serviceName string, config interface{}) error {
 	service := econtext.GetService(serviceName)
+	if service == nil {
+		return fmt.Errorf("get service err, service name:%s", serviceName)
+	}
 	phase := econtext.GetConfig(service.Name())
 	if phase == nil {
 		return nil

@@ -97,3 +97,25 @@ func (accountapi *AccountApi) Call(from *secp256k1.PublicKey, to crypto.CommonAd
         return t.TxId()
     }
 }
+
+func (accountapi *AccountApi) CreateCode(from *secp256k1.PublicKey, to crypto.CommonAddress, chainId common.ChainIdType, byteCode []byte) (string, error){
+    t := accountapi.chainService.GenerateCreateContractTransaction(from, to, chainId, byteCode)
+    if accountapi.chainService.SendTransaction(t) != nil {
+        return "", errors.New("Offline")
+    } else {
+        return t.TxId()
+    }
+}
+
+
+func (accountapi *AccountApi) Sign(addr crypto.CommonAddress, msg interface{}) string {
+    return ""
+}
+
+func (accountapi *AccountApi) GasPrice() {
+
+}
+
+func (accountapi *AccountApi) GetCode(addr crypto.CommonAddress) []byte {
+    return []byte{}
+}

@@ -46,7 +46,7 @@ func (chainService *ChainService) ExecuteTransactions(b *chainTypes.Block) (*big
         }
     }
 
-    stateRoot := chainService.DatabaseService.GetStateRoot();
+    stateRoot := chainService.DatabaseService.GetStateRoot()
     if bytes.Equal(b.Header.StateRoot, stateRoot) {
         fmt.Println()
         fmt.Println("matched ", hex.EncodeToString(b.Header.StateRoot), " vs ", hex.EncodeToString(stateRoot))
