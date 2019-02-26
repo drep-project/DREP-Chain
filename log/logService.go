@@ -15,7 +15,14 @@ func (logService *LogService) Name() string {
 	return "log"
 }
 func (logService *LogService) Api() []app.API {
-	return []app.API{}
+	return []app.API{
+		app.API{
+			Namespace: "log",
+			Version:   "1.0",
+			Service: &LogApi{},
+			Public: true,
+		},
+	}
 }
 func (logService *LogService) CommandFlags() ([]cli.Command, []cli.Flag) {
 	return nil, []cli.Flag{LogDirFlag, LogLevelFlag, VmoduleFlag, BacktraceAtFlag}

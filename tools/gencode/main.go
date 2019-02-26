@@ -5,6 +5,7 @@ import (
 	accountService "github.com/drep-project/drep-chain/accounts/service"
 	chainService "github.com/drep-project/drep-chain/chain/service"
 	consensusService "github.com/drep-project/drep-chain/consensus/service"
+	logService "github.com/drep-project/drep-chain/log"
 	p2pService "github.com/drep-project/drep-chain/network/service"
 	"io"
 	"os"
@@ -78,8 +79,8 @@ func main() {
 	vType=reflect.TypeOf(&accountService.AccountApi{})
 	resolveType(output,"account", "ACCOUNT", "account",vType)
 
-//	vType=reflect.TypeOf(&clientService.AdminApi{})
-//	resolveType(output,"admin", "ADMIN", "admin",vType)
+	vType=reflect.TypeOf(&logService.LogApi{})
+	resolveType(output,"log", "LOG", "log",vType)
 
 	vType=reflect.TypeOf(&chainService.ChainApi{})
 	resolveType(output,"chain", "CHAIN", "chain",vType)
