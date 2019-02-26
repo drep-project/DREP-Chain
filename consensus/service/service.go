@@ -7,7 +7,9 @@ import (
 	"github.com/drep-project/drep-chain/app"
 	chainService "github.com/drep-project/drep-chain/chain/service"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/common"
 	consensusTypes "github.com/drep-project/drep-chain/consensus/types"
+	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/database"
@@ -16,6 +18,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/urfave/cli.v1"
 	"math"
+	"math/big"
 	"time"
 )
 
@@ -25,9 +28,11 @@ var (
 		Usage: "enable consensus",
 	}
 )
+
 const (
-	blockInterval = time.Second*5
-	minWaitTime = time.Millisecond * 500
+	blockInterval = time.Second * 5
+	minWaitTime   = time.Millisecond * 500
+	Rewards       = 10000000 //每出一个块，系统奖励的币数目
 )
 
 type ConsensusService struct {
@@ -111,7 +116,8 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	}
 	consensusService.pid = pid
 	consensusService.leader = NewLeader(consensusService.pubkey, consensusService.quitRound, consensusService.P2pServer)
-	consensusService.member = NewMember(consensusService.privkey, consensusService.quitRound , consensusService.P2pServer)
+	consensusService.member = NewMember(consensusService.privkey, consensusService.quitRound, consensusService.P2pServer)
+	consensusService.ChainService.AccRewards = consensusService
 
 	consensusService.apis = []app.API{
 		app.API{
@@ -386,4 +392,25 @@ func (consensusService *ConsensusService) GetWaitTime() (time.Time,time.Duration
 		 return time.Duration(avgSpan) * time.Nanosecond
 	 }
 	*/
+}
+
+// AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
+func (cs *ConsensusService) AccumulateRewards(chainId common.ChainIdType) {
+	cs.DatabaseService.BeginTransaction()
+	//defer  cs.DatabaseService.Discard()
+
+	reward := new(big.Int).SetUint64(uint64(Rewards))
+	leaderAddr := crypto.PubKey2Address(cs.leader.pubkey)
+
+	r := new(big.Int)
+	cs.DatabaseService.AddBalance(leaderAddr, r.Div(reward, new(big.Int).SetInt64(2)), chainId, true)
+
+	num := len(cs.member.members)
+	for _, memberPK := range cs.member.members {
+		memberAddr := crypto.PubKey2Address(memberPK)
+		r.Div(r, new(big.Int).SetInt64(int64(num)))
+		cs.DatabaseService.AddBalance(memberAddr, r, chainId, true)
+	}
+
+	cs.DatabaseService.Commit()
 }

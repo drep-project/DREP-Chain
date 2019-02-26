@@ -1,7 +1,6 @@
 package main
 
 import (
-	"BlockChainTest/util/flags"
 	"crypto/hmac"
 	"crypto/sha512"
 	"encoding/json"
@@ -26,15 +25,14 @@ import (
 var (
 	pasword = "123"
 	parentNode = accountTypes.NewNode(nil,common.ChainIdType{})
-	pathFlag = flags.DirectoryFlag{
+	pathFlag = common.DirectoryFlag{
 		Name:  "path",
 		Usage: "keystore save to",
 	}
 )
 
 func main() {
-
-	app := flags.NewApp("", "the drep command line interface")
+	app := cli.NewApp()
 	app.Flags = []cli.Flag{
 		pathFlag,
 	}
@@ -125,8 +123,8 @@ func gen(ctx *cli.Context) error {
 		offset = writePhase(fs, "chain",chainConfig, offset)
 		offset = writePhase(fs, "accounts",walletConfig, offset)
 
-		fs.Truncate(offset-2)
-		fs.WriteAt([]byte("\n}"),offset)
+		fs.Truncate(offset - 2)
+		fs.WriteAt([]byte("\n}"), offset-2)
 
 	}
 	return nil

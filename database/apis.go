@@ -14,12 +14,12 @@ import (
 )
 
 func (database *DatabaseService) GetStateRoot() []byte {
-    return db.getStateRoot()
+    return database.db.getStateRoot()
 }
 
 func (database *DatabaseService) GetBlock(height int64) *chainType.Block {
     key := sha3.Hash256([]byte("block_" + strconv.FormatInt(height, 10)))
-    value, err := db.get(key, false)
+    value, err := database.db.get(key, false)
     if err != nil {
         return nil
     }
@@ -34,7 +34,7 @@ func (database *DatabaseService) PutBlock(block *chainType.Block) error {
     if err != nil {
         return err
     }
-    return db.put(key, value, false)
+    return database.db.put(key, value, false)
 }
 
 func (database *DatabaseService) GetBlocksFrom(start, size int64) []*chainType.Block {
@@ -64,7 +64,7 @@ func (database *DatabaseService) GetHighestBlock() *chainType.Block {
 
 func (database *DatabaseService) GetMaxHeight() int64 {
     key := sha3.Hash256([]byte("max_height"))
-    value, err := db.get(key, false)
+    value, err := database.db.get(key, false)
     if err != nil {
         return -1
     } else {
@@ -75,23 +75,23 @@ func (database *DatabaseService) GetMaxHeight() int64 {
 func (database *DatabaseService) PutMaxHeight(height int64) error {
     key := sha3.Hash256([]byte("max_height"))
     value := new(big.Int).SetInt64(height).Bytes()
-    return db.put(key, value, false)
+    return database.db.put(key, value, false)
 }
 
 func (database *DatabaseService) GetPreviousBlockHash() []byte {
     key := sha3.Hash256([]byte("previous_hash"))
-    value, _ := db.get(key, false)
+    value, _ := database.db.get(key, false)
     return value
 }
 
 func (database *DatabaseService) PutPreviousBlockHash(value []byte) error {
     key := sha3.Hash256([]byte("previous_hash"))
-    return db.put(key, value, false)
+    return database.db.put(key, value, false)
 }
 
 func (database *DatabaseService) GetPreviousBlockTimestamp() int64 {
     key := sha3.Hash256([]byte("previous_hash"))
-    value, err := db.get(key, false)
+    value, err := database.db.get(key, false)
     if err != nil {
         return -1
     }
@@ -101,44 +101,44 @@ func (database *DatabaseService) GetPreviousBlockTimestamp() int64 {
 func (database *DatabaseService) PutPreviousBlockTimestamp(timestamp int64) error {
     key := sha3.Hash256([]byte("previous_hash"))
     value := new(big.Int).SetInt64(timestamp).Bytes()
-    return db.put(key, value, false)
+    return database.db.put(key, value, false)
 }
 
 func (database *DatabaseService) GetStorage(addr crypto.CommonAddress, chainId common.ChainIdType, transactional bool) *accountTypes.Storage {
     if !transactional {
-        return getStorage(addr, chainId)
+        return database.db.getStorage(addr, chainId)
     }
-    if db.stores == nil {
-        db.stores = make(map[string] *accountTypes.Storage)
+    if database.db.stores == nil {
+        database.db.stores = make(map[string] *accountTypes.Storage)
     }
     key := sha3.Hash256([]byte("storage_" + addr.Hex() + chainId.Hex()))
     hk := bytes2Hex(key)
-    storage, ok := db.stores[hk]
+    storage, ok := database.db.stores[hk]
     if ok {
         return storage
     }
-    storage = getStorage(addr, chainId)
-    db.stores[hk] = storage
+    storage =  database.db.getStorage(addr, chainId)
+    database.db.stores[hk] = storage
     return storage
 }
 
 func (database *DatabaseService) PutStorage(addr crypto.CommonAddress, chainId common.ChainIdType, storage *accountTypes.Storage, transactional bool) error {
     if !transactional {
-        return putStorage(addr, chainId, storage)
+        return database.db.putStorage(addr, chainId, storage)
     }
-    if db.stores == nil {
-        db.stores = make(map[string] *accountTypes.Storage)
+    if database.db.stores == nil {
+        database.db.stores = make(map[string] *accountTypes.Storage)
     }
     key := sha3.Hash256([]byte("storage_" + addr.Hex() + chainId.Hex()))
     value, err := json.Marshal(storage)
     if err != nil {
         return err
     }
-    err = db.put(key, value, true)
+    err = database.db.put(key, value, true)
     if err != nil {
         return err
     }
-    db.stores[bytes2Hex(key)] = storage
+    database.db.stores[bytes2Hex(key)] = storage
     return nil
 }
 
@@ -212,7 +212,7 @@ func (database *DatabaseService) GetReputation(addr crypto.CommonAddress, chainI
 
 func (database *DatabaseService) GetLogs(txHash []byte, chainId common.ChainIdType) []*chainType.Log {
     key := sha3.Hash256([]byte("logs_" + hex.EncodeToString(txHash) + chainId.Hex()))
-    value, err := db.get(key, false)
+    value, err := database.db.get(key, false)
     if err != nil {
         return make([]*chainType.Log, 0)
     }
@@ -230,7 +230,7 @@ func (database *DatabaseService) PutLogs(logs []*chainType.Log, txHash []byte, c
     if err != nil {
         return err
     }
-    return db.put(key, value, false)
+    return database.db.put(key, value, false)
 }
 
 func (database *DatabaseService) AddLog(log *chainType.Log) error {
@@ -241,26 +241,35 @@ func (database *DatabaseService) AddLog(log *chainType.Log) error {
 
 
 func (database *DatabaseService) Load(x *big.Int) []byte {
-    value, _ := db.get(x.Bytes(), true)
+    value, _ := database.db.get(x.Bytes(), true)
     return value
 }
 
 func (database *DatabaseService) Store(x, y *big.Int) error {
-    return db.put(x.Bytes(), y.Bytes(), true)
+    return database.db.put(x.Bytes(), y.Bytes(), true)
 }
 
 func (database *DatabaseService) BeginTransaction() {
-    db.BeginTransaction()
+    database.db.BeginTransaction()
 }
 
 func (database *DatabaseService) EndTransaction() {
-    db.EndTransaction()
+    database.db.EndTransaction()
 }
 
 func (database *DatabaseService) Commit() {
-    db.Commit()
+    database.db.Commit()
 }
 
 func  (database *DatabaseService) Discard() {
-    db.Discard()
+    database.db.Discard()
+}
+
+func (database *DatabaseService)AddBalance(addr crypto.CommonAddress, amount *big.Int, chainId common.ChainIdType, transactional bool) {
+    balance := database.GetBalance(addr, chainId, transactional)
+    if balance == nil {
+        balance = new(big.Int).SetInt64(0)
+    }
+    database.PutBalance(addr, chainId, new(big.Int).Add(balance, amount), transactional)
+    return
 }

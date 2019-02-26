@@ -14,10 +14,11 @@ var (
 		Usage: "Directory for the database dir (default = inside the homedir)",
 	}
 )
+
 type DatabaseService struct {
 	config *DatabaseConfig
+	db     *Database
 }
-
 
 func (database *DatabaseService) Name() string {
 	return "database"
@@ -31,9 +32,9 @@ func (database *DatabaseService) CommandFlags() ([]cli.Command, []cli.Flag) {
 	return nil, []cli.Flag{DataDirFlag}
 }
 
-func (database *DatabaseService) Receive(context actor.Context) { }
+func (database *DatabaseService) Receive(context actor.Context) {}
 
-func (database *DatabaseService)  P2pMessages() map[int]interface{} {
+func (database *DatabaseService) P2pMessages() map[int]interface{} {
 	return map[int]interface{}{}
 }
 
@@ -44,10 +45,10 @@ func (database *DatabaseService) Init(executeContext *app.ExecuteContext) error 
 	}
 
 	path := path2.Join(executeContext.CommonConfig.HomeDir, "data")
-	if executeContext.Cli.IsSet(DataDirFlag.Name) {
+	if executeContext.Cli != nil && executeContext.Cli.IsSet(DataDirFlag.Name) {
 		path = executeContext.Cli.GlobalString(DataDirFlag.Name)
 	}
-	db = NewDatabase(path)
+	database.db = NewDatabase(path)
 	return nil
 }
 
@@ -58,5 +59,3 @@ func (database *DatabaseService) Start(executeContext *app.ExecuteContext) error
 func (database *DatabaseService) Stop(executeContext *app.ExecuteContext) error {
 	return nil
 }
-
-

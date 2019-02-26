@@ -1,0 +1,67 @@
+{
+	"log" : {
+	      "logLevel": 3
+	},
+	"rpc" : {
+	      "IPCEnabled": true,
+	      "HTTPEnabled": false,
+	      "WSEnabled": false,
+	      "WSExposeAll": false,
+	      "RESTEnabled": false
+	},
+	"consensus" : {
+	      "consensusMode": "bft",
+	      "producers": [
+	            {
+	                  "Public": "0x03f099bbbc319a091a9f51ae215b2972f206fbec2967a39fe9444eb3dee1a6a9da",
+	                  "Ip": "192.168.1.198",
+	                  "Port": 55555
+	            },
+	            {
+	                  "Public": "0x036fc3d328e0436f6406acfe5745067891b8d38111b979167172984beaaf8b864f",
+	                  "Ip": "192.168.1.130",
+	                  "Port": 55555
+	            },
+	            {
+	                  "Public": "0x032e1040928669713ce0e75a7152a2cca3e3fe90fbf2972cea42f6b47148ab445d",
+	                  "Ip": "192.168.1.139",
+	                  "Port": 55555
+	            },
+	            {
+	                  "Public": "0x030ae2ab717788d3c29fd18cf8fd19c43bfbd67de90f572b75a522558850c7d568",
+	                  "Ip": "192.168.1.191",
+	                  "Port": 55555
+	            }
+	      ],
+	      "mypk": "0x036fc3d328e0436f6406acfe5745067891b8d38111b979167172984beaaf8b864f",
+	      "enableConsensus": true
+	},
+	"p2p" : {
+	      "Port": 55555,
+	      "BootNodes": [
+	            {
+	                  "ip": "192.168.1.198",
+	                  "port": 55555
+	            },
+	            {
+	                  "ip": "192.168.1.130",
+	                  "port": 55555
+	            },
+	            {
+	                  "ip": "192.168.1.139",
+	                  "port": 55555
+	            },
+	            {
+	                  "ip": "192.168.1.191",
+	                  "port": 55555
+	            }
+	      ]
+	},
+	"chain" : {
+	      "remoteport": 55555
+	},
+	"accounts" : {
+	      "enableWallet": true,
+	      "walletPassword": "123"
+	}
+}

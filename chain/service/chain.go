@@ -23,32 +23,40 @@ import (
 )
 var (
     rootChain common.ChainIdType
-    genesisPubkey = "0x4f0160f718a479f9f14b3e70c10208d03839dec58380c24e0152d1cce44ce594"
+    genesisPubkey = "0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26"
 )
 
 type ChainService struct {
-    RpcService       *rpcService.RpcService    `service:"rpc"`
+    RpcService      *rpcService.RpcService    `service:"rpc"`
     P2pServer       *p2pService.P2pService    `service:"p2p"`
     DatabaseService *database.DatabaseService `service:"database"`
     transactionPool *TransactionPool
     isRelay         bool
     apis            []app.API
 
-    chainId common.ChainIdType
+    AccRewards AccumulateRewardsInterface
+    chainId    common.ChainIdType
 
-    lock sync.RWMutex
-    addBlockSync sync.Mutex
-    StartComplete  chan struct{}
-    stopChanel   chan struct{}
+    lock          sync.RWMutex
+    addBlockSync  sync.Mutex
+    StartComplete chan struct{}
+    stopChanel    chan struct{}
 
-    prvKey *secp256k1.PrivateKey
+    prvKey        *secp256k1.PrivateKey
     CurrentHeight int64
-    peerStateMap map[string]*chainTypes.PeerState
+    peerStateMap  map[string]*chainTypes.PeerState
 
     Config *chainTypes.ChainConfig
-    pid *actor.PID
+    pid    *actor.PID
 }
 
+type AccumulateRewardsInterface interface {
+    AccumulateRewards(chainId common.ChainIdType)
+}
+
+func (chainService *ChainService) ChainID() common.ChainIdType {
+    return chainService.chainId
+}
 
 func (chainService *ChainService) Name() string {
     return "chain"
@@ -146,6 +154,9 @@ func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (*big.In
     if err != nil {
         chainService.CurrentHeight = block.Header.Height
     }
+
+    chainService.AccRewards.AccumulateRewards(chainService.ChainID())
+
     return gasUsed, err
 }
 
@@ -301,7 +312,16 @@ func (chainService *ChainService) GenesisBlock() *chainTypes.Block{
     stateRoot := chainService.DatabaseService.GetStateRoot()
     merkle := chainService.DatabaseService.NewMerkle([][]byte{})
     merkleRoot := merkle.Root.Hash
-    pubkey, _ := secp256k1.ParsePubKey([]byte(genesisPubkey))
+
+    b := common.Bytes(genesisPubkey)
+    err := b.UnmarshalText(b)
+    if err != nil {
+        return nil
+    }
+    pubkey, err := secp256k1.ParsePubKey(b)
+    if err != nil {
+        return nil
+    }
     var memberPks []*secp256k1.PublicKey = nil
     return &chainTypes.Block{
         Header: &chainTypes.BlockHeader{
