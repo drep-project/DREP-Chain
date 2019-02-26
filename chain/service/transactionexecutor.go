@@ -56,6 +56,8 @@ func (chainService *ChainService) ExecuteTransactions(b *chainTypes.Block) (*big
         chainService.DatabaseService.Commit()
         fmt.Println("received block: ", true)
         fmt.Println()
+
+        chainService.accumulateRewards(b, chainService.ChainID())
         chainService.preSync(b)
         chainService.doSync(height)
     } else {

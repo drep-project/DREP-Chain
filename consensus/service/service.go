@@ -62,19 +62,19 @@ func (consensusService *ConsensusService) CommandFlags() ([]cli.Command, []cli.F
 	return nil, []cli.Flag{EnableConsensusFlag}
 }
 
-func (consensusService *ConsensusService)  P2pMessages() map[int]interface{} {
+func (consensusService *ConsensusService) P2pMessages() map[int]interface{} {
 	return map[int]interface{}{
-		consensusTypes.MsgTypeSetUp : consensusTypes.Setup{},
-		consensusTypes.MsgTypeCommitment :consensusTypes.Commitment{},
-		consensusTypes.MsgTypeChallenge : consensusTypes.Challenge{},
-		consensusTypes.MsgTypeResponse : consensusTypes.Response{},
-		consensusTypes.MsgTypeFail : consensusTypes.Fail{},
+		consensusTypes.MsgTypeSetUp:      consensusTypes.Setup{},
+		consensusTypes.MsgTypeCommitment: consensusTypes.Commitment{},
+		consensusTypes.MsgTypeChallenge:  consensusTypes.Challenge{},
+		consensusTypes.MsgTypeResponse:   consensusTypes.Response{},
+		consensusTypes.MsgTypeFail:       consensusTypes.Fail{},
 	}
 }
 
 func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContext) error {
 	consensusService.Config = &consensusTypes.ConsensusConfig{}
-	err := executeContext.UnmashalConfig(consensusService.Name(), consensusService.Config )
+	err := executeContext.UnmashalConfig(consensusService.Name(), consensusService.Config)
 	if err != nil {
 		return err
 	}
@@ -101,10 +101,10 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 		panic(err)
 	}
 
-	router :=  consensusService.P2pServer.Router
+	router := consensusService.P2pServer.Router
 	chainP2pMessage := consensusService.P2pMessages()
 	for msgType, _ := range chainP2pMessage {
-		router.RegisterMsgHandler(msgType,pid)
+		router.RegisterMsgHandler(msgType, pid)
 	}
 	consensusService.leader = NewLeader(consensusService.pubkey, consensusService.P2pServer)
 	consensusService.member = NewMember(consensusService.privkey,consensusService.P2pServer)
@@ -147,17 +147,17 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 					if isL {
 						consensusService.leader.UpdateStatus(participants, consensusService.curMiner, minMember, consensusService.ChainService.CurrentHeight)
 						block, err = consensusService.runAsLeader()
-					}else if isM {
+					} else if isM {
 						consensusService.member.UpdateStatus(participants, consensusService.curMiner, minMember, consensusService.ChainService.CurrentHeight)
 						block, err = consensusService.runAsMember()
-					}else{
+					} else {
 						// backup node， return directly
 						log.Debug("backup node")
 						break
 					}
-				}else{
+				} else {
 					err = errors.New("bft node not ready")
-					time.Sleep(time.Second*10)
+					time.Sleep(time.Second * 10)
 				}
 			} else {
 				break
@@ -231,15 +231,15 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 	consensusService.leader.Reset()
 
 	membersPubkey := []*secp256k1.PublicKey{}
-	for _, pub := range  consensusService.leader.members {
+	for _, pub := range consensusService.leader.members {
 		membersPubkey = append(membersPubkey, pub.Producer.Public)
 	}
 	block, err := consensusService.ChainService.GenerateBlock(consensusService.leader.pubkey, membersPubkey)
 	if err != nil {
-		log.Error("generate block fail", "msg", err )
+		log.Error("generate block fail", "msg", err)
 	}
 
-	log.Trace("node leader is preparing process consensus for round 1", "Block",block)
+	log.Trace("node leader is preparing process consensus for round 1", "Block", block)
 	msg, err := json.Marshal(block)
 	if err != nil {
 		return nil, err
@@ -248,7 +248,7 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 	err, sig, bitmap := consensusService.leader.ProcessConsensus(msg)
 	if err != nil {
 		var str = err.Error()
-		log.Error("Error occurs","msg", str)
+		log.Error("Error occurs", "msg", str)
 		return nil, err
 	}
 
@@ -271,7 +271,7 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 	return block, nil
 }
 
-func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error){
+func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error) {
 	membersPubkey := []*secp256k1.PublicKey{}
 	for _, produce := range  consensusService.Config.Producers {
 		membersPubkey = append(membersPubkey, produce.Public)
@@ -301,19 +301,19 @@ func (consensusService *ConsensusService) isProduce() bool {
 	return false
 }
 
-func (consensusService *ConsensusService) CollectLiveMember()[]*consensusTypes.MemberInfo{
+func (consensusService *ConsensusService) CollectLiveMember() []*consensusTypes.MemberInfo {
 	liveMembers := []*consensusTypes.MemberInfo{}
 	for _, produce := range consensusService.Config.Producers {
 		if consensusService.pubkey.IsEqual(produce.Public) {
 			liveMembers = append(liveMembers, &consensusTypes.MemberInfo{
 				Producer: produce,
-			})  // self
-		}else{
+			}) // self
+		} else {
 			peer := consensusService.P2pServer.GetPeer(produce.Ip)
 			if peer != nil {
 				liveMembers = append(liveMembers, &consensusTypes.MemberInfo{
 					Producer: produce,
-					Peer :    peer,
+					Peer:     peer,
 				})
 			}
 		}
@@ -322,11 +322,11 @@ func (consensusService *ConsensusService) CollectLiveMember()[]*consensusTypes.M
 }
 
 func (consensusService *ConsensusService) MoveToNextMiner(liveMembers []*consensusTypes.MemberInfo) (bool, bool) {
-	consensusService.curMiner = int(consensusService.ChainService.CurrentHeight%int64(len(liveMembers)))
+	consensusService.curMiner = int(consensusService.ChainService.CurrentHeight % int64(len(liveMembers)))
 
 	if liveMembers[consensusService.curMiner].Peer == nil {
 		return false, true
-	} else{
+	} else {
 		return true, false
 	}
 }
@@ -334,7 +334,7 @@ func (consensusService *ConsensusService) MoveToNextMiner(liveMembers []*consens
 func (consensusService *ConsensusService) OnNewHeightUpdate(height int64) {
 	if height > consensusService.ChainService.CurrentHeight {
 		consensusService.ChainService.CurrentHeight = height
-		log.Info("update new height","Height", height)
+		log.Info("update new height", "Height", height)
 	}
 }
 
@@ -342,7 +342,7 @@ func (consensusService *ConsensusService) GetMyPubkey() *secp256k1.PublicKey {
 	return consensusService.pubkey
 }
 
-func (consensusService *ConsensusService) GetWaitTime() (time.Time,time.Duration){
+func (consensusService *ConsensusService) GetWaitTime() (time.Time, time.Duration) {
 	// max_delay_time +(min_block_interval)*windows = expected_block_interval*windows
 	// 6h + 5s*windows = 10s*windows
 	// windows = 4320
@@ -350,8 +350,8 @@ func (consensusService *ConsensusService) GetWaitTime() (time.Time,time.Duration
 	targetTime := lastBlockTime.Add(blockInterval)
 	now := time.Now()
 	if targetTime.Before(now) {
-		return now.Add(time.Millisecond * 500 ), time.Millisecond * 500
-	} else{
+		return now.Add(time.Millisecond * 500), time.Millisecond * 500
+	} else {
 		return targetTime, targetTime.Sub(now)
 	}
 	/*
