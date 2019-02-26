@@ -18,6 +18,19 @@ func IsDirExists(path string) bool {
 
 	panic("not reached")
 }
+func EnsureFile(filePath string)  {
+	dir := filepath.Dir(filePath)
+	EnsureDir(dir)
+	if !IsFileExists(filePath) {
+		os.Create(filePath)
+	}
+}
+
+func EnsureDir(dir string)  {
+	if !IsDirExists(dir) {
+		os.MkdirAll(dir, os.ModePerm)
+	}
+}
 
 func IsFileExists(path string) bool {
 	fi, err := os.Stat(path)
@@ -29,6 +42,18 @@ func IsFileExists(path string) bool {
 	}
 
 	panic("not reached")
+}
+
+func IsEmptyDir(directory string) bool {
+	if IsFileExists(directory) {
+		fds, err := ioutil.ReadDir(directory)
+		if err != nil {
+			return false
+		}
+		return len(fds) == 0
+	}
+
+	return false
 }
 
 // EachChildFile get child fi  and process ,if get error after processing stop, if get a stop flag , stop

@@ -1,15 +1,10 @@
 package types
 
 import (
-	"errors"
-	"math/big"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
-)
-
-var (
-	RootChain common.ChainIdType
+	"math/big"
 )
 
 var (
@@ -83,10 +78,10 @@ func (account *Account) Sign(hash []byte) ([]byte, error) {
 }
 
 func NewNormalAccount(parent *Node, chainId common.ChainIdType) (*Account, error) {
-	IsRoot := chainId == RootChain
+	/*IsRoot := chainId == RootChain
 	if !IsRoot && parent == nil {
 		return nil, errors.New("missing parent account")
-	}
+	}*/
 	node := NewNode(parent, chainId)
 	address := node.Address
 	storage := NewStorage()

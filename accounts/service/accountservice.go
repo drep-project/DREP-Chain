@@ -1,12 +1,15 @@
 package service
 
 import (
-	path2 "path"
-	"gopkg.in/urfave/cli.v1"
-	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/common"
+	"errors"
+	accountComponent "github.com/drep-project/drep-chain/accounts/component"
 	accountTypes "github.com/drep-project/drep-chain/accounts/types"
+	"github.com/drep-project/drep-chain/app"
 	chainService "github.com/drep-project/drep-chain/chain/service"
+	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/drep-chain/crypto/sha3"
+	"gopkg.in/urfave/cli.v1"
+	path2 "path"
 )
 
 var (
@@ -29,6 +32,7 @@ var (
 // CliService provides an interactive command line window
 type AccountService struct {
 	ChainService *chainService.ChainService  `service:"chain"`
+	CommonConfig *app.CommonConfig
 	config *accountTypes.Config
 	Wallet *Wallet
 	apis   []app.API
@@ -41,7 +45,18 @@ func (accountService *AccountService) Name() string {
 
 // Api api none
 func (accountService *AccountService) Api() []app.API {
-	return accountService.apis
+	return  []app.API{
+		app.API{
+			Namespace: "account",
+			Version:   "1.0",
+			Service: &AccountApi{
+				Wallet: accountService.Wallet,
+				chainService: accountService.ChainService,
+				accountService: accountService,
+			},
+			Public: true,
+		},
+	}
 }
 
 // Flags flags  enable load js and execute before run
@@ -55,7 +70,10 @@ func (accountService *AccountService)  P2pMessages() map[int]interface{} {
 
 // Init  set console config
 func (accountService *AccountService) Init(executeContext *app.ExecuteContext) error {
-	accountService.config = &accountTypes.Config{}
+	accountService.CommonConfig = executeContext.CommonConfig
+	accountService.config = &accountTypes.Config{
+		KeyStoreDir: path2.Join(executeContext.CommonConfig.HomeDir, "keystore"),
+	}
 	err := executeContext.UnmashalConfig(accountService.Name(), accountService.config)
 	if err != nil {
 		return err
@@ -73,35 +91,12 @@ func (accountService *AccountService) Init(executeContext *app.ExecuteContext) e
 		accountService.config.EnableWallet = executeContext.Cli.GlobalBool(EnableWalletFlag.Name)
 	}
 
-	if !accountService.config.EnableWallet {
-		return nil
-	}
-
-	if !path2.IsAbs(accountService.config.KeyStoreDir) {
-		if accountService.config.KeyStoreDir == "" {
-			accountService.config.KeyStoreDir = path2.Join(executeContext.CommonConfig.HomeDir, "keystore")
-		} else {
-			accountService.config.KeyStoreDir = path2.Join(executeContext.CommonConfig.HomeDir, accountService.config.KeyStoreDir)
-		}
-	}
-
-	accountService.Wallet, err = NewWallet(accountService.config, accountTypes.RootChain)
+	accountService.Wallet, err = NewWallet(accountService.config, accountService.ChainService.Config.ChainId)
 	if err != nil {
 		return err
 	}
 	if accountService.config.WalletPassword != "" {
 		accountService.Wallet.Open(accountService.config.WalletPassword )
-	}
-	accountService.apis = []app.API{
-		app.API{
-			Namespace: "account",
-			Version:   "1.0",
-			Service: &AccountApi{
-				Wallet: accountService.Wallet,
-				chainService: accountService.ChainService,
-			},
-			Public: true,
-		},
 	}
 	return nil
 }
@@ -117,5 +112,21 @@ func (accountService *AccountService) Stop(executeContext *app.ExecuteContext) e
 	if !accountService.config.EnableWallet {
 		return nil
 	}
+	return nil
+}
+
+func (accountService *AccountService) CreateWallet(password string) error {
+	if common.IsDirExists(accountService.config.KeyStoreDir) {
+		if !common.IsEmptyDir(accountService.config.KeyStoreDir) {
+			return errors.New("exist keystore")
+		}
+	}else {
+		common.EnsureDir(accountService.config.KeyStoreDir)
+	}
+
+	store := accountComponent.NewFileStore(accountService.config.KeyStoreDir)
+	password = string(sha3.Hash256([]byte(password)))
+	newNode := accountTypes.NewNode(nil, accountService.CommonConfig.RootChain)
+	store.StoreKey(newNode, password)
 	return nil
 }

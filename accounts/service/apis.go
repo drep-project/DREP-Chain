@@ -12,6 +12,7 @@ import (
 
 type AccountApi struct {
 	Wallet *Wallet
+	accountService *AccountService
 	chainService *chainService.ChainService
 }
 
@@ -20,6 +21,14 @@ func (accountapi *AccountApi) AddressList() ([]*crypto.CommonAddress, error) {
 		return nil, errors.New("wallet is not open")
 	}
 	return accountapi.Wallet.ListAddress()
+}
+
+func (accountapi *AccountApi) Create(password string) error {
+	err := accountapi.accountService.CreateWallet(password)
+	if err != nil {
+		return err
+	}
+	return accountapi.Open(password)
 }
 
 // CreateAccount create a new account and return address
@@ -35,7 +44,7 @@ func (accountapi *AccountApi) CreateAccount() (*crypto.CommonAddress, error) {
 }
 
 // DumpPrikey dumpPrivate
-func (accountapi *AccountApi) DumpPrikey(address *crypto.CommonAddress) (*secp256k1.PrivateKey, error) {
+func (accountapi *AccountApi) DumpPrivkey(address *crypto.CommonAddress) (*secp256k1.PrivateKey, error) {
 	if !accountapi.Wallet.IsOpen() {
 		return nil, errors.New("wallet is not open")
 	}

@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/drep-project/drep-chain/common"
 	"github.com/pkg/errors"
 	"gopkg.in/urfave/cli.v1"
 	"github.com/asaskevich/EventBus"
@@ -41,7 +42,9 @@ GLOBAL OPTIONS:
 
 // CommonConfig read before app run,this fuction shared by other moudles
 type CommonConfig struct {
-	HomeDir string `json:"homeDir,omitempty"`
+	RootChain common.ChainIdType	`json:"rootChain,omitempty"`
+	HomeDir string 					`json:"homeDir,omitempty"`
+	ConfigFile string 				`json:"configFile,omitempty"`
 }
 
 // API describes the set of methods offered over the RPC interface
@@ -126,16 +129,7 @@ func (econtext *ExecuteContext) AggerateFlags() ([]cli.Command, []cli.Flag) {
 
 //	GetApis aggregate interface functions for each service to provide for use by RPC services
 func (econtext *ExecuteContext) GetApis() []API {
-	apis := []API{
-		API{
-			Namespace: "chain",
-			Version:   "1.0",
-			Service: &AdminApi{
-				Context: econtext,
-			},
-			Public: true,
-		},
-	}
+	apis := []API{}
 	for _, service := range econtext.Services {
 		apis = append(apis, service.Api()...)
 	}

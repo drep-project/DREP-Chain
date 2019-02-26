@@ -10,6 +10,7 @@ import (
 	"github.com/drep-project/drep-chain/drepclient/component/console"
 	cliTypes "github.com/drep-project/drep-chain/drepclient/types"
 	"github.com/drep-project/drep-chain/log"
+	accountService "github.com/drep-project/drep-chain/accounts/service"
 	rpcService "github.com/drep-project/drep-chain/rpc/service"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -26,6 +27,7 @@ type CliService struct {
 	config *cliTypes.Config
 	Log *log.LogService `service:"log"`
 	ChainService *chainService.ChainService `service:"chain"`
+	AccountService *accountService.AccountService `service:"accounts"`
 	RpcService *rpcService.RpcService `service:"rpc"`
 }
 

@@ -1502,15 +1502,39 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 params: 0,
             });
 
+            var create = new Method({
+                name: 'create',
+                call: 'account_create',
+                params: 1,
+            });
+
             var createAccount = new Method({
                 name: 'createAccount',
                 call: 'account_createAccount',
                 params: 0,
             });
 
-            var dumpPrikey = new Method({
-                name: 'dumpPrikey',
-                call: 'account_dumpPrikey',
+            var createCode = new Method({
+                name: 'createCode',
+                call: 'account_createCode',
+                params: 4,
+            });
+
+            var dumpPrivkey = new Method({
+                name: 'dumpPrivkey',
+                call: 'account_dumpPrivkey',
+                params: 1,
+            });
+
+            var gasPrice = new Method({
+                name: 'gasPrice',
+                call: 'account_gasPrice',
+                params: 0,
+            });
+
+            var getCode = new Method({
+                name: 'getCode',
+                call: 'account_getCode',
                 params: 1,
             });
 
@@ -1532,13 +1556,19 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 params: 4,
             });
 
+            var sign = new Method({
+                name: 'sign',
+                call: 'account_sign',
+                params: 2,
+            });
+
             var unLock = new Method({
                 name: 'unLock',
                 call: 'account_unLock',
                 params: 1,
             });
 
-            return [addressList,call,close,createAccount,dumpPrikey,lock,open,sendTransaction,unLock]
+            return [addressList,call,close,create,createAccount,createCode,dumpPrikey,gasPrice,getCode,lock,open,sendTransaction,sign,unLock]
         }
 
         module.exports = ACCOUNT;
@@ -1642,13 +1672,19 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
         var methods = function () {
 
+            var minning = new Method({
+                name: 'minning',
+                call: 'consensus_minning',
+                params: 0,
+            });
+
             var mock = new Method({
                 name: 'mock',
                 call: 'consensus_mock',
                 params: 0,
             });
 
-            return [mock]
+            return [minning,mock]
         }
 
         module.exports = CONSENSUS;

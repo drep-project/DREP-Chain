@@ -98,6 +98,7 @@ func gen(ctx *cli.Context) error {
 
 	chainConfig := chainTypes.ChainConfig{}
 	chainConfig.RemotePort = 55555
+	chainConfig.ChainId = common.ChainIdType{}
 
 	walletConfig := accountTypes.Config{}
 	walletConfig.EnableWallet = true

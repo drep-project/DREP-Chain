@@ -1,17 +1,17 @@
 package app
 
 import (
-	"os"
-	"fmt"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
-	"io/ioutil"
-	"encoding/json"
-	"path/filepath"
 
-	"gopkg.in/urfave/cli.v1"
 	"github.com/drep-project/drep-chain/common"
+	"gopkg.in/urfave/cli.v1"
 )
 
 var (
@@ -77,13 +77,21 @@ func (mApp DrepApp) addService(serviceValue reflect.Value) {
 		if serviceValueField.Type().Implements(reflect.TypeOf((*Service)(nil)).Elem()) {
 			refServiceName := GetServiceTag(serviceTypeField)
 			preAddServices := mApp.Context.Services
+			hasService := false
 			for _, addedService := range preAddServices {
+
 				if addedService.Name() == refServiceName {
 					//TODO the filed to be set must be set public field, but it wiil be better to set it as a private field ,
 					//TODO There are still some technical difficulties that need to be overcome.
 					//TODO UnsafePointer may help
 					serviceValue.Elem().Field(i).Set(reflect.ValueOf(addedService))
+					hasService = true
 				}
+			}
+
+			if !hasService {
+				fmt.Println(fmt.Sprintf("service not exist %s require %s", serviceValue.Interface().(Service).Name(), refServiceName))
+				//log.Debug("service not exist",  "Service", addedService.Name() ,"RefService", refServiceName)
 			}
 		}
 	}
@@ -183,8 +191,8 @@ func (mApp DrepApp) before(ctx *cli.Context) error {
 }
 
 //	loadConfigFile sed to read configuration files
-func loadConfigFile(ctx *cli.Context, configPath string) (map[string]json.RawMessage, error) {
-	configFile := filepath.Join(configPath, "config.json")
+func loadConfigFile(ctx *cli.Context, homeDir string) (map[string]json.RawMessage, error) {
+	configFile := filepath.Join(homeDir, "config.json")
 
 	if ctx.GlobalIsSet(ConfigFileFlag.Name) {
 		file := ctx.GlobalString(ConfigFileFlag.Name)
@@ -197,9 +205,21 @@ func loadConfigFile(ctx *cli.Context, configPath string) (map[string]json.RawMes
 
 	if !common.IsFileExists(configFile) {
 		//use default
-		return nil, errors.New("config file not found")
-	}else{
-
+		cfg := &CommonConfig{
+			HomeDir: homeDir,
+			ConfigFile: configFile,
+			RootChain: common.ChainIdType{},
+		}
+		originConfigBytes, err := json.MarshalIndent(cfg,"", "\t")
+		if err != nil {
+			return nil, err
+		}
+		common.EnsureFile(configFile)
+		file, err :=  os.OpenFile(configFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0777)
+		if err != nil {
+			return nil, err
+		}
+		file.Write(originConfigBytes)
 	}
 	content, err := ioutil.ReadFile(configFile)
 	if err != nil {
