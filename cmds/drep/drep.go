@@ -1,4 +1,4 @@
-package drep
+package main
 
 import (
 	"fmt"
