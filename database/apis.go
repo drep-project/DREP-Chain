@@ -4,7 +4,6 @@ import (
     "strconv"
     "encoding/json"
     chainType "github.com/drep-project/drep-chain/chain/types"
-    accountTypes "github.com/drep-project/drep-chain/accounts/types"
     "github.com/drep-project/drep-chain/crypto/sha3"
     "github.com/drep-project/drep-chain/crypto"
     "math/big"
@@ -103,12 +102,12 @@ func (database *DatabaseService) PutPreviousBlockTimestamp(timestamp int64) erro
     return database.db.put(key, value, false)
 }
 
-func (database *DatabaseService) GetStorage(addr crypto.CommonAddress, transactional bool) *accountTypes.Storage {
+func (database *DatabaseService) GetStorage(addr crypto.CommonAddress, transactional bool) *chainType.Storage {
     if !transactional {
         return database.db.getStorage(addr)
     }
     if database.db.stores == nil {
-        database.db.stores = make(map[string] *accountTypes.Storage)
+        database.db.stores = make(map[string] *chainType.Storage)
     }
     key := sha3.Hash256([]byte("storage_" + addr.Hex()))
     hk := bytes2Hex(key)
@@ -121,12 +120,12 @@ func (database *DatabaseService) GetStorage(addr crypto.CommonAddress, transacti
     return storage
 }
 
-func (database *DatabaseService) PutStorage(addr crypto.CommonAddress, storage *accountTypes.Storage, transactional bool) error {
+func (database *DatabaseService) PutStorage(addr crypto.CommonAddress, storage *chainType.Storage, transactional bool) error {
     if !transactional {
         return database.db.putStorage(addr, storage)
     }
     if database.db.stores == nil {
-        database.db.stores = make(map[string] *accountTypes.Storage)
+        database.db.stores = make(map[string] *chainType.Storage)
     }
     key := sha3.Hash256([]byte("storage_" + addr.Hex()))
     value, err := json.Marshal(storage)

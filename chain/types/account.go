@@ -94,12 +94,12 @@ func NewNormalAccount(parent *Node, chainId app.ChainIdType) (*Account, error) {
 	return account, nil
 }
 
-func NewContractAccount(callerAddr crypto.CommonAddress, chainId app.ChainIdType, nonce int64) (*Account, error) {
+func NewContractAccount(callerAddr crypto.CommonAddress, nonce int64) (*Account, error) {
 	address := crypto.GetByteCodeAddress(callerAddr, nonce)
 	storage := NewStorage()
 	account := &Account{
 		Address: &address,
-		Node:    &Node{ChainId: chainId},
+		Node:    &Node{},
 		Storage: storage,
 	}
 	return account, nil

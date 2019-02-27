@@ -396,7 +396,7 @@ func opBalance(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memo
 	slot := stack.peek()
 	//slot.Set(interpreter.evm.StateDB.GetBalance(BigToAddress(slot)))
 	evm := interpreter.EVM
-	balance := evm.State.GetBalance(crypto.Big2Address(slot), contract.ChainId)
+	balance := evm.State.GetBalance(crypto.Big2Address(slot))
 	slot.Set(balance)
 	return nil, nil
 }
@@ -469,7 +469,7 @@ func opReturnDataCopy(pc *uint64, interpreter *EVMInterpreter, contract *Contrac
 func opExtCodeSize(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	slot := stack.peek()
 	//slot.SetUint64(uint64(interpreter.EVM.StateDB.GetCodeSize(BigToAddress(slot))))
-	l := interpreter.EVM.State.GetCodeSize(crypto.Big2Address(slot), contract.ChainId)
+	l := interpreter.EVM.State.GetCodeSize(crypto.Big2Address(slot))
 	slot.SetUint64(uint64(l))
 	return nil, nil
 }
@@ -501,7 +501,7 @@ func opExtCodeCopy(pc *uint64, interpreter *EVMInterpreter, contract *Contract, 
 		codeOffset = stack.pop()
 		length     = stack.pop()
 	)
-	byteCode := interpreter.EVM.State.GetByteCode(addr, contract.ChainId)
+	byteCode := interpreter.EVM.State.GetByteCode(addr)
 	codeCopy := common.GetDataBig(byteCode, codeOffset, length)
 	//codeCopy := getDataBig(interpreter.evm.StateDB.GetCode(addr), codeOffset, length)
 	memory.Set(memOffset.Uint64(), length.Uint64(), codeCopy)
@@ -538,7 +538,7 @@ func opExtCodeCopy(pc *uint64, interpreter *EVMInterpreter, contract *Contract, 
 // this account should be regarded as a non-existent account and zero should be returned.
 func opExtCodeHash(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	slot := stack.peek()
-	hash := interpreter.EVM.State.GetCodeHash(crypto.Big2Address(slot), contract.ChainId).Bytes()
+	hash := interpreter.EVM.State.GetCodeHash(crypto.Big2Address(slot)).Bytes()
 	slot.SetBytes(hash)
 	//slot.SetBytes(interpreter.evm.StateDB.GetCodeHash(BigToAddress(slot)).Bytes())
 	return nil, nil
@@ -645,7 +645,7 @@ func opSstore(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memor
 	loc, val := stack.pop(), stack.pop()
 	//fmt.Println("loc: ", loc)
 	modifiedLoc := new(big.Int).SetBytes(sha3.HashS256(contract.ByteCode, loc.Bytes()))
-	interpreter.EVM.State.Store(modifiedLoc, val, contract.ChainId)
+	interpreter.EVM.State.Store(modifiedLoc, val)
 	//interpreter.EVM.State.Store(loc, val)
 	interpreter.IntPool.put(val)
 	return nil, nil
@@ -915,9 +915,9 @@ func opSuicide(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memo
 	//interpreter.evm.StateDB.AddBalance(BigToAddress(stack.pop()), balance)
 	//interpreter.evm.StateDB.Suicide(contract.GetAddress())
 
-	balance := interpreter.EVM.State.GetBalance(contract.CallerAddr, contract.ChainId)
-	interpreter.EVM.State.AddBalance(crypto.Big2Address(stack.pop()), contract.ChainId, balance)
-	interpreter.EVM.State.Suicide(contract.CallerAddr, contract.ChainId)
+	balance := interpreter.EVM.State.GetBalance(contract.CallerAddr)
+	interpreter.EVM.State.AddBalance(crypto.Big2Address(stack.pop()), balance)
+	interpreter.EVM.State.Suicide(contract.CallerAddr)
 	return nil, nil
 }
 
@@ -943,7 +943,7 @@ func makeLog(size int) executionFunc {
 		//})
 		//
 		//interpreter.IntPool.put(mStart, mSize)
-		interpreter.EVM.State.AddLog(contract.CallerAddr, contract.ChainId, contract.TxHash, d, topics)
+		interpreter.EVM.State.AddLog(contract.CallerAddr, contract.TxHash, d, topics)
 		return nil, nil
 	}
 }
