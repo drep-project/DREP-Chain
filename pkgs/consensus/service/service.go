@@ -35,7 +35,7 @@ const (
 )
 
 type ConsensusService struct {
-	P2pServer     *p2pService.P2pService         `service:"p2p"`
+	P2pServer     p2pService.P2P         `service:"p2p"`
 	ChainService  *chainService.ChainService     `service:"chain"`
 	DatabaseService  *database.DatabaseService     `service:"database"`
 	WalletService *accountService.AccountService `service:"accounts"`
@@ -101,7 +101,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 		panic(err)
 	}
 
-	router := consensusService.P2pServer.Router
+	router := consensusService.P2pServer.GetRouter()
 	chainP2pMessage := consensusService.P2pMessages()
 	for msgType, _ := range chainP2pMessage {
 		router.RegisterMsgHandler(msgType, pid)

@@ -3,7 +3,7 @@ package service
 import "github.com/drep-project/drep-chain/network/types"
 
 type P2PApi struct {
-	p2pService *P2pService
+	p2pService P2P
 }
 
 func (p2pApis *P2PApi) GetPeers() []*types.Peer{

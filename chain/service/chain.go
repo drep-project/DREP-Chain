@@ -38,7 +38,7 @@ const (
 
 type ChainService struct {
 	RpcService      *rpc2.RpcService    `service:"rpc"`
-	P2pServer       *p2pService.P2pService    `service:"p2p"`
+	P2pServer       p2pService.P2P    `service:"p2p"`
 	DatabaseService *database.DatabaseService `service:"database"`
 	transactionPool *TransactionPool
 	isRelay         bool
@@ -111,7 +111,7 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 		panic(err)
 	}
 	chainService.pid = pid
-	router := chainService.P2pServer.Router
+	router := chainService.P2pServer.GetRouter()
 	chainP2pMessage := chainService.P2pMessages()
 	for msgType, _ := range chainP2pMessage {
 		router.RegisterMsgHandler(msgType, pid)

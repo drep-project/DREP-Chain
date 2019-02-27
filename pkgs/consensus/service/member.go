@@ -29,7 +29,7 @@ type Member struct {
     leader *consensusTypes.MemberInfo
     members []*secp256k1.PublicKey
     prvKey *secp256k1.PrivateKey
-    p2pServer *p2pService.P2pService
+    p2pServer p2pService.P2P
 
     msg []byte
     msgHash []byte
@@ -52,7 +52,7 @@ type Member struct {
     isConsensus bool   // time split 2, in consensus \ wait
 }
 
-func NewMember(prvKey *secp256k1.PrivateKey, p2pServer *p2pService.P2pService) *Member {
+func NewMember(prvKey *secp256k1.PrivateKey, p2pServer p2pService.P2P) *Member {
     member := &Member{}
 
     member.prvKey = prvKey

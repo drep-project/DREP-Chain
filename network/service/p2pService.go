@@ -448,6 +448,10 @@ func (p2pService *P2pService) recoverDeadPeer(){
 	}
 }
 
+func (p2pService *P2pService) GetRouter() (*p2pTypes.MessageRouter) {
+	return  p2pService.Router
+}
+
 func (p2pService *P2pService) Peers()([]*p2pTypes.Peer){
 	return p2pService.livePeer
 }

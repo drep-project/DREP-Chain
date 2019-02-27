@@ -13,6 +13,7 @@ type P2P interface {
 	Broadcast(msg interface{})
 	Peers()([]*p2pTypes.Peer)
 	GetPeer(ip string)(*p2pTypes.Peer)
+	GetRouter() (*p2pTypes.MessageRouter)
 	AddPeer(addr string) error
-	RemovePeer(addr string) error
+	RemovePeer(addr string)
 }

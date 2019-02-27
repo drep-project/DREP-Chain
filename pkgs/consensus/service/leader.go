@@ -35,7 +35,7 @@ const (
 type Leader struct {
     members    []*consensusTypes.MemberInfo
     pubkey *secp256k1.PublicKey
-    p2pServer *p2pService.P2pService
+    p2pServer p2pService.P2P
 
     commitBitmap []byte
     sigmaPubKey []*secp256k1.PublicKey
@@ -56,7 +56,7 @@ type Leader struct {
     cancelWaitChallenge chan struct{}
 }
 
-func NewLeader(pubKey *secp256k1.PublicKey, p2pServer *p2pService.P2pService) *Leader {
+func NewLeader(pubKey *secp256k1.PublicKey, p2pServer p2pService.P2P) *Leader {
     l := &Leader{}
     l.waitTime = 10 * time.Second
     l.pubkey = pubKey
