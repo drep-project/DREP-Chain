@@ -87,10 +87,6 @@ func (accountService *AccountService) Init(executeContext *app.ExecuteContext) e
 		accountService.config.KeyStoreDir = executeContext.Cli.GlobalString(KeyStoreDirFlag.Name)
 	}
 
-	if executeContext.Cli.IsSet(EnableWalletFlag.Name) {
-		accountService.config.EnableWallet = executeContext.Cli.GlobalBool(EnableWalletFlag.Name)
-	}
-
 	accountService.Wallet, err = NewWallet(accountService.config, accountService.ChainService.Config.ChainId)
 	if err != nil {
 		return err
@@ -102,16 +98,10 @@ func (accountService *AccountService) Init(executeContext *app.ExecuteContext) e
 }
 
 func (accountService *AccountService) Start(executeContext *app.ExecuteContext) error {
-	if !accountService.config.EnableWallet {
-		return nil
-	}
 	return nil
 }
 
 func (accountService *AccountService) Stop(executeContext *app.ExecuteContext) error {
-	if !accountService.config.EnableWallet {
-		return nil
-	}
 	return nil
 }
 

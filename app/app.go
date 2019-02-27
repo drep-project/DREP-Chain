@@ -15,11 +15,12 @@ import (
 )
 
 var (
+	// General settings
 	ConfigFileFlag = cli.StringFlag{
 		Name:  "config",
 		Usage: "TODO add config description",
 	}
-	// General settings
+	
 	HomeDirFlag = common.DirectoryFlag{
 		Name:  "homedir",
 		Usage: "Home directory for the datadir logdir and keystore",

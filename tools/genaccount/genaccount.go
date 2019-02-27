@@ -86,6 +86,7 @@ func gen(ctx *cli.Context) error {
 
 	rpcConfig := rpcTypes.RpcConfig{}
 	rpcConfig.IPCEnabled = true
+	rpcConfig.HTTPEnabled = true
 	p2pConfig := p2pTypes.P2pConfig{}
 	p2pConfig.ListerAddr = "0.0.0.0"
 	p2pConfig.Port = 55555
@@ -102,7 +103,6 @@ func gen(ctx *cli.Context) error {
 	chainConfig.GenesisPK = "0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26"
 	
 	walletConfig := accountTypes.Config{}
-	walletConfig.EnableWallet = true
 	walletConfig.WalletPassword = pasword
 	for i:=0; i<len(nodeItems); i++{
 		consensusConfig.MyPk = (*secp256k1.PublicKey)(&standbyKey[i].PublicKey)
