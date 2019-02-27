@@ -1,11 +1,10 @@
 package service
 
 import (
-    "github.com/drep-project/drep-chain/app"
-    chainType "github.com/drep-project/drep-chain/chain/types"
-    "github.com/drep-project/drep-chain/crypto"
-    "github.com/drep-project/drep-chain/database"
     "math/big"
+    chainType "github.com/drep-project/drep-chain/chain/types"
+    "github.com/drep-project/drep-chain/database"
+    "github.com/drep-project/drep-chain/crypto"
 )
 
 
@@ -25,11 +24,11 @@ func (chain *ChainApi) GetMaxHeight() int64 {
     return chain.dbService.GetMaxHeight()
 }
 
-func (chain *ChainApi) GetBalance(addr crypto.CommonAddress, chainId app.ChainIdType) *big.Int{
-    return chain.dbService.GetBalance(addr, app.ChainIdType{}, true)
+func (chain *ChainApi) GetBalance(addr crypto.CommonAddress) *big.Int{
+    return chain.dbService.GetBalance(addr, true)
 }
 
-func (chain *ChainApi) GetNonce(addr crypto.CommonAddress, chainId app.ChainIdType) int64 {
+func (chain *ChainApi) GetNonce(addr crypto.CommonAddress) int64 {
     return chain.dbService.GetNonce(addr, true)
 }
 
@@ -38,8 +37,8 @@ func (chain *ChainApi) GetPreviousBlockHash() string {
     return "0x" + string(bytes)
 }
 
-func (chain *ChainApi) GetReputation(addr crypto.CommonAddress, chainId app.ChainIdType) *big.Int {
-    return chain.dbService.GetReputation(addr, chainId, true)
+func (chain *ChainApi) GetReputation(addr crypto.CommonAddress) *big.Int {
+    return chain.dbService.GetReputation(addr, true)
 }
 
 func (chain *ChainApi) GetTransactionsFromBlock(height int64) []*chainType.Transaction {
