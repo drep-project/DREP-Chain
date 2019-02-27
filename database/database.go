@@ -2,17 +2,17 @@ package database
 
 import (
 	"encoding/json"
-	accountTypes "github.com/drep-project/drep-chain/accounts/types"
+	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/sha3"
-	"github.com/syndtr/goleveldb/leveldb"
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
 )
 
 type Database struct {
 	db     *leveldb.DB
 	temp   map[string][]byte
 	states map[string]*State
-	stores map[string]*accountTypes.Storage
+	stores map[string]*chainTypes.Storage
 	root   []byte
 }
 
@@ -77,7 +77,7 @@ func (db *Database) delete(key []byte, temporary bool) error {
 func (db *Database) BeginTransaction() {
 	db.temp = make(map[string][]byte)
 	db.states = make(map[string]*State)
-	db.stores = make(map[string]*accountTypes.Storage)
+	db.stores = make(map[string]*chainTypes.Storage)
 }
 
 func (db *Database) EndTransaction() {
@@ -151,8 +151,8 @@ func (db *Database) delState(key []byte) error {
 	return nil
 }
 
-func (db *Database) getStorage(addr crypto.CommonAddress) *accountTypes.Storage {
-	storage := &accountTypes.Storage{}
+func (db *Database) getStorage(addr crypto.CommonAddress) *chainTypes.Storage {
+	storage := &chainTypes.Storage{}
 	key := sha3.Hash256([]byte("storage_" + addr.Hex()))
 	value, err := db.get(key, false)
 	if err != nil {
@@ -162,7 +162,7 @@ func (db *Database) getStorage(addr crypto.CommonAddress) *accountTypes.Storage 
 	return storage
 }
 
-func (db *Database) putStorage(addr crypto.CommonAddress, storage *accountTypes.Storage) error {
+func (db *Database) putStorage(addr crypto.CommonAddress, storage *chainTypes.Storage) error {
 	key := sha3.Hash256([]byte("storage_" + addr.Hex()))
 	value, err := json.Marshal(storage)
 	if err != nil {

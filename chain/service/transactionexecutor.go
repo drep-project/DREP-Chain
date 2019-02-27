@@ -3,12 +3,12 @@ package service
 import (
     "errors"
     "fmt"
+    "github.com/drep-project/drep-chain/app"
     chainComponent "github.com/drep-project/drep-chain/chain/component"
     "github.com/drep-project/drep-chain/chain/component/vm"
     chainTypes "github.com/drep-project/drep-chain/chain/types"
-    "github.com/drep-project/drep-chain/common"
     "github.com/drep-project/drep-chain/crypto"
-    "github.com/drep-project/drep-chain/log"
+    "github.com/drep-project/dlog"
     "math/big"
 
     "bytes"
@@ -30,7 +30,7 @@ func (chainService *ChainService) ExecuteTransactions(b *chainTypes.Block) (*big
     height := chainService.DatabaseService.GetMaxHeight()
     if height + 1 != b.Header.Height {
         msg := fmt.Sprintf("not corrent height CurrentHeight: %d, ReceiveHeight: %d", height, b.Header.Height)
-        log.Error(msg)
+        dlog.Error(msg)
         return nil, errors.New(msg)
     }
 
@@ -142,7 +142,7 @@ func (chainService *ChainService) canExecute(t *chainTypes.Transaction, gasFloor
     return
 }
 
-func (chainService *ChainService) deduct(addr crypto.CommonAddress, chainId common.ChainIdType, balance, gasFee *big.Int) (leftBalance, actualFee *big.Int) {
+func (chainService *ChainService) deduct(addr crypto.CommonAddress, chainId app.ChainIdType, balance, gasFee *big.Int) (leftBalance, actualFee *big.Int) {
     leftBalance = new(big.Int).Sub(balance, gasFee)
     actualFee = new(big.Int).Set(gasFee)
     if leftBalance.Sign() < 0 {

@@ -3,7 +3,7 @@ package service
 import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	"github.com/drep-project/drep-chain/log"
+	"github.com/drep-project/dlog"
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
 )
 
@@ -28,17 +28,17 @@ func (chainService *ChainService) Receive(context actor.Context) {
 			transaction := msg
 			id, _ := transaction.TxId()
 			if ForwardedTransaction(id) {
-				log.Debug("Forwarded this transaction ", "transaction", *transaction)
+				dlog.Debug("Forwarded this transaction ", "transaction", *transaction)
 				return
 			}
 			// TODO backup nodes should not add
 			err := chainService.transactionPool.AddTransaction(transaction)
 			if err == nil {
-				log.Debug("Succeed to add this transaction ", "transaction", *transaction)
+				dlog.Debug("Succeed to add this transaction ", "transaction", *transaction)
 				chainService.P2pServer.Broadcast(transaction)
 				ForwardTransaction(id)
 			} else {
-				log.Debug("Fail to add this transaction ", "reason", err, "transaction", *transaction)
+				dlog.Debug("Fail to add this transaction ", "reason", err, "transaction", *transaction)
 			}
 		case *chainTypes.Block:
 			block := msg
@@ -47,7 +47,7 @@ func (chainService *ChainService) Receive(context actor.Context) {
 			}
 			id, _ := block.BlockHashHex()
 			if ForwardedBlock(id) { // if forwarded, then processed. later this will be read from db
-				log.Debug("Forwarded this block ", "block" ,*block)
+				dlog.Debug("Forwarded this block ", "block" ,*block)
 				return
 			}
 			ForwardBlock(id)

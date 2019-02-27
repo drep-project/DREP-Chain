@@ -3,7 +3,7 @@ package service
 import (
     "sync"
     chainTypes "github.com/drep-project/drep-chain/chain/types"
-    "github.com/drep-project/drep-chain/log"
+    "github.com/drep-project/dlog"
     "github.com/drep-project/drep-chain/crypto"
     "math/big"
     "github.com/drep-project/drep-chain/common/list"
@@ -104,12 +104,12 @@ func (pool *TransactionPool) AddTransaction(transaction *chainTypes.Transaction)
     defer  pool.tranLock.Unlock()
     if  pool.trans.Size() >= maxSize {
         msg := "transaction pool full. %s fail to add" + id
-        log.Error(msg)
+        dlog.Error(msg)
         return errors.New(msg)
     }
     if _, exists :=  pool.tranSet[id]; exists {
         msg := "transaction %s exists" + id
-        log.Error("transaction %s exists", id)
+        dlog.Error("transaction %s exists", id)
         return errors.New(msg)
     } else {
         pool.tranSet[id] = true
@@ -185,7 +185,7 @@ func (pool *TransactionPool) PickTransactions(maxGas *big.Int) []*chainTypes.Tra
                             }
                         }
                     } else {
-                        log.Error("Fuck")
+                        dlog.Error("Fuck")
                     }
                 } else {
                     it.Remove()

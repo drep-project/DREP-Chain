@@ -1,16 +1,16 @@
 package database
 
 import (
-    "strconv"
-    "encoding/json"
-    chainType "github.com/drep-project/drep-chain/chain/types"
-    accountTypes "github.com/drep-project/drep-chain/accounts/types"
-    "github.com/drep-project/drep-chain/common"
-    "github.com/drep-project/drep-chain/crypto/sha3"
-    "github.com/drep-project/drep-chain/crypto"
-    "math/big"
-    "errors"
     "encoding/hex"
+    "encoding/json"
+    "errors"
+    "math/big"
+    "strconv"
+
+    "github.com/drep-project/drep-chain/app"
+    chainType "github.com/drep-project/drep-chain/chain/types"
+    "github.com/drep-project/drep-chain/crypto"
+    "github.com/drep-project/drep-chain/crypto/sha3"
 )
 
 func (database *DatabaseService) GetStateRoot() []byte {
@@ -104,12 +104,12 @@ func (database *DatabaseService) PutPreviousBlockTimestamp(timestamp int64) erro
     return database.db.put(key, value, false)
 }
 
-func (database *DatabaseService) GetStorage(addr crypto.CommonAddress, transactional bool) *accountTypes.Storage {
+func (database *DatabaseService) GetStorage(addr crypto.CommonAddress, transactional bool) *chainType.Storage {
     if !transactional {
         return database.db.getStorage(addr)
     }
     if database.db.stores == nil {
-        database.db.stores = make(map[string] *accountTypes.Storage)
+        database.db.stores = make(map[string] *chainType.Storage)
     }
     key := sha3.Hash256([]byte("storage_" + addr.Hex()))
     hk := bytes2Hex(key)
@@ -122,12 +122,12 @@ func (database *DatabaseService) GetStorage(addr crypto.CommonAddress, transacti
     return storage
 }
 
-func (database *DatabaseService) PutStorage(addr crypto.CommonAddress, storage *accountTypes.Storage, transactional bool) error {
+func (database *DatabaseService) PutStorage(addr crypto.CommonAddress, storage *chainType.Storage, transactional bool) error {
     if !transactional {
         return database.db.putStorage(addr, storage)
     }
     if database.db.stores == nil {
-        database.db.stores = make(map[string] *accountTypes.Storage)
+        database.db.stores = make(map[string] *chainType.Storage)
     }
     key := sha3.Hash256([]byte("storage_" + addr.Hex()))
     value, err := json.Marshal(storage)
@@ -142,7 +142,7 @@ func (database *DatabaseService) PutStorage(addr crypto.CommonAddress, storage *
     return nil
 }
 
-func (database *DatabaseService) GetBalance(addr crypto.CommonAddress, chainId common.ChainIdType, transactional bool) *big.Int {
+func (database *DatabaseService) GetBalance(addr crypto.CommonAddress, chainId app.ChainIdType, transactional bool) *big.Int {
     storage := database.GetStorage(addr, transactional)
 
     if storage == nil {
@@ -151,7 +151,7 @@ func (database *DatabaseService) GetBalance(addr crypto.CommonAddress, chainId c
     return storage.Balance
 }
 
-func (database *DatabaseService) PutBalance(addr crypto.CommonAddress, chainId common.ChainIdType, balance *big.Int, transactional bool) error {
+func (database *DatabaseService) PutBalance(addr crypto.CommonAddress, chainId app.ChainIdType, balance *big.Int, transactional bool) error {
     storage := database.GetStorage(addr, transactional)
     if storage == nil {
         return errors.New("no account storage found")
@@ -195,7 +195,7 @@ func (database *DatabaseService) PutByteCode(addr crypto.CommonAddress, byteCode
     return database.PutStorage(addr, storage, transactional)
 }
 
-func (database *DatabaseService) GetCodeHash(addr crypto.CommonAddress, chainId common.ChainIdType, transactional bool) crypto.Hash {
+func (database *DatabaseService) GetCodeHash(addr crypto.CommonAddress, chainId app.ChainIdType, transactional bool) crypto.Hash {
     storage := database.GetStorage(addr, transactional)
     if storage == nil {
         return crypto.Hash{}
@@ -203,7 +203,7 @@ func (database *DatabaseService) GetCodeHash(addr crypto.CommonAddress, chainId 
     return storage.CodeHash
 }
 
-func (database *DatabaseService) GetReputation(addr crypto.CommonAddress, chainId common.ChainIdType, transactional bool) *big.Int {
+func (database *DatabaseService) GetReputation(addr crypto.CommonAddress, chainId app.ChainIdType, transactional bool) *big.Int {
     storage := database.GetStorage(addr, transactional)
     if storage == nil {
         return big.NewInt(0)
@@ -211,7 +211,7 @@ func (database *DatabaseService) GetReputation(addr crypto.CommonAddress, chainI
     return storage.Reputation
 }
 
-func (database *DatabaseService) GetLogs(txHash []byte, chainId common.ChainIdType) []*chainType.Log {
+func (database *DatabaseService) GetLogs(txHash []byte, chainId app.ChainIdType) []*chainType.Log {
     key := sha3.Hash256([]byte("logs_" + hex.EncodeToString(txHash) + chainId.Hex()))
     value, err := database.db.get(key, false)
     if err != nil {
@@ -225,7 +225,7 @@ func (database *DatabaseService) GetLogs(txHash []byte, chainId common.ChainIdTy
     return logs
 }
 
-func (database *DatabaseService) PutLogs(logs []*chainType.Log, txHash []byte, chainId common.ChainIdType) error {
+func (database *DatabaseService) PutLogs(logs []*chainType.Log, txHash []byte, chainId app.ChainIdType) error {
     key := sha3.Hash256([]byte("logs_" + hex.EncodeToString(txHash) + chainId.Hex()))
     value, err := json.Marshal(logs)
     if err != nil {
@@ -266,7 +266,7 @@ func  (database *DatabaseService) Discard() {
     database.db.Discard()
 }
 
-func (database *DatabaseService)AddBalance(addr crypto.CommonAddress, amount *big.Int, chainId common.ChainIdType, transactional bool) {
+func (database *DatabaseService)AddBalance(addr crypto.CommonAddress, amount *big.Int, chainId app.ChainIdType, transactional bool) {
     balance := database.GetBalance(addr, chainId, transactional)
     //text, _ := addr.MarshalText()
     //x := string(text)

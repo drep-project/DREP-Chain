@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	accountService "github.com/drep-project/drep-chain/accounts/service"
+	accountService "github.com/drep-project/drep-chain/pkgs/accounts/service"
 	chainService "github.com/drep-project/drep-chain/chain/service"
-	consensusService "github.com/drep-project/drep-chain/consensus/service"
-	logService "github.com/drep-project/drep-chain/log"
+	consensusService "github.com/drep-project/drep-chain/pkgs/consensus/service"
+	logService "github.com/drep-project/dlog"
 	p2pService "github.com/drep-project/drep-chain/network/service"
 	"io"
 	"os"

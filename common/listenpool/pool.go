@@ -4,7 +4,7 @@ import (
     "sync"
     chainTypes "github.com/drep-project/drep-chain/chain/types"
     "encoding/json"
-    "github.com/drep-project/drep-chain/log"
+    "github.com/drep-project/dlog"
 )
 /*
     Ethan
@@ -39,7 +39,7 @@ func (p *ListenPool) Obtain(cp func(interface{})bool, tranSizeLimit int) []chain
     i:=len(p.Transactions) - 1
     for tmpSize > tranSizeLimit && i>=0 {
         if bytes,err:=json.Marshal(p.Transactions[i]); err!=nil{
-            log.Error("Error, can not json.Marsha(transaction)")
+            dlog.Error("Error, can not json.Marsha(transaction)")
         } else {
             tmpSize-=len(bytes)
             i --
@@ -55,7 +55,7 @@ func (p *ListenPool) Push(tran chainTypes.Transaction)  {
     p.Transactions = append(p.Transactions, tran)
 
     if bytes, err := json.Marshal(tran); err!=nil{
-        log.Error("Error, can not json.Marsha(transaction)")
+        dlog.Error("Error, can not json.Marsha(transaction)")
     } else {
         p.Size += len(bytes)
     }
@@ -64,7 +64,7 @@ func (p *ListenPool) Push(tran chainTypes.Transaction)  {
 
 func (p *ListenPool) PackageTransaction(transactions []chainTypes.Transaction)  {
     if _,err:=json.Marshal(transactions); err!=nil{
-        log.Error("Error, can not json.Marsha(transactions)")
+        dlog.Error("Error, can not json.Marsha(transactions)")
     } else {
         //Todo send bytes to MainChain by using http api
         //when http result come , p.cond.broadcast

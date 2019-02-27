@@ -1,13 +1,13 @@
 package vm
 
 import (
-	"github.com/drep-project/drep-chain/crypto"
-	"math/big"
 	"errors"
 	"fmt"
+	"github.com/drep-project/drep-chain/app"
+	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
-	"github.com/drep-project/drep-chain/common"
 	"github.com/ethereum/go-ethereum/params"
+	"math/big"
 )
 
 type EVM struct {
@@ -34,7 +34,7 @@ func NewEVM(databaseApi *database.DatabaseService) *EVM {
 	return evm
 }
 
-func (evm *EVM) CreateContractCode(callerAddr crypto.CommonAddress, chainId common.ChainIdType, byteCode crypto.ByteCode, gas uint64, value *big.Int) ([]byte, crypto.CommonAddress, uint64, error) {
+func (evm *EVM) CreateContractCode(callerAddr crypto.CommonAddress, chainId app.ChainIdType, byteCode crypto.ByteCode, gas uint64, value *big.Int) ([]byte, crypto.CommonAddress, uint64, error) {
 	if !evm.CanTransfer(callerAddr, chainId, value) {
 		return nil, crypto.CommonAddress{}, gas, ErrInsufficientBalance
 	}
@@ -72,7 +72,7 @@ func (evm *EVM) CreateContractCode(callerAddr crypto.CommonAddress, chainId comm
 	return ret, *contractAddr, contract.Gas, err
 }
 
-func (evm *EVM) CallContractCode(callerAddr, contractAddr crypto.CommonAddress, chainId common.ChainIdType, input []byte, gas uint64, value *big.Int) (ret []byte, returnGas uint64, err error) {
+func (evm *EVM) CallContractCode(callerAddr, contractAddr crypto.CommonAddress, chainId app.ChainIdType, input []byte, gas uint64, value *big.Int) (ret []byte, returnGas uint64, err error) {
 	if !evm.CanTransfer(callerAddr, chainId, value) {
 		return nil, gas, ErrInsufficientBalance
 	}
@@ -99,7 +99,7 @@ func (evm *EVM) CallContractCode(callerAddr, contractAddr crypto.CommonAddress, 
 	return ret, contract.Gas, err
 }
 
-func (evm *EVM) StaticCall(callerAddr, contractAddr crypto.CommonAddress, chainId common.ChainIdType, input []byte, gas uint64) (ret []byte, returnGas uint64, err error) {
+func (evm *EVM) StaticCall(callerAddr, contractAddr crypto.CommonAddress, chainId app.ChainIdType, input []byte, gas uint64) (ret []byte, returnGas uint64, err error) {
 	byteCode := evm.State.GetByteCode(contractAddr, chainId)
 	if byteCode == nil {
 		return nil, gas, ErrCodeNotExists
@@ -162,12 +162,12 @@ func run(evm *EVM, contract *Contract, input []byte, readOnly bool) ([]byte, err
 	return nil, ErrNoCompatibleInterpreter
 }
 
-func (evm *EVM) CanTransfer(addr crypto.CommonAddress, chainId common.ChainIdType, amount *big.Int) bool {
+func (evm *EVM) CanTransfer(addr crypto.CommonAddress, chainId app.ChainIdType, amount *big.Int) bool {
 	balance := evm.State.GetBalance(addr, chainId)
 	return balance.Cmp(amount) >= 0
 }
 
-func (evm *EVM) Transfer(from, to crypto.CommonAddress, chainId common.ChainIdType, amount *big.Int) error {
+func (evm *EVM) Transfer(from, to crypto.CommonAddress, chainId app.ChainIdType, amount *big.Int) error {
 	err := evm.State.SubBalance(from, chainId, amount)
 	if err != nil {
 		return err

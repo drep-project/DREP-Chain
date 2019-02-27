@@ -2,22 +2,22 @@ package main
 
 import (
 	"fmt"
-	"github.com/drep-project/drep-chain/log"
 	"github.com/drep-project/drep-chain/app"
+	"github.com/drep-project/drep-chain/pkgs/log"
 	"github.com/drep-project/drep-chain/database"
-	rpcService "github.com/drep-project/drep-chain/rpc/service"
+	"github.com/drep-project/drep-chain/pkgs/rpc"
 	chainService "github.com/drep-project/drep-chain/chain/service"
 	p2pService "github.com/drep-project/drep-chain/network/service"
-	cliService "github.com/drep-project/drep-chain/drepclient/service"
-	accountService "github.com/drep-project/drep-chain/accounts/service"
-	consensusService "github.com/drep-project/drep-chain/consensus/service"
+	cliService "github.com/drep-project/drep-chain/pkgs/drepclient/service"
+	accountService "github.com/drep-project/drep-chain/pkgs/accounts/service"
+	consensusService "github.com/drep-project/drep-chain/pkgs/consensus/service"
 )
 
 func main() {
 	drepApp := app.NewApp()
 	err := drepApp.AddServices(
 		database.DatabaseService{},
-		rpcService.RpcService{},
+		rpc.RpcService{},
 		log.LogService{},
 		p2pService.P2pService{},
 

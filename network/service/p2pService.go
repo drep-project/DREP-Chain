@@ -7,7 +7,7 @@ import (
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/log"
+	"github.com/drep-project/dlog"
 	p2pComponent "github.com/drep-project/drep-chain/network/component"
 	"github.com/drep-project/drep-chain/network/component/nat"
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
@@ -26,6 +26,14 @@ const (
 	MaxDeadPeer = 200
 	MaxConnections = 4000
 	UPnPStart  = false
+)
+
+var (
+	DefaultP2pConfig = &p2pTypes.P2pConfig{
+		ListerAddr :"0.0.0.0",
+		Port: 55555,
+		BootNodes:[]p2pTypes.BootNode{},
+	}
 )
 
 type P2pService struct {
@@ -83,7 +91,7 @@ func (p2pService *P2pService) Init(executeContext *app.ExecuteContext) error {
 		}
 	}
 	// config
-	p2pService.Config = &p2pTypes.P2pConfig{}
+	p2pService.Config = DefaultP2pConfig
 	err = executeContext.UnmashalConfig(p2pService.Name(), p2pService.Config)
 	if err != nil {
 		return err
@@ -92,7 +100,7 @@ func (p2pService *P2pService) Init(executeContext *app.ExecuteContext) error {
 	p2pService.prvKey, err = secp256k1.GeneratePrivateKey(nil)
 	if err != nil {
 		//TODO shoud never occur
-		log.Error("generate private key error ", "Reason", err)
+		dlog.Error("generate private key error ", "Reason", err)
 		return err
 	}
 	p2pService.livePeer = []*p2pTypes.Peer{}
@@ -156,16 +164,16 @@ func (p2pService *P2pService) receiveRoutine(){
 	}
 
 	listener, err := net.ListenTCP("tcp", addr)
-	log.Debug("P2p Service started", "addr", listener.Addr())
+	dlog.Debug("P2p Service started", "addr", listener.Addr())
 	if err != nil {
-		log.Info("error", err)
+		dlog.Info("error", err)
 		return
 	}
 
 	for {
-		log.Info("start listen", "port", p2pService.Config.Port)
+		dlog.Info("start listen", "port", p2pService.Config.Port)
 		conn, err := listener.AcceptTCP()
-		log.Info("listen from ", "accept address", conn.RemoteAddr())
+		dlog.Info("listen from ", "accept address", conn.RemoteAddr())
 		if err != nil {
 			continue
 		}
@@ -191,7 +199,7 @@ func (p2pService *P2pService) receiveRoutine(){
 						if err.Error() == "no msg"{
 							return
 						}else{
-							log.Debug("receive message error ","ErrMessage", err.Error())
+							dlog.Debug("receive message error ","ErrMessage", err.Error())
 							return
 						}
 					}
@@ -275,7 +283,7 @@ func (p2pService *P2pService) handPong(peer *p2pTypes.Peer, pong *p2pTypes.Pong)
 func (p2pService *P2pService) handError(peer *p2pTypes.Peer, err error){
 	if err != nil {
 		if pErr,ok := err.(*p2pTypes.PeerError);ok {
-			log.Error(pErr.Error())
+			dlog.Error(pErr.Error())
 			peer.Conn.Stop()
 			p2pService.addDeadPeer(peer)
 		}
@@ -314,7 +322,7 @@ func (p2pService *P2pService) sendMessageRoutine(){
 				if err != nil{
 					//dead peer
 					p2pService.handError(outMsg.Peer,p2pTypes.NewPeerError(err))
-					log.Error("", "MSG",err.Error())
+					dlog.Error("", "MSG",err.Error())
 				}
 				select {
 				case outMsg.done <- err:
@@ -330,12 +338,12 @@ func (p2pService *P2pService) sendMessageRoutine(){
 func (p2pService *P2pService) sendMessage(outMessage *outMessage) error {
 	message, err := p2pComponent.GenerateMessage(outMessage.Msg, p2pService.prvKey)
 	if err != nil {
-		log.Info("error during cipher:", "reason", err)
+		dlog.Info("error during cipher:", "reason", err)
 		return &common.DataError{MyError:common.MyError{Err:err}}
 	}
 	d, err := time.ParseDuration("3s")
 	if err != nil {
-		log.Error(err.Error())
+		dlog.Error(err.Error())
 		return &common.DefaultError{}
 	}
 	var conn net.Conn
@@ -344,18 +352,18 @@ func (p2pService *P2pService) sendMessage(outMessage *outMessage) error {
 		if err == nil {
 			break
 		} else {
-			log.Info(fmt.Sprintf("%T %v\n", err, err))
+			dlog.Info(fmt.Sprintf("%T %v\n", err, err))
 			if ope, ok := err.(*net.OpError); ok {
-				log.Info(strconv.FormatBool(ope.Timeout()), ope)
+				dlog.Info(strconv.FormatBool(ope.Timeout()), ope)
 			}
-			log.Info("Retry after 2s")
+			dlog.Info("Retry after 2s")
 			time.Sleep(2 * time.Second)
 		}
 	}
 	if err != nil {
-		log.Info(fmt.Sprintf("%T %v\n", err, err))
+		dlog.Info(fmt.Sprintf("%T %v\n", err, err))
 		if ope, ok := err.(*net.OpError); ok {
-			log.Info(strconv.FormatBool(ope.Timeout()), ope)
+			dlog.Info(strconv.FormatBool(ope.Timeout()), ope)
 			if ope.Timeout() {
 				return &common.TimeoutError{MyError:common.MyError{Err:ope}}
 			} else {
@@ -367,7 +375,7 @@ func (p2pService *P2pService) sendMessage(outMessage *outMessage) error {
 	now := time.Now()
 	d2, err := time.ParseDuration("5s")
 	if err != nil {
-		log.Error(err.Error())
+		dlog.Error(err.Error())
 		return &common.DefaultError{}
 	} else {
 		conn.SetDeadline(now.Add(d2))
@@ -382,9 +390,9 @@ func (p2pService *P2pService) sendMessage(outMessage *outMessage) error {
 		if err := p2pService.sendMessageInternal(conn, sizeBytes); err != nil {
 			return &common.TransmissionError{MyError: common.MyError{Err: err}}
 		}
-		//log.Debug("send message", "IP", conn.RemoteAddr(), "Content", string(bytes))
+		//dlog.Debug("send message", "IP", conn.RemoteAddr(), "Content", string(bytes))
 		if err := p2pService.sendMessageInternal(conn, bytes); err != nil {
-			log.Error("Send error ", "Msg", err)
+			dlog.Error("Send error ", "Msg", err)
 			return &common.TransmissionError{MyError: common.MyError{Err: err}}
 		} else {
 			return nil
@@ -429,11 +437,11 @@ func (p2pService *P2pService) recoverDeadPeer(){
 				if deadPeer.Conn.Connect() {
 					deadPeer.Conn.ReStart()
 					p2pService.addPeer(deadPeer)
-					log.Trace("try to connect peer success", "Addr", deadPeer.GetAddr())
+					dlog.Trace("try to connect peer success", "Addr", deadPeer.GetAddr())
 				}else{
 					deadPeer.Conn.Stop()
 					p2pService.addDeadPeer(deadPeer)
-					log.Trace("try to connect peer fail", "Addr", deadPeer.GetAddr())
+					dlog.Trace("try to connect peer fail", "Addr", deadPeer.GetAddr())
 				}
 			}
 		}

@@ -3,11 +3,10 @@ package app
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/drep-project/drep-chain/common"
+	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/asaskevich/EventBus"
 	"github.com/pkg/errors"
 	"gopkg.in/urfave/cli.v1"
-	"github.com/asaskevich/EventBus"
-	"github.com/AsynkronIT/protoactor-go/actor"
 )
 
 var (
@@ -42,7 +41,6 @@ GLOBAL OPTIONS:
 
 // CommonConfig read before app run,this fuction shared by other moudles
 type CommonConfig struct {
-	RootChain common.ChainIdType	`json:"rootChain,omitempty"`
 	HomeDir string 					`json:"homeDir,omitempty"`
 	ConfigFile string 				`json:"configFile,omitempty"`
 }

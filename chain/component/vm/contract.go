@@ -1,7 +1,7 @@
 package vm
 
 import (
-	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/crypto"
 	"math/big"
 )
@@ -23,7 +23,7 @@ var (
 type Contract struct {
 	CallerAddr   crypto.CommonAddress
 	ContractAddr crypto.CommonAddress
-	ChainId      common.ChainIdType
+	ChainId      app.ChainIdType
 	ByteCode     crypto.ByteCode
 	CodeHash     crypto.Hash
 	Input        []byte
@@ -33,7 +33,7 @@ type Contract struct {
 	TxHash       []byte
 }
 
-func NewContract(callerAddr crypto.CommonAddress, chainId common.ChainIdType, gas uint64, value *big.Int, jumpdests destinations) *Contract {
+func NewContract(callerAddr crypto.CommonAddress, chainId app.ChainIdType, gas uint64, value *big.Int, jumpdests destinations) *Contract {
 	if jumpdests == nil {
 		return &Contract{CallerAddr: callerAddr, ChainId: chainId, Gas: gas, Value: value, Jumpdests: NewDest()}
 	}

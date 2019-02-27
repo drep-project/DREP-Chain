@@ -6,7 +6,7 @@ import (
 	"github.com/drep-project/drep-chain/chain/component/vm"
 	"github.com/drep-project/drep-chain/chain/component/abi"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	accountTypes "github.com/drep-project/drep-chain/accounts/types"
+	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
 	"math/big"
 	"testing"
 	"fmt"

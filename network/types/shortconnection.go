@@ -2,7 +2,7 @@ package types
 
 import (
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/log"
+	"github.com/drep-project/dlog"
 	"errors"
 	"fmt"
 	"net"
@@ -114,7 +114,7 @@ func (sConn *ShortConnection) stopPongTimer() {
 func (sConn *ShortConnection) Connect() bool{
 	conn, err := net.DialTimeout("tcp",sConn.Addr, time.Second)
 	if err != nil {
-		log.Error("connection dial fail","Addr",sConn.Addr)
+		dlog.Error("connection dial fail","Addr",sConn.Addr)
 		return false
 	}
 	defer func() {
@@ -138,9 +138,9 @@ func (sConn *ShortConnection) Send(msg []byte) error{
 		}
 	}()
 	if err != nil {
-		log.Info(fmt.Sprintf("%T %v\n", err, err))
+		dlog.Info(fmt.Sprintf("%T %v\n", err, err))
 		if ope, ok := err.(*net.OpError); ok {
-			log.Info(strconv.FormatBool(ope.Timeout()), ope)
+			dlog.Info(strconv.FormatBool(ope.Timeout()), ope)
 		}
 		return err
 	}
@@ -148,13 +148,13 @@ func (sConn *ShortConnection) Send(msg []byte) error{
 	now := time.Now()
 	d2, err := time.ParseDuration("5s")
 	if err != nil {
-		log.Error(err.Error())
+		dlog.Error(err.Error())
 		return err
 	} else {
 		conn.SetDeadline(now.Add(d2))
 	}
 	if _, err := conn.Write(msg); err != nil {
-		log.Info("Send error ", err)
+		dlog.Info("Send error ", err)
 		return err
 	}
 	return nil

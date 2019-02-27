@@ -1,30 +1,34 @@
 package service
 
 import (
-	"encoding/json"
 	"fmt"
-	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/drep-project/drep-chain/app"
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/crypto/sha3"
-	"github.com/drep-project/drep-chain/database"
-	"github.com/drep-project/drep-chain/log"
-	p2pService "github.com/drep-project/drep-chain/network/service"
-	p2pTypes "github.com/drep-project/drep-chain/network/types"
-	rpcComponent "github.com/drep-project/drep-chain/rpc/component"
-	rpcService "github.com/drep-project/drep-chain/rpc/service"
-	"gopkg.in/urfave/cli.v1"
-	"math/big"
-	"strconv"
 	"sync"
 	"time"
+	"strconv"
+	"math/big"
+	"encoding/json"
+
+	"gopkg.in/urfave/cli.v1"
+	"github.com/drep-project/dlog"
+	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/drep-project/drep-chain/app"
+
+	"github.com/drep-project/drep-chain/rpc"
+	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/database"
+	"github.com/drep-project/drep-chain/crypto/sha3"
+	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	
+
+	rpc2 "github.com/drep-project/drep-chain/pkgs/rpc"
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	p2pTypes "github.com/drep-project/drep-chain/network/types"
+	p2pService "github.com/drep-project/drep-chain/network/service"
 )
 
 var (
-	rootChain     common.ChainIdType
+	rootChain     app.ChainIdType
 	//genesisPubkey = "0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26"
 )
 
@@ -33,14 +37,14 @@ const (
 )
 
 type ChainService struct {
-	RpcService      *rpcService.RpcService    `service:"rpc"`
+	RpcService      *rpc2.RpcService    `service:"rpc"`
 	P2pServer       *p2pService.P2pService    `service:"p2p"`
 	DatabaseService *database.DatabaseService `service:"database"`
 	transactionPool *TransactionPool
 	isRelay         bool
 	apis            []app.API
 
-	chainId common.ChainIdType
+	chainId app.ChainIdType
 
 	lock          sync.RWMutex
 	addBlockSync  sync.Mutex
@@ -55,7 +59,7 @@ type ChainService struct {
 	pid    *actor.PID
 }
 
-func (chainService *ChainService) ChainID() common.ChainIdType {
+func (chainService *ChainService) ChainID() app.ChainIdType {
 	return chainService.chainId
 }
 
@@ -153,7 +157,7 @@ func (chainService *ChainService) sendBlock(block *chainTypes.Block) {
 func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (*big.Int, error) {
 	chainService.addBlockSync.Lock()
 	defer chainService.addBlockSync.Unlock()
-	log.Trace("Process block leader.", "LeaderPubKey", crypto.PubKey2Address(block.Header.LeaderPubKey).Hex(), " height ", strconv.FormatInt(block.Header.Height, 10))
+	dlog.Trace("Process block leader.", "LeaderPubKey", crypto.PubKey2Address(block.Header.LeaderPubKey).Hex(), " height ", strconv.FormatInt(block.Header.Height, 10))
 	gasUsed, err := chainService.ExecuteTransactions(block)
 	if err == nil {
 		chainService.CurrentHeight = block.Header.Height
@@ -234,14 +238,14 @@ func (chainService *ChainService) GetTxHashes(ts []*chainTypes.Transaction) ([][
 	return txHashes, nil
 }
 
-func (chainService *ChainService) Attach() (*rpcComponent.Client, error) {
+func (chainService *ChainService) Attach() (*rpc.Client, error) {
 	chainService.lock.RLock()
 	defer chainService.lock.RUnlock()
 
-	return rpcComponent.DialInProc(chainService.RpcService.IpcHandler), nil
+	return rpc.DialInProc(chainService.RpcService.IpcHandler), nil
 }
 
-func (chainService *ChainService) RootChain() common.ChainIdType {
+func (chainService *ChainService) RootChain() app.ChainIdType {
 	return rootChain
 }
 
@@ -343,7 +347,7 @@ func (chainService *ChainService) GenesisBlock(genesisPubkey string) *chainTypes
 }
 
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
-func (chainService *ChainService) accumulateRewards(b *chainTypes.Block, chainId common.ChainIdType) {
+func (chainService *ChainService) accumulateRewards(b *chainTypes.Block, chainId app.ChainIdType) {
 	chainService.DatabaseService.BeginTransaction()
 	//defer  cs.DatabaseService.Discard()
 

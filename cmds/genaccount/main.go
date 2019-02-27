@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 
 	"gopkg.in/urfave/cli.v1"
-	"github.com/drep-project/drep-chain/log"
+	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/sha3"
@@ -19,9 +19,9 @@ import (
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
 	rpcTypes "github.com/drep-project/drep-chain/rpc/types"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	accountTypes "github.com/drep-project/drep-chain/accounts/types"
-	consensusTypes "github.com/drep-project/drep-chain/consensus/types"
-	accountComponent "github.com/drep-project/drep-chain/accounts/component"
+	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
+	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
+	accountComponent "github.com/drep-project/drep-chain/pkgs/accounts/component"
 
 )
 
@@ -81,7 +81,7 @@ func gen(ctx *cli.Context) error {
 	}
 
 
-	logConfig := log.LogConfig{}
+	logConfig := dlog.LogConfig{}
 	logConfig.LogLevel = 3
 
 	rpcConfig := rpcTypes.RpcConfig{}

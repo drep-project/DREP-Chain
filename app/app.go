@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/drep-project/drep-chain/common/fileutil"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -92,7 +93,7 @@ func (mApp DrepApp) addService(serviceValue reflect.Value) {
 
 			if !hasService {
 				fmt.Println(fmt.Sprintf("service not exist %s require %s", serviceValue.Interface().(Service).Name(), refServiceName))
-				//log.Debug("service not exist",  "Service", addedService.Name() ,"RefService", refServiceName)
+				//dlog.Debug("service not exist",  "Service", addedService.Name() ,"RefService", refServiceName)
 			}
 		}
 	}
@@ -197,25 +198,24 @@ func loadConfigFile(ctx *cli.Context, homeDir string) (map[string]json.RawMessag
 
 	if ctx.GlobalIsSet(ConfigFileFlag.Name) {
 		file := ctx.GlobalString(ConfigFileFlag.Name)
-		if common.IsFileExists(file) {
+		if fileutil.IsFileExists(file) {
 			//report error when user specify
 			return nil, errors.New("specify config file not exist")
 		}
 		configFile = file
 	}
 
-	if !common.IsFileExists(configFile) {
+	if !fileutil.IsFileExists(configFile) {
 		//use default
 		cfg := &CommonConfig{
 			HomeDir: homeDir,
 			ConfigFile: configFile,
-			RootChain: common.ChainIdType{},
 		}
 		originConfigBytes, err := json.MarshalIndent(cfg,"", "\t")
 		if err != nil {
 			return nil, err
 		}
-		common.EnsureFile(configFile)
+		fileutil.EnsureFile(configFile)
 		file, err :=  os.OpenFile(configFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0777)
 		if err != nil {
 			return nil, err

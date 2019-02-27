@@ -1,17 +1,17 @@
 package core
 
 import (
-	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/chain/component/vm"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"github.com/drep-project/drep-chain/crypto"
 	"math/big"
 )
 
-func ExecuteCreateCode(evm *vm.EVM, callerAddr crypto.CommonAddress, chainId common.ChainIdType, code []byte, gas uint64, value *big.Int) (uint64, error) {
+func ExecuteCreateCode(evm *vm.EVM, callerAddr crypto.CommonAddress, chainId app.ChainIdType, code []byte, gas uint64, value *big.Int) (uint64, error) {
 	ret, _, returnGas, err := evm.CreateContractCode(callerAddr, chainId, code, gas, value)
 	fmt.Println("gas: ", gas)
 	fmt.Println("code: ", hex.EncodeToString(code))
@@ -20,14 +20,14 @@ func ExecuteCreateCode(evm *vm.EVM, callerAddr crypto.CommonAddress, chainId com
 	return returnGas, err
 }
 
-func ExecuteCallCode(evm *vm.EVM, callerAddr, contractAddr crypto.CommonAddress, chainId common.ChainIdType, input []byte, gas uint64, value *big.Int) (uint64, error) {
+func ExecuteCallCode(evm *vm.EVM, callerAddr, contractAddr crypto.CommonAddress, chainId app.ChainIdType, input []byte, gas uint64, value *big.Int) (uint64, error) {
 	ret, returnGas, err := evm.CallContractCode(callerAddr, contractAddr, chainId, input, gas, value)
 	fmt.Println("ret: ", ret)
 	fmt.Println("err: ", err)
 	return returnGas, err
 }
 
-func ExecuteStaticCall(evm *vm.EVM, callerAddr, contractAddr crypto.CommonAddress, chainId common.ChainIdType, input []byte, gas uint64) (uint64, error) {
+func ExecuteStaticCall(evm *vm.EVM, callerAddr, contractAddr crypto.CommonAddress, chainId app.ChainIdType, input []byte, gas uint64) (uint64, error) {
 	ret, returnGas, err := evm.StaticCall(callerAddr, contractAddr, chainId, input, gas)
 	fmt.Println("ret: ", ret)
 	fmt.Println("err: ", err)
@@ -37,8 +37,8 @@ func ExecuteStaticCall(evm *vm.EVM, callerAddr, contractAddr crypto.CommonAddres
 type Message struct {
 	From      crypto.CommonAddress
 	To        crypto.CommonAddress
-	ChainId   common.ChainIdType
-	DestChain common.ChainIdType
+	ChainId   app.ChainIdType
+	DestChain app.ChainIdType
 	Gas       uint64
 	Value     *big.Int
 	Nonce     uint64
