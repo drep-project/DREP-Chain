@@ -38,7 +38,7 @@ func (s *State) CreateContractAccount(callerAddr crypto.CommonAddress, chainId c
 	if err != nil {
 		return nil, err
 	}
-	return account, s.databaseApi.PutStorage(*account.Address, chainId, account.Storage, true)
+	return account, s.databaseApi.PutStorage(*account.Address, account.Storage, true)
 }
 
 func (s *State) SubBalance(addr crypto.CommonAddress, chainId common.ChainIdType, amount *big.Int) error {
@@ -58,22 +58,22 @@ func (s *State) GetBalance(addr crypto.CommonAddress, chainId common.ChainIdType
 }
 
 func (s *State) SetNonce(addr crypto.CommonAddress, chainId common.ChainIdType, nonce int64) error {
-	return s.databaseApi.PutNonce(addr, chainId, nonce, true)
+	return s.databaseApi.PutNonce(addr, nonce, true)
 }
 
 func (s *State) GetNonce(addr crypto.CommonAddress, chainId common.ChainIdType) int64 {
-	return s.databaseApi.GetNonce(addr, chainId, true)
+	return s.databaseApi.GetNonce(addr, true)
 }
 
 func (s *State) Suicide(addr crypto.CommonAddress, chainId common.ChainIdType) error {
-	storage := s.databaseApi.GetStorage(addr, chainId, true)
+	storage := s.databaseApi.GetStorage(addr, true)
 	storage.Balance = new(big.Int)
 	storage.Nonce = 0
-	return s.databaseApi.PutStorage(addr, chainId, storage, true)
+	return s.databaseApi.PutStorage(addr, storage, true)
 }
 
 func (s *State) GetByteCode(addr crypto.CommonAddress, chainId common.ChainIdType) crypto.ByteCode {
-	return s.databaseApi.GetByteCode(addr, chainId, true)
+	return s.databaseApi.GetByteCode(addr, true)
 }
 
 func (s *State) GetCodeSize(addr crypto.CommonAddress, chainId common.ChainIdType) int {
@@ -87,7 +87,7 @@ func (s *State) GetCodeHash(addr crypto.CommonAddress, chainId common.ChainIdTyp
 }
 
 func (s *State) SetByteCode(addr crypto.CommonAddress, chainId common.ChainIdType, byteCode crypto.ByteCode) error {
-	return s.databaseApi.PutByteCode(addr, chainId, byteCode, true)
+	return s.databaseApi.PutByteCode(addr, byteCode, true)
 }
 
 func (s *State) GetLogs(txHash []byte, chainId common.ChainIdType) []*chainTypes.Log {

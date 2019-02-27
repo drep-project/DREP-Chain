@@ -92,20 +92,20 @@ func (accountapi *AccountApi) Close() {
 	accountapi.Wallet.Close()
 }
 
-func (accountapi *AccountApi) SendTransaction(from *secp256k1.PublicKey, to crypto.CommonAddress, chainId common.ChainIdType, amount *big.Int) (string, error) {
-	t := accountapi.chainService.GenerateBalanceTransaction(from, to, chainId, amount)
+func (accountapi *AccountApi) SendTransaction(from *secp256k1.PublicKey, to crypto.CommonAddress, amount *big.Int) (string, error) {
+	t := accountapi.chainService.GenerateBalanceTransaction(from, to, amount)
     accountapi.chainService.SendTransaction(t)
     return t.TxId()
 }
 
-func (accountapi *AccountApi) Call(from *secp256k1.PublicKey, to crypto.CommonAddress, chainId common.ChainIdType, input []byte, amount *big.Int, readOnly bool)  (string, error){
-    t := accountapi.chainService.GenerateCallContractTransaction(from, to, chainId, input, amount, readOnly)
+func (accountapi *AccountApi) Call(from *secp256k1.PublicKey, to crypto.CommonAddress, input []byte, amount *big.Int, readOnly bool)  (string, error){
+    t := accountapi.chainService.GenerateCallContractTransaction(from, to, input, amount, readOnly)
     accountapi.chainService.SendTransaction(t)
     return t.TxId()
 }
 
-func (accountapi *AccountApi) CreateCode(from *secp256k1.PublicKey, to crypto.CommonAddress, chainId common.ChainIdType, byteCode []byte) (string, error){
-    t := accountapi.chainService.GenerateCreateContractTransaction(from, to, chainId, byteCode)
+func (accountapi *AccountApi) CreateCode(from *secp256k1.PublicKey, to crypto.CommonAddress, byteCode []byte) (string, error){
+    t := accountapi.chainService.GenerateCreateContractTransaction(from, to, byteCode)
     accountapi.chainService.SendTransaction(t)
     return t.TxId()
 }
@@ -123,5 +123,5 @@ func (accountapi *AccountApi) GasPrice() *big.Int {
 }
 
 func (accountapi *AccountApi) GetCode(addr crypto.CommonAddress, chainId common.ChainIdType) []byte {
-    return accountapi.databaseService.GetByteCode(addr, chainId, false)
+    return accountapi.databaseService.GetByteCode(addr, false)
 }

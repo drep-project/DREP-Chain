@@ -40,7 +40,7 @@ func (chain *ChainApi) GetBalance(addr crypto.CommonAddress, chainId common.Chai
 }
 
 func (chain *ChainApi) GetNonce(addr crypto.CommonAddress, chainId common.ChainIdType) int64 {
-    return chain.dbService.GetNonce(addr, chainId, true)
+    return chain.dbService.GetNonce(addr, true)
 }
 
 func (chain *ChainApi) GetPreviousBlockHash() string {

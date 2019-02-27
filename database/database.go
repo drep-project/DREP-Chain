@@ -3,7 +3,6 @@ package database
 import (
 	"encoding/json"
 	accountTypes "github.com/drep-project/drep-chain/accounts/types"
-	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -152,9 +151,9 @@ func (db *Database) delState(key []byte) error {
 	return nil
 }
 
-func (db *Database) getStorage(addr crypto.CommonAddress, chainId common.ChainIdType) *accountTypes.Storage {
+func (db *Database) getStorage(addr crypto.CommonAddress) *accountTypes.Storage {
 	storage := &accountTypes.Storage{}
-	key := sha3.Hash256([]byte("storage_" + addr.Hex() + chainId.Hex()))
+	key := sha3.Hash256([]byte("storage_" + addr.Hex()))
 	value, err := db.get(key, false)
 	if err != nil {
 		return storage
@@ -163,8 +162,8 @@ func (db *Database) getStorage(addr crypto.CommonAddress, chainId common.ChainId
 	return storage
 }
 
-func (db *Database) putStorage(addr crypto.CommonAddress, chainId common.ChainIdType, storage *accountTypes.Storage) error {
-	key := sha3.Hash256([]byte("storage_" + addr.Hex() + chainId.Hex()))
+func (db *Database) putStorage(addr crypto.CommonAddress, storage *accountTypes.Storage) error {
+	key := sha3.Hash256([]byte("storage_" + addr.Hex()))
 	value, err := json.Marshal(storage)
 	if err != nil {
 		return err

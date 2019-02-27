@@ -245,15 +245,14 @@ func (chainService *ChainService) RootChain() common.ChainIdType {
 	return rootChain
 }
 
-func (chainService *ChainService) GenerateBalanceTransaction(from *secp256k1.PublicKey, to crypto.CommonAddress, chainId common.ChainIdType, amount *big.Int) *chainTypes.Transaction {
+func (chainService *ChainService) GenerateBalanceTransaction(from *secp256k1.PublicKey, to crypto.CommonAddress, amount *big.Int) *chainTypes.Transaction {
 	address := crypto.PubKey2Address(from)
-	nonce := chainService.DatabaseService.GetNonce(address, chainId, false)
+	nonce := chainService.DatabaseService.GetNonce(address, false)
 	data := &chainTypes.TransactionData{
 		Version:   Version,
 		Nonce:     nonce,
 		Type:      TransferType,
 		To:        to,
-		ChainId:   chainId,
 		Amount:    amount,
 		GasPrice:  DefaultGasPrice,
 		GasLimit:  TransferGas,
@@ -263,14 +262,13 @@ func (chainService *ChainService) GenerateBalanceTransaction(from *secp256k1.Pub
 	return &chainTypes.Transaction{Data: data}
 }
 
-func (chainService *ChainService) GenerateCreateContractTransaction(from *secp256k1.PublicKey, to crypto.CommonAddress, chainId common.ChainIdType, byteCode []byte) *chainTypes.Transaction {
+func (chainService *ChainService) GenerateCreateContractTransaction(from *secp256k1.PublicKey, to crypto.CommonAddress, byteCode []byte) *chainTypes.Transaction {
 	address := crypto.PubKey2Address(from)
-	nonce := chainService.DatabaseService.GetNonce(address, chainId, false)
+	nonce := chainService.DatabaseService.GetNonce(address, false)
 	nonce++
 	data := &chainTypes.TransactionData{
 		Nonce:     nonce,
 		Type:      CreateContractType,
-		ChainId:   chainId,
 		GasPrice:  DefaultGasPrice,
 		GasLimit:  CreateContractGas,
 		Timestamp: time.Now().Unix(),
@@ -282,14 +280,13 @@ func (chainService *ChainService) GenerateCreateContractTransaction(from *secp25
 	return &chainTypes.Transaction{Data: data}
 }
 
-func (chainService *ChainService) GenerateCallContractTransaction(from *secp256k1.PublicKey, to crypto.CommonAddress, chainId common.ChainIdType, input []byte, amount *big.Int, readOnly bool) *chainTypes.Transaction {
+func (chainService *ChainService) GenerateCallContractTransaction(from *secp256k1.PublicKey, to crypto.CommonAddress, input []byte, amount *big.Int, readOnly bool) *chainTypes.Transaction {
 	address := crypto.PubKey2Address(from)
-	nonce := chainService.DatabaseService.GetNonce(address, chainId, false)
+	nonce := chainService.DatabaseService.GetNonce(address, false)
 	nonce++
 	data := &chainTypes.TransactionData{
 		Nonce:     nonce,
 		Type:      CallContractType,
-		ChainId:   chainId,
 		To:        to,
 		Amount:    amount,
 		GasPrice:  DefaultGasPrice,

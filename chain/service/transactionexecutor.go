@@ -119,8 +119,8 @@ func (chainService *ChainService) execute(t *chainTypes.Transaction) (gasUsed, g
 func (chainService *ChainService) canExecute(t *chainTypes.Transaction, gasFloor, gasCap *big.Int) (canExecute bool, addr crypto.CommonAddress, balance, gasLimit, gasPrice *big.Int) {
     addr = crypto.PubKey2Address(t.Data.PubKey)
     balance = chainService.DatabaseService.GetBalance(addr, t.Data.ChainId, true)
-    nonce :=  chainService.DatabaseService.GetNonce(addr, t.Data.ChainId,true) + 1
-    chainService.DatabaseService.PutNonce(addr, t.Data.ChainId, nonce,true)
+    nonce :=  chainService.DatabaseService.GetNonce(addr,true) + 1
+    chainService.DatabaseService.PutNonce(addr, nonce,true)
 
     if nonce != t.Data.Nonce {
         return

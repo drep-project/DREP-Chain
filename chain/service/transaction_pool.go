@@ -73,7 +73,7 @@ func (pool *TransactionPool) checkAndGetAddr(tran *chainTypes.Transaction) (bool
         return false, crypto.CommonAddress{}
     }
     // TODO Check sig
-    if pool.databaseApi.GetNonce(addr, chainId, true) >= tran.Data.Nonce {
+    if pool.databaseApi.GetNonce(addr, true) >= tran.Data.Nonce {
         return false, crypto.CommonAddress{}
     }
     {
@@ -157,14 +157,13 @@ func (pool *TransactionPool) PickTransactions(maxGas *big.Int) []*chainTypes.Tra
             if id, err := t.TxId(); err == nil {
                 if  pool.tranSet[id] {
                     addr := crypto.PubKey2Address(t.Data.PubKey)
-                    chainId := t.Data.ChainId
                     if ts, exists :=  pool.accountTran[addr]; exists {
                         it2 := ts.Iterator()
                         for it2.HasNext() {
                             if t2, ok := it2.Next().(*chainTypes.Transaction); ok {
                                 cn, e := tn[addr]
                                 if !e {
-                                    cn = pool.databaseApi.GetNonce(addr, chainId, true)
+                                    cn = pool.databaseApi.GetNonce(addr, true)
                                 }
                                 if t2.Data.Nonce != cn + 1 {
                                     continue
