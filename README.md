@@ -26,7 +26,7 @@ Clone the repository into the appropriate $GOPATH/src/github.com/drep-project di
 ```
   git clone https://github.com/drep-project/drep-chain.git
   cd drep-chain
-  go install
+  go install .\cmds\...
 ```
 
 # Usage

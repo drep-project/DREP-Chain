@@ -1,16 +1,16 @@
-package main
+package drep
 
 import (
 	"fmt"
-	accountService "github.com/drep-project/drep-chain/accounts/service"
-	"github.com/drep-project/drep-chain/app"
-	chainService "github.com/drep-project/drep-chain/chain/service"
-	consensusService "github.com/drep-project/drep-chain/consensus/service"
-	"github.com/drep-project/drep-chain/database"
-	cliService "github.com/drep-project/drep-chain/drepclient/service"
 	"github.com/drep-project/drep-chain/log"
-	p2pService "github.com/drep-project/drep-chain/network/service"
+	"github.com/drep-project/drep-chain/app"
+	"github.com/drep-project/drep-chain/database"
 	rpcService "github.com/drep-project/drep-chain/rpc/service"
+	chainService "github.com/drep-project/drep-chain/chain/service"
+	p2pService "github.com/drep-project/drep-chain/network/service"
+	cliService "github.com/drep-project/drep-chain/drepclient/service"
+	accountService "github.com/drep-project/drep-chain/accounts/service"
+	consensusService "github.com/drep-project/drep-chain/consensus/service"
 )
 
 func main() {

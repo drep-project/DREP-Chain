@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"github.com/drep-project/drep-chain/common"
 	"log"
 	"testing"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
@@ -11,15 +12,15 @@ import (
 
 func TestWallet(t *testing.T) {
 	password := string(sha3.Hash256([]byte("AAAAAAAAAAAAAAAA")))
-
-	newNode := accountTypes.NewNode(nil, accountTypes.RootChain)
+	rootChain := common.ChainIdType{}
+	newNode := accountTypes.NewNode(nil, rootChain)
 	fmt.Println(newNode)
 
 	accountConfig := &accountTypes.Config{
 		KeyStoreDir: "TestWallet",
 	}
-	wallet, err := NewWallet(accountConfig, accountTypes.RootChain)
-	wallet.chainId = accountTypes.RootChain
+	wallet, err := NewWallet(accountConfig, rootChain)
+	wallet.chainId = rootChain
 	if err != nil {
 		log.Fatal("NewWallet error")
 	}

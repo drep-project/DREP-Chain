@@ -1,21 +1,21 @@
 [
   {
-    "name": "jessie",
+    "name": "dreptest1",
     "ip": "192.168.1.198",
     "port": 55555
   },
   {
-    "name": "nani",
+    "name": "dreptest2",
     "ip": "192.168.1.130",
     "port": 55555
   },
   {
-    "name": "bich",
+    "name": "dreptest3",
     "ip": "192.168.1.139",
     "port": 55555
   },
   {
-    "name": "helo",
+    "name": "dreptest4",
     "ip": "192.168.1.191",
     "port": 55555
   }
