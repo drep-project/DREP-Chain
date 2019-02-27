@@ -1,15 +1,13 @@
 package service
 
 import (
-	
 	"math/big"
-	"encoding/json"
 	"github.com/pkg/errors"
-	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/database"
     "github.com/drep-project/drep-chain/crypto/secp256k1"
-	chainService "github.com/drep-project/drep-chain/chain/service"
+   chainService "github.com/drep-project/drep-chain/chain/service"
+    "encoding/json"
+    "github.com/drep-project/drep-chain/database"
 )
 
 
@@ -123,6 +121,6 @@ func (accountapi *AccountApi) GasPrice() *big.Int {
     return chainService.DefaultGasPrice
 }
 
-func (accountapi *AccountApi) GetCode(addr crypto.CommonAddress, chainId app.ChainIdType) []byte {
+func (accountapi *AccountApi) GetCode(addr crypto.CommonAddress) []byte {
     return accountapi.databaseService.GetByteCode(addr, false)
 }
