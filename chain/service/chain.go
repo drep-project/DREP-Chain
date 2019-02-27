@@ -118,7 +118,8 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 			Namespace: "chain",
 			Version:   "1.0",
 			Service: &ChainApi{
-				chain: chainService,
+				chainService: chainService,
+				dbService:chainService.DatabaseService,
 			},
 			Public: true,
 		},

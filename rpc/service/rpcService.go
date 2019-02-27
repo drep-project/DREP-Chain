@@ -218,7 +218,7 @@ func (rpcService *RpcService) StartHTTP(endpoint string, apis []app.API, modules
 	if endpoint == "" {
 		return nil
 	}
-	listener, handler, err := StartHTTPEndpoint(endpoint, apis, modules, cors, vhosts, *timeouts)
+	listener, handler, err := StartHTTPEndpoint(endpoint, apis, modules, cors, vhosts, rpcTypes.HTTPTimeouts{})
 	if err != nil {
 		return err
 	}

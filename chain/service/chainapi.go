@@ -6,49 +6,59 @@ import (
     "github.com/drep-project/drep-chain/database"
     "github.com/drep-project/drep-chain/crypto"
     "github.com/drep-project/drep-chain/common"
+    "fmt"
 )
 
-var dbService = &database.DatabaseService{}
 
 type ChainApi struct {
-    chain *ChainService
+    chainService *ChainService
+    dbService *database.DatabaseService `service:"database"`
 }
 
 func (chain *ChainApi) GetBlock(height int64) *chainType.Block {
     if height < 0 {
         return nil
     }
-    return dbService.GetBlock(height)
+    return chain.dbService.GetBlock(height)
 }
 
 func (chain *ChainApi) GetMaxHeight() int64 {
-    return dbService.GetMaxHeight()
+    return chain.dbService.GetMaxHeight()
 }
 
 func (chain *ChainApi) GetBalance(addr crypto.CommonAddress, chainId common.ChainIdType) *big.Int{
-    return dbService.GetBalance(addr, chainId, true)
+    bbb := chain.dbService.GetBalance(addr, common.ChainIdType{}, true)
+    text, _ := chainId.MarshalText()
+    fmt.Println(string(text))
+
+    text, _ = addr.MarshalText()
+    fmt.Println(string(text))
+    fmt.Println(common.ChainIdType{}.Hex())
+
+    fmt.Println(bbb.Int64())
+    return bbb
 }
 
 func (chain *ChainApi) GetNonce(addr crypto.CommonAddress, chainId common.ChainIdType) int64 {
-    return dbService.GetNonce(addr, chainId, true)
+    return chain.dbService.GetNonce(addr, chainId, true)
 }
 
 func (chain *ChainApi) GetPreviousBlockHash() string {
-    bytes := dbService.GetPreviousBlockHash()
+    bytes := chain.dbService.GetPreviousBlockHash()
     return "0x" + string(bytes)
 }
 
 func (chain *ChainApi) GetReputation(addr crypto.CommonAddress, chainId common.ChainIdType) *big.Int {
-    return dbService.GetReputation(addr, chainId, true)
+    return chain.dbService.GetReputation(addr, chainId, true)
 }
 
 func (chain *ChainApi) GetTransactionsFromBlock(height int64) []*chainType.Transaction {
-    block := dbService.GetBlock(height)
+    block := chain.dbService.GetBlock(height)
     return block.Data.TxList
 }
 
 func (chain *ChainApi) GetTransactionByBlockHeightAndIndex(height int64, index int) *chainType.Transaction{
-    block := dbService.GetBlock(height)
+    block := chain.dbService.GetBlock(height)
     if index > len(block.Data.TxList) {
         return nil
     }
@@ -56,6 +66,6 @@ func (chain *ChainApi) GetTransactionByBlockHeightAndIndex(height int64, index i
 }
 
 func (chain *ChainApi) GetTransactionCountByBlockHeight(height int64) int {
-    block := dbService.GetBlock(height)
+    block := chain.dbService.GetBlock(height)
     return len(block.Data.TxList)
 }

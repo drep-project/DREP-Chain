@@ -144,6 +144,7 @@ func (database *DatabaseService) PutStorage(addr crypto.CommonAddress, chainId c
 
 func (database *DatabaseService) GetBalance(addr crypto.CommonAddress, chainId common.ChainIdType, transactional bool) *big.Int {
     storage := database.GetStorage(addr, chainId, transactional)
+
     if storage == nil {
         return new(big.Int)
     }
@@ -267,6 +268,9 @@ func  (database *DatabaseService) Discard() {
 
 func (database *DatabaseService)AddBalance(addr crypto.CommonAddress, amount *big.Int, chainId common.ChainIdType, transactional bool) {
     balance := database.GetBalance(addr, chainId, transactional)
+    //text, _ := addr.MarshalText()
+    //x := string(text)
+    //fmt.Println("0x" + x)
     if balance == nil {
         balance = new(big.Int).SetInt64(0)
     }
