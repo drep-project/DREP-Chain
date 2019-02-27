@@ -118,7 +118,7 @@ func (chainService *ChainService) execute(t *chainTypes.Transaction) (gasUsed, g
 
 func (chainService *ChainService) canExecute(t *chainTypes.Transaction, gasFloor, gasCap *big.Int) (canExecute bool, addr crypto.CommonAddress, balance, gasLimit, gasPrice *big.Int) {
     addr = crypto.PubKey2Address(t.Data.PubKey)
-    balance = chainService.DatabaseService.GetBalance(addr, t.Data.ChainId, true)
+    balance = chainService.DatabaseService.GetBalance(addr, true)
     nonce :=  chainService.DatabaseService.GetNonce(addr,true) + 1
     chainService.DatabaseService.PutNonce(addr, nonce,true)
 
@@ -149,7 +149,7 @@ func (chainService *ChainService) deduct(addr crypto.CommonAddress, chainId app.
         actualFee = new(big.Int).Set(balance)
         leftBalance = new(big.Int)
     }
-    chainService.DatabaseService.PutBalance(addr, chainId, leftBalance, true)
+    chainService.DatabaseService.PutBalance(addr, leftBalance, true)
     return leftBalance, actualFee
 }
 
@@ -171,10 +171,10 @@ func (chainService *ChainService) executeTransferTransaction(t *chainTypes.Trans
     balance, gasFee = chainService.deduct(addr, t.Data.ChainId, balance, gasFee)
     if balance.Cmp(t.Data.Amount) >= 0 {
        balance = new(big.Int).Sub(balance, t.Data.Amount)
-       balanceTo := chainService.DatabaseService.GetBalance(t.Data.To, t.Data.ChainId, true)
+       balanceTo := chainService.DatabaseService.GetBalance(t.Data.To, true)
        balanceTo = new(big.Int).Add(balanceTo, t.Data.Amount)
-       chainService.DatabaseService.PutBalance(addr, t.Data.ChainId, balance, true)
-       chainService.DatabaseService.PutBalance(t.Data.To, t.Data.ChainId, balanceTo, true)
+       chainService.DatabaseService.PutBalance(addr, balance, true)
+       chainService.DatabaseService.PutBalance(t.Data.To, balanceTo, true)
     }
     return
 }
@@ -195,7 +195,7 @@ func (chainService *ChainService) executeCreateContractTransaction(t *chainTypes
     returnGas, _ := chainComponent.ApplyTransaction(evm, t)
     gasUsed = new(big.Int).Sub(gasLimit, new(big.Int).SetUint64(returnGas))
     gasFee = new(big.Int).Mul(gasUsed, gasPrice)
-    balance = chainService.DatabaseService.GetBalance(addr, t.Data.ChainId, true)
+    balance = chainService.DatabaseService.GetBalance(addr, true)
     _, gasFee = chainService.deduct(addr, t.Data.ChainId, balance, gasFee)
     return
 }
@@ -217,7 +217,7 @@ func (chainService *ChainService) executeCallContractTransaction(t *chainTypes.T
     returnGas, _ := chainComponent.ApplyTransaction(evm, t)
     gasUsed = new(big.Int).Sub(gasLimit, new(big.Int).SetUint64(returnGas))
     gasFee = new(big.Int).Mul(gasUsed, gasPrice)
-    balance = chainService.DatabaseService.GetBalance(addr, t.Data.ChainId, true)
+    balance = chainService.DatabaseService.GetBalance(addr, true)
     _, gasFee = chainService.deduct(addr, t.Data.ChainId, balance, gasFee)
     return
 }

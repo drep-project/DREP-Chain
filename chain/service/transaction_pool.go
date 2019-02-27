@@ -68,7 +68,6 @@ func (pool *TransactionPool) Contains(id string) bool {
 
 func (pool *TransactionPool) checkAndGetAddr(tran *chainTypes.Transaction) (bool, crypto.CommonAddress) {
     addr := crypto.PubKey2Address(tran.Data.PubKey)
-    chainId := tran.Data.ChainId
     if tran.Data == nil {
         return false, crypto.CommonAddress{}
     }
@@ -83,7 +82,7 @@ func (pool *TransactionPool) checkAndGetAddr(tran *chainTypes.Transaction) (bool
         total := big.NewInt(0)
         total.Mul(gasLimit, gasPrice)
         total.Add(total, amount)
-        if pool.databaseApi.GetBalance(addr, chainId,true).Cmp(total) < 0 {
+        if pool.databaseApi.GetBalance(addr,true).Cmp(total) < 0 {
             return false, crypto.CommonAddress{}
             // TODO Remove this
         }
