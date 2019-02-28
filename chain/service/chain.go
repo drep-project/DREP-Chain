@@ -15,6 +15,7 @@ import (
 
 	"github.com/drep-project/drep-chain/rpc"
 	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/crypto/sha3"
@@ -57,6 +58,12 @@ type ChainService struct {
 
 	Config *chainTypes.ChainConfig
 	pid    *actor.PID
+
+	//Events related to sync blocks
+	syncBlockEvent event.Feed
+	//Maximum block height being synced
+	syncingMaxHeight int64
+	syncMaxHeightMut     sync.Mutex
 }
 
 func (chainService *ChainService) ChainID() app.ChainIdType {
@@ -110,6 +117,7 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 	if err != nil {
 		panic(err)
 	}
+	chainService.syncingMaxHeight = -1
 	chainService.pid = pid
 	router := chainService.P2pServer.GetRouter()
 	chainP2pMessage := chainService.P2pMessages()
@@ -349,8 +357,6 @@ func (chainService *ChainService) GenesisBlock(genesisPubkey string) *chainTypes
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
 func (chainService *ChainService) accumulateRewards(b *chainTypes.Block, chainId app.ChainIdType) {
 	chainService.DatabaseService.BeginTransaction()
-	//defer  cs.DatabaseService.Discard()
-
 	reward := new(big.Int).SetUint64(uint64(Rewards))
 	leaderAddr := crypto.PubKey2Address(b.Header.LeaderPubKey)
 
@@ -366,3 +372,8 @@ func (chainService *ChainService) accumulateRewards(b *chainTypes.Block, chainId
 
 	chainService.DatabaseService.Commit()
 }
+
+func (chainService *ChainService)Subscribe( subchan chan event.SyncBlockEvent)event.Subscription{
+	return chainService.syncBlockEvent.Subscribe(subchan)
+}
+

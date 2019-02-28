@@ -2,27 +2,45 @@ package service
 
 import (
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/common/event"
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
 	"time"
 )
 
 func (chainService *ChainService) fetchBlocks() {
-	go func() {
-		for {
-			chainService.P2pServer.Broadcast(&chainTypes.ReqPeerState{
-				Height: chainService.DatabaseService.GetMaxHeight(),
-			})
-			time.Sleep(time.Second * 5)
-			peer, state := chainService.GetBestPeer()
-			if peer == nil || state == nil || state.Height < 1 {
-				continue
+	for {
+		maxH := chainService.DatabaseService.GetMaxHeight()
+
+		chainService.P2pServer.Broadcast(&chainTypes.ReqPeerState{
+			Height: maxH,
+		})
+		time.Sleep(time.Second * 5)
+		peer, state := chainService.GetBestPeer()
+		if peer == nil || state == nil || state.Height < 1 {
+			continue
+		}
+
+		if state.Height > maxH {
+			chainService.syncMaxHeightMut.Lock()
+			if chainService.syncingMaxHeight == -1 {
+				chainService.syncingMaxHeight = state.Height
+				chainService.syncBlockEvent.Send(&event.SyncBlockEvent{EventType: event.StartSyncBlock})
+
+			} else if chainService.syncingMaxHeight < state.Height {
+				chainService.syncingMaxHeight = state.Height
 			}
-			if state.Height > chainService.DatabaseService.GetMaxHeight() {
-				req := &chainTypes.BlockReq{Height: chainService.DatabaseService.GetMaxHeight()}
+			chainService.syncMaxHeightMut.Unlock()
+
+			num := int(chainService.syncingMaxHeight - maxH)
+			for i := 0; i < num; i++ {
+				if i > 0 && i%64 == 0 {
+					time.Sleep(time.Second)
+				}
+				req := &chainTypes.BlockReq{Height: maxH + int64(i)}
 				chainService.P2pServer.Send(peer, req)
 			}
 		}
-	}()
+	}
 }
 
 func (chainService *ChainService) handlePeerState(peer *p2pTypes.Peer, peerState *chainTypes.PeerState) {

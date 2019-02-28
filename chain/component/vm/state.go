@@ -31,6 +31,7 @@ func NewState(databaseService *database.DatabaseService) *State {
 	return &State{}
 }
 
+
 func (s *State) CreateContractAccount(callerAddr crypto.CommonAddress, nonce int64) (*chainTypes.Account, error) {
 	account, err := chainTypes.NewContractAccount(callerAddr, nonce)
 	if err != nil {
@@ -38,6 +39,7 @@ func (s *State) CreateContractAccount(callerAddr crypto.CommonAddress, nonce int
 	}
 	return account, s.databaseApi.PutStorage(*account.Address, account.Storage, true)
 }
+
 
 func (s *State) SubBalance(addr crypto.CommonAddress, amount *big.Int) error {
 	balance := s.databaseApi.GetBalance(addr, true)
