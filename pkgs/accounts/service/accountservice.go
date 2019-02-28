@@ -6,6 +6,7 @@ import (
 	"gopkg.in/urfave/cli.v1"
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/common/fileutil"
 	accountComponent "github.com/drep-project/drep-chain/pkgs/accounts/component"
@@ -33,6 +34,7 @@ var (
 
 // CliService provides an interactive command line window
 type AccountService struct {
+	DatabaseService *database.DatabaseService  `service:"database"`
 	ChainService *chainService.ChainService  `service:"chain"`
 	CommonConfig *app.CommonConfig
 	Config       *accountTypes.Config
@@ -55,6 +57,7 @@ func (accountService *AccountService) Api() []app.API {
 				Wallet: accountService.Wallet,
 				chainService: accountService.ChainService,
 				accountService: accountService,
+				databaseService: accountService.DatabaseService,
 			},
 			Public: true,
 		},

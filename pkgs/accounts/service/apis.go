@@ -7,6 +7,7 @@ import (
     "github.com/drep-project/drep-chain/crypto/secp256k1"
    chainService "github.com/drep-project/drep-chain/chain/service"
     "github.com/drep-project/drep-chain/database"
+    "github.com/drep-project/drep-chain/crypto/sha3"
 )
 
 
@@ -24,14 +25,6 @@ func (accountapi *AccountApi) AddressList() ([]*crypto.CommonAddress, error) {
 	return accountapi.Wallet.ListAddress()
 }
 
-func (accountapi *AccountApi) Create(password string) error {
-	err := accountapi.accountService.CreateWallet(password)
-	if err != nil {
-		return err
-	}
-	return accountapi.Open(password)
-}
-
 // CreateAccount create a new account and return address
 func (accountapi *AccountApi) CreateAccount() (*crypto.CommonAddress, error) {
 	if !accountapi.Wallet.IsOpen() {
@@ -44,24 +37,16 @@ func (accountapi *AccountApi) CreateAccount() (*crypto.CommonAddress, error) {
 	return newAaccount.Address, nil
 }
 
-// DumpPrikey dumpPrivate
-func (accountapi *AccountApi) DumpPrivkey(address *crypto.CommonAddress) (*secp256k1.PrivateKey, error) {
-	if !accountapi.Wallet.IsOpen() {
-		return nil, errors.New("wallet is not open")
-	}
-	if accountapi.Wallet.IsLock() {
-		return nil, errors.New("wallet has locked")
-	}
-
-	node, err := accountapi.Wallet.GetAccountByAddress(address)
-	if err != nil {
-		return nil, err
-	}
-	return node.PrivateKey, nil
+func (accountapi *AccountApi) CreateWallet(password string) error {
+    err := accountapi.accountService.CreateWallet(password)
+    if err != nil {
+        return err
+    }
+    return accountapi.OpenWallet(password)
 }
 
 // Lock lock the wallet to protect private key
-func (accountapi *AccountApi) Lock() error {
+func (accountapi *AccountApi) LockWallet() error {
 	if !accountapi.Wallet.IsOpen() {
 		return errors.New("wallet is not open")
 	}
@@ -72,7 +57,7 @@ func (accountapi *AccountApi) Lock() error {
 }
 
 // UnLock unlock the wallet
-func (accountapi *AccountApi) UnLock(password string) error {
+func (accountapi *AccountApi) UnLockWallet(password string) error {
 	if !accountapi.Wallet.IsOpen() {
 		return errors.New("wallet is not open")
 	}
@@ -82,11 +67,11 @@ func (accountapi *AccountApi) UnLock(password string) error {
 	return errors.New("wallet is already unlock")
 }
 
-func (accountapi *AccountApi) Open(password string) error {
+func (accountapi *AccountApi) OpenWallet(password string) error {
 	return accountapi.Wallet.Open(password)
 }
 
-func (accountapi *AccountApi) Close() {
+func (accountapi *AccountApi) CloseWallet() {
 	accountapi.Wallet.Close()
 }
 
@@ -109,8 +94,25 @@ func (accountapi *AccountApi) CreateCode(from *secp256k1.PublicKey, to crypto.Co
     return t.TxId()
 }
 
-func (accountapi *AccountApi) Sign(prv *secp256k1.PrivateKey, msg string) ([]byte, error) {
-    bytes := []byte(msg)
+// DumpPrikey dumpPrivate
+func (accountapi *AccountApi) DumpPrivkey(address *crypto.CommonAddress) (*secp256k1.PrivateKey, error) {
+    if !accountapi.Wallet.IsOpen() {
+        return nil, errors.New("wallet is not open")
+    }
+    if accountapi.Wallet.IsLock() {
+        return nil, errors.New("wallet has locked")
+    }
+
+    node, err := accountapi.Wallet.GetAccountByAddress(address)
+    if err != nil {
+        return nil, err
+    }
+    return node.PrivateKey, nil
+}
+
+func (accountapi *AccountApi) Sign(address *crypto.CommonAddress, msg string) ([]byte, error) {
+    prv, _ := accountapi.DumpPrivkey(address)
+    bytes := sha3.Hash256([]byte(msg))
     return crypto.Sign(bytes, prv)
 }
 
