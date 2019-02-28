@@ -6,7 +6,6 @@ import (
 	"github.com/drep-project/drep-chain/crypto"
     "github.com/drep-project/drep-chain/crypto/secp256k1"
    chainService "github.com/drep-project/drep-chain/chain/service"
-    "encoding/json"
     "github.com/drep-project/drep-chain/database"
 )
 
@@ -94,7 +93,8 @@ func (accountapi *AccountApi) Close() {
 func (accountapi *AccountApi) SendTransaction(from *secp256k1.PublicKey, to crypto.CommonAddress, amount *big.Int) (string, error) {
 	t := accountapi.chainService.GenerateBalanceTransaction(from, to, amount)
     accountapi.chainService.SendTransaction(t)
-    return t.TxId()
+	hash, err := t.TxHash()
+    return "0x" + string(hash), err
 }
 
 func (accountapi *AccountApi) Call(from *secp256k1.PublicKey, to crypto.CommonAddress, input []byte, amount *big.Int, readOnly bool)  (string, error){
@@ -109,11 +109,8 @@ func (accountapi *AccountApi) CreateCode(from *secp256k1.PublicKey, to crypto.Co
     return t.TxId()
 }
 
-func (accountapi *AccountApi) Sign(prv *secp256k1.PrivateKey, msg interface{}) ([]byte, error) {
-    bytes, err := json.Marshal(msg)
-    if err != nil {
-        return nil, err
-    }
+func (accountapi *AccountApi) Sign(prv *secp256k1.PrivateKey, msg string) ([]byte, error) {
+    bytes := []byte(msg)
     return crypto.Sign(bytes, prv)
 }
 

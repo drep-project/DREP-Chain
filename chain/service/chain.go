@@ -109,7 +109,7 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 		}
 		chainService.ProcessBlock(genesisBlock)
 	}
-	chainService.transactionPool = NewTransactionPool()
+	chainService.transactionPool = NewTransactionPool(chainService.DatabaseService)
 	props := actor.FromProducer(func() actor.Actor {
 		return chainService
 	})
@@ -152,6 +152,7 @@ func (chainService *ChainService) SendTransaction(t *chainTypes.Transaction) err
 	if id, err := t.TxId(); err == nil {
 		ForwardTransaction(id)
 	}
+
 	//TODO validate transaction
 	error := chainService.transactionPool.AddTransaction(t)
 	chainService.P2pServer.Broadcast(t)

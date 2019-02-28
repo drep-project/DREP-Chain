@@ -24,8 +24,8 @@ type TransactionPool struct {
     tranCp func(a interface{}, b interface{}) bool
 }
 
-func NewTransactionPool() *TransactionPool {
- pool := &TransactionPool{}
+func NewTransactionPool(databaseApi *database.DatabaseService) *TransactionPool {
+ pool := &TransactionPool{databaseApi:databaseApi}
  pool.nonceCp = func(a interface{}, b interface{}) int{
      ta, oka := a.(*chainTypes.Transaction)
      tb, okb := b.(*chainTypes.Transaction)

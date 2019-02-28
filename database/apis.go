@@ -106,9 +106,14 @@ func (database *DatabaseService) GetStorage(addr crypto.CommonAddress, transacti
     if !transactional {
         return database.db.getStorage(addr)
     }
+
+    //text, _ := addr.MarshalText()
+    //fmt.Println("GetStorage : " + string(text))
+
     if database.db.stores == nil {
-        database.db.stores = make(map[string] *chainType.Storage)
+       database.db.stores = make(map[string] *chainType.Storage)
     }
+
     key := sha3.Hash256([]byte("storage_" + addr.Hex()))
     hk := bytes2Hex(key)
     storage, ok := database.db.stores[hk]
