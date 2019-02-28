@@ -1,31 +1,31 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/drep-project/drep-chain/pkgs/evm"
+	"math/big"
+	"strconv"
 	"sync"
 	"time"
-	"strconv"
-	"math/big"
-	"encoding/json"
 
-	"gopkg.in/urfave/cli.v1"
-	"github.com/drep-project/dlog"
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
+	"gopkg.in/urfave/cli.v1"
 
-	"github.com/drep-project/drep-chain/rpc"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/database"
-	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	
+	"github.com/drep-project/drep-chain/crypto/sha3"
+	"github.com/drep-project/drep-chain/database"
+	"github.com/drep-project/drep-chain/rpc"
 
-	rpc2 "github.com/drep-project/drep-chain/pkgs/rpc"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	p2pTypes "github.com/drep-project/drep-chain/network/types"
 	p2pService "github.com/drep-project/drep-chain/network/service"
+	p2pTypes "github.com/drep-project/drep-chain/network/types"
+	rpc2 "github.com/drep-project/drep-chain/pkgs/rpc"
 )
 
 var (
@@ -41,6 +41,7 @@ type ChainService struct {
 	RpcService      *rpc2.RpcService    `service:"rpc"`
 	P2pServer       p2pService.P2P    `service:"p2p"`
 	DatabaseService *database.DatabaseService `service:"database"`
+	VmService 		evm.Vm `service:"evm"`
 	transactionPool *TransactionPool
 	isRelay         bool
 	apis            []app.API

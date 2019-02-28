@@ -13,6 +13,7 @@ var (
 		LogLevel :3,
 	}
 )
+
 type LogService struct {
 	Config *LogConfig
 }

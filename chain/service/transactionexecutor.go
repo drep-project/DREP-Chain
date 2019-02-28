@@ -3,12 +3,11 @@ package service
 import (
     "errors"
     "fmt"
+    "github.com/drep-project/dlog"
     "github.com/drep-project/drep-chain/app"
-    chainComponent "github.com/drep-project/drep-chain/chain/component"
-    "github.com/drep-project/drep-chain/chain/component/vm"
     chainTypes "github.com/drep-project/drep-chain/chain/types"
     "github.com/drep-project/drep-chain/crypto"
-    "github.com/drep-project/dlog"
+    "github.com/drep-project/drep-chain/pkgs/evm/vm"
     "math/big"
 
     "bytes"
@@ -192,7 +191,7 @@ func (chainService *ChainService) executeCreateContractTransaction(t *chainTypes
     }
 
     evm := vm.NewEVM(chainService.DatabaseService)
-    returnGas, _ := chainComponent.ApplyTransaction(evm, t)
+    returnGas, _ := chainService.VmService.ApplyTransaction(evm, t)
     gasUsed = new(big.Int).Sub(gasLimit, new(big.Int).SetUint64(returnGas))
     gasFee = new(big.Int).Mul(gasUsed, gasPrice)
     balance = chainService.DatabaseService.GetBalance(addr, true)
@@ -214,7 +213,7 @@ func (chainService *ChainService) executeCallContractTransaction(t *chainTypes.T
     }
 
     evm := vm.NewEVM(chainService.DatabaseService)
-    returnGas, _ := chainComponent.ApplyTransaction(evm, t)
+    returnGas, _ := chainService.VmService.ApplyTransaction(evm, t)
     gasUsed = new(big.Int).Sub(gasLimit, new(big.Int).SetUint64(returnGas))
     gasFee = new(big.Int).Mul(gasUsed, gasPrice)
     balance = chainService.DatabaseService.GetBalance(addr, true)

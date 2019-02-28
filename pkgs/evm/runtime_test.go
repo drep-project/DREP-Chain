@@ -1,10 +1,10 @@
-package core
+package evm
 
 import (
-	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/chain/component/vm"
-	"github.com/drep-project/drep-chain/chain/component/abi"
+	"github.com/drep-project/drep-chain/pkgs/evm/vm"
+	"github.com/drep-project/drep-chain/pkgs/evm/abi"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
 	"math/big"
@@ -27,11 +27,11 @@ func ExecuteCreate(code []byte) {
 	evm := vm.NewEVM(databaseService)
 	s1 := "111111"
 	s2 := "222222"
-	var chainId common.ChainIdType
+	var chainId app.ChainIdType
 	callerAddr1 := crypto.Hex2Address(s1)
 	callerAddr2 := crypto.Hex2Address(s2)
-	caller1 := &accountTypes.Account{Address: &callerAddr1, Storage: &accountTypes.Storage{Balance: new(big.Int).SetInt64(100)}}
-	caller2 := &accountTypes.Account{Address: &callerAddr2, Storage: &accountTypes.Storage{Balance: new(big.Int).SetInt64(200)}}
+	caller1 := &chainTypes.Account{Address: &callerAddr1, Storage: &chainTypes.Storage{Balance: new(big.Int).SetInt64(100)}}
+	caller2 := &chainTypes.Account{Address: &callerAddr2, Storage: &chainTypes.Storage{Balance: new(big.Int).SetInt64(200)}}
 	errPut1 := databaseService.PutStorage(callerAddr1, chainId, caller1.Storage, true)
 	errPut2 := databaseService.PutStorage(callerAddr2, chainId, caller2.Storage)
 	fmt.Println("errPut1: ", errPut1)
@@ -57,7 +57,7 @@ func ExecuteCall(input []byte) {
 	gas := uint64(1000000)
 	value := new(big.Int).SetInt64(0)
 	contractAddr := crypto.Hex2Address(s2)
-	var chainId common.ChainIdType
+	var chainId app.ChainIdType
 	evm.CallContractCode(callerAddr, contractAddr, chainId, input, gas, value)
 }
 

@@ -251,7 +251,7 @@ func (p2pService *P2pService) waitForMessage(conn *net.TCPConn)(interface{}, int
 	}
 	//addr := conn.RemoteAddr().String()
 	//log.Debug("receive msg", "Addr", conn.RemoteAddr().String(),"Content", string(bytes))
-	return p2pComponent.GetMessage(bytes)
+	return p2pComponent.Deserialize(bytes)
 }
 
 func (p2pService *P2pService) receiveMessageInternal(conn net.Conn, size int) ([]byte, error) {
@@ -336,7 +336,7 @@ func (p2pService *P2pService) sendMessageRoutine(){
 }
 
 func (p2pService *P2pService) sendMessage(outMessage *outMessage) error {
-	message, err := p2pComponent.GenerateMessage(outMessage.Msg, p2pService.prvKey)
+	message, err := p2pComponent.Serialize(outMessage.Msg, p2pService.prvKey)
 	if err != nil {
 		dlog.Info("error during cipher:", "reason", err)
 		return &common.DataError{MyError:common.MyError{Err:err}}

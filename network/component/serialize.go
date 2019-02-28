@@ -8,54 +8,11 @@ import (
 	"github.com/vishalkuo/bimap"
 	"reflect"
 )
-const (
-	MsgTypeBlockHeader = iota
-	MsgTypeBlock
-	MsgTypeTransaction
-	MsgTypeSetUp
-	MsgTypeCommitment
-	MsgTypeChallenge
-	MsgTypeResponse
-	MsgTypeFail
-	MsgTypeNewPeer
-	MsgTypePeerList
-	MsgTypeBlockReq   //10
-	MsgTypeBlockResp
-	MsgTypePing
-	MsgTypePong
-	MsgTypeOfflinePeers
-	MsgTypeFirstPeerInfoList
-	MsgTypePeerState
-	MsgTypeReqPeerState
-)
+
 
 var (
 	msgTypeMap = bimap.NewBiMap()
 )
-
-func init(){
-	// register should done in every module that  needs
-	/*
-	msgTypeMap.Insert(MsgTypeBlockHeader, reflect.TypeOf(bean.BlockHeader{}))
-	msgTypeMap.Insert(MsgTypeBlock, reflect.TypeOf(bean.Block{}))
-	msgTypeMap.Insert(MsgTypeTransaction, reflect.TypeOf(bean.Transaction{}))
-	msgTypeMap.Insert(MsgTypeSetUp, reflect.TypeOf(bean.Setup{}))
-	msgTypeMap.Insert(MsgTypeCommitment, reflect.TypeOf(bean.Commitment{}))
-	msgTypeMap.Insert(MsgTypeChallenge, reflect.TypeOf(bean.Challenge{}))
-	msgTypeMap.Insert(MsgTypeResponse, reflect.TypeOf(bean.Response{}))
-	msgTypeMap.Insert(MsgTypeFail, reflect.TypeOf(bean.Fail{}))
-	msgTypeMap.Insert(MsgTypeNewPeer, reflect.TypeOf(bean.PeerInfo{}))
-	msgTypeMap.Insert(MsgTypePeerList, reflect.TypeOf(bean.PeerInfoList{}))
-	msgTypeMap.Insert(MsgTypeBlockReq, reflect.TypeOf(bean.BlockReq{}))
-	msgTypeMap.Insert(MsgTypeBlockResp, reflect.TypeOf(bean.BlockResp{}))
-	msgTypeMap.Insert(MsgTypePing, reflect.TypeOf(bean.Ping{}))
-	msgTypeMap.Insert(MsgTypePong, reflect.TypeOf(bean.Pong{}))
-	msgTypeMap.Insert(MsgTypeOfflinePeers, reflect.TypeOf(bean.OfflinePeers{}))
-	msgTypeMap.Insert(MsgTypeFirstPeerInfoList, reflect.TypeOf(bean.FirstPeerInfoList{}))
-	msgTypeMap.Insert(MsgTypePeerState, reflect.TypeOf(PeerState{}))
-	msgTypeMap.Insert(MsgTypeReqPeerState, reflect.TypeOf(ReqPeerState{}))
-	*/
-}
 
 type MessageHeader struct {
 	Type int
@@ -69,7 +26,7 @@ type Message struct {
 	Body   []byte
 }
 
-func GenerateMessage(message interface{}, prvKey *secp256k1.PrivateKey) (*Message, error) {
+func Serialize(message interface{}, prvKey *secp256k1.PrivateKey) (*Message, error) {
 	body, err := json.Marshal(message)
 	if err != nil {
 		return nil, err
@@ -98,7 +55,7 @@ func GenerateMessage(message interface{}, prvKey *secp256k1.PrivateKey) (*Messag
 	return msg, nil
 }
 
-func GetMessage(msgBytes []byte) (interface{}, int, *secp256k1.PublicKey, error) {
+func Deserialize(msgBytes []byte) (interface{}, int, *secp256k1.PublicKey, error) {
 	msg := &Message{}
 	if err := json.Unmarshal(msgBytes, msg); err != nil {
 		return nil, 0, nil, err
