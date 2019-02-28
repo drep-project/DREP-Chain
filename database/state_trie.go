@@ -15,7 +15,6 @@ type State struct {
 	db        *Database
 }
 
-
 func (state *State) resetValue(children [17]*State) {
 	stack := make([]byte, 32*17)
 	for i := 0; i < 17; i++ {
