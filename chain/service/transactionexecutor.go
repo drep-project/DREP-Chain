@@ -120,6 +120,7 @@ func (chainService *ChainService) canExecute(t *chainTypes.Transaction, gasFloor
     balance = chainService.DatabaseService.GetBalance(addr, true)
     nonce :=  chainService.DatabaseService.GetNonce(addr,true) + 1
     chainService.DatabaseService.PutNonce(addr, nonce,true)
+    gasPrice = t.Data.GasPrice
 
     if nonce != t.Data.Nonce {
         return

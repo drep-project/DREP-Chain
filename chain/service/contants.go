@@ -23,6 +23,6 @@ var (
 const LocalTest = false
 
 func init() {
-    DefaultGasPrice, _ = new(big.Int).SetString("20000000000", 10)
+    DefaultGasPrice, _ = new(big.Int).SetString("1", 10)
 }
 

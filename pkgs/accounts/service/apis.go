@@ -8,6 +8,8 @@ import (
    chainService "github.com/drep-project/drep-chain/chain/service"
     "github.com/drep-project/drep-chain/database"
     "github.com/drep-project/drep-chain/crypto/sha3"
+    "encoding/json"
+    "encoding/hex"
 )
 
 
@@ -78,8 +80,12 @@ func (accountapi *AccountApi) CloseWallet() {
 func (accountapi *AccountApi) SendTransaction(from *secp256k1.PublicKey, to crypto.CommonAddress, amount *big.Int) (string, error) {
 	t := accountapi.chainService.GenerateBalanceTransaction(from, to, amount)
     accountapi.chainService.SendTransaction(t)
-	hash, err := t.TxHash()
-    return "0x" + string(hash), err
+	txHash, err := t.TxHash()
+	hex := hex.EncodeToString(txHash)
+	bytes, _ := json.Marshal(t)
+	println(string(bytes))
+	println("0x" + string(hex))
+    return "0x" + string(hex), err
 }
 
 func (accountapi *AccountApi) Call(from *secp256k1.PublicKey, to crypto.CommonAddress, input []byte, amount *big.Int, readOnly bool)  (string, error){

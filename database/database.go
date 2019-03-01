@@ -6,6 +6,7 @@ import (
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
+    "math/big"
 )
 
 type Database struct {
@@ -156,6 +157,9 @@ func (db *Database) getStorage(addr crypto.CommonAddress) *chainTypes.Storage {
 	key := sha3.Hash256([]byte("storage_" + addr.Hex()))
 	value, err := db.get(key, false)
 	if err != nil {
+	    storage.Balance = new(big.Int)
+	    storage.Nonce = 0
+	    storage.Reputation = new(big.Int)
 		return storage
 	}
 	json.Unmarshal(value, storage)
