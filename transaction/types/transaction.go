@@ -1,20 +1,20 @@
 package types
 
 import (
-"encoding/hex"
-"encoding/json"
-"github.com/drep-project/drep-chain/app"
-"github.com/drep-project/drep-chain/common"
-"github.com/drep-project/drep-chain/crypto"
-"github.com/drep-project/drep-chain/crypto/secp256k1"
-"github.com/drep-project/drep-chain/crypto/sha3"
-"math/big"
-"time"
+	"encoding/hex"
+	"encoding/json"
+	"github.com/drep-project/drep-chain/app"
+	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/drep-chain/crypto/sha3"
+	"math/big"
+	"time"
 )
 
 type Transaction struct {
 	data *TransactionData
-	Sig  []byte
+	sig  []byte
 }
 
 type TransactionData struct {
@@ -85,7 +85,7 @@ func (tx *Transaction) TxId() (string, error) {
 }
 
 func (tx *Transaction) TxHash() ([]byte, error) {
-	b, err := json.Marshal(tx)
+	b, err := json.Marshal(tx.data)
 	if err != nil {
 		return nil, err
 	}
@@ -110,6 +110,10 @@ func (tx *Transaction) GetGas() *big.Int {
 	gasQuantity := tx.GetGasUsed()
 	gasUsed := new(big.Int).Mul(gasQuantity, tx.data.GasPrice)
 	return gasUsed
+}
+
+func (tx *Transaction) Sig() []byte {
+	return tx.sig
 }
 
 func NewTransaction(from crypto.CommonAddress, to crypto.CommonAddress, amount *big.Int, nonce int64) *Transaction {

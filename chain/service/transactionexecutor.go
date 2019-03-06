@@ -45,8 +45,8 @@ func (chainService *ChainService) ExecuteTransactions(b *chainTypes.Block) (*big
 		if gasFee != nil {
 			total.Add(total, gasFee)
 		}
-		if t.Nonce()%10000 == 0 {
-			fmt.Println("execute tx :", t.From().Hex(), t.Nonce(), t.Amount(), string(t.Sig))
+		if t.Nonce()%10 == 0 {
+			fmt.Println("execute tx :", t.From().Hex(), t.Nonce(), t.Amount(), string(t.Sig()))
 		}
 	}
 

@@ -88,6 +88,7 @@ func (accountapi *AccountApi) SendTransaction(from crypto.CommonAddress, to cryp
 	if err != nil{
 		return "",err
 	}
+
 	hex := hex.EncodeToString(txHash)
 	//bytes, _ := json.Marshal(t)
 	//println(string(bytes))
@@ -96,14 +97,14 @@ func (accountapi *AccountApi) SendTransaction(from crypto.CommonAddress, to cryp
 }
 
 func (accountapi *AccountApi) Call(from crypto.CommonAddress, to crypto.CommonAddress, input []byte, amount *big.Int, readOnly bool) (string, error) {
-	nonce := accountapi.chainService.DatabaseService.GetNonce(&from, false)
+	nonce := accountapi.chainService.GetTransactionCount(&from)
 	t := txType.NewCallContractTransaction(from, to, input, amount, nonce, readOnly)
 	accountapi.chainService.SendTransaction(t)
 	return t.TxId()
 }
 
 func (accountapi *AccountApi) CreateCode(from crypto.CommonAddress, to crypto.CommonAddress, byteCode []byte) (string, error) {
-	nonce := accountapi.chainService.DatabaseService.GetNonce(&from, false)
+	nonce := accountapi.chainService.GetTransactionCount(&from)
 	t := txType.NewContractTransaction(from, to, byteCode, nonce)
 	accountapi.chainService.SendTransaction(t)
 	return t.TxId()

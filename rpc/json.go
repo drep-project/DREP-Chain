@@ -275,8 +275,8 @@ func (c *jsonCodec) ParseRequestArguments(argTypes []reflect.Type, params interf
 	if args, ok := params.(json.RawMessage); !ok {
 		return nil, &InvalidParamsError{"Invalid params supplied"}
 	} else {
-		str := argTypes[0].String()
-		fmt.Println(str)
+		//str := argTypes[0].String()
+		//fmt.Println(str)
 		return parsePositionalArguments(args, argTypes)
 	}
 }

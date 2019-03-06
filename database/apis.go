@@ -108,9 +108,6 @@ func (database *DatabaseService) GetStorage(addr *crypto.CommonAddress, transact
         return database.db.getStorage(addr)
     }
 
-    //text, _ := addr.MarshalText()
-    //fmt.Println("GetStorage : " + string(text))
-
     if database.db.stores == nil {
        database.db.stores = make(map[string] *chainType.Storage)
     }
