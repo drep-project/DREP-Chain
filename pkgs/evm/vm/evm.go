@@ -39,7 +39,7 @@ func (evm *EVM) CreateContractCode(callerAddr crypto.CommonAddress, chainId app.
 		return nil, crypto.CommonAddress{}, gas, ErrInsufficientBalance
 	}
 
-	nonce := evm.State.GetNonce(callerAddr)
+	nonce := evm.State.GetNonce(&callerAddr)
 	account, err := evm.State.CreateContractAccount(callerAddr, nonce)
 	if err != nil {
 		return nil, crypto.CommonAddress{}, gas, err
@@ -53,7 +53,7 @@ func (evm *EVM) CreateContractCode(callerAddr crypto.CommonAddress, chainId app.
 
 	createDataGas := uint64(len(ret)) * params.CreateDataGas
 	if contract.UseGas(createDataGas) {
-		err = evm.State.SetByteCode(*contractAddr, ret)
+		err = evm.State.SetByteCode(contractAddr, ret)
 	} else {
 		err = ErrCodeStoreOutOfGas
 	}
@@ -77,7 +77,7 @@ func (evm *EVM) CallContractCode(callerAddr, contractAddr crypto.CommonAddress, 
 		return nil, gas, ErrInsufficientBalance
 	}
 
-	byteCode := evm.State.GetByteCode(contractAddr)
+	byteCode := evm.State.GetByteCode(&contractAddr)
 	if byteCode == nil {
 		return nil, gas, ErrCodeNotExists
 	}
@@ -100,7 +100,7 @@ func (evm *EVM) CallContractCode(callerAddr, contractAddr crypto.CommonAddress, 
 }
 
 func (evm *EVM) StaticCall(callerAddr, contractAddr crypto.CommonAddress, chainId app.ChainIdType, input []byte, gas uint64) (ret []byte, returnGas uint64, err error) {
-	byteCode := evm.State.GetByteCode(contractAddr)
+	byteCode := evm.State.GetByteCode(&contractAddr)
 	if byteCode == nil {
 		return nil, gas, ErrCodeNotExists
 	}
@@ -126,7 +126,7 @@ func (evm *EVM) DelegateCall(con *Contract, contractAddr crypto.CommonAddress, i
 	chainId := con.ChainId
 	jumpdests := con.Jumpdests
 
-	byteCode := evm.State.GetByteCode(contractAddr)
+	byteCode := evm.State.GetByteCode(&contractAddr)
 	if byteCode == nil {
 		return nil, gas, ErrCodeNotExists
 	}
@@ -163,18 +163,18 @@ func run(evm *EVM, contract *Contract, input []byte, readOnly bool) ([]byte, err
 }
 
 func (evm *EVM) CanTransfer(addr crypto.CommonAddress, chainId app.ChainIdType, amount *big.Int) bool {
-	balance := evm.State.GetBalance(addr)
+	balance := evm.State.GetBalance(&addr)
 	return balance.Cmp(amount) >= 0
 }
 
 func (evm *EVM) Transfer(from, to crypto.CommonAddress, chainId app.ChainIdType, amount *big.Int) error {
-	err := evm.State.SubBalance(from, amount)
+	err := evm.State.SubBalance(&from, amount)
 	if err != nil {
 		return err
 	}
-	err = evm.State.AddBalance(to, amount)
+	err = evm.State.AddBalance(&to, amount)
 	if err != nil {
-		evm.State.AddBalance(from, amount)
+		evm.State.AddBalance(&from, amount)
 		return err
 	}
 	return nil

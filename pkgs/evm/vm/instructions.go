@@ -396,7 +396,8 @@ func opBalance(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memo
 	slot := stack.peek()
 	//slot.Set(interpreter.evm.StateDB.GetBalance(BigToAddress(slot)))
 	evm := interpreter.EVM
-	balance := evm.State.GetBalance(crypto.Big2Address(slot))
+	addr := crypto.Big2Address(slot)
+	balance := evm.State.GetBalance(&addr)
 	slot.Set(balance)
 	return nil, nil
 }
@@ -501,7 +502,7 @@ func opExtCodeCopy(pc *uint64, interpreter *EVMInterpreter, contract *Contract, 
 		codeOffset = stack.pop()
 		length     = stack.pop()
 	)
-	byteCode := interpreter.EVM.State.GetByteCode(addr)
+	byteCode := interpreter.EVM.State.GetByteCode(&addr)
 	codeCopy := common.GetDataBig(byteCode, codeOffset, length)
 	//codeCopy := getDataBig(interpreter.evm.StateDB.GetCode(addr), codeOffset, length)
 	memory.Set(memOffset.Uint64(), length.Uint64(), codeCopy)
@@ -915,9 +916,10 @@ func opSuicide(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memo
 	//interpreter.evm.StateDB.AddBalance(BigToAddress(stack.pop()), balance)
 	//interpreter.evm.StateDB.Suicide(contract.GetAddress())
 
-	balance := interpreter.EVM.State.GetBalance(contract.CallerAddr)
-	interpreter.EVM.State.AddBalance(crypto.Big2Address(stack.pop()), balance)
-	interpreter.EVM.State.Suicide(contract.CallerAddr)
+	balance := interpreter.EVM.State.GetBalance(&contract.CallerAddr)
+	addr := crypto.Big2Address(stack.pop())
+	interpreter.EVM.State.AddBalance(&addr, balance)
+	interpreter.EVM.State.Suicide(&contract.CallerAddr)
 	return nil, nil
 }
 

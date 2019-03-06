@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/drep-project/drep-chain/pkgs/evm"
+	"github.com/drep-project/drep-chain/transaction/txpool"
 	"math/big"
 	"strconv"
 	"sync"
@@ -26,6 +27,7 @@ import (
 	p2pService "github.com/drep-project/drep-chain/network/service"
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
 	rpc2 "github.com/drep-project/drep-chain/pkgs/rpc"
+	txType "github.com/drep-project/drep-chain/transaction/types"
 )
 
 var (
@@ -33,16 +35,13 @@ var (
 	//genesisPubkey = "0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26"
 )
 
-const (
-	Rewards = 10000000 //每出一个块，系统奖励的币数目
-)
 
 type ChainService struct {
-	RpcService      *rpc2.RpcService    `service:"rpc"`
-	P2pServer       p2pService.P2P    `service:"p2p"`
+	RpcService      *rpc2.RpcService          `service:"rpc"`
+	P2pServer       p2pService.P2P            `service:"p2p"`
 	DatabaseService *database.DatabaseService `service:"database"`
-	VmService 		evm.Vm `service:"evm"`
-	transactionPool *TransactionPool
+	VmService       evm.Vm                    `service:"vm"`
+	transactionPool *txpool.TransactionPool
 	isRelay         bool
 	apis            []app.API
 
@@ -64,7 +63,10 @@ type ChainService struct {
 	syncBlockEvent event.Feed
 	//Maximum block height being synced
 	syncingMaxHeight int64
-	syncMaxHeightMut     sync.Mutex
+	syncMaxHeightMut sync.Mutex
+
+	//提供新块订阅
+	newBlockFeed event.Feed
 }
 
 func (chainService *ChainService) ChainID() app.ChainIdType {
@@ -88,7 +90,7 @@ func (chainService *ChainService) P2pMessages() map[int]interface{} {
 		chainTypes.MsgTypeBlockReq:     chainTypes.BlockReq{},
 		chainTypes.MsgTypeBlockResp:    chainTypes.BlockResp{},
 		chainTypes.MsgTypeBlock:        chainTypes.Block{},
-		chainTypes.MsgTypeTransaction:  chainTypes.Transaction{},
+		chainTypes.MsgTypeTransaction:  txType.Transaction{},
 		chainTypes.MsgTypePeerState:    chainTypes.PeerState{},
 		chainTypes.MsgTypeReqPeerState: chainTypes.ReqPeerState{},
 	}
@@ -110,7 +112,8 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 		}
 		chainService.ProcessBlock(genesisBlock)
 	}
-	chainService.transactionPool = NewTransactionPool(chainService.DatabaseService)
+	chainService.transactionPool = txpool.NewTransactionPool(chainService.DatabaseService)
+	chainService.transactionPool.Start(&chainService.newBlockFeed)
 	props := actor.FromProducer(func() actor.Actor {
 		return chainService
 	})
@@ -132,7 +135,7 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 			Version:   "1.0",
 			Service: &ChainApi{
 				chainService: chainService,
-				dbService:chainService.DatabaseService,
+				dbService:    chainService.DatabaseService,
 			},
 			Public: true,
 		},
@@ -149,14 +152,17 @@ func (chainService *ChainService) Stop(executeContext *app.ExecuteContext) error
 	return nil
 }
 
-func (chainService *ChainService) SendTransaction(t *chainTypes.Transaction) error {
-	if id, err := t.TxId(); err == nil {
+func (chainService *ChainService) SendTransaction(tx *txType.Transaction) error {
+	if id, err := tx.TxId(); err == nil {
 		ForwardTransaction(id)
 	}
 
 	//TODO validate transaction
-	error := chainService.transactionPool.AddTransaction(t)
-	chainService.P2pServer.Broadcast(t)
+	error := chainService.transactionPool.AddTransaction(tx)
+	if error == nil {
+		chainService.P2pServer.Broadcast(tx)
+	}
+
 	return error
 }
 
@@ -171,6 +177,20 @@ func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (*big.In
 	gasUsed, err := chainService.ExecuteTransactions(block)
 	if err == nil {
 		chainService.CurrentHeight = block.Header.Height
+	}
+
+	addrMap := make(map[crypto.CommonAddress]struct{})
+	var addrs []*crypto.CommonAddress
+	for _,tx := range block.Data.TxList {
+		addr := tx.From()
+		if _,ok:=addrMap[*addr]; !ok{
+			addrMap[*addr] = struct{}{}
+			addrs = append(addrs, addr)
+		}
+	}
+
+	if len(addrs) > 0 {
+		chainService.newBlockFeed.Send(addrs)
 	}
 
 	return gasUsed, err
@@ -192,10 +212,10 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey, 
 	defer chainService.DatabaseService.Discard()
 
 	height := chainService.DatabaseService.GetMaxHeight() + 1
-	ts := chainService.transactionPool.PickTransactions(BlockGasLimit)
+	txs := chainService.transactionPool.GetPending(BlockGasLimit)
 
 	gasUsed := new(big.Int)
-	for _, t := range ts {
+	for _, t := range txs {
 		g, _ := chainService.execute(t)
 		gasUsed.Add(gasUsed, g)
 	}
@@ -204,7 +224,7 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey, 
 	previousHash := chainService.DatabaseService.GetPreviousBlockHash()
 
 	stateRoot := chainService.DatabaseService.GetStateRoot()
-	txHashes, _ := chainService.GetTxHashes(ts)
+	txHashes, _ := chainService.GetTxHashes(txs)
 	merkle := chainService.DatabaseService.NewMerkle(txHashes)
 	merkleRoot := merkle.Root.Hash
 
@@ -215,7 +235,7 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey, 
 
 	block := &chainTypes.Block{
 		Header: &chainTypes.BlockHeader{
-			Version:      Version,
+			Version:      common.Version,
 			PreviousHash: previousHash,
 			ChainId:      chainService.chainId,
 			GasLimit:     BlockGasLimit,
@@ -229,14 +249,14 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey, 
 			MinorPubKeys: memberPks,
 		},
 		Data: &chainTypes.BlockData{
-			TxCount: int32(len(ts)),
-			TxList:  ts,
+			TxCount: int32(len(txs)),
+			TxList:  txs,
 		},
 	}
 	return block, nil
 }
 
-func (chainService *ChainService) GetTxHashes(ts []*chainTypes.Transaction) ([][]byte, error) {
+func (chainService *ChainService) GetTxHashes(ts []*txType.Transaction) ([][]byte, error) {
 	txHashes := make([][]byte, len(ts))
 	for i, tx := range ts {
 		b, err := json.Marshal(tx.Data)
@@ -259,64 +279,64 @@ func (chainService *ChainService) RootChain() app.ChainIdType {
 	return rootChain
 }
 
-func (chainService *ChainService) GenerateBalanceTransaction(from *secp256k1.PublicKey, to crypto.CommonAddress, amount *big.Int) *chainTypes.Transaction {
-	address := crypto.PubKey2Address(from)
-	nonce := chainService.DatabaseService.GetNonce(address, false)
-	data := &chainTypes.TransactionData{
-		Version:   Version,
-		Nonce:     nonce,
-		Type:      TransferType,
-		To:        to,
-		Amount:    amount,
-		GasPrice:  DefaultGasPrice,
-		GasLimit:  TransferGas,
-		Timestamp: time.Now().Unix(),
-		PubKey:    from,
-	}
-	return &chainTypes.Transaction{Data: data}
-}
-
-func (chainService *ChainService) GenerateCreateContractTransaction(from *secp256k1.PublicKey, to crypto.CommonAddress, byteCode []byte) *chainTypes.Transaction {
-	address := crypto.PubKey2Address(from)
-	nonce := chainService.DatabaseService.GetNonce(address, false)
-	nonce++
-	data := &chainTypes.TransactionData{
-		Nonce:     nonce,
-		Type:      CreateContractType,
-		GasPrice:  DefaultGasPrice,
-		GasLimit:  CreateContractGas,
-		Timestamp: time.Now().Unix(),
-		Data:      make([]byte, len(byteCode)+1),
-		PubKey:    from,
-	}
-	copy(data.Data[1:], byteCode)
-	data.Data[0] = 2
-	return &chainTypes.Transaction{Data: data}
-}
-
-func (chainService *ChainService) GenerateCallContractTransaction(from *secp256k1.PublicKey, to crypto.CommonAddress, input []byte, amount *big.Int, readOnly bool) *chainTypes.Transaction {
-	address := crypto.PubKey2Address(from)
-	nonce := chainService.DatabaseService.GetNonce(address, false)
-	nonce++
-	data := &chainTypes.TransactionData{
-		Nonce:     nonce,
-		Type:      CallContractType,
-		To:        to,
-		Amount:    amount,
-		GasPrice:  DefaultGasPrice,
-		GasLimit:  CallContractGas,
-		Timestamp: time.Now().Unix(),
-		PubKey:    from,
-		Data:      make([]byte, len(input)+1),
-	}
-	copy(data.Data[1:], input)
-	if readOnly {
-		data.Data[0] = 1
-	} else {
-		data.Data[0] = 0
-	}
-	return &chainTypes.Transaction{Data: data}
-}
+//func (chainService *ChainService) GenerateBalanceTransaction(from *secp256k1.PublicKey, to crypto.CommonAddress, amount *big.Int) *txType.Transaction {
+//	address := crypto.PubKey2Address(from)
+//	nonce := chainService.DatabaseService.GetNonce(&address, false)
+//	data := &txType.TransactionData{
+//		Version:   Version,
+//		Nonce:     nonce,
+//		Type:      TransferType,
+//		To:        to,
+//		Amount:    amount,
+//		GasPrice:  DefaultGasPrice,
+//		GasLimit:  TransferGas,
+//		Timestamp: time.Now().Unix(),
+//		PubKey:    from,
+//	}
+//	return &txType.Transaction{Data: data}
+//}
+//
+//func (chainService *ChainService) GenerateCreateContractTransaction(from *secp256k1.PublicKey, to crypto.CommonAddress, byteCode []byte) *txType.Transaction {
+//	address := crypto.PubKey2Address(from)
+//	nonce := chainService.DatabaseService.GetNonce(&address, false)
+//	nonce++
+//	data := &txType.TransactionData{
+//		Nonce:     nonce,
+//		Type:      CreateContractType,
+//		GasPrice:  DefaultGasPrice,
+//		GasLimit:  CreateContractGas,
+//		Timestamp: time.Now().Unix(),
+//		Data:      make([]byte, len(byteCode)+1),
+//		PubKey:    from,
+//	}
+//	copy(data.Data[1:], byteCode)
+//	data.Data[0] = 2
+//	return &txType.Transaction{Data: data}
+//}
+//
+//func (chainService *ChainService) GenerateCallContractTransaction(from *secp256k1.PublicKey, to crypto.CommonAddress, input []byte, amount *big.Int, readOnly bool) *chainTypes.Transaction {
+//	address := crypto.PubKey2Address(from)
+//	nonce := chainService.DatabaseService.GetNonce(&address, false)
+//	nonce++
+//	data := &txType.TransactionData{
+//		Nonce:     nonce,
+//		Type:      CallContractType,
+//		To:        to,
+//		Amount:    amount,
+//		GasPrice:  DefaultGasPrice,
+//		GasLimit:  CallContractGas,
+//		Timestamp: time.Now().Unix(),
+//		PubKey:    from,
+//		Data:      make([]byte, len(input)+1),
+//	}
+//	copy(data.Data[1:], input)
+//	if readOnly {
+//		data.Data[0] = 1
+//	} else {
+//		data.Data[0] = 0
+//	}
+//	return &txType.Transaction{Data: data}
+//}
 
 func (chainService *ChainService) GenesisBlock(genesisPubkey string) *chainTypes.Block {
 	chainService.DatabaseService.BeginTransaction()
@@ -337,7 +357,7 @@ func (chainService *ChainService) GenesisBlock(genesisPubkey string) *chainTypes
 	var memberPks []*secp256k1.PublicKey = nil
 	return &chainTypes.Block{
 		Header: &chainTypes.BlockHeader{
-			Version:      Version,
+			Version:      common.Version,
 			PreviousHash: []byte{},
 			GasLimit:     BlockGasLimit,
 			GasUsed:      new(big.Int),
@@ -351,7 +371,7 @@ func (chainService *ChainService) GenesisBlock(genesisPubkey string) *chainTypes
 		},
 		Data: &chainTypes.BlockData{
 			TxCount: 0,
-			TxList:  []*chainTypes.Transaction{},
+			TxList:  []*txType.Transaction{},
 		},
 	}
 }
@@ -363,19 +383,22 @@ func (chainService *ChainService) accumulateRewards(b *chainTypes.Block, chainId
 	leaderAddr := crypto.PubKey2Address(b.Header.LeaderPubKey)
 
 	r := new(big.Int)
-	chainService.DatabaseService.AddBalance(leaderAddr, r.Div(reward, new(big.Int).SetInt64(2)), true)
+	chainService.DatabaseService.AddBalance(&leaderAddr, r.Div(reward, new(big.Int).SetInt64(2)), true)
 
 	num := len(b.Header.MinorPubKeys)
 	for _, memberPK := range b.Header.MinorPubKeys {
 		memberAddr := crypto.PubKey2Address(memberPK)
 		r.Div(r, new(big.Int).SetInt64(int64(num)))
-		chainService.DatabaseService.AddBalance(memberAddr, r, true)
+		chainService.DatabaseService.AddBalance(&memberAddr, r, true)
 	}
 
 	chainService.DatabaseService.Commit()
 }
 
-func (chainService *ChainService)Subscribe( subchan chan event.SyncBlockEvent)event.Subscription{
+func (chainService *ChainService) Subscribe(subchan chan event.SyncBlockEvent) event.Subscription {
 	return chainService.syncBlockEvent.Subscribe(subchan)
 }
 
+func (chainService *ChainService)GetTransactionCount(addr * crypto.CommonAddress)int64{
+	return chainService.transactionPool.GetTransactionCount(addr)
+}

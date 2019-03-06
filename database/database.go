@@ -14,13 +14,14 @@ type Database struct {
 	temp   map[string][]byte
 	states map[string]*State
 	stores map[string]*chainTypes.Storage
+	//trie  Trie
 	root   []byte
 }
 
-func NewDatabase(dbPath string) *Database {
+func NewDatabase(dbPath string) (*Database, error){
 	ldb, err := leveldb.OpenFile(dbPath, nil)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	db := &Database{
 		db:     ldb,
@@ -28,7 +29,7 @@ func NewDatabase(dbPath string) *Database {
 		states: nil,
 	}
 	db.initState()
-	return db
+	return db,nil
 }
 
 func (db *Database) initState() {
@@ -103,6 +104,7 @@ func (db *Database) Discard() {
 	db.EndTransaction()
 }
 
+//trie tree root
 func (db *Database) getStateRoot() []byte {
 	state, _ := db.getState(db.root)
 	return state.Value
@@ -152,7 +154,7 @@ func (db *Database) delState(key []byte) error {
 	return nil
 }
 
-func (db *Database) getStorage(addr crypto.CommonAddress) *chainTypes.Storage {
+func (db *Database) getStorage(addr *crypto.CommonAddress) *chainTypes.Storage {
 	storage := &chainTypes.Storage{}
 	key := sha3.Hash256([]byte("storage_" + addr.Hex()))
 	value, err := db.get(key, false)
@@ -166,11 +168,12 @@ func (db *Database) getStorage(addr crypto.CommonAddress) *chainTypes.Storage {
 	return storage
 }
 
-func (db *Database) putStorage(addr crypto.CommonAddress, storage *chainTypes.Storage) error {
+func (db *Database) putStorage(addr *crypto.CommonAddress, storage *chainTypes.Storage) error {
 	key := sha3.Hash256([]byte("storage_" + addr.Hex()))
 	value, err := json.Marshal(storage)
 	if err != nil {
 		return err
 	}
+
 	return db.put(key, value, true)
 }

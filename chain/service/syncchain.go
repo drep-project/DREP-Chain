@@ -73,8 +73,8 @@ func (chainService *ChainService) GetBestPeer() (*p2pTypes.Peer, *chainTypes.Pee
 	curPeer := peers[0]
 
 	for i := 1; i < len(peers); i++ {
-		peerId := string(peers[i].PubKey.Serialize())
-		curPeerId := string(curPeer.PubKey.Serialize())
+		peerId := string(peers[i].Ip)
+		curPeerId := string(curPeer.Ip)
 		if _, ok := chainService.peerStateMap[peerId]; !ok {
 			chainService.peerStateMap[peerId] = &chainTypes.PeerState{Height: 0}
 		}
@@ -85,5 +85,5 @@ func (chainService *ChainService) GetBestPeer() (*p2pTypes.Peer, *chainTypes.Pee
 			curPeer = peers[i]
 		}
 	}
-	return curPeer, chainService.peerStateMap[string(curPeer.PubKey.Serialize())]
+	return curPeer, chainService.peerStateMap[string(curPeer.Ip)]
 }

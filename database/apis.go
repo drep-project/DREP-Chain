@@ -102,7 +102,8 @@ func (database *DatabaseService) PutPreviousBlockTimestamp(timestamp int64) erro
     return database.db.put(key, value, false)
 }
 
-func (database *DatabaseService) GetStorage(addr crypto.CommonAddress, transactional bool) *chainType.Storage {
+
+func (database *DatabaseService) GetStorage(addr *crypto.CommonAddress, transactional bool) *chainType.Storage {
     if !transactional {
         return database.db.getStorage(addr)
     }
@@ -125,7 +126,7 @@ func (database *DatabaseService) GetStorage(addr crypto.CommonAddress, transacti
     return storage
 }
 
-func (database *DatabaseService) PutStorage(addr crypto.CommonAddress, storage *chainType.Storage, transactional bool) error {
+func (database *DatabaseService) PutStorage(addr *crypto.CommonAddress, storage *chainType.Storage, transactional bool) error {
     if !transactional {
         return database.db.putStorage(addr, storage)
     }
@@ -145,7 +146,7 @@ func (database *DatabaseService) PutStorage(addr crypto.CommonAddress, storage *
     return nil
 }
 
-func (database *DatabaseService) GetBalance(addr crypto.CommonAddress, transactional bool) *big.Int {
+func (database *DatabaseService) GetBalance(addr *crypto.CommonAddress, transactional bool) *big.Int {
     storage := database.GetStorage(addr, transactional)
 
     if storage == nil {
@@ -154,7 +155,7 @@ func (database *DatabaseService) GetBalance(addr crypto.CommonAddress, transacti
     return storage.Balance
 }
 
-func (database *DatabaseService) PutBalance(addr crypto.CommonAddress, balance *big.Int, transactional bool) error {
+func (database *DatabaseService) PutBalance(addr *crypto.CommonAddress, balance *big.Int, transactional bool) error {
     storage := database.GetStorage(addr, transactional)
     if storage == nil {
         return errors.New("no account storage found")
@@ -163,7 +164,7 @@ func (database *DatabaseService) PutBalance(addr crypto.CommonAddress, balance *
     return database.PutStorage(addr, storage, transactional)
 }
 
-func (database *DatabaseService) GetNonce(addr crypto.CommonAddress, transactional bool) int64 {
+func (database *DatabaseService) GetNonce(addr *crypto.CommonAddress, transactional bool) int64 {
     storage := database.GetStorage(addr, transactional)
     if storage == nil {
         return -1
@@ -171,7 +172,7 @@ func (database *DatabaseService) GetNonce(addr crypto.CommonAddress, transaction
     return storage.Nonce
 }
 
-func (database *DatabaseService) PutNonce(addr crypto.CommonAddress, nonce int64, transactional bool) error {
+func (database *DatabaseService) PutNonce(addr *crypto.CommonAddress, nonce int64, transactional bool) error {
     storage := database.GetStorage(addr, transactional)
     if storage == nil {
         return errors.New("no account storage found")
@@ -180,7 +181,7 @@ func (database *DatabaseService) PutNonce(addr crypto.CommonAddress, nonce int64
     return database.PutStorage(addr, storage, transactional)
 }
 
-func (database *DatabaseService) GetByteCode(addr crypto.CommonAddress, transactional bool) []byte {
+func (database *DatabaseService) GetByteCode(addr *crypto.CommonAddress, transactional bool) []byte {
     storage := database.GetStorage(addr, transactional)
     if storage == nil {
         return nil
@@ -188,7 +189,7 @@ func (database *DatabaseService) GetByteCode(addr crypto.CommonAddress, transact
     return storage.ByteCode
 }
 
-func (database *DatabaseService) PutByteCode(addr crypto.CommonAddress, byteCode []byte, transactional bool) error {
+func (database *DatabaseService) PutByteCode(addr *crypto.CommonAddress, byteCode []byte, transactional bool) error {
     storage := database.GetStorage(addr, transactional)
     if storage == nil {
         return errors.New("no account storage found")
@@ -198,7 +199,7 @@ func (database *DatabaseService) PutByteCode(addr crypto.CommonAddress, byteCode
     return database.PutStorage(addr, storage, transactional)
 }
 
-func (database *DatabaseService) GetCodeHash(addr crypto.CommonAddress, transactional bool) crypto.Hash {
+func (database *DatabaseService) GetCodeHash(addr *crypto.CommonAddress, transactional bool) crypto.Hash {
     storage := database.GetStorage(addr, transactional)
     if storage == nil {
         return crypto.Hash{}
@@ -206,7 +207,7 @@ func (database *DatabaseService) GetCodeHash(addr crypto.CommonAddress, transact
     return storage.CodeHash
 }
 
-func (database *DatabaseService) GetReputation(addr crypto.CommonAddress, transactional bool) *big.Int {
+func (database *DatabaseService) GetReputation(addr *crypto.CommonAddress, transactional bool) *big.Int {
     storage := database.GetStorage(addr, transactional)
     if storage == nil {
         return big.NewInt(0)
@@ -269,7 +270,7 @@ func  (database *DatabaseService) Discard() {
     database.db.Discard()
 }
 
-func (database *DatabaseService)AddBalance(addr crypto.CommonAddress, amount *big.Int, transactional bool) {
+func (database *DatabaseService)AddBalance(addr *crypto.CommonAddress, amount *big.Int, transactional bool) {
     balance := database.GetBalance(addr, transactional)
     //text, _ := addr.MarshalText()
     //x := string(text)

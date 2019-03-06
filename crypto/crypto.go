@@ -108,9 +108,9 @@ func GenerateKey(rand io.Reader) (prv *secp256k1.PrivateKey, err error) {
 	return (*secp256k1.PrivateKey)(key), nil
 }
 
-func PubkeyToAddress(p *secp256k1.PublicKey) CommonAddress {
-	return Bytes2Address(Keccak256(p.Serialize()[1:])[12:])
-}
+//func PubkeyToAddress(p *secp256k1.PublicKey) CommonAddress {
+//	return Bytes2Address(Keccak256(p.Serialize()[1:])[12:])
+//}
 
 func zeroBytes(bytes []byte) {
 	for i := range bytes {

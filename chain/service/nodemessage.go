@@ -6,6 +6,7 @@ import (
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common/event"
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
+	txType "github.com/drep-project/drep-chain/transaction/types"
 )
 
 func (chainService *ChainService) Receive(context actor.Context) {
@@ -32,7 +33,7 @@ func (chainService *ChainService) Receive(context actor.Context) {
 			}
 		}()
 
-	case *chainTypes.Transaction:
+	case *txType.Transaction:
 		transaction := msg
 		id, _ := transaction.TxId()
 		if ForwardedTransaction(id) {

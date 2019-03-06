@@ -207,7 +207,7 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 				} else {
 					consensusService.P2pServer.Broadcast(block)
 					consensusService.ChainService.ProcessBlock(block)
-					dlog.Info("Block Produced  ", "Height", consensusService.DatabaseService.GetMaxHeight())
+					dlog.Info("Block Produced  ", "Height", consensusService.DatabaseService.GetMaxHeight(), "txs:", block.Data.TxCount)
 				}
 				time.Sleep(100) //delay a little time for block deliver
 				nextBlockTime, waitSpan := consensusService.GetWaitTime()

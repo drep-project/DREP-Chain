@@ -363,6 +363,7 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 		arguments = append(arguments, req.args...)
 	}
 
+	fmt.Println("rpcserver recv a new req")
 	// execute RPC method and return result
 	reply := req.callb.method.Func.Call(arguments)
 	if len(reply) == 0 {

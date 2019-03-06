@@ -1,16 +1,16 @@
 package evm
 
 import (
-	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/pkgs/evm/vm"
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/drep-project/drep-chain/crypto"
-	"math/big"
-	"gopkg.in/urfave/cli.v1"
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/drep-project/drep-chain/app"
+	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/pkgs/evm/vm"
+	"github.com/drep-project/drep-chain/transaction/types"
+	"gopkg.in/urfave/cli.v1"
+	"math/big"
 )
 
 var (
@@ -39,19 +39,20 @@ func  (evmService *EvmService) ExecuteStaticCall(evm *vm.EVM, callerAddr, contra
 	return returnGas, err
 }
 
-func  (evmService *EvmService) Tx2Message(tx *chainTypes.Transaction) *Message {
+func  (evmService *EvmService) Tx2Message(tx *types.Transaction) *Message {
 	readOnly := false
-	if bytes.Equal(tx.Data.Data[:1], []byte{1}) {
+	if bytes.Equal(tx.Data()[:1], []byte{1}) {
 		readOnly = true
 	}
+
 	return &Message{
-		From:      crypto.PubKey2Address(tx.Data.PubKey),
-		To:        tx.Data.To,
-		ChainId:   tx.Data.ChainId,
-		Gas:       tx.Data.GasLimit.Uint64(),
-		Value:     tx.Data.Amount,
-		Nonce:     uint64(tx.Data.Nonce),
-		Input:     tx.Data.Data[1:],
+		From:      *tx.From(),
+		To:        *tx.To(),
+		ChainId:   tx.ChainId(),
+		Gas:       tx.GasLimit().Uint64(),
+		Value:     tx.Amount(),
+		Nonce:     uint64(tx.Nonce()),
+		Input:     tx.Data()[1:],
 		ReadOnly:  readOnly,
 	}
 }
@@ -67,7 +68,7 @@ func  (evmService *EvmService) ApplyMessage(evm *vm.EVM, message *Message) (uint
 	}
 }
 
-func  (evmService *EvmService) ApplyTransaction(evm *vm.EVM, tx *chainTypes.Transaction) (uint64, error) {
+func  (evmService *EvmService) ApplyTransaction(evm *vm.EVM, tx *types.Transaction) (uint64, error) {
 	return evmService.ApplyMessage(evm,  evmService.Tx2Message(tx))
 }
 
@@ -77,7 +78,7 @@ type EvmService struct {
 }
 
 func (evmService *EvmService) Name() string {
-	return "log"
+	return "vm"
 }
 
 func (evmService *EvmService) Api() []app.API {

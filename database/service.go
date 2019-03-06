@@ -20,6 +20,12 @@ type DatabaseService struct {
 	db     *Database
 }
 
+func NewDatabaseService(db *Database) *DatabaseService {
+	ds := &DatabaseService{db: db}
+	return ds
+
+}
+
 func (database *DatabaseService) Name() string {
 	return "database"
 }
@@ -48,8 +54,8 @@ func (database *DatabaseService) Init(executeContext *app.ExecuteContext) error 
 	if executeContext.Cli != nil && executeContext.Cli.IsSet(DataDirFlag.Name) {
 		path = executeContext.Cli.GlobalString(DataDirFlag.Name)
 	}
-	database.db = NewDatabase(path)
-	return nil
+	database.db, err = NewDatabase(path)
+	return err
 }
 
 func (database *DatabaseService) Start(executeContext *app.ExecuteContext) error {

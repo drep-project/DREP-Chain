@@ -1547,7 +1547,7 @@ var open = new Method({
 var sendTransaction = new Method({
 	name: 'sendTransaction',
 	call: 'account_sendTransaction',
-	params: 4,
+	params: 3,
 });
 	
 var sign = new Method({

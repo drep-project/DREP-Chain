@@ -7,6 +7,7 @@ import (
     "github.com/drep-project/drep-chain/crypto"
     "errors"
     "encoding/hex"
+    txType "github.com/drep-project/drep-chain/transaction/types"
 )
 
 
@@ -27,11 +28,11 @@ func (chain *ChainApi) GetMaxHeight() int64 {
 }
 
 func (chain *ChainApi) GetBalance(addr crypto.CommonAddress) *big.Int{
-    return chain.dbService.GetBalance(addr, true)
+    return chain.dbService.GetBalance(&addr, true)
 }
 
 func (chain *ChainApi) GetNonce(addr crypto.CommonAddress) int64 {
-    return chain.dbService.GetNonce(addr, true)
+    return chain.dbService.GetNonce(&addr, true)
 }
 
 func (chain *ChainApi) GetPreviousBlockHash() string {
@@ -40,15 +41,15 @@ func (chain *ChainApi) GetPreviousBlockHash() string {
 }
 
 func (chain *ChainApi) GetReputation(addr crypto.CommonAddress) *big.Int {
-    return chain.dbService.GetReputation(addr, true)
+    return chain.dbService.GetReputation(&addr, true)
 }
 
-func (chain *ChainApi) GetTransactionsFromBlock(height int64) []*chainType.Transaction {
+func (chain *ChainApi) GetTransactionsFromBlock(height int64) []*txType.Transaction {
     block := chain.dbService.GetBlock(height)
     return block.Data.TxList
 }
 
-func (chain *ChainApi) GetTransactionByBlockHeightAndIndex(height int64, index int) *chainType.Transaction{
+func (chain *ChainApi) GetTransactionByBlockHeightAndIndex(height int64, index int) *txType.Transaction{
     block := chain.dbService.GetBlock(height)
     if index > len(block.Data.TxList) {
         return nil
@@ -61,19 +62,19 @@ func (chain *ChainApi) GetTransactionCountByBlockHeight(height int64) int {
     return len(block.Data.TxList)
 }
 
-func (chain *ChainApi) SendRawTransaction(tx *chainType.Transaction) (string, error){
+func (chain *ChainApi) SendRawTransaction(tx *txType.Transaction) (string, error){
     //bytes := []byte(raw)
     //tx := &chainType.Transaction{}
     //json.Unmarshal(bytes, tx)
 
     can := false
-    switch tx.Data.Type {
-    case TransferType:
-        can, _, _, _, _ = chain.canExecute(tx, TransferGas, nil)
-    case CreateContractType:
-        can, _, _, _, _ = chain.canExecute(tx, nil, CreateContractGas)
-    case CallContractType:
-        can, _, _, _, _ = chain.canExecute(tx,nil, CallContractGas)
+    switch tx.Type() {
+    case txType.TransferType:
+        can, _, _, _, _ = chain.canExecute(tx, txType.TransferGas, nil)
+    case txType.CreateContractType:
+        can, _, _, _, _ = chain.canExecute(tx, nil, txType.CreateContractGas)
+    case txType.CallContractType:
+        can, _, _, _, _ = chain.canExecute(tx,nil, txType.CallContractGas)
     }
 
     if !can {
@@ -93,24 +94,24 @@ func (chain *ChainApi) SendRawTransaction(tx *chainType.Transaction) (string, er
     return res, err
 }
 
-func (chain *ChainApi) canExecute(t *chainType.Transaction, gasFloor, gasCap *big.Int) (canExecute bool, addr crypto.CommonAddress, balance, gasLimit, gasPrice *big.Int) {
+func (chain *ChainApi) canExecute(tx *txType.Transaction, gasFloor, gasCap *big.Int) (canExecute bool, addr crypto.CommonAddress, balance, gasLimit, gasPrice *big.Int) {
     chain.chainService.DatabaseService.BeginTransaction()
-    addr = crypto.PubKey2Address(t.Data.PubKey)
-    balance = chain.chainService.DatabaseService.GetBalance(addr, true)
-    nonce :=  chain.chainService.DatabaseService.GetNonce(addr,true) + 1
-    chain.chainService.DatabaseService.PutNonce(addr, nonce,true)
+    addr = *tx.From()
+    balance = chain.chainService.DatabaseService.GetBalance(&addr, true)
+    nonce :=  chain.chainService.DatabaseService.GetNonce(&addr,true) + 1
+    chain.chainService.DatabaseService.PutNonce(&addr, nonce,true)
 
-    if nonce != t.Data.Nonce {
+    if nonce != tx.Nonce() {
        return
     }
     if gasFloor != nil {
-        amountFloor := new(big.Int).Mul(gasFloor, t.Data.GasPrice)
-        if t.Data.GasLimit.Cmp(gasFloor) < 0 || amountFloor.Cmp(balance) > 0 {
+        amountFloor := new(big.Int).Mul(gasFloor, tx.GasPrice())
+        if tx.GasLimit().Cmp(gasFloor) < 0 || amountFloor.Cmp(balance) > 0 {
             return
         }
     }
     if gasCap != nil {
-        amountCap := new(big.Int).Mul(gasCap, t.Data.GasPrice)
+        amountCap := new(big.Int).Mul(gasCap, tx.GasPrice())
         if amountCap.Cmp(balance) > 0 {
             return
         }

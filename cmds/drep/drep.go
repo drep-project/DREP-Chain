@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/drep-project/drep-chain/app"
+	"github.com/drep-project/drep-chain/pkgs/evm"
 	"github.com/drep-project/drep-chain/pkgs/log"
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/pkgs/rpc"
@@ -20,7 +21,7 @@ func main() {
 		rpc.RpcService{},
 		log.LogService{},
 		p2pService.P2pService{},
-
+		evm.EvmService{},
 		chainService.ChainService{},
 		accountService.AccountService{},
 		consensusService.ConsensusService{},

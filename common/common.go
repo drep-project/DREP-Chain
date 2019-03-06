@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+var Version int32 = 1
+
 func HmAC(message, key []byte) []byte {
 	h := hmac.New(sha512.New, key)
 	h.Write(message)

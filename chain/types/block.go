@@ -6,6 +6,7 @@ import (
     "github.com/drep-project/drep-chain/app"
     "github.com/drep-project/drep-chain/crypto/secp256k1"
     "github.com/drep-project/drep-chain/crypto/sha3"
+    "github.com/drep-project/drep-chain/transaction/types"
     "math/big"
 )
 
@@ -26,7 +27,7 @@ type BlockHeader struct {
 
 type BlockData struct {
     TxCount              int32
-    TxList               []*Transaction
+    TxList               []*types.Transaction
 }
 
 type Block struct {
