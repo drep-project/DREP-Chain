@@ -388,6 +388,7 @@ func (chainService *ChainService) Subscribe(subchan chan event.SyncBlockEvent) e
 func (chainService *ChainService)GetTransactionCount(addr * crypto.CommonAddress)int64{
 	return chainService.transactionPool.GetTransactionCount(addr)
 }
+
 func (chainService *ChainService) GetBlocksFrom(start, size int64) ( []*chainTypes.Block, error){
 	blocks := []*chainTypes.Block{}
 	for i:= start; i < start+size; i++ {

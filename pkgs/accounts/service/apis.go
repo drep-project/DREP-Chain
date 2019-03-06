@@ -78,7 +78,7 @@ func (accountapi *AccountApi) CloseWallet() {
 }
 
 func (accountapi *AccountApi) SendTransaction(from crypto.CommonAddress, to crypto.CommonAddress, amount *big.Int) (string, error) {
-	nonce := accountapi.chainService.GetTransactionCount(&from)
+	nonce := accountapi.chainService.DatabaseService.GetNonce(&from, false)+1
 	t := chainTypes.NewTransaction(from, to, amount, nonce)
 	err := accountapi.chainService.SendTransaction(t)
 	if err != nil{

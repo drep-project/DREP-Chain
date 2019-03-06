@@ -27,6 +27,7 @@ import (
 	"sort"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"
@@ -118,6 +119,10 @@ func (c *Console) init(preload []string) error {
 	consoleObj, _ := c.jsre.Get("console")
 	consoleObj.Object().Set("log", c.consoleOutput)
 	consoleObj.Object().Set("error", c.consoleOutput)
+
+	c.jsre.Run("var thread = {}")
+	threadObj, _ := c.jsre.Get("thread")
+	threadObj.Object().Set("sleep", c.sleep)
 
 	// Load all the internal utility JavaScript libraries
 	if err := c.jsre.Compile("bignumber.js", jsre.BigNumber_JS); err != nil {
@@ -224,6 +229,11 @@ func (c *Console) clearHistory() {
 	} else {
 		fmt.Fprintln(c.printer, "history file deleted")
 	}
+}
+
+func (c *Console) sleep(ms int) otto.Value {
+	time.Sleep(time.Duration(ms) * time.Second)
+	return otto.Value{}
 }
 
 // consoleOutput is an override for the console.log and console.error methods to

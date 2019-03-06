@@ -285,15 +285,19 @@ func (chainService *ChainService) InitStates() error {
 	chainState := chainService.DatabaseService.GetChainState()
 
 	var blockCount int32
-	chainService.DatabaseService.BlockNodeIterator(func(header *chainTypes.BlockHeader, status chainTypes.BlockStatus) error {
+	err := chainService.DatabaseService.BlockNodeIterator(func(header *chainTypes.BlockHeader, status chainTypes.BlockStatus) error {
 		blockCount++
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
 	blockNodes := make([]chainTypes.BlockNode, blockCount)
 
 	var i int32
 	var lastNode *chainTypes.BlockNode
-	chainService.DatabaseService.BlockNodeIterator(func(header *chainTypes.BlockHeader, status chainTypes.BlockStatus) error {
+	err = chainService.DatabaseService.BlockNodeIterator(func(header *chainTypes.BlockHeader, status chainTypes.BlockStatus) error {
 		// Determine the parent block node. Since we iterate block headers
 		// in order of height, if the blocks are mostly linear there is a
 		// very good chance the previous header processed is the parent.
@@ -327,6 +331,10 @@ func (chainService *ChainService) InitStates() error {
 		return nil
 	})
 
+	if err != nil {
+		return err
+	}
+
 	// Set the best chain view to the stored best state.
 	tip := chainService.Index.LookupNode(&chainState.Hash)
 	if tip == nil {
@@ -336,7 +344,7 @@ func (chainService *ChainService) InitStates() error {
 	chainService.BestChain.SetTip(tip)
 
 	// Load the raw block bytes for the best block.
-	_, err := chainService.DatabaseService.GetBlock(&chainState.Hash)
+	_, err = chainService.DatabaseService.GetBlock(&chainState.Hash)
 	if err != nil {
 		return err
 	}
