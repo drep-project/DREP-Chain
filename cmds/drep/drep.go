@@ -12,9 +12,15 @@ import (
 	accountService "github.com/drep-project/drep-chain/pkgs/accounts/service"
 	consensusService "github.com/drep-project/drep-chain/pkgs/consensus/service"
 	evmService "github.com/drep-project/drep-chain/pkgs/evm"
+	"net/http"
+	_ "net/http/pprof"
 )
 
 func main() {
+	go func() {
+		http.ListenAndServe("0.0.0.0:8080", nil)
+	}()
+
 	drepApp := app.NewApp()
 	err := drepApp.AddServices(
 		database.DatabaseService{},

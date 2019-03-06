@@ -1,13 +1,13 @@
 package database
 
 import (
-	"strconv"
 	"encoding/json"
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/sha3"
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/syndtr/goleveldb/leveldb"
 	"math/big"
+	"strconv"
 )
 
 type Database struct {
