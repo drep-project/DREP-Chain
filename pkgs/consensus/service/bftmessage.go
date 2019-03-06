@@ -15,19 +15,19 @@ func (consensusService *ConsensusService) Receive(context actor.Context) {
 
 	switch msg := routeMsg.Detail.(type) {
 	case *consensusTypes.Setup:
-		dlog.Debug("receive setup msg "+ routeMsg.Peer.GetAddr())
+		dlog.Debug("Receive setup msg "+ routeMsg.Peer.GetAddr())
 		consensusService.member.OnSetUp(routeMsg.Peer, msg)
 	case *consensusTypes.Commitment:
-		dlog.Debug("receive Commitment msg " + routeMsg.Peer.GetAddr())
+		dlog.Debug("Receive Commitment msg " + routeMsg.Peer.GetAddr())
 		consensusService.leader.OnCommit(routeMsg.Peer, msg)
 	case *consensusTypes.Challenge:
-		dlog.Debug("receive Challenge msg "+ routeMsg.Peer.GetAddr())
+		dlog.Debug("Receive Challenge msg "+ routeMsg.Peer.GetAddr())
 		consensusService.member.OnChallenge(routeMsg.Peer, msg)
 	case *consensusTypes.Response:
-		dlog.Debug("receive Response msg "+ routeMsg.Peer.GetAddr())
+		dlog.Debug("Receive Response msg "+ routeMsg.Peer.GetAddr())
 		consensusService.leader.OnResponse(routeMsg.Peer, msg)
 	case *consensusTypes.Fail:
-		dlog.Debug("receive Fail msg")
+		dlog.Debug("Receive Fail msg")
 		consensusService.member.OnFail(routeMsg.Peer, msg)
 	}
 }

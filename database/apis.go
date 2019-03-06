@@ -1,33 +1,31 @@
 package database
 
 import (
-    "strconv"
-    "encoding/json"
-    chainType "github.com/drep-project/drep-chain/chain/types"
-    "github.com/drep-project/drep-chain/crypto/sha3"
-    "github.com/drep-project/drep-chain/crypto"
-    "math/big"
-    "errors"
+    "encoding/binary"
     "encoding/hex"
+    "encoding/json"
+    "errors"
+    chainType "github.com/drep-project/drep-chain/chain/types"
+    "github.com/drep-project/drep-chain/crypto"
+    "github.com/drep-project/drep-chain/crypto/sha3"
+    "github.com/syndtr/goleveldb/leveldb/util"
+    "math/big"
+)
+
+var (
+    MetaDataPrefix = []byte("metaData_")
+    ChainStatePrefix = []byte("chainState_")
+    BlockPrefix = []byte("block_")
+    BlockNodePrefix = []byte("blockNode_")
 )
 
 func (database *DatabaseService) GetStateRoot() []byte {
     return database.db.getStateRoot()
 }
 
-func (database *DatabaseService) GetBlock(height int64) *chainType.Block {
-    key := sha3.Hash256([]byte("block_" + strconv.FormatInt(height, 10)))
-    value, err := database.db.get(key, false)
-    if err != nil {
-        return nil
-    }
-    block := &chainType.Block{}
-    json.Unmarshal(value, block)
-    return block
-}
-
 func (database *DatabaseService) PutBlock(block *chainType.Block) error {
-    key := sha3.Hash256([]byte("block_" + strconv.FormatInt(block.Header.Height, 10)))
+    hash := block.Header.Hash()
+    key := append(BlockPrefix, hash[:]...)
     value, err := json.Marshal(block)
     if err != nil {
         return err
@@ -35,71 +33,119 @@ func (database *DatabaseService) PutBlock(block *chainType.Block) error {
     return database.db.put(key, value, false)
 }
 
-func (database *DatabaseService) GetBlocksFrom(start, size int64) []*chainType.Block {
-    var (
-        currentBlock =&chainType.Block{}
-        height = start
-        blocks = make([]*chainType.Block, 0)
-    )
-    for currentBlock != nil && (height < start + size || size == -1)  {
-        currentBlock = database.GetBlock(height)
-        if currentBlock != nil {
-            blocks = append(blocks, currentBlock)
+func (database *DatabaseService) GetBlock(hash *crypto.Hash) (*chainType.Block, error) {
+    key := append(BlockPrefix, hash[:]...)
+    value, err := database.db.get(key, false)
+    if err != nil {
+        return nil, err
+    }
+    block := &chainType.Block{}
+    json.Unmarshal(value, block)
+    return block, nil
+}
+
+func (database *DatabaseService) BlockIterator(handle func(*chainType.Block) error) error {
+    iter := database.db.db.NewIterator(util.BytesPrefix(BlockPrefix), nil)
+    defer iter.Release()
+    var err error
+    for iter.Next() {
+        block := &chainType.Block{}
+        err = json.Unmarshal(iter.Value(), block)
+        if err != nil {
+           break
         }
-        height += 1
+        err = handle(block)
+        if err != nil {
+            break
+        }
     }
-    return blocks
+    if err != nil {
+        return err
+    }
+    return nil
 }
 
-func (database *DatabaseService) GetAllBlocks() []*chainType.Block {
-    return database.GetBlocksFrom(int64(0), int64(-1))
+
+func (database *DatabaseService) PutBlockNode(blockNode *chainType.BlockNode) error {
+    header := blockNode.Header()
+    value, err := json.Marshal(header)
+    if err != nil {
+        return err
+    }
+    key := database.blockIndexKey(blockNode.Hash, blockNode.Height)
+    value = append(value, byte(blockNode.Status))    //TODO just for now , when change binary serilize, should change a better one
+    return database.db.put(key, value, false)
 }
 
-func (database *DatabaseService) GetHighestBlock() *chainType.Block {
-    maxHeight := database.GetMaxHeight()
-    return database.GetBlock(maxHeight)
+func (database *DatabaseService) blockIndexKey(blockHash *crypto.Hash, blockHeight int64) []byte {
+    indexKey := make([]byte, len(BlockNodePrefix)+crypto.HashLength+8)
+    copy(indexKey[0:len(BlockNodePrefix)], BlockNodePrefix[:])
+    binary.BigEndian.PutUint64(indexKey[len(BlockNodePrefix):len(BlockNodePrefix)+8], uint64(blockHeight))
+    copy(indexKey[len(BlockNodePrefix)+8:len(BlockNodePrefix)+40], blockHash[:])
+    return indexKey
 }
 
-func (database *DatabaseService) GetMaxHeight() int64 {
-    key := sha3.Hash256([]byte("max_height"))
+func (database *DatabaseService) GetBlockNode(hash *crypto.Hash, height int64) (*chainType.BlockHeader, chainType.BlockStatus, error) {
+    key := database.blockIndexKey(hash, height)
     value, err := database.db.get(key, false)
     if err != nil {
-        return -1
-    } else {
-        return new(big.Int).SetBytes(value).Int64()
+        return nil, 0, err
     }
+    blockHeader := &chainType.BlockHeader{}
+    json.Unmarshal(value[0:len(value)-1], blockHeader)
+    status :=  value[len(value)-1:len(value)][0]
+    return blockHeader, chainType.BlockStatus(status), nil
 }
 
-func (database *DatabaseService) PutMaxHeight(height int64) error {
-    key := sha3.Hash256([]byte("max_height"))
-    value := new(big.Int).SetInt64(height).Bytes()
+func (database *DatabaseService) BlockNodeIterator(handle func(*chainType.BlockHeader, chainType.BlockStatus) error) error {
+    iter := database.db.db.NewIterator(util.BytesPrefix(BlockNodePrefix), nil)
+    defer iter.Release()
+    var err error
+    for iter.Next() {
+        val := iter.Value()
+        blockHeader := &chainType.BlockHeader{}
+        err = json.Unmarshal(val[0:len(val)-1], blockHeader)
+        if err != nil {
+            break
+        }
+        err = handle(blockHeader, chainType.BlockStatus(val[len(val)-1:len(val)][0]))
+        if err != nil {
+            break
+        }
+    }
+    if err != nil {
+        return err
+    }
+    return nil
+}
+
+
+func (database *DatabaseService) PutChainState(chainState *chainType.BestState) error {
+    key := ChainStatePrefix
+    value, err := json.Marshal(chainState)
+    if err != nil {
+        return err
+    }
     return database.db.put(key, value, false)
 }
 
-func (database *DatabaseService) GetPreviousBlockHash() []byte {
-    key := sha3.Hash256([]byte("previous_hash"))
-    value, _ := database.db.get(key, false)
-    return value
-}
-
-func (database *DatabaseService) PutPreviousBlockHash(value []byte) error {
-    key := sha3.Hash256([]byte("previous_hash"))
-    return database.db.put(key, value, false)
-}
-
-func (database *DatabaseService) GetPreviousBlockTimestamp() int64 {
-    key := sha3.Hash256([]byte("previous_hash"))
+func (database *DatabaseService) GetChainState() *chainType.BestState {
+    key := ChainStatePrefix
     value, err := database.db.get(key, false)
     if err != nil {
-        return -1
+        return nil
     }
-    return new(big.Int).SetBytes(value).Int64()
+    state := &chainType.BestState{}
+    json.Unmarshal(value, state)
+    return state
 }
 
-func (database *DatabaseService) PutPreviousBlockTimestamp(timestamp int64) error {
-    key := sha3.Hash256([]byte("previous_hash"))
-    value := new(big.Int).SetInt64(timestamp).Bytes()
-    return database.db.put(key, value, false)
+func (database *DatabaseService) Rollback2Block(height int64) {
+     database.db.Rollback2Block(height)
+}
+
+func (database *DatabaseService) RecordBlockJournal(height int64) {
+    database.db.RecordBlockJournal(height)
 }
 
 

@@ -4,3 +4,4 @@ go.sum
 .idea
 tools/gencode/*.js
 dreptest*
+data

@@ -8,7 +8,7 @@ import (
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
-	"github.com/drep-project/drep-chain/transaction/types"
+	"github.com/drep-project/drep-chain/chain/types"
 	"gopkg.in/urfave/cli.v1"
 	"math/big"
 )
@@ -41,7 +41,7 @@ func  (evmService *EvmService) ExecuteStaticCall(evm *vm.EVM, callerAddr, contra
 
 func  (evmService *EvmService) Tx2Message(tx *types.Transaction) *Message {
 	readOnly := false
-	if bytes.Equal(tx.Data()[:1], []byte{1}) {
+	if bytes.Equal(tx.GetData()[:1], []byte{1}) {
 		readOnly = true
 	}
 
@@ -52,7 +52,7 @@ func  (evmService *EvmService) Tx2Message(tx *types.Transaction) *Message {
 		Gas:       tx.GasLimit().Uint64(),
 		Value:     tx.Amount(),
 		Nonce:     uint64(tx.Nonce()),
-		Input:     tx.Data()[1:],
+		Input:     tx.GetData()[1:],
 		ReadOnly:  readOnly,
 	}
 }

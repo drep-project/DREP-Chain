@@ -7,7 +7,6 @@ import (
     "github.com/drep-project/drep-chain/crypto"
     "errors"
     "encoding/hex"
-    txType "github.com/drep-project/drep-chain/transaction/types"
 )
 
 
@@ -17,14 +16,11 @@ type ChainApi struct {
 }
 
 func (chain *ChainApi) GetBlock(height int64) *chainType.Block {
-    if height < 0 {
-        return nil
-    }
-    return chain.dbService.GetBlock(height)
+    return chain.GetBlock(height)
 }
 
 func (chain *ChainApi) GetMaxHeight() int64 {
-    return chain.dbService.GetMaxHeight()
+    return chain.GetMaxHeight()
 }
 
 func (chain *ChainApi) GetBalance(addr crypto.CommonAddress) *big.Int{
@@ -36,21 +32,21 @@ func (chain *ChainApi) GetNonce(addr crypto.CommonAddress) int64 {
 }
 
 func (chain *ChainApi) GetPreviousBlockHash() string {
-    bytes := chain.dbService.GetPreviousBlockHash()
-    return "0x" + string(bytes)
+    bytes := chain.GetPreviousBlockHash()
+    return "0x" + string(bytes[:])
 }
 
 func (chain *ChainApi) GetReputation(addr crypto.CommonAddress) *big.Int {
     return chain.dbService.GetReputation(&addr, true)
 }
 
-func (chain *ChainApi) GetTransactionsFromBlock(height int64) []*txType.Transaction {
-    block := chain.dbService.GetBlock(height)
+func (chain *ChainApi) GetTransactionsFromBlock(height int64) []*chainType.Transaction {
+    block := chain.GetBlock(height)
     return block.Data.TxList
 }
 
-func (chain *ChainApi) GetTransactionByBlockHeightAndIndex(height int64, index int) *txType.Transaction{
-    block := chain.dbService.GetBlock(height)
+func (chain *ChainApi) GetTransactionByBlockHeightAndIndex(height int64, index int) *chainType.Transaction{
+    block := chain.GetBlock(height)
     if index > len(block.Data.TxList) {
         return nil
     }
@@ -58,23 +54,23 @@ func (chain *ChainApi) GetTransactionByBlockHeightAndIndex(height int64, index i
 }
 
 func (chain *ChainApi) GetTransactionCountByBlockHeight(height int64) int {
-    block := chain.dbService.GetBlock(height)
+    block := chain.GetBlock(height)
     return len(block.Data.TxList)
 }
 
-func (chain *ChainApi) SendRawTransaction(tx *txType.Transaction) (string, error){
+func (chain *ChainApi) SendRawTransaction(tx *chainType.Transaction) (string, error){
     //bytes := []byte(raw)
     //tx := &chainType.Transaction{}
     //json.Unmarshal(bytes, tx)
 
     can := false
     switch tx.Type() {
-    case txType.TransferType:
-        can, _, _, _, _ = chain.canExecute(tx, txType.TransferGas, nil)
-    case txType.CreateContractType:
-        can, _, _, _, _ = chain.canExecute(tx, nil, txType.CreateContractGas)
-    case txType.CallContractType:
-        can, _, _, _, _ = chain.canExecute(tx,nil, txType.CallContractGas)
+    case chainType.TransferType:
+        can, _, _, _, _ = chain.canExecute(tx, chainType.TransferGas, nil)
+    case chainType.CreateContractType:
+        can, _, _, _, _ = chain.canExecute(tx, nil, chainType.CreateContractGas)
+    case chainType.CallContractType:
+        can, _, _, _, _ = chain.canExecute(tx,nil, chainType.CallContractGas)
     }
 
     if !can {
@@ -94,7 +90,7 @@ func (chain *ChainApi) SendRawTransaction(tx *txType.Transaction) (string, error
     return res, err
 }
 
-func (chain *ChainApi) canExecute(tx *txType.Transaction, gasFloor, gasCap *big.Int) (canExecute bool, addr crypto.CommonAddress, balance, gasLimit, gasPrice *big.Int) {
+func (chain *ChainApi) canExecute(tx *chainType.Transaction, gasFloor, gasCap *big.Int) (canExecute bool, addr crypto.CommonAddress, balance, gasLimit, gasPrice *big.Int) {
     chain.chainService.DatabaseService.BeginTransaction()
     addr = *tx.From()
     balance = chain.chainService.DatabaseService.GetBalance(&addr, true)

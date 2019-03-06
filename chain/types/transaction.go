@@ -13,8 +13,8 @@ import (
 )
 
 type Transaction struct {
-	data *TransactionData
-	sig  []byte
+	Data *TransactionData
+	Sig  []byte
 }
 
 type TransactionData struct {
@@ -32,15 +32,15 @@ type TransactionData struct {
 }
 
 func (tx *Transaction) Nonce() int64 {
-	return tx.data.Nonce
+	return tx.Data.Nonce
 }
 
 func (tx *Transaction) Type() TxType {
-	return tx.data.Type
+	return tx.Data.Type
 }
 
 func (tx *Transaction) From() *crypto.CommonAddress {
-	return &tx.data.From
+	return &tx.Data.From
 }
 
 type CrossChainTransaction struct {
@@ -49,34 +49,34 @@ type CrossChainTransaction struct {
 	Trans     []*Transaction
 }
 
-func (tx *Transaction) Data() []byte {
-	return tx.data.Data
+func (tx *Transaction) GetData() []byte {
+	return tx.Data.Data
 }
 
 func (tx *Transaction) To() *crypto.CommonAddress {
-	return &tx.data.To
+	return &tx.Data.To
 }
 
 func (tx *Transaction) ChainId() app.ChainIdType {
-	return tx.data.ChainId
+	return tx.Data.ChainId
 }
 
 func (tx *Transaction) Amount() *big.Int {
-	return tx.data.Amount
+	return tx.Data.Amount
 }
 func (tx *Transaction) GasLimit() *big.Int {
-	return tx.data.GasLimit
+	return tx.Data.GasLimit
 }
 func (tx *Transaction) GasPrice() *big.Int {
-	return tx.data.GasPrice
+	return tx.Data.GasPrice
 }
 
 //func (tx *Transaction) PubKey() *secp256k1.PublicKey {
-//	return tx.data.PubKey
+//	return tx.Data.PubKey
 //}
 
 func (tx *Transaction) TxId() (string, error) {
-	b, err := json.Marshal(tx.data)
+	b, err := json.Marshal(tx.Data)
 	if err != nil {
 		return "", err
 	}
@@ -85,7 +85,7 @@ func (tx *Transaction) TxId() (string, error) {
 }
 
 func (tx *Transaction) TxHash() ([]byte, error) {
-	b, err := json.Marshal(tx.data)
+	b, err := json.Marshal(tx.Data)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func (tx *Transaction) TxHash() ([]byte, error) {
 }
 
 func (tx *Transaction) TxSig(prvKey *secp256k1.PrivateKey) (*secp256k1.Signature, error) {
-	b, err := json.Marshal(tx.data)
+	b, err := json.Marshal(tx.Data)
 	if err != nil {
 		return nil, err
 	}
@@ -108,12 +108,12 @@ func (tx *Transaction) GetGasUsed() *big.Int {
 
 func (tx *Transaction) GetGas() *big.Int {
 	gasQuantity := tx.GetGasUsed()
-	gasUsed := new(big.Int).Mul(gasQuantity, tx.data.GasPrice)
+	gasUsed := new(big.Int).Mul(gasQuantity, tx.Data.GasPrice)
 	return gasUsed
 }
 
-func (tx *Transaction) Sig() []byte {
-	return tx.sig
+func (tx *Transaction) GetSig() []byte {
+	return tx.Sig
 }
 
 func NewTransaction(from crypto.CommonAddress, to crypto.CommonAddress, amount *big.Int, nonce int64) *Transaction {
@@ -128,7 +128,7 @@ func NewTransaction(from crypto.CommonAddress, to crypto.CommonAddress, amount *
 		Timestamp: time.Now().Unix(),
 		From:      from,
 	}
-	return &Transaction{data: data}
+	return &Transaction{Data: data}
 }
 
 func NewContractTransaction(from crypto.CommonAddress, to crypto.CommonAddress, byteCode []byte, nonce int64) *Transaction {
@@ -144,7 +144,7 @@ func NewContractTransaction(from crypto.CommonAddress, to crypto.CommonAddress, 
 	}
 	copy(data.Data[1:], byteCode)
 	data.Data[0] = 2
-	return &Transaction{data: data}
+	return &Transaction{Data: data}
 }
 
 func NewCallContractTransaction(from crypto.CommonAddress, to crypto.CommonAddress, input []byte, amount *big.Int, nonce int64, readOnly bool) *Transaction {
@@ -166,5 +166,5 @@ func NewCallContractTransaction(from crypto.CommonAddress, to crypto.CommonAddre
 	} else {
 		data.Data[0] = 0
 	}
-	return &Transaction{data: data}
+	return &Transaction{Data: data}
 }

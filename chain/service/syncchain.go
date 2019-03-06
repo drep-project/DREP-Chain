@@ -1,18 +1,18 @@
 package service
 
 import (
+	"fmt"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common/event"
+	"github.com/drep-project/drep-chain/crypto"
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
 	"time"
 )
 
 func (chainService *ChainService) fetchBlocks() {
 	for {
-		maxH := chainService.DatabaseService.GetMaxHeight()
-
 		chainService.P2pServer.Broadcast(&chainTypes.ReqPeerState{
-			Height: maxH,
+			Height: chainService.BestChain.Height(),
 		})
 		time.Sleep(time.Second * 5)
 		peer, state := chainService.GetBestPeer()
@@ -20,48 +20,45 @@ func (chainService *ChainService) fetchBlocks() {
 			continue
 		}
 
-		if state.Height > maxH {
+		if state.Height > chainService.BestChain.Height() {
 			chainService.syncMaxHeightMut.Lock()
 			if chainService.syncingMaxHeight == -1 {
 				chainService.syncingMaxHeight = state.Height
-				chainService.syncBlockEvent.Send(&event.SyncBlockEvent{EventType: event.StartSyncBlock})
-
+				fmt.Println(chainService.syncingMaxHeight)
+				chainService.syncBlockEvent.Send(event.SyncBlockEvent{EventType: event.StartSyncBlock})
 			} else if chainService.syncingMaxHeight < state.Height {
 				chainService.syncingMaxHeight = state.Height
 			}
 			chainService.syncMaxHeightMut.Unlock()
 
-			num := int(chainService.syncingMaxHeight - maxH)
-			for i := 0; i < num; i++ {
-				if i > 0 && i%64 == 0 {
-					time.Sleep(time.Second)
-				}
-				req := &chainTypes.BlockReq{Height: maxH + int64(i)}
-				chainService.P2pServer.Send(peer, req)
+			req := &chainTypes.BlockReq{
+				StartHash: *chainService.BestChain.Tip().Hash,
+				StopHash: crypto.Hash{},
 			}
+			chainService.P2pServer.Send(peer, req)
 		}
 	}
 }
 
 func (chainService *ChainService) handlePeerState(peer *p2pTypes.Peer, peerState *chainTypes.PeerState) {
 	//get bestpeers
-	if _, ok := chainService.peerStateMap[string(peer.PubKey.Serialize())]; ok {
-		chainService.peerStateMap[string(peer.PubKey.Serialize())].Height = peerState.Height
+	if _, ok := chainService.peerStateMap[string(peer.Ip)]; ok {
+		chainService.peerStateMap[string(peer.Ip)].Height = peerState.Height
 	} else {
-		chainService.peerStateMap[string(peer.PubKey.Serialize())] = peerState
+		chainService.peerStateMap[string(peer.Ip)] = peerState
 	}
 }
 
 func (chainService *ChainService) handleReqPeerState(peer *p2pTypes.Peer, peerState *chainTypes.ReqPeerState) {
 
-	if _, ok := chainService.peerStateMap[string(peer.PubKey.Serialize())]; ok {
-		chainService.peerStateMap[string(peer.PubKey.Serialize())].Height = peerState.Height
+	if _, ok := chainService.peerStateMap[string(peer.Ip)]; ok {
+		chainService.peerStateMap[string(peer.Ip)].Height = peerState.Height
 	} else {
-		chainService.peerStateMap[string(peer.PubKey.Serialize())] = &chainTypes.PeerState{Height: peerState.Height}
+		chainService.peerStateMap[string(peer.Ip)] = &chainTypes.PeerState{Height: peerState.Height}
 	}
 
 	chainService.P2pServer.SendAsync(peer, &chainTypes.PeerState{
-		Height: chainService.DatabaseService.GetMaxHeight(),
+		Height: chainService.BestChain.Height(),
 	})
 }
 

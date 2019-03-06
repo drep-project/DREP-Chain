@@ -10,7 +10,7 @@ import (
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/database"
-	txType "github.com/drep-project/drep-chain/transaction/types"
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
 )
 
 type AccountApi struct {
@@ -79,7 +79,7 @@ func (accountapi *AccountApi) CloseWallet() {
 
 func (accountapi *AccountApi) SendTransaction(from crypto.CommonAddress, to crypto.CommonAddress, amount *big.Int) (string, error) {
 	nonce := accountapi.chainService.GetTransactionCount(&from)
-	t := txType.NewTransaction(from, to, amount, nonce)
+	t := chainTypes.NewTransaction(from, to, amount, nonce)
 	err := accountapi.chainService.SendTransaction(t)
 	if err != nil{
 		return "",err
@@ -98,14 +98,14 @@ func (accountapi *AccountApi) SendTransaction(from crypto.CommonAddress, to cryp
 
 func (accountapi *AccountApi) Call(from crypto.CommonAddress, to crypto.CommonAddress, input []byte, amount *big.Int, readOnly bool) (string, error) {
 	nonce := accountapi.chainService.GetTransactionCount(&from)
-	t := txType.NewCallContractTransaction(from, to, input, amount, nonce, readOnly)
+	t := chainTypes.NewCallContractTransaction(from, to, input, amount, nonce, readOnly)
 	accountapi.chainService.SendTransaction(t)
 	return t.TxId()
 }
 
 func (accountapi *AccountApi) CreateCode(from crypto.CommonAddress, to crypto.CommonAddress, byteCode []byte) (string, error) {
 	nonce := accountapi.chainService.GetTransactionCount(&from)
-	t := txType.NewContractTransaction(from, to, byteCode, nonce)
+	t := chainTypes.NewContractTransaction(from, to, byteCode, nonce)
 	accountapi.chainService.SendTransaction(t)
 	return t.TxId()
 }
@@ -133,7 +133,7 @@ func (accountapi *AccountApi) Sign(address *crypto.CommonAddress, msg string) ([
 }
 
 func (accountapi *AccountApi) GasPrice() *big.Int {
-	return txType.DefaultGasPrice
+	return chainTypes.DefaultGasPrice
 }
 
 func (accountapi *AccountApi) GetCode(addr crypto.CommonAddress) []byte {

@@ -1,12 +1,13 @@
 package database
 
 import (
+	"strconv"
 	"encoding/json"
-	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
-    "math/big"
+	"github.com/syndtr/goleveldb/leveldb"
+	"math/big"
 )
 
 type Database struct {
@@ -18,7 +19,14 @@ type Database struct {
 	root   []byte
 }
 
-func NewDatabase(dbPath string) (*Database, error){
+type journal struct {
+	op       string
+	key      []byte
+	value    []byte
+	previous []byte
+}
+
+func NewDatabase(dbPath string) (*Database, error) {
 	ldb, err := leveldb.OpenFile(dbPath, nil)
 	if err != nil {
 		return nil, err
@@ -29,7 +37,7 @@ func NewDatabase(dbPath string) (*Database, error){
 		states: nil,
 	}
 	db.initState()
-	return db,nil
+	return db, nil
 }
 
 func (db *Database) initState() {
@@ -62,7 +70,25 @@ func (db *Database) get(key []byte, transactional bool) ([]byte, error) {
 
 func (db *Database) put(key []byte, value []byte, temporary bool) error {
 	if !temporary {
-		return db.db.Put(key, value, nil)
+		depthVal, err := db.db.Get([]byte("journal_depth"), nil)
+		var depth int64 = 0
+		if err == nil {
+			depth = new(big.Int).SetBytes(depthVal).Int64() + 1
+		}
+		previous, _ := db.get(key, temporary)
+		j := &journal{
+			op:      "put",
+			key:      key,
+			value:    value,
+			previous: previous,
+		}
+		err = db.db.Put(key, value, nil)
+		if err != nil {
+			return err
+		}
+		jVal, _ := json.Marshal(j)
+		db.db.Put([]byte("journal_" + strconv.FormatInt(depth, 10)), jVal, nil)
+		return nil
 	}
 	db.temp[bytes2Hex(key)] = value
 	return nil
@@ -70,6 +96,23 @@ func (db *Database) put(key []byte, value []byte, temporary bool) error {
 
 func (db *Database) delete(key []byte, temporary bool) error {
 	if !temporary {
+		depthVal, err := db.db.Get([]byte("journal_depth"), nil)
+		var depth int64 = 0
+		if err == nil {
+			depth = new(big.Int).SetBytes(depthVal).Int64() + 1
+		}
+		previous, _ := db.get(key, temporary)
+		j := &journal{
+			op:      "del",
+			key:      key,
+			previous: previous,
+		}
+		err = db.db.Delete(key, nil)
+		if err != nil {
+			return err
+		}
+		jVal, _ := json.Marshal(j)
+		db.db.Put([]byte("journal_" + strconv.FormatInt(depth, 10)), jVal, nil)
 		return db.db.Delete(key, nil)
 	}
 	db.temp[bytes2Hex(key)] = nil
@@ -88,6 +131,7 @@ func (db *Database) EndTransaction() {
 	db.stores = nil
 }
 
+
 func (db *Database) Commit() {
 	for key, value := range db.temp {
 		bk := hex2Bytes(key)
@@ -104,7 +148,49 @@ func (db *Database) Discard() {
 	db.EndTransaction()
 }
 
-//trie tree root
+func (db *Database) Rollback(index int64) {
+	depthVal, err := db.db.Get([]byte("journal_depth"), nil)
+	var depth int64 = 0
+	if err == nil {
+		depth = new(big.Int).SetBytes(depthVal).Int64() + 1
+	}
+	for i := depth; i > index; i-- {
+		key := []byte("journal_" + strconv.FormatInt(depth, 10))
+		jVal, _ := db.db.Get(key, nil)
+		if jVal == nil {
+			continue
+		}
+		j := &journal{}
+		err = json.Unmarshal(jVal, j)
+		if err != nil {
+			continue
+		}
+		if j.op == "put" {
+			if j.previous == nil {
+				db.db.Delete(key, nil)
+			} else {
+				db.db.Put(key, j.previous, nil)
+			}
+		}
+		if j.op == "del" {
+			db.db.Put(key, j.previous, nil)
+		}
+		db.db.Delete(key, nil)
+	}
+}
+
+func (db *Database) Rollback2Block(height int64) {
+	indexVal, _ := db.db.Get([]byte("depth_of_height_" + strconv.FormatInt(height, 10)), nil)
+	index := new(big.Int).SetBytes(indexVal).Int64()
+	db.Rollback(index)
+}
+
+func (db *Database) RecordBlockJournal(height int64) {
+	depthVal, _ := db.db.Get([]byte("journal_depth"), nil)
+	depth := new(big.Int).SetBytes(depthVal).Int64()
+	db.db.Put([]byte("depth_of_height_" + strconv.FormatInt(height, 10)), new(big.Int).SetInt64(depth).Bytes(), nil)
+}
+
 func (db *Database) getStateRoot() []byte {
 	state, _ := db.getState(db.root)
 	return state.Value
@@ -174,6 +260,6 @@ func (db *Database) putStorage(addr *crypto.CommonAddress, storage *chainTypes.S
 	if err != nil {
 		return err
 	}
-
+	insert(nil, bytes2Hex(key), db.root, sha3.Hash256(value))
 	return db.put(key, value, true)
 }

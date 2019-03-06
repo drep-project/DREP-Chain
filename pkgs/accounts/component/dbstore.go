@@ -30,6 +30,7 @@ func NewDbStore(dbStoreDir string) DbStore {
 	if err != nil {
 		panic(err)
 	}
+
 	return DbStore{
 		dbDirPath: dbStoreDir,
 		db:        db,

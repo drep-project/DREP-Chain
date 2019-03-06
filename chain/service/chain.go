@@ -2,16 +2,13 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/drep-project/drep-chain/pkgs/evm"
-	"github.com/drep-project/drep-chain/transaction/txpool"
+	"github.com/drep-project/drep-chain/chain/txpool"
 	"math/big"
-	"strconv"
 	"sync"
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
 	"gopkg.in/urfave/cli.v1"
 
@@ -25,13 +22,16 @@ import (
 
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	p2pService "github.com/drep-project/drep-chain/network/service"
-	p2pTypes "github.com/drep-project/drep-chain/network/types"
 	rpc2 "github.com/drep-project/drep-chain/pkgs/rpc"
-	txType "github.com/drep-project/drep-chain/transaction/types"
 )
 
 var (
 	rootChain     app.ChainIdType
+	DefaultChainConfig = &chainTypes.ChainConfig{
+		RemotePort : 55555,
+		ChainId  : app.ChainIdType{},
+		GenesisPK  : "0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26",
+	}
 	//genesisPubkey = "0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26"
 )
 
@@ -52,13 +52,24 @@ type ChainService struct {
 	StartComplete chan struct{}
 	stopChanel    chan struct{}
 
+	// These fields are related to handling of orphan blocks.  They are
+	// protected by a combination of the chain lock and the orphan lock.
+	orphanLock   sync.RWMutex
+	orphans      map[crypto.Hash]*chainTypes.OrphanBlock
+	prevOrphans  map[crypto.Hash][]*chainTypes.OrphanBlock
+	oldestOrphan *chainTypes.OrphanBlock
+
 	prvKey        *secp256k1.PrivateKey
-	CurrentHeight int64
 	peerStateMap  map[string]*chainTypes.PeerState
+
+	Index     *chainTypes.BlockIndex
+	BestChain *chainTypes.ChainView
+	stateLock     sync.RWMutex
+	StateSnapshot *chainTypes.BestState
 
 	Config *chainTypes.ChainConfig
 	pid    *actor.PID
-
+	genesisBlock *chainTypes.Block
 	//Events related to sync blocks
 	syncBlockEvent event.Feed
 	//Maximum block height being synced
@@ -90,30 +101,38 @@ func (chainService *ChainService) P2pMessages() map[int]interface{} {
 		chainTypes.MsgTypeBlockReq:     chainTypes.BlockReq{},
 		chainTypes.MsgTypeBlockResp:    chainTypes.BlockResp{},
 		chainTypes.MsgTypeBlock:        chainTypes.Block{},
-		chainTypes.MsgTypeTransaction:  txType.Transaction{},
+		chainTypes.MsgTypeTransaction:  chainTypes.Transaction{},
 		chainTypes.MsgTypePeerState:    chainTypes.PeerState{},
 		chainTypes.MsgTypeReqPeerState: chainTypes.ReqPeerState{},
 	}
 }
 
 func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error {
-	chainService.Config = &chainTypes.ChainConfig{}
+	chainService.Config = DefaultChainConfig
 	err := executeContext.UnmashalConfig(chainService.Name(), chainService.Config)
 	if err != nil {
 		return err
 	}
+	chainService.Index = chainTypes.NewBlockIndex()
+	chainService.BestChain = chainTypes.NewChainView(nil)
+	chainService.orphans = make(map[crypto.Hash]*chainTypes.OrphanBlock)
+	chainService.prevOrphans =make(map[crypto.Hash][]*chainTypes.OrphanBlock)
 	chainService.peerStateMap = make(map[string]*chainTypes.PeerState)
-	chainService.CurrentHeight = chainService.DatabaseService.GetMaxHeight()
-	if chainService.CurrentHeight == -1 {
-		//generate genisis block
-		genesisBlock := chainService.GenesisBlock(chainService.Config.GenesisPK)
-		if genesisBlock == nil {
-			return fmt.Errorf("genesis block err")
-		}
-		chainService.ProcessBlock(genesisBlock)
+
+	chainService.genesisBlock = chainService.GenesisBlock(chainService.Config.GenesisPK)
+	block, err := chainService.DatabaseService.GetBlock(chainService.genesisBlock.Header.Hash())
+	if err != nil && err.Error() != "leveldb: not found" {
+		return nil
 	}
+	if block == nil {
+		//generate genisis block
+		chainService.createChainState()
+		chainService.ProcessBlock(chainService.genesisBlock)
+	}
+
+	chainService.InitStates()
 	chainService.transactionPool = txpool.NewTransactionPool(chainService.DatabaseService)
-	chainService.transactionPool.Start(&chainService.newBlockFeed)
+	
 	props := actor.FromProducer(func() actor.Actor {
 		return chainService
 	})
@@ -144,6 +163,7 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 }
 
 func (chainService *ChainService) Start(executeContext *app.ExecuteContext) error {
+	chainService.transactionPool.Start(&chainService.newBlockFeed)
 	go chainService.fetchBlocks()
 	return nil
 }
@@ -152,7 +172,7 @@ func (chainService *ChainService) Stop(executeContext *app.ExecuteContext) error
 	return nil
 }
 
-func (chainService *ChainService) SendTransaction(tx *txType.Transaction) error {
+func (chainService *ChainService) SendTransaction(tx *chainTypes.Transaction) error {
 	if id, err := tx.TxId(); err == nil {
 		ForwardTransaction(id)
 	}
@@ -170,48 +190,15 @@ func (chainService *ChainService) sendBlock(block *chainTypes.Block) {
 	chainService.P2pServer.Broadcast(block)
 }
 
-func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (*big.Int, error) {
-	chainService.addBlockSync.Lock()
-	defer chainService.addBlockSync.Unlock()
-	dlog.Trace("Process block leader.", "LeaderPubKey", crypto.PubKey2Address(block.Header.LeaderPubKey).Hex(), " height ", strconv.FormatInt(block.Header.Height, 10))
-	gasUsed, err := chainService.ExecuteTransactions(block)
-	if err == nil {
-		chainService.CurrentHeight = block.Header.Height
-	}
-
-	addrMap := make(map[crypto.CommonAddress]struct{})
-	var addrs []*crypto.CommonAddress
-	for _,tx := range block.Data.TxList {
-		addr := tx.From()
-		if _,ok:=addrMap[*addr]; !ok{
-			addrMap[*addr] = struct{}{}
-			addrs = append(addrs, addr)
-		}
-	}
-
-	if len(addrs) > 0 {
-		chainService.newBlockFeed.Send(addrs)
-	}
-
-	return gasUsed, err
-}
-
-func (chainService *ChainService) ProcessBlockReq(peer *p2pTypes.Peer, req *chainTypes.BlockReq) {
-	from := req.Height + 1
-	size := int64(200)
-	for i := from; i <= chainService.DatabaseService.GetMaxHeight(); {
-		bs := chainService.DatabaseService.GetBlocksFrom(i, size)
-		resp := &chainTypes.BlockResp{Height: chainService.DatabaseService.GetMaxHeight(), Blocks: bs}
-		chainService.P2pServer.Send(peer, resp)
-		i += int64(len(bs))
-	}
+func (chainService *ChainService) blockExists(blockHash *crypto.Hash) bool {
+	return chainService.Index.HaveBlock(blockHash)
 }
 
 func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey, members []*secp256k1.PublicKey) (*chainTypes.Block, error) {
 	chainService.DatabaseService.BeginTransaction()
 	defer chainService.DatabaseService.Discard()
 
-	height := chainService.DatabaseService.GetMaxHeight() + 1
+	height := chainService.BestChain.Height() + 1
 	txs := chainService.transactionPool.GetPending(BlockGasLimit)
 
 	gasUsed := new(big.Int)
@@ -221,7 +208,7 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey, 
 	}
 
 	timestamp := time.Now().Unix()
-	previousHash := chainService.DatabaseService.GetPreviousBlockHash()
+	previousHash := chainService.BestChain.Tip().Hash
 
 	stateRoot := chainService.DatabaseService.GetStateRoot()
 	txHashes, _ := chainService.GetTxHashes(txs)
@@ -243,7 +230,6 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey, 
 			Timestamp:    timestamp,
 			StateRoot:    stateRoot,
 			MerkleRoot:   merkleRoot,
-			TxHashes:     txHashes,
 			Height:       height,
 			LeaderPubKey: leaderKey,
 			MinorPubKeys: memberPks,
@@ -256,7 +242,7 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey, 
 	return block, nil
 }
 
-func (chainService *ChainService) GetTxHashes(ts []*txType.Transaction) ([][]byte, error) {
+func (chainService *ChainService) GetTxHashes(ts []*chainTypes.Transaction) ([][]byte, error) {
 	txHashes := make([][]byte, len(ts))
 	for i, tx := range ts {
 		b, err := json.Marshal(tx.Data)
@@ -358,20 +344,19 @@ func (chainService *ChainService) GenesisBlock(genesisPubkey string) *chainTypes
 	return &chainTypes.Block{
 		Header: &chainTypes.BlockHeader{
 			Version:      common.Version,
-			PreviousHash: []byte{},
+			PreviousHash: &crypto.Hash{},
 			GasLimit:     BlockGasLimit,
 			GasUsed:      new(big.Int),
 			Timestamp:    1545282765,
 			StateRoot:    stateRoot,
 			MerkleRoot:   merkleRoot,
-			TxHashes:     [][]byte{},
 			Height:       0,
 			LeaderPubKey: pubkey,
 			MinorPubKeys: memberPks,
 		},
 		Data: &chainTypes.BlockData{
 			TxCount: 0,
-			TxList:  []*txType.Transaction{},
+			TxList:  []*chainTypes.Transaction{},
 		},
 	}
 }
@@ -399,6 +384,31 @@ func (chainService *ChainService) Subscribe(subchan chan event.SyncBlockEvent) e
 	return chainService.syncBlockEvent.Subscribe(subchan)
 }
 
+
 func (chainService *ChainService)GetTransactionCount(addr * crypto.CommonAddress)int64{
 	return chainService.transactionPool.GetTransactionCount(addr)
+}
+func (chainService *ChainService) GetBlocksFrom(start, size int64) ( []*chainTypes.Block, error){
+	blocks := []*chainTypes.Block{}
+	for i:= start; i < start+size; i++ {
+		node := chainService.BestChain.NodeByHeight(i)
+		if node == nil {
+			continue
+		}
+		block, err := chainService.DatabaseService.GetBlock(node.Hash)
+		if err != nil {
+			return nil, err
+		}
+		blocks = append(blocks, block)
+	}
+	return blocks, nil
+}
+
+func (chainService *ChainService) GetHighestBlock() (*chainTypes.Block, error) {
+	heighestBlockBode :=  chainService.BestChain.Tip()
+	block, err := chainService.DatabaseService.GetBlock(heighestBlockBode.Hash)
+	if err != nil {
+		return nil, err
+	}
+	return block, nil
 }

@@ -7,7 +7,7 @@ import (
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/database"
-	"github.com/drep-project/drep-chain/transaction/types"
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"math/big"
 	"testing"
 	"time"
@@ -19,7 +19,7 @@ var txPool *TransactionPool
 var feed event.Feed
 
 func TestNewTransactions(t *testing.T) {
-	diskDb, err := database.NewDatabase("./")
+	diskDb, err := database.NewDatabase("./data")
 	if err != nil {
 		t.Error("db init err")
 	}
@@ -49,7 +49,7 @@ func addTx(t *testing.T, num int) error {
 
 	nonce := txPool.databaseApi.GetNonce(&addr, false)
 	for i := 0; i < num; i++ {
-		tx := types.NewTransaction(addr, crypto.CommonAddress{}, new(big.Int).SetInt64(100), nonce+int64(i))
+		tx := chainTypes.NewTransaction(addr, crypto.CommonAddress{}, new(big.Int).SetInt64(100), nonce+int64(i))
 		err := txPool.AddTransaction(tx)
 		if err != nil {
 			return err
@@ -82,7 +82,7 @@ func TestAddIntevalTX(t *testing.T) {
 			continue
 		}
 
-		tx := types.NewTransaction(addr, crypto.CommonAddress{}, new(big.Int).SetInt64(100000000), int64(i))
+		tx := chainTypes.NewTransaction(addr, crypto.CommonAddress{}, new(big.Int).SetInt64(100000000), int64(i))
 		txPool.AddTransaction(tx)
 	}
 }

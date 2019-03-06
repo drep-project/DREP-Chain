@@ -67,7 +67,7 @@ func Deserialize(msgBytes []byte) (interface{}, int, *secp256k1.PublicKey, error
 	}
 	bodyMsg := reflect.New(refType.(reflect.Type)).Interface()
 	if err := json.Unmarshal(msg.Body, bodyMsg); err == nil {
-		if !msg.Header.Sig.Verify( sha3.Hash256(msg.Body), msg.Header.PubKey) {
+		if !msg.Header.Sig.Verify(sha3.Hash256(msg.Body), msg.Header.PubKey) {
 			return nil, 0, nil, errors.New("check signature fail")
 		}
 		return bodyMsg, msg.Header.Type, msg.Header.PubKey, nil

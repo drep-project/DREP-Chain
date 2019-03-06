@@ -6,7 +6,9 @@ import (
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"strconv"
 )
-
+type StateStore interface {
+	
+}
 type State struct {
 	Sequence  string
 	ChildKeys [17][]byte

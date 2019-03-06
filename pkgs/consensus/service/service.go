@@ -2,7 +2,6 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
@@ -141,10 +140,10 @@ func (consensusService *ConsensusService) handlerEvent() {
 		case e := <-consensusService.syncBlockEventChan:
 			if e.EventType == event.StartSyncBlock {
 				consensusService.pauseForSync = true
-				fmt.Println("pause start")
+				dlog.Info("Start Pause for Sync Blcok")
 			} else {
-				fmt.Println("pause stop")
 				consensusService.pauseForSync = false
+				dlog.Info("Stop Pause for Sync Blcok")
 			}
 		case <-consensusService.quit:
 			return
@@ -174,7 +173,7 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 					time.Sleep(time.Millisecond * 500)
 					continue
 				}
-				dlog.Trace("node start", "Height", consensusService.ChainService.CurrentHeight)
+				dlog.Trace("node start", "Height", consensusService.ChainService.BestChain.Height())
 				var block *chainTypes.Block
 				var err error
 				if consensusService.Config.ConsensusMode == "solo" {
@@ -185,10 +184,10 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 					if len(participants) > 1 {
 						isM, isL := consensusService.MoveToNextMiner(participants)
 						if isL {
-							consensusService.leader.UpdateStatus(participants, consensusService.curMiner, minMember, consensusService.ChainService.CurrentHeight)
+							consensusService.leader.UpdateStatus(participants, consensusService.curMiner, minMember, consensusService.ChainService.BestChain.Height())
 							block, err = consensusService.runAsLeader()
 						} else if isM {
-							consensusService.member.UpdateStatus(participants, consensusService.curMiner, minMember, consensusService.ChainService.CurrentHeight)
+							consensusService.member.UpdateStatus(participants, consensusService.curMiner, minMember, consensusService.ChainService.BestChain.Height())
 							block, err = consensusService.runAsMember()
 						} else {
 							// backup node， return directly
@@ -207,13 +206,12 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 				} else {
 					consensusService.P2pServer.Broadcast(block)
 					consensusService.ChainService.ProcessBlock(block)
-					dlog.Info("Block Produced  ", "Height", consensusService.DatabaseService.GetMaxHeight(), "txs:", block.Data.TxCount)
+					dlog.Info("Submit Block ", "Height", consensusService.ChainService.BestChain.Height(), "txs:", block.Data.TxCount)
 				}
 				time.Sleep(100) //delay a little time for block deliver
 				nextBlockTime, waitSpan := consensusService.GetWaitTime()
 				dlog.Debug("Sleep", "nextBlockTime", nextBlockTime, "waitSpan", waitSpan)
 				time.Sleep(waitSpan)
-				consensusService.OnNewHeightUpdate(consensusService.DatabaseService.GetMaxHeight())
 			}
 		}
 	}()
@@ -366,19 +364,12 @@ func (consensusService *ConsensusService) CollectLiveMember() []*consensusTypes.
 }
 
 func (consensusService *ConsensusService) MoveToNextMiner(liveMembers []*consensusTypes.MemberInfo) (bool, bool) {
-	consensusService.curMiner = int(consensusService.ChainService.CurrentHeight % int64(len(liveMembers)))
+	consensusService.curMiner = int(consensusService.ChainService.BestChain.Height() % int64(len(liveMembers)))
 
 	if liveMembers[consensusService.curMiner].Peer == nil {
 		return false, true
 	} else {
 		return true, false
-	}
-}
-
-func (consensusService *ConsensusService) OnNewHeightUpdate(height int64) {
-	if height > consensusService.ChainService.CurrentHeight {
-		consensusService.ChainService.CurrentHeight = height
-		dlog.Info("update new height", "Height", height)
 	}
 }
 
@@ -390,7 +381,8 @@ func (consensusService *ConsensusService) GetWaitTime() (time.Time, time.Duratio
 	// max_delay_time +(min_block_interval)*windows = expected_block_interval*windows
 	// 6h + 5s*windows = 10s*windows
 	// windows = 4320
-	lastBlockTime := time.Unix(consensusService.DatabaseService.GetHighestBlock().Header.Timestamp, 0)
+
+	lastBlockTime := time.Unix(consensusService.ChainService.BestChain.Tip().TimeStamp, 0)
 	targetTime := lastBlockTime.Add(blockInterval)
 	now := time.Now()
 	if targetTime.Before(now) {

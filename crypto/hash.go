@@ -41,6 +41,17 @@ func (h *Hash) UnmarshalText(input []byte) error {
 	return common.UnmarshalFixedText("Hash", input, h[:])
 }
 
+// IsEqual returns true if target is the same as hash.
+func (hash *Hash) IsEqual(target *Hash) bool {
+	if hash == nil && target == nil {
+		return true
+	}
+	if hash == nil || target == nil {
+		return false
+	}
+	return *hash == *target
+}
+
 // UnmarshalJSON parses a hash in hex syntax.
 func (h *Hash) UnmarshalJSON(input []byte) error {
 	return common.UnmarshalFixedJSON(hashT, input, h[:])

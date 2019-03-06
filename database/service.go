@@ -55,7 +55,10 @@ func (database *DatabaseService) Init(executeContext *app.ExecuteContext) error 
 		path = executeContext.Cli.GlobalString(DataDirFlag.Name)
 	}
 	database.db, err = NewDatabase(path)
-	return err
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (database *DatabaseService) Start(executeContext *app.ExecuteContext) error {

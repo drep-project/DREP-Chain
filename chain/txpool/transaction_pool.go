@@ -7,7 +7,7 @@ import (
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
-	txTypes "github.com/drep-project/drep-chain/transaction/types"
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/pkg/errors"
 	"math/big"
 	"sync"
@@ -41,8 +41,8 @@ type TransactionPool struct {
 func NewTransactionPool(databaseApi *database.DatabaseService) *TransactionPool {
 	pool := &TransactionPool{databaseApi: databaseApi}
 	pool.nonceCp = func(a interface{}, b interface{}) int {
-		ta, oka := a.(*txTypes.Transaction)
-		tb, okb := b.(*txTypes.Transaction)
+		ta, oka := a.(*chainTypes.Transaction)
+		tb, okb := b.(*chainTypes.Transaction)
 		if oka && okb {
 			nonceA := ta.Nonce()
 			nonceB := tb.Nonce()
@@ -58,8 +58,8 @@ func NewTransactionPool(databaseApi *database.DatabaseService) *TransactionPool 
 		}
 	}
 	pool.tranCp = func(a interface{}, b interface{}) bool {
-		ta, oka := a.(*txTypes.Transaction)
-		tb, okb := b.(*txTypes.Transaction)
+		ta, oka := a.(*chainTypes.Transaction)
+		tb, okb := b.(*chainTypes.Transaction)
 		sa, ea := ta.TxId()
 		sb, eb := tb.TxId()
 		return oka && okb && ea == nil && eb == nil && sa == sb
@@ -84,7 +84,7 @@ func (pool *TransactionPool) Contains(id string) bool {
 	return exists || value
 }
 
-func (pool *TransactionPool) checkAndGetAddr(tx *txTypes.Transaction) (error, *crypto.CommonAddress) {
+func (pool *TransactionPool) checkAndGetAddr(tx *chainTypes.Transaction) (error, *crypto.CommonAddress) {
 	addr := tx.From()
 	// TODO Check sig
 	if pool.GetTransactionCount(addr) > tx.Nonce() {
@@ -108,7 +108,7 @@ func (pool *TransactionPool) checkAndGetAddr(tx *txTypes.Transaction) (error, *c
 }
 
 //func AddTransaction(id string, transaction *common.transaction) {
-func (pool *TransactionPool) AddTransaction(tx *txTypes.Transaction) error {
+func (pool *TransactionPool) AddTransaction(tx *chainTypes.Transaction) error {
 	err, addr := pool.checkAndGetAddr(tx)
 	if err != nil {
 		return err
@@ -164,7 +164,7 @@ func (pool *TransactionPool) syncToPending(address *crypto.CommonAddress) {
 	}
 }
 
-func (pool *TransactionPool) removeTransaction(tran *txTypes.Transaction) (bool, bool) {
+func (pool *TransactionPool) removeTransaction(tran *chainTypes.Transaction) (bool, bool) {
 	//id, err := tran.TxId()
 	//if err != nil {
 	//	return false, false
@@ -181,7 +181,7 @@ func (pool *TransactionPool) removeTransaction(tran *txTypes.Transaction) (bool,
 }
 
 //打包过程获取交易，进行打包处理
-func (pool *TransactionPool) GetPending(GasLimit *big.Int) []*txTypes.Transaction {
+func (pool *TransactionPool) GetPending(GasLimit *big.Int) []*chainTypes.Transaction {
 	pool.mu.Lock()
 	gasCount := new(big.Int)
 
@@ -202,10 +202,10 @@ func (pool *TransactionPool) GetPending(GasLimit *big.Int) []*txTypes.Transactio
 	}()
 	pool.mu.Unlock()
 
-	var retrunTxs []*txTypes.Transaction
+	var retrunTxs []*chainTypes.Transaction
 	for {
 		for addr, list := range hbn {
-			tx := heap.Pop(list).(*txTypes.Transaction)
+			tx := heap.Pop(list).(*chainTypes.Transaction)
 			if GasLimit.Cmp(new(big.Int).Add(tx.GasLimit(), gasCount)) >= 0 {
 				retrunTxs = append(retrunTxs, tx)
 			} else {
@@ -223,10 +223,6 @@ func (pool *TransactionPool) GetPending(GasLimit *big.Int) []*txTypes.Transactio
 	}
 
 END:
-	fmt.Println("get tx from pending:", len(retrunTxs))
-	if len(retrunTxs) > 0 {
-		fmt.Println("get tx from pending nonce :", retrunTxs[0].Nonce(), "----->", retrunTxs[len(retrunTxs)-1].Nonce())
-	}
 	return retrunTxs
 }
 
