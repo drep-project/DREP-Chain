@@ -2,8 +2,8 @@ package service
 
 import (
 	"encoding/json"
-	"github.com/drep-project/drep-chain/pkgs/evm"
 	"github.com/drep-project/drep-chain/chain/txpool"
+	"github.com/drep-project/drep-chain/pkgs/evm"
 	"math/big"
 	"sync"
 	"time"
@@ -26,15 +26,14 @@ import (
 )
 
 var (
-	rootChain     app.ChainIdType
+	rootChain          app.ChainIdType
 	DefaultChainConfig = &chainTypes.ChainConfig{
-		RemotePort : 55555,
-		ChainId  : app.ChainIdType{},
-		GenesisPK  : "0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26",
+		RemotePort: 55555,
+		ChainId:    app.ChainIdType{},
+		GenesisPK:  "0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26",
 	}
 	//genesisPubkey = "0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26"
 )
-
 
 type ChainService struct {
 	RpcService      *rpc2.RpcService          `service:"rpc"`
@@ -59,16 +58,16 @@ type ChainService struct {
 	prevOrphans  map[crypto.Hash][]*chainTypes.OrphanBlock
 	oldestOrphan *chainTypes.OrphanBlock
 
-	prvKey        *secp256k1.PrivateKey
-	peerStateMap  map[string]*chainTypes.PeerState
+	prvKey       *secp256k1.PrivateKey
+	peerStateMap map[string]*chainTypes.PeerState
 
-	Index     *chainTypes.BlockIndex
-	BestChain *chainTypes.ChainView
+	Index         *chainTypes.BlockIndex
+	BestChain     *chainTypes.ChainView
 	stateLock     sync.RWMutex
 	StateSnapshot *chainTypes.BestState
 
-	Config *chainTypes.ChainConfig
-	pid    *actor.PID
+	Config       *chainTypes.ChainConfig
+	pid          *actor.PID
 	genesisBlock *chainTypes.Block
 	//Events related to sync blocks
 	syncBlockEvent event.Feed
@@ -116,7 +115,7 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 	chainService.Index = chainTypes.NewBlockIndex()
 	chainService.BestChain = chainTypes.NewChainView(nil)
 	chainService.orphans = make(map[crypto.Hash]*chainTypes.OrphanBlock)
-	chainService.prevOrphans =make(map[crypto.Hash][]*chainTypes.OrphanBlock)
+	chainService.prevOrphans = make(map[crypto.Hash][]*chainTypes.OrphanBlock)
 	chainService.peerStateMap = make(map[string]*chainTypes.PeerState)
 
 	chainService.genesisBlock = chainService.GenesisBlock(chainService.Config.GenesisPK)
@@ -132,7 +131,7 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 
 	chainService.InitStates()
 	chainService.transactionPool = txpool.NewTransactionPool(chainService.DatabaseService)
-	
+
 	props := actor.FromProducer(func() actor.Actor {
 		return chainService
 	})
@@ -363,7 +362,7 @@ func (chainService *ChainService) GenesisBlock(genesisPubkey string) *chainTypes
 
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
 func (chainService *ChainService) accumulateRewards(b *chainTypes.Block, chainId app.ChainIdType) {
-	chainService.DatabaseService.BeginTransaction()
+	//chainService.DatabaseService.BeginTransaction()
 	reward := new(big.Int).SetUint64(uint64(Rewards))
 	leaderAddr := crypto.PubKey2Address(b.Header.LeaderPubKey)
 
@@ -377,20 +376,19 @@ func (chainService *ChainService) accumulateRewards(b *chainTypes.Block, chainId
 		chainService.DatabaseService.AddBalance(&memberAddr, r, true)
 	}
 
-	chainService.DatabaseService.Commit()
+	//chainService.DatabaseService.Commit()
 }
 
 func (chainService *ChainService) Subscribe(subchan chan event.SyncBlockEvent) event.Subscription {
 	return chainService.syncBlockEvent.Subscribe(subchan)
 }
 
-
-func (chainService *ChainService)GetTransactionCount(addr * crypto.CommonAddress)int64{
+func (chainService *ChainService) GetTransactionCount(addr *crypto.CommonAddress) int64 {
 	return chainService.transactionPool.GetTransactionCount(addr)
 }
-func (chainService *ChainService) GetBlocksFrom(start, size int64) ( []*chainTypes.Block, error){
+func (chainService *ChainService) GetBlocksFrom(start, size int64) ([]*chainTypes.Block, error) {
 	blocks := []*chainTypes.Block{}
-	for i:= start; i < start+size; i++ {
+	for i := start; i < start+size; i++ {
 		node := chainService.BestChain.NodeByHeight(i)
 		if node == nil {
 			continue
@@ -405,7 +403,7 @@ func (chainService *ChainService) GetBlocksFrom(start, size int64) ( []*chainTyp
 }
 
 func (chainService *ChainService) GetHighestBlock() (*chainTypes.Block, error) {
-	heighestBlockBode :=  chainService.BestChain.Tip()
+	heighestBlockBode := chainService.BestChain.Tip()
 	block, err := chainService.DatabaseService.GetBlock(heighestBlockBode.Hash)
 	if err != nil {
 		return nil, err

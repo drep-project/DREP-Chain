@@ -4,10 +4,10 @@ import (
 	"container/heap"
 	"fmt"
 	"github.com/drep-project/dlog"
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/pkg/errors"
 	"math/big"
 	"sync"
@@ -100,7 +100,7 @@ func (pool *TransactionPool) checkAndGetAddr(tx *chainTypes.Transaction) (error,
 	total.Add(total, amount)
 
 	if pool.databaseApi.GetBalance(addr, false).Cmp(total) < 0 {
-		fmt.Println("7777:", pool.databaseApi.GetBalance(addr, false),total)
+		fmt.Println("7777:", pool.databaseApi.GetBalance(addr, false), total)
 		return fmt.Errorf("no enough balance"), nil
 	}
 
@@ -120,7 +120,7 @@ func (pool *TransactionPool) AddTransaction(tx *chainTypes.Transaction) error {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 	if len(pool.allTxs) >= maxSize {
-		msg := "transaction pool full.txid:" + id + "fail to add"
+		msg := fmt.Sprintf("transaction pool full.txid:%s fail to add.pool tx count:%d, maxSize:%d", id, len(pool.allTxs))
 		dlog.Error(msg)
 		return errors.New(msg)
 	}
@@ -252,7 +252,7 @@ func (pool *TransactionPool) adjust(addrList []*crypto.CommonAddress) {
 	for _, addr := range addrList {
 		// 获取数据库里面的nonce
 		//根据nonce是否被处理，删除对应的交易
-		nonce := pool.databaseApi.GetNonce(addr, false)
+		nonce := pool.databaseApi.GetNonce(addr, true)
 		pool.mu.Lock()
 		list, ok := pool.pending[*addr]
 		if ok {
@@ -260,6 +260,7 @@ func (pool *TransactionPool) adjust(addrList []*crypto.CommonAddress) {
 			for _, tx := range txs {
 				id, _ := tx.TxId()
 				delete(pool.allTxs, id)
+				fmt.Println("adjust:", tx.Nonce())
 			}
 		}
 		pool.mu.Unlock()

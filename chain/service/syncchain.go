@@ -33,7 +33,7 @@ func (chainService *ChainService) fetchBlocks() {
 
 			req := &chainTypes.BlockReq{
 				StartHash: *chainService.BestChain.Tip().Hash,
-				StopHash: crypto.Hash{},
+				StopHash:  crypto.Hash{},
 			}
 			chainService.P2pServer.Send(peer, req)
 		}

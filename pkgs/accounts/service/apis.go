@@ -92,7 +92,7 @@ func (accountapi *AccountApi) SendTransaction(from crypto.CommonAddress, to cryp
 	hex := hex.EncodeToString(txHash)
 	//bytes, _ := json.Marshal(t)
 	//println(string(bytes))
-	println("0x" + string(hex))
+	//println("0x" + string(hex))
 	return "0x" + string(hex), nil
 }
 
