@@ -1,33 +1,21 @@
 package component
 
 import (
-	"encoding/json"
 	"errors"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
+    "github.com/drep-project/drep-chain/network/types"
 	"github.com/vishalkuo/bimap"
 	"reflect"
+    "github.com/francoispqt/gojay"
 )
-
 
 var (
 	msgTypeMap = bimap.NewBiMap()
 )
 
-type MessageHeader struct {
-	Type int
-	//Size int32
-	PubKey *secp256k1.PublicKey
-	Sig *secp256k1.Signature
-}
-
-type Message struct {
-	Header *MessageHeader
-	Body   []byte
-}
-
-func Serialize(message interface{}, prvKey *secp256k1.PrivateKey) (*Message, error) {
-	body, err := json.Marshal(message)
+func Serialize(message interface{}, prvKey *secp256k1.PrivateKey) (*types.Message, error) {
+	body, err := gojay.Marshal(message)
 	if err != nil {
 		return nil, err
 	}
@@ -44,8 +32,8 @@ func Serialize(message interface{}, prvKey *secp256k1.PrivateKey) (*Message, err
 	if err != nil {
 		return nil, err
 	}
-	msg := &Message{
-		Header: &MessageHeader{
+	msg := &types.Message{
+		Header: &types.MessageHeader{
 			Type: msgType.(int),
 			PubKey: (*secp256k1.PublicKey)(&prvKey.PublicKey),
 			Sig: sig,
@@ -56,8 +44,8 @@ func Serialize(message interface{}, prvKey *secp256k1.PrivateKey) (*Message, err
 }
 
 func Deserialize(msgBytes []byte) (interface{}, int, *secp256k1.PublicKey, error) {
-	msg := &Message{}
-	if err := json.Unmarshal(msgBytes, msg); err != nil {
+	msg := &types.Message{}
+	if err := gojay.Unmarshal(msgBytes, msg); err != nil {
 		return nil, 0, nil, err
 	}
 
@@ -66,7 +54,7 @@ func Deserialize(msgBytes []byte) (interface{}, int, *secp256k1.PublicKey, error
 		return nil, 0, nil, errors.New("Unknown peer message type ")
 	}
 	bodyMsg := reflect.New(refType.(reflect.Type)).Interface()
-	if err := json.Unmarshal(msg.Body, bodyMsg); err == nil {
+	if err := gojay.Unmarshal(msg.Body, bodyMsg); err == nil {
 		if !msg.Header.Sig.Verify(sha3.Hash256(msg.Body), msg.Header.PubKey) {
 			return nil, 0, nil, errors.New("check signature fail")
 		}

@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/drep-chain/app"
@@ -19,6 +18,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"github.com/francoispqt/gojay"
 )
 
 const (
@@ -380,7 +380,7 @@ func (p2pService *P2pService) sendMessage(outMessage *outMessage) error {
 	} else {
 		conn.SetDeadline(now.Add(d2))
 	}
-	if bytes, err := json.Marshal(message); err == nil {
+	if bytes, err := gojay.Marshal(message); err == nil {
 		size := len(bytes)
 		sizeBytes := make([]byte, 4)
 		sizeBytes[0] = byte((size & 0xFF000000) >> 24)
