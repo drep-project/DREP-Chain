@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"hash"
 	"math/big"
+    "github.com/francoispqt/gojay"
 )
 
 // Errors returned by canonicalPadding.
@@ -21,12 +22,6 @@ var (
 	errNegativeValue          = errors.New("value may be interpreted as negative")
 	errExcessivelyPaddedValue = errors.New("value is excessively padded")
 )
-
-// Signature is a type representing an ecdsa signature.
-type Signature struct {
-	R *big.Int
-	S *big.Int
-}
 
 var (
 	// Curve order and halforder, used to tame ECDSA malleability (see BIP-0062)
@@ -45,6 +40,41 @@ var (
 func NewSignature(r, s *big.Int) *Signature {
 	return &Signature{r, s}
 }
+
+// Signature is a type representing an ecdsa signature.
+type Signature struct {
+    R *big.Int
+    S *big.Int
+}
+
+// UnmarshalJSONObject implements gojay's UnmarshalerJSONObject
+func (v *Signature) UnmarshalJSONObject(dec *gojay.Decoder, k string) error {
+    switch k {
+    case "r":
+        vr := ""
+        err := dec.String(&vr)
+        v.R, _ = new(big.Int).SetString(vr, 10)
+        return err
+    case "s":
+        vs := ""
+        err := dec.String(&vs)
+        v.S, _ = new(big.Int).SetString(vs, 10)
+        return err
+    }
+    return nil
+}
+
+// NKeys returns the number of keys to unmarshal
+func (v *Signature) NKeys() int { return 2 }
+
+// MarshalJSONObject implements gojay's MarshalerJSONObject
+func (v *Signature) MarshalJSONObject(enc *gojay.Encoder) {
+    enc.StringKey("r", v.R.String())
+    enc.StringKey("s", v.S.String())
+}
+
+// IsNil returns wether the structure is nil value or not
+func (v *Signature) IsNil() bool { return v == nil }
 
 // Serialize returns the ECDSA signature in the more strict DER format.  Note
 // that the serialized bytes returned do not include the appended hash type

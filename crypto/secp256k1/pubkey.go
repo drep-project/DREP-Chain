@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/drep-project/drep-chain/common"
 	"math/big"
+	"github.com/francoispqt/gojay"
 )
 
 // These constants define the lengths of serialized public keys.
@@ -118,6 +119,39 @@ func ParsePubKey(pubKeyStr []byte) (key *PublicKey, err error) {
 // PublicKey is an ecdsa.PublicKey with additional functions to
 // serialize in uncompressed and compressed formats.
 type PublicKey ecdsa.PublicKey
+
+// UnmarshalJSONObject implements gojay's UnmarshalerJSONObject
+func (v *PublicKey) UnmarshalJSONObject(dec *gojay.Decoder, k string) error {
+    switch k {
+    case "curve":
+        v.Curve = S256()
+        return  nil
+    case "x":
+        vx := ""
+        err := dec.String(&vx)
+        v.X, _ = new(big.Int).SetString(vx, 10)
+        return err
+    case "y":
+        vy := ""
+        err := dec.String(&vy)
+        v.Y, _ = new(big.Int).SetString(vy, 10)
+        return err
+    }
+    return nil
+}
+
+// NKeys returns the number of keys to unmarshal
+func (v *PublicKey) NKeys() int { return 3 }
+
+// MarshalJSONObject implements gojay's MarshalerJSONObject
+func (v *PublicKey) MarshalJSONObject(enc *gojay.Encoder) {
+    enc.StringKey("r", v.X.String())
+    enc.StringKey("s", v.Y.String())
+}
+
+// IsNil returns wether the structure is nil value or not
+func (v *PublicKey) IsNil() bool { return v == nil }
+
 
 // ToECDSA returns the public key as a *ecdsa.PublicKey.
 func (p PublicKey) ToECDSA() *ecdsa.PublicKey {
