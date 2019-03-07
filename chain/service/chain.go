@@ -172,9 +172,9 @@ func (chainService *ChainService) Stop(executeContext *app.ExecuteContext) error
 }
 
 func (chainService *ChainService) SendTransaction(tx *chainTypes.Transaction) error {
-	if id, err := tx.TxId(); err == nil {
-		ForwardTransaction(id)
-	}
+	//if id, err := tx.TxId(); err == nil {
+	//	ForwardTransaction(id)
+	//}
 
 	//TODO validate transaction
 	error := chainService.transactionPool.AddTransaction(tx)

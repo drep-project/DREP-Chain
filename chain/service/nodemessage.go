@@ -25,17 +25,17 @@ func (chainService *ChainService) Receive(context actor.Context) {
 		go chainService.HandleBlockRespMsg(routeMsg.Peer, msg)
 	case *chainTypes.Transaction:
 		transaction := msg
-		id, _ := transaction.TxId()
-		if ForwardedTransaction(id) {
-			dlog.Debug("Forwarded this transaction ", "transaction", *transaction)
-			return
-		}
+		//id, _ := transaction.TxId()
+		//if ForwardedTransaction(id) {
+		//	dlog.Debug("Forwarded this transaction ", "transaction", *transaction)
+		//	return
+		//}
 		// TODO backup nodes should not add
 		err := chainService.transactionPool.AddTransaction(transaction)
 		if err == nil {
 			dlog.Debug("Succeed to add this transaction ", "transaction", *transaction)
 			chainService.P2pServer.Broadcast(transaction)
-			ForwardTransaction(id)
+			//ForwardTransaction(id)
 		} else {
 			dlog.Debug("Fail to add this transaction ", "reason", err, "transaction", *transaction)
 		}
