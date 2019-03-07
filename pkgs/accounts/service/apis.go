@@ -3,15 +3,14 @@ package service
 import (
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"math/big"
 
 	chainService "github.com/drep-project/drep-chain/chain/service"
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/database"
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
 )
 
 type AccountApi struct {
@@ -80,7 +79,6 @@ func (accountapi *AccountApi) CloseWallet() {
 
 func (accountapi *AccountApi) SendTransaction(from crypto.CommonAddress, to crypto.CommonAddress, amount *big.Int) (string, error) {
 	nonce := accountapi.chainService.GetTransactionCount(&from)
-	fmt.Println("new tx nonce:", nonce)
 	t := chainTypes.NewTransaction(from, to, amount, nonce)
 	err := accountapi.chainService.SendTransaction(t)
 	if err != nil{

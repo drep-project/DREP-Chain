@@ -87,7 +87,7 @@ func (pool *TransactionPool) Contains(id string) bool {
 func (pool *TransactionPool) checkAndGetAddr(tx *chainTypes.Transaction) (error, *crypto.CommonAddress) {
 	addr := tx.From()
 	// TODO Check sig
-	if pool.GetTransactionCount(addr) > tx.Nonce() {
+	if pool.getTransactionCount(addr) > tx.Nonce() {
 		fmt.Println("checkAndGetAddr:", pool.databaseApi.GetNonce(addr, false), tx.Nonce())
 		return fmt.Errorf("nonce err ,dbNonce:%d > txNonce:%d", pool.databaseApi.GetNonce(addr, false), tx.Nonce()), nil
 	}
@@ -100,7 +100,6 @@ func (pool *TransactionPool) checkAndGetAddr(tx *chainTypes.Transaction) (error,
 	total.Add(total, amount)
 
 	if pool.databaseApi.GetBalance(addr, false).Cmp(total) < 0 {
-		fmt.Println("7777:", pool.databaseApi.GetBalance(addr, false), total)
 		return fmt.Errorf("no enough balance"), nil
 	}
 
@@ -146,7 +145,7 @@ func (pool *TransactionPool) AddTransaction(tx *chainTypes.Transaction) error {
 
 func (pool *TransactionPool) syncToPending(address *crypto.CommonAddress) {
 	//从queue找nonce连续的交易放入到pending中
-	list := pool.queue[*address].Ready(pool.GetTransactionCount(address))
+	list := pool.queue[*address].Ready(pool.getTransactionCount(address))
 
 	if _, ok := pool.pending[*address]; !ok {
 		pool.pending[*address] = newTxList(true)
@@ -260,15 +259,23 @@ func (pool *TransactionPool) adjust(addrList []*crypto.CommonAddress) {
 			for _, tx := range txs {
 				id, _ := tx.TxId()
 				delete(pool.allTxs, id)
-				fmt.Println("adjust:", tx.Nonce())
+
 			}
 		}
 		pool.mu.Unlock()
+
+		dlog.Warn("clear txpool",  "max tx.nonce:", nonce,"txpool tx count:", len(pool.allTxs))
 	}
 }
 
 //获取总的交易个数，即获取地址对应的nonce
 func (pool *TransactionPool) GetTransactionCount(address *crypto.CommonAddress) int64 {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+	return pool.getTransactionCount(address)
+}
+
+func (pool *TransactionPool) getTransactionCount(address *crypto.CommonAddress) int64 {
 	if nonce, ok := pool.pendingNonce[*address]; ok {
 		return nonce
 	} else {

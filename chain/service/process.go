@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"container/list"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/drep-project/dlog"
@@ -61,7 +62,7 @@ func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, b
 		return false, false,err
 	}
 
-	dlog.Info("Accepted block", "Height", block.Header.Height, "Hash", blockHash.Bytes())
+	dlog.Info("Accepted block", "Height", block.Header.Height, "Hash", hex.EncodeToString(blockHash.Bytes()))
 	return isMainChain, false, nil
 }
 
