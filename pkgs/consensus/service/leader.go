@@ -148,15 +148,15 @@ func (leader *Leader) OnCommit(peer *p2pTypes.Peer, commit *consensusTypes.Commi
         return
     }
 
-    index := leader.getMinerIndex(peer.PubKey)
+    index := leader.getMinerIndex(peer.Ip)
     if !hasMarked(index, leader.commitBitmap) {
         return
     }
-
+    member := leader.getMember(peer.Ip)
     if leader.sigmaPubKey == nil {
-        leader.sigmaPubKey = []*secp256k1.PublicKey{peer.PubKey }
+        leader.sigmaPubKey = []*secp256k1.PublicKey{ member.Producer.Public }
     } else {
-        leader.sigmaPubKey = append(leader.sigmaPubKey,  peer.PubKey)
+        leader.sigmaPubKey = append(leader.sigmaPubKey,  member.Producer.Public )
     }
 
     if leader.sigmaCommitPubkey == nil {
@@ -238,7 +238,7 @@ func (leader *Leader) OnResponse(peer *p2pTypes.Peer, response *consensusTypes.R
 }
 
 func (leader *Leader) markResponse(peer *p2pTypes.Peer) {
-    index := leader.getMinerIndex(peer.PubKey)
+    index := leader.getMinerIndex(peer.Ip)
     if !hasMarked(index, leader.responseBitmap) {
         return
     }
@@ -330,10 +330,20 @@ func hasMarked(index int, bitmap []byte) bool {
     return index >=0 && index <= len(bitmap) && bitmap[index] != 1
 }
 
-func (leader *Leader) getMinerIndex(p *secp256k1.PublicKey) int {
+func (leader *Leader) getMember(ip string) *consensusTypes.MemberInfo {
+    // TODO if it is itself
+    for _, v := range leader.members {
+        if v.Peer.Ip == ip {
+            return v
+        }
+    }
+    return nil
+}
+
+func (leader *Leader) getMinerIndex(ip string) int {
     // TODO if it is itself
     for i, v := range leader.members {
-        if v.Peer.PubKey.IsEqual(p) {
+        if v.Peer.Ip == ip {
             return i
         }
     }

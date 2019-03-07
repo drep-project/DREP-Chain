@@ -169,7 +169,7 @@ func (member *Member) OnSetUp(peer *p2pTypes.Peer, setUp *consensusTypes.Setup) 
         return
     }
     dlog.Debug("receive setup message")
-    if member.leader.Peer.PubKey.IsEqual(peer.PubKey) {
+    if member.leader.Peer.Ip == peer.Ip {
         member.msg = setUp.Msg
         member.msgHash = sha3.Hash256(setUp.Msg)
         member.commit()
@@ -216,7 +216,7 @@ func (member *Member) OnChallenge(peer *p2pTypes.Peer, challengeMsg *consensusTy
         return
     }
     dlog.Debug("recieved challenge message")
-    if member.leader.Peer.PubKey.IsEqual(peer.PubKey) {
+    if member.leader.Peer.Ip == peer.Ip {
         // r := sha3.ConcatHash256(challengeMsg.SigmaPubKey.Serialize(), challengeMsg.SigmaQ.Serialize(), member.msgHash)
         r := sha3.ConcatHash256(member.msgHash)
         // dlog.Println("Member process challenge ")
