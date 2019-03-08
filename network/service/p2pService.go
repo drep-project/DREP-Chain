@@ -10,7 +10,7 @@ import (
 	p2pComponent "github.com/drep-project/drep-chain/network/component"
 	"github.com/drep-project/drep-chain/network/component/nat"
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
-	"github.com/pkg/errors"
+	"errors"
 	"gopkg.in/urfave/cli.v1"
 	"io"
 	"net"

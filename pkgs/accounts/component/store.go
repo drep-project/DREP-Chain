@@ -7,7 +7,7 @@ import (
 	"github.com/drep-project/drep-chain/crypto/aes"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	"github.com/pkg/errors"
+	"errors"
 )
 
 type KeyStore interface {

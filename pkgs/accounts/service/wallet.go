@@ -3,7 +3,7 @@ package service
 import (
 	"github.com/drep-project/drep-chain/app"
 	"sync/atomic"
-	"github.com/pkg/errors"
+	"errors"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"

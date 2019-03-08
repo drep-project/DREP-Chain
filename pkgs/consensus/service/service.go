@@ -14,7 +14,7 @@ import (
 	p2pService "github.com/drep-project/drep-chain/network/service"
 	accountService "github.com/drep-project/drep-chain/pkgs/accounts/service"
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
-	"github.com/pkg/errors"
+	"errors"
 	"gopkg.in/urfave/cli.v1"
 	"math"
 	"time"

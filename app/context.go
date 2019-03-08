@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/asaskevich/EventBus"
-	"github.com/pkg/errors"
+	"errors"
 	"gopkg.in/urfave/cli.v1"
 )
 
