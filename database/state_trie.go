@@ -58,10 +58,10 @@ func newLeaf(db *Database, seq string, key, value []byte) (*State, error) {
 	return leaf, nil
 }
 
-func insert(state *State, seq string, key, value []byte) (*State, error) {
-	state, err := state.db.getState(key)
+func insert(db *Database, seq string, key, value []byte) (*State, error) {
+	state, err := db.getState(key)
 	if err != nil {
-		return newLeaf(state.db, seq, key, value)
+		return newLeaf(db, seq, key, value)
 	}
 	prefix, offset := getCommonPrefix(seq, state.Sequence)
 	if prefix == state.Sequence {
@@ -72,7 +72,7 @@ func insert(state *State, seq string, key, value []byte) (*State, error) {
 				return insertNewChildBranchOnLeaf(state, seq, offset, key, value)
 			}
 		} else {
-			return insertProceedingOnCurrentBranch(state, seq, offset, key, value)
+			return insertProceedingOnCurrentBranch(db, state, seq, offset, key, value)
 		}
 	} else {
 		return insertDivergingBranch(state, prefix, seq, offset, key, value)
@@ -125,7 +125,7 @@ func insertNewChildBranchOnLeaf(state *State, seq string, offset int, key, value
 	return state, nil
 }
 
-func insertProceedingOnCurrentBranch(state *State, seq string, offset int, key, value []byte) (*State, error) {
+func insertProceedingOnCurrentBranch(db *Database,state *State, seq string, offset int, key, value []byte) (*State, error) {
 	fmt.Println("call insertProceedingOnCurrentBranch")
 	fmt.Println("key:   ", bytes2Hex(key))
 	fmt.Println("value: ", value)
@@ -137,7 +137,7 @@ func insertProceedingOnCurrentBranch(state *State, seq string, offset int, key, 
 
 	nib := getNextNibble(seq, offset)
 	state.ChildKeys[nib] = getChildKey(state, key, nib)
-	children[nib], err = insert(state, seq[offset:], state.ChildKeys[nib], value)
+	children[nib], err = insert(db, seq[offset:], state.ChildKeys[nib], value)
 	if err != nil {
 		return nil, err
 	}

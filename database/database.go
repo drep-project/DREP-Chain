@@ -260,6 +260,7 @@ func (db *Database) putStorage(addr *crypto.CommonAddress, storage *chainTypes.S
 	if err != nil {
 		return err
 	}
-	insert(nil, bytes2Hex(key), db.root, sha3.Hash256(value))
+
+	insert(db, bytes2Hex(key), db.root, sha3.Hash256(value))
 	return db.put(key, value, true)
 }

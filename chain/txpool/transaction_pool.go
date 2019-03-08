@@ -99,7 +99,9 @@ func (pool *TransactionPool) checkAndGetAddr(tx *chainTypes.Transaction) (error,
 	total.Mul(gasLimit, gasPrice)
 	total.Add(total, amount)
 
-	if pool.databaseApi.GetBalance(addr, false).Cmp(total) < 0 {
+	addrBalance := pool.databaseApi.GetBalance(addr, false)
+	if addrBalance.Cmp(total) < 0 {
+		dlog.Debug("Not Enough Balance", "CurrentBalance", addrBalance.Int64(), "NeedBalance", total)
 		return fmt.Errorf("no enough balance"), nil
 	}
 

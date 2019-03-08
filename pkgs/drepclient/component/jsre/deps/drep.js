@@ -1589,7 +1589,7 @@ var methods = function () {
 var getBalance = new Method({
 	name: 'getBalance',
 	call: 'chain_getBalance',
-	params: 2,
+	params: 1,
 });
 	
 var getBlock = new Method({

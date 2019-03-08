@@ -176,13 +176,15 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 				dlog.Trace("node start", "Height", consensusService.ChainService.BestChain.Height())
 				var block *chainTypes.Block
 				var err error
+				var isM bool
+				var isL bool
 				if consensusService.Config.ConsensusMode == "solo" {
 					block, err = consensusService.runAsSolo()
 				} else if consensusService.Config.ConsensusMode == "bft" {
 					//TODO a more elegant implementation is needed: select live peer ,and Determine who is the leader
 					participants := consensusService.CollectLiveMember()
 					if len(participants) > 1 {
-						isM, isL := consensusService.MoveToNextMiner(participants)
+						isM, isL = consensusService.MoveToNextMiner(participants)
 						if isL {
 							consensusService.leader.UpdateStatus(participants, consensusService.curMiner, minMember, consensusService.ChainService.BestChain.Height())
 							block, err = consensusService.runAsLeader()
@@ -206,7 +208,9 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 				} else {
 					consensusService.P2pServer.Broadcast(block)
 					consensusService.ChainService.ProcessBlock(block)
-					dlog.Info("Submit Block ", "Height", consensusService.ChainService.BestChain.Height(), "txs:", block.Data.TxCount)
+					if isL {
+						dlog.Info("Submit Block ", "Height", consensusService.ChainService.BestChain.Height(), "txs:", block.Data.TxCount)
+					}
 				}
 				time.Sleep(100) //delay a little time for block deliver
 				nextBlockTime, waitSpan := consensusService.GetWaitTime()

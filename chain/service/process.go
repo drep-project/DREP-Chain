@@ -62,7 +62,7 @@ func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, b
 		return false, false,err
 	}
 
-	dlog.Info("Accepted block", "Height", block.Header.Height, "Hash", hex.EncodeToString(blockHash.Bytes()))
+	dlog.Info("Accepted block", "Height", block.Header.Height, "Hash", hex.EncodeToString(blockHash.Bytes()), "TxCount", block.Data.TxCount)
 	return isMainChain, false, nil
 }
 

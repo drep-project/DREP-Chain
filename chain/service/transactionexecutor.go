@@ -86,7 +86,6 @@ func (chainService *ChainService) doSync(height int64) {
 }
 
 func (chainService *ChainService) execute(t *chainTypes.Transaction) (gasUsed, gasFee *big.Int) {
-
 	switch t.Type() {
 	case chainTypes.TransferType:
 		return chainService.executeTransferTransaction(t)
@@ -104,12 +103,11 @@ func (chainService *ChainService) canExecute(tx *chainTypes.Transaction, gasFloo
 	addr = *tx.From()
 	balance = chainService.DatabaseService.GetBalance(&addr, true)
 	nonce := chainService.DatabaseService.GetNonce(&addr, true)
-	chainService.DatabaseService.PutNonce(&addr, nonce, true)
-	gasPrice = tx.GasPrice()
-
-	if nonce != tx.Nonce() {
+	if nonce > tx.Nonce() {
 		return
 	}
+	gasPrice = tx.GasPrice()
+
 	if gasFloor != nil {
 		amountFloor := new(big.Int).Mul(gasFloor, tx.GasPrice())
 		if tx.GasLimit().Cmp(gasFloor) < 0 || amountFloor.Cmp(balance) > 0 {
@@ -122,7 +120,6 @@ func (chainService *ChainService) canExecute(tx *chainTypes.Transaction, gasFloo
 			return
 		}
 	}
-
 	canExecute = true
 	return
 }
@@ -160,6 +157,7 @@ func (chainService *ChainService) executeTransferTransaction(t *chainTypes.Trans
 		balanceTo = new(big.Int).Add(balanceTo, t.Amount())
 		chainService.DatabaseService.PutBalance(&addr, balance, true)
 		chainService.DatabaseService.PutBalance(t.To(), balanceTo, true)
+		chainService.DatabaseService.PutNonce(&addr, t.Nonce()+1, true)
 	}
 	return
 }
@@ -182,6 +180,7 @@ func (chainService *ChainService) executeCreateContractTransaction(t *chainTypes
 	gasFee = new(big.Int).Mul(gasUsed, gasPrice)
 	balance = chainService.DatabaseService.GetBalance(&addr, true)
 	_, gasFee = chainService.deduct(addr, t.ChainId(), balance, gasFee)
+	chainService.DatabaseService.PutNonce(&addr, t.Nonce()+1, true)
 	return
 }
 
@@ -204,6 +203,7 @@ func (chainService *ChainService) executeCallContractTransaction(t *chainTypes.T
 	gasFee = new(big.Int).Mul(gasUsed, gasPrice)
 	balance = chainService.DatabaseService.GetBalance(&addr, true)
 	_, gasFee = chainService.deduct(addr, t.ChainId(), balance, gasFee)
+	chainService.DatabaseService.PutNonce(&addr, t.Nonce()+1, true)
 	return
 }
 
