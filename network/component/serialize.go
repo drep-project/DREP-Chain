@@ -7,7 +7,7 @@ import (
     "github.com/drep-project/drep-chain/network/types"
 	"github.com/vishalkuo/bimap"
 	"reflect"
-    "github.com/francoispqt/gojay"
+    "encoding/json"
 )
 
 var (
@@ -15,7 +15,7 @@ var (
 )
 
 func Serialize(message interface{}, prvKey *secp256k1.PrivateKey) (*types.Message, error) {
-	body, err := gojay.Marshal(message)
+	body, err := json.Marshal(message)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func Serialize(message interface{}, prvKey *secp256k1.PrivateKey) (*types.Messag
 
 func Deserialize(msgBytes []byte) (interface{}, int, *secp256k1.PublicKey, error) {
 	msg := &types.Message{}
-	if err := gojay.Unmarshal(msgBytes, msg); err != nil {
+	if err := json.Unmarshal(msgBytes, msg); err != nil {
 		return nil, 0, nil, err
 	}
 
@@ -54,7 +54,7 @@ func Deserialize(msgBytes []byte) (interface{}, int, *secp256k1.PublicKey, error
 		return nil, 0, nil, errors.New("Unknown peer message type ")
 	}
 	bodyMsg := reflect.New(refType.(reflect.Type)).Interface()
-	if err := gojay.Unmarshal(msg.Body, bodyMsg); err == nil {
+	if err := json.Unmarshal(msg.Body, bodyMsg); err == nil {
 		if !msg.Header.Sig.Verify(sha3.Hash256(msg.Body), msg.Header.PubKey) {
 			return nil, 0, nil, errors.New("check signature fail")
 		}
