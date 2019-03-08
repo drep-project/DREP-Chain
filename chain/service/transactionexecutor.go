@@ -43,7 +43,6 @@ func (chainService *ChainService) ExecuteTransactions(b *chainTypes.Block) (*big
 
     if bytes.Equal(b.Header.StateRoot, stateRoot) {
         dlog.Debug("matched ", "BlockStateRoot", hex.EncodeToString(b.Header.StateRoot), "CalcStateRoot", hex.EncodeToString(stateRoot))
-        chainService.DatabaseService.PutBlock(b)
         chainService.accumulateRewards(b, chainService.ChainID())
         chainService.DatabaseService.Commit()
         chainService.preSync(b)
@@ -104,7 +103,7 @@ func (chainService *ChainService) execute(t *chainTypes.Transaction) (gasUsed, g
 func (chainService *ChainService) canExecute(tx *chainTypes.Transaction, gasFloor, gasCap *big.Int) (canExecute bool, addr crypto.CommonAddress, balance, gasLimit, gasPrice *big.Int) {
 	addr = *tx.From()
 	balance = chainService.DatabaseService.GetBalance(&addr, true)
-	nonce := chainService.DatabaseService.GetNonce(&addr, true) + 1
+	nonce := chainService.DatabaseService.GetNonce(&addr, true)
 	chainService.DatabaseService.PutNonce(&addr, nonce, true)
 	gasPrice = tx.GasPrice()
 
