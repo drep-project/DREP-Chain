@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2018 DREP Foundation Ltd.
+// This file is part of the drep-cli library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The drep-cli library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The drep-cli library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the drep-cli library. If not, see <http://www.gnu.org/licenses/>.
 
 package rpc
 
@@ -31,7 +31,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"BlockChainTest/log"
+	"github.com/drep-project/dlog"
 )
 
 func TestClientRequest(t *testing.T) {
@@ -176,7 +176,7 @@ func testClientCancel(transport string, t *testing.T) {
 			// The key thing here is that no call will ever complete successfully.
 			err := client.CallContext(ctx, nil, "service_sleep", 2*maxContextCancelTimeout)
 			if err != nil {
-				log.Debug(fmt.Sprint("got expected error:", err))
+				dlog.Debug(fmt.Sprint("got expected error:", err))
 			} else {
 				t.Error("no error for call with %v wait time", timeout)
 			}
@@ -583,7 +583,7 @@ func (l *flakeyListener) Accept() (net.Conn, error) {
 	if err == nil {
 		timeout := time.Duration(rand.Int63n(int64(l.maxKillTimeout)))
 		time.AfterFunc(timeout, func() {
-			log.Debug(fmt.Sprintf("killing conn %v after %v", c.LocalAddr(), timeout))
+			dlog.Debug(fmt.Sprintf("killing conn %v after %v", c.LocalAddr(), timeout))
 			c.Close()
 		})
 	}

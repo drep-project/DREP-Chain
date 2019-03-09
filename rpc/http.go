@@ -1,44 +1,37 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2018 DREP Foundation Ltd.
+// This file is part of the drep-cli library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The drep-cli library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The drep-cli library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the drep-cli library. If not, see <http://www.gnu.org/licenses/>.
 
 package rpc
 
 import (
 	"bytes"
-	"fmt"
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
-	"mime"
 	"net"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 
-	"BlockChainTest/log"
+	"github.com/drep-project/dlog"
 	"github.com/rs/cors"
-	"BlockChainTest/config"
-)
-
-const (
-	contentType             = "application/json"
-	maxRequestContentLength = 1024 * 512
 )
 
 var nullAddr, _ = net.ResolveTCPAddr("tcp", "127.0.0.1:0")
@@ -68,10 +61,9 @@ func (hc *httpConn) Close() error {
 	return nil
 }
 
-
 // DefaultHTTPTimeouts represents the default timeout values used if further
 // configuration is not provided.
-var DefaultHTTPTimeouts = config.HTTPTimeouts{
+var DefaultHTTPTimeouts = HTTPTimeouts{
 	ReadTimeout:  30 * time.Second,
 	WriteTimeout: 30 * time.Second,
 	IdleTimeout:  120 * time.Second,
@@ -84,8 +76,8 @@ func DialHTTPWithClient(endpoint string, client *http.Client) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", contentType)
-	req.Header.Set("Accept", contentType)
+	req.Header.Set("Content-Type", ContentType)
+	req.Header.Set("Accept", ContentType)
 
 	initctx := context.Background()
 	return newClient(initctx, func(context.Context) (net.Conn, error) {
@@ -114,7 +106,7 @@ func (c *Client) sendHTTP(ctx context.Context, op *requestOp, msg interface{}) e
 		}
 		return err
 	}
-	var respmsg jsonrpcMessage
+	var respmsg JsonrpcMessage
 	if err := json.NewDecoder(respBody).Decode(&respmsg); err != nil {
 		return err
 	}
@@ -122,14 +114,14 @@ func (c *Client) sendHTTP(ctx context.Context, op *requestOp, msg interface{}) e
 	return nil
 }
 
-func (c *Client) sendBatchHTTP(ctx context.Context, op *requestOp, msgs []*jsonrpcMessage) error {
+func (c *Client) sendBatchHTTP(ctx context.Context, op *requestOp, msgs []*JsonrpcMessage) error {
 	hc := c.writeConn.(*httpConn)
 	respBody, err := hc.doRequest(ctx, msgs)
 	if err != nil {
 		return err
 	}
 	defer respBody.Close()
-	var respmsgs []jsonrpcMessage
+	var respmsgs []JsonrpcMessage
 	if err := json.NewDecoder(respBody).Decode(&respmsgs); err != nil {
 		return err
 	}
@@ -158,36 +150,25 @@ func (hc *httpConn) doRequest(ctx context.Context, msg interface{}) (io.ReadClos
 	return resp.Body, nil
 }
 
-// httpReadWriteNopCloser wraps a io.Reader and io.Writer with a NOP Close method.
-type httpReadWriteNopCloser struct {
-	io.Reader
-	io.Writer
-}
-
-// Close does nothing and returns always nil
-func (t *httpReadWriteNopCloser) Close() error {
-	return nil
-}
-
 // NewHTTPServer creates a new HTTP RPC server around an API provider.
 //
 // Deprecated: Server implements http.Handler
-func NewHTTPServer(cors []string, vhosts []string, timeouts config.HTTPTimeouts, srv *Server) *http.Server {
+func NewHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv *Server) *http.Server {
 	// Wrap the CORS-handler within a host-handler
 	handler := newCorsHandler(srv, cors)
 	handler = newVHostHandler(vhosts, handler)
 
 	// Make sure timeout values are meaningful
 	if timeouts.ReadTimeout < time.Second {
-		log.Warn("Sanitizing invalid HTTP read timeout", "provided", timeouts.ReadTimeout, "updated", DefaultHTTPTimeouts.ReadTimeout)
+		dlog.Warn("Sanitizing invalid HTTP read timeout", "provided", timeouts.ReadTimeout, "updated", DefaultHTTPTimeouts.ReadTimeout)
 		timeouts.ReadTimeout = DefaultHTTPTimeouts.ReadTimeout
 	}
 	if timeouts.WriteTimeout < time.Second {
-		log.Warn("Sanitizing invalid HTTP write timeout", "provided", timeouts.WriteTimeout, "updated", DefaultHTTPTimeouts.WriteTimeout)
+		dlog.Warn("Sanitizing invalid HTTP write timeout", "provided", timeouts.WriteTimeout, "updated", DefaultHTTPTimeouts.WriteTimeout)
 		timeouts.WriteTimeout = DefaultHTTPTimeouts.WriteTimeout
 	}
 	if timeouts.IdleTimeout < time.Second {
-		log.Warn("Sanitizing invalid HTTP idle timeout", "provided", timeouts.IdleTimeout, "updated", DefaultHTTPTimeouts.IdleTimeout)
+		dlog.Warn("Sanitizing invalid HTTP idle timeout", "provided", timeouts.IdleTimeout, "updated", DefaultHTTPTimeouts.IdleTimeout)
 		timeouts.IdleTimeout = DefaultHTTPTimeouts.IdleTimeout
 	}
 	// Bundle and start the HTTP server
@@ -197,56 +178,6 @@ func NewHTTPServer(cors []string, vhosts []string, timeouts config.HTTPTimeouts,
 		WriteTimeout: timeouts.WriteTimeout,
 		IdleTimeout:  timeouts.IdleTimeout,
 	}
-}
-
-// ServeHTTP serves JSON-RPC requests over HTTP.
-func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Permit dumb empty requests for remote health-checks (AWS)
-	if r.Method == http.MethodGet && r.ContentLength == 0 && r.URL.RawQuery == "" {
-		return
-	}
-	if code, err := validateRequest(r); err != nil {
-		http.Error(w, err.Error(), code)
-		return
-	}
-	// All checks passed, create a codec that reads direct from the request body
-	// untilEOF and writes the response to w and order the server to process a
-	// single request.
-	ctx := r.Context()
-	ctx = context.WithValue(ctx, "remote", r.RemoteAddr)
-	ctx = context.WithValue(ctx, "scheme", r.Proto)
-	ctx = context.WithValue(ctx, "local", r.Host)
-	if ua := r.Header.Get("User-Agent"); ua != "" {
-		ctx = context.WithValue(ctx, "User-Agent", ua)
-	}
-	if origin := r.Header.Get("Origin"); origin != "" {
-		ctx = context.WithValue(ctx, "Origin", origin)
-	}
-
-	body := io.LimitReader(r.Body, maxRequestContentLength)
-	codec := NewJSONCodec(&httpReadWriteNopCloser{body, w})
-	defer codec.Close()
-
-	w.Header().Set("content-type", contentType)
-	srv.ServeSingleRequest(ctx, codec, OptionMethodInvocation)
-}
-
-// validateRequest returns a non-zero response code and error message if the
-// request is invalid.
-func validateRequest(r *http.Request) (int, error) {
-	if r.Method == http.MethodPut || r.Method == http.MethodDelete {
-		return http.StatusMethodNotAllowed, errors.New("method not allowed")
-	}
-	if r.ContentLength > maxRequestContentLength {
-		err := fmt.Errorf("content length too large (%d>%d)", r.ContentLength, maxRequestContentLength)
-		return http.StatusRequestEntityTooLarge, err
-	}
-	mt, _, err := mime.ParseMediaType(r.Header.Get("content-type"))
-	if r.Method != http.MethodOptions && (err != nil || mt != contentType) {
-		err := fmt.Errorf("invalid content type, only %s is supported", contentType)
-		return http.StatusUnsupportedMediaType, err
-	}
-	return 0, nil
 }
 
 func newCorsHandler(srv *Server, allowedOrigins []string) http.Handler {

@@ -1,18 +1,18 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2018 DREP Foundation Ltd.
+// This file is part of the drep-cli library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The drep-cli library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The drep-cli library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the drep-cli library. If not, see <http://www.gnu.org/licenses/>.
 
 package rpc
 
@@ -32,7 +32,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"BlockChainTest/log"
+	"github.com/drep-project/dlog"
 )
 
 var (
@@ -76,34 +76,6 @@ type BatchElem struct {
 	Error error
 }
 
-// A value of this type can a JSON-RPC request, notification, successful response or
-// error response. Which one it is depends on the fields.
-type jsonrpcMessage struct {
-	Version string          `json:"jsonrpc"`
-	ID      json.RawMessage `json:"id,omitempty"`
-	Method  string          `json:"method,omitempty"`
-	Params  json.RawMessage `json:"params,omitempty"`
-	Error   *jsonError      `json:"error,omitempty"`
-	Result  json.RawMessage `json:"result,omitempty"`
-}
-
-func (msg *jsonrpcMessage) isNotification() bool {
-	return msg.ID == nil && msg.Method != ""
-}
-
-func (msg *jsonrpcMessage) isResponse() bool {
-	return msg.hasValidID() && msg.Method == "" && len(msg.Params) == 0
-}
-
-func (msg *jsonrpcMessage) hasValidID() bool {
-	return len(msg.ID) > 0 && msg.ID[0] != '{' && msg.ID[0] != '['
-}
-
-func (msg *jsonrpcMessage) String() string {
-	b, _ := json.Marshal(msg)
-	return string(b)
-}
-
 // Client represents a connection to an RPC server.
 type Client struct {
 	idCounter   uint32
@@ -117,25 +89,25 @@ type Client struct {
 
 	// for dispatch
 	close       chan struct{}
-	closing     chan struct{}                  // closed when client is quitting
-	didClose    chan struct{}                  // closed when client quits
-	reconnected chan net.Conn                  // where write/reconnect sends the new connection
-	readErr     chan error                     // errors from read
-	readResp    chan []*jsonrpcMessage         // valid messages from read
-	requestOp   chan *requestOp                // for registering response IDs
-	sendDone    chan error                     // signals write completion, releases write lock
-	respWait    map[string]*requestOp          // active requests
-	subs        map[string]*ClientSubscription // active subscriptions
+	closing     chan struct{}                   // closed when client is quitting
+	didClose    chan struct{}                   // closed when client quits
+	reconnected chan net.Conn                   // where write/reconnect sends the new connection
+	readErr     chan error                      // errors from read
+	readResp    chan []*JsonrpcMessage // valid messages from read
+	requestOp   chan *requestOp                 // for registering response IDs
+	sendDone    chan error                      // signals write completion, releases write lock
+	respWait    map[string]*requestOp           // active requests
+	subs        map[string]*ClientSubscription  // active subscriptions
 }
 
 type requestOp struct {
 	ids  []json.RawMessage
 	err  error
-	resp chan *jsonrpcMessage // receives up to len(ids) responses
-	sub  *ClientSubscription  // only set for EthSubscribe requests
+	resp chan *JsonrpcMessage // receives up to len(ids) responses
+	sub  *ClientSubscription           // only set for EthSubscribe requests
 }
 
-func (op *requestOp) wait(ctx context.Context) (*jsonrpcMessage, error) {
+func (op *requestOp) wait(ctx context.Context) (*JsonrpcMessage, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -196,7 +168,7 @@ func newClient(initctx context.Context, connectFunc func(context.Context) (net.C
 		didClose:    make(chan struct{}),
 		reconnected: make(chan net.Conn),
 		readErr:     make(chan error),
-		readResp:    make(chan []*jsonrpcMessage),
+		readResp:    make(chan []*JsonrpcMessage),
 		requestOp:   make(chan *requestOp),
 		sendDone:    make(chan error, 1),
 		respWait:    make(map[string]*requestOp),
@@ -255,7 +227,7 @@ func (c *Client) CallContext(ctx context.Context, result interface{}, method str
 	if err != nil {
 		return err
 	}
-	op := &requestOp{ids: []json.RawMessage{msg.ID}, resp: make(chan *jsonrpcMessage, 1)}
+	op := &requestOp{ids: []json.RawMessage{msg.ID}, resp: make(chan *JsonrpcMessage, 1)}
 
 	if c.isHTTP {
 		err = c.sendHTTP(ctx, op, msg)
@@ -301,10 +273,10 @@ func (c *Client) BatchCall(b []BatchElem) error {
 //
 // Note that batch calls may not be executed atomically on the server side.
 func (c *Client) BatchCallContext(ctx context.Context, b []BatchElem) error {
-	msgs := make([]*jsonrpcMessage, len(b))
+	msgs := make([]*JsonrpcMessage, len(b))
 	op := &requestOp{
 		ids:  make([]json.RawMessage, len(b)),
-		resp: make(chan *jsonrpcMessage, len(b)),
+		resp: make(chan *JsonrpcMessage, len(b)),
 	}
 	for i, elem := range b {
 		msg, err := c.newMessage(elem.Method, elem.Args...)
@@ -324,7 +296,7 @@ func (c *Client) BatchCallContext(ctx context.Context, b []BatchElem) error {
 
 	// Wait for all responses to come back.
 	for n := 0; n < len(b) && err == nil; n++ {
-		var resp *jsonrpcMessage
+		var resp *JsonrpcMessage
 		resp, err = op.wait(ctx)
 		if err != nil {
 			break
@@ -387,13 +359,13 @@ func (c *Client) Subscribe(ctx context.Context, namespace string, channel interf
 		return nil, ErrNotificationsUnsupported
 	}
 
-	msg, err := c.newMessage(namespace+subscribeMethodSuffix, args...)
+	msg, err := c.newMessage(namespace+SubscribeMethodSuffix, args...)
 	if err != nil {
 		return nil, err
 	}
 	op := &requestOp{
 		ids:  []json.RawMessage{msg.ID},
-		resp: make(chan *jsonrpcMessage),
+		resp: make(chan *JsonrpcMessage),
 		sub:  newClientSubscription(c, namespace, chanVal),
 	}
 
@@ -408,12 +380,12 @@ func (c *Client) Subscribe(ctx context.Context, namespace string, channel interf
 	return op.sub, nil
 }
 
-func (c *Client) newMessage(method string, paramsIn ...interface{}) (*jsonrpcMessage, error) {
+func (c *Client) newMessage(method string, paramsIn ...interface{}) (*JsonrpcMessage, error) {
 	params, err := json.Marshal(paramsIn)
 	if err != nil {
 		return nil, err
 	}
-	return &jsonrpcMessage{Version: "2.0", ID: c.nextID(), Method: method, Params: params}, nil
+	return &JsonrpcMessage{Version: "2.0", ID: c.nextID(), Method: method, Params: params}, nil
 }
 
 // send registers op with the dispatch loop, then sends msg on the connection.
@@ -421,7 +393,7 @@ func (c *Client) newMessage(method string, paramsIn ...interface{}) (*jsonrpcMes
 func (c *Client) send(ctx context.Context, op *requestOp, msg interface{}) error {
 	select {
 	case c.requestOp <- op:
-		log.Trace("", "msg", log.Lazy{Fn: func() string {
+		dlog.Trace("", "msg", dlog.Lazy{Fn: func() string {
 			return fmt.Sprint("sending ", msg)
 		}})
 		err := c.write(ctx, msg)
@@ -461,7 +433,7 @@ func (c *Client) write(ctx context.Context, msg interface{}) error {
 func (c *Client) reconnect(ctx context.Context) error {
 	newconn, err := c.connectFunc(ctx)
 	if err != nil {
-		log.Trace(fmt.Sprintf("reconnect failed: %v", err))
+		dlog.Trace(fmt.Sprintf("reconnect failed: %v", err))
 		return err
 	}
 	select {
@@ -512,18 +484,18 @@ func (c *Client) dispatch(conn net.Conn) {
 		case batch := <-c.readResp:
 			for _, msg := range batch {
 				switch {
-				case msg.isNotification():
-					log.Trace("", "msg", log.Lazy{Fn: func() string {
+				case msg.IsNotification():
+					dlog.Trace("", "msg", dlog.Lazy{Fn: func() string {
 						return fmt.Sprint("<-readResp: notification ", msg)
 					}})
 					c.handleNotification(msg)
-				case msg.isResponse():
-					log.Trace("", "msg", log.Lazy{Fn: func() string {
+				case msg.IsResponse():
+					dlog.Trace("", "msg", dlog.Lazy{Fn: func() string {
 						return fmt.Sprint("<-readResp: response ", msg)
 					}})
 					c.handleResponse(msg)
 				default:
-					log.Debug("", "msg", log.Lazy{Fn: func() string {
+					dlog.Debug("", "msg", dlog.Lazy{Fn: func() string {
 						return fmt.Sprint("<-readResp: dropping weird message", msg)
 					}})
 					// TODO: maybe close
@@ -531,13 +503,13 @@ func (c *Client) dispatch(conn net.Conn) {
 			}
 
 		case err := <-c.readErr:
-			log.Debug("<-readErr", "err", err)
+			dlog.Debug("<-readErr", "err", err)
 			c.closeRequestOps(err)
 			conn.Close()
 			reading = false
 
 		case newconn := <-c.reconnected:
-			log.Debug("<-reconnected", "reading", reading, "remote", conn.RemoteAddr())
+			dlog.Debug("<-reconnected", "reading", reading, "remote", conn.RemoteAddr())
 			if reading {
 				// Wait for the previous read loop to exit. This is a rare case.
 				conn.Close()
@@ -592,9 +564,9 @@ func (c *Client) closeRequestOps(err error) {
 	}
 }
 
-func (c *Client) handleNotification(msg *jsonrpcMessage) {
-	if !strings.HasSuffix(msg.Method, notificationMethodSuffix) {
-		log.Debug("dropping non-subscription message", "msg", msg)
+func (c *Client) handleNotification(msg *JsonrpcMessage) {
+	if !strings.HasSuffix(msg.Method, NotificationMethodSuffix) {
+		dlog.Debug("dropping non-subscription message", "msg", msg)
 		return
 	}
 	var subResult struct {
@@ -602,7 +574,7 @@ func (c *Client) handleNotification(msg *jsonrpcMessage) {
 		Result json.RawMessage `json:"result"`
 	}
 	if err := json.Unmarshal(msg.Params, &subResult); err != nil {
-		log.Debug("dropping invalid subscription message", "msg", msg)
+		dlog.Debug("dropping invalid subscription message", "msg", msg)
 		return
 	}
 	if c.subs[subResult.ID] != nil {
@@ -610,10 +582,10 @@ func (c *Client) handleNotification(msg *jsonrpcMessage) {
 	}
 }
 
-func (c *Client) handleResponse(msg *jsonrpcMessage) {
+func (c *Client) handleResponse(msg *JsonrpcMessage) {
 	op := c.respWait[string(msg.ID)]
 	if op == nil {
-		log.Debug("unsolicited response", "msg", msg)
+		dlog.Debug("unsolicited response", "msg", msg)
 		return
 	}
 	delete(c.respWait, string(msg.ID))
@@ -643,15 +615,15 @@ func (c *Client) read(conn net.Conn) error {
 		buf json.RawMessage
 		dec = json.NewDecoder(conn)
 	)
-	readMessage := func() (rs []*jsonrpcMessage, err error) {
+	readMessage := func() (rs []*JsonrpcMessage, err error) {
 		buf = buf[:0]
 		if err = dec.Decode(&buf); err != nil {
 			return nil, err
 		}
-		if isBatch(buf) {
+		if IsBatch(buf) {
 			err = json.Unmarshal(buf, &rs)
 		} else {
-			rs = make([]*jsonrpcMessage, 1)
+			rs = make([]*JsonrpcMessage, 1)
 			err = json.Unmarshal(buf, &rs[0])
 		}
 		return rs, err
@@ -794,7 +766,7 @@ func (sub *ClientSubscription) unmarshal(result json.RawMessage) (interface{}, e
 
 func (sub *ClientSubscription) requestUnsubscribe() error {
 	var result interface{}
-	return sub.client.Call(&result, sub.namespace+unsubscribeMethodSuffix, sub.subid)
+	return sub.client.Call(&result, sub.namespace+UnsubscribeMethodSuffix, sub.subid)
 }
 
 //"{"jsonrpc":"2.0","id":1,"method":"eth_getBalance","params":["0xc6196f8d8165c7cbb5ffc3833d4caf0c92017c5d","latest"]}"

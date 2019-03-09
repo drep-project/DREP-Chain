@@ -1,40 +1,39 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2018 DREP Foundation Ltd.
+// This file is part of the drep-cli library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The drep-cli library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The drep-cli library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the drep-cli library. If not, see <http://www.gnu.org/licenses/>.
 
 package rpc
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
 	"io"
+	"fmt"
+	"sync"
+	"bytes"
 	"reflect"
 	"strconv"
 	"strings"
-	"sync"
-
-	"BlockChainTest/log"
+	"encoding/json"
+	"github.com/drep-project/dlog"
 )
 
 const (
-	jsonrpcVersion           = "2.0"
-	serviceMethodSeparator   = "_"
-	subscribeMethodSuffix    = "_subscribe"
-	unsubscribeMethodSuffix  = "_unsubscribe"
-	notificationMethodSuffix = "_subscription"
+	JsonrpcVersion           = "2.0"
+	ServiceMethodSeparator   = "_"
+	SubscribeMethodSuffix    = "_subscribe"
+	UnsubscribeMethodSuffix  = "_unsubscribe"
+	NotificationMethodSuffix = "_subscription"
 )
 
 type jsonRequest struct {
@@ -122,7 +121,7 @@ func NewJSONCodec(rwc io.ReadWriteCloser) ServerCodec {
 }
 
 // isBatch returns true when the first non-whitespace characters is '['
-func isBatch(msg json.RawMessage) bool {
+func IsBatch(msg json.RawMessage) bool {
 	for _, c := range msg {
 		// skip insignificant whitespace (http://www.ietf.org/rfc/rfc4627.txt)
 		if c == 0x20 || c == 0x09 || c == 0x0a || c == 0x0d {
@@ -142,9 +141,9 @@ func (c *jsonCodec) ReadRequestHeaders() ([]rpcRequest, bool, Error) {
 
 	var incomingMsg json.RawMessage
 	if err := c.decode(&incomingMsg); err != nil {
-		return nil, false, &invalidRequestError{err.Error()}
+		return nil, false, &InvalidRequestError{err.Error()}
 	}
-	if isBatch(incomingMsg) {
+	if IsBatch(incomingMsg) {
 		return parseBatchRequest(incomingMsg)
 	}
 	return parseRequest(incomingMsg)
@@ -172,39 +171,39 @@ func checkReqId(reqId json.RawMessage) error {
 func parseRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, Error) {
 	var in jsonRequest
 	if err := json.Unmarshal(incomingMsg, &in); err != nil {
-		return nil, false, &invalidMessageError{err.Error()}
+		return nil, false, &InvalidMessageError{err.Error()}
 	}
 
 	if err := checkReqId(in.Id); err != nil {
-		return nil, false, &invalidMessageError{err.Error()}
+		return nil, false, &InvalidMessageError{err.Error()}
 	}
 
 	// subscribe are special, they will always use `subscribeMethod` as first param in the payload
-	if strings.HasSuffix(in.Method, subscribeMethodSuffix) {
+	if strings.HasSuffix(in.Method, SubscribeMethodSuffix) {
 		reqs := []rpcRequest{{id: &in.Id, isPubSub: true}}
 		if len(in.Payload) > 0 {
 			// first param must be subscription name
 			var subscribeMethod [1]string
 			if err := json.Unmarshal(in.Payload, &subscribeMethod); err != nil {
-				log.Debug(fmt.Sprintf("Unable to parse subscription method: %v\n", err))
-				return nil, false, &invalidRequestError{"Unable to parse subscription request"}
+				dlog.Debug(fmt.Sprintf("Unable to parse subscription method: %v\n", err))
+				return nil, false, &InvalidRequestError{"Unable to parse subscription request"}
 			}
 
-			reqs[0].service, reqs[0].method = strings.TrimSuffix(in.Method, subscribeMethodSuffix), subscribeMethod[0]
+			reqs[0].service, reqs[0].method = strings.TrimSuffix(in.Method, SubscribeMethodSuffix), subscribeMethod[0]
 			reqs[0].params = in.Payload
 			return reqs, false, nil
 		}
-		return nil, false, &invalidRequestError{"Unable to parse subscription request"}
+		return nil, false, &InvalidRequestError{"Unable to parse subscription request"}
 	}
 
-	if strings.HasSuffix(in.Method, unsubscribeMethodSuffix) {
+	if strings.HasSuffix(in.Method, UnsubscribeMethodSuffix) {
 		return []rpcRequest{{id: &in.Id, isPubSub: true,
 			method: in.Method, params: in.Payload}}, false, nil
 	}
 
-	elems := strings.Split(in.Method, serviceMethodSeparator)
+	elems := strings.Split(in.Method, ServiceMethodSeparator)
 	if len(elems) != 2 {
-		return nil, false, &methodNotFoundError{in.Method, ""}
+		return nil, false, &MethodNotFoundError{in.Method, ""}
 	}
 
 	// regular RPC call
@@ -220,37 +219,37 @@ func parseRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, Error) {
 func parseBatchRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, Error) {
 	var in []jsonRequest
 	if err := json.Unmarshal(incomingMsg, &in); err != nil {
-		return nil, false, &invalidMessageError{err.Error()}
+		return nil, false, &InvalidMessageError{err.Error()}
 	}
 
 	requests := make([]rpcRequest, len(in))
 	for i, r := range in {
 		if err := checkReqId(r.Id); err != nil {
-			return nil, false, &invalidMessageError{err.Error()}
+			return nil, false, &InvalidMessageError{err.Error()}
 		}
 
 		id := &in[i].Id
 
 		// subscribe are special, they will always use `subscriptionMethod` as first param in the payload
-		if strings.HasSuffix(r.Method, subscribeMethodSuffix) {
+		if strings.HasSuffix(r.Method, SubscribeMethodSuffix) {
 			requests[i] = rpcRequest{id: id, isPubSub: true}
 			if len(r.Payload) > 0 {
 				// first param must be subscription name
 				var subscribeMethod [1]string
 				if err := json.Unmarshal(r.Payload, &subscribeMethod); err != nil {
-					log.Debug(fmt.Sprintf("Unable to parse subscription method: %v\n", err))
-					return nil, false, &invalidRequestError{"Unable to parse subscription request"}
+					dlog.Debug(fmt.Sprintf("Unable to parse subscription method: %v\n", err))
+					return nil, false, &InvalidRequestError{"Unable to parse subscription request"}
 				}
 
-				requests[i].service, requests[i].method = strings.TrimSuffix(r.Method, subscribeMethodSuffix), subscribeMethod[0]
+				requests[i].service, requests[i].method = strings.TrimSuffix(r.Method, SubscribeMethodSuffix), subscribeMethod[0]
 				requests[i].params = r.Payload
 				continue
 			}
 
-			return nil, true, &invalidRequestError{"Unable to parse (un)subscribe request arguments"}
+			return nil, true, &InvalidRequestError{"Unable to parse (un)subscribe request arguments"}
 		}
 
-		if strings.HasSuffix(r.Method, unsubscribeMethodSuffix) {
+		if strings.HasSuffix(r.Method, UnsubscribeMethodSuffix) {
 			requests[i] = rpcRequest{id: id, isPubSub: true, method: r.Method, params: r.Payload}
 			continue
 		}
@@ -260,10 +259,10 @@ func parseBatchRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, Error) 
 		} else {
 			requests[i] = rpcRequest{id: id, params: r.Payload}
 		}
-		if elem := strings.Split(r.Method, serviceMethodSeparator); len(elem) == 2 {
+		if elem := strings.Split(r.Method, ServiceMethodSeparator); len(elem) == 2 {
 			requests[i].service, requests[i].method = elem[0], elem[1]
 		} else {
-			requests[i].err = &methodNotFoundError{r.Method, ""}
+			requests[i].err = &MethodNotFoundError{r.Method, ""}
 		}
 	}
 
@@ -274,10 +273,10 @@ func parseBatchRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, Error) 
 // types. It returns the parsed values or an error when the parsing failed.
 func (c *jsonCodec) ParseRequestArguments(argTypes []reflect.Type, params interface{}) ([]reflect.Value, Error) {
 	if args, ok := params.(json.RawMessage); !ok {
-		return nil, &invalidParamsError{"Invalid params supplied"}
+		return nil, &InvalidParamsError{"Invalid params supplied"}
 	} else {
-		str := argTypes[0].String()
-		fmt.Println(str)
+		//str := argTypes[0].String()
+		//fmt.Println(str)
 		return parsePositionalArguments(args, argTypes)
 	}
 }
@@ -289,31 +288,31 @@ func parsePositionalArguments(rawArgs json.RawMessage, types []reflect.Type) ([]
 	// Read beginning of the args array.
 	dec := json.NewDecoder(bytes.NewReader(rawArgs))
 	if tok, _ := dec.Token(); tok != json.Delim('[') {
-		return nil, &invalidParamsError{"non-array args"}
+		return nil, &InvalidParamsError{"non-array args"}
 	}
 	// Read args.
 	args := make([]reflect.Value, 0, len(types))
 	for i := 0; dec.More(); i++ {
 		if i >= len(types) {
-			return nil, &invalidParamsError{fmt.Sprintf("too many arguments, want at most %d", len(types))}
+			return nil, &InvalidParamsError{fmt.Sprintf("too many arguments, want at most %d", len(types))}
 		}
 		argval := reflect.New(types[i])
 		if err := dec.Decode(argval.Interface()); err != nil {
-			return nil, &invalidParamsError{fmt.Sprintf("invalid argument %d: %v", i, err)}
+			return nil, &InvalidParamsError{fmt.Sprintf("invalid argument %d: %v", i, err)}
 		}
 		if argval.IsNil() && types[i].Kind() != reflect.Ptr {
-			return nil, &invalidParamsError{fmt.Sprintf("missing value for required argument %d", i)}
+			return nil, &InvalidParamsError{fmt.Sprintf("missing value for required argument %d", i)}
 		}
 		args = append(args, argval.Elem())
 	}
 	// Read end of args array.
 	if _, err := dec.Token(); err != nil {
-		return nil, &invalidParamsError{err.Error()}
+		return nil, &InvalidParamsError{err.Error()}
 	}
 	// Set any missing args to nil.
 	for i := len(args); i < len(types); i++ {
 		if types[i].Kind() != reflect.Ptr {
-			return nil, &invalidParamsError{fmt.Sprintf("missing value for required argument %d", i)}
+			return nil, &InvalidParamsError{fmt.Sprintf("missing value for required argument %d", i)}
 		}
 		args = append(args, reflect.Zero(types[i]))
 	}
@@ -322,24 +321,24 @@ func parsePositionalArguments(rawArgs json.RawMessage, types []reflect.Type) ([]
 
 // CreateResponse will create a JSON-RPC success response with the given id and reply as result.
 func (c *jsonCodec) CreateResponse(id interface{}, reply interface{}) interface{} {
-	return &jsonSuccessResponse{Version: jsonrpcVersion, Id: id, Result: reply}
+	return &jsonSuccessResponse{Version: JsonrpcVersion, Id: id, Result: reply}
 }
 
 // CreateErrorResponse will create a JSON-RPC error response with the given id and error.
 func (c *jsonCodec) CreateErrorResponse(id interface{}, err Error) interface{} {
-	return &jsonErrResponse{Version: jsonrpcVersion, Id: id, Error: jsonError{Code: err.ErrorCode(), Message: err.Error()}}
+	return &jsonErrResponse{Version: JsonrpcVersion, Id: id, Error: jsonError{Code: err.ErrorCode(), Message: err.Error()}}
 }
 
 // CreateErrorResponseWithInfo will create a JSON-RPC error response with the given id and error.
 // info is optional and contains additional information about the error. When an empty string is passed it is ignored.
 func (c *jsonCodec) CreateErrorResponseWithInfo(id interface{}, err Error, info interface{}) interface{} {
-	return &jsonErrResponse{Version: jsonrpcVersion, Id: id,
+	return &jsonErrResponse{Version: JsonrpcVersion, Id: id,
 		Error: jsonError{Code: err.ErrorCode(), Message: err.Error(), Data: info}}
 }
 
 // CreateNotification will create a JSON-RPC notification with the given subscription id and event as params.
 func (c *jsonCodec) CreateNotification(subid, namespace string, event interface{}) interface{} {
-	return &jsonNotification{Version: jsonrpcVersion, Method: namespace + notificationMethodSuffix,
+	return &jsonNotification{Version: JsonrpcVersion, Method: namespace + NotificationMethodSuffix,
 		Params: jsonSubscription{Subscription: subid, Result: event}}
 }
 

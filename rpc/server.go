@@ -1,35 +1,67 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2018 DREP Foundation Ltd.
+// This file is part of the drep-cli library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The drep-cli library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The drep-cli library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the drep-cli library. If not, see <http://www.gnu.org/licenses/>.
 
 package rpc
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"mime"
+	"net"
+	"net/http"
+	"os"
 	"reflect"
 	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
 
-	mapset "github.com/deckarep/golang-set"
-	"BlockChainTest/log"
+	"github.com/drep-project/dlog"
+	"github.com/ethereum/go-ethereum/p2p/netutil"
+
+	"github.com/deckarep/golang-set"
+	"golang.org/x/net/websocket"
 )
 
-const MetadataApi = "rpc"
+const (
+	ContentType             = "application/json"
+	MetadataApi             = "rpc"
+	maxRequestContentLength = 1024 * 512
+)
+
+// websocketJSONCodec is a custom JSON codec with payload size enforcement and
+// special number parsing.
+var websocketJSONCodec = websocket.Codec{
+	// Marshal is the stock JSON marshaller used by the websocket library too.
+	Marshal: func(v interface{}) ([]byte, byte, error) {
+		msg, err := json.Marshal(v)
+		return msg, websocket.TextFrame, err
+	},
+	// Unmarshal is a specialized unmarshaller to properly convert numbers.
+	Unmarshal: func(msg []byte, payloadType byte, v interface{}) error {
+		dec := json.NewDecoder(bytes.NewReader(msg))
+		dec.UseNumber()
+
+		return dec.Decode(v)
+	},
+}
 
 // CodecOption specifies which type of messages this codec supports
 type CodecOption int
@@ -41,6 +73,47 @@ const (
 	// OptionSubscriptions is an indication that the codec suports RPC notifications
 	OptionSubscriptions = 1 << iota // support pub sub
 )
+
+// callback is a method callback which was registered in the server
+type callback struct {
+	rcvr        reflect.Value  // receiver of method
+	method      reflect.Method // callback
+	argTypes    []reflect.Type // input argument types
+	hasCtx      bool           // method's first argument is a context (not included in argTypes)
+	errPos      int            // err return idx, of -1 when method cannot return error
+	isSubscribe bool           // indication if the callback is a subscription
+}
+
+// service represents a registered object
+type service struct {
+	name          string        // name for service
+	typ           reflect.Type  // receiver type
+	callbacks     callbacks     // registered handlers
+	subscriptions subscriptions // available subscriptions/notifications
+}
+
+// serverRequest is an incoming request
+type serverRequest struct {
+	id            interface{}
+	svcname       string
+	callb         *callback
+	args          []reflect.Value
+	isUnsubscribe bool
+	err           Error
+}
+
+type serviceRegistry map[string]*service // collection of services
+type callbacks map[string]*callback      // collection of RPC callbacks
+type subscriptions map[string]*callback  // collection of subscription callbacks
+
+// Server represents a RPC server
+type Server struct {
+	services serviceRegistry
+
+	run      int32
+	codecsMu sync.Mutex
+	codecs   mapset.Set
+}
 
 // NewServer will create a new server instance with no registered handlers.
 func NewServer() *Server {
@@ -56,21 +129,6 @@ func NewServer() *Server {
 	server.RegisterName(MetadataApi, rpcService)
 
 	return server
-}
-
-// RPCService gives meta information about the server.
-// e.g. gives information about the loaded modules.
-type RPCService struct {
-	server *Server
-}
-
-// Modules returns the list of RPC services with their version number
-func (s *RPCService) Modules() map[string]string {
-	modules := make(map[string]string)
-	for name := range s.server.services {
-		modules[name] = "1.0"
-	}
-	return modules
 }
 
 // RegisterName will create a service for the given rcvr type under the given name. When no methods on the given rcvr
@@ -130,7 +188,7 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 			const size = 64 << 10
 			buf := make([]byte, size)
 			buf = buf[:runtime.Stack(buf, false)]
-			log.Error(string(buf))
+			dlog.Error(string(buf))
 		}
 		s.codecsMu.Lock()
 		s.codecs.Remove(codec)
@@ -150,7 +208,7 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 	s.codecsMu.Lock()
 	if atomic.LoadInt32(&s.run) != 1 { // server stopped
 		s.codecsMu.Unlock()
-		return &shutdownError{}
+		return &ShutdownError{}
 	}
 	s.codecs.Add(codec)
 	s.codecsMu.Unlock()
@@ -161,7 +219,7 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 		if err != nil {
 			// If a parsing error occurred, send an error
 			if err.Error() != "EOF" {
-				log.Debug(fmt.Sprintf("read error %v\n", err))
+				dlog.Debug(fmt.Sprintf("read error %v\n", err))
 				codec.Write(codec.CreateErrorResponse(nil, err))
 			}
 			// Error or end of stream, wait for requests and tear down
@@ -172,7 +230,7 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 		// check if server is ordered to shutdown and return an error
 		// telling the client that his request failed.
 		if atomic.LoadInt32(&s.run) != 1 {
-			err = &shutdownError{}
+			err = &ShutdownError{}
 			if batch {
 				resps := make([]interface{}, len(reqs))
 				for i, r := range reqs {
@@ -227,7 +285,7 @@ func (s *Server) ServeSingleRequest(ctx context.Context, codec ServerCodec, opti
 // close all codecs which will cancel pending requests/subscriptions.
 func (s *Server) Stop() {
 	if atomic.CompareAndSwapInt32(&s.run, 1, 0) {
-		log.Debug("RPC Server shutdown initiatied")
+		dlog.Debug("RPC Server shutdown initiatied")
 		s.codecsMu.Lock()
 		defer s.codecsMu.Unlock()
 		s.codecs.Each(func(c interface{}) bool {
@@ -261,23 +319,23 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 		if len(req.args) >= 1 && req.args[0].Kind() == reflect.String {
 			notifier, supported := NotifierFromContext(ctx)
 			if !supported { // interface doesn't support subscriptions (e.g. http)
-				return codec.CreateErrorResponse(&req.id, &callbackError{ErrNotificationsUnsupported.Error()}), nil
+				return codec.CreateErrorResponse(&req.id, &CallbackError{ErrNotificationsUnsupported.Error()}), nil
 			}
 
 			subid := ID(req.args[0].String())
 			if err := notifier.unsubscribe(subid); err != nil {
-				return codec.CreateErrorResponse(&req.id, &callbackError{err.Error()}), nil
+				return codec.CreateErrorResponse(&req.id, &CallbackError{err.Error()}), nil
 			}
 
 			return codec.CreateResponse(req.id, true), nil
 		}
-		return codec.CreateErrorResponse(&req.id, &invalidParamsError{"Expected subscription id as first argument"}), nil
+		return codec.CreateErrorResponse(&req.id, &InvalidParamsError{"Expected subscription id as first argument"}), nil
 	}
 
 	if req.callb.isSubscribe {
 		subid, err := s.createSubscription(ctx, codec, req)
 		if err != nil {
-			return codec.CreateErrorResponse(&req.id, &callbackError{err.Error()}), nil
+			return codec.CreateErrorResponse(&req.id, &CallbackError{err.Error()}), nil
 		}
 
 		// active the subscription after the sub id was successfully sent to the client
@@ -291,8 +349,8 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 
 	// regular RPC call, prepare arguments
 	if len(req.args) != len(req.callb.argTypes) {
-		rpcErr := &invalidParamsError{fmt.Sprintf("%s%s%s expects %d parameters, got %d",
-			req.svcname, serviceMethodSeparator, req.callb.method.Name,
+		rpcErr := &InvalidParamsError{fmt.Sprintf("%s%s%s expects %d parameters, got %d",
+			req.svcname, ServiceMethodSeparator, req.callb.method.Name,
 			len(req.callb.argTypes), len(req.args))}
 		return codec.CreateErrorResponse(&req.id, rpcErr), nil
 	}
@@ -313,7 +371,7 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 	if req.callb.errPos >= 0 { // test if method returned an error
 		if !reply[req.callb.errPos].IsNil() {
 			e := reply[req.callb.errPos].Interface().(error)
-			res := codec.CreateErrorResponse(&req.id, &callbackError{e.Error()})
+			res := codec.CreateErrorResponse(&req.id, &CallbackError{e.Error()})
 			return res, nil
 		}
 	}
@@ -331,7 +389,7 @@ func (s *Server) exec(ctx context.Context, codec ServerCodec, req *serverRequest
 	}
 
 	if err := codec.Write(response); err != nil {
-		log.Error(fmt.Sprintf("%v\n", err))
+		dlog.Error(fmt.Sprintf("%v\n", err))
 		codec.Close()
 	}
 
@@ -358,7 +416,7 @@ func (s *Server) execBatch(ctx context.Context, codec ServerCodec, requests []*s
 	}
 
 	if err := codec.Write(responses); err != nil {
-		log.Error(fmt.Sprintf("%v\n", err))
+		dlog.Error(fmt.Sprintf("%v\n", err))
 		codec.Close()
 	}
 
@@ -389,19 +447,19 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, Error) 
 			continue
 		}
 
-		if r.isPubSub && strings.HasSuffix(r.method, unsubscribeMethodSuffix) {
+		if r.isPubSub && strings.HasSuffix(r.method, UnsubscribeMethodSuffix) {
 			requests[i] = &serverRequest{id: r.id, isUnsubscribe: true}
 			argTypes := []reflect.Type{reflect.TypeOf("")} // expect subscription id as first arg
 			if args, err := codec.ParseRequestArguments(argTypes, r.params); err == nil {
 				requests[i].args = args
 			} else {
-				requests[i].err = &invalidParamsError{err.Error()}
+				requests[i].err = &InvalidParamsError{err.Error()}
 			}
 			continue
 		}
 
 		if svc, ok = s.services[r.service]; !ok { // rpc method isn't available
-			requests[i] = &serverRequest{id: r.id, err: &methodNotFoundError{r.service, r.method}}
+			requests[i] = &serverRequest{id: r.id, err: &MethodNotFoundError{r.service, r.method}}
 			continue
 		}
 
@@ -414,11 +472,11 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, Error) 
 					if args, err := codec.ParseRequestArguments(argTypes, r.params); err == nil {
 						requests[i].args = args[1:] // first one is service.method name which isn't an actual argument
 					} else {
-						requests[i].err = &invalidParamsError{err.Error()}
+						requests[i].err = &InvalidParamsError{err.Error()}
 					}
 				}
 			} else {
-				requests[i] = &serverRequest{id: r.id, err: &methodNotFoundError{r.service, r.method}}
+				requests[i] = &serverRequest{id: r.id, err: &MethodNotFoundError{r.service, r.method}}
 			}
 			continue
 		}
@@ -429,14 +487,150 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, Error) 
 				if args, err := codec.ParseRequestArguments(callb.argTypes, r.params); err == nil {
 					requests[i].args = args
 				} else {
-					requests[i].err = &invalidParamsError{err.Error()}
+					requests[i].err = &InvalidParamsError{err.Error()}
 				}
 			}
 			continue
 		}
 
-		requests[i] = &serverRequest{id: r.id, err: &methodNotFoundError{r.service, r.method}}
+		requests[i] = &serverRequest{id: r.id, err: &MethodNotFoundError{r.service, r.method}}
 	}
 
 	return requests, batch, nil
+}
+
+// ServeHTTP serves JSON-RPC requests over HTTP.
+func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Permit dumb empty requests for remote health-checks (AWS)
+	if r.Method == http.MethodGet && r.ContentLength == 0 && r.URL.RawQuery == "" {
+		return
+	}
+	if code, err := validateRequest(r); err != nil {
+		http.Error(w, err.Error(), code)
+		return
+	}
+	// All checks passed, create a codec that reads direct from the request body
+	// untilEOF and writes the response to w and order the server to process a
+	// single request.
+	ctx := r.Context()
+	ctx = context.WithValue(ctx, "remote", r.RemoteAddr)
+	ctx = context.WithValue(ctx, "scheme", r.Proto)
+	ctx = context.WithValue(ctx, "local", r.Host)
+	if ua := r.Header.Get("User-Agent"); ua != "" {
+		ctx = context.WithValue(ctx, "User-Agent", ua)
+	}
+	if origin := r.Header.Get("Origin"); origin != "" {
+		ctx = context.WithValue(ctx, "Origin", origin)
+	}
+
+	body := io.LimitReader(r.Body, maxRequestContentLength)
+	codec := NewJSONCodec(&httpReadWriteNopCloser{body, w})
+	defer codec.Close()
+
+	w.Header().Set("content-type", ContentType)
+	srv.ServeSingleRequest(ctx, codec, OptionMethodInvocation)
+}
+
+// validateRequest returns a non-zero response code and error message if the
+// request is invalid.
+func validateRequest(r *http.Request) (int, error) {
+	if r.Method == http.MethodPut || r.Method == http.MethodDelete {
+		return http.StatusMethodNotAllowed, errors.New("method not allowed")
+	}
+	if r.ContentLength > maxRequestContentLength {
+		err := fmt.Errorf("content length too large (%d>%d)", r.ContentLength, maxRequestContentLength)
+		return http.StatusRequestEntityTooLarge, err
+	}
+	mt, _, err := mime.ParseMediaType(r.Header.Get("content-type"))
+	if r.Method != http.MethodOptions && (err != nil || mt != ContentType) {
+		err := fmt.Errorf("invalid content type, only %s is supported", ContentType)
+		return http.StatusUnsupportedMediaType, err
+	}
+	return 0, nil
+}
+
+// httpReadWriteNopCloser wraps a io.Reader and io.Writer with a NOP Close method.
+type httpReadWriteNopCloser struct {
+	io.Reader
+	io.Writer
+}
+
+// Close does nothing and returns always nil
+func (t *httpReadWriteNopCloser) Close() error {
+	return nil
+}
+
+// ServeListener accepts connections on l, serving JSON-RPC on them.
+func (srv *Server) ServeListener(l net.Listener) error {
+	for {
+		conn, err := l.Accept()
+		if netutil.IsTemporaryError(err) {
+			dlog.Warn("RPC accept error", "err", err)
+			continue
+		} else if err != nil {
+			return err
+		}
+		dlog.Trace("Accepted connection", "addr", conn.RemoteAddr())
+		go srv.ServeCodec(NewJSONCodec(conn), OptionMethodInvocation|OptionSubscriptions)
+	}
+}
+
+// WebsocketHandler returns a handler that serves JSON-RPC to WebSocket connections.
+//
+// allowedOrigins should be a comma-separated list of allowed origin URLs.
+// To allow connections with any origin, pass "*".
+func (srv *Server) WebsocketHandler(allowedOrigins []string) http.Handler {
+	return websocket.Server{
+		Handshake: wsHandshakeValidator(allowedOrigins),
+		Handler: func(conn *websocket.Conn) {
+			// Create a custom encode/decode pair to enforce payload size and number encoding
+			conn.MaxPayloadBytes = maxRequestContentLength
+
+			encoder := func(v interface{}) error {
+				return websocketJSONCodec.Send(conn, v)
+			}
+			decoder := func(v interface{}) error {
+				return websocketJSONCodec.Receive(conn, v)
+			}
+			srv.ServeCodec(NewCodec(conn, encoder, decoder), OptionMethodInvocation|OptionSubscriptions)
+		},
+	}
+}
+
+// wsHandshakeValidator returns a handler that verifies the origin during the
+// websocket upgrade process. When a '*' is specified as an allowed origins all
+// connections are accepted.
+func wsHandshakeValidator(allowedOrigins []string) func(*websocket.Config, *http.Request) error {
+	origins := mapset.NewSet()
+	allowAllOrigins := false
+
+	for _, origin := range allowedOrigins {
+		if origin == "*" {
+			allowAllOrigins = true
+		}
+		if origin != "" {
+			origins.Add(strings.ToLower(origin))
+		}
+	}
+
+	// allow localhost if no allowedOrigins are specified.
+	if len(origins.ToSlice()) == 0 {
+		origins.Add("http://localhost")
+		if hostname, err := os.Hostname(); err == nil {
+			origins.Add("http://" + strings.ToLower(hostname))
+		}
+	}
+
+	dlog.Debug(fmt.Sprintf("Allowed origin(s) for WS RPC interface %v\n", origins.ToSlice()))
+
+	f := func(cfg *websocket.Config, req *http.Request) error {
+		origin := strings.ToLower(req.Header.Get("Origin"))
+		if allowAllOrigins || origins.Contains(origin) {
+			return nil
+		}
+		dlog.Warn(fmt.Sprintf("origin '%s' not allowed on WS-RPC interface\n", origin))
+		return fmt.Errorf("origin %s not allowed", origin)
+	}
+
+	return f
 }

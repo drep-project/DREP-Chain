@@ -1,0 +1,299 @@
+package database
+
+import (
+	"errors"
+	"github.com/drep-project/drep-chain/crypto/sha3"
+	"strconv"
+)
+type StateStore interface {
+	
+}
+type State struct {
+	Sequence  string
+	ChildKeys [17][]byte
+	Value     []byte
+	IsLeaf    bool
+	db        *Database
+}
+
+func (state *State) resetValue(children [17]*State) {
+	stack := make([]byte, 32*17)
+	for i := 0; i < 17; i++ {
+		if children[i] != nil && children[i].Value != nil {
+			copy(stack[i*17:(i+1)*17], children[i].Value)
+		}
+	}
+	state.Value = sha3.Hash256(stack)
+}
+
+func (state *State) getChildren() [17]*State {
+	var children [17]*State
+	for i := 0; i < 17; i++ {
+		if state.ChildKeys[i] != nil {
+			children[i], _ = state.db.getState(state.ChildKeys[i])
+		}
+	}
+	return children
+}
+
+func getChildKey(state *State, key []byte, nib int) []byte {
+	if state.ChildKeys[nib] != nil {
+		return state.ChildKeys[nib]
+	}
+	return sha3.HashS256(key, []byte("child"), []byte(strconv.Itoa(nib)))
+}
+
+func newLeaf(db *Database, seq string, key, value []byte) (*State, error) {
+	leaf := &State{
+		Sequence: seq,
+		Value:    value,
+		IsLeaf:   true,
+		db:       db,
+	}
+	err := db.putState(key, leaf)
+	if err != nil {
+		return nil, err
+	}
+	return leaf, nil
+}
+
+func insert(db *Database, seq string, key, value []byte) (*State, error) {
+	state, err := db.getState(key)
+	if err != nil {
+		return newLeaf(db, seq, key, value)
+	}
+	prefix, offset := getCommonPrefix(seq, state.Sequence)
+	if prefix == state.Sequence {
+		if state.IsLeaf {
+			if seq == state.Sequence {
+				return insertExistedLeafValue(state, key, value)
+			} else {
+				return insertNewChildBranchOnLeaf(state, seq, offset, key, value)
+			}
+		} else {
+			return insertProceedingOnCurrentBranch(db, state, seq, offset, key, value)
+		}
+	} else {
+		return insertDivergingBranch(state, prefix, seq, offset, key, value)
+	}
+}
+
+func insertExistedLeafValue(state *State, key, value []byte) (*State, error) {
+	state.Value = value
+	err := state.db.putState(key, state)
+	if err != nil {
+		return nil, err
+	}
+	return state, nil
+}
+
+func insertNewChildBranchOnLeaf(state *State, seq string, offset int, key, value []byte) (*State, error) {
+	var err error
+	children := state.getChildren()
+
+	state.ChildKeys[16] = getChildKey(state, key, 16)
+	children[16], err = newLeaf(state.db, "", state.ChildKeys[16], state.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	nib := getNextNibble(seq, offset)
+	state.ChildKeys[nib] = getChildKey(state, key, nib)
+	children[nib], err = newLeaf(state.db, seq[offset:], state.ChildKeys[nib], value)
+	if err != nil {
+		return nil, err
+	}
+
+	state.resetValue(children)
+	state.IsLeaf = false
+	err = state.db.putState(key, state)
+	if err != nil {
+		return nil, err
+	}
+	return state, nil
+}
+
+func insertProceedingOnCurrentBranch(db *Database,state *State, seq string, offset int, key, value []byte) (*State, error) {
+	var err error
+	children := state.getChildren()
+
+	nib := getNextNibble(seq, offset)
+	state.ChildKeys[nib] = getChildKey(state, key, nib)
+	children[nib], err = insert(db, seq[offset:], state.ChildKeys[nib], value)
+	if err != nil {
+		return nil, err
+	}
+	state.db.putState(state.ChildKeys[nib], children[nib])
+	if err != nil {
+		return nil, err
+	}
+
+	state.resetValue(children)
+	err = state.db.putState(key, state)
+	if err != nil {
+		return nil, err
+	}
+	err = state.db.putState(key, state)
+	if err != nil {
+		return nil, err
+	}
+	return state, nil
+}
+
+func insertDivergingBranch(state *State, prefix, seq string, offset int, key, value []byte) (*State, error) {
+	var err error
+	children := state.getChildren()
+
+	nib0 := getNextNibble(state.Sequence, offset)
+	childKey0 := getChildKey(state, key, nib0)
+	div := &State{}
+	div.Sequence = state.Sequence[offset:]
+	for i, child := range children {
+		if state.ChildKeys[i] != nil {
+			div.ChildKeys[i] = getChildKey(div, state.ChildKeys[nib0], i)
+			err = state.db.putState(div.ChildKeys[i], child)
+			if err != nil {
+				return nil, err
+			}
+			err = state.db.delState(state.ChildKeys[i])
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	div.IsLeaf = state.IsLeaf
+	if div.IsLeaf {
+		div.Value = state.Value
+	} else {
+		div.resetValue(children)
+	}
+	err = state.db.putState(childKey0, div)
+	if err != nil {
+		return nil, err
+	}
+
+	nib1 := getNextNibble(seq, offset)
+	childKey1 := getChildKey(state, key, nib1)
+	leaf, err := newLeaf(state.db, seq[offset:], childKey1, value)
+	if err != nil {
+		return nil, err
+	}
+
+	var twins [17]*State
+	twins[nib0] = div
+	twins[nib1] = leaf
+	for i, _ := range state.ChildKeys {
+		state.ChildKeys[i] = nil
+	}
+	state.ChildKeys[nib0] = childKey0
+	state.ChildKeys[nib1] = childKey1
+	state.resetValue(twins)
+	state.Sequence = prefix
+	state.IsLeaf = false
+	err = state.db.putState(key, state)
+	if err != nil {
+		return nil, err
+	}
+
+	return state, nil
+}
+
+func del(state *State, key []byte, seq string) (*State, error) {
+	state, err := state.db.getState(key)
+	if err != nil {
+		return nil, err
+	}
+	if state.IsLeaf {
+		if seq == state.Sequence {
+			return delExistedLeaf(state, key)
+		} else {
+			return nil, errors.New("current key not found")
+		}
+	}
+	return delProceedingOnCurrentBranch(state, seq, key)
+}
+
+func delExistedLeaf(state *State, key []byte) (*State, error) {
+	err := state.db.delState(key)
+	if err != nil {
+		return nil, err
+	}
+	return state, nil
+}
+
+func delProceedingOnCurrentBranch(state *State, seq string, key []byte) (*State, error) {
+	_, offset := getCommonPrefix(seq, state.Sequence)
+	if offset < len(state.Sequence) {
+		return nil, errors.New("current key not found")
+	}
+	nib := getNextNibble(seq, offset)
+	state.ChildKeys[nib] = getChildKey(state, key, nib)
+	_, err := del(state, state.ChildKeys[nib], seq[offset:])
+	if err != nil {
+		return nil, err
+	}
+	childCount, onlyChild := countChildren(state)
+	if childCount == 1 {
+		return absorbOnlyChild(state, onlyChild, key)
+	}
+	return state, nil
+}
+
+func countChildren(state *State) (int, *State) {
+	children := state.getChildren()
+	childCount := 0
+	var onlyChild *State
+	for i, childKey := range state.ChildKeys {
+		if childKey != nil && children[i] != nil {
+			childCount += 1
+			onlyChild = children[i]
+		}
+	}
+	return childCount, onlyChild
+}
+
+func absorbOnlyChild(state, onlyChild *State, key []byte) (*State, error) {
+	state.Sequence += onlyChild.Sequence
+	state.Value = onlyChild.Value
+	state.IsLeaf = onlyChild.IsLeaf
+	state.ChildKeys = onlyChild.ChildKeys
+	err := state.db.putState(key, state)
+	if err != nil {
+		return nil, err
+	}
+	return state, nil
+}
+
+func get(state *State, key []byte, seq string) (*State, error) {
+	state, err := state.db.getState(key)
+	if err != nil {
+		return nil, err
+	}
+	if state.IsLeaf {
+		if seq == state.Sequence {
+			return state, nil
+		}
+		return nil, errors.New("current key not found")
+	}
+	return getProceedingOnCurrentBranch(state, seq)
+}
+
+func getProceedingOnCurrentBranch(state *State, seq string) (*State, error) {
+	_, offset := getCommonPrefix(seq, state.Sequence)
+	if offset < len(state.Sequence) {
+		return nil, errors.New("current key not found")
+	}
+	nib := getNextNibble(seq, offset)
+	return get(state, state.ChildKeys[nib], seq[offset:])
+}
+
+func search(state *State, key []byte, seq string, depth int) {
+	st, _ := state.db.getState(key)
+	seq += state.Sequence
+
+	for i := 0; i < 17; i++ {
+		if state.ChildKeys[i] != nil {
+			search(st, st.ChildKeys[i], seq, depth+1)
+		}
+	}
+}
