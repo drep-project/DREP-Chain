@@ -2,7 +2,6 @@ package database
 
 import (
 	"errors"
-	"fmt"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"strconv"
 )
@@ -80,11 +79,6 @@ func insert(db *Database, seq string, key, value []byte) (*State, error) {
 }
 
 func insertExistedLeafValue(state *State, key, value []byte) (*State, error) {
-	fmt.Println("call insertExistedLeafValue")
-	fmt.Println("key:   ", bytes2Hex(key))
-	fmt.Println("value: ", value)
-	fmt.Println()
-
 	state.Value = value
 	err := state.db.putState(key, state)
 	if err != nil {
@@ -94,12 +88,6 @@ func insertExistedLeafValue(state *State, key, value []byte) (*State, error) {
 }
 
 func insertNewChildBranchOnLeaf(state *State, seq string, offset int, key, value []byte) (*State, error) {
-	fmt.Println("call insertNewChildBranchOnLeaf")
-	fmt.Println("key:   ", bytes2Hex(key))
-	fmt.Println("value: ", value)
-	fmt.Println("seq:   ", seq)
-	fmt.Println()
-
 	var err error
 	children := state.getChildren()
 
@@ -126,12 +114,6 @@ func insertNewChildBranchOnLeaf(state *State, seq string, offset int, key, value
 }
 
 func insertProceedingOnCurrentBranch(db *Database,state *State, seq string, offset int, key, value []byte) (*State, error) {
-	fmt.Println("call insertProceedingOnCurrentBranch")
-	fmt.Println("key:   ", bytes2Hex(key))
-	fmt.Println("value: ", value)
-	fmt.Println("seq:   ", seq)
-	fmt.Println()
-
 	var err error
 	children := state.getChildren()
 
@@ -159,12 +141,6 @@ func insertProceedingOnCurrentBranch(db *Database,state *State, seq string, offs
 }
 
 func insertDivergingBranch(state *State, prefix, seq string, offset int, key, value []byte) (*State, error) {
-	fmt.Println("call insertDivergingBranch")
-	fmt.Println("key:   ", bytes2Hex(key))
-	fmt.Println("value: ", value)
-	fmt.Println("seq:   ", seq)
-	fmt.Println()
-
 	var err error
 	children := state.getChildren()
 
@@ -277,7 +253,6 @@ func countChildren(state *State) (int, *State) {
 }
 
 func absorbOnlyChild(state, onlyChild *State, key []byte) (*State, error) {
-	fmt.Println("call absorbOnlyChild")
 	state.Sequence += onlyChild.Sequence
 	state.Value = onlyChild.Value
 	state.IsLeaf = onlyChild.IsLeaf
@@ -313,19 +288,8 @@ func getProceedingOnCurrentBranch(state *State, seq string) (*State, error) {
 }
 
 func search(state *State, key []byte, seq string, depth int) {
-
-	fmt.Println("current depth: ", depth)
-
 	st, _ := state.db.getState(key)
-	seq0 := seq
 	seq += state.Sequence
-
-	fmt.Println("seq old: ", seq0)
-	fmt.Println("seq cat: ", st.Sequence)
-	fmt.Println("seq:     ", seq)
-	fmt.Println("value:   ", st.Value)
-	fmt.Println("leaf:    ", st.IsLeaf)
-	fmt.Println()
 
 	for i := 0; i < 17; i++ {
 		if state.ChildKeys[i] != nil {

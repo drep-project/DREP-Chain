@@ -125,8 +125,8 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 	}
 	if block == nil {
 		//generate genisis block
+		chainService.ProcessGenisisBlock()
 		chainService.createChainState()
-		chainService.ProcessBlock(chainService.genesisBlock)
 	}
 
 	chainService.InitStates()

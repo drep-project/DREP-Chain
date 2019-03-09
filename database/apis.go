@@ -186,6 +186,7 @@ func (database *DatabaseService) PutStorage(addr *crypto.CommonAddress, storage 
         return err
     }
     database.db.stores[bytes2Hex(key)] = storage
+    insert(database.db, bytes2Hex(key), database.db.root, sha3.Hash256(value))
     return nil
 }
 

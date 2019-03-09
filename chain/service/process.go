@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+func (chainService *ChainService) ProcessGenisisBlock() {
+	 chainService.ExecuteTransactions(chainService.genesisBlock)
+}
+
 func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, bool, error) {
 	chainService.addBlockSync.Lock()
 	defer chainService.addBlockSync.Unlock()
@@ -29,9 +33,10 @@ func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, b
 	}
 
 	// Handle orphan blocks.
+	zeroHash := crypto.Hash {}
 	prevHash := block.Header.PreviousHash
 	prevHashExists := chainService.blockExists(prevHash)
-	if !prevHashExists {
+	if !prevHashExists && *prevHash != zeroHash{
 		chainService.addOrphanBlock(block)
 		return  false, true, nil
 	}
@@ -40,19 +45,7 @@ func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, b
 		return false, false, err
 	} 
 	if isMainChain {
-		addrMap := make(map[crypto.CommonAddress]struct{})
-		var addrs []*crypto.CommonAddress
-		for _,tx := range block.Data.TxList {
-			addr := tx.From()
-			if _,ok:=addrMap[*addr]; !ok{
-				addrMap[*addr] = struct{}{}
-				addrs = append(addrs, addr)
-			}
-		}
-	
-		if len(addrs) > 0 {
-			chainService.newBlockFeed.Send(addrs)
-		}	
+		chainService.clearTxPool(block)
 	}
 	// Accept any orphan blocks that depend on this block (they are
 	// no longer orphans) and repeat for those accepted blocks until
@@ -257,6 +250,7 @@ func (chainService *ChainService) reorganizeChain(detachNodes, attachNodes *list
 			break
 		}
 		chainService.markState(bkn)
+		chainService.clearTxPool(bk)
 		if err != nil {
 			return err
 		}
@@ -269,6 +263,22 @@ func (chainService *ChainService) reorganizeChain(detachNodes, attachNodes *list
 		chainService.DatabaseService.Discard()
 	}
 	return nil
+}
+
+func (chainService *ChainService) clearTxPool(block *chainTypes.Block) {
+	addrMap := make(map[crypto.CommonAddress]struct{})
+	var addrs []*crypto.CommonAddress
+	for _,tx := range block.Data.TxList {
+		addr := tx.From()
+		if _,ok:=addrMap[*addr]; !ok{
+			addrMap[*addr] = struct{}{}
+			addrs = append(addrs, addr)
+		}
+	}
+
+	if len(addrs) > 0 {
+		chainService.newBlockFeed.Send(addrs)
+	}
 }
 
 func (chainService *ChainService) markState(blockNode *chainTypes.BlockNode) {

@@ -180,6 +180,7 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 				var isL bool
 				if consensusService.Config.ConsensusMode == "solo" {
 					block, err = consensusService.runAsSolo()
+					isL = true
 				} else if consensusService.Config.ConsensusMode == "bft" {
 					//TODO a more elegant implementation is needed: select live peer ,and Determine who is the leader
 					participants := consensusService.CollectLiveMember()
@@ -193,26 +194,26 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 							block, err = consensusService.runAsMember()
 						} else {
 							// backup node， return directly
-							dlog.Debug("backup node")
+							dlog.Debug("Backup Node")
 							break
 						}
 					} else {
-						err = errors.New("bft node not ready")
+						err = errors.New("BFT node not ready")
 						time.Sleep(time.Second * 10)
 					}
 				} else {
 					break
 				}
 				if err != nil {
-					dlog.Debug("Producer Block Fail", "reason", err.Error())
+					dlog.Debug("Producer Block Fail", "Reason", err.Error())
 				} else {
-					consensusService.P2pServer.Broadcast(block)
-					consensusService.ChainService.ProcessBlock(block)
 					if isL {
+						consensusService.P2pServer.Broadcast(block)
+						consensusService.ChainService.ProcessBlock(block)
 						dlog.Info("Submit Block ", "Height", consensusService.ChainService.BestChain.Height(), "txs:", block.Data.TxCount)
 					}
 				}
-				time.Sleep(100) //delay a little time for block deliver
+				time.Sleep(time.Duration(500)*time.Millisecond) //delay a little time for block deliver
 				nextBlockTime, waitSpan := consensusService.GetWaitTime()
 				dlog.Debug("Sleep", "nextBlockTime", nextBlockTime, "waitSpan", waitSpan)
 				time.Sleep(waitSpan)

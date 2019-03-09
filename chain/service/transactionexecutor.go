@@ -40,7 +40,6 @@ func (chainService *ChainService) ExecuteTransactions(b *chainTypes.Block) (*big
 	}
 
 	stateRoot := chainService.DatabaseService.GetStateRoot()
-
     if bytes.Equal(b.Header.StateRoot, stateRoot) {
         dlog.Debug("matched ", "BlockStateRoot", hex.EncodeToString(b.Header.StateRoot), "CalcStateRoot", hex.EncodeToString(stateRoot))
         chainService.accumulateRewards(b, chainService.ChainID())
