@@ -24,11 +24,11 @@ func (chain *ChainApi) GetMaxHeight() int64 {
 }
 
 func (chain *ChainApi) GetBalance(addr crypto.CommonAddress) *big.Int{
-    return chain.dbService.GetBalance(&addr, true)
+    return chain.dbService.GetBalance(&addr)
 }
 
 func (chain *ChainApi) GetNonce(addr crypto.CommonAddress) int64 {
-    return chain.dbService.GetNonce(&addr, true)
+    return chain.dbService.GetNonce(&addr)
 }
 
 func (chain *ChainApi) GetPreviousBlockHash() string {
@@ -37,7 +37,7 @@ func (chain *ChainApi) GetPreviousBlockHash() string {
 }
 
 func (chain *ChainApi) GetReputation(addr crypto.CommonAddress) *big.Int {
-    return chain.dbService.GetReputation(&addr, true)
+    return chain.dbService.GetReputation(&addr)
 }
 
 func (chain *ChainApi) GetTransactionsFromBlock(height int64) []*chainType.Transaction {
@@ -93,9 +93,9 @@ func (chain *ChainApi) SendRawTransaction(tx *chainType.Transaction) (string, er
 func (chain *ChainApi) canExecute(tx *chainType.Transaction, gasFloor, gasCap *big.Int) (canExecute bool, addr crypto.CommonAddress, balance, gasLimit, gasPrice *big.Int) {
     chain.chainService.DatabaseService.BeginTransaction()
     addr = *tx.From()
-    balance = chain.chainService.DatabaseService.GetBalance(&addr, true)
-    nonce :=  chain.chainService.DatabaseService.GetNonce(&addr,true) + 1
-    chain.chainService.DatabaseService.PutNonce(&addr, nonce,true)
+    balance = chain.chainService.DatabaseService.GetCachedBalance(&addr)
+    nonce :=  chain.chainService.DatabaseService.GetCachedNonce(&addr) + 1
+    chain.chainService.DatabaseService.CacheNonce(&addr, nonce)
 
     if nonce != tx.Nonce() {
        return

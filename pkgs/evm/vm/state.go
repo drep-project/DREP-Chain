@@ -37,43 +37,43 @@ func (s *State) CreateContractAccount(callerAddr crypto.CommonAddress, nonce int
 	if err != nil {
 		return nil, err
 	}
-	return account, s.databaseApi.PutStorage(account.Address, account.Storage, true)
+	return account, s.databaseApi.CacheStorage(account.Address, account.Storage)
 }
 
 
 func (s *State) SubBalance(addr *crypto.CommonAddress, amount *big.Int) error {
-	balance := s.databaseApi.GetBalance(addr, true)
-	return s.databaseApi.PutBalance(addr, new(big.Int).Sub(balance, amount), true)
+	balance := s.databaseApi.GetBalance(addr)
+	return s.databaseApi.CacheBalance(addr, new(big.Int).Sub(balance, amount))
 }
 
 func (s *State) AddBalance(addr *crypto.CommonAddress, amount *big.Int) error {
-	s.databaseApi.AddBalance(addr, amount, true)
+	s.databaseApi.AddBalance(addr, amount)
 	//balance := s.databaseApi.GetBalance(addr, chainId,true)
 	//return s.databaseApi.PutBalance(addr, chainId, new(big.Int).Add(balance, amount),true)
 	return nil
 }
 
 func (s *State) GetBalance(addr *crypto.CommonAddress,) *big.Int {
-	return s.databaseApi.GetBalance(addr, true)
+	return s.databaseApi.GetBalance(addr)
 }
 
 func (s *State) SetNonce(addr *crypto.CommonAddress, nonce int64) error {
-	return s.databaseApi.PutNonce(addr, nonce, true)
+	return s.databaseApi.CacheNonce(addr, nonce)
 }
 
 func (s *State) GetNonce(addr *crypto.CommonAddress,) int64 {
-	return s.databaseApi.GetNonce(addr, true)
+	return s.databaseApi.GetNonce(addr)
 }
 
 func (s *State) Suicide(addr *crypto.CommonAddress,) error {
-	storage := s.databaseApi.GetStorage(addr, true)
+	storage := s.databaseApi.GetStorage(addr)
 	storage.Balance = new(big.Int)
 	storage.Nonce = 0
-	return s.databaseApi.PutStorage(addr, storage, true)
+	return s.databaseApi.CacheStorage(addr, storage)
 }
 
 func (s *State) GetByteCode(addr *crypto.CommonAddress,) crypto.ByteCode {
-	return s.databaseApi.GetByteCode(addr, true)
+	return s.databaseApi.GetCachedByteCode(addr)
 }
 
 func (s *State) GetCodeSize(addr crypto.CommonAddress,) int {
@@ -83,11 +83,11 @@ func (s *State) GetCodeSize(addr crypto.CommonAddress,) int {
 }
 
 func (s *State) GetCodeHash(addr crypto.CommonAddress,) crypto.Hash {
-	return s.databaseApi.GetCodeHash(&addr, true)
+	return s.databaseApi.GetCachedCodeHash(&addr)
 }
 
 func (s *State) SetByteCode(addr *crypto.CommonAddress, byteCode crypto.ByteCode) error {
-	return s.databaseApi.PutByteCode(addr, byteCode, true)
+	return s.databaseApi.CacheByteCode(addr, byteCode)
 }
 
 func (s *State) GetLogs(txHash []byte,) []*chainTypes.Log {

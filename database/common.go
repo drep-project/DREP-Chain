@@ -14,8 +14,8 @@ func hex2Bytes(key string) []byte {
     return b
 }
 
-func commonKey2TrieKey(key []byte) string {
-    return bytes2Hex(sha3.HashS256(key, []byte("trie_key")))
+func commonKey2TrieKey(key []byte) []byte {
+    return sha3.HashS256(key, []byte("trie_key"))
 }
 
 func commonValue2TrieValue(value []byte) []byte {

@@ -137,5 +137,5 @@ func (accountapi *AccountApi) GasPrice() *big.Int {
 }
 
 func (accountapi *AccountApi) GetCode(addr crypto.CommonAddress) []byte {
-	return accountapi.databaseService.GetByteCode(&addr, false)
+	return accountapi.databaseService.GetByteCode(&addr)
 }

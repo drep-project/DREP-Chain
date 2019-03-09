@@ -367,13 +367,13 @@ func (chainService *ChainService) accumulateRewards(b *chainTypes.Block, chainId
 	leaderAddr := crypto.PubKey2Address(b.Header.LeaderPubKey)
 
 	r := new(big.Int)
-	chainService.DatabaseService.AddBalance(&leaderAddr, r.Div(reward, new(big.Int).SetInt64(2)), true)
+	chainService.DatabaseService.AddBalance(&leaderAddr, r.Div(reward, new(big.Int).SetInt64(2)))
 
 	num := len(b.Header.MinorPubKeys)
 	for _, memberPK := range b.Header.MinorPubKeys {
 		memberAddr := crypto.PubKey2Address(memberPK)
 		r.Div(r, new(big.Int).SetInt64(int64(num)))
-		chainService.DatabaseService.AddBalance(&memberAddr, r, true)
+		chainService.DatabaseService.AddBalance(&memberAddr, r)
 	}
 
 	//chainService.DatabaseService.Commit()

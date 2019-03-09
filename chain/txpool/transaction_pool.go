@@ -88,8 +88,8 @@ func (pool *TransactionPool) checkAndGetAddr(tx *chainTypes.Transaction) (error,
 	addr := tx.From()
 	// TODO Check sig
 	if pool.getTransactionCount(addr) > tx.Nonce() {
-		fmt.Println("checkAndGetAddr:", pool.databaseApi.GetNonce(addr, false), tx.Nonce())
-		return fmt.Errorf("nonce err ,dbNonce:%d > txNonce:%d", pool.databaseApi.GetNonce(addr, false), tx.Nonce()), nil
+		fmt.Println("checkAndGetAddr:", pool.databaseApi.GetNonce(addr), tx.Nonce())
+		return fmt.Errorf("nonce err ,dbNonce:%d > txNonce:%d", pool.databaseApi.GetNonce(addr), tx.Nonce()), nil
 	}
 
 	amount := new(big.Int).SetBytes(tx.Amount().Bytes())
@@ -99,7 +99,7 @@ func (pool *TransactionPool) checkAndGetAddr(tx *chainTypes.Transaction) (error,
 	total.Mul(gasLimit, gasPrice)
 	total.Add(total, amount)
 
-	addrBalance := pool.databaseApi.GetBalance(addr, false)
+	addrBalance := pool.databaseApi.GetBalance(addr)
 	if addrBalance.Cmp(total) < 0 {
 		dlog.Debug("Not Enough Balance", "CurrentBalance", addrBalance.Int64(), "NeedBalance", total)
 		return fmt.Errorf("no enough balance"), nil
@@ -253,7 +253,7 @@ func (pool *TransactionPool) adjust(addrList []*crypto.CommonAddress) {
 	for _, addr := range addrList {
 		// 获取数据库里面的nonce
 		//根据nonce是否被处理，删除对应的交易
-		nonce := pool.databaseApi.GetNonce(addr, true)
+		nonce := pool.databaseApi.GetNonce(addr)
 		pool.mu.Lock()
 		list, ok := pool.pending[*addr]
 		if ok {
@@ -281,7 +281,7 @@ func (pool *TransactionPool) getTransactionCount(address *crypto.CommonAddress) 
 	if nonce, ok := pool.pendingNonce[*address]; ok {
 		return nonce
 	} else {
-		nonce := pool.databaseApi.GetNonce(address, true)
+		nonce := pool.databaseApi.GetNonce(address)
 		pool.pendingNonce[*address] = nonce
 		return nonce
 	}
