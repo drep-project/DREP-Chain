@@ -183,14 +183,14 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 					isL = true
 				} else if consensusService.Config.ConsensusMode == "bft" {
 					//TODO a more elegant implementation is needed: select live peer ,and Determine who is the leader
-					participants := consensusService.CollectLiveMember()
-					if len(participants) > 1 {
-						isM, isL = consensusService.MoveToNextMiner(participants)
+					miners := consensusService.collectMemberStatus()
+					if len(miners) > 1 {
+						isM, isL = consensusService.moveToNextMiner(miners)
 						if isL {
-							consensusService.leader.UpdateStatus(participants, consensusService.curMiner, minMember, consensusService.ChainService.BestChain.Height())
+							consensusService.leader.UpdateStatus(miners, minMember, consensusService.ChainService.BestChain.Height())
 							block, err = consensusService.runAsLeader()
 						} else if isM {
-							consensusService.member.UpdateStatus(participants, consensusService.curMiner, minMember, consensusService.ChainService.BestChain.Height())
+							consensusService.member.UpdateStatus(miners, minMember, consensusService.ChainService.BestChain.Height())
 							block, err = consensusService.runAsMember()
 						} else {
 							// backup node， return directly
@@ -214,7 +214,7 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 					}
 				}
 				time.Sleep(time.Duration(500)*time.Millisecond) //delay a little time for block deliver
-				nextBlockTime, waitSpan := consensusService.GetWaitTime()
+				nextBlockTime, waitSpan := consensusService.getWaitTime()
 				dlog.Debug("Sleep", "nextBlockTime", nextBlockTime, "waitSpan", waitSpan)
 				time.Sleep(waitSpan)
 			}
@@ -233,6 +233,7 @@ func (consensusService *ConsensusService) Stop(executeContext *app.ExecuteContex
 	consensusService.syncBlockEventSub.Unsubscribe()
 	return nil
 }
+
 
 func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, error) {
 	consensusService.member.Reset()
@@ -276,9 +277,8 @@ func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, erro
 
 func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, error) {
 	consensusService.leader.Reset()
-
 	membersPubkey := []*secp256k1.PublicKey{}
-	for _, pub := range consensusService.leader.members {
+	for _, pub := range consensusService.leader.producers {
 		membersPubkey = append(membersPubkey, pub.Producer.Public)
 	}
 	block, err := consensusService.ChainService.GenerateBlock(consensusService.leader.pubkey, membersPubkey)
@@ -348,41 +348,56 @@ func (consensusService *ConsensusService) isProduce() bool {
 	return false
 }
 
-func (consensusService *ConsensusService) CollectLiveMember() []*consensusTypes.MemberInfo {
+func (consensusService *ConsensusService) collectMemberStatus() []*consensusTypes.MemberInfo {
+	produceInfos := make([]*consensusTypes.MemberInfo, len(consensusService.Config.Producers))
+	for i, produce := range consensusService.Config.Producers {
+		peer := consensusService.P2pServer.GetPeer(produce.Ip)
+		isOnLine := peer != nil
+		isMe := consensusService.pubkey.IsEqual(produce.Public)
+		if isMe {
+			isOnLine = true
+		}
+		produceInfos[i] = &consensusTypes.MemberInfo{
+			Producer: 	produce,
+			Peer:     	peer,
+			IsMe: 		isMe,
+			IsOnline:	isOnLine,
+		}
+	}
+	return produceInfos
+}
+
+func (consensusService *ConsensusService) moveToNextMiner(produceInfos []*consensusTypes.MemberInfo) (bool, bool) {
 	liveMembers := []*consensusTypes.MemberInfo{}
-	for _, produce := range consensusService.Config.Producers {
-		if consensusService.pubkey.IsEqual(produce.Public) {
-			liveMembers = append(liveMembers, &consensusTypes.MemberInfo{
-				Producer: produce,
-			}) // self
-		} else {
-			peer := consensusService.P2pServer.GetPeer(produce.Ip)
-			if peer != nil {
-				liveMembers = append(liveMembers, &consensusTypes.MemberInfo{
-					Producer: produce,
-					Peer:     peer,
-				})
+
+	for _, produce :=	range produceInfos {
+		if produce.IsOnline {
+			liveMembers = append(liveMembers, produce)
+		}
+	}
+	curentHeight := consensusService.ChainService.BestChain.Height()
+	liveMinerIndex := int( curentHeight% int64(len(liveMembers)))
+	curMiner := liveMembers[liveMinerIndex]
+
+	for index, produce :=	range produceInfos {
+		if produce.IsOnline {
+			if produce.Producer.Public.IsEqual(curMiner.Producer.Public) {
+				produce.IsLeader = true
+				consensusService.curMiner = index
+			}else{
+				produce.IsLeader = false
 			}
 		}
 	}
-	return liveMembers
-}
 
-func (consensusService *ConsensusService) MoveToNextMiner(liveMembers []*consensusTypes.MemberInfo) (bool, bool) {
-	consensusService.curMiner = int(consensusService.ChainService.BestChain.Height() % int64(len(liveMembers)))
-
-	if liveMembers[consensusService.curMiner].Peer == nil {
+	if curMiner.Peer == nil {
 		return false, true
 	} else {
 		return true, false
 	}
 }
 
-func (consensusService *ConsensusService) GetMyPubkey() *secp256k1.PublicKey {
-	return consensusService.pubkey
-}
-
-func (consensusService *ConsensusService) GetWaitTime() (time.Time, time.Duration) {
+func (consensusService *ConsensusService) getWaitTime() (time.Time, time.Duration) {
 	// max_delay_time +(min_block_interval)*windows = expected_block_interval*windows
 	// 6h + 5s*windows = 10s*windows
 	// windows = 4320

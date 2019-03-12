@@ -14,7 +14,7 @@ func TestAccumulateRewards(t *testing.T) {
 	//}
 	//ce := ConsensusService{
 	//	leader: NewLeader(pubkey, nil, nil),
-	//	member: &Member{members: []*secp256k1.PublicKey{pubkey, pubkey, pubkey}},
+	//	member: &Member{producers: []*secp256k1.PublicKey{pubkey, pubkey, pubkey}},
 	//	DatabaseService: &database.DatabaseService{},
 	//}
 	//
