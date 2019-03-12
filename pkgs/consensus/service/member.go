@@ -26,10 +26,11 @@ const (
 )
 
 type Member struct {
-    leader *consensusTypes.MemberInfo
-    members []*secp256k1.PublicKey
-    prvKey *secp256k1.PrivateKey
-    p2pServer p2pService.P2P
+    leader      *consensusTypes.MemberInfo
+    producers   []*consensusTypes.MemberInfo
+    liveMembers []*consensusTypes.MemberInfo
+    prvKey      *secp256k1.PrivateKey
+    p2pServer   p2pService.P2P
 
     msg []byte
     msgHash []byte
@@ -65,22 +66,25 @@ func NewMember(prvKey *secp256k1.PrivateKey, p2pServer p2pService.P2P) *Member {
     return member
 }
 
-func (member *Member) UpdateStatus(participants []*consensusTypes.MemberInfo , curMiner int,minMember int, curHeight int64){
-    member.Reset()
-    member.leader = participants[curMiner]
-    member.members = []*secp256k1.PublicKey{}
+func (member *Member) UpdateStatus(producers []*consensusTypes.MemberInfo,minMember int, curHeight int64){
+    member.producers = producers
+    member.currentHeight = curHeight
 
-    for _, participant := range participants {
-        if participant.Peer == nil {
-            member.members = append(member.members, member.prvKey.PubKey())
-        }else {
-            if !participant.Producer.SignPubkey.IsEqual(&member.leader.Producer.SignPubkey) {
-                member.members = append(member.members, &participant.Producer.SignPubkey)
+    member.liveMembers = []*consensusTypes.MemberInfo{}
+    for _, producer := range producers {
+        if producer.IsLeader {
+            member.leader = producer
+        }else{
+            if producer.IsMe {
+                //include self
+                member.liveMembers = append(member.liveMembers, producer)
+            }else {
+                if producer.IsOnline {
+                    member.liveMembers = append(member.liveMembers, producer)
+                }
             }
         }
     }
-
-    member.currentHeight = curHeight
 }
 
 func (member *Member) Reset(){
@@ -103,13 +107,13 @@ func (member *Member) ProcessConsensus() ([]byte, error) {
     }()
     go member.WaitSetUp()
 
-PREMSG:
+PRESETUPMSG:  //process msg receive in the span of two consensus
     for {
         select {
         case msg := <- member.msgPool:
             member.OnSetUp(msg.Peer, msg.SetUpMsg)
         default:
-            break PREMSG
+            break PRESETUPMSG
         }
     }
 
@@ -250,10 +254,6 @@ func (member *Member) OnFail(peer *p2pTypes.Peer, failMsg *consensusTypes.Fail){
     member.pushErrorMsg(failMsg.Reason)
 }
 
-func (member *Member) GetMembers() []*secp256k1.PublicKey{
-    return member.members
-}
-
 func (member *Member) commit()  {
     //TODO validate block from leader
     var err error
@@ -283,6 +283,12 @@ func (member *Member) response(challengeMsg *consensusTypes.Challenge) {
     member.p2pServer.SendAsync(member.leader.Peer, response)
 }
 
+/*
+func (member *Member) getLiveMembers() []*consensusTypes.MemberInfo{
+    return member.liveMembers
+}
+*/
+
 func (member *Member) setState(state int){
     member.stateLock.Lock()
     defer member.stateLock.Unlock()
@@ -310,3 +316,5 @@ CANCEL:
         }
     }
 }
+
+

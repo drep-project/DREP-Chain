@@ -13,8 +13,13 @@ func TestAccumulateRewards(t *testing.T) {
 	//	panic(err)
 	//}
 	//ce := ConsensusService{
+<<<<<<< HEAD
 	//	leader: NewLeader(signPubkey, nil, nil),
 	//	member: &Member{members: []*secp256k1.PublicKey{signPubkey, signPubkey, signPubkey}},
+=======
+	//	leader: NewLeader(pubkey, nil, nil),
+	//	member: &Member{producers: []*secp256k1.PublicKey{pubkey, pubkey, pubkey}},
+>>>>>>> fix member find
 	//	DatabaseService: &database.DatabaseService{},
 	//}
 	//
