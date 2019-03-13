@@ -207,7 +207,7 @@ func del(state *State, key []byte, seq string) (*State, error) {
 		if seq == state.Sequence {
 			return delExistedLeaf(state, key)
 		} else {
-			return nil, errors.New("current key not found")
+			return nil, errors.New("current Key not found")
 		}
 	}
 	return delProceedingOnCurrentBranch(state, seq, key)
@@ -224,7 +224,7 @@ func delExistedLeaf(state *State, key []byte) (*State, error) {
 func delProceedingOnCurrentBranch(state *State, seq string, key []byte) (*State, error) {
 	_, offset := getCommonPrefix(seq, state.Sequence)
 	if offset < len(state.Sequence) {
-		return nil, errors.New("current key not found")
+		return nil, errors.New("current Key not found")
 	}
 	nib := getNextNibble(seq, offset)
 	state.ChildKeys[nib] = getChildKey(state, key, nib)
@@ -273,7 +273,7 @@ func get(state *State, key []byte, seq string) (*State, error) {
 		if seq == state.Sequence {
 			return state, nil
 		}
-		return nil, errors.New("current key not found")
+		return nil, errors.New("current Key not found")
 	}
 	return getProceedingOnCurrentBranch(state, seq)
 }
@@ -281,7 +281,7 @@ func get(state *State, key []byte, seq string) (*State, error) {
 func getProceedingOnCurrentBranch(state *State, seq string) (*State, error) {
 	_, offset := getCommonPrefix(seq, state.Sequence)
 	if offset < len(state.Sequence) {
-		return nil, errors.New("current key not found")
+		return nil, errors.New("current Key not found")
 	}
 	nib := getNextNibble(seq, offset)
 	return get(state, state.ChildKeys[nib], seq[offset:])

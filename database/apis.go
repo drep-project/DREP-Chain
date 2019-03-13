@@ -30,7 +30,7 @@ func (database *DatabaseService) PutBlock(block *chainType.Block) error {
     if err != nil {
         return err
     }
-    return database.db.put(key, value, false)
+    return database.db.db.Put(key, value, nil)
 }
 
 func (database *DatabaseService) GetBlock(hash *crypto.Hash) (*chainType.Block, error) {
@@ -74,7 +74,7 @@ func (database *DatabaseService) PutBlockNode(blockNode *chainType.BlockNode) er
     }
     key := database.blockIndexKey(blockNode.Hash, blockNode.Height)
     value = append(value, byte(blockNode.Status))    //TODO just for now , when change binary serilize, should change a better one
-    return database.db.put(key, value, false)
+    return database.db.db.Put(key, value, nil)
 }
 
 func (database *DatabaseService) blockIndexKey(blockHash *crypto.Hash, blockHeight int64) []byte {
@@ -126,7 +126,7 @@ func (database *DatabaseService) PutChainState(chainState *chainType.BestState) 
     if err != nil {
         return err
     }
-    return database.db.put(key, value, false)
+    return database.db.db.Put(key, value, nil)
 }
 
 func (database *DatabaseService) GetChainState() *chainType.BestState {
