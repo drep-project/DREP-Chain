@@ -1,12 +1,11 @@
 package service
 
 import (
-    "math/big"
+    "encoding/hex"
+    "errors"
     chainType "github.com/drep-project/drep-chain/chain/types"
     "github.com/drep-project/drep-chain/database"
-    "github.com/drep-project/drep-chain/crypto"
-    "errors"
-    "encoding/hex"
+    "math/big"
 )
 
 
@@ -23,12 +22,12 @@ func (chain *ChainApi) GetMaxHeight() int64 {
     return chain.GetMaxHeight()
 }
 
-func (chain *ChainApi) GetBalance(addr crypto.CommonAddress) *big.Int{
-    return chain.dbService.GetBalance(&addr, true)
+func (chain *ChainApi) GetBalance(accountName string) *big.Int{
+    return chain.dbService.GetBalance(accountName, true)
 }
 
-func (chain *ChainApi) GetNonce(addr crypto.CommonAddress) int64 {
-    return chain.dbService.GetNonce(&addr, true)
+func (chain *ChainApi) GetNonce(accountName string) int64 {
+    return chain.dbService.GetNonce(accountName, true)
 }
 
 func (chain *ChainApi) GetPreviousBlockHash() string {
@@ -36,8 +35,8 @@ func (chain *ChainApi) GetPreviousBlockHash() string {
     return "0x" + string(bytes[:])
 }
 
-func (chain *ChainApi) GetReputation(addr crypto.CommonAddress) *big.Int {
-    return chain.dbService.GetReputation(&addr, true)
+func (chain *ChainApi) GetReputation(accountName string) *big.Int {
+    return chain.dbService.GetReputation(accountName, true)
 }
 
 func (chain *ChainApi) GetTransactionsFromBlock(height int64) []*chainType.Transaction {
@@ -90,12 +89,12 @@ func (chain *ChainApi) SendRawTransaction(tx *chainType.Transaction) (string, er
     return res, err
 }
 
-func (chain *ChainApi) canExecute(tx *chainType.Transaction, gasFloor, gasCap *big.Int) (canExecute bool, addr crypto.CommonAddress, balance, gasLimit, gasPrice *big.Int) {
+func (chain *ChainApi) canExecute(tx *chainType.Transaction, gasFloor, gasCap *big.Int) (canExecute bool, accountName string, balance, gasLimit, gasPrice *big.Int) {
     chain.chainService.DatabaseService.BeginTransaction()
-    addr = *tx.From()
-    balance = chain.chainService.DatabaseService.GetBalance(&addr, true)
-    nonce :=  chain.chainService.DatabaseService.GetNonce(&addr,true) + 1
-    chain.chainService.DatabaseService.PutNonce(&addr, nonce,true)
+    fromAccountName := tx.From()
+    balance = chain.chainService.DatabaseService.GetBalance(fromAccountName, true)
+    nonce :=  chain.chainService.DatabaseService.GetNonce(fromAccountName,true) + 1
+    chain.chainService.DatabaseService.PutNonce(fromAccountName, nonce,true)
 
     if nonce != tx.Nonce() {
        return

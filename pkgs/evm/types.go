@@ -1,8 +1,8 @@
 package evm
 
 import (
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/crypto"
 	"math/big"
 )
 
@@ -11,8 +11,7 @@ type VMConfig struct {
 }
 
 type Message struct {
-	From      crypto.CommonAddress
-	To        crypto.CommonAddress
+	From      string
 	ChainId   app.ChainIdType
 	DestChain app.ChainIdType
 	Gas       uint64
@@ -20,4 +19,5 @@ type Message struct {
 	Nonce     uint64
 	Input     []byte
 	ReadOnly  bool
+	MessageType chainTypes.TxType
 }

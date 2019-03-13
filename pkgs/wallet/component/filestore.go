@@ -1,63 +1,73 @@
 package component
 
 import (
-	"os"
-	"fmt"
-	"io/ioutil"
+	"bytes"
+	"encoding/hex"
 	"encoding/json"
-	"path/filepath"
+	"errors"
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/common/fileutil"
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/drep-chain/crypto/sha3"
+	walletTypes "github.com/drep-project/drep-chain/pkgs/wallet/types"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
 )
 
 type FileStore struct {
 	keysDirPath string
 }
 
-func NewFileStore(keyStoreDir string) FileStore {
+func NewFileStore(keyStoreDir string, password string) (*FileStore, error) {
 	if !fileutil.IsDirExists(keyStoreDir) {
-		err := os.Mkdir(keyStoreDir, os.ModePerm)
+		fileutil.EnsureDir(keyStoreDir)
+		metadataPath := filepath.Join(keyStoreDir, ".metadata")
+		fs, err := os.Create(metadataPath)
 		if err != nil {
-			panic(err)
+			return nil, err
+		}
+		checkString := sha3.Hash256([]byte(password))
+		_, err = fs.Write(checkString)
+		if err != nil {
+			return nil, err
 		}
 	}
-	return FileStore{
+	store := &FileStore{
 		keysDirPath: keyStoreDir,
+	}
+	if store.checkPassword(password) {
+		return store, nil
+	}else{
+		return nil, errors.New("error password")
 	}
 }
 
 // GetKey read key in file
-func (fs FileStore) GetKey(addr *crypto.CommonAddress, auth string) (*chainTypes.Node, error) {
-	contents, err := ioutil.ReadFile(fs.JoinPath(addr.Hex()))
+func (fs FileStore) GetKey(pubkey *secp256k1.PublicKey, auth string) (*walletTypes.Key, error) {
+	saveKey := getSaveKey(pubkey)
+	contents, err := ioutil.ReadFile(fs.JoinPath(saveKey))
 	if err != nil {
 		return nil, err
 	}
 
-	node, err := bytesToCryptoNode(contents, auth)
+	key, err := bytesToCryptoNode(contents, auth)
 	if err != nil {
 		return nil, err
 	}
-
-	//ensure ressult after read and decrypto correct
-	if node.Address.Hex() != addr.Hex() {
-		return nil, fmt.Errorf("key content mismatch: have address %x, want %x", node.Address, addr)
-	}
-	return node, nil
+	return key, nil
 }
 
 // store the key in file encrypto
-func (fs FileStore) StoreKey(key *chainTypes.Node, auth string) error {
+func (fs FileStore) StoreKey(key *walletTypes.Key, auth string) error {
 	iv, err := common.GenUnique()
 	if err != nil {
 		return err
 	}
 	cryptoNode := &CryptedNode{
-		PrivateKey: key.PrivateKey,
-		ChainId:    key.ChainId,
-		ChainCode:  key.ChainCode,
+		PrivateKey: key.PrivKey,
 		Key:        []byte(auth),
 		Iv:         iv[:16],
 	}
@@ -66,12 +76,13 @@ func (fs FileStore) StoreKey(key *chainTypes.Node, auth string) error {
 	if err != nil {
 		return err
 	}
-	return writeKeyFile(fs.JoinPath(key.Address.Hex()), content)
+	saveKey := getSaveKey(key.Pubkey)
+	return writeKeyFile(fs.JoinPath(saveKey), content)
 }
 
 // ExportKey export all key in file by password
-func (fs FileStore) ExportKey(auth string) ([]*chainTypes.Node, error) {
-	persistedNodes := []*chainTypes.Node{}
+func (fs FileStore) ExportKey(auth string) ([]*walletTypes.Key, error) {
+	persistedNodes := []*walletTypes.Key{}
 	err := fileutil.EachChildFile(fs.keysDirPath, func(path string) (bool, error) {
 		contents, err := ioutil.ReadFile(path)
 		if err != nil {
@@ -105,6 +116,17 @@ func (fs FileStore) JoinPath(filename string) string {
 	return filepath.Join(fs.keysDirPath, filename)
 }
 
+// JoinPath return keystore directory
+func (fs FileStore) checkPassword(password string) bool {
+	checkString := sha3.Hash256([]byte(password))
+	metadataPath := filepath.Join(fs.keysDirPath, ".metadata")
+	saveCheckBytes, err := ioutil.ReadFile(metadataPath)
+	if err != nil {
+		return false
+	}
+	return bytes.Equal(saveCheckBytes, checkString)
+}
+
 func writeTemporaryKeyFile(file string, content []byte) (string, error) {
 	// Create the keystore directory with appropriate permissions
 	// in case it is not present yet.
@@ -133,4 +155,15 @@ func writeKeyFile(file string, content []byte) error {
 		return err
 	}
 	return os.Rename(name, file)
+}
+
+func getSaveKey(pubkey *secp256k1.PublicKey) string {
+	return hex.EncodeToString(sha3.Hash256(pubkey.Serialize()))
+}
+// ensureSaveKey used to ensure key validate
+func ensureSaveKey(saveKey string) string {
+	if strings.HasPrefix(saveKey, "0x") {
+		return saveKey[2:len(saveKey)]
+	}
+	return saveKey
 }

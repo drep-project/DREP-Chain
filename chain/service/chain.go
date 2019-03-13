@@ -193,7 +193,7 @@ func (chainService *ChainService) blockExists(blockHash *crypto.Hash) bool {
 	return chainService.Index.HaveBlock(blockHash)
 }
 
-func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey, members []*secp256k1.PublicKey) (*chainTypes.Block, error) {
+func (chainService *ChainService) GenerateBlock(leaderKey string, members []string) (*chainTypes.Block, error) {
 	chainService.DatabaseService.BeginTransaction()
 	defer chainService.DatabaseService.Discard()
 
@@ -214,7 +214,7 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey, 
 	merkle := chainService.DatabaseService.NewMerkle(txHashes)
 	merkleRoot := merkle.Root.Hash
 
-	var memberPks []*secp256k1.PublicKey
+	var memberPks []string
 	for _, p := range members {
 		memberPks = append(memberPks, p)
 	}
@@ -323,20 +323,24 @@ func (chainService *ChainService) RootChain() app.ChainIdType {
 //	return &txType.Transaction{Data: data}
 //}
 
-func (chainService *ChainService) GenesisBlock(genesisPubkey string) *chainTypes.Block {
+func (chainService *ChainService) GenesisBlock(genesisAccount string) *chainTypes.Block {
 	merkle := chainService.DatabaseService.NewMerkle([][]byte{})
 	merkleRoot := merkle.Root.Hash
 
+	//TODO check genesis account
+	/*
 	b := common.Bytes(genesisPubkey)
 	err := b.UnmarshalText(b)
 	if err != nil {
 		return nil
 	}
+
 	pubkey, err := secp256k1.ParsePubKey(b)
 	if err != nil {
 		return nil
 	}
-	var memberPks []*secp256k1.PublicKey = nil
+	*/
+	var memberPks []string = nil
 	return &chainTypes.Block{
 		Header: &chainTypes.BlockHeader{
 			Version:      common.Version,
@@ -347,7 +351,7 @@ func (chainService *ChainService) GenesisBlock(genesisPubkey string) *chainTypes
 			StateRoot:    []byte{0},
 			MerkleRoot:   merkleRoot,
 			Height:       0,
-			LeaderPubKey: pubkey,
+			LeaderPubKey: genesisAccount,
 			MinorPubKeys: memberPks,
 		},
 		Data: &chainTypes.BlockData{
@@ -361,16 +365,14 @@ func (chainService *ChainService) GenesisBlock(genesisPubkey string) *chainTypes
 func (chainService *ChainService) accumulateRewards(b *chainTypes.Block, chainId app.ChainIdType) {
 	//chainService.DatabaseService.BeginTransaction()
 	reward := new(big.Int).SetUint64(uint64(Rewards))
-	leaderAddr := crypto.PubKey2Address(b.Header.LeaderPubKey)
 
 	r := new(big.Int)
-	chainService.DatabaseService.AddBalance(&leaderAddr, r.Div(reward, new(big.Int).SetInt64(2)), true)
+	chainService.DatabaseService.AddBalance(b.Header.LeaderPubKey, r.Div(reward, new(big.Int).SetInt64(2)), true)
 
 	num := len(b.Header.MinorPubKeys)
-	for _, memberPK := range b.Header.MinorPubKeys {
-		memberAddr := crypto.PubKey2Address(memberPK)
+	for _, memberAccount := range b.Header.MinorPubKeys {
 		r.Div(r, new(big.Int).SetInt64(int64(num)))
-		chainService.DatabaseService.AddBalance(&memberAddr, r, true)
+		chainService.DatabaseService.AddBalance(memberAccount, r, true)
 	}
 
 	//chainService.DatabaseService.Commit()
@@ -380,8 +382,8 @@ func (chainService *ChainService) Subscribe(subchan chan event.SyncBlockEvent) e
 	return chainService.syncBlockEvent.Subscribe(subchan)
 }
 
-func (chainService *ChainService) GetTransactionCount(addr *crypto.CommonAddress) int64 {
-	return chainService.transactionPool.GetTransactionCount(addr)
+func (chainService *ChainService) GetTransactionCount(accountName string) int64 {
+	return chainService.transactionPool.GetTransactionCount(accountName)
 }
 
 func (chainService *ChainService) GetBlocksFrom(start, size int64) ( []*chainTypes.Block, error){

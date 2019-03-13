@@ -1,18 +1,13 @@
 package service
 
 import (
-	"errors"
-	path2 "path"
-	"gopkg.in/urfave/cli.v1"
 	"github.com/drep-project/drep-chain/app"
+	chainService "github.com/drep-project/drep-chain/chain/service"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/database"
-	"github.com/drep-project/drep-chain/crypto/sha3"
-	"github.com/drep-project/drep-chain/common/fileutil"
-	accountComponent "github.com/drep-project/drep-chain/pkgs/accounts/component"
-	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	chainService "github.com/drep-project/drep-chain/chain/service"
+	accountTypes "github.com/drep-project/drep-chain/pkgs/wallet/types"
+	"gopkg.in/urfave/cli.v1"
+	path2 "path"
 )
 
 var (
@@ -107,21 +102,5 @@ func (accountService *AccountService) Start(executeContext *app.ExecuteContext) 
 }
 
 func (accountService *AccountService) Stop(executeContext *app.ExecuteContext) error {
-	return nil
-}
-
-func (accountService *AccountService) CreateWallet(password string) error {
-	if fileutil.IsDirExists(accountService.Config.KeyStoreDir) {
-		if !fileutil.IsEmptyDir(accountService.Config.KeyStoreDir) {
-			return errors.New("exist keystore")
-		}
-	}else {
-		fileutil.EnsureDir(accountService.Config.KeyStoreDir)
-	}
-
-	store := accountComponent.NewFileStore(accountService.Config.KeyStoreDir)
-	password = string(sha3.Hash256([]byte(password)))
-	newNode := chainTypes.NewNode(nil, accountService.ChainService.Config.ChainId)
-	store.StoreKey(newNode, password)
 	return nil
 }

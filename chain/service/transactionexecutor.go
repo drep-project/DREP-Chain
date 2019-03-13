@@ -6,7 +6,6 @@ import (
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
 	"math/big"
 
@@ -67,7 +66,7 @@ func (chainService *ChainService) doSync(height int64) {
 	if !chainService.isRelay || chainService.chainId == chainService.RootChain() || height%2 != 0 || height == 0 {
 		return
 	}
-	cct := &chainTypes.CrossChainTransaction{
+	cct := &chainTypes.CrossChainAction{
 		ChainId:   chainService.chainId,
 		StateRoot: chainService.DatabaseService.GetStateRoot(),
 		Trans:     childTrans,
@@ -84,7 +83,36 @@ func (chainService *ChainService) doSync(height int64) {
 	childTrans = nil
 }
 
-func (chainService *ChainService) execute(t *chainTypes.Transaction) (gasUsed, gasFee *big.Int) {
+func (chainService *ChainService) execute(tx *chainTypes.Transaction) (gasUsed, gasFee *big.Int) {
+
+	switch tx.Type() {
+	case chainTypes.TransferType:
+
+	case chainTypes.RegisterAccountType:
+
+	case chainTypes.RegisterAccountType:
+
+	case chainTypes.CreateContractType:
+		createContractAction :=	&types.CreateContractAction{}
+		err := json.Unmarshal(tx.GetData(), createContractAction)
+		if err != nil {
+			return 0, err
+		}
+		return  evmService.ExecuteCreateCode(evm, tx.From(), createContractAction.ContractName, tx.ChainId(), createContractAction.ByteCode, tx.GasLimit().Uint64(), tx.Amount())
+	case chainTypes.CallContractType:
+		callContractAction := &types.CallContractAction{}
+		err := json.Unmarshal(tx.GetData(), callContractAction)
+		if err != nil {
+			return 0, err
+		}
+		if callContractAction.Readonly {
+			return  evmService.ExecuteStaticCall(evm, tx.From(), callContractAction.ContractName, tx.ChainId(), callContractAction.Input, tx.GasLimit().Uint64())
+		}else{
+			return  evmService.ExecuteCallCode(evm, tx.From(), callContractAction.ContractName, tx.ChainId(), callContractAction.Input, tx.GasLimit().Uint64(), tx.Amount())
+		}
+	}
+	return 0, errors.New("not support tx type")
+
 	switch t.Type() {
 	case chainTypes.TransferType:
 		return chainService.executeTransferTransaction(t)
@@ -98,10 +126,10 @@ func (chainService *ChainService) execute(t *chainTypes.Transaction) (gasUsed, g
 	return nil, nil
 }
 
-func (chainService *ChainService) canExecute(tx *chainTypes.Transaction, gasFloor, gasCap *big.Int) (canExecute bool, addr crypto.CommonAddress, balance, gasLimit, gasPrice *big.Int) {
-	addr = *tx.From()
-	balance = chainService.DatabaseService.GetBalance(&addr, true)
-	nonce := chainService.DatabaseService.GetNonce(&addr, true)
+func (chainService *ChainService) canExecute(tx *chainTypes.Transaction, gasFloor, gasCap *big.Int) (canExecute bool, fromAccountName string, balance, gasLimit, gasPrice *big.Int) {
+	fromAccountName = tx.From()
+	balance = chainService.DatabaseService.GetBalance(fromAccountName, true)
+	nonce := chainService.DatabaseService.GetNonce(fromAccountName, true)
 	if nonce > tx.Nonce() {
 		return
 	}
@@ -123,40 +151,40 @@ func (chainService *ChainService) canExecute(tx *chainTypes.Transaction, gasFloo
 	return
 }
 
-func (chainService *ChainService) deduct(addr crypto.CommonAddress, chainId app.ChainIdType, balance, gasFee *big.Int) (leftBalance, actualFee *big.Int) {
+func (chainService *ChainService) deduct(accountName string, chainId app.ChainIdType, balance, gasFee *big.Int) (leftBalance, actualFee *big.Int) {
 	leftBalance = new(big.Int).Sub(balance, gasFee)
 	actualFee = new(big.Int).Set(gasFee)
 	if leftBalance.Sign() < 0 {
 		actualFee = new(big.Int).Set(balance)
 		leftBalance = new(big.Int)
 	}
-	chainService.DatabaseService.PutBalance(&addr, leftBalance, true)
+	chainService.DatabaseService.PutBalance(accountName, leftBalance, true)
 	return leftBalance, actualFee
 }
 
 func (chainService *ChainService) executeTransferTransaction(t *chainTypes.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
 	var (
 		can               bool
-		addr              crypto.CommonAddress
+		fromAccountName              string
 		balance, gasPrice *big.Int
 	)
 
 	gasUsed, gasFee = new(big.Int), new(big.Int)
-	can, addr, balance, _, gasPrice = chainService.canExecute(t, chainTypes.TransferGas, nil)
+	can, fromAccountName, balance, _, gasPrice = chainService.canExecute(t, chainTypes.TransferGas, nil)
 	if !can {
 		return
 	}
 
 	gasUsed = new(big.Int).Set(chainTypes.TransferGas)
 	gasFee = new(big.Int).Mul(gasUsed, gasPrice)
-	balance, gasFee = chainService.deduct(addr, t.ChainId(), balance, gasFee)
+	balance, gasFee = chainService.deduct(fromAccountName, t.ChainId(), balance, gasFee)
 	if balance.Cmp(t.Amount()) >= 0 {
 		balance = new(big.Int).Sub(balance, t.Amount())
 		balanceTo := chainService.DatabaseService.GetBalance(t.To(), true)
 		balanceTo = new(big.Int).Add(balanceTo, t.Amount())
-		chainService.DatabaseService.PutBalance(&addr, balance, true)
+		chainService.DatabaseService.PutBalance(fromAccountName, balance, true)
 		chainService.DatabaseService.PutBalance(t.To(), balanceTo, true)
-		chainService.DatabaseService.PutNonce(&addr, t.Nonce()+1, true)
+		chainService.DatabaseService.PutNonce(fromAccountName, t.Nonce()+1, true)
 	}
 	return
 }
@@ -164,45 +192,45 @@ func (chainService *ChainService) executeTransferTransaction(t *chainTypes.Trans
 func (chainService *ChainService) executeCreateContractTransaction(t *chainTypes.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
 	var (
 		can                         bool
-		addr                        crypto.CommonAddress
+		fromAccountName             string
 		balance, gasLimit, gasPrice *big.Int
 	)
 	gasUsed, gasFee = new(big.Int), new(big.Int)
-	can, addr, _, gasLimit, gasPrice = chainService.canExecute(t, nil, chainTypes.CreateContractGas)
+	can, fromAccountName, _, gasLimit, gasPrice = chainService.canExecute(t, nil, chainTypes.CreateContractGas)
 	if !can {
 		return
 	}
 
-	evm := vm.NewEVM(chainService.DatabaseService)
+	evm := vm.NewEVM(chainService.DatabaseService, chainService.chainId)
 	returnGas, _ := chainService.VmService.ApplyTransaction(evm, t)
 	gasUsed = new(big.Int).Sub(gasLimit, new(big.Int).SetUint64(returnGas))
 	gasFee = new(big.Int).Mul(gasUsed, gasPrice)
-	balance = chainService.DatabaseService.GetBalance(&addr, true)
-	_, gasFee = chainService.deduct(addr, t.ChainId(), balance, gasFee)
-	chainService.DatabaseService.PutNonce(&addr, t.Nonce()+1, true)
+	balance = chainService.DatabaseService.GetBalance(fromAccountName, true)
+	_, gasFee = chainService.deduct(fromAccountName, t.ChainId(), balance, gasFee)
+	chainService.DatabaseService.PutNonce(fromAccountName, t.Nonce()+1, true)
 	return
 }
 
 func (chainService *ChainService) executeCallContractTransaction(t *chainTypes.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
 	var (
 		can                         bool
-		addr                        crypto.CommonAddress
+		fromAccountName             string
 		balance, gasLimit, gasPrice *big.Int
 	)
 
 	gasUsed, gasFee = new(big.Int), new(big.Int)
-	can, addr, _, gasLimit, gasPrice = chainService.canExecute(t, nil, chainTypes.CallContractGas)
+	can, fromAccountName, _, gasLimit, gasPrice = chainService.canExecute(t, nil, chainTypes.CallContractGas)
 	if !can {
 		return
 	}
 
-	evm := vm.NewEVM(chainService.DatabaseService)
+	evm := vm.NewEVM(chainService.DatabaseService, chainService.chainId)
 	returnGas, _ := chainService.VmService.ApplyTransaction(evm, t)
 	gasUsed = new(big.Int).Sub(gasLimit, new(big.Int).SetUint64(returnGas))
 	gasFee = new(big.Int).Mul(gasUsed, gasPrice)
-	balance = chainService.DatabaseService.GetBalance(&addr, true)
-	_, gasFee = chainService.deduct(addr, t.ChainId(), balance, gasFee)
-	chainService.DatabaseService.PutNonce(&addr, t.Nonce()+1, true)
+	balance = chainService.DatabaseService.GetBalance(fromAccountName, true)
+	_, gasFee = chainService.deduct(fromAccountName, t.ChainId(), balance, gasFee)
+	chainService.DatabaseService.PutNonce(fromAccountName, t.Nonce()+1, true)
 	return
 }
 

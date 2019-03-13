@@ -9,7 +9,7 @@ import (
 	chainService "github.com/drep-project/drep-chain/chain/service"
 	p2pService "github.com/drep-project/drep-chain/network/service"
 	cliService "github.com/drep-project/drep-chain/pkgs/drepclient/service"
-	accountService "github.com/drep-project/drep-chain/pkgs/accounts/service"
+	accountService "github.com/drep-project/drep-chain/pkgs/wallet/service"
 	consensusService "github.com/drep-project/drep-chain/pkgs/consensus/service"
 	evmService "github.com/drep-project/drep-chain/pkgs/evm"
 	"net/http"

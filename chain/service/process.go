@@ -102,7 +102,7 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (bool, er
 	if err != nil {
 		return false, err
 	}
-	dlog.Trace("Process block leader.", "LeaderPubKey", crypto.PubKey2Address(block.Header.LeaderPubKey).Hex(), " height ", strconv.FormatInt(block.Header.Height, 10))
+	dlog.Trace("Process block leader.", "LeaderPubKey", block.Header.LeaderPubKey, " height ", strconv.FormatInt(block.Header.Height, 10))
 	newNode := chainTypes.NewBlockNode(block.Header, prevNode)
 	newNode.Status = chainTypes.StatusDataStored
 
@@ -270,12 +270,12 @@ func (chainService *ChainService) reorganizeChain(detachNodes, attachNodes *list
 }
 
 func (chainService *ChainService) clearTxPool(block *chainTypes.Block) {
-	addrMap := make(map[crypto.CommonAddress]struct{})
-	var addrs []*crypto.CommonAddress
+	addrMap := make(map[string]struct{})
+	var addrs []string
 	for _,tx := range block.Data.TxList {
 		addr := tx.From()
-		if _,ok:=addrMap[*addr]; !ok{
-			addrMap[*addr] = struct{}{}
+		if _,ok:=addrMap[addr]; !ok{
+			addrMap[addr] = struct{}{}
 			addrs = append(addrs, addr)
 		}
 	}

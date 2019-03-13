@@ -1,32 +1,30 @@
 package main
 
 import (
-	"github.com/drep-project/drep-chain/app"
-	"os"
-	"fmt"
-	path2 "path"
-	"io/ioutil"
 	"crypto/hmac"
 	"crypto/sha512"
 	"encoding/json"
-	"gopkg.in/urfave/cli.v1"
+	"fmt"
+	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/pkgs/log"
+	"gopkg.in/urfave/cli.v1"
+	"io/ioutil"
+	"os"
+	path2 "path"
 
-	p2pTypes "github.com/drep-project/drep-chain/network/types"
-	"github.com/drep-project/drep-chain/rpc"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
+	p2pTypes "github.com/drep-project/drep-chain/network/types"
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
-	accountComponent "github.com/drep-project/drep-chain/pkgs/accounts/component"
+	accountComponent "github.com/drep-project/drep-chain/pkgs/wallet/component"
+	accountTypes "github.com/drep-project/drep-chain/pkgs/wallet/types"
+	"github.com/drep-project/drep-chain/rpc"
 )
 
 var (
 	pasword = "123"
-	parentNode = chainTypes.NewNode(nil,app.ChainIdType{})
 	pathFlag = common.DirectoryFlag{
 		Name:  "path",
 		Usage: "keystore save to",
@@ -60,21 +58,28 @@ func gen(ctx *cli.Context) error {
 	}
 	bootsNodes := []p2pTypes.BootNode{}
 	standbyKey := []*secp256k1.PrivateKey{}
-	nodes := []*chainTypes.Node{}
+	keys := []*accountTypes.Key{}
 	produces := []*consensusTypes.Producer{}
 	for i:=0; i< len(nodeItems); i++{
-		aNode := getAccount(nodeItems[i].Name)
-		nodes = append(nodes, aNode)
+		aNode, chaincode := RandomNode([]byte(nodeItems[i].Name))
+		keys = append(keys, aNode)
 		bootsNodes = append(bootsNodes,p2pTypes.BootNode{
-			//PubKey:(*secp256k1.PublicKey)(&aNode.PrivateKey.PublicKey),
 			IP :nodeItems[i].Ip,
 			Port:nodeItems[i].Port,
 		})
-		standbyKey = append(standbyKey, aNode.PrivateKey)
+		storage :=  chainTypes.Storage{
+			Name: 		nodeItems[i].Name,
+			ChainId  : 	app.ChainIdType{},
+			ChainCode: 	chaincode,
+		}
+		fmt.Println(storage)
+
+		standbyKey = append(standbyKey, aNode.PrivKey)
 		producer := &consensusTypes.Producer{
+			Account: nodeItems[i].Name,
 			Ip:nodeItems[i].Ip,
 			Port:nodeItems[i].Port,
-			Public: (*secp256k1.PublicKey)(&aNode.PrivateKey.PublicKey),
+			SignPubkey: *(*secp256k1.PublicKey)(&aNode.PrivKey.PublicKey),
 		}
 		produces = append(produces, producer)
 	}
@@ -104,15 +109,16 @@ func gen(ctx *cli.Context) error {
 	walletConfig := accountTypes.Config{}
 	walletConfig.WalletPassword = pasword
 	for i:=0; i<len(nodeItems); i++{
-		consensusConfig.MyPk = (*secp256k1.PublicKey)(&standbyKey[i].PublicKey)
+		consensusConfig.Me = nodeItems[i].Name
+		//consensusConfig.MyPk = (*secp256k1.PublicKey)(&standbyKey[i].PublicKey)
 		p2pConfig.PrvKey = standbyKey[i]
 		userDir :=  path2.Join(path,nodeItems[i].Name)
 		os.MkdirAll(userDir, os.ModeDir|os.ModePerm)
 		keyStorePath := path2.Join(userDir, "keystore")
 
-		store := accountComponent.NewFileStore(keyStorePath)
-		password := string(sha3.Hash256([]byte(pasword)))
-		store.StoreKey(nodes[i],password)
+		password := string(sha3.Hash256([]byte(pasword + "drep")))
+		store, _ := accountComponent.NewFileStore(keyStorePath, password)
+		store.StoreKey(keys[i], password)
 
 		cfgPath := path2.Join(userDir, "config.json")
 		fs, _ := os.Create(cfgPath)
@@ -145,27 +151,14 @@ func writePhase(fs *os.File, name string, config interface{},  offset int64) int
 	return offset
 }
 
-func getAccount(name string) *chainTypes.Node {
-	node := RandomNode([]byte(name))
-	return node
-}
-
-func RandomNode(seed []byte) *chainTypes.Node {
-	var (
-		prvKey *secp256k1.PrivateKey
-		chainCode []byte
-	)
-
+func RandomNode(seed []byte) (*accountTypes.Key, []byte) {
 	h := hmAC(seed, chainTypes.DrepMark)
-	prvKey, _ = secp256k1.PrivKeyFromBytes(h[:chainTypes.KeyBitSize])
-	chainCode = h[chainTypes.KeyBitSize:]
-	addr :=  crypto.PubKey2Address(prvKey.PubKey())
-	return &chainTypes.Node{
-		PrivateKey: prvKey,
-		Address: &addr,
-		ChainId: app.ChainIdType{},
-		ChainCode: chainCode,
-	}
+	prvKey, _ := secp256k1.PrivKeyFromBytes(h[:chainTypes.KeyBitSize])
+	chainCode := h[chainTypes.KeyBitSize:]
+	return &accountTypes.Key{
+		PrivKey: prvKey,
+		Pubkey: prvKey.PubKey(),
+	},chainCode
 }
 
 func hmAC(message, key []byte) []byte {

@@ -20,31 +20,20 @@ type AccountApi struct {
 	databaseService *database.DatabaseService
 }
 
-func (accountapi *AccountApi) AddressList() ([]*crypto.CommonAddress, error) {
+func (accountapi *AccountApi) AddressList() ([]*secp256k1.PublicKey, error) {
 	if !accountapi.Wallet.IsOpen() {
 		return nil, errors.New("wallet is not open")
 	}
-	return accountapi.Wallet.ListAddress()
-}
-
-// CreateAccount create a new account and return address
-func (accountapi *AccountApi) CreateAccount() (*crypto.CommonAddress, error) {
-	if !accountapi.Wallet.IsOpen() {
-		return nil, errors.New("wallet is not open")
-	}
-	newAaccount, err := accountapi.Wallet.NewAccount()
-	if err != nil {
-		return nil, err
-	}
-	return newAaccount.Address, nil
+	return accountapi.Wallet.ListKeys()
 }
 
 func (accountapi *AccountApi) CreateWallet(password string) error {
-	err := accountapi.accountService.CreateWallet(password)
+	wallet, err := CreateWallet(accountapi.accountService.Config, accountapi.chainService.Config.ChainId,password)
 	if err != nil {
 		return err
 	}
-	return accountapi.OpenWallet(password)
+	accountapi.Wallet = wallet
+	return nil
 }
 
 // Lock lock the wallet to protect private key
@@ -77,8 +66,8 @@ func (accountapi *AccountApi) CloseWallet() {
 	accountapi.Wallet.Close()
 }
 
-func (accountapi *AccountApi) SendTransaction(from crypto.CommonAddress, to crypto.CommonAddress, amount *big.Int) (string, error) {
-	nonce := accountapi.chainService.GetTransactionCount(&from)
+func (accountapi *AccountApi) SendTransaction(from, to string, amount *big.Int) (string, error) {
+	nonce := accountapi.chainService.GetTransactionCount(from)
 	t := chainTypes.NewTransaction(from, to, amount, nonce)
 	err := accountapi.chainService.SendTransaction(t)
 	if err != nil{
@@ -96,22 +85,22 @@ func (accountapi *AccountApi) SendTransaction(from crypto.CommonAddress, to cryp
 	return "0x" + string(hex), nil
 }
 
-func (accountapi *AccountApi) Call(from crypto.CommonAddress, to crypto.CommonAddress, input []byte, amount *big.Int, readOnly bool) (string, error) {
-	nonce := accountapi.chainService.GetTransactionCount(&from)
+func (accountapi *AccountApi) Call(from, to string, input []byte, amount *big.Int, readOnly bool) (string, error) {
+	nonce := accountapi.chainService.GetTransactionCount(from)
 	t := chainTypes.NewCallContractTransaction(from, to, input, amount, nonce, readOnly)
 	accountapi.chainService.SendTransaction(t)
 	return t.TxId()
 }
 
-func (accountapi *AccountApi) CreateCode(from crypto.CommonAddress, to crypto.CommonAddress, byteCode []byte) (string, error) {
-	nonce := accountapi.chainService.GetTransactionCount(&from)
-	t := chainTypes.NewContractTransaction(from, to, byteCode, nonce)
+func (accountapi *AccountApi) CreateCode(from, to string, byteCode []byte) (string, error) {
+	nonce := accountapi.chainService.GetTransactionCount(from)
+	t := chainTypes.NewCreateContractTransaction(from, to, byteCode, nonce)
 	accountapi.chainService.SendTransaction(t)
 	return t.TxId()
 }
 
 // DumpPrikey dumpPrivate
-func (accountapi *AccountApi) DumpPrivkey(address *crypto.CommonAddress) (*secp256k1.PrivateKey, error) {
+func (accountapi *AccountApi) DumpPrivkey(address *secp256k1.PublicKey) (*secp256k1.PrivateKey, error) {
 	if !accountapi.Wallet.IsOpen() {
 		return nil, errors.New("wallet is not open")
 	}
@@ -119,15 +108,15 @@ func (accountapi *AccountApi) DumpPrivkey(address *crypto.CommonAddress) (*secp2
 		return nil, errors.New("wallet has locked")
 	}
 
-	node, err := accountapi.Wallet.GetAccountByAddress(address)
+	key, err := accountapi.Wallet.DumpPrivateKey(address)
 	if err != nil {
 		return nil, err
 	}
-	return node.PrivateKey, nil
+	return key, nil
 }
 
-func (accountapi *AccountApi) Sign(address *crypto.CommonAddress, msg string) ([]byte, error) {
-	prv, _ := accountapi.DumpPrivkey(address)
+func (accountapi *AccountApi) Sign(key *secp256k1.PublicKey, msg string) ([]byte, error) {
+	prv, _ := accountapi.DumpPrivkey(key)
 	bytes := sha3.Hash256([]byte(msg))
 	return crypto.Sign(bytes, prv)
 }
@@ -136,6 +125,6 @@ func (accountapi *AccountApi) GasPrice() *big.Int {
 	return chainTypes.DefaultGasPrice
 }
 
-func (accountapi *AccountApi) GetCode(addr crypto.CommonAddress) []byte {
-	return accountapi.databaseService.GetByteCode(&addr, false)
+func (accountapi *AccountApi) GetCode(accountName string) []byte {
+	return accountapi.databaseService.GetByteCode(accountName, false)
 }

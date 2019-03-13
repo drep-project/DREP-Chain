@@ -1,15 +1,13 @@
 package service
 
 import (
-	"github.com/drep-project/drep-chain/app"
-	"sync/atomic"
 	"errors"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/sha3"
+	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	accountsComponent "github.com/drep-project/drep-chain/pkgs/accounts/component"
-	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/crypto/sha3"
+	accountsComponent "github.com/drep-project/drep-chain/pkgs/wallet/component"
+	accountTypes "github.com/drep-project/drep-chain/pkgs/wallet/types"
+	"sync/atomic"
 )
 
 const (
@@ -40,6 +38,18 @@ func NewWallet(config *accountTypes.Config, chainId app.ChainIdType) (*Wallet, e
 	return wallet, nil
 }
 
+func CreateWallet(config *accountTypes.Config, chainId app.ChainIdType, password string) (*Wallet, error) {
+	wallet := &Wallet{
+		config:  config,
+		chainId: chainId,
+	}
+	err := wallet.Open(password)
+	if err != nil {
+		return nil, err
+	}
+	return wallet, nil
+}
+
 func (wallet *Wallet) Open(password string) error {
 	if wallet.cacheStore != nil {
 		return errors.New("wallet is already open")
@@ -60,56 +70,31 @@ func (wallet *Wallet) Close() {
 	wallet.password = ""
 }
 
-func (wallet *Wallet) NewAccount() (*chainTypes.Node, error) {
+func (wallet *Wallet) ListKeys() ([]*secp256k1.PublicKey, error) {
+	if err := wallet.checkWallet(RPERMISSION); err != nil {
+		return nil, errors.New("wallet is not open")
+	}
+	keys, err := wallet.cacheStore.ExportKey(wallet.password)
+	if err != nil {
+		return nil, err
+	}
+	pKeys := []*secp256k1.PublicKey{}
+	for _, key := range keys {
+		pKeys = append(pKeys, key.Pubkey)
+	}
+	return pKeys, nil
+}
+
+func (wallet *Wallet) DumpPrivateKey(pubkey *secp256k1.PublicKey) (*secp256k1.PrivateKey, error) {
 	if err := wallet.checkWallet(WPERMISSION); err != nil {
 		return nil, err
 	}
 
-	newNode := chainTypes.NewNode(nil, wallet.chainId)
-	wallet.cacheStore.StoreKey(newNode, wallet.password)
-	return newNode, nil
-}
-
-func (wallet *Wallet) GetAccountByAddress(addr *crypto.CommonAddress) (*chainTypes.Node, error) {
-	if err := wallet.checkWallet(RPERMISSION); err != nil {
-		return nil, errors.New("wallet is not open")
-	}
-	return wallet.cacheStore.GetKey(addr, wallet.password)
-}
-
-func (wallet *Wallet) GetAccountByPubkey(pubkey *secp256k1.PublicKey) (*chainTypes.Node, error) {
-	if err := wallet.checkWallet(RPERMISSION); err != nil {
-		return nil, errors.New("wallet is not open")
-	}
-	addr := crypto.PubKey2Address(pubkey)
-	return wallet.GetAccountByAddress(&addr)
-}
-
-func (wallet *Wallet) ListAddress() ([]*crypto.CommonAddress, error) {
-	if err := wallet.checkWallet(RPERMISSION); err != nil {
-		return nil, errors.New("wallet is not open")
-	}
-	nodes, err := wallet.cacheStore.ExportKey(wallet.password)
+	key, err := wallet.cacheStore.GetKey(pubkey, wallet.password)
 	if err != nil {
 		return nil, err
 	}
-	addreses := []*crypto.CommonAddress{}
-	for _, node := range nodes {
-		addreses = append(addreses, node.Address)
-	}
-	return addreses, nil
-}
-
-func (wallet *Wallet) DumpPrivateKey(addr *crypto.CommonAddress) (*secp256k1.PrivateKey, error) {
-	if err := wallet.checkWallet(WPERMISSION); err != nil {
-		return nil, err
-	}
-
-	node, err := wallet.cacheStore.GetKey(addr, wallet.password)
-	if err != nil {
-		return nil, err
-	}
-	return node.PrivateKey, nil
+	return key.PrivKey, nil
 }
 
 // 0 is locked  1 is unlock
@@ -120,6 +105,7 @@ func (wallet *Wallet) IsLock() bool {
 func (wallet *Wallet) IsOpen() bool {
 	return wallet.cacheStore != nil
 }
+
 func (wallet *Wallet) Lock() error {
 	atomic.StoreInt32(&wallet.isLock, LOCKED)
 	wallet.cacheStore.ClearKeys()
@@ -155,5 +141,5 @@ func (wallet *Wallet) checkWallet(op int) error {
 }
 
 func (wallet *Wallet) cryptoPassword(password string) string {
-	return string(sha3.Hash256([]byte(password)))
+	return string(sha3.Hash256([]byte(password + "drep")))
 }

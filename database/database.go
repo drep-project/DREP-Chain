@@ -3,7 +3,6 @@ package database
 import (
 	"encoding/json"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/syndtr/goleveldb/leveldb"
 	"math/big"
@@ -244,9 +243,9 @@ func (db *Database) delState(key []byte) error {
 	return nil
 }
 
-func (db *Database) getStorage(addr *crypto.CommonAddress) *chainTypes.Storage {
+func (db *Database) getStorage(accountName string) *chainTypes.Storage {
 	storage := &chainTypes.Storage{}
-	key := sha3.Hash256([]byte("storage_" + addr.Hex()))
+	key := sha3.Hash256([]byte("storage_" + accountName))
 	value, err := db.get(key, false)
 	if err != nil {
 	    storage.Balance = new(big.Int)
@@ -258,8 +257,8 @@ func (db *Database) getStorage(addr *crypto.CommonAddress) *chainTypes.Storage {
 	return storage
 }
 
-func (db *Database) putStorage(addr *crypto.CommonAddress, storage *chainTypes.Storage) error {
-	key := sha3.Hash256([]byte("storage_" + addr.Hex()))
+func (db *Database) putStorage(accountName string, storage *chainTypes.Storage) error {
+	key := sha3.Hash256([]byte("storage_" + accountName))
 	value, err := json.Marshal(storage)
 	if err != nil {
 		return err

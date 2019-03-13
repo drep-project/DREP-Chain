@@ -2,6 +2,7 @@ package vm
 
 import (
 	"errors"
+	"github.com/drep-project/drep-chain/app"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
@@ -32,71 +33,71 @@ func NewState(databaseService *database.DatabaseService) *State {
 }
 
 
-func (s *State) CreateContractAccount(callerAddr crypto.CommonAddress, nonce int64) (*chainTypes.Account, error) {
-	account, err := chainTypes.NewContractAccount(callerAddr, nonce)
+func (s *State) CreateContractAccount(callerName string, chainId app.ChainIdType, nonce int64) (*chainTypes.Account, error) {
+	account, err := chainTypes.NewContractAccount(callerName, chainId)
 	if err != nil {
 		return nil, err
 	}
-	return account, s.databaseApi.PutStorage(account.Address, account.Storage, true)
+	return account, s.databaseApi.PutStorage(account.Name, account.Storage, true)
 }
 
 
-func (s *State) SubBalance(addr *crypto.CommonAddress, amount *big.Int) error {
-	balance := s.databaseApi.GetBalance(addr, true)
-	return s.databaseApi.PutBalance(addr, new(big.Int).Sub(balance, amount), true)
+func (s *State) SubBalance(accountName string, amount *big.Int) error {
+	balance := s.databaseApi.GetBalance(accountName, true)
+	return s.databaseApi.PutBalance(accountName, new(big.Int).Sub(balance, amount), true)
 }
 
-func (s *State) AddBalance(addr *crypto.CommonAddress, amount *big.Int) error {
-	s.databaseApi.AddBalance(addr, amount, true)
+func (s *State) AddBalance(accountName string, amount *big.Int) error {
+	s.databaseApi.AddBalance(accountName, amount, true)
 	//balance := s.databaseApi.GetBalance(addr, chainId,true)
 	//return s.databaseApi.PutBalance(addr, chainId, new(big.Int).Add(balance, amount),true)
 	return nil
 }
 
-func (s *State) GetBalance(addr *crypto.CommonAddress,) *big.Int {
-	return s.databaseApi.GetBalance(addr, true)
+func (s *State) GetBalance(accountName string,) *big.Int {
+	return s.databaseApi.GetBalance(accountName, true)
 }
 
-func (s *State) SetNonce(addr *crypto.CommonAddress, nonce int64) error {
-	return s.databaseApi.PutNonce(addr, nonce, true)
+func (s *State) SetNonce(accountName string, nonce int64) error {
+	return s.databaseApi.PutNonce(accountName, nonce, true)
 }
 
-func (s *State) GetNonce(addr *crypto.CommonAddress,) int64 {
-	return s.databaseApi.GetNonce(addr, true)
+func (s *State) GetNonce(accountName string,) int64 {
+	return s.databaseApi.GetNonce(accountName, true)
 }
 
-func (s *State) Suicide(addr *crypto.CommonAddress,) error {
-	storage := s.databaseApi.GetStorage(addr, true)
+func (s *State) Suicide(accountName string,) error {
+	storage := s.databaseApi.GetStorage(accountName, true)
 	storage.Balance = new(big.Int)
 	storage.Nonce = 0
-	return s.databaseApi.PutStorage(addr, storage, true)
+	return s.databaseApi.PutStorage(accountName, storage, true)
 }
 
-func (s *State) GetByteCode(addr *crypto.CommonAddress,) crypto.ByteCode {
-	return s.databaseApi.GetByteCode(addr, true)
+func (s *State) GetByteCode(accountName string,) crypto.ByteCode {
+	return s.databaseApi.GetByteCode(accountName, true)
 }
 
-func (s *State) GetCodeSize(addr crypto.CommonAddress,) int {
-	byteCode := s.GetByteCode(&addr)
+func (s *State) GetCodeSize(accountName string,) int {
+	byteCode := s.GetByteCode(accountName)
 	return len(byteCode)
 
 }
 
-func (s *State) GetCodeHash(addr crypto.CommonAddress,) crypto.Hash {
-	return s.databaseApi.GetCodeHash(&addr, true)
+func (s *State) GetCodeHash(accountName string,) crypto.Hash {
+	return s.databaseApi.GetCodeHash(accountName, true)
 }
 
-func (s *State) SetByteCode(addr *crypto.CommonAddress, byteCode crypto.ByteCode) error {
-	return s.databaseApi.PutByteCode(addr, byteCode, true)
+func (s *State) SetByteCode(accountName string, byteCode crypto.ByteCode) error {
+	return s.databaseApi.PutByteCode(accountName, byteCode, true)
 }
 
 func (s *State) GetLogs(txHash []byte,) []*chainTypes.Log {
 	return s.databaseApi.GetLogs(txHash)
 }
 
-func (s *State) AddLog(contractAddr crypto.CommonAddress, txHash, data []byte, topics [][]byte) error {
+func (s *State) AddLog(contractName string, txHash, data []byte, topics [][]byte) error {
 	log := &chainTypes.Log{
-		Address: contractAddr,
+		Name: contractName,
 		TxHash:  txHash,
 		Data:    data,
 		Topics:  topics,

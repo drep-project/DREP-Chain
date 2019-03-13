@@ -1,19 +1,18 @@
 package types
 
-import (
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
-)
+import "github.com/drep-project/drep-chain/crypto/secp256k1"
 
 type ConsensusConfig struct {
-	ConsensusMode string          	`json:"consensusMode"`
-	Producers []*Producer         	`json:"producers"`
-	MyPk 	 *secp256k1.PublicKey 	`json:"mypk"`
-	EnableConsensus bool			`json:"enableConsensus"`
+	ConsensusMode 	string          	`json:"consensusMode"`
+	Producers 		[]*Producer         `json:"producers"`
+	Me 	 			string 				`json:"me"`
+	EnableConsensus bool				`json:"enableConsensus"`
 }
 
 //TODO how to identify a mine pk or pr&addr
 type Producer struct {
-	Public  *secp256k1.PublicKey
-	Ip string
-	Port int
+	Account  	string
+	SignPubkey 	secp256k1.PublicKey
+	Ip 			string
+	Port 		int
 }

@@ -2,17 +2,16 @@ package service
 
 import (
 	"fmt"
-	"github.com/drep-project/drep-chain/common"
-	"log"
+	"github.com/drep-project/drep-chain/app"
 	"testing"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
-	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
+	accountTypes "github.com/drep-project/drep-chain/pkgs/wallet/types"
 )
 
 func TestWallet(t *testing.T) {
 	password := string(sha3.Hash256([]byte("AAAAAAAAAAAAAAAA")))
-	rootChain := common.ChainIdType{}
+	rootChain := app.ChainIdType{}
 	newNode := accountTypes.NewNode(nil, rootChain)
 	fmt.Println(newNode)
 

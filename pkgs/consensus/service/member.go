@@ -74,8 +74,8 @@ func (member *Member) UpdateStatus(participants []*consensusTypes.MemberInfo , c
         if participant.Peer == nil {
             member.members = append(member.members, member.prvKey.PubKey())
         }else {
-            if !participant.Producer.Public.IsEqual(member.leader.Producer.Public) {
-                member.members = append(member.members, participant.Producer.Public)
+            if !participant.Producer.SignPubkey.IsEqual(&member.leader.Producer.SignPubkey) {
+                member.members = append(member.members, &participant.Producer.SignPubkey)
             }
         }
     }

@@ -154,9 +154,9 @@ func (leader *Leader) OnCommit(peer *p2pTypes.Peer, commit *consensusTypes.Commi
     }
     member := leader.getMember(peer.Ip)
     if leader.sigmaPubKey == nil {
-        leader.sigmaPubKey = []*secp256k1.PublicKey{ member.Producer.Public }
+        leader.sigmaPubKey = []*secp256k1.PublicKey{ &member.Producer.SignPubkey }
     } else {
-        leader.sigmaPubKey = append(leader.sigmaPubKey,  member.Producer.Public )
+        leader.sigmaPubKey = append(leader.sigmaPubKey, &member.Producer.SignPubkey )
     }
 
     if leader.sigmaCommitPubkey == nil {
@@ -250,7 +250,7 @@ func (leader *Leader) challenge(msg []byte) {
         memIndex := 0
         sigmaPubKeys := []*secp256k1.PublicKey{}
         for index, pubkey := range  leader.sigmaPubKey {
-            if !pubkey.IsEqual(member.Producer.Public) {
+            if !pubkey.IsEqual(&member.Producer.SignPubkey) {
                 sigmaPubKeys = append(sigmaPubKeys, pubkey)
             }else{
                 memIndex = index
@@ -378,7 +378,7 @@ func (leader *Leader) getResponsePubkey() []*secp256k1.PublicKey {
     publicKeys := []*secp256k1.PublicKey{}
     for index, val := range leader.responseBitmap {
         if val == 1 {
-            publicKeys = append(publicKeys, leader.members[index].Producer.Public)
+            publicKeys = append(publicKeys, &leader.members[index].Producer.SignPubkey)
         }
     }
     return publicKeys

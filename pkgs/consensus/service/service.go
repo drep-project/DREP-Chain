@@ -12,7 +12,7 @@ import (
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/database"
 	p2pService "github.com/drep-project/drep-chain/network/service"
-	accountService "github.com/drep-project/drep-chain/pkgs/accounts/service"
+	walletService "github.com/drep-project/drep-chain/pkgs/wallet/service"
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
 	"errors"
 	"gopkg.in/urfave/cli.v1"
@@ -36,13 +36,14 @@ type ConsensusService struct {
 	P2pServer       p2pService.P2P                 `service:"p2p"`
 	ChainService    *chainService.ChainService     `service:"chain"`
 	DatabaseService *database.DatabaseService      `service:"database"`
-	WalletService   *accountService.AccountService `service:"accounts"`
+	WalletService   *walletService.AccountService `service:"accounts"`
 
 	apis   []app.API
 	Config *consensusTypes.ConsensusConfig
 
-	pubkey             *secp256k1.PublicKey
-	privkey            *secp256k1.PrivateKey
+	signPubkey         *secp256k1.PublicKey
+	signPrivkey        *secp256k1.PrivateKey
+
 	curMiner           int
 	leader             *Leader
 	member             *Member
@@ -92,12 +93,14 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 		return nil
 	}
 
-	consensusService.pubkey = consensusService.Config.MyPk
-	accountNode, err := consensusService.WalletService.Wallet.GetAccountByPubkey(consensusService.pubkey)
+	consensusService.signPubkey = consensusService.GetSignPubkey(consensusService.Config.Me)
+	if consensusService.signPubkey == nil {
+		return  errors.New("consensus config error")
+	}
+	consensusService.signPrivkey, err = consensusService.WalletService.Wallet.DumpPrivateKey(consensusService.signPubkey)
 	if err != nil {
 		return err
 	}
-	consensusService.privkey = accountNode.PrivateKey
 
 	props := actor.FromProducer(func() actor.Actor {
 		return consensusService
@@ -112,8 +115,8 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	for msgType, _ := range chainP2pMessage {
 		router.RegisterMsgHandler(msgType, pid)
 	}
-	consensusService.leader = NewLeader(consensusService.pubkey, consensusService.P2pServer)
-	consensusService.member = NewMember(consensusService.privkey, consensusService.P2pServer)
+	consensusService.leader = NewLeader(consensusService.signPubkey, consensusService.P2pServer)
+	consensusService.member = NewMember(consensusService.signPrivkey, consensusService.P2pServer)
 	consensusService.syncBlockEventChan = make(chan event.SyncBlockEvent)
 	consensusService.syncBlockEventSub = consensusService.ChainService.Subscribe(consensusService.syncBlockEventChan)
 	consensusService.quit = make(chan struct{})
@@ -225,10 +228,9 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 }
 
 func (consensusService *ConsensusService) Stop(executeContext *app.ExecuteContext) error {
-	if !consensusService.Config.EnableConsensus {
+	if consensusService.Config != nil && !consensusService.Config.EnableConsensus {
 		return nil
 	}
-
 	close(consensusService.quit)
 	consensusService.syncBlockEventSub.Unsubscribe()
 	return nil
@@ -277,11 +279,11 @@ func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, erro
 func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, error) {
 	consensusService.leader.Reset()
 
-	membersPubkey := []*secp256k1.PublicKey{}
+	membersAccounts := []string{}
 	for _, pub := range consensusService.leader.members {
-		membersPubkey = append(membersPubkey, pub.Producer.Public)
+		membersAccounts = append(membersAccounts, pub.Producer.Account)
 	}
-	block, err := consensusService.ChainService.GenerateBlock(consensusService.leader.pubkey, membersPubkey)
+	block, err := consensusService.ChainService.GenerateBlock(consensusService.Config.Me, membersAccounts)
 	if err != nil {
 		dlog.Error("generate block fail", "msg", err)
 	}
@@ -319,17 +321,17 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 }
 
 func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error) {
-	membersPubkey := []*secp256k1.PublicKey{}
+	membersAccounts := []string{}
 	for _, produce := range consensusService.Config.Producers {
-		membersPubkey = append(membersPubkey, produce.Public)
+		membersAccounts = append(membersAccounts, produce.Account)
 	}
-	block, _ := consensusService.ChainService.GenerateBlock(consensusService.pubkey, membersPubkey)
+	block, _ := consensusService.ChainService.GenerateBlock(consensusService.Config.Me, membersAccounts)
 	msg, err := json.Marshal(block)
 	if err != nil {
 		return block, nil
 	}
 
-	sig, err := consensusService.privkey.Sign(sha3.Hash256(msg))
+	sig, err := consensusService.signPrivkey.Sign(sha3.Hash256(msg))
 	if err != nil {
 		dlog.Error("sign block error")
 		return nil, errors.New("sign block error")
@@ -341,7 +343,7 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 
 func (consensusService *ConsensusService) isProduce() bool {
 	for _, produce := range consensusService.Config.Producers {
-		if produce.Public.IsEqual(consensusService.pubkey) {
+		if produce.SignPubkey.IsEqual(consensusService.signPubkey) {
 			return true
 		}
 	}
@@ -351,7 +353,7 @@ func (consensusService *ConsensusService) isProduce() bool {
 func (consensusService *ConsensusService) CollectLiveMember() []*consensusTypes.MemberInfo {
 	liveMembers := []*consensusTypes.MemberInfo{}
 	for _, produce := range consensusService.Config.Producers {
-		if consensusService.pubkey.IsEqual(produce.Public) {
+		if consensusService.signPubkey.IsEqual(&produce.SignPubkey) {
 			liveMembers = append(liveMembers, &consensusTypes.MemberInfo{
 				Producer: produce,
 			}) // self
@@ -378,8 +380,13 @@ func (consensusService *ConsensusService) MoveToNextMiner(liveMembers []*consens
 	}
 }
 
-func (consensusService *ConsensusService) GetMyPubkey() *secp256k1.PublicKey {
-	return consensusService.pubkey
+func (consensusService *ConsensusService) GetSignPubkey(accountName string) *secp256k1.PublicKey {
+	for _, producer := range consensusService.Config.Producers {
+		if producer.Account == accountName {
+			return &producer.SignPubkey
+		}
+	}
+	return nil
 }
 
 func (consensusService *ConsensusService) GetWaitTime() (time.Time, time.Duration) {

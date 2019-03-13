@@ -1,14 +1,14 @@
 package evm
 
 import (
-	"bytes"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/pkgs/evm/vm"
 	"github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/pkgs/evm/vm"
 	"gopkg.in/urfave/cli.v1"
 	"math/big"
 )
@@ -16,8 +16,8 @@ import (
 var (
 	DefaultEvmConfig = &VMConfig{}
 )
-func  (evmService *EvmService) ExecuteCreateCode(evm *vm.EVM, callerAddr crypto.CommonAddress, chainId app.ChainIdType, code []byte, gas uint64, value *big.Int) (uint64, error) {
-	ret, _, returnGas, err := evm.CreateContractCode(callerAddr, chainId, code, gas, value)
+func  (evmService *EvmService) ExecuteCreateCode(evm *vm.EVM, callerName, contractName string, chainId app.ChainIdType, code []byte, gas uint64, value *big.Int) (uint64, error) {
+	ret, _, returnGas, err := evm.CreateContractCode(callerName, contractName, chainId, code, gas, value)
 	fmt.Println("gas: ", gas)
 	fmt.Println("code: ", hex.EncodeToString(code))
 	fmt.Println("ret: ", ret)
@@ -25,51 +25,46 @@ func  (evmService *EvmService) ExecuteCreateCode(evm *vm.EVM, callerAddr crypto.
 	return returnGas, err
 }
 
-func  (evmService *EvmService) ExecuteCallCode(evm *vm.EVM, callerAddr, contractAddr crypto.CommonAddress, chainId app.ChainIdType, input []byte, gas uint64, value *big.Int) (uint64, error) {
-	ret, returnGas, err := evm.CallContractCode(callerAddr, contractAddr, chainId, input, gas, value)
+func  (evmService *EvmService) ExecuteCallCode(evm *vm.EVM, callerName, contractName string, chainId app.ChainIdType, input []byte, gas uint64, value *big.Int) (uint64, error) {
+	ret, returnGas, err := evm.CallContractCode(callerName, contractName, chainId, input, gas, value)
 	fmt.Println("ret: ", ret)
 	fmt.Println("err: ", err)
 	return returnGas, err
 }
 
-func  (evmService *EvmService) ExecuteStaticCall(evm *vm.EVM, callerAddr, contractAddr crypto.CommonAddress, chainId app.ChainIdType, input []byte, gas uint64) (uint64, error) {
-	ret, returnGas, err := evm.StaticCall(callerAddr, contractAddr, chainId, input, gas)
+func  (evmService *EvmService) ExecuteStaticCall(evm *vm.EVM, callerName, contractName string, chainId app.ChainIdType, input []byte, gas uint64) (uint64, error) {
+	ret, returnGas, err := evm.StaticCall(callerName, contractName, chainId, input, gas)
 	fmt.Println("ret: ", ret)
 	fmt.Println("err: ", err)
 	return returnGas, err
 }
 
-func  (evmService *EvmService) Tx2Message(tx *types.Transaction) *Message {
-	readOnly := false
-	if bytes.Equal(tx.GetData()[:1], []byte{1}) {
-		readOnly = true
+func  (evmService *EvmService) ApplyMessage(evm *vm.EVM, tx *types.Transaction) (uint64, error) {
+	switch tx.Type() {
+	case types.CreateContractType:
+		createContractAction :=	&types.CreateContractAction{}
+		err := json.Unmarshal(tx.GetData(), createContractAction)
+		if err != nil {
+			return 0, err
+		}
+		return  evmService.ExecuteCreateCode(evm, tx.From(), createContractAction.ContractName, tx.ChainId(), createContractAction.ByteCode, tx.GasLimit().Uint64(), tx.Amount())
+	case types.CallContractType:
+		callContractAction := &types.CallContractAction{}
+		err := json.Unmarshal(tx.GetData(), callContractAction)
+		if err != nil {
+			return 0, err
+		}
+		if callContractAction.Readonly {
+			return  evmService.ExecuteStaticCall(evm, tx.From(), callContractAction.ContractName, tx.ChainId(), callContractAction.Input, tx.GasLimit().Uint64())
+		}else{
+			return  evmService.ExecuteCallCode(evm, tx.From(), callContractAction.ContractName, tx.ChainId(), callContractAction.Input, tx.GasLimit().Uint64(), tx.Amount())
+		}
 	}
-
-	return &Message{
-		From:      *tx.From(),
-		To:        *tx.To(),
-		ChainId:   tx.ChainId(),
-		Gas:       tx.GasLimit().Uint64(),
-		Value:     tx.Amount(),
-		Nonce:     uint64(tx.Nonce()),
-		Input:     tx.GetData()[1:],
-		ReadOnly:  readOnly,
-	}
-}
-
-func  (evmService *EvmService) ApplyMessage(evm *vm.EVM, message *Message) (uint64, error) {
-	contractCreation := message.To.IsEmpty()
-	if contractCreation {
-		return  evmService.ExecuteCreateCode(evm, message.From, message.ChainId, message.Input, message.Gas, message.Value)
-	} else if !message.ReadOnly {
-		return  evmService.ExecuteCallCode(evm, message.From, message.To, message.ChainId, message.Input, message.Gas, message.Value)
-	} else {
-		return  evmService.ExecuteStaticCall(evm, message.From, message.To, message.ChainId, message.Input, message.Gas)
-	}
+	return 0, errors.New("not support tx type")
 }
 
 func  (evmService *EvmService) ApplyTransaction(evm *vm.EVM, tx *types.Transaction) (uint64, error) {
-	return evmService.ApplyMessage(evm,  evmService.Tx2Message(tx))
+	return evmService.ApplyMessage(evm, tx)
 }
 
 

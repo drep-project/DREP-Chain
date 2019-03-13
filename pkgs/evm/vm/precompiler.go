@@ -22,14 +22,14 @@ type PrecompiledContract interface {
 	Run(input []byte) ([]byte, error) // Run runs the precompiled contract
 }
 
-var PrecompiledContracts = map[crypto.CommonAddress]PrecompiledContract{
-	crypto.Bytes2Address([]byte{1}): &ecrecover{},
-	crypto.Bytes2Address([]byte{2}): &sha256hash{},
-	crypto.Bytes2Address([]byte{4}): &dataCopy{},
-	crypto.Bytes2Address([]byte{5}): &bigModExp{},
-	crypto.Bytes2Address([]byte{6}): &bn256Add{},
-	crypto.Bytes2Address([]byte{7}): &bn256ScalarMul{},
-	crypto.Bytes2Address([]byte{8}): &bn256Pairing{},
+var PrecompiledContracts = map[string]PrecompiledContract{
+	"ecrecover": &ecrecover{},
+	"sha256hash": &sha256hash{},
+	"dataCopy": &dataCopy{},
+	"bigModExp": &bigModExp{},
+	"bn256Add": &bn256Add{},
+	"bn256ScalarMul": &bn256ScalarMul{},
+	"bn256Pairing": &bn256Pairing{},
 }
 
 func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contract) (ret []byte, err error) {

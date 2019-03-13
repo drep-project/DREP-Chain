@@ -21,39 +21,40 @@ type EVM struct {
 	CoinBase    crypto.CommonAddress
 	Time        *big.Int
 	Abort       int32
+	ChainId      app.ChainIdType
 }
 
 var (
 	ErrNoCompatibleInterpreter  = errors.New("no compatible interpreter")
 )
 
-func NewEVM(databaseApi *database.DatabaseService) *EVM {
+func NewEVM(databaseApi *database.DatabaseService, chainId app.ChainIdType) *EVM {
 	evm := &EVM{}
 	evm.State = NewState(databaseApi)
 	evm.Interpreter = NewEVMInterpreter(evm)
+	evm.ChainId = chainId
 	return evm
 }
 
-func (evm *EVM) CreateContractCode(callerAddr crypto.CommonAddress, chainId app.ChainIdType, byteCode crypto.ByteCode, gas uint64, value *big.Int) ([]byte, crypto.CommonAddress, uint64, error) {
-	if !evm.CanTransfer(callerAddr, chainId, value) {
-		return nil, crypto.CommonAddress{}, gas, ErrInsufficientBalance
+func (evm *EVM) CreateContractCode(callerName string, contractName string, chainId app.ChainIdType, byteCode crypto.ByteCode, gas uint64, value *big.Int) ([]byte, string, uint64, error) {
+	if !evm.CanTransfer(callerName, chainId, value) {
+		return nil, "", gas, ErrInsufficientBalance
 	}
 
-	nonce := evm.State.GetNonce(&callerAddr)
-	account, err := evm.State.CreateContractAccount(callerAddr, nonce)
+	nonce := evm.State.GetNonce(callerName)
+	_, err := evm.State.CreateContractAccount(contractName, evm.ChainId, nonce)
 	if err != nil {
-		return nil, crypto.CommonAddress{}, gas, err
+		return nil, "", gas, err
 	}
 
-	contractAddr := account.Address
-	evm.Transfer(callerAddr, *contractAddr, chainId, value)
-	contract := NewContract(callerAddr, chainId, gas, value, nil)
-	contract.SetCode(*contractAddr, byteCode)
+	evm.Transfer(callerName, contractName, chainId, value)
+	contract := NewContract(callerName, contractName, chainId, gas, value, nil)
+	contract.SetCode(byteCode)
 	ret, err := run(evm, contract, nil, false)
 
 	createDataGas := uint64(len(ret)) * params.CreateDataGas
 	if contract.UseGas(createDataGas) {
-		err = evm.State.SetByteCode(contractAddr, ret)
+		err = evm.State.SetByteCode(contractName, ret)
 	} else {
 		err = ErrCodeStoreOutOfGas
 	}
@@ -67,24 +68,24 @@ func (evm *EVM) CreateContractCode(callerAddr crypto.CommonAddress, chainId app.
 		//evm.State.dt.Commit()
 	}
 
-	fmt.Println("contract address: ", contractAddr.Hex())
+	fmt.Println("contract address: ", contractName)
 	fmt.Println("contract gas: ", contract.Gas)
-	return ret, *contractAddr, contract.Gas, err
+	return ret, contractName, contract.Gas, err
 }
 
-func (evm *EVM) CallContractCode(callerAddr, contractAddr crypto.CommonAddress, chainId app.ChainIdType, input []byte, gas uint64, value *big.Int) (ret []byte, returnGas uint64, err error) {
-	if !evm.CanTransfer(callerAddr, chainId, value) {
+func (evm *EVM) CallContractCode(callerName, contractName string, chainId app.ChainIdType, input []byte, gas uint64, value *big.Int) (ret []byte, returnGas uint64, err error) {
+	if !evm.CanTransfer(callerName, chainId, value) {
 		return nil, gas, ErrInsufficientBalance
 	}
 
-	byteCode := evm.State.GetByteCode(&contractAddr)
+	byteCode := evm.State.GetByteCode(contractName)
 	if byteCode == nil {
 		return nil, gas, ErrCodeNotExists
 	}
 
-	evm.Transfer(callerAddr, contractAddr, chainId, value)
-	contract := NewContract(callerAddr, chainId, gas, value, nil)
-	contract.SetCode(contractAddr, byteCode)
+	evm.Transfer(callerName, contractName, chainId, value)
+	contract := NewContract(callerName,contractName, chainId, gas, value, nil)
+	contract.SetCode(byteCode)
 
 	ret, err = run(evm, contract, input, false)
 	if err != nil {
@@ -99,14 +100,14 @@ func (evm *EVM) CallContractCode(callerAddr, contractAddr crypto.CommonAddress, 
 	return ret, contract.Gas, err
 }
 
-func (evm *EVM) StaticCall(callerAddr, contractAddr crypto.CommonAddress, chainId app.ChainIdType, input []byte, gas uint64) (ret []byte, returnGas uint64, err error) {
-	byteCode := evm.State.GetByteCode(&contractAddr)
+func (evm *EVM) StaticCall(callerName, contractName string, chainId app.ChainIdType, input []byte, gas uint64) (ret []byte, returnGas uint64, err error) {
+	byteCode := evm.State.GetByteCode(contractName)
 	if byteCode == nil {
 		return nil, gas, ErrCodeNotExists
 	}
 
-	contract := NewContract(callerAddr, chainId, gas, new(big.Int), nil)
-	contract.SetCode(contractAddr, byteCode)
+	contract := NewContract(callerName, contractName, chainId, gas, new(big.Int), nil)
+	contract.SetCode(byteCode)
 
 	ret, err = run(evm, contract, input, true)
 	if err != nil {
@@ -121,18 +122,18 @@ func (evm *EVM) StaticCall(callerAddr, contractAddr crypto.CommonAddress, chainI
 	return ret, contract.Gas, err
 }
 
-func (evm *EVM) DelegateCall(con *Contract, contractAddr crypto.CommonAddress, input []byte, gas uint64) (ret []byte, leftGas uint64, err error) {
-	callerAddr := con.CallerAddr
+func (evm *EVM) DelegateCall(con *Contract, contractName string, input []byte, gas uint64) (ret []byte, leftGas uint64, err error) {
+	callerName := con.CallerName
 	chainId := con.ChainId
 	jumpdests := con.Jumpdests
 
-	byteCode := evm.State.GetByteCode(&contractAddr)
+	byteCode := evm.State.GetByteCode(contractName)
 	if byteCode == nil {
 		return nil, gas, ErrCodeNotExists
 	}
 
-	contract := NewContract(callerAddr, chainId, gas, new(big.Int), jumpdests)
-	contract.SetCode(contractAddr, byteCode)
+	contract := NewContract(callerName, contractName, chainId, gas, new(big.Int), jumpdests)
+	contract.SetCode(byteCode)
 
 	ret, err = run(evm, contract, input, false)
 	if err != nil {
@@ -149,9 +150,9 @@ func (evm *EVM) DelegateCall(con *Contract, contractAddr crypto.CommonAddress, i
 
 
 func run(evm *EVM, contract *Contract, input []byte, readOnly bool) ([]byte, error) {
-	if !contract.ContractAddr.IsEmpty() {
+	if contract.ContractName != "" {
 		precompiles := PrecompiledContracts
-		if p := precompiles[contract.ContractAddr]; p != nil {
+		if p := precompiles[contract.ContractName]; p != nil {
 			return RunPrecompiledContract(p, input, contract)
 		}
 	}
@@ -162,19 +163,19 @@ func run(evm *EVM, contract *Contract, input []byte, readOnly bool) ([]byte, err
 	return nil, ErrNoCompatibleInterpreter
 }
 
-func (evm *EVM) CanTransfer(addr crypto.CommonAddress, chainId app.ChainIdType, amount *big.Int) bool {
-	balance := evm.State.GetBalance(&addr)
+func (evm *EVM) CanTransfer(accountName string, chainId app.ChainIdType, amount *big.Int) bool {
+	balance := evm.State.GetBalance(accountName)
 	return balance.Cmp(amount) >= 0
 }
 
-func (evm *EVM) Transfer(from, to crypto.CommonAddress, chainId app.ChainIdType, amount *big.Int) error {
-	err := evm.State.SubBalance(&from, amount)
+func (evm *EVM) Transfer(from, to string, chainId app.ChainIdType, amount *big.Int) error {
+	err := evm.State.SubBalance(from, amount)
 	if err != nil {
 		return err
 	}
-	err = evm.State.AddBalance(&to, amount)
+	err = evm.State.AddBalance(to, amount)
 	if err != nil {
-		evm.State.AddBalance(&from, amount)
+		evm.State.AddBalance(from, amount)
 		return err
 	}
 	return nil

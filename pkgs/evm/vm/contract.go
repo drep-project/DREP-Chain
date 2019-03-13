@@ -21,8 +21,8 @@ var (
 )
 
 type Contract struct {
-	CallerAddr   crypto.CommonAddress
-	ContractAddr crypto.CommonAddress
+	CallerName   string
+	ContractName string
 	ChainId      app.ChainIdType
 	ByteCode     crypto.ByteCode
 	CodeHash     crypto.Hash
@@ -33,15 +33,14 @@ type Contract struct {
 	TxHash       []byte
 }
 
-func NewContract(callerAddr crypto.CommonAddress, chainId app.ChainIdType, gas uint64, value *big.Int, jumpdests destinations) *Contract {
+func NewContract(callerName, contractName string,  chainId app.ChainIdType, gas uint64, value *big.Int, jumpdests destinations) *Contract {
 	if jumpdests == nil {
-		return &Contract{CallerAddr: callerAddr, ChainId: chainId, Gas: gas, Value: value, Jumpdests: NewDest()}
+		return &Contract{CallerName: callerName, ContractName: contractName, ChainId: chainId, Gas: gas, Value: value, Jumpdests: NewDest()}
 	}
-	return &Contract{CallerAddr: callerAddr, Gas: gas, Value: value, Jumpdests: jumpdests}
+	return &Contract{CallerName: callerName, ContractName: contractName, Gas: gas, Value: value, Jumpdests: jumpdests}
 }
 
-func (c *Contract) SetCode(contractAddr crypto.CommonAddress, byteCode crypto.ByteCode) {
-	c.ContractAddr = contractAddr
+func (c *Contract) SetCode(byteCode crypto.ByteCode) {
 	c.ByteCode = byteCode
 	c.CodeHash = crypto.GetByteCodeHash(byteCode)
 }

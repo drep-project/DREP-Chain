@@ -149,34 +149,34 @@ func (database *DatabaseService) RecordBlockJournal(height int64) {
 }
 
 
-func (database *DatabaseService) GetStorage(addr *crypto.CommonAddress, transactional bool) *chainType.Storage {
+func (database *DatabaseService) GetStorage(accountName string, transactional bool) *chainType.Storage {
     if !transactional {
-        return database.db.getStorage(addr)
+        return database.db.getStorage(accountName)
     }
 
     if database.db.stores == nil {
        database.db.stores = make(map[string] *chainType.Storage)
     }
 
-    key := sha3.Hash256([]byte("storage_" + addr.Hex()))
+    key := sha3.Hash256([]byte("storage_" + accountName))
     hk := bytes2Hex(key)
     storage, ok := database.db.stores[hk]
     if ok {
         return storage
     }
-    storage =  database.db.getStorage(addr)
+    storage =  database.db.getStorage(accountName)
     database.db.stores[hk] = storage
     return storage
 }
 
-func (database *DatabaseService) PutStorage(addr *crypto.CommonAddress, storage *chainType.Storage, transactional bool) error {
+func (database *DatabaseService) PutStorage(accountName string, storage *chainType.Storage, transactional bool) error {
     if !transactional {
-        return database.db.putStorage(addr, storage)
+        return database.db.putStorage(accountName, storage)
     }
     if database.db.stores == nil {
         database.db.stores = make(map[string] *chainType.Storage)
     }
-    key := sha3.Hash256([]byte("storage_" + addr.Hex()))
+    key := sha3.Hash256([]byte("storage_" + accountName))
     value, err := json.Marshal(storage)
     if err != nil {
         return err
@@ -190,8 +190,8 @@ func (database *DatabaseService) PutStorage(addr *crypto.CommonAddress, storage 
     return nil
 }
 
-func (database *DatabaseService) GetBalance(addr *crypto.CommonAddress, transactional bool) *big.Int {
-    storage := database.GetStorage(addr, transactional)
+func (database *DatabaseService) GetBalance(accountName string, transactional bool) *big.Int {
+    storage := database.GetStorage(accountName, transactional)
 
     if storage == nil {
         return new(big.Int)
@@ -199,60 +199,60 @@ func (database *DatabaseService) GetBalance(addr *crypto.CommonAddress, transact
     return storage.Balance
 }
 
-func (database *DatabaseService) PutBalance(addr *crypto.CommonAddress, balance *big.Int, transactional bool) error {
-    storage := database.GetStorage(addr, transactional)
+func (database *DatabaseService) PutBalance(accountName string, balance *big.Int, transactional bool) error {
+    storage := database.GetStorage(accountName, transactional)
     if storage == nil {
         return errors.New("no account storage found")
     }
     storage.Balance = balance
-    return database.PutStorage(addr, storage, transactional)
+    return database.PutStorage(accountName, storage, transactional)
 }
 
-func (database *DatabaseService) GetNonce(addr *crypto.CommonAddress, transactional bool) int64 {
-    storage := database.GetStorage(addr, transactional)
+func (database *DatabaseService) GetNonce(accountName string, transactional bool) int64 {
+    storage := database.GetStorage(accountName, transactional)
     if storage == nil {
         return -1
     }
     return storage.Nonce
 }
 
-func (database *DatabaseService) PutNonce(addr *crypto.CommonAddress, nonce int64, transactional bool) error {
-    storage := database.GetStorage(addr, transactional)
+func (database *DatabaseService) PutNonce(accountName string, nonce int64, transactional bool) error {
+    storage := database.GetStorage(accountName, transactional)
     if storage == nil {
         return errors.New("no account storage found")
     }
     storage.Nonce = nonce
-    return database.PutStorage(addr, storage, transactional)
+    return database.PutStorage(accountName, storage, transactional)
 }
 
-func (database *DatabaseService) GetByteCode(addr *crypto.CommonAddress, transactional bool) []byte {
-    storage := database.GetStorage(addr, transactional)
+func (database *DatabaseService) GetByteCode(accountName string, transactional bool) []byte {
+    storage := database.GetStorage(accountName, transactional)
     if storage == nil {
         return nil
     }
     return storage.ByteCode
 }
 
-func (database *DatabaseService) PutByteCode(addr *crypto.CommonAddress, byteCode []byte, transactional bool) error {
-    storage := database.GetStorage(addr, transactional)
+func (database *DatabaseService) PutByteCode(accountName string, byteCode []byte, transactional bool) error {
+    storage := database.GetStorage(accountName, transactional)
     if storage == nil {
         return errors.New("no account storage found")
     }
     storage.ByteCode = byteCode
     storage.CodeHash = crypto.GetByteCodeHash(byteCode)
-    return database.PutStorage(addr, storage, transactional)
+    return database.PutStorage(accountName, storage, transactional)
 }
 
-func (database *DatabaseService) GetCodeHash(addr *crypto.CommonAddress, transactional bool) crypto.Hash {
-    storage := database.GetStorage(addr, transactional)
+func (database *DatabaseService) GetCodeHash(accountName string, transactional bool) crypto.Hash {
+    storage := database.GetStorage(accountName, transactional)
     if storage == nil {
         return crypto.Hash{}
     }
     return storage.CodeHash
 }
 
-func (database *DatabaseService) GetReputation(addr *crypto.CommonAddress, transactional bool) *big.Int {
-    storage := database.GetStorage(addr, transactional)
+func (database *DatabaseService) GetReputation(accountName string, transactional bool) *big.Int {
+    storage := database.GetStorage(accountName, transactional)
     if storage == nil {
         return big.NewInt(0)
     }
@@ -314,14 +314,14 @@ func  (database *DatabaseService) Discard() {
     database.db.Discard()
 }
 
-func (database *DatabaseService)AddBalance(addr *crypto.CommonAddress, amount *big.Int, transactional bool) {
-    balance := database.GetBalance(addr, transactional)
+func (database *DatabaseService)AddBalance(accountName string, amount *big.Int, transactional bool) {
+    balance := database.GetBalance(accountName, transactional)
     //text, _ := addr.MarshalText()
     //x := string(text)
     //fmt.Println("0x" + x)
     if balance == nil {
         balance = new(big.Int).SetInt64(0)
     }
-    database.PutBalance(addr, new(big.Int).Add(balance, amount), transactional)
+    database.PutBalance(accountName, new(big.Int).Add(balance, amount), transactional)
     return
 }

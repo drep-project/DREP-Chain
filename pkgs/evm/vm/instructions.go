@@ -386,7 +386,7 @@ func opSha3(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 }
 
 func opAddress(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	x := contract.ContractAddr.Big()
+	x := new (big.Int).SetBytes([]byte(contract.ContractName))
 	//stack.push(contract.GetAddress().Big())
 	stack.push(x)
 	return nil, nil
@@ -396,8 +396,8 @@ func opBalance(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memo
 	slot := stack.peek()
 	//slot.Set(interpreter.evm.StateDB.GetBalance(BigToAddress(slot)))
 	evm := interpreter.EVM
-	addr := crypto.Big2Address(slot)
-	balance := evm.State.GetBalance(&addr)
+	accountName := string(slot.Bytes())
+	balance := evm.State.GetBalance(accountName)
 	slot.Set(balance)
 	return nil, nil
 }
@@ -411,7 +411,7 @@ func opOrigin(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memor
 
 func opCaller(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	//stack.push(contract.Caller().Big())
-	x := contract.CallerAddr.Big()
+	x :=  new (big.Int).SetBytes([]byte(contract.CallerName))
 	stack.push(x)
 	return nil, nil
 }
@@ -470,7 +470,7 @@ func opReturnDataCopy(pc *uint64, interpreter *EVMInterpreter, contract *Contrac
 func opExtCodeSize(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	slot := stack.peek()
 	//slot.SetUint64(uint64(interpreter.EVM.StateDB.GetCodeSize(BigToAddress(slot))))
-	l := interpreter.EVM.State.GetCodeSize(crypto.Big2Address(slot))
+	l := interpreter.EVM.State.GetCodeSize(string(slot.Bytes()))
 	slot.SetUint64(uint64(l))
 	return nil, nil
 }
@@ -497,12 +497,13 @@ func opCodeCopy(pc *uint64, interpreter *EVMInterpreter, contract *Contract, mem
 
 func opExtCodeCopy(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	var (
-		addr       = crypto.Big2Address(stack.pop())
-		memOffset  = stack.pop()
-		codeOffset = stack.pop()
-		length     = stack.pop()
+		accountName	= string(stack.pop().Bytes())
+		memOffset  	= stack.pop()
+		codeOffset 	= stack.pop()
+		length     	= stack.pop()
 	)
-	byteCode := interpreter.EVM.State.GetByteCode(&addr)
+
+	byteCode := interpreter.EVM.State.GetByteCode(accountName)
 	codeCopy := common.GetDataBig(byteCode, codeOffset, length)
 	//codeCopy := getDataBig(interpreter.evm.StateDB.GetCode(addr), codeOffset, length)
 	memory.Set(memOffset.Uint64(), length.Uint64(), codeCopy)
@@ -539,7 +540,7 @@ func opExtCodeCopy(pc *uint64, interpreter *EVMInterpreter, contract *Contract, 
 // this account should be regarded as a non-existent account and zero should be returned.
 func opExtCodeHash(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	slot := stack.peek()
-	hash := interpreter.EVM.State.GetCodeHash(crypto.Big2Address(slot)).Bytes()
+	hash := interpreter.EVM.State.GetCodeHash(string(slot.Bytes())).Bytes()
 	slot.SetBytes(hash)
 	//slot.SetBytes(interpreter.evm.StateDB.GetCodeHash(BigToAddress(slot)).Bytes())
 	return nil, nil
@@ -720,7 +721,7 @@ func opCreate(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memor
 
 	contract.UseGas(gas)
 	//res, addr, returnGas, suberr := interpreter.evm.Create(contract, input, gas, value)
-	res, addr, returnGas, suberr := interpreter.EVM.CreateContractCode(contract.CallerAddr, contract.ChainId, contract.ByteCode, gas, value)
+	res, accountName, returnGas, suberr := interpreter.EVM.CreateContractCode(contract.CallerName, contract.ContractName , contract.ChainId, contract.ByteCode, gas, value)
 	// Push item on the stack based on the returned error. If the ruleset is
 	// homestead we must check for CodeStoreOutOfGasError (homestead only
 	// rule) and treat as an error, if the ruleset is frontier we must
@@ -729,7 +730,7 @@ func opCreate(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memor
 		stack.push(interpreter.IntPool.getZero())
 	} else {
 		//stack.push(addr.Big())
-		x:= addr.Big()
+		x:=  new (big.Int).SetBytes([]byte(accountName))
 		stack.push(x)
 	}
 	contract.Gas += returnGas
@@ -786,7 +787,7 @@ func opCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 	if value.Sign() != 0 {
 		gas += CallStipend
 	}
-	ret, returnGas, err := interpreter.EVM.CallContractCode(contract.CallerAddr, contract.ContractAddr, contract.ChainId, args, gas, value)
+	ret, returnGas, err := interpreter.EVM.CallContractCode(contract.CallerName, contract.ContractName, contract.ChainId, args, gas, value)
 	if err != nil {
 		stack.push(interpreter.IntPool.getZero())
 	} else {
@@ -808,8 +809,8 @@ func opCallCode(pc *uint64, interpreter *EVMInterpreter, contract *Contract, mem
 	//gas := interpreter.evm.callGasTemp
 	gas := interpreter.EVM.CallGasTemp
 	// Pop other call parameters.
-	addr, value, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
-	toAddr := crypto.Big2Address(addr)
+	accountBig, value, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
+	accountName := string(accountBig.Bytes())
 	value = common.U256(value)
 	// Get arguments from the memory.
 	args := memory.Get(inOffset.Int64(), inSize.Int64())
@@ -817,7 +818,7 @@ func opCallCode(pc *uint64, interpreter *EVMInterpreter, contract *Contract, mem
 	if value.Sign() != 0 {
 		gas += CallStipend
 	}
-	ret, returnGas, err := interpreter.EVM.CallContractCode(contract.CallerAddr, toAddr, contract.ChainId, args, gas, value)
+	ret, returnGas, err := interpreter.EVM.CallContractCode(contract.CallerName, accountName, contract.ChainId, args, gas, value)
 	if err != nil {
 		stack.push(interpreter.IntPool.getZero())
 	} else {
@@ -829,7 +830,7 @@ func opCallCode(pc *uint64, interpreter *EVMInterpreter, contract *Contract, mem
 	}
 	contract.Gas += returnGas
 
-	interpreter.IntPool.put(addr, value, inOffset, inSize, retOffset, retSize)
+	interpreter.IntPool.put(accountBig, value, inOffset, inSize, retOffset, retSize)
 	return ret, nil
 }
 
@@ -838,12 +839,12 @@ func opDelegateCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract,
 	interpreter.IntPool.put(stack.pop())
 	gas := interpreter.EVM.CallGasTemp
 	// Pop other call parameters.
-	addr, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
-	toAddr := crypto.Big2Address(addr)
+	accountBig, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
+	accountName := string(accountBig.Bytes())
 	// Get arguments from the memory.
 	args := memory.Get(inOffset.Int64(), inSize.Int64())
 
-	ret, returnGas, err := interpreter.EVM.DelegateCall(contract, toAddr, args, gas)
+	ret, returnGas, err := interpreter.EVM.DelegateCall(contract, accountName, args, gas)
 	if err != nil {
 		stack.push(interpreter.IntPool.getZero())
 	} else {
@@ -855,7 +856,7 @@ func opDelegateCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract,
 	}
 	contract.Gas += returnGas
 
-	interpreter.IntPool.put(addr, inOffset, inSize, retOffset, retSize)
+	interpreter.IntPool.put(accountBig, inOffset, inSize, retOffset, retSize)
 	return ret, nil
 }
 
@@ -865,12 +866,12 @@ func opStaticCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, m
 	//gas := interpreter.evm.callGasTemp
 	gas := interpreter.EVM.CallGasTemp
 	// Pop other call parameters.
-	addr, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
-	toAddr := crypto.Big2Address(addr)
+	accountBig, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
+	accountName := string(accountBig.Bytes())
 	// Get arguments from the memory.
 	args := memory.Get(inOffset.Int64(), inSize.Int64())
 
-	ret, returnGas, err := interpreter.EVM.StaticCall(contract.CallerAddr, toAddr, contract.ChainId, args, gas)
+	ret, returnGas, err := interpreter.EVM.StaticCall(contract.CallerName, accountName, contract.ChainId, args, gas)
 	if err != nil {
 		stack.push(interpreter.IntPool.getZero())
 	} else {
@@ -882,7 +883,7 @@ func opStaticCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, m
 	}
 	contract.Gas += returnGas
 
-	interpreter.IntPool.put(addr, inOffset, inSize, retOffset, retSize)
+	interpreter.IntPool.put(accountBig, inOffset, inSize, retOffset, retSize)
 	return ret, nil
 }
 
@@ -916,10 +917,10 @@ func opSuicide(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memo
 	//interpreter.evm.StateDB.AddBalance(BigToAddress(stack.pop()), balance)
 	//interpreter.evm.StateDB.Suicide(contract.GetAddress())
 
-	balance := interpreter.EVM.State.GetBalance(&contract.CallerAddr)
-	addr := crypto.Big2Address(stack.pop())
-	interpreter.EVM.State.AddBalance(&addr, balance)
-	interpreter.EVM.State.Suicide(&contract.CallerAddr)
+	balance := interpreter.EVM.State.GetBalance(contract.CallerName)
+	accountName := string(stack.pop().Bytes())
+	interpreter.EVM.State.AddBalance(accountName, balance)
+	interpreter.EVM.State.Suicide(contract.ContractName)
 	return nil, nil
 }
 
@@ -945,7 +946,7 @@ func makeLog(size int) executionFunc {
 		//})
 		//
 		//interpreter.IntPool.put(mStart, mSize)
-		interpreter.EVM.State.AddLog(contract.CallerAddr, contract.TxHash, d, topics)
+		interpreter.EVM.State.AddLog(contract.ContractName, contract.TxHash, d, topics)
 		return nil, nil
 	}
 }

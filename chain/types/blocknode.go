@@ -3,7 +3,6 @@ package types
 import (
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"math/big"
 	"sort"
 	"time"
@@ -83,9 +82,9 @@ type BlockNode struct {
 	GasUsed              *big.Int
 	MerkleRoot           []byte
 
-	LeaderPubKey         *secp256k1.PublicKey
+	LeaderPubKey         string
 
-	MinorPubKeys         []*secp256k1.PublicKey
+	MinorPubKeys         []string
 
 	Status BlockStatus
 }

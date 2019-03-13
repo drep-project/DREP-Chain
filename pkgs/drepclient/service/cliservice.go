@@ -9,7 +9,7 @@ import (
 	"github.com/drep-project/drep-chain/pkgs/drepclient/component/console"
 	cliTypes "github.com/drep-project/drep-chain/pkgs/drepclient/types"
 	"github.com/drep-project/drep-chain/pkgs/log"
-	accountService "github.com/drep-project/drep-chain/pkgs/accounts/service"
+	accountService "github.com/drep-project/drep-chain/pkgs/wallet/service"
 	"github.com/drep-project/drep-chain/rpc"
 	rpc2 "github.com/drep-project/drep-chain/pkgs/rpc"
 	"gopkg.in/urfave/cli.v1"

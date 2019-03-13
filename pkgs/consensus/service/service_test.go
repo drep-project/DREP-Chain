@@ -7,14 +7,14 @@ import (
 func TestAccumulateRewards(t *testing.T) {
 	//b := common.Bytes("0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26")
 	//err := b.UnmarshalText(b)
-	//pubkey, err := secp256k1.ParsePubKey(b)
+	//signPubkey, err := secp256k1.ParsePubKey(b)
 	//
 	//if err != nil {
 	//	panic(err)
 	//}
 	//ce := ConsensusService{
-	//	leader: NewLeader(pubkey, nil, nil),
-	//	member: &Member{members: []*secp256k1.PublicKey{pubkey, pubkey, pubkey}},
+	//	leader: NewLeader(signPubkey, nil, nil),
+	//	member: &Member{members: []*secp256k1.PublicKey{signPubkey, signPubkey, signPubkey}},
 	//	DatabaseService: &database.DatabaseService{},
 	//}
 	//

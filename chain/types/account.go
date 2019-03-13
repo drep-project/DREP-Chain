@@ -13,52 +13,44 @@ var (
 	KeyBitSize = 256 >> 3
 )
 
-type Node struct {
-	Address    *crypto.CommonAddress
-	PrivateKey *secp256k1.PrivateKey
-	ChainId    app.ChainIdType
-	ChainCode  []byte
+type KeyWeight struct {
+	Key    secp256k1.PublicKey
+	Weight uint16
 }
 
-func NewNode(parent *Node, chainId app.ChainIdType) *Node {
-	var (
-		prvKey    *secp256k1.PrivateKey
-		chainCode []byte
-	)
-
-	IsRoot := parent == nil
-	if IsRoot {
-		uni, err := common.GenUnique()
-		if err != nil {
-			return nil
-		}
-		h := common.HmAC(uni, DrepMark)
-		prvKey, _ = secp256k1.PrivKeyFromBytes(h[:KeyBitSize])
-		chainCode = h[KeyBitSize:]
-	} else {
-		pid := new(big.Int).SetBytes(parent.ChainCode)
-		cid := new(big.Int).SetBytes(chainId[:])
-		chainCode := new(big.Int).Xor(pid, cid).Bytes()
-
-		h := common.HmAC(chainCode, parent.PrivateKey.Serialize())
-		prvKey, _ = secp256k1.PrivKeyFromBytes(h[:KeyBitSize])
-		chainCode = h[KeyBitSize:]
+func (key KeyWeight) Compare(kw KeyWeight) bool {
+	if !key.Key.IsEqual(&kw.Key) {
+		return false
 	}
-	address := crypto.PubKey2Address(prvKey.PubKey())
-	return &Node{
-		Address:    &address,
-		PrivateKey: prvKey,
-		ChainId:    chainId,
-		ChainCode:  chainCode,
+	if key.Weight != kw.Weight {
+		return false
 	}
+	return true
+}
+
+type Authority struct {
+	Threshold uint32                  `json:"threshold"`
+	Keys      []KeyWeight             `json:"keys"`
+}
+
+func NewAuthority(k secp256k1.PublicKey) (a Authority) {
+	a.Threshold = 1
+	a.Keys = append(a.Keys, KeyWeight{k, 1})
+	return a
 }
 
 type Storage struct {
-	Balance    *big.Int
-	Nonce      int64
-	ByteCode   crypto.ByteCode
-	CodeHash   crypto.Hash
-	Reputation *big.Int
+	Name   		string
+	Authority	Authority
+
+	ChainId    app.ChainIdType
+	ChainCode  []byte
+	Balance    	*big.Int
+	Nonce      	int64
+	Reputation 	*big.Int
+	//contract
+	ByteCode   	crypto.ByteCode
+	CodeHash   	crypto.Hash
 }
 
 func NewStorage() *Storage {
@@ -69,38 +61,55 @@ func NewStorage() *Storage {
 }
 
 type Account struct {
-	Address *crypto.CommonAddress
-	Node    *Node
+	Name 	string
 	Storage *Storage
 }
 
-func (account *Account) Sign(hash []byte) ([]byte, error) {
-	return crypto.Sign(hash, account.Node.PrivateKey)
-}
-
-func NewNormalAccount(parent *Node, chainId app.ChainIdType) (*Account, error) {
-	/*IsRoot := chainId == RootChain
-	if !IsRoot && parent == nil {
-		return nil, errors.New("missing parent account")
-	}*/
-	node := NewNode(parent, chainId)
-	address := node.Address
-	storage := NewStorage()
-	account := &Account{
-		Address: address,
-		Node:    node,
-		Storage: storage,
+func (account *Account) NewAccount(chainId app.ChainIdType,privKey *secp256k1.PrivateKey) (*Account, *secp256k1.PrivateKey){
+	uni, err := common.GenUnique()
+	if err != nil {
+		return nil, nil
 	}
-	return account, nil
+	h := common.HmAC(uni, DrepMark)
+	prvKey, _ := secp256k1.PrivKeyFromBytes(h[:KeyBitSize])
+	chainCode := h[KeyBitSize:]
+	return &Account{
+		Name: account.Name,
+		Storage: &Storage{
+			Name: account.Name,
+			ChainId  : account.Storage.ChainId,
+			ChainCode: chainCode,
+		},
+	}, prvKey
 }
 
-func NewContractAccount(callerAddr crypto.CommonAddress, nonce int64) (*Account, error) {
-	address := crypto.GetByteCodeAddress(callerAddr, nonce)
-	storage := NewStorage()
+func (account *Account) Derive(privKey *secp256k1.PrivateKey) (*Account, *secp256k1.PrivateKey){
+	pid := new(big.Int).SetBytes( account.Storage.ChainCode)
+	cid := new(big.Int).SetBytes( account.Storage.ChainId[:])
+	chainCode := new(big.Int).Xor(pid, cid).Bytes()
+
+	h := common.HmAC(chainCode, privKey.Serialize())
+	newPrvKey, _ := secp256k1.PrivKeyFromBytes(h[:KeyBitSize])
+	chainCode = h[KeyBitSize:]
+
+	return &Account{
+		Name: account.Name,
+		Storage: &Storage{
+			Name: account.Name,
+			ChainId  : account.Storage.ChainId,
+			ChainCode: chainCode,
+		},
+	}, newPrvKey
+}
+
+func NewContractAccount(contractName string, chainId app.ChainIdType) (*Account, error) {
 	account := &Account{
-		Address: &address,
-		Node:    &Node{},
-		Storage: storage,
+		Name: 	 contractName,
+		Storage: &Storage{
+			Name: contractName,
+			ChainId  : chainId,
+			ChainCode: []byte{},    //contract address cannot Derive
+		},
 	}
 	return account, nil
 }
