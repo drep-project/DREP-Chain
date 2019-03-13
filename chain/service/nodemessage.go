@@ -4,11 +4,8 @@ import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/dlog"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
-	"strings"
-	"time"
 )
 
 func (chainService *ChainService) Receive(context actor.Context) {
@@ -20,9 +17,9 @@ func (chainService *ChainService) Receive(context actor.Context) {
 	}
 	switch msg := msg.(type) {
 	case *chainTypes.BlockReq:
-		chainService.HandleBlockReqMsg(routeMsg.Peer, msg)
+		go chainService.HandleBlockReqMsg(routeMsg.Peer, msg)
 	case *chainTypes.BlockResp:
-		go chainService.HandleBlockRespMsg(routeMsg.Peer, msg)
+		go  chainService.HandleBlockRespMsg(msg)
 	case *chainTypes.Transaction:
 		transaction := msg
 		//id, _ := transaction.TxId()
@@ -44,38 +41,62 @@ func (chainService *ChainService) Receive(context actor.Context) {
 		if err != nil {
 			return
 		}
-		if isOrPhan && routeMsg.Peer!= nil {
-			if isOrPhan {
-				hash := chainService.GetOrphanRoot(msg.Header.Hash())
-				chainService.P2pServer.SendAsync(routeMsg.Peer, &chainTypes.BlockReq{
-					StopHash: *hash,
-				})
-			}
-		}
-		if chainService.syncingMaxHeight != -1 {
-			if chainService.BestChain.Tip().Height >= chainService.syncingMaxHeight {
-				chainService.syncBlockEvent.Send(event.SyncBlockEvent{EventType: event.StopSyncBlock})
-				chainService.syncingMaxHeight = -1
-			}
+		if isOrPhan {
+			// todo ��ʼ����ͬ��
+			//chainService.synchronise()
 		}
 	case *chainTypes.PeerState:
-		chainService.handlePeerState(routeMsg.Peer, msg)
+		go chainService.handlePeerState(routeMsg.Peer, msg)
 	case *chainTypes.ReqPeerState:
-		chainService.handleReqPeerState(routeMsg.Peer, msg)
+		go chainService.handleReqPeerState(routeMsg.Peer, msg)
+	case *chainTypes.HeaderReq:
+		go chainService.handleHeaderReq(routeMsg.Peer, msg)
+	case *chainTypes.HeaderRsp:
+		go chainService.handleHeaderRsp(routeMsg.Peer, msg)
 	}
 }
 
+func (chainService *ChainService) handleHeaderReq(peer *p2pTypes.Peer, req *chainTypes.HeaderReq) {
+	headers := make([]chainTypes.BlockHeader, 0, req.ToHeight-req.FromHeight+1)
+	for i := req.FromHeight; i <= req.ToHeight; i++ {
+		node := chainService.BestChain.NodeByHeight(i)
+		if node != nil {
+			headers = append(headers, node.Header())
+		}
+	}
+
+	dlog.Info("header req len", "total header",len(headers), "from", req.FromHeight,"to", req.ToHeight)
+
+	chainService.P2pServer.Send(peer, chainTypes.HeaderRsp{Headers: headers})
+}
+
+func (chainService *ChainService) handleHeaderRsp(peer *p2pTypes.Peer, rsp *chainTypes.HeaderRsp) {
+	headerHashs := make([]*syncHeaderHash, 0, len(rsp.Headers))
+	for _, h := range rsp.Headers {
+		headerHashs = append(headerHashs, &syncHeaderHash{headerHash: h.Hash(), height: h.Height})
+	}
+	dlog.Info("handleHeaderRsp ", "total len:", len(headerHashs), "from height:" ,headerHashs[0].height, "end height:",headerHashs[len(headerHashs)-1].height)
+	chainService.headerHashCh <- headerHashs
+}
+
 func (chainService *ChainService) HandleBlockReqMsg(peer *p2pTypes.Peer, req *chainTypes.BlockReq) {
+	dlog.Info("sync req block", "num:", len(req.BlockHashs))
 	zero := crypto.Hash{}
 	startHeight := int64(0)
 	endHeight := chainService.BestChain.Tip().Height
 
-	if req.StartHash != zero && chainService.blockExists(&req.StartHash) {
-		startHeight = chainService.Index.LookupNode(&req.StartHash).Height
+	if len(req.BlockHashs) == 0{
+		dlog.Warn("handle block req", "block hash num", len(req.BlockHashs))
+		return
+	}
+	startHash := req.BlockHashs[0]
+	endHash := req.BlockHashs[len(req.BlockHashs)-1]
+	if startHash != zero && chainService.blockExists(&startHash) {
+		startHeight = chainService.Index.LookupNode(&startHash).Height
 	}
 
-	if req.StopHash != zero {
-		block, err := chainService.DatabaseService.GetBlock(&req.StopHash)
+	if endHash != zero {
+		block, err := chainService.DatabaseService.GetBlock(&endHash)
 		if err != nil {
 			return
 		}
@@ -84,63 +105,32 @@ func (chainService *ChainService) HandleBlockReqMsg(peer *p2pTypes.Peer, req *ch
 
 	blocks := []*chainTypes.Block{}
 	count := 0
-	for i:= startHeight; i <= endHeight; i++ {
-		if count%64 == 0&&len(blocks)>0 {
+	for i := startHeight; i <= endHeight; i++ {
+		if count%maxBlockCountReq == 0 && len(blocks) > 0 {
 			chainService.P2pServer.Send(peer, &chainTypes.BlockResp{
-				Blocks:blocks,
+				Blocks: blocks,
 			})
 			blocks = []*chainTypes.Block{}
 			count = 0
-			time.Sleep(time.Second)
 		}
+
 		node := chainService.BestChain.NodeByHeight(i)
 		block, err := chainService.DatabaseService.GetBlock(node.Hash)
 		if err != nil {
 			return
 		}
-		count = count +1
+		count = count + 1
 		blocks = append(blocks, block)
 	}
-	if len(blocks)>0 {
+	if len(blocks) > 0 {
 		chainService.P2pServer.Send(peer, &chainTypes.BlockResp{
-			Blocks:blocks,
+			Blocks: blocks,
 		})
+		dlog.Info("req blocks and rsp:", "num", len(blocks))
 		blocks = []*chainTypes.Block{}
 	}
-
 }
 
-func (chainService *ChainService) HandleBlockRespMsg(peer *p2pTypes.Peer, req *chainTypes.BlockResp) {
-	if len(req.Blocks) < 1 {
-		return
-	}
-	chainService.syncMaxHeightMut.Lock()
-
-	firstBlock := req.Blocks[0]
-	_, isOrPhan, err := chainService.ProcessBlock(firstBlock)
-	if err!=nil && !strings.HasPrefix(err.Error(),"already have block") {
-		return
-	}
-	if isOrPhan && peer != nil {
-		if isOrPhan {
-			hash := chainService.GetOrphanRoot(firstBlock.Header.Hash())
-			chainService.P2pServer.SendAsync(peer, &chainTypes.BlockReq{
-				StopHash: *hash,
-			})
-		}
-	}
-	for i:=1; i < len(req.Blocks); i++ {
-		_, isOrPhan, err = chainService.ProcessBlock(req.Blocks[i])
-		if err!=nil && !strings.HasPrefix(err.Error(),"already have block") {
-			return
-		}
-	}
-	if chainService.syncingMaxHeight != -1 {
-		if chainService.BestChain.Tip().Height >= chainService.syncingMaxHeight {
-			chainService.syncBlockEvent.Send(event.SyncBlockEvent{EventType: event.StopSyncBlock})
-			chainService.syncingMaxHeight = -1
-		}
-	}
-	chainService.syncMaxHeightMut.Unlock()
+func (chainService *ChainService) HandleBlockRespMsg(rsp *chainTypes.BlockResp) {
+	chainService.blocksCh <- rsp.Blocks
 }
-

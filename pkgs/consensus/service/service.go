@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
@@ -14,7 +15,6 @@ import (
 	p2pService "github.com/drep-project/drep-chain/network/service"
 	walletService "github.com/drep-project/drep-chain/pkgs/wallet/service"
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
-	"errors"
 	"gopkg.in/urfave/cli.v1"
 	"math"
 	"time"
@@ -99,6 +99,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	}
 	consensusService.signPrivkey, err = consensusService.WalletService.Wallet.DumpPrivateKey(consensusService.signPubkey)
 	if err != nil {
+		dlog.Error("consensusService", "init err", err, "pubkey", string(consensusService.pubkey.Serialize()))
 		return err
 	}
 
@@ -118,7 +119,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	consensusService.leader = NewLeader(consensusService.signPubkey, consensusService.P2pServer)
 	consensusService.member = NewMember(consensusService.signPrivkey, consensusService.P2pServer)
 	consensusService.syncBlockEventChan = make(chan event.SyncBlockEvent)
-	consensusService.syncBlockEventSub = consensusService.ChainService.Subscribe(consensusService.syncBlockEventChan)
+	consensusService.syncBlockEventSub = consensusService.ChainService.SubscribeSyncBlockEvent(consensusService.syncBlockEventChan)
 	consensusService.quit = make(chan struct{})
 
 	consensusService.apis = []app.API{
@@ -143,10 +144,10 @@ func (consensusService *ConsensusService) handlerEvent() {
 		case e := <-consensusService.syncBlockEventChan:
 			if e.EventType == event.StartSyncBlock {
 				consensusService.pauseForSync = true
-				dlog.Info("Start Pause for Sync Blcok")
+				dlog.Info("Start Sync Blcok")
 			} else {
 				consensusService.pauseForSync = false
-				dlog.Info("Stop Pause for Sync Blcok")
+				dlog.Info("Stop Sync Blcok")
 			}
 		case <-consensusService.quit:
 			return

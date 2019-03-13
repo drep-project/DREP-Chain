@@ -30,12 +30,14 @@ type Peer struct {
 
 	Conn       *ShortConnection `json:"-"`
 	addrUpdate sync.Mutex       `json:"-"`
+	idle       bool             `json:"-"`
 }
 
 func NewPeer(ip string, port int, handError func(*Peer, error), sendPing func(*Peer)) *Peer {
 	peer := &Peer{
 		Ip:   ip,
 		Port: port,
+		idle: true,
 	}
 	onError := func(err error) {
 		handError(peer, err)
@@ -59,4 +61,12 @@ func (peer *Peer) UpdateAddr(ip string, port int) {
 
 func (peer *Peer) GetAddr() string {
 	return fmt.Sprintf("%s:%d", peer.Ip, peer.Port)
+}
+
+func (peer *Peer) SetIdle(idle bool) {
+	peer.idle = idle
+}
+
+func (peer *Peer) GetIdle() bool {
+	return peer.idle
 }

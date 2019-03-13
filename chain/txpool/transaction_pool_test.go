@@ -33,7 +33,7 @@ func TestNewTransactions(t *testing.T) {
 }
 
 func addTx(t *testing.T, num int) error {
-	b := common.Bytes("0x03721096dad8e4eff6b281ea892bd9be7158791188129b9ebb8a42a648ad69830e")
+	b := common.Bytes("0x0373654ccdb250f2cfcfe64c783a44b9ea85bc47f2f00c480d05082428d277d6d0")
 	b.UnmarshalText(b)
 	pubkey, _ := secp256k1.ParsePubKey(b)
 	addr := crypto.PubKey2Address(pubkey)

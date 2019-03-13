@@ -3,7 +3,6 @@ package service
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
@@ -353,7 +352,7 @@ func (p2pService *P2pService) sendMessage(outMessage *outMessage) error {
 		if err == nil {
 			break
 		} else {
-			dlog.Info(fmt.Sprintf("%T %v\n", err, err))
+			dlog.Info("p2p sendmsg dial", "err", err)
 			if ope, ok := err.(*net.OpError); ok {
 				dlog.Info(strconv.FormatBool(ope.Timeout()), ope)
 			}
@@ -362,7 +361,7 @@ func (p2pService *P2pService) sendMessage(outMessage *outMessage) error {
 		}
 	}
 	if err != nil {
-		dlog.Info(fmt.Sprintf("%T %v\n", err, err))
+		dlog.Info("2 p2p sendmsg dial", "err", err)
 		if ope, ok := err.(*net.OpError); ok {
 			dlog.Info(strconv.FormatBool(ope.Timeout()), ope)
 			if ope.Timeout() {
@@ -587,4 +586,22 @@ func (p2pService *P2pService) isLocalIp(ip string) bool{
 	return false
 }
 
+//todo 增加ttl机制，让慢的服务器少做事
+func (p2pService *P2pService) SetIdle(peer *p2pTypes.Peer, idle bool) {
+	peer.SetIdle(idle)
+}
 
+func (p2pService *P2pService) GetIdlePeers(count int) []*p2pTypes.Peer {
+	peers := make([]*p2pTypes.Peer, 0)
+	for _, p := range p2pService.livePeer {
+		if p.GetIdle() == true{
+			peers = append(peers, p)
+			count --
+			if count <= 0 {
+				break
+			}
+		}
+	}
+
+	return peers
+}

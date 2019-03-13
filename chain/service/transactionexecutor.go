@@ -19,12 +19,13 @@ import (
 
 var (
 	childTrans []*chainTypes.Transaction
+	errBalance = errors.New("no enough blance")
 )
 
 func (chainService *ChainService) ExecuteTransactions(b *chainTypes.Block) (*big.Int, error) {
-    if b == nil || b.Header == nil { // || b.Data == nil || b.Data.TxList == nil {
-        return nil, errors.New("error block nil or header nil")
-    }
+	if b == nil || b.Header == nil { // || b.Data == nil || b.Data.TxList == nil {
+		return nil, errors.New("error block nil or header nil")
+	}
 
 	chainService.DatabaseService.BeginTransaction()
 	total := big.NewInt(0)
@@ -32,24 +33,27 @@ func (chainService *ChainService) ExecuteTransactions(b *chainTypes.Block) (*big
 		return total, nil
 	}
 	for _, t := range b.Data.TxList {
-		_, gasFee := chainService.execute(t)
+		_, gasFee, err := chainService.execute(t)
+		if err != nil {
+			return  nil, err
+		}
 		if gasFee != nil {
 			total.Add(total, gasFee)
 		}
 	}
 
 	stateRoot := chainService.DatabaseService.GetStateRoot()
-    if bytes.Equal(b.Header.StateRoot, stateRoot) {
-        dlog.Debug("matched ", "BlockStateRoot", hex.EncodeToString(b.Header.StateRoot), "CalcStateRoot", hex.EncodeToString(stateRoot))
-        chainService.accumulateRewards(b, chainService.ChainID())
-        chainService.DatabaseService.Commit()
-        chainService.preSync(b)
-        chainService.doSync(b.Header.Height)
-    } else {
-        chainService.DatabaseService.Discard()
-        return nil, fmt.Errorf("%s not matched %s", hex.EncodeToString(b.Header.StateRoot), " vs ", hex.EncodeToString(stateRoot))
-    }
-    return total, nil
+	if bytes.Equal(b.Header.StateRoot, stateRoot) {
+		dlog.Debug("matched ", "BlockStateRoot", hex.EncodeToString(b.Header.StateRoot), "CalcStateRoot", hex.EncodeToString(stateRoot))
+		chainService.accumulateRewards(b, chainService.ChainID())
+		chainService.DatabaseService.Commit()
+		chainService.preSync(b)
+		chainService.doSync(b.Header.Height)
+	} else {
+		chainService.DatabaseService.Discard()
+		return nil, fmt.Errorf("%s not matched %s", hex.EncodeToString(b.Header.StateRoot), " vs ", hex.EncodeToString(stateRoot))
+	}
+	return total, nil
 }
 
 func (chainService *ChainService) preSync(block *chainTypes.Block) {
@@ -83,36 +87,7 @@ func (chainService *ChainService) doSync(height int64) {
 	childTrans = nil
 }
 
-func (chainService *ChainService) execute(tx *chainTypes.Transaction) (gasUsed, gasFee *big.Int) {
-
-	switch tx.Type() {
-	case chainTypes.TransferType:
-
-	case chainTypes.RegisterAccountType:
-
-	case chainTypes.RegisterAccountType:
-
-	case chainTypes.CreateContractType:
-		createContractAction :=	&types.CreateContractAction{}
-		err := json.Unmarshal(tx.GetData(), createContractAction)
-		if err != nil {
-			return 0, err
-		}
-		return  evmService.ExecuteCreateCode(evm, tx.From(), createContractAction.ContractName, tx.ChainId(), createContractAction.ByteCode, tx.GasLimit().Uint64(), tx.Amount())
-	case chainTypes.CallContractType:
-		callContractAction := &types.CallContractAction{}
-		err := json.Unmarshal(tx.GetData(), callContractAction)
-		if err != nil {
-			return 0, err
-		}
-		if callContractAction.Readonly {
-			return  evmService.ExecuteStaticCall(evm, tx.From(), callContractAction.ContractName, tx.ChainId(), callContractAction.Input, tx.GasLimit().Uint64())
-		}else{
-			return  evmService.ExecuteCallCode(evm, tx.From(), callContractAction.ContractName, tx.ChainId(), callContractAction.Input, tx.GasLimit().Uint64(), tx.Amount())
-		}
-	}
-	return 0, errors.New("not support tx type")
-
+func (chainService *ChainService) execute(t *chainTypes.Transaction) (gasUsed, gasFee *big.Int, err error) {
 	switch t.Type() {
 	case chainTypes.TransferType:
 		return chainService.executeTransferTransaction(t)
@@ -123,7 +98,7 @@ func (chainService *ChainService) execute(tx *chainTypes.Transaction) (gasUsed, 
 		//case CrossChainType:
 		//   return chainService.executeCrossChainTransaction(t)
 	}
-	return nil, nil
+	return nil, nil, nil
 }
 
 func (chainService *ChainService) canExecute(tx *chainTypes.Transaction, gasFloor, gasCap *big.Int) (canExecute bool, fromAccountName string, balance, gasLimit, gasPrice *big.Int) {
@@ -162,7 +137,7 @@ func (chainService *ChainService) deduct(accountName string, chainId app.ChainId
 	return leftBalance, actualFee
 }
 
-func (chainService *ChainService) executeTransferTransaction(t *chainTypes.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
+func (chainService *ChainService) executeTransferTransaction(t *chainTypes.Transaction) (gasUsed *big.Int, gasFee *big.Int, err error) {
 	var (
 		can               bool
 		fromAccountName              string
@@ -172,8 +147,11 @@ func (chainService *ChainService) executeTransferTransaction(t *chainTypes.Trans
 	gasUsed, gasFee = new(big.Int), new(big.Int)
 	can, fromAccountName, balance, _, gasPrice = chainService.canExecute(t, chainTypes.TransferGas, nil)
 	if !can {
+		err = errBalance
 		return
 	}
+
+	chainService.DatabaseService.PutNonce(&addr, t.Nonce()+1, true)
 
 	gasUsed = new(big.Int).Set(chainTypes.TransferGas)
 	gasFee = new(big.Int).Mul(gasUsed, gasPrice)
@@ -184,12 +162,15 @@ func (chainService *ChainService) executeTransferTransaction(t *chainTypes.Trans
 		balanceTo = new(big.Int).Add(balanceTo, t.Amount())
 		chainService.DatabaseService.PutBalance(fromAccountName, balance, true)
 		chainService.DatabaseService.PutBalance(t.To(), balanceTo, true)
-		chainService.DatabaseService.PutNonce(fromAccountName, t.Nonce()+1, true)
+	} else {
+		err = errBalance
+		hash, _ := t.TxHash()
+		dlog.Info("execute tx err", "tx:", string(hash), "account balance", balance, "is less t.Amount", t.Amount())
 	}
 	return
 }
 
-func (chainService *ChainService) executeCreateContractTransaction(t *chainTypes.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
+func (chainService *ChainService) executeCreateContractTransaction(t *chainTypes.Transaction) (gasUsed *big.Int, gasFee *big.Int, err error) {
 	var (
 		can                         bool
 		fromAccountName             string
@@ -198,6 +179,7 @@ func (chainService *ChainService) executeCreateContractTransaction(t *chainTypes
 	gasUsed, gasFee = new(big.Int), new(big.Int)
 	can, fromAccountName, _, gasLimit, gasPrice = chainService.canExecute(t, nil, chainTypes.CreateContractGas)
 	if !can {
+		err = errBalance
 		return
 	}
 
@@ -211,7 +193,7 @@ func (chainService *ChainService) executeCreateContractTransaction(t *chainTypes
 	return
 }
 
-func (chainService *ChainService) executeCallContractTransaction(t *chainTypes.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
+func (chainService *ChainService) executeCallContractTransaction(t *chainTypes.Transaction) (gasUsed *big.Int, gasFee *big.Int, err error) {
 	var (
 		can                         bool
 		fromAccountName             string
@@ -221,6 +203,7 @@ func (chainService *ChainService) executeCallContractTransaction(t *chainTypes.T
 	gasUsed, gasFee = new(big.Int), new(big.Int)
 	can, fromAccountName, _, gasLimit, gasPrice = chainService.canExecute(t, nil, chainTypes.CallContractGas)
 	if !can {
+		err = errBalance
 		return
 	}
 
@@ -235,17 +218,17 @@ func (chainService *ChainService) executeCallContractTransaction(t *chainTypes.T
 }
 
 func (chainService *ChainService) CheckStateRoot(block *chainTypes.Block) bool {
-    chainService.DatabaseService.BeginTransaction()
-    for _, t := range block.Data.TxList {
-        chainService.execute(t)
-    }
-    stateRoot := chainService.DatabaseService.GetStateRoot()
-    chainService.DatabaseService.Discard()
-    if bytes.Equal(stateRoot, block.Header.StateRoot) {
-        return true
-    } else {
-        return false
-    }
+	chainService.DatabaseService.BeginTransaction()
+	for _, t := range block.Data.TxList {
+		chainService.execute(t)
+	}
+	stateRoot := chainService.DatabaseService.GetStateRoot()
+	chainService.DatabaseService.Discard()
+	if bytes.Equal(stateRoot, block.Header.StateRoot) {
+		return true
+	} else {
+		return false
+	}
 }
 
 //func (chainService *ChainService) executeCrossChainTransaction(t *chainTypes.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
