@@ -121,7 +121,7 @@ func (pool *TransactionPool) AddTransaction(tx *chainTypes.Transaction) error {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 	if len(pool.allTxs) >= maxSize {
-		msg := fmt.Sprintf("transaction pool full.txid:%s fail to add.pool tx count:%d, maxSize:%d", id, len(pool.allTxs))
+		msg := fmt.Sprintf("transaction pool full.txid:%s fail to add.pool tx count:%d, maxSize:%d",id, len(pool.allTxs),maxSize)
 		dlog.Error(msg)
 		return errors.New(msg)
 	}

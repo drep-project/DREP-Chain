@@ -24,10 +24,11 @@ func Serialize(message interface{}, prvKey *secp256k1.PrivateKey) (*types.Messag
 	if refType.Kind() == reflect.Ptr {
 		refType = refType.Elem()
 	}
+
 	msgType, ok := msgTypeMap.GetInverse(refType)
 	if !ok {
 		msgTypeMap.GetInverse(refType)
-		return nil, errors.New("Unknown peer message type")
+		return nil, errors.New("serialize Unknown peer message type")
 	}
 	sig, err :=  prvKey.Sign(sha3.Hash256(body))
 	if err != nil {
@@ -54,7 +55,7 @@ func Deserialize(msgBytes []byte) (interface{}, int, *secp256k1.PublicKey, error
 
 	refType, ok := msgTypeMap.Get(msg.Header.Type)
 	if !ok {
-		return nil, 0, nil, errors.New("Unknown peer message type ")
+		return nil, 0, nil, errors.New("Deserialize Unknown peer message type ")
 	}
 	bodyMsg := reflect.New(refType.(reflect.Type)).Interface()
 	if err := json.Unmarshal(msg.Body, bodyMsg); err == nil {

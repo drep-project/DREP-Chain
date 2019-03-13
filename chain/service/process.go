@@ -9,12 +9,17 @@ import (
 	"github.com/drep-project/dlog"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
-	"strconv"
 	"time"
 )
 
+const (
+	errBlockExsist       = "already have block"
+	errOrphanBlockExsist = "already have block (orphan)"
+)
+
 func (chainService *ChainService) ProcessGenisisBlock() {
-	 chainService.ExecuteTransactions(chainService.genesisBlock)
+	chainService.ExecuteTransactions(chainService.genesisBlock)
+	chainService.DatabaseService.RecordBlockJournal(0)
 }
 
 func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, bool, error) {
@@ -24,23 +29,23 @@ func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, b
 	blockHash := block.Header.Hash()
 	exist := chainService.blockExists(blockHash)
 	if exist {
-		return false, false, errors.New(fmt.Sprintf("already have block %v", blockHash))
+		return false, false, errors.New(errBlockExsist)
 	}
 
 	// The block must not already exist as an orphan.
 	if _, exists := chainService.orphans[*blockHash]; exists {
-		return  false, false, errors.New(fmt.Sprintf("already have block (orphan) %v", blockHash))
+		return false, false, errors.New(errOrphanBlockExsist)
 	}
 
 	// Handle orphan blocks.
-	zeroHash := crypto.Hash {}
+	zeroHash := crypto.Hash{}
 	prevHash := block.Header.PreviousHash
 	prevHashExists := chainService.blockExists(prevHash)
-	if !prevHashExists && *prevHash != zeroHash{
+	if !prevHashExists && *prevHash != zeroHash {
 		chainService.addOrphanBlock(block)
-		return  false, true, nil
+		return false, true, nil
 	}
-	isMainChain, err :=  chainService.acceptBlock(block)
+	isMainChain, err := chainService.acceptBlock(block)
 	if err != nil {
 		return false, false, err
 	}
@@ -49,10 +54,8 @@ func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, b
 	// there are no more.
 	err = chainService.processOrphans(blockHash)
 	if err != nil {
-		return false, false,err
+		return false, false, err
 	}
-
-	dlog.Info("Accepted block", "Height", block.Header.Height, "Hash", hex.EncodeToString(blockHash.Bytes()), "TxCount", block.Data.TxCount)
 	return isMainChain, false, nil
 }
 
@@ -102,7 +105,7 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (bool, er
 	if err != nil {
 		return false, err
 	}
-	dlog.Trace("Process block leader.", "LeaderPubKey", crypto.PubKey2Address(block.Header.LeaderPubKey).Hex(), " height ", strconv.FormatInt(block.Header.Height, 10))
+	dlog.Info("Accepted block", "Height", block.Header.Height, "Hash", hex.EncodeToString(block.Header.Hash().Bytes()), "TxCount", block.Data.TxCount)
 	newNode := chainTypes.NewBlockNode(block.Header, prevNode)
 	newNode.Status = chainTypes.StatusDataStored
 
@@ -116,7 +119,7 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (bool, er
 		//main chain
 		if chainService.CheckStateRoot(block) {
 			chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValid)
-		}else {
+		} else {
 			chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValidateFailed)
 		}
 
@@ -137,14 +140,14 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (bool, er
 		// If this is fast add, or this block node isn't yet marked as
 		// valid, then we'll update its status and flush the state to
 		// disk again.
-		if  chainService.Index.NodeStatus(newNode).KnownValid() {
+		if chainService.Index.NodeStatus(newNode).KnownValid() {
 			chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValid)
 			chainService.flushIndexState()
 		}
 		return true, nil
 	}
 
-	if block.Header.Height - chainService.BestChain.Tip().Height <= 0 {
+	if block.Header.Height-chainService.BestChain.Tip().Height <= 0 {
 		// store but but not reorg
 		dlog.Debug("block store and validate true but not reorgnize")
 		return false, nil
@@ -153,7 +156,7 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (bool, er
 	detachNodes, attachNodes := chainService.getReorganizeNodes(newNode)
 
 	// Reorganize the chain.
-	dlog.Info("REORGANIZE: Block is causing a reorganize.", "hash",  newNode.Hash)
+	dlog.Info("REORGANIZE: Block is causing a reorganize.", "hash", newNode.Hash)
 	err = chainService.reorganizeChain(detachNodes, attachNodes)
 
 	// Either getReorganizeNodes or reorganizeChain could have made unsaved
@@ -238,7 +241,7 @@ func (chainService *ChainService) reorganizeChain(detachNodes, attachNodes *list
 		chainService.DatabaseService.BeginTransaction()
 		success := true
 		elem := attachNodes.Front()
-		for elem != nil {  //
+		for elem != nil { //
 			bkn := elem.Value.(*chainTypes.BlockNode)
 			bk, err := chainService.DatabaseService.GetBlock(bkn.Hash)
 			if err != nil {
@@ -249,6 +252,9 @@ func (chainService *ChainService) reorganizeChain(detachNodes, attachNodes *list
 			}
 			if bytes.Equal(bk.Header.StateRoot, chainService.DatabaseService.GetStateRoot()) {
 			} else {
+				for {
+					chainService.DatabaseService.GetStateRoot()
+				}
 				success = false
 				break
 			}
@@ -272,9 +278,9 @@ func (chainService *ChainService) reorganizeChain(detachNodes, attachNodes *list
 func (chainService *ChainService) clearTxPool(block *chainTypes.Block) {
 	addrMap := make(map[crypto.CommonAddress]struct{})
 	var addrs []*crypto.CommonAddress
-	for _,tx := range block.Data.TxList {
+	for _, tx := range block.Data.TxList {
 		addr := tx.From()
-		if _,ok:=addrMap[*addr]; !ok{
+		if _, ok := addrMap[*addr]; !ok {
 			addrMap[*addr] = struct{}{}
 			addrs = append(addrs, addr)
 		}
@@ -387,7 +393,7 @@ func (chainService *ChainService) InitStates() error {
 	return chainService.Index.FlushToDB(chainService.DatabaseService.PutBlockNode)
 }
 
-func  (chainService *ChainService) createChainState() error {
+func (chainService *ChainService) createChainState() error {
 	node := chainTypes.NewBlockNode(chainService.genesisBlock.Header, nil)
 	node.Status = chainTypes.StatusDataStored | chainTypes.StatusValid
 	chainService.BestChain.SetTip(node)
@@ -420,7 +426,7 @@ func  (chainService *ChainService) createChainState() error {
 	err = chainService.DatabaseService.PutBlock(chainService.genesisBlock)
 	if err != nil {
 		return err
-	}else{
+	} else {
 		return nil
 	}
 }
