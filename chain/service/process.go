@@ -1,7 +1,6 @@
 package service
 
 import (
-	"bytes"
 	"container/list"
 	"encoding/hex"
 	"errors"
@@ -128,7 +127,6 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (bool, er
 		if err != nil {
 			return false, err
 		}
-
 		_, err = chainService.ExecuteTransactions(block)
 		if err != nil {
 			chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValidateFailed)
@@ -234,12 +232,10 @@ func (chainService *ChainService) reorganizeChain(detachNodes, attachNodes *list
 		height := lastBlock.Height - 1
 		chainService.DatabaseService.Rollback2Block(height)
 		dlog.Info("REORGANIZE:RollBack state root", "Height", height)
-		chainService.markState(lastBlock)
+		chainService.markState(lastBlock.Parent)
 	}
 
 	if attachNodes.Len() != 0 && detachNodes.Len() != 0 {
-		chainService.DatabaseService.BeginTransaction()
-		success := true
 		elem := attachNodes.Front()
 		for elem != nil { //
 			bkn := elem.Value.(*chainTypes.BlockNode)
@@ -247,29 +243,16 @@ func (chainService *ChainService) reorganizeChain(detachNodes, attachNodes *list
 			if err != nil {
 				return err
 			}
-			for _, t := range bk.Data.TxList {
-				chainService.execute(t)
-			}
-			if bytes.Equal(bk.Header.StateRoot, chainService.DatabaseService.GetStateRoot()) {
-			} else {
-				for {
-					chainService.DatabaseService.GetStateRoot()
-				}
-				success = false
-				break
+			_, err = chainService.ExecuteTransactions(bk)
+			if err != nil {
+				fmt.Println(err)
+				return err
 			}
 			chainService.markState(bkn)
 			chainService.clearTxPool(bk)
-			if err != nil {
-				return err
-			}
+
 			dlog.Info("REORGANIZE:Append New Block", "Height", bkn.Height, "Hash", bkn.Hash)
 			elem = elem.Next()
-		}
-		if success {
-			chainService.DatabaseService.Commit()
-		} else {
-			chainService.DatabaseService.Discard()
 		}
 	}
 	return nil

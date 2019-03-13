@@ -33,7 +33,7 @@ func TestDBInit(t *testing.T) {
 
 func TestStateTrie(t *testing.T) {
     db = NewDatabase()
-    fmt.Println("root key: ", bytes2Hex(db.root))
+    fmt.Println("root Key: ", bytes2Hex(db.root))
     fmt.Println("root:     ", db.root)
     fmt.Println()
 
@@ -42,7 +42,7 @@ func TestStateTrie(t *testing.T) {
     //seq := bytes2Hex(originKey)
     //state, err := insert(seq, db.root, originValue)
     //fmt.Println("seq:      ", seq)
-    //fmt.Println("value:    ", originValue)
+    //fmt.Println("Value:    ", originValue)
     //fmt.Println("state:    ", state)
     //fmt.Println("err:      ", err)
 

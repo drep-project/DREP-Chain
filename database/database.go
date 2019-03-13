@@ -2,6 +2,7 @@ package database
 
 import (
 	"encoding/json"
+	"fmt"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/sha3"
@@ -20,10 +21,10 @@ type Database struct {
 }
 
 type journal struct {
-	op       string
-	key      []byte
-	value    []byte
-	previous []byte
+	Op       string
+	Key      []byte
+	Value    []byte
+	Previous []byte
 }
 
 func NewDatabase(dbPath string) (*Database, error) {
@@ -42,6 +43,8 @@ func NewDatabase(dbPath string) (*Database, error) {
 
 func (db *Database) initState() {
 	db.root = sha3.Hash256([]byte("state rootState"))
+	fmt.Println("root", bytes2Hex(db.root))
+	fmt.Println()
 	value, _ := db.get(db.root, false)
 	if value != nil {
 		return
@@ -81,17 +84,19 @@ func (db *Database) put(key []byte, value []byte, temporary bool) error {
 		}
 		previous, _ := db.get(key, temporary)
 		j := &journal{
-			op:      "put",
-			key:      key,
-			value:    value,
-			previous: previous,
+			Op:       "put",
+			Key:      key,
+			Value:    value,
+			Previous: previous,
 		}
+
 		err = db.db.Put(key, value, nil)
 		if err != nil {
 			return err
 		}
 		jVal, _ := json.Marshal(j)
 		db.db.Put([]byte("journal_" + strconv.FormatInt(depth, 10)), jVal, nil)
+		db.db.Put([]byte("journal_depth"), new(big.Int).SetInt64(depth).Bytes(), nil)
 		return nil
 	}
 	db.temp[bytes2Hex(key)] = value
@@ -107,9 +112,9 @@ func (db *Database) delete(key []byte, temporary bool) error {
 		}
 		previous, _ := db.get(key, temporary)
 		j := &journal{
-			op:      "del",
-			key:      key,
-			previous: previous,
+			Op:       "del",
+			Key:      key,
+			Previous: previous,
 		}
 		err = db.db.Delete(key, nil)
 		if err != nil {
@@ -117,6 +122,7 @@ func (db *Database) delete(key []byte, temporary bool) error {
 		}
 		jVal, _ := json.Marshal(j)
 		db.db.Put([]byte("journal_" + strconv.FormatInt(depth, 10)), jVal, nil)
+		db.db.Put([]byte("journal_depth"), new(big.Int).SetInt64(depth).Bytes(), nil)
 		return db.db.Delete(key, nil)
 	}
 	db.temp[bytes2Hex(key)] = nil
@@ -156,10 +162,11 @@ func (db *Database) Rollback(index int64) {
 	depthVal, err := db.db.Get([]byte("journal_depth"), nil)
 	var depth int64 = 0
 	if err == nil {
-		depth = new(big.Int).SetBytes(depthVal).Int64() + 1
+		depth = new(big.Int).SetBytes(depthVal).Int64()
 	}
+
 	for i := depth; i > index; i-- {
-		key := []byte("journal_" + strconv.FormatInt(depth, 10))
+		key := []byte("journal_" + strconv.FormatInt(i, 10))
 		jVal, _ := db.db.Get(key, nil)
 		if jVal == nil {
 			continue
@@ -169,17 +176,18 @@ func (db *Database) Rollback(index int64) {
 		if err != nil {
 			continue
 		}
-		if j.op == "put" {
-			if j.previous == nil {
-				db.db.Delete(key, nil)
+		if j.Op == "put" {
+			if j.Previous == nil {
+				db.db.Delete(j.Key, nil)
 			} else {
-				db.db.Put(key, j.previous, nil)
+				db.db.Put(j.Key, j.Previous, nil)
 			}
 		}
-		if j.op == "del" {
-			db.db.Put(key, j.previous, nil)
+		if j.Op == "del" {
+			db.db.Put(j.Key, j.Previous, nil)
 		}
 		db.db.Delete(key, nil)
+		db.db.Put([]byte("journal_depth"), new(big.Int).SetInt64(index).Bytes(), nil)
 	}
 }
 

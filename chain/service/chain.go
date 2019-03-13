@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/drep-project/drep-chain/chain/txpool"
 	"github.com/drep-project/drep-chain/pkgs/evm"
 	"math/big"
@@ -142,7 +143,8 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 	chainService.pendingSyncTasks = make(map[crypto.Hash]int64)
 
 	chainService.genesisBlock = chainService.GenesisBlock(chainService.Config.GenesisPK)
-	block, err := chainService.DatabaseService.GetBlock(chainService.genesisBlock.Header.Hash())
+	hash := chainService.genesisBlock.Header.Hash()
+	block, err := chainService.DatabaseService.GetBlock(hash)
 	if err != nil && err.Error() != "leveldb: not found" {
 		return nil
 	}

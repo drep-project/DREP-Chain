@@ -1,9 +1,9 @@
 package database
 
-//func insertBackup(seq string, key, value []byte) (*State, error) {
-//   state, err := db.getState(key)
+//func insertBackup(seq string, Key, Value []byte) (*State, error) {
+//   state, err := db.getState(Key)
 //   if err != nil {
-//       return newLeaf(seq, key, value)
+//       return newLeaf(seq, Key, Value)
 //   }
 //   children := state.getChildren()
 //   length, prefix := getCommonPrefix(seq, state.Sequence)
@@ -12,15 +12,15 @@ package database
 //   if prefix == state.Sequence {
 //       if state.IsLeaf {
 //           if seq == state.Sequence {
-//               state.Value = value
+//               state.Value = Value
 //           } else {
-//               state.ChildKeys[16] = getChildKey(key, 16)
-//               children[16], err = newLeaf("", state.ChildKeys[16], value)
+//               state.ChildKeys[16] = getChildKey(Key, 16)
+//               children[16], err = newLeaf("", state.ChildKeys[16], Value)
 //               if err != nil {
 //                   return nil, err
 //               }
-//               state.ChildKeys[nib0] = getChildKey(key, nib0)
-//               children[nib0], err = insertBackup(seq[length:], state.ChildKeys[nib0], value)
+//               state.ChildKeys[nib0] = getChildKey(Key, nib0)
+//               children[nib0], err = insertBackup(seq[length:], state.ChildKeys[nib0], Value)
 //               if err != nil {
 //                   return nil, err
 //               }
@@ -28,14 +28,14 @@ package database
 //               state.IsLeaf = false
 //           }
 //       } else {
-//           state.ChildKeys[nib0] = getChildKey(key, nib0)
-//           children[nib0], err = insertBackup(seq[length:], state.ChildKeys[nib0], value)
+//           state.ChildKeys[nib0] = getChildKey(Key, nib0)
+//           children[nib0], err = insertBackup(seq[length:], state.ChildKeys[nib0], Value)
 //           if err != nil {
 //               return nil, err
 //           }
 //           state.resetValue(children)
 //       }
-//       err = db.putState(key, state)
+//       err = db.putState(Key, state)
 //       if err != nil {
 //           return nil, err
 //       }
@@ -50,16 +50,16 @@ package database
 //       state.Sequence = state.Sequence[length:]
 //       st := &State{}
 //       st.Sequence = prefix
-//       st.ChildKeys[nib0] = getChildKey(key, nib0)
-//       st.ChildKeys[nib1] = getChildKey(key, nib1)
-//       children[nib0], err = insertBackup(seq[length:], st.ChildKeys[nib0], value)
+//       st.ChildKeys[nib0] = getChildKey(Key, nib0)
+//       st.ChildKeys[nib1] = getChildKey(Key, nib1)
+//       children[nib0], err = insertBackup(seq[length:], st.ChildKeys[nib0], Value)
 //       if err != nil {
 //           return nil, err
 //       }
 //       children[nib1] = state
 //       st.resetValue(children)
 //       state = st
-//       err = db.putState(key, st)
+//       err = db.putState(Key, st)
 //       if err != nil {
 //           return nil, err
 //       }
@@ -75,13 +75,13 @@ package database
 //   }
 //}
 
-//func delBackup(key []byte, seq string) (*State, error) {
-//    state, err := db.getState(key)
+//func delBackup(Key []byte, seq string) (*State, error) {
+//    state, err := db.getState(Key)
 //    if err != nil {
 //        return nil, err
 //    }
 //    if state.IsLeaf && seq == state.Sequence {
-//        err = db.delState(key)
+//        err = db.delState(Key)
 //        if err != nil {
 //            return nil, err
 //        }
@@ -93,7 +93,7 @@ package database
 //    }
 //    children := state.getChildren()
 //    nib := getNextNibble(commonLen, seq)
-//    state.ChildKeys[nib] = getChildKey(key, nib)
+//    state.ChildKeys[nib] = getChildKey(Key, nib)
 //    _, err = del(state.ChildKeys[nib], seq[commonLen:])
 //    if err != nil {
 //        return nil, err
@@ -109,7 +109,7 @@ package database
 //            }
 //        }
 //        if sum == 1 {
-//            err = state.absorbOnlyChild(key, uniqueChild)
+//            err = state.absorbOnlyChild(Key, uniqueChild)
 //            if err != nil {
 //                return nil, err
 //            }
@@ -117,15 +117,15 @@ package database
 //        }
 //    }
 //    state.resetValue(children)
-//    err = db.putState(key, state)
+//    err = db.putState(Key, state)
 //    if err != nil {
 //        return nil, err
 //    }
 //    return state, nil
 //}
 
-//func getBackup(key []byte, seq string) (*State, error) {
-//    state, err := db.getState(key)
+//func getBackup(Key []byte, seq string) (*State, error) {
+//    state, err := db.getState(Key)
 //    if err != nil {
 //        return nil, err
 //    }
@@ -133,11 +133,11 @@ package database
 //        if seq == state.Sequence {
 //            return state, nil
 //        }
-//        return nil, errors.New("current key not found")
+//        return nil, errors.New("current Key not found")
 //    }
 //    commonLen, _ := getCommonPrefix(seq, state.Sequence)
 //    if commonLen < len(state.Sequence) {
-//        return nil, errors.New("current key not found")
+//        return nil, errors.New("current Key not found")
 //    }
 //    nib := getNextNibble(commonLen, seq)
 //    return get(state.ChildKeys[nib], seq[commonLen:])
