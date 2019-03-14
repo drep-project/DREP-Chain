@@ -19,7 +19,7 @@ func (chainService *ChainService) Receive(context actor.Context) {
 	case *chainTypes.BlockReq:
 		go chainService.HandleBlockReqMsg(routeMsg.Peer, msg)
 	case *chainTypes.BlockResp:
-		go  chainService.HandleBlockRespMsg(msg)
+		go chainService.HandleBlockRespMsg(msg)
 	case *chainTypes.Transaction:
 		transaction := msg
 		//id, _ := transaction.TxId()
@@ -65,8 +65,7 @@ func (chainService *ChainService) handleHeaderReq(peer *p2pTypes.Peer, req *chai
 		}
 	}
 
-	dlog.Info("header req len", "total header",len(headers), "from", req.FromHeight,"to", req.ToHeight)
-
+	dlog.Info("header req len", "total header", len(headers), "from", req.FromHeight, "to", req.ToHeight)
 	chainService.P2pServer.Send(peer, chainTypes.HeaderRsp{Headers: headers})
 }
 
@@ -75,7 +74,14 @@ func (chainService *ChainService) handleHeaderRsp(peer *p2pTypes.Peer, rsp *chai
 	for _, h := range rsp.Headers {
 		headerHashs = append(headerHashs, &syncHeaderHash{headerHash: h.Hash(), height: h.Height})
 	}
-	dlog.Info("handleHeaderRsp ", "total len:", len(headerHashs), "from height:" ,headerHashs[0].height, "end height:",headerHashs[len(headerHashs)-1].height)
+
+	err := chainService.checkHeaderChain(rsp.Headers)
+	if err != nil {
+		dlog.Info("handleHeaderRsp", "err", err)
+		return
+	}
+
+	dlog.Info("handleHeaderRsp ", "total len:", len(headerHashs), "from height:", headerHashs[0].height, "end height:", headerHashs[len(headerHashs)-1].height)
 	chainService.headerHashCh <- headerHashs
 }
 
@@ -85,7 +91,7 @@ func (chainService *ChainService) HandleBlockReqMsg(peer *p2pTypes.Peer, req *ch
 	startHeight := int64(0)
 	endHeight := chainService.BestChain.Tip().Height
 
-	if len(req.BlockHashs) == 0{
+	if len(req.BlockHashs) == 0 {
 		dlog.Warn("handle block req", "block hash num", len(req.BlockHashs))
 		return
 	}
