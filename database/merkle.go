@@ -1,9 +1,9 @@
 package database
 
 import (
-    "math"
     "bytes"
     "github.com/drep-project/drep-chain/crypto/sha3"
+    "math"
 )
 
 type MerkleNode struct {

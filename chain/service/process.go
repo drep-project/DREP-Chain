@@ -8,12 +8,13 @@ import (
 	"github.com/drep-project/dlog"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
+	"math/big"
 	"time"
 )
 
-const (
-	errBlockExsist       = "already have block"
-	errOrphanBlockExsist = "already have block (orphan)"
+var (
+	errBlockExsist       = errors.New("already have block")
+	errOrphanBlockExsist = errors.New("already have block (orphan)")
 )
 
 func (chainService *ChainService) ProcessGenisisBlock() {
@@ -21,19 +22,85 @@ func (chainService *ChainService) ProcessGenisisBlock() {
 	chainService.DatabaseService.RecordBlockJournal(0)
 }
 
+func (chainService *ChainService) checkBody(block *chainTypes.Block) error {
+	//todo check state root
+
+	// Check whether the block's known, and if not, that it's linkable
+	if chainService.blockExists(block.Header.Hash()) {
+		return errBlockExsist
+	}
+
+	txRoot := chainService.deriveMerkleRoot(block.Data.TxList)
+	if !bytes.Equal(txRoot, block.Header.TxRoot) {
+		return fmt.Errorf("transaction root hash mismatch: have %x, want %x", string(txRoot), string(block.Header.TxRoot))
+	}
+
+	//签名是否正确
+	//crypto.ValidateSignatureValues()
+	return nil
+}
+
+func (cs *ChainService) checkHeader(header *chainTypes.BlockHeader) error {
+	//第0个块，不做检查
+	if header.Height == 0 {
+		return nil
+	}
+	if cs.Index.HaveBlock(header.Hash()) {
+		return nil
+	}
+
+	parentBlock, err := cs.DatabaseService.GetBlock(header.PreviousHash)
+	if err == nil && header.Height != parentBlock.Header.Height +1 {
+		return errors.New("head height err")
+	}
+
+	//出块时间
+	if header.Timestamp > time.Now().Unix() {
+		return errors.New("block time err")
+	}
+
+	if header.GasLimit.Cmp(new(big.Int).Set(BlockGasLimit)) > 0 {
+		return errors.New("gas out block gas limit")
+	}
+
+	return nil
+}
+
+func (cs *ChainService) checkBlock(block *chainTypes.Block) error {
+	// check header
+	err := cs.checkHeader(block.Header)
+	if err != nil {
+		return err
+	}
+	// check body
+	err = cs.checkBody(block)
+	if err != nil {
+		return err
+	}
+
+	//todo check sig
+	return nil
+}
+
 func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, bool, error) {
 	chainService.addBlockSync.Lock()
 	defer chainService.addBlockSync.Unlock()
 
+	//err := chainService.checkBlock(block)
+	//if err != nil {
+	//	dlog.Info("process Block", "err", err)
+	//	return false, false, err
+	//}
+
 	blockHash := block.Header.Hash()
 	exist := chainService.blockExists(blockHash)
 	if exist {
-		return false, false, errors.New(errBlockExsist)
+		return false, false, errBlockExsist
 	}
 
 	// The block must not already exist as an orphan.
 	if _, exists := chainService.orphans[*blockHash]; exists {
-		return false, false, errors.New(errOrphanBlockExsist)
+		return false, false, errOrphanBlockExsist
 	}
 
 	// Handle orphan blocks.
@@ -48,6 +115,7 @@ func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, b
 	if err != nil {
 		return false, false, err
 	}
+
 	// Accept any orphan blocks that depend on this block (they are
 	// no longer orphans) and repeat for those accepted blocks until
 	// there are no more.

@@ -167,7 +167,7 @@ func (cs *ChainService) fetchBlocks(peer *p2pTypes.Peer, height int64) error {
 	go func() {
 		commonAncestor += 1
 		for height > commonAncestor {
-			timeout := time.After(time.Second * maxNetworkTimeout*2)
+			timeout := time.After(time.Second * maxNetworkTimeout)
 
 			cs.syncMut.Lock()
 			cs.P2pServer.SetIdle(peer, false)
@@ -235,7 +235,7 @@ func (cs *ChainService) fetchBlocks(peer *p2pTypes.Peer, height int64) error {
 
 					_, _, err := cs.ProcessBlock(b)
 					dlog.Info("sync block recv block","height", b.Header.Height, "process result", err)
-					if err != nil && err.Error() != errBlockExsist && err.Error() != errOrphanBlockExsist {
+					if err != nil && err != errBlockExsist && err != errOrphanBlockExsist {
 						dlog.Error("deal sync block", "err", err)
 						errCh <- err
 						return
@@ -309,4 +309,29 @@ func (chainService *ChainService) GetBestPeer() (*p2pTypes.Peer, *chainTypes.Pee
 		}
 	}
 	return curPeer, chainService.peerStateMap[string(curPeer.Ip)]
+}
+
+func (cs *ChainService) checkHeaderChain(chain []chainTypes.BlockHeader) (error) {
+	// Do a sanity check that the provided chain is actually ordered and linked
+	for i := 1; i < len(chain); i++ {
+		if chain[i].Height != chain[i-1].Height+1 || chain[i].PreviousHash != chain[i-1].Hash() {
+			// Chain broke ancestry, log a message (programming error) and skip insertion
+			dlog.Error("Non contiguous header", "number", chain[i].Height, "hash", chain[i].Hash(),
+				"parent", chain[i].PreviousHash, "prevnumber", chain[i-1].Height, "prevhash", chain[i-1].Hash())
+
+			return fmt.Errorf("non contiguous headers: item-1:%d  height:%d hash:%s, item:%d height:%d hash:%s",
+				i-1, chain[i-1].Height,chain[i-1].Hash().Bytes()[:4], i, chain[i].Height, chain[i].Hash().Bytes()[:4])
+		}
+
+		cs.checkHeader(&chain[i])
+	}
+
+	return nil
+}
+
+
+func (cs *ChainService) deriveMerkleRoot(txs[]*chainTypes.Transaction) []byte{
+	txHashes, _ := cs.GetTxHashes(txs)
+	merkle := cs.DatabaseService.NewMerkle(txHashes)
+	return  merkle.Root.Hash
 }

@@ -36,7 +36,7 @@ func (chainService *ChainService) ExecuteTransactions(b *chainTypes.Block) (*big
 	for _, t := range b.Data.TxList {
 		_, gasFee, err := chainService.execute(t)
 		if err != nil {
-			return  nil, err
+			return nil, err
 		}
 		if gasFee != nil {
 			total.Add(total, gasFee)
@@ -46,7 +46,7 @@ func (chainService *ChainService) ExecuteTransactions(b *chainTypes.Block) (*big
 	stateRoot := chainService.DatabaseService.GetStateRoot()
 	if bytes.Equal(b.Header.StateRoot, stateRoot) {
 		dlog.Debug("matched ", "BlockStateRoot", hex.EncodeToString(b.Header.StateRoot), "CalcStateRoot", hex.EncodeToString(stateRoot))
-		chainService.accumulateRewards(b, chainService.ChainID())
+		chainService.accumulateRewards(b, chainService.ChainID(), total)
 		chainService.DatabaseService.Commit()
 		chainService.preSync(b)
 		chainService.doSync(b.Header.Height)

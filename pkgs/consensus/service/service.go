@@ -214,7 +214,7 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 						dlog.Info("Submit Block ", "Height", consensusService.ChainService.BestChain.Height(), "txs:", block.Data.TxCount)
 					}
 				}
-				time.Sleep(time.Duration(500)*time.Millisecond) //delay a little time for block deliver
+				time.Sleep(time.Duration(500) * time.Millisecond) //delay a little time for block deliver
 				nextBlockTime, waitSpan := consensusService.getWaitTime()
 				dlog.Debug("Sleep", "nextBlockTime", nextBlockTime, "waitSpan", waitSpan)
 				time.Sleep(waitSpan)
@@ -234,7 +234,6 @@ func (consensusService *ConsensusService) Stop(executeContext *app.ExecuteContex
 	consensusService.syncBlockEventSub.Unsubscribe()
 	return nil
 }
-
 
 func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, error) {
 	consensusService.member.Reset()
@@ -303,7 +302,7 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 	multiSig := &chainTypes.MultiSignature{Sig: *sig, Bitmap: bitmap}
 	dlog.Trace("node leader is preparing process consensus for round 2")
 	consensusService.leader.Reset()
-	msg, err = json.Marshal(multiSig);
+	msg, err = json.Marshal(multiSig)
 	if err != nil {
 		return nil, err
 	}
@@ -359,10 +358,10 @@ func (consensusService *ConsensusService) collectMemberStatus() []*consensusType
 			isOnLine = true
 		}
 		produceInfos[i] = &consensusTypes.MemberInfo{
-			Producer: 	produce,
-			Peer:     	peer,
-			IsMe: 		isMe,
-			IsOnline:	isOnLine,
+			Producer: produce,
+			Peer:     peer,
+			IsMe:     isMe,
+			IsOnline: isOnLine,
 		}
 	}
 	return produceInfos
@@ -371,21 +370,21 @@ func (consensusService *ConsensusService) collectMemberStatus() []*consensusType
 func (consensusService *ConsensusService) moveToNextMiner(produceInfos []*consensusTypes.MemberInfo) (bool, bool) {
 	liveMembers := []*consensusTypes.MemberInfo{}
 
-	for _, produce :=	range produceInfos {
+	for _, produce := range produceInfos {
 		if produce.IsOnline {
 			liveMembers = append(liveMembers, produce)
 		}
 	}
 	curentHeight := consensusService.ChainService.BestChain.Height()
-	liveMinerIndex := int( curentHeight% int64(len(liveMembers)))
+	liveMinerIndex := int(curentHeight % int64(len(liveMembers)))
 	curMiner := liveMembers[liveMinerIndex]
 
-	for index, produce :=	range produceInfos {
+	for index, produce := range produceInfos {
 		if produce.IsOnline {
 			if produce.Producer.Public.IsEqual(curMiner.Producer.Public) {
 				produce.IsLeader = true
 				consensusService.curMiner = index
-			}else{
+			} else {
 				produce.IsLeader = false
 			}
 		}

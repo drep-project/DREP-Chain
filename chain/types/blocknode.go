@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	medianTimeBlocks     = 11
+	medianTimeBlocks = 11
 )
 // blockStatus is a bit field representing the validation state of the block.
 type BlockStatus byte
@@ -76,20 +76,19 @@ type BlockNode struct {
 	// heigh is the position in the block chain.
 	Height int64
 
-	ChainId              app.ChainIdType
-	Version              int32
-	PreviousHash         *crypto.Hash
-	GasLimit             *big.Int
-	GasUsed              *big.Int
-	MerkleRoot           []byte
+	ChainId      app.ChainIdType
+	Version      int32
+	PreviousHash *crypto.Hash
+	GasLimit     *big.Int
+	GasUsed      *big.Int
+	MerkleRoot   []byte
 
-	LeaderPubKey         *secp256k1.PublicKey
+	LeaderPubKey *secp256k1.PublicKey
 
-	MinorPubKeys         []*secp256k1.PublicKey
+	MinorPubKeys []*secp256k1.PublicKey
 
 	Status BlockStatus
 }
-
 
 // initBlockNode initializes a block node from the given header and parent node,
 // calculating the height and workSum from the respective fields on the parent.
@@ -97,17 +96,17 @@ type BlockNode struct {
 // initially creating a node.
 func InitBlockNode(node *BlockNode, blockHeader *BlockHeader, parent *BlockNode) {
 	*node = BlockNode{
-		Hash:       	blockHeader.Hash(),
-		Height: 		blockHeader.Height,
-		StateRoot:  	blockHeader.StateRoot,
-		TimeStamp:  	blockHeader.Timestamp,
-		ChainId: 		blockHeader.ChainId,
-		Version: 		blockHeader.Version,
-		GasLimit: 		blockHeader.GasLimit,
-		GasUsed: 		blockHeader.GasUsed,
-		MerkleRoot: 	blockHeader.MerkleRoot,
-		LeaderPubKey: 	blockHeader.LeaderPubKey,
-		MinorPubKeys: 	blockHeader.MinorPubKeys,
+		Hash:         blockHeader.Hash(),
+		Height:       blockHeader.Height,
+		StateRoot:    blockHeader.StateRoot,
+		TimeStamp:    blockHeader.Timestamp,
+		ChainId:      blockHeader.ChainId,
+		Version:      blockHeader.Version,
+		GasLimit:     blockHeader.GasLimit,
+		GasUsed:      blockHeader.GasUsed,
+		MerkleRoot:   blockHeader.TxRoot,
+		LeaderPubKey: blockHeader.LeaderPubKey,
+		MinorPubKeys: blockHeader.MinorPubKeys,
 	}
 	if parent != nil {
 		node.Parent = parent
@@ -135,17 +134,17 @@ func (node *BlockNode) Header() BlockHeader {
 		prevHash = node.Parent.Hash
 	}
 	return BlockHeader{
-		Height: 		node.Height,
-		StateRoot:  	node.StateRoot,
-		Timestamp:  	node.TimeStamp,
-		ChainId: 		node.ChainId,
-		Version: 		node.Version,
-		PreviousHash: 	prevHash,
-		GasLimit: 		node.GasLimit,
-		GasUsed: 		node.GasUsed,
-		MerkleRoot: 	node.MerkleRoot,
-		LeaderPubKey: 	node.LeaderPubKey,
-		MinorPubKeys: 	node.MinorPubKeys,
+		Height:       node.Height,
+		StateRoot:    node.StateRoot,
+		Timestamp:    node.TimeStamp,
+		ChainId:      node.ChainId,
+		Version:      node.Version,
+		PreviousHash: prevHash,
+		GasLimit:     node.GasLimit,
+		GasUsed:      node.GasUsed,
+		TxRoot:       node.MerkleRoot,
+		LeaderPubKey: node.LeaderPubKey,
+		MinorPubKeys: node.MinorPubKeys,
 	}
 }
 
