@@ -73,7 +73,7 @@ func (chain *ChainApi) SendRawTransaction(tx *chainType.Transaction) (string, er
     }
 
     if !can {
-        return "", errors.New("error: can not execute this transaction")
+        return "", errors.New("error: can not executeTransaction this transaction")
     }
 
     err := chain.chainService.transactionPool.AddTransaction(tx)

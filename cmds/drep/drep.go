@@ -14,16 +14,20 @@ import (
 	evmService "github.com/drep-project/drep-chain/pkgs/evm"
 	"net/http"
 	_ "net/http/pprof"
+	"runtime/debug"
 )
 
 func main() {
 	go func() {
 		http.ListenAndServe("0.0.0.0:8080", nil)
 	}()
+	debug.SetGCPercent(20)
 
 	drepApp := app.NewApp()
 	err := drepApp.AddServices(
 		database.DatabaseService{},
+
+
 		rpc.RpcService{},
 		log.LogService{},
 		p2pService.P2pService{},

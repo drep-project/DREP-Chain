@@ -22,18 +22,49 @@ var (
 	errBalance = errors.New("no enough blance")
 )
 
-func (chainService *ChainService) ExecuteTransactions(b *chainTypes.Block) (*big.Int, error) {
-	if b == nil || b.Header == nil { // || b.Data == nil || b.Data.TxList == nil {
+func (chainService *ChainService) ValidateBlock(b *chainTypes.Block) bool {
+	var result error
+	_ = chainService.DatabaseService.Transaction(func() error {
+		_, result = chainService.executeBlock(b)
+		return errors.New("just not commit")
+	})
+	if result != nil {
+		return false
+	}
+	return true
+}
+
+func (chainService *ChainService) ValidateTransaction(tx *chainTypes.Transaction) bool {
+	var result error
+	_ = chainService.DatabaseService.Transaction(func() error {
+		_, _, result = chainService.executeTransaction(tx)
+		return errors.New("just not commit")
+	})
+	if result != nil {
+		return false
+	}
+	return true
+}
+
+func (chainService *ChainService) ExecuteBlock(b *chainTypes.Block) (gasUsed *big.Int, err error) {
+	err = chainService.DatabaseService.Transaction(func() error {
+		gasUsed, err = chainService.executeBlock(b)
+		return err
+	})
+	return
+}
+
+func (chainService *ChainService) executeBlock(b *chainTypes.Block) (*big.Int, error) {
+	if b == nil || b.Header == nil {
 		return nil, errors.New("error block nil or header nil")
 	}
-
-	chainService.DatabaseService.BeginTransaction()
 	total := big.NewInt(0)
 	if b.Data == nil {
 		return total, nil
 	}
+
 	for _, t := range b.Data.TxList {
-		_, gasFee, err := chainService.execute(t)
+		_, gasFee, err := chainService.executeTransaction(t)
 		if err != nil {
 			return nil, err
 		}
@@ -45,15 +76,13 @@ func (chainService *ChainService) ExecuteTransactions(b *chainTypes.Block) (*big
 	stateRoot := chainService.DatabaseService.GetStateRoot()
 	if bytes.Equal(b.Header.StateRoot, stateRoot) {
 		dlog.Debug("matched ", "BlockStateRoot", hex.EncodeToString(b.Header.StateRoot), "CalcStateRoot", hex.EncodeToString(stateRoot))
-		chainService.accumulateRewards(b, chainService.ChainID(), total)
-		chainService.DatabaseService.Commit()
+		chainService.accumulateRewards(b,total)
 		chainService.preSync(b)
 		chainService.doSync(b.Header.Height)
+		return total, nil
 	} else {
-		chainService.DatabaseService.Discard()
 		return nil, fmt.Errorf("%s not matched %s", hex.EncodeToString(b.Header.StateRoot), " vs ", hex.EncodeToString(stateRoot))
 	}
-	return total, nil
 }
 
 func (chainService *ChainService) preSync(block *chainTypes.Block) {
@@ -87,149 +116,141 @@ func (chainService *ChainService) doSync(height int64) {
 	childTrans = nil
 }
 
-func (chainService *ChainService) execute(t *chainTypes.Transaction) (gasUsed, gasFee *big.Int, err error) {
-	switch t.Type() {
-	case chainTypes.TransferType:
-		return chainService.executeTransferTransaction(t)
-	case chainTypes.CreateContractType:
-		return chainService.executeCreateContractTransaction(t)
-	case chainTypes.CallContractType:
-		return chainService.executeCallContractTransaction(t)
-		//case CrossChainType:
-		//   return chainService.executeCrossChainTransaction(t)
+func (chainService *ChainService) executeTransaction(tx *chainTypes.Transaction) (*big.Int, *big.Int, error) {
+	to := tx.To()
+	nounce := tx.Nonce()
+	amount := tx.Amount()
+	fromAccount := tx.From()
+	gasPrice := tx.GasPrice()
+	gasLimit := tx.GasLimit()
+
+	originBalance := chainService.DatabaseService.GetBalance(fromAccount, true)
+	err := chainService.checkNonce(fromAccount, nounce)
+	if err != nil {
+		return  nil, nil, err
 	}
-	return nil, nil, nil
+
+	var gasUsed *big.Int
+	var gasFee *big.Int
+	switch tx.Type() {
+	case chainTypes.TransferType:
+		err = chainService.checkBalance(gasLimit, gasPrice, originBalance, chainTypes.GasTable[chainTypes.TransferType], nil)
+		if err != nil {
+			return  nil, nil, err
+		}
+		gasUsed, gasFee, err = chainService.executeTransferTransaction(tx, fromAccount, to, originBalance, gasPrice, gasLimit, amount, tx.ChainId())
+	case chainTypes.CreateContractType:
+		err = chainService.checkBalance(gasLimit, gasPrice, originBalance,nil, chainTypes.GasTable[chainTypes.CreateContractType])
+		if err != nil {
+			return  nil, nil, err
+		}
+		gasUsed, gasFee, err = chainService.executeCreateContractTransaction(tx, fromAccount, to, originBalance, gasPrice, gasLimit, amount, tx.ChainId())
+	case chainTypes.CallContractType:
+		err = chainService.checkBalance(gasLimit, gasPrice, originBalance,nil, chainTypes.GasTable[chainTypes.CallContractType])
+		if err != nil {
+			return  nil, nil, err
+		}
+		gasUsed, gasFee, err = chainService.executeCallContractTransaction(tx, fromAccount, to, originBalance, gasPrice, gasLimit, amount, tx.ChainId())
+	}
+	if err != nil {
+		dlog.Error("executeTransaction transaction error", "reason", err)
+	}
+	chainService.DatabaseService.PutNonce(fromAccount, nounce+1, true)
+	return gasUsed, gasFee, nil
 }
 
-func (chainService *ChainService) canExecute(tx *chainTypes.Transaction, gasFloor, gasCap *big.Int) (canExecute bool, fromAccountName string, balance, gasLimit, gasPrice *big.Int) {
-	fromAccountName = tx.From()
-	balance = chainService.DatabaseService.GetBalance(fromAccountName, true)
-	nonce := chainService.DatabaseService.GetNonce(fromAccountName, true)
-	if nonce > tx.Nonce() {
-		return
+func (chainService *ChainService) executeTransferTransaction(t *chainTypes.Transaction, fromAccount, to *crypto.CommonAddress, balance, gasPrice, gasLimit, amount *big.Int, chainId app.ChainIdType) (*big.Int, *big.Int, error) {
+	gasUsed := new(big.Int).Set(chainTypes.GasTable[chainTypes.TransferType])
+	gasFee := new(big.Int).Mul(gasUsed, gasPrice)
+	leftBalance, gasFee := chainService.deduct(chainId, balance, gasFee)  //sub gas fee
+	if leftBalance.Cmp(amount) >= 0 {				//sub transfer amount
+		leftBalance = new(big.Int).Sub(leftBalance, amount)
+		balanceTo := chainService.DatabaseService.GetBalance(to, true)
+		balanceTo = new(big.Int).Add(balanceTo, amount)
+		chainService.DatabaseService.PutBalance(fromAccount, balance, true)
+		chainService.DatabaseService.PutBalance(to, balanceTo, true)
+	} else {
+		return gasUsed, gasFee, errBalance
 	}
-	gasPrice = tx.GasPrice()
+	return gasUsed, gasFee, nil
+}
 
+func (chainService *ChainService) executeCreateContractTransaction(t *chainTypes.Transaction, fromAccount, to *crypto.CommonAddress, balance, gasPrice, gasLimit, amount *big.Int, chainId app.ChainIdType) (*big.Int, *big.Int, error) {
+	evm := vm.NewEVM(chainService.DatabaseService)
+	refundGas, err := chainService.VmService.ApplyTransaction(evm, t)
+	balance = chainService.DatabaseService.GetBalance(fromAccount, true)
+	gasUsed := new(big.Int).Sub(gasLimit, new(big.Int).SetUint64(refundGas))
+	gasFee  := new(big.Int).Mul(gasUsed, gasPrice)
+	leftBalance, gasFee := chainService.deduct(chainId, balance, gasFee)
+	if leftBalance.Sign() >= 0{
+		chainService.DatabaseService.PutBalance(fromAccount, leftBalance, true)
+		return gasUsed, gasFee, err
+	}else{
+		return gasUsed, gasFee, errBalance
+	}
+}
+
+func (chainService *ChainService) executeCallContractTransaction(t *chainTypes.Transaction, fromAccount, to *crypto.CommonAddress, balance, gasPrice, gasLimit, amount *big.Int, chainId app.ChainIdType) (*big.Int, *big.Int, error) {
+	evm := vm.NewEVM(chainService.DatabaseService)
+	returnGas, err := chainService.VmService.ApplyTransaction(evm, t)
+	balance = chainService.DatabaseService.GetBalance(fromAccount, true)
+	gasUsed := new(big.Int).Sub(gasLimit, new(big.Int).SetUint64(returnGas))
+	gasFee  := new(big.Int).Mul(gasUsed, gasPrice)
+	leftBalance, gasFee := chainService.deduct(t.ChainId(), balance, gasFee)
+	if leftBalance.Sign() >= 0{
+		chainService.DatabaseService.PutBalance(fromAccount, leftBalance, true)
+		return gasUsed, gasFee, err
+	}else{
+		return gasUsed, gasFee, errBalance
+	}
+}
+
+func  (chainService *ChainService) checkNonce(fromAccount *crypto.CommonAddress, nounce int64) error{
+	nonce := chainService.DatabaseService.GetNonce(fromAccount, true)
+	if nonce > nounce {
+		return errors.New("error nounce")
+	}
+	return nil
+}
+
+func (chainService *ChainService) checkBalance(gaslimit, gasPrice, balance, gasFloor, gasCap *big.Int) error {
 	if gasFloor != nil {
-		amountFloor := new(big.Int).Mul(gasFloor, tx.GasPrice())
-		if tx.GasLimit().Cmp(gasFloor) < 0 || amountFloor.Cmp(balance) > 0 {
-			return
+		amountFloor := new(big.Int).Mul(gasFloor, gasPrice)
+		if gaslimit.Cmp(gasFloor) < 0 || amountFloor.Cmp(balance) > 0 {
+			return errors.New("not enough gas")
 		}
 	}
 	if gasCap != nil {
-		amountCap := new(big.Int).Mul(gasCap, tx.GasPrice())
+		amountCap := new(big.Int).Mul(gasCap, gasPrice)
 		if amountCap.Cmp(balance) > 0 {
-			return
+			return errors.New("too much gaslimit")
 		}
 	}
-	canExecute = true
-	return
+	return nil
 }
 
-func (chainService *ChainService) deduct(accountName string, chainId app.ChainIdType, balance, gasFee *big.Int) (leftBalance, actualFee *big.Int) {
+func (chainService *ChainService) deduct(chainId app.ChainIdType, balance, gasFee *big.Int) (leftBalance, actualFee *big.Int) {
 	leftBalance = new(big.Int).Sub(balance, gasFee)
 	actualFee = new(big.Int).Set(gasFee)
 	if leftBalance.Sign() < 0 {
 		actualFee = new(big.Int).Set(balance)
 		leftBalance = new(big.Int)
 	}
-	chainService.DatabaseService.PutBalance(accountName, leftBalance, true)
 	return leftBalance, actualFee
 }
 
-func (chainService *ChainService) executeTransferTransaction(t *chainTypes.Transaction) (gasUsed *big.Int, gasFee *big.Int, err error) {
-	var (
-		can               bool
-		fromAccountName              string
-		balance, gasPrice *big.Int
-	)
 
-	gasUsed, gasFee = new(big.Int), new(big.Int)
-	can, fromAccountName, balance, _, gasPrice = chainService.canExecute(t, chainTypes.TransferGas, nil)
-	if !can {
-		err = errBalance
-		return
-	}
 
-	chainService.DatabaseService.PutNonce(&addr, t.Nonce()+1, true)
 
-	gasUsed = new(big.Int).Set(chainTypes.TransferGas)
-	gasFee = new(big.Int).Mul(gasUsed, gasPrice)
-	balance, gasFee = chainService.deduct(fromAccountName, t.ChainId(), balance, gasFee)
-	if balance.Cmp(t.Amount()) >= 0 {
-		balance = new(big.Int).Sub(balance, t.Amount())
-		balanceTo := chainService.DatabaseService.GetBalance(t.To(), true)
-		balanceTo = new(big.Int).Add(balanceTo, t.Amount())
-		chainService.DatabaseService.PutBalance(fromAccountName, balance, true)
-		chainService.DatabaseService.PutBalance(t.To(), balanceTo, true)
-	} else {
-		err = errBalance
-		hash, _ := t.TxHash()
-		dlog.Info("execute tx err", "tx:", string(hash), "account balance", balance, "is less t.Amount", t.Amount())
-	}
-	return
-}
 
-func (chainService *ChainService) executeCreateContractTransaction(t *chainTypes.Transaction) (gasUsed *big.Int, gasFee *big.Int, err error) {
-	var (
-		can                         bool
-		fromAccountName             string
-		balance, gasLimit, gasPrice *big.Int
-	)
-	gasUsed, gasFee = new(big.Int), new(big.Int)
-	can, fromAccountName, _, gasLimit, gasPrice = chainService.canExecute(t, nil, chainTypes.CreateContractGas)
-	if !can {
-		err = errBalance
-		return
-	}
 
-	evm := vm.NewEVM(chainService.DatabaseService, chainService.chainId)
-	returnGas, _ := chainService.VmService.ApplyTransaction(evm, t)
-	gasUsed = new(big.Int).Sub(gasLimit, new(big.Int).SetUint64(returnGas))
-	gasFee = new(big.Int).Mul(gasUsed, gasPrice)
-	balance = chainService.DatabaseService.GetBalance(fromAccountName, true)
-	_, gasFee = chainService.deduct(fromAccountName, t.ChainId(), balance, gasFee)
-	chainService.DatabaseService.PutNonce(fromAccountName, t.Nonce()+1, true)
-	return
-}
 
-func (chainService *ChainService) executeCallContractTransaction(t *chainTypes.Transaction) (gasUsed *big.Int, gasFee *big.Int, err error) {
-	var (
-		can                         bool
-		fromAccountName             string
-		balance, gasLimit, gasPrice *big.Int
-	)
 
-	gasUsed, gasFee = new(big.Int), new(big.Int)
-	can, fromAccountName, _, gasLimit, gasPrice = chainService.canExecute(t, nil, chainTypes.CallContractGas)
-	if !can {
-		err = errBalance
-		return
-	}
 
-	evm := vm.NewEVM(chainService.DatabaseService, chainService.chainId)
-	returnGas, _ := chainService.VmService.ApplyTransaction(evm, t)
-	gasUsed = new(big.Int).Sub(gasLimit, new(big.Int).SetUint64(returnGas))
-	gasFee = new(big.Int).Mul(gasUsed, gasPrice)
-	balance = chainService.DatabaseService.GetBalance(fromAccountName, true)
-	_, gasFee = chainService.deduct(fromAccountName, t.ChainId(), balance, gasFee)
-	chainService.DatabaseService.PutNonce(fromAccountName, t.Nonce()+1, true)
-	return
-}
 
-func (chainService *ChainService) CheckStateRoot(block *chainTypes.Block) bool {
-	chainService.DatabaseService.BeginTransaction()
-	for _, t := range block.Data.TxList {
-		chainService.execute(t)
-	}
-	stateRoot := chainService.DatabaseService.GetStateRoot()
-	chainService.DatabaseService.Discard()
-	if bytes.Equal(stateRoot, block.Header.StateRoot) {
-		return true
-	} else {
-		return false
-	}
-}
+
+
+
 
 //func (chainService *ChainService) executeCrossChainTransaction(t *chainTypes.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
 //    var (
@@ -256,7 +277,7 @@ func (chainService *ChainService) CheckStateRoot(block *chainTypes.Block) bool {
 //       if tx.Data.Type == CrossChainType {
 //           continue
 //       }
-//       g, _ := chainService.execute(tx)
+//       g, _ := chainService.executeTransaction(tx)
 //       gasSum = new(big.Int).Add(gasSum, g)
 //    }
 //
@@ -302,7 +323,7 @@ func (chainService *ChainService) CheckStateRoot(block *chainTypes.Block) bool {
 //        if tx.Data.Type == CrossChainType {
 //            continue
 //        }
-//        g, _ := execute(subDt, tx)
+//        g, _ := executeTransaction(subDt, tx)
 //        gasSum = new(big.Int).Add(gasSum, g)
 //    }
 //

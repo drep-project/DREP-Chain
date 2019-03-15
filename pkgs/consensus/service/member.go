@@ -171,6 +171,7 @@ func (member *Member) OnSetUp(peer *p2pTypes.Peer, setUp *consensusTypes.Setup) 
         member.pushErrorMsg(StatusError)
         return
     }
+
     dlog.Debug("receive setup message")
     if member.leader.Peer.Ip == peer.Ip {
         member.msg = setUp.Msg

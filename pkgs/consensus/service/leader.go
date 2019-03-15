@@ -94,10 +94,7 @@ func (leader *Leader) Reset() {
 
 func (leader *Leader) ProcessConsensus(msg []byte) (error, *secp256k1.Signature, []byte) {
 	leader.setState(INIT)
-	//TODO  Waiting here is just to reduce the chance of message staggering. This waiting time should be minimized or even eliminated.
-	time.AfterFunc(time.Second, func() {
-		leader.setUp(msg)
-	})
+	leader.setUp(msg)
 	if !leader.waitForCommit() {
 		//send reason and reset
 		leader.fail("waitForCommit fail")
