@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"container/list"
 	"encoding/hex"
 	"errors"
@@ -56,6 +57,7 @@ func (cs *ChainService) checkHeader(header *chainTypes.BlockHeader) error {
 
 	//出块时间
 	if header.Timestamp > time.Now().Unix() {
+		fmt.Println(header.Timestamp, time.Now().Unix())
 		return errors.New("block time err")
 	}
 
@@ -86,11 +88,11 @@ func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, b
 	chainService.addBlockSync.Lock()
 	defer chainService.addBlockSync.Unlock()
 
-	//err := chainService.checkBlock(block)
-	//if err != nil {
-	//	dlog.Info("process Block", "err", err)
-	//	return false, false, err
-	//}
+	err := chainService.checkBlock(block)
+	if err != nil {
+		dlog.Info("process Block", "err", err)
+		return false, false, err
+	}
 
 	blockHash := block.Header.Hash()
 	exist := chainService.blockExists(blockHash)

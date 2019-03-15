@@ -2,7 +2,6 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/drep-project/drep-chain/chain/txpool"
 	"github.com/drep-project/drep-chain/pkgs/evm"
 	"math/big"
@@ -237,7 +236,7 @@ func (chainService *ChainService) GenerateBlock(leaderKey string, members []stri
 	timestamp := time.Now().Unix()
 	previousHash := chainService.BestChain.Tip().Hash
 	stateRoot := chainService.DatabaseService.GetStateRoot()
-	merkleRoot := chainService.deriveMerkleRoot(txs)
+	merkleRoot := chainService.deriveMerkleRoot(finalTxs)
 
 	var memberPks []string
 	for _, p := range members {
