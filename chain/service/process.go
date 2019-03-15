@@ -19,7 +19,7 @@ var (
 )
 
 func (chainService *ChainService) ProcessGenisisBlock() {
-	chainService.ExecuteTransactions(chainService.genesisBlock)
+	chainService.ExecuteBlock(chainService.genesisBlock)
 	chainService.DatabaseService.RecordBlockJournal(0)
 }
 
@@ -183,21 +183,19 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (bool, er
 	if err != nil {
 		return false, err
 	}
-
 	if block.Header.PreviousHash.IsEqual(chainService.BestChain.Tip().Hash) {
 		//main chain
-		if chainService.CheckStateRoot(block) {
+		if chainService.ValidateBlock(block) {
 			chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValid)
 		} else {
 			chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValidateFailed)
 		}
-
 		chainService.flushIndexState()
 
 		if err != nil {
 			return false, err
 		}
-		_, err = chainService.ExecuteTransactions(block)
+		_, err = chainService.ExecuteBlock(block)
 		if err != nil {
 			chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValidateFailed)
 			chainService.flushIndexState()
@@ -313,7 +311,7 @@ func (chainService *ChainService) reorganizeChain(detachNodes, attachNodes *list
 			if err != nil {
 				return err
 			}
-			_, err = chainService.ExecuteTransactions(bk)
+			_, err = chainService.ExecuteBlock(bk)
 			if err != nil {
 				fmt.Println(err)
 				return err

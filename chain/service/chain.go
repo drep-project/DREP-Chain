@@ -154,7 +154,6 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 
 	chainService.InitStates()
 	chainService.transactionPool = txpool.NewTransactionPool(chainService.DatabaseService)
-
 	props := actor.FromProducer(func() actor.Actor {
 		return chainService
 	})
@@ -226,7 +225,7 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey, 
 	finalTxs := make([]*chainTypes.Transaction, 0, len(txs))
 	gasUsed := new(big.Int)
 	for _, t := range txs {
-		g, _, err := chainService.execute(t)
+		g, _, err := chainService.executeTransaction(t)
 		if err == nil {
 			finalTxs = append(finalTxs, t)
 			gasUsed.Add(gasUsed, g)
@@ -326,7 +325,7 @@ func (chainService *ChainService) GenesisBlock(genesisPubkey string) *chainTypes
 }
 
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
-func (chainService *ChainService) accumulateRewards(b *chainTypes.Block, chainId app.ChainIdType, totalGasBalance *big.Int) {
+func (chainService *ChainService) accumulateRewards(b *chainTypes.Block, totalGasBalance *big.Int) {
 	reward := new(big.Int).SetUint64(uint64(Rewards))
 	leaderAddr := crypto.PubKey2Address(b.Header.LeaderPubKey)
 

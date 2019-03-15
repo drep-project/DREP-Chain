@@ -298,6 +298,22 @@ func (database *DatabaseService) Store(x, y *big.Int) error {
     return database.db.put(x.Bytes(), y.Bytes(), true)
 }
 
+func  (database *DatabaseService)Transaction(fn func() error) error{
+    isSuccess := false
+    database.BeginTransaction()
+    defer func() {
+        if isSuccess {
+            database.Commit()
+        }else{
+            database.Discard()
+        }
+    }()
+    err := fn()
+    if err == nil {
+        isSuccess = true
+    }
+    return err
+}
 func (database *DatabaseService) BeginTransaction() {
     database.db.BeginTransaction()
 }
