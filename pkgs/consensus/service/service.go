@@ -275,6 +275,10 @@ func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, erro
 	return block, nil
 }
 
+//1 leader出块，然后签名并且广播给其他producer,
+//2 其他producer收到后，签自己的构建数字签名;然后把签名后的块返回给leader
+//3 leader搜集到所有的签名或者返回的签名个数大于producer个数的三分之二后，开始验证签名
+//4 leader验证签名通过后，广播此块给所有的Peer
 func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, error) {
 	consensusService.leader.Reset()
 	membersPubkey := []*secp256k1.PublicKey{}

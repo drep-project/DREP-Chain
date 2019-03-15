@@ -156,7 +156,6 @@ func (member *Member) OnSetUp(peer *p2pTypes.Peer, setUp *consensusTypes.Setup) 
         return
     }
 
-
     if member.currentHeight < setUp.Height {
         dlog.Debug("setup low height", "Receive Height", setUp.Height, "Current Height", member.currentHeight, "Status", member.getState())
         member.pushErrorMsg(HighHeightError)
