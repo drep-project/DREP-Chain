@@ -87,7 +87,7 @@ func (pool *TransactionPool) Contains(id string) bool {
 func (pool *TransactionPool) checkAndGetAddr(tx *chainTypes.Transaction) (error, *crypto.CommonAddress) {
 	addr := tx.From()
 	// TODO Check sig
-	if pool.getTransactionCount(addr) > tx.Nonce() {
+	if pool.GetTransactionCount(addr) > tx.Nonce() {
 		fmt.Println("checkAndGetAddr:", pool.getTransactionCount(addr), tx.Nonce())
 		return fmt.Errorf("nonce err ,dbNonce:%d > txNonce:%d", pool.getTransactionCount(addr), tx.Nonce()), nil
 	}

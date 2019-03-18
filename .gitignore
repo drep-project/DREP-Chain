@@ -5,3 +5,4 @@ go.sum
 tools/gencode/*.js
 dreptest*
 data
+drep

@@ -235,7 +235,7 @@ func (cs *ChainService) fetchBlocks(peer *p2pTypes.Peer, height int64) error {
 					delete(cs.pendingSyncTasks, *b.Header.Hash())
 
 					_, _, err := cs.ProcessBlock(b)
-					dlog.Info("sync block recv block","height", b.Header.Height, "process result", err)
+					//dlog.Info("sync block recv block","height", b.Header.Height, "process result", err)
 					if err != nil && err != errBlockExsist && err != errOrphanBlockExsist {
 						dlog.Error("deal sync block", "err", err)
 						errCh <- err
@@ -249,8 +249,6 @@ func (cs *ChainService) fetchBlocks(peer *p2pTypes.Peer, height int64) error {
 					cs.syncMut.Unlock()
 				}
 
-				//同步块的时候，每个周期休息200ms
-				//time.Sleep(time.Millisecond*200)
 			case <-timeout:
 				errCh <- fmt.Errorf("fetch blocks timeout")
 			case <-quit:

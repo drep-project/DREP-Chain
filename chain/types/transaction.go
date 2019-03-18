@@ -29,6 +29,12 @@ type TransactionData struct {
 	Timestamp int64
 	Data      []byte
 	From      crypto.CommonAddress
+
+
+	// Signature values
+	V *big.Int `json:"v" gencodec:"required"`
+	R *big.Int `json:"r" gencodec:"required"`
+	S *big.Int `json:"s" gencodec:"required"`
 }
 
 func (tx *Transaction) Nonce() int64 {
