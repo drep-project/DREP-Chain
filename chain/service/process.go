@@ -57,8 +57,7 @@ func (cs *ChainService) checkHeader(header *chainTypes.BlockHeader) error {
 
 	//出块时间
 	if header.Timestamp > time.Now().Unix() {
-		fmt.Println(header.Timestamp, time.Now().Unix())
-		return errors.New("block time err")
+		return fmt.Errorf("block time err", "HeaderTime", time.Unix(header.Timestamp,0), "Now", time.Now())
 	}
 
 	if header.GasLimit.Cmp(new(big.Int).Set(BlockGasLimit)) > 0 {
@@ -184,31 +183,9 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (bool, er
 		return false, err
 	}
 	if block.Header.PreviousHash.IsEqual(chainService.BestChain.Tip().Hash) {
-		//main chain
-		if chainService.ValidateBlock(block) {
-			chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValid)
-		} else {
-			chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValidateFailed)
-		}
-		chainService.flushIndexState()
-
+ 		err = chainService.connectBlock(block, newNode)
 		if err != nil {
 			return false, err
-		}
-		_, err = chainService.ExecuteBlock(block)
-		if err != nil {
-			chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValidateFailed)
-			chainService.flushIndexState()
-			return false, err
-		}
-		chainService.markState(newNode)
-		chainService.clearTxPool(block)
-		// If this is fast add, or this block node isn't yet marked as
-		// valid, then we'll update its status and flush the state to
-		// disk again.
-		if chainService.Index.NodeStatus(newNode).KnownValid() {
-			chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValid)
-			chainService.flushIndexState()
 		}
 		return true, nil
 	}
@@ -233,6 +210,32 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (bool, er
 		dlog.Warn("Error flushing block index changes to disk", "Reason", writeErr)
 	}
 	return err == nil, err
+}
+
+func (chainService *ChainService) connectBlock(block *chainTypes.Block, newNode *chainTypes.BlockNode) error {
+	//main chain
+	if chainService.ValidateBlock(block) {
+		chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValid)
+	} else {
+		chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValidateFailed)
+	}
+	chainService.flushIndexState()
+	_, err := chainService.ExecuteBlock(block)
+	if err != nil {
+		chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValidateFailed)
+		chainService.flushIndexState()
+		return err
+	}
+	chainService.markState(newNode)
+	chainService.clearTxPool(block)
+	// If this is fast add, or this block node isn't yet marked as
+	// valid, then we'll update its status and flush the state to
+	// disk again.
+	if chainService.Index.NodeStatus(newNode).KnownValid() {
+		chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValid)
+		chainService.flushIndexState()
+	}
+	return nil
 }
 
 func (chainService *ChainService) flushIndexState() {
@@ -306,20 +309,17 @@ func (chainService *ChainService) reorganizeChain(detachNodes, attachNodes *list
 	if attachNodes.Len() != 0 && detachNodes.Len() != 0 {
 		elem := attachNodes.Front()
 		for elem != nil { //
-			bkn := elem.Value.(*chainTypes.BlockNode)
-			bk, err := chainService.DatabaseService.GetBlock(bkn.Hash)
+			blockNode := elem.Value.(*chainTypes.BlockNode)
+			block, err := chainService.DatabaseService.GetBlock(blockNode.Hash)
 			if err != nil {
 				return err
 			}
-			_, err = chainService.ExecuteBlock(bk)
+			err = chainService.connectBlock(block, blockNode)
 			if err != nil {
-				fmt.Println(err)
 				return err
 			}
-			chainService.markState(bkn)
-			chainService.clearTxPool(bk)
 
-			dlog.Info("REORGANIZE:Append New Block", "Height", bkn.Height, "Hash", bkn.Hash)
+			dlog.Info("REORGANIZE:Append New Block", "Height", blockNode.Height, "Hash", blockNode.Hash)
 			elem = elem.Next()
 		}
 	}
