@@ -28,6 +28,7 @@ func NewDatabase(dbPath string) (*Database, error) {
     return db, nil
 }
 
+
 func (db *Database) initState() error {
     db.trieRootKey = sha3.Hash256([]byte("state rootState"))
     rootState := &Node {

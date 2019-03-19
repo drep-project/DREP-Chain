@@ -7,10 +7,10 @@ import (
 )
 
 type Journal struct {
-    op       string
-    key      []byte
-    value    []byte
-    previous []byte
+    Op       string
+    Key      []byte
+    Value    []byte
+    Previous []byte
 }
 
 func (db *Database) getJournalLength() int64 {
@@ -26,10 +26,10 @@ func (db *Database) addJournal(op string, key, value []byte) error {
     length := db.getJournalLength() + 1
     previous, _ := db.db.Get(key, nil)
     j := &Journal{
-        op:       op,
-        key:      key,
-        value:    value,
-        previous: previous,
+        Op:       op,
+        Key:      key,
+        Value:    value,
+        Previous: previous,
     }
     jVal, err := json.Marshal(j)
     if err != nil {
@@ -57,15 +57,15 @@ func (db *Database) revertJournal(index int64) error {
     if err != nil {
         return err
     }
-    if j.op == "put" {
-        if j.previous == nil {
-            return db.db.Delete(j.key, nil)
+    if j.Op == "put" {
+        if j.Previous == nil {
+            return db.db.Delete(j.Key, nil)
         } else {
-            return db.db.Put(j.key, j.previous, nil)
+            return db.db.Put(j.Key, j.Previous, nil)
         }
     }
-    if j.op == "del" {
-        return db.db.Put(j.key, j.previous, nil)
+    if j.Op == "del" {
+        return db.db.Put(j.Key, j.Previous, nil)
     }
     return nil
 }
@@ -80,14 +80,13 @@ func (db *Database) rollback2Index(index int64) error {
         err = db.removeJournal(i)
         if err != nil {
             return err
-
         }
     }
-    return nil
+    return db.db.Put([]byte("journal_length"), new(big.Int).SetInt64(index).Bytes(), nil)
 }
 
 func (db *Database) BlockHeight2JournalIndex(height int64) error {
-    lengthVal, err := db.db.Get([]byte("journal_lenght"), nil)
+    lengthVal, err := db.db.Get([]byte("journal_length"), nil)
     if err != nil {
         return err
     }
