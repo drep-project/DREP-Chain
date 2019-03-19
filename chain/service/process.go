@@ -18,9 +18,29 @@ var (
 	errOrphanBlockExsist = errors.New("already have block (orphan)")
 )
 
-func (chainService *ChainService) ProcessGenisisBlock() {
-	chainService.ExecuteBlock(chainService.genesisBlock)
+func (chainService *ChainService) ProcessGenisisBlock() error {
+	var err error
+	err = chainService.DatabaseService.Transaction(func() error {
+		_, err = chainService.executeBlock(chainService.genesisBlock)
+		if err != nil {
+			return err
+		}
+		biosStorage := chainTypes.NewStorage(chainService.Config.Bios, chainService.Config.ChainId, []byte{}, chainTypes.Authority{})
+		for _, producer := range chainService.Config.Producers {
+			//register account
+			storage := chainTypes.NewStorage(producer.Account, chainService.Config.ChainId, producer.ChainCode, chainTypes.NewAuthority(producer.Pubkey))
+			chainService.DatabaseService.PutStorage(producer.Account, storage, true)
+			//add to bios miner
+			biosStorage.Miner[producer.Account] = &producer.SignPubkey
+		}
+		chainService.DatabaseService.PutStorage(chainService.Config.Bios, biosStorage, true)
+		return nil
+	})
+	if err != nil {
+		return err
+	}
 	chainService.DatabaseService.RecordBlockJournal(0)
+	return nil
 }
 
 func (chainService *ChainService) checkBody(block *chainTypes.Block) error {

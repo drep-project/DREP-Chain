@@ -20,8 +20,8 @@ type BlockHeader struct {
 	Timestamp    int64
 	StateRoot    []byte
 	TxRoot       []byte
-    LeaderPubKey         string
-    MinorPubKeys         []string
+    LeaderPubKey string
+    MinorPubKeys []string
 }
 
 func (blockHeader *BlockHeader) Hash() *crypto.Hash {

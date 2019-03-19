@@ -246,3 +246,6 @@ func (p *PublicKey) UnmarshalJSON(input []byte) error {
 func (p *PublicKey) MarshalText() ([]byte, error) {
 	return common.Bytes(p.Serialize()).MarshalText()
 }
+func (p *PublicKey) MarshalJsn() ([]byte, error) {
+	return p.MarshalText()
+}

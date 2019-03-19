@@ -59,7 +59,7 @@ func gen(ctx *cli.Context) error {
 	bootsNodes := []p2pTypes.BootNode{}
 	standbyKey := []*secp256k1.PrivateKey{}
 	keys := []*accountTypes.Key{}
-	produces := []*consensusTypes.Producer{}
+	produces := []chainTypes.Producer{}
 	for i:=0; i< len(nodeItems); i++{
 		aNode, chaincode := RandomNode([]byte(nodeItems[i].Name))
 		keys = append(keys, aNode)
@@ -75,13 +75,15 @@ func gen(ctx *cli.Context) error {
 		fmt.Println(storage)
 
 		standbyKey = append(standbyKey, aNode.PrivKey)
-		producer := &consensusTypes.Producer{
+		producer := &chainTypes.Producer{
 			Account: nodeItems[i].Name,
 			Ip:nodeItems[i].Ip,
 			Port:nodeItems[i].Port,
+			Pubkey :		*(*secp256k1.PublicKey)(&aNode.PrivKey.PublicKey),
 			SignPubkey: *(*secp256k1.PublicKey)(&aNode.PrivKey.PublicKey),
+			ChainCode :chaincode,
 		}
-		produces = append(produces, producer)
+		produces = append(produces, *producer)
 	}
 
 
@@ -99,12 +101,13 @@ func gen(ctx *cli.Context) error {
 	consensusConfig := consensusTypes.ConsensusConfig{}
 	consensusConfig.EnableConsensus = true
 	consensusConfig.ConsensusMode = "bft"
-	consensusConfig.Producers = produces
+
 
 	chainConfig := chainTypes.ChainConfig{}
 	chainConfig.RemotePort = 55555
+	chainConfig.Bios = "drep"
 	chainConfig.ChainId = app.ChainIdType{}
-	chainConfig.GenesisPK = "0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26"
+	chainConfig.Producers = produces
 	
 	walletConfig := accountTypes.Config{}
 	walletConfig.WalletPassword = pasword

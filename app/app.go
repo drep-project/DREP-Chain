@@ -154,6 +154,7 @@ func (mApp DrepApp) action(ctx *cli.Context) error {
 	for _, service := range mApp.Context.Services {
 		err := service.Init(mApp.Context)
 		if err != nil {
+			fmt.Println(service.Name())
 			return err
 		}
 	}

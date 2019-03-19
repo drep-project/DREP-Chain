@@ -148,8 +148,7 @@ func (database *DatabaseService) RecordBlockJournal(height int64) {
     database.db.RecordBlockJournal(height)
 }
 
-
-func (database *DatabaseService) GetStorage(accountName string, transactional bool) *chainType.Storage {
+func (database *DatabaseService) GetStorage(accountName string, transactional bool) (*chainType.Storage, error) {
     if !transactional {
         return database.db.getStorage(accountName)
     }
@@ -162,11 +161,14 @@ func (database *DatabaseService) GetStorage(accountName string, transactional bo
     hk := bytes2Hex(key)
     storage, ok := database.db.stores[hk]
     if ok {
-        return storage
+        return storage, nil
     }
-    storage =  database.db.getStorage(accountName)
+    storage, err := database.db.getStorage(accountName)
+    if err != nil {
+        return nil, err
+    }
     database.db.stores[hk] = storage
-    return storage
+    return storage, nil
 }
 
 func (database *DatabaseService) PutStorage(accountName string, storage *chainType.Storage, transactional bool) error {
@@ -191,7 +193,7 @@ func (database *DatabaseService) PutStorage(accountName string, storage *chainTy
 }
 
 func (database *DatabaseService) GetBalance(accountName string, transactional bool) *big.Int {
-    storage := database.GetStorage(accountName, transactional)
+    storage, _ := database.GetStorage(accountName, transactional)
 
     if storage == nil {
         return new(big.Int)
@@ -200,7 +202,7 @@ func (database *DatabaseService) GetBalance(accountName string, transactional bo
 }
 
 func (database *DatabaseService) PutBalance(accountName string, balance *big.Int, transactional bool) error {
-    storage := database.GetStorage(accountName, transactional)
+    storage, _ := database.GetStorage(accountName, transactional)
     if storage == nil {
         return errors.New("no account storage found")
     }
@@ -209,7 +211,7 @@ func (database *DatabaseService) PutBalance(accountName string, balance *big.Int
 }
 
 func (database *DatabaseService) GetNonce(accountName string, transactional bool) int64 {
-    storage := database.GetStorage(accountName, transactional)
+    storage, _ := database.GetStorage(accountName, transactional)
     if storage == nil {
         return -1
     }
@@ -217,7 +219,7 @@ func (database *DatabaseService) GetNonce(accountName string, transactional bool
 }
 
 func (database *DatabaseService) PutNonce(accountName string, nonce int64, transactional bool) error {
-    storage := database.GetStorage(accountName, transactional)
+    storage, _ := database.GetStorage(accountName, transactional)
     if storage == nil {
         return errors.New("no account storage found")
     }
@@ -226,7 +228,7 @@ func (database *DatabaseService) PutNonce(accountName string, nonce int64, trans
 }
 
 func (database *DatabaseService) GetByteCode(accountName string, transactional bool) []byte {
-    storage := database.GetStorage(accountName, transactional)
+    storage, _ := database.GetStorage(accountName, transactional)
     if storage == nil {
         return nil
     }
@@ -234,7 +236,7 @@ func (database *DatabaseService) GetByteCode(accountName string, transactional b
 }
 
 func (database *DatabaseService) PutByteCode(accountName string, byteCode []byte, transactional bool) error {
-    storage := database.GetStorage(accountName, transactional)
+    storage, _ := database.GetStorage(accountName, transactional)
     if storage == nil {
         return errors.New("no account storage found")
     }
@@ -244,7 +246,7 @@ func (database *DatabaseService) PutByteCode(accountName string, byteCode []byte
 }
 
 func (database *DatabaseService) GetCodeHash(accountName string, transactional bool) crypto.Hash {
-    storage := database.GetStorage(accountName, transactional)
+    storage, _ := database.GetStorage(accountName, transactional)
     if storage == nil {
         return crypto.Hash{}
     }
@@ -252,7 +254,7 @@ func (database *DatabaseService) GetCodeHash(accountName string, transactional b
 }
 
 func (database *DatabaseService) GetReputation(accountName string, transactional bool) *big.Int {
-    storage := database.GetStorage(accountName, transactional)
+    storage, _ := database.GetStorage(accountName, transactional)
     if storage == nil {
         return big.NewInt(0)
     }
@@ -316,10 +318,6 @@ func  (database *DatabaseService)Transaction(fn func() error) error{
 }
 func (database *DatabaseService) BeginTransaction() {
     database.db.BeginTransaction()
-}
-
-func (database *DatabaseService) EndTransaction() {
-    database.db.EndTransaction()
 }
 
 func (database *DatabaseService) Commit() {

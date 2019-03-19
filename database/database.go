@@ -8,6 +8,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"math/big"
 	"strconv"
+	"sync"
 )
 
 type Database struct {
@@ -17,6 +18,7 @@ type Database struct {
 	stores map[string]*chainTypes.Storage
 	//trie  Trie
 	root   []byte
+	txLock sync.Mutex
 }
 
 type journal struct {
@@ -129,6 +131,7 @@ func (db *Database) delete(key []byte, temporary bool) error {
 }
 
 func (db *Database) BeginTransaction() {
+	db.txLock.Lock()
 	db.temp = make(map[string][]byte)
 	db.states = make(map[string]*State)
 	db.stores = make(map[string]*chainTypes.Storage)
@@ -138,6 +141,7 @@ func (db *Database) EndTransaction() {
 	db.temp = nil
 	db.states = nil
 	db.stores = nil
+	db.txLock.Unlock()
 }
 
 
@@ -251,18 +255,19 @@ func (db *Database) delState(key []byte) error {
 	return nil
 }
 
-func (db *Database) getStorage(accountName string) *chainTypes.Storage {
-	storage := &chainTypes.Storage{}
+func (db *Database) getStorage(accountName string) (*chainTypes.Storage, error) {
+
 	key := sha3.Hash256([]byte("storage_" + accountName))
 	value, err := db.get(key, false)
 	if err != nil {
-	    storage.Balance = new(big.Int)
-	    storage.Nonce = 0
-	    storage.Reputation = new(big.Int)
-		return storage
+		return nil, err
 	}
-	json.Unmarshal(value, storage)
-	return storage
+	storage := &chainTypes.Storage{}
+	err = json.Unmarshal(value, storage)
+	if err != nil {
+		return nil, err
+	}
+	return storage, nil
 }
 
 func (db *Database) putStorage(accountName string, storage *chainTypes.Storage) error {

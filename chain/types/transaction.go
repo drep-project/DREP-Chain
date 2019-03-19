@@ -3,10 +3,13 @@ package types
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"github.com/drep-project/drep-chain/app"
+	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"math/big"
+	"time"
 )
 
 type Transaction struct {
@@ -28,20 +31,29 @@ type TransactionData struct {
 	Data      []byte
 }
 
+func NewTransaction(from string, txType TxType ,amount *big.Int, nonce int64, gasPrice, gasLimit *big.Int, action interface{}) (*Transaction, error) {
+	actionBytes, err := json.Marshal(action)
+	if err != nil {
+		return nil, err
+	}
+	data := &TransactionData{
+		Version:   		common.Version,
+		FromAccount:    from,
+		Type:      		txType,
+		Amount:    		amount,
+		Nonce:     		nonce,
+		GasPrice:  		gasPrice,
+		GasLimit:  		gasLimit,
+		Data:			actionBytes,
+		Timestamp: 		time.Now().Unix(),
+	}
+	return &Transaction{Data: data}, nil
+}
+
+
 type TransferAction struct {
 	To        string
 }
-
-// UnmarshalJSON parses a hash in hex syntax.
-func (transferAction TransferAction) UnmarshalJSON(input []byte) error {
-	transferAction.To = string(input)
-	return nil
-}
-
-func (transferAction TransferAction) MarshalText() ([]byte, error) {
-	return []byte(transferAction.To), nil
-}
-
 
 func NewTransferAction(toAccount string) *TransferAction{
 	return &TransferAction{
@@ -53,15 +65,6 @@ type RegisterMinerAction struct {
 	MinerAccount string
 	SignKey		 secp256k1.PublicKey
 
-}
-
-// UnmarshalJSON parses a hash in hex syntax.
-func (registerMinerAction RegisterMinerAction) UnmarshalJSON(input []byte) error {
-	return nil
-}
-
-func (registerMinerAction RegisterMinerAction) MarshalText() ([]byte, error) {
-	return []byte(""), nil
 }
 
 func NewRegisterMinerAction(minerAccount string, signKey secp256k1.PublicKey) *RegisterMinerAction{
@@ -79,14 +82,6 @@ type RegisterAccountAction struct {
 	ChainCode  	[]byte
 }
 
-// UnmarshalJSON parses a hash in hex syntax.
-func (registerAccountAction RegisterAccountAction) UnmarshalJSON(input []byte) error {
-	return nil
-}
-
-func (registerAccountAction RegisterAccountAction) MarshalText() ([]byte, error) {
-	return []byte(""), nil
-}
 
 func NewRegisterAccountAction(name string, authority Authority, chainId app.ChainIdType, chainCode []byte) *RegisterAccountAction{
 	return &RegisterAccountAction{
@@ -157,7 +152,7 @@ func (createContractAction CreateContractAction) MarshalText() ([]byte, error) {
 	return []byte(""), nil
 }
 
-func NewCallCreateContractAction(contractName string, byteCode []byte) *CreateContractAction {
+func NewCreateContractAction(contractName string, byteCode []byte) *CreateContractAction {
 	return &CreateContractAction{
 		ContractName: 	contractName,
 		ByteCode: 		byteCode,
@@ -259,4 +254,44 @@ func (tx *Transaction) GetGas() *big.Int {
 
 func (tx *Transaction) GetSig() []byte {
 	return tx.Sig
+}
+
+type Message struct {
+	Type     TxType
+	From      string
+	ChainId   app.ChainIdType
+	DestChain app.ChainIdType
+	Gas       *big.Int
+	Value     *big.Int
+	Nonce     uint64
+	Action		interface{}
+}
+
+func TxToMessage(tx *Transaction) (*Message, error) {
+	var action interface{}
+
+	switch tx.Type() {
+	case CreateContractType:
+		action = &CreateContractAction{}
+		err := json.Unmarshal(tx.GetData(), action)
+		if err != nil{
+			return  nil, err
+		}
+	case CallContractType:
+		action = &CallContractAction{}
+		err := json.Unmarshal(tx.GetData(), action)
+		if err != nil{
+			return  nil, err
+		}
+	default:
+		return  nil, errors.New("unsupport type")
+	}
+
+	return &Message{
+		From:      tx.From(),
+		ChainId:   tx.ChainId(),
+		Gas:       tx.GasLimit(),
+		Value:     tx.Amount(),
+		Nonce:     uint64(tx.Nonce()),
+	}, nil
 }

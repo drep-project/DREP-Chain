@@ -2,7 +2,6 @@ package evm
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/AsynkronIT/protoactor-go/actor"
@@ -39,34 +38,22 @@ func  (evmService *EvmService) ExecuteStaticCall(evm *vm.EVM, callerName, contra
 	return returnGas, err
 }
 
-func  (evmService *EvmService) ApplyMessage(evm *vm.EVM, tx *types.Transaction) (uint64, error) {
-	switch tx.Type() {
+
+func  (evmService *EvmService) ApplyMessage(evm *vm.EVM, message *types.Message) (uint64, error) {
+	switch message.Type {
 	case types.CreateContractType:
-		createContractAction :=	&types.CreateContractAction{}
-		err := json.Unmarshal(tx.GetData(), createContractAction)
-		if err != nil {
-			return 0, err
-		}
-		return  evmService.ExecuteCreateCode(evm, tx.From(), createContractAction.ContractName, tx.ChainId(), createContractAction.ByteCode, tx.GasLimit().Uint64(), tx.Amount())
+		createContractAction := message.Action.(*types.CreateContractAction)
+		return  evmService.ExecuteCreateCode(evm, message.From, createContractAction.ContractName, message.ChainId, createContractAction.ByteCode, message.Gas.Uint64(), message.Value)
 	case types.CallContractType:
-		callContractAction := &types.CallContractAction{}
-		err := json.Unmarshal(tx.GetData(), callContractAction)
-		if err != nil {
-			return 0, err
-		}
+		callContractAction := message.Action.(*types.CallContractAction)
 		if callContractAction.Readonly {
-			return  evmService.ExecuteStaticCall(evm, tx.From(), callContractAction.ContractName, tx.ChainId(), callContractAction.Input, tx.GasLimit().Uint64())
+			return  evmService.ExecuteStaticCall(evm, message.From, callContractAction.ContractName, message.ChainId, callContractAction.Input, message.Gas.Uint64())
 		}else{
-			return  evmService.ExecuteCallCode(evm, tx.From(), callContractAction.ContractName, tx.ChainId(), callContractAction.Input, tx.GasLimit().Uint64(), tx.Amount())
+			return  evmService.ExecuteCallCode(evm, message.From, callContractAction.ContractName,message.ChainId, callContractAction.Input, message.Gas.Uint64(), message.Value)
 		}
 	}
 	return 0, errors.New("not support tx type")
 }
-
-func  (evmService *EvmService) ApplyTransaction(evm *vm.EVM, tx *types.Transaction) (uint64, error) {
-	return evmService.ApplyMessage(evm, tx)
-}
-
 
 type EvmService struct {
 	Config *VMConfig

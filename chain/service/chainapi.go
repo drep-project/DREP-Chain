@@ -26,6 +26,10 @@ func (chain *ChainApi) GetBalance(accountName string) *big.Int{
     return chain.dbService.GetBalance(accountName, true)
 }
 
+func (chain *ChainApi) GetAccount(accountName string) (*chainType.Storage, error) {
+    return chain.dbService.GetStorage(accountName, true)
+}
+
 func (chain *ChainApi) GetNonce(accountName string) int64 {
     return chain.dbService.GetNonce(accountName, true)
 }

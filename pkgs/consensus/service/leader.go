@@ -362,7 +362,7 @@ func (leader *Leader) getCommitPubkey() []*secp256k1.PublicKey {
     publicKeys := []*secp256k1.PublicKey{}
     for index, val := range leader.commitBitmap {
         if val == 1 {
-            publicKeys = append(publicKeys, &leader.members[index].Producer.SignPubkey)
+            publicKeys = append(publicKeys, &leader.producers[index].Producer.SignPubkey)
         }
     }
     return publicKeys
@@ -382,7 +382,7 @@ func (leader *Leader) getResponsePubkey() []*secp256k1.PublicKey {
 	publicKeys := []*secp256k1.PublicKey{}
 	for index, val := range leader.responseBitmap {
 		if val == 1 {
-			publicKeys = append(publicKeys, leader.producers[index].Producer.Public)
+			publicKeys = append(publicKeys, &leader.producers[index].Producer.SignPubkey)
 		}
 	}
 	return publicKeys

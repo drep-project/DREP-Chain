@@ -84,6 +84,9 @@ func (fs FileStore) StoreKey(key *walletTypes.Key, auth string) error {
 func (fs FileStore) ExportKey(auth string) ([]*walletTypes.Key, error) {
 	persistedNodes := []*walletTypes.Key{}
 	err := fileutil.EachChildFile(fs.keysDirPath, func(path string) (bool, error) {
+		if strings.Contains(path, ".metadata") {
+			return true, nil
+		}
 		contents, err := ioutil.ReadFile(path)
 		if err != nil {
 			dlog.Error("read key store error ", "Msg", err.Error())

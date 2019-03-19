@@ -1,6 +1,7 @@
 package types
 
 import (
+	"github.com/drep-project/drep-chain/chain/types"
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
 )
 
@@ -10,7 +11,7 @@ const (
 )
 type MemberInfo struct {
 	Peer     	*p2pTypes.Peer
-	Producer 	*Producer
+	Producer 	*types.Producer
 	Status 		int
 	IsMe		bool
 	IsLeader 	bool

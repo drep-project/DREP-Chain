@@ -90,20 +90,6 @@ func (pool *TransactionPool) checkAndGetAddr(tx *chainTypes.Transaction) (error,
 		fmt.Println("checkAndGetAddr:", pool.getTransactionCount(accountName), tx.Nonce())
 		return fmt.Errorf("nonce err ,dbNonce:%d > txNonce:%d", pool.getTransactionCount(accountName), tx.Nonce()), ""
 	}
-
-	amount := new(big.Int).SetBytes(tx.Amount().Bytes())
-	gasLimit := new(big.Int).SetBytes(tx.GasLimit().Bytes())
-	gasPrice := new(big.Int).SetBytes(tx.GasPrice().Bytes())
-	total := big.NewInt(0)
-	total.Mul(gasLimit, gasPrice)
-	total.Add(total, amount)
-
-	addrBalance := pool.databaseApi.GetBalance(accountName, false)
-	if addrBalance.Cmp(total) < 0 {
-		dlog.Debug("Not Enough Balance", "CurrentBalance", addrBalance.Int64(), "NeedBalance", total)
-		return fmt.Errorf("no enough balance"), ""
-	}
-
 	return nil, accountName
 }
 

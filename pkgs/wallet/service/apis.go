@@ -1,12 +1,12 @@
 package service
 
 import (
-	"encoding/hex"
 	"errors"
 	"math/big"
 
 	chainService "github.com/drep-project/drep-chain/chain/service"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	walletTypes "github.com/drep-project/drep-chain/pkgs/wallet/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
@@ -66,37 +66,88 @@ func (accountapi *AccountApi) CloseWallet() {
 	accountapi.Wallet.Close()
 }
 
-func (accountapi *AccountApi) SendTransaction(from, to string, amount *big.Int) (string, error) {
-	nonce := accountapi.chainService.GetTransactionCount(from)
-	t := chainTypes.NewTransaction(from, to, amount, nonce)
-	err := accountapi.chainService.SendTransaction(t)
-	if err != nil{
-		return "",err
+func (accountapi *AccountApi) SuggestKey() (interface{}, error)  {
+	if !accountapi.Wallet.IsOpen() {
+		return nil,  errors.New("wallet is not open")
 	}
-	txHash, err := t.TxHash()
-	if err != nil{
-		return "",err
+	if accountapi.Wallet.IsLock() {
+		return nil,   errors.New("wallet has locked")
+	}
+	pri, chainCode := chainTypes.RandomAccount()
+	key := &walletTypes.Key{pri.PubKey(), pri}
+	accountapi.Wallet.cacheStore.StoreKey(key, accountapi.Wallet.password)
+
+	return &struct{
+		Pubkey 		*secp256k1.PublicKey
+		PriKey 		*secp256k1.PrivateKey
+		ChainCode 	[]byte
+	}{pri.PubKey(),pri,  chainCode}, nil
+}
+
+func (accountapi *AccountApi) RegisterAccount(fromAccount, newAccountName string, pk *secp256k1.PublicKey, chainCode []byte) (string, error)  {
+	if !accountapi.Wallet.IsOpen() {
+		return "", errors.New("wallet is not open")
+	}
+	if accountapi.Wallet.IsLock() {
+		return "", errors.New("wallet has locked")
 	}
 
-	hex := hex.EncodeToString(txHash)
-	//bytes, _ := json.Marshal(t)
-	//println(string(bytes))
-	//println("0x" + string(hex))
-	return "0x" + string(hex), nil
+	nonce := accountapi.chainService.GetTransactionCount(fromAccount)
+	action := chainTypes.NewRegisterAccountAction(newAccountName, chainTypes.NewAuthority(*pk), accountapi.Wallet.chainId, chainCode)
+	//amount *big.Int, nonce int64, gasPrice, gasLimit *big.Int, action interface{}
+	tx, err := chainTypes.NewTransaction(fromAccount, chainTypes.RegisterAccountType, new (big.Int), nonce, chainTypes.DefaultGasPrice, chainTypes.GasTable[chainTypes.RegisterAccountType], action)
+	if err != nil{
+		return "",err
+	}
+	err = accountapi.chainService.SendTransaction(tx)
+	if err != nil{
+		return "",err
+	}
+	return tx.TxId()
+}
+
+func (accountapi *AccountApi) Transfer(from, to string, amount *big.Int) (string, error) {
+	nonce := accountapi.chainService.GetTransactionCount(from)
+
+	action := chainTypes.NewTransferAction(to)
+	//amount *big.Int, nonce int64, gasPrice, gasLimit *big.Int, action interface{}
+	tx, err := chainTypes.NewTransaction(from, chainTypes.TransferType, amount, nonce, chainTypes.DefaultGasPrice, chainTypes.GasTable[chainTypes.TransferType], action)
+	if err != nil{
+		return "",err
+	}
+	err = accountapi.chainService.SendTransaction(tx)
+	if err != nil{
+		return "",err
+	}
+	return tx.TxId()
 }
 
 func (accountapi *AccountApi) Call(from, to string, input []byte, amount *big.Int, readOnly bool) (string, error) {
 	nonce := accountapi.chainService.GetTransactionCount(from)
-	t := chainTypes.NewCallContractTransaction(from, to, input, amount, nonce, readOnly)
-	accountapi.chainService.SendTransaction(t)
-	return t.TxId()
+	action := chainTypes.NewCallContractAction(to,input, readOnly)
+	tx, err := chainTypes.NewTransaction(from, chainTypes.CallContractType, amount, nonce, chainTypes.DefaultGasPrice, chainTypes.GasTable[chainTypes.CallContractType], action)
+	if err != nil{
+		return "",err
+	}
+	err = accountapi.chainService.SendTransaction(tx)
+	if err != nil{
+		return "",err
+	}
+	return tx.TxId()
 }
 
 func (accountapi *AccountApi) CreateCode(from, to string, byteCode []byte) (string, error) {
 	nonce := accountapi.chainService.GetTransactionCount(from)
-	t := chainTypes.NewCreateContractTransaction(from, to, byteCode, nonce)
-	accountapi.chainService.SendTransaction(t)
-	return t.TxId()
+	action := chainTypes.NewCreateContractAction(to, byteCode)
+	tx, err := chainTypes.NewTransaction(from, chainTypes.CallContractType, nil, nonce, chainTypes.DefaultGasPrice, chainTypes.GasTable[chainTypes.CallContractType], action)
+	if err != nil{
+		return "",err
+	}
+	err = accountapi.chainService.SendTransaction(tx)
+	if err != nil{
+		return "",err
+	}
+	return tx.TxId()
 }
 
 // DumpPrikey dumpPrivate

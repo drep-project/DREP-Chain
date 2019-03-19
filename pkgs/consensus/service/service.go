@@ -40,6 +40,7 @@ type ConsensusService struct {
 
 	apis   []app.API
 	Config *consensusTypes.ConsensusConfig
+	Producers []chainTypes.Producer
 
 	signPubkey         *secp256k1.PublicKey
 	signPrivkey        *secp256k1.PrivateKey
@@ -93,13 +94,14 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 		return nil
 	}
 
+	consensusService.Producers = consensusService.ChainService.Config.Producers
 	consensusService.signPubkey = consensusService.GetSignPubkey(consensusService.Config.Me)
 	if consensusService.signPubkey == nil {
 		return  errors.New("consensus config error")
 	}
 	consensusService.signPrivkey, err = consensusService.WalletService.Wallet.DumpPrivateKey(consensusService.signPubkey)
 	if err != nil {
-		dlog.Error("consensusService", "init err", err, "pubkey", string(consensusService.pubkey.Serialize()))
+		dlog.Error("consensusService", "init err", err, "pubkey", string(consensusService.signPubkey.Serialize()))
 		return err
 	}
 
@@ -118,6 +120,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	}
 	consensusService.leader = NewLeader(consensusService.signPubkey, consensusService.P2pServer)
 	consensusService.member = NewMember(consensusService.signPrivkey, consensusService.P2pServer)
+
 	consensusService.syncBlockEventChan = make(chan event.SyncBlockEvent)
 	consensusService.syncBlockEventSub = consensusService.ChainService.SubscribeSyncBlockEvent(consensusService.syncBlockEventChan)
 	consensusService.quit = make(chan struct{})
@@ -166,7 +169,7 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 	consensusService.start = true
 
 	go func() {
-		minMember := int(math.Ceil(float64(len(consensusService.Config.Producers))*2/3)) - 1
+		minMember := int(math.Ceil(float64(len(consensusService.Producers))*2/3)) - 1
 
 		select {
 		case <-consensusService.quit:
@@ -283,12 +286,7 @@ func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, erro
 //4 leader验证签名通过后，广播此块给所有的Peer
 func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, error) {
 	consensusService.leader.Reset()
-
-	membersAccounts := []string{}
-	for _, pub := range consensusService.leader.members {
-		membersAccounts = append(membersAccounts, pub.Producer.Account)
-	}
-	block, err := consensusService.ChainService.GenerateBlock(consensusService.Config.Me, membersAccounts)
+	block, err := consensusService.ChainService.GenerateBlock(consensusService.Config.Me)
 	if err != nil {
 		dlog.Error("generate block fail", "msg", err)
 	}
@@ -319,6 +317,13 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 		return nil, err
 	}
 	dlog.Trace("node leader finishes process consensus for round 2")
+	membersAccounts := []string{}
+	for index, val := range  bitmap {
+		if val == 1 {
+			membersAccounts = append(membersAccounts, consensusService.Producers[index].Account)
+		}
+	}
+	block.Header.MinorPubKeys = membersAccounts
 	block.MultiSig = multiSig
 	consensusService.leader.Reset()
 	dlog.Trace("node leader finishes sending block")
@@ -326,11 +331,7 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 }
 
 func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error) {
-	membersAccounts := []string{}
-	for _, produce := range consensusService.Config.Producers {
-		membersAccounts = append(membersAccounts, produce.Account)
-	}
-	block, _ := consensusService.ChainService.GenerateBlock(consensusService.Config.Me, membersAccounts)
+	block, _ := consensusService.ChainService.GenerateBlock(consensusService.Config.Me)
 	msg, err := json.Marshal(block)
 	if err != nil {
 		return block, nil
@@ -341,13 +342,20 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 		dlog.Error("sign block error")
 		return nil, errors.New("sign block error")
 	}
+
+	membersAccounts := []string{}
+	for _, produce := range consensusService.Producers {
+		membersAccounts = append(membersAccounts, produce.Account)
+	}
+
 	multiSig := &chainTypes.MultiSignature{Sig: *sig, Bitmap: []byte{}}
+	block.Header.MinorPubKeys = membersAccounts
 	block.MultiSig = multiSig
 	return block, nil
 }
 
 func (consensusService *ConsensusService) isProduce() bool {
-	for _, produce := range consensusService.Config.Producers {
+	for _, produce := range consensusService.Producers {
 		if produce.SignPubkey.IsEqual(consensusService.signPubkey) {
 			return true
 		}
@@ -356,16 +364,16 @@ func (consensusService *ConsensusService) isProduce() bool {
 }
 
 func (consensusService *ConsensusService) collectMemberStatus() []*consensusTypes.MemberInfo {
-	produceInfos := make([]*consensusTypes.MemberInfo, len(consensusService.Config.Producers))
-	for i, produce := range consensusService.Config.Producers {
+	produceInfos := make([]*consensusTypes.MemberInfo, len(consensusService.Producers))
+	for i, produce := range consensusService.Producers {
 		peer := consensusService.P2pServer.GetPeer(produce.Ip)
 		isOnLine := peer != nil
-		isMe := consensusService.pubkey.IsEqual(produce.Public)
+		isMe := consensusService.signPubkey.IsEqual(&produce.SignPubkey)
 		if isMe {
 			isOnLine = true
 		}
 		produceInfos[i] = &consensusTypes.MemberInfo{
-			Producer: produce,
+			Producer: &produce,
 			Peer:     peer,
 			IsMe:     isMe,
 			IsOnline: isOnLine,
@@ -388,7 +396,7 @@ func (consensusService *ConsensusService) moveToNextMiner(produceInfos []*consen
 
 	for index, produce := range produceInfos {
 		if produce.IsOnline {
-			if produce.Producer.Public.IsEqual(curMiner.Producer.Public) {
+			if produce.Producer.SignPubkey.IsEqual(&curMiner.Producer.SignPubkey) {
 				produce.IsLeader = true
 				consensusService.curMiner = index
 			} else {
@@ -405,7 +413,7 @@ func (consensusService *ConsensusService) moveToNextMiner(produceInfos []*consen
 }
 
 func (consensusService *ConsensusService) GetSignPubkey(accountName string) *secp256k1.PublicKey {
-	for _, producer := range consensusService.Config.Producers {
+	for _, producer := range consensusService.Producers {
 		if producer.Account == accountName {
 			return &producer.SignPubkey
 		}
@@ -413,7 +421,7 @@ func (consensusService *ConsensusService) GetSignPubkey(accountName string) *sec
 	return nil
 }
 
-func (consensusService *ConsensusService) GetWaitTime() (time.Time, time.Duration) {
+func (consensusService *ConsensusService) getWaitTime() (time.Time, time.Duration) {
 	// max_delay_time +(min_block_interval)*windows = expected_block_interval*windows
 	// 6h + 5s*windows = 10s*windows
 	// windows = 4320

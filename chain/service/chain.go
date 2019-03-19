@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/drep-project/drep-chain/chain/txpool"
 	"github.com/drep-project/drep-chain/pkgs/evm"
 	"math/big"
@@ -30,7 +31,6 @@ var (
 	DefaultChainConfig = &chainTypes.ChainConfig{
 		RemotePort: 55555,
 		ChainId:    app.ChainIdType{},
-		GenesisPK:  "0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26",
 	}
 )
 
@@ -140,7 +140,10 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 	chainService.allTasks = newHeightSortedMap()
 	chainService.pendingSyncTasks = make(map[crypto.Hash]int64)
 
-	chainService.genesisBlock = chainService.GenesisBlock(chainService.Config.GenesisPK)
+	chainService.genesisBlock, err = chainService.GenesisBlock()
+	if err != nil {
+		return err
+	}
 	hash := chainService.genesisBlock.Header.Hash()
 	block, err := chainService.DatabaseService.GetBlock(hash)
 	if err != nil && err.Error() != "leveldb: not found" {
@@ -154,9 +157,11 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 
 	chainService.InitStates()
 	chainService.transactionPool = txpool.NewTransactionPool(chainService.DatabaseService)
+
 	props := actor.FromProducer(func() actor.Actor {
 		return chainService
 	})
+
 	pid, err := actor.SpawnNamed(props, "chain_message")
 	if err != nil {
 		panic(err)
@@ -198,6 +203,10 @@ func (chainService *ChainService) SendTransaction(tx *chainTypes.Transaction) er
 	//	ForwardTransaction(id)
 	//}
 
+	err := chainService.ValidateTransaction(tx)
+	if err != nil {
+		return err
+	}
 	//TODO validate transaction
 	error := chainService.transactionPool.AddTransaction(tx)
 	if error == nil {
@@ -215,7 +224,7 @@ func (chainService *ChainService) blockExists(blockHash *crypto.Hash) bool {
 	return chainService.Index.HaveBlock(blockHash)
 }
 
-func (chainService *ChainService) GenerateBlock(leaderKey string, members []string) (*chainTypes.Block, error) {
+func (chainService *ChainService) GenerateBlock(leaderKey string) (*chainTypes.Block, error) {
 	chainService.DatabaseService.BeginTransaction()
 	defer chainService.DatabaseService.Discard()
 
@@ -224,10 +233,10 @@ func (chainService *ChainService) GenerateBlock(leaderKey string, members []stri
 
 	finalTxs := make([]*chainTypes.Transaction, 0, len(txs))
 	gasUsed := new(big.Int)
-	for _, t := range txs {
-		g, _, err := chainService.executeTransaction(t)
+	for _, tx := range txs {
+		g, _, err := chainService.executeTransaction(tx)
 		if err == nil {
-			finalTxs = append(finalTxs, t)
+			finalTxs = append(finalTxs, tx)
 			gasUsed.Add(gasUsed, g)
 		}
 	}
@@ -236,11 +245,6 @@ func (chainService *ChainService) GenerateBlock(leaderKey string, members []stri
 	previousHash := chainService.BestChain.Tip().Hash
 	stateRoot := chainService.DatabaseService.GetStateRoot()
 	merkleRoot := chainService.deriveMerkleRoot(finalTxs)
-
-	var memberPks []string
-	for _, p := range members {
-		memberPks = append(memberPks, p)
-	}
 
 	block := &chainTypes.Block{
 		Header: &chainTypes.BlockHeader{
@@ -254,7 +258,6 @@ func (chainService *ChainService) GenerateBlock(leaderKey string, members []stri
 			TxRoot:       merkleRoot,
 			Height:       height,
 			LeaderPubKey: leaderKey,
-			MinorPubKeys: memberPks,
 		},
 		Data: &chainTypes.BlockData{
 			TxCount: int32(len(finalTxs)),
@@ -287,7 +290,7 @@ func (chainService *ChainService) RootChain() app.ChainIdType {
 	return rootChain
 }
 
-func (chainService *ChainService) GenesisBlock(genesisAccount string) *chainTypes.Block {
+func (chainService *ChainService) GenesisBlock() (*chainTypes.Block, error) {
 	chainService.DatabaseService.BeginTransaction()
 	defer chainService.DatabaseService.Discard()
 
@@ -307,7 +310,7 @@ func (chainService *ChainService) GenesisBlock(genesisAccount string) *chainType
 		return nil
 	}
 	*/
-	var memberPks []string = nil
+
 	return &chainTypes.Block{
 		Header: &chainTypes.BlockHeader{
 			Version:      common.Version,
@@ -318,31 +321,36 @@ func (chainService *ChainService) GenesisBlock(genesisAccount string) *chainType
 			StateRoot:    []byte{0},
 			TxRoot:       merkleRoot,
 			Height:       0,
-			LeaderPubKey: genesisAccount,
-			MinorPubKeys: memberPks,
+			LeaderPubKey: "",
+			MinorPubKeys: []string{},
 		},
 		Data: &chainTypes.BlockData{
 			TxCount: 0,
 			TxList:  []*chainTypes.Transaction{},
 		},
-	}
+	}, nil
 }
 
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
-func (chainService *ChainService) accumulateRewards(b *chainTypes.Block, totalGasBalance *big.Int) {
+func (chainService *ChainService) accumulateRewards(b *chainTypes.Block, totalGasBalance *big.Int) error {
+	if b.Header.LeaderPubKey == "" {
+		return errors.New("invalidate leader account")
+	}
 	reward := new(big.Int).SetUint64(uint64(Rewards))
-
 	r := new(big.Int)
 	r = r.Div(reward, new(big.Int).SetInt64(2))
 	r.Add(r, totalGasBalance)
-	chainService.DatabaseService.AddBalance(&leaderAddr, r, true)
+	chainService.DatabaseService.AddBalance(b.Header.LeaderPubKey, r, true)
 
 	num := len(b.Header.MinorPubKeys)
-	for _, memberPK := range b.Header.MinorPubKeys {
-		memberAddr := crypto.PubKey2Address(memberPK)
+	for _, member := range b.Header.MinorPubKeys {
 		r.Div(reward, new(big.Int).SetInt64(int64(num*2)))
-		chainService.DatabaseService.AddBalance(&memberAddr, r, true)
+		if member == "" {
+			return errors.New("invalidate leader account")
+		}
+		chainService.DatabaseService.AddBalance(member, r, true)
 	}
+	return  nil
 }
 
 func (chainService *ChainService) SubscribeSyncBlockEvent(subchan chan event.SyncBlockEvent) event.Subscription {

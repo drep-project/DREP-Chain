@@ -67,7 +67,7 @@ func (s *State) GetNonce(accountName string,) int64 {
 }
 
 func (s *State) Suicide(accountName string,) error {
-	storage := s.databaseApi.GetStorage(accountName, true)
+	storage, _ := s.databaseApi.GetStorage(accountName, true)
 	storage.Balance = new(big.Int)
 	storage.Nonce = 0
 	return s.databaseApi.PutStorage(accountName, storage, true)
