@@ -35,16 +35,13 @@ func (chainService *ChainService) ValidateBlock(b *chainTypes.Block) bool {
 	return true
 }
 
-func (chainService *ChainService) ValidateTransaction(tx *chainTypes.Transaction) bool {
+func (chainService *ChainService) ValidateTransaction(tx *chainTypes.Transaction) error {
 	var result error
 	_ = chainService.DatabaseService.Transaction(func() error {
 		_, _, result = chainService.executeTransaction(tx)
 		return errors.New("just not commit")
 	})
-	if result != nil {
-		return false
-	}
-	return true
+	return result
 }
 
 func (chainService *ChainService) ExecuteBlock(b *chainTypes.Block) (gasUsed *big.Int, err error) {

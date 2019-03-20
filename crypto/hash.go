@@ -28,6 +28,10 @@ func (h Hash) Bytes() []byte {
 	copy(b, h[:])
 	return b
 }
+func (h Hash) String() string {
+	strBytes, _ := common.Bytes(h[:]).MarshalText()
+	return string(strBytes)
+}
 
 func Big2Hash(x *big.Int) Hash {
 	if x == nil {

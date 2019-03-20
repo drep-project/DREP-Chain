@@ -59,6 +59,7 @@ type ChainService struct {
 
 	prvKey       *secp256k1.PrivateKey
 	peerStateMap map[string]*chainTypes.PeerState
+    peerStateLock sync.RWMutex
 
 	Index         *chainTypes.BlockIndex
 	BestChain     *chainTypes.ChainView
@@ -197,14 +198,16 @@ func (chainService *ChainService) SendTransaction(tx *chainTypes.Transaction) er
 	//if id, err := tx.TxId(); err == nil {
 	//	ForwardTransaction(id)
 	//}
-
+	err := chainService.ValidateTransaction(tx)
+	if err != nil {
+		return err
+	}
 	//TODO validate transaction
-	error := chainService.transactionPool.AddTransaction(tx)
-	if error == nil {
+	err = chainService.transactionPool.AddTransaction(tx)
+	if err == nil {
 		chainService.P2pServer.Broadcast(tx)
 	}
-
-	return error
+	return err
 }
 
 func (chainService *ChainService) sendBlock(block *chainTypes.Block) {

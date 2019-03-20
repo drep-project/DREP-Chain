@@ -1,12 +1,10 @@
 package service
 
 import (
-    "math/big"
     chainType "github.com/drep-project/drep-chain/chain/types"
-    "github.com/drep-project/drep-chain/database"
     "github.com/drep-project/drep-chain/crypto"
-    "errors"
-    "encoding/hex"
+    "github.com/drep-project/drep-chain/database"
+    "math/big"
 )
 
 
@@ -59,61 +57,15 @@ func (chain *ChainApi) GetTransactionCountByBlockHeight(height int64) int {
 }
 
 func (chain *ChainApi) SendRawTransaction(tx *chainType.Transaction) (string, error){
-    //bytes := []byte(raw)
-    //tx := &chainType.Transaction{}
-    //json.Unmarshal(bytes, tx)
-
-    can := false
-    switch tx.Type() {
-    case chainType.TransferType:
-        can, _, _, _, _ = chain.canExecute(tx, chainType.TransferGas, nil)
-    case chainType.CreateContractType:
-        can, _, _, _, _ = chain.canExecute(tx, nil, chainType.CreateContractGas)
-    case chainType.CallContractType:
-        can, _, _, _, _ = chain.canExecute(tx,nil, chainType.CallContractGas)
+    err := chain.chainService.ValidateTransaction(tx)
+    if err != nil {
+        return "", err
     }
-
-    if !can {
-        return "", errors.New("error: can not executeTransaction this transaction")
-    }
-
-    err := chain.chainService.transactionPool.AddTransaction(tx)
+    err = chain.chainService.transactionPool.AddTransaction(tx)
     if err != nil {
         return "", err
     }
 
     chain.chainService.P2pServer.Broadcast(tx)
-
-    hash, err:= tx.TxHash()
-    encodedHash := hex.EncodeToString(hash)
-    res := "0x" + string(encodedHash)
-    return res, err
-}
-
-func (chain *ChainApi) canExecute(tx *chainType.Transaction, gasFloor, gasCap *big.Int) (canExecute bool, addr crypto.CommonAddress, balance, gasLimit, gasPrice *big.Int) {
-    chain.chainService.DatabaseService.BeginTransaction()
-    addr = *tx.From()
-    balance = chain.chainService.DatabaseService.GetBalance(&addr, true)
-    nonce :=  chain.chainService.DatabaseService.GetNonce(&addr,true) + 1
-    chain.chainService.DatabaseService.PutNonce(&addr, nonce,true)
-
-    if nonce != tx.Nonce() {
-       return
-    }
-    if gasFloor != nil {
-        amountFloor := new(big.Int).Mul(gasFloor, tx.GasPrice())
-        if tx.GasLimit().Cmp(gasFloor) < 0 || amountFloor.Cmp(balance) > 0 {
-            return
-        }
-    }
-    if gasCap != nil {
-        amountCap := new(big.Int).Mul(gasCap, tx.GasPrice())
-        if amountCap.Cmp(balance) > 0 {
-            return
-        }
-    }
-
-    canExecute = true
-    chain.chainService.DatabaseService.Discard()
-    return
+    return tx.TxHash().String(), err
 }

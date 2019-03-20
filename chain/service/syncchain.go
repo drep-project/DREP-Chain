@@ -266,6 +266,8 @@ func (cs *ChainService) fetchBlocks(peer *p2pTypes.Peer, height int64) error {
 }
 
 func (chainService *ChainService) handlePeerState(peer *p2pTypes.Peer, peerState *chainTypes.PeerState) {
+	chainService.peerStateLock.Lock()
+	defer chainService.peerStateLock.Unlock()
 	//get bestpeers
 	if _, ok := chainService.peerStateMap[string(peer.Ip)]; ok {
 		chainService.peerStateMap[string(peer.Ip)].Height = peerState.Height
@@ -275,7 +277,8 @@ func (chainService *ChainService) handlePeerState(peer *p2pTypes.Peer, peerState
 }
 
 func (chainService *ChainService) handleReqPeerState(peer *p2pTypes.Peer, peerState *chainTypes.ReqPeerState) {
-
+	chainService.peerStateLock.Lock()
+	defer chainService.peerStateLock.Unlock()
 	if _, ok := chainService.peerStateMap[string(peer.Ip)]; ok {
 		chainService.peerStateMap[string(peer.Ip)].Height = peerState.Height
 	} else {
@@ -293,7 +296,8 @@ func (chainService *ChainService) GetBestPeer() (*p2pTypes.Peer, *chainTypes.Pee
 		return nil, nil
 	}
 	curPeer := peers[0]
-
+	chainService.peerStateLock.Lock()
+	defer chainService.peerStateLock.Unlock()
 	for i := 1; i < len(peers); i++ {
 		peerId := string(peers[i].Ip)
 		curPeerId := string(curPeer.Ip)

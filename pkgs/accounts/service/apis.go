@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/hex"
 	"errors"
 	"math/big"
 
@@ -20,7 +19,7 @@ type AccountApi struct {
 	databaseService *database.DatabaseService
 }
 
-func (accountapi *AccountApi) AddressList() ([]*crypto.CommonAddress, error) {
+func (accountapi *AccountApi) ListAddress() ([]*crypto.CommonAddress, error) {
 	if !accountapi.Wallet.IsOpen() {
 		return nil, errors.New("wallet is not open")
 	}
@@ -77,37 +76,28 @@ func (accountapi *AccountApi) CloseWallet() {
 	accountapi.Wallet.Close()
 }
 
-func (accountapi *AccountApi) SendTransaction(from crypto.CommonAddress, to crypto.CommonAddress, amount *big.Int) (string, error) {
+func (accountapi *AccountApi) Transfer(from crypto.CommonAddress, to crypto.CommonAddress, amount *big.Int) (string, error) {
 	nonce := accountapi.chainService.GetTransactionCount(&from)
 	t := chainTypes.NewTransaction(from, to, amount, nonce)
 	err := accountapi.chainService.SendTransaction(t)
 	if err != nil{
 		return "",err
 	}
-	txHash, err := t.TxHash()
-	if err != nil{
-		return "",err
-	}
-
-	hex := hex.EncodeToString(txHash)
-	//bytes, _ := json.Marshal(t)
-	//println(string(bytes))
-	//println("0x" + string(hex))
-	return "0x" + string(hex), nil
+	return t.TxHash().String(), nil
 }
 
 func (accountapi *AccountApi) Call(from crypto.CommonAddress, to crypto.CommonAddress, input []byte, amount *big.Int, readOnly bool) (string, error) {
 	nonce := accountapi.chainService.GetTransactionCount(&from)
 	t := chainTypes.NewCallContractTransaction(from, to, input, amount, nonce, readOnly)
 	accountapi.chainService.SendTransaction(t)
-	return t.TxId()
+	return t.TxHash().String(), nil
 }
 
 func (accountapi *AccountApi) CreateCode(from crypto.CommonAddress, to crypto.CommonAddress, byteCode []byte) (string, error) {
 	nonce := accountapi.chainService.GetTransactionCount(&from)
 	t := chainTypes.NewContractTransaction(from, to, byteCode, nonce)
 	accountapi.chainService.SendTransaction(t)
-	return t.TxId()
+	return t.TxHash().String(), nil
 }
 
 // DumpPrikey dumpPrivate

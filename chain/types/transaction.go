@@ -1,7 +1,6 @@
 package types
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/common"
@@ -81,22 +80,13 @@ func (tx *Transaction) GasPrice() *big.Int {
 //	return tx.Data.PubKey
 //}
 
-func (tx *Transaction) TxId() (string, error) {
-	b, err := json.Marshal(tx.Data)
-	if err != nil {
-		return "", err
-	}
-	id := hex.EncodeToString(sha3.Hash256(b))
-	return id, nil
-}
 
-func (tx *Transaction) TxHash() ([]byte, error) {
-	b, err := json.Marshal(tx.Data)
-	if err != nil {
-		return nil, err
-	}
+func (tx *Transaction) TxHash() *crypto.Hash {
+	b, _ := json.Marshal(tx.Data)
 	h := sha3.Hash256(b)
-	return h, nil
+	hash := crypto.Hash{}
+	hash.SetBytes(h)
+	return &hash
 }
 
 func (tx *Transaction) TxSig(prvKey *secp256k1.PrivateKey) (*secp256k1.Signature, error) {

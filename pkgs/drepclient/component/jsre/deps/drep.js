@@ -1484,9 +1484,9 @@ var ACCOUNT = function (drep) {
 
 var methods = function () {
 	
-var addressList = new Method({
-	name: 'addressList',
-	call: 'account_addressList',
+var listAddress = new Method({
+	name: 'listAddress',
+	call: 'account_listAddress',
 	params: 0,
 });
 	
@@ -1544,9 +1544,9 @@ var open = new Method({
 	params: 1,
 });
 	
-var sendTransaction = new Method({
-	name: 'sendTransaction',
-	call: 'account_sendTransaction',
+var transfer = new Method({
+	name: 'transfer',
+	call: 'account_transfer',
 	params: 3,
 });
 	
@@ -1562,7 +1562,7 @@ var unLock = new Method({
 	params: 1,
 });
 	
-    return [addressList,call,close,createAccount,createCode,dumpPrikey,gasPrice,getCode,lock,open,sendTransaction,sign,unLock]
+    return [listAddress,call,close,createAccount,createCode,dumpPrikey,gasPrice,getCode,lock,open,transfer,sign,unLock]
 }
 
 module.exports = ACCOUNT;

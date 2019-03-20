@@ -60,9 +60,9 @@ func NewTransactionPool(databaseApi *database.DatabaseService) *TransactionPool 
 	pool.tranCp = func(a interface{}, b interface{}) bool {
 		ta, oka := a.(*chainTypes.Transaction)
 		tb, okb := b.(*chainTypes.Transaction)
-		sa, ea := ta.TxId()
-		sb, eb := tb.TxId()
-		return oka && okb && ea == nil && eb == nil && sa == sb
+		sa := ta.TxHash()
+		sb := tb.TxHash()
+		return oka && okb && sa == sb
 	}
 
 	pool.allTxs = make(map[string]bool)
@@ -91,20 +91,6 @@ func (pool *TransactionPool) checkAndGetAddr(tx *chainTypes.Transaction) (error,
 		fmt.Println("checkAndGetAddr:", pool.getTransactionCount(addr), tx.Nonce())
 		return fmt.Errorf("nonce err ,dbNonce:%d > txNonce:%d", pool.getTransactionCount(addr), tx.Nonce()), nil
 	}
-
-	amount := new(big.Int).SetBytes(tx.Amount().Bytes())
-	gasLimit := new(big.Int).SetBytes(tx.GasLimit().Bytes())
-	gasPrice := new(big.Int).SetBytes(tx.GasPrice().Bytes())
-	total := big.NewInt(0)
-	total.Mul(gasLimit, gasPrice)
-	total.Add(total, amount)
-
-	addrBalance := pool.databaseApi.GetBalance(addr, false)
-	if addrBalance.Cmp(total) < 0 {
-		dlog.Debug("Not Enough Balance", "CurrentBalance", addrBalance.Int64(), "NeedBalance", total)
-		return fmt.Errorf("no enough balance"), nil
-	}
-
 	return nil, addr
 }
 
@@ -114,10 +100,7 @@ func (pool *TransactionPool) AddTransaction(tx *chainTypes.Transaction) error {
 	if err != nil {
 		return err
 	}
-	id, err := tx.TxId()
-	if err != nil {
-		return err
-	}
+	id := tx.TxHash()
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 	if len(pool.allTxs) >= maxSize {
@@ -126,12 +109,12 @@ func (pool *TransactionPool) AddTransaction(tx *chainTypes.Transaction) error {
 		return errors.New(msg)
 	}
 
-	if _, exists := pool.allTxs[id]; exists {
-		msg := "transaction %s exists" + id
-		dlog.Error("transaction %s exists", id)
+	if _, exists := pool.allTxs[id.String()]; exists {
+		msg := "transaction %s exists" + id.String()
+		dlog.Error("transaction %s exists", id.String())
 		return errors.New(msg)
 	} else {
-		pool.allTxs[id] = true
+		pool.allTxs[id.String()] = true
 
 		if list, ok := pool.queue[*tx.From()]; ok {
 			list.Add(tx)
@@ -259,8 +242,8 @@ func (pool *TransactionPool) adjust(addrList []*crypto.CommonAddress) {
 		if ok {
 			txs := list.Forward(nonce)
 			for _, tx := range txs {
-				id, _ := tx.TxId()
-				delete(pool.allTxs, id)
+				id := tx.TxHash()
+				delete(pool.allTxs, id.String())
 
 			}
 		}
