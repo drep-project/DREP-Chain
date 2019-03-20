@@ -9,6 +9,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"math/big"
 	"strconv"
+	"sync"
 )
 
 type Database struct {
@@ -18,6 +19,7 @@ type Database struct {
 	stores map[string]*chainTypes.Storage
 	//trie  Trie
 	root   []byte
+	txLock sync.Mutex
 }
 
 type journal struct {
@@ -130,6 +132,7 @@ func (db *Database) delete(key []byte, temporary bool) error {
 }
 
 func (db *Database) BeginTransaction() {
+	db.txLock.Lock()
 	db.temp = make(map[string][]byte)
 	db.states = make(map[string]*State)
 	db.stores = make(map[string]*chainTypes.Storage)
@@ -139,6 +142,7 @@ func (db *Database) EndTransaction() {
 	db.temp = nil
 	db.states = nil
 	db.stores = nil
+	db.txLock.Unlock()
 }
 
 
