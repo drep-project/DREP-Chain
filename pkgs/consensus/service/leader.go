@@ -124,8 +124,10 @@ func (leader *Leader) setUp(msg []byte) {
 	setup := &consensusTypes.Setup{Msg: msg}
 	setup.Height = leader.currentHeight
 	for _, member := range leader.liveMembers {
-		dlog.Debug("leader sent setup message", "IP", member.Peer.GetAddr(), "Height", setup.Height)
-		leader.p2pServer.SendAsync(member.Peer, setup)
+		if member.Peer != nil {
+			dlog.Debug("leader sent setup message", "IP", member.Peer.GetAddr(), "Height", setup.Height)
+			leader.p2pServer.SendAsync(member.Peer, setup)
+		}
 	}
 }
 
@@ -331,7 +333,7 @@ func (leader *Leader) markCommit(peer *p2pTypes.Peer) {
 
 func (leader *Leader) getMember(ip string) *consensusTypes.MemberInfo {
 	for _, producer := range leader.producers {
-		if producer.Peer.Ip == ip {
+		if producer.Peer != nil && producer.Peer.Ip == ip {
 			return producer
 		}
 	}
@@ -341,7 +343,7 @@ func (leader *Leader) getMember(ip string) *consensusTypes.MemberInfo {
 func (leader *Leader) getMinerIndex(ip string) int {
 	// TODO if it is itself
 	for i, v := range leader.producers {
-		if v.Peer.Ip == ip {
+		if v.Peer != nil &&v.Peer.Ip == ip {
 			return i
 		}
 	}

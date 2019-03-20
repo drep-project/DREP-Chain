@@ -167,7 +167,7 @@ func (cs *ChainService) fetchBlocks(peer *p2pTypes.Peer, height int64) error {
 	//2 获取所有需要同步的块的hash;然后通知给获取BODY的协程
 	go func() {
 		commonAncestor += 1
-		for height > commonAncestor {
+		for height >= commonAncestor {
 			timeout := time.After(time.Second * maxNetworkTimeout)
 
 			cs.syncMut.Lock()
@@ -224,12 +224,12 @@ func (cs *ChainService) fetchBlocks(peer *p2pTypes.Peer, height int64) error {
 			go cs.bathReqBlocks(hashs)
 
 			//最多等待一分钟
-			timeout := time.After(time.Second * maxNetworkTimeout *12)
+			timeout := time.After(time.Second * maxNetworkTimeout * 12)
 
 			select {
 			case blocks := <-cs.blocksCh:
 				for _, b := range blocks {
-					dlog.Info("sync block recv block","height", b.Header.Height)
+					dlog.Info("sync block recv block", "height", b.Header.Height)
 
 					//删除块高度对应的任务
 					delete(cs.pendingSyncTasks, *b.Header.Hash())
@@ -319,7 +319,7 @@ func (cs *ChainService) checkHeaderChain(chain []chainTypes.BlockHeader) (error)
 				"parent", hex.EncodeToString(chain[i].PreviousHash.Bytes()), "prevnumber", chain[i-1].Height, "prevhash", hex.EncodeToString(chain[i-1].Hash().Bytes()))
 
 			return fmt.Errorf("non contiguous headers: item-1:%d  height:%d hash:%s, item:%d height:%d hash:%s",
-				i-1, chain[i-1].Height,chain[i-1].Hash().Bytes()[:4], i, chain[i].Height, chain[i].Hash().Bytes()[:4])
+				i-1, chain[i-1].Height, chain[i-1].Hash().Bytes()[:4], i, chain[i].Height, chain[i].Hash().Bytes()[:4])
 		}
 
 		cs.checkHeader(&chain[i])
@@ -328,9 +328,8 @@ func (cs *ChainService) checkHeaderChain(chain []chainTypes.BlockHeader) (error)
 	return nil
 }
 
-
-func (cs *ChainService) deriveMerkleRoot(txs[]*chainTypes.Transaction) []byte{
+func (cs *ChainService) deriveMerkleRoot(txs []*chainTypes.Transaction) []byte {
 	txHashes, _ := cs.GetTxHashes(txs)
 	merkle := cs.DatabaseService.NewMerkle(txHashes)
-	return  merkle.Root.Hash
+	return merkle.Root.Hash
 }
