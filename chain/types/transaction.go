@@ -2,7 +2,6 @@ package types
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
@@ -10,6 +9,7 @@ import (
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"math/big"
 	"time"
+	"github.com/drep-project/binary"
 )
 
 type Transaction struct {
@@ -82,7 +82,7 @@ func (tx *Transaction) GasPrice() *big.Int {
 //}
 
 func (tx *Transaction) TxId() (string, error) {
-	b, err := json.Marshal(tx.Data)
+	b, err := binary.Marshal(tx.Data)
 	if err != nil {
 		return "", err
 	}
@@ -91,7 +91,7 @@ func (tx *Transaction) TxId() (string, error) {
 }
 
 func (tx *Transaction) TxHash() ([]byte, error) {
-	b, err := json.Marshal(tx.Data)
+	b, err := binary.Marshal(tx.Data)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func (tx *Transaction) TxHash() ([]byte, error) {
 }
 
 func (tx *Transaction) TxSig(prvKey *secp256k1.PrivateKey) (*secp256k1.Signature, error) {
-	b, err := json.Marshal(tx.Data)
+	b, err := binary.Marshal(tx.Data)
 	if err != nil {
 		return nil, err
 	}

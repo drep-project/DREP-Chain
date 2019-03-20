@@ -8,7 +8,7 @@ import (
     "github.com/drep-project/drep-chain/network/types"
 	"github.com/vishalkuo/bimap"
 	"reflect"
-    "encoding/json"
+	"github.com/drep-project/binary"
 )
 
 var (
@@ -16,7 +16,7 @@ var (
 )
 
 func Serialize(message interface{}, prvKey *secp256k1.PrivateKey) (*types.Message, error) {
-	body, err := json.Marshal(message)
+	body, err := binary.Marshal(message)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func Serialize(message interface{}, prvKey *secp256k1.PrivateKey) (*types.Messag
 
 func Deserialize(msgBytes []byte) (interface{}, int, *secp256k1.PublicKey, error) {
 	msg := &types.Message{}
-	if err := json.Unmarshal(msgBytes, msg); err != nil {
+	if err := binary.Unmarshal(msgBytes, msg); err != nil {
 		fmt.Println(string(msgBytes))
 		fmt.Println(err.Error())
 		return nil, 0, nil, err
@@ -58,7 +58,7 @@ func Deserialize(msgBytes []byte) (interface{}, int, *secp256k1.PublicKey, error
 		return nil, 0, nil, errors.New("Deserialize Unknown peer message type ")
 	}
 	bodyMsg := reflect.New(refType.(reflect.Type)).Interface()
-	if err := json.Unmarshal(msg.Body, bodyMsg); err == nil {
+	if err := binary.Unmarshal(msg.Body, bodyMsg); err == nil {
 		if !msg.Header.Sig.Verify(sha3.Hash256(msg.Body), msg.Header.PubKey) {
 			return nil, 0, nil, errors.New("check signature fail")
 		}
