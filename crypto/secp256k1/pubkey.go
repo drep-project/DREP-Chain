@@ -12,6 +12,8 @@ import (
 	"github.com/drep-project/drep-chain/common"
 	"math/big"
 	"github.com/francoispqt/gojay"
+	"github.com/drep-project/binary"
+	"reflect"
 )
 
 // These constants define the lengths of serialized public keys.
@@ -245,4 +247,39 @@ func (p *PublicKey) UnmarshalJSON(input []byte) error {
 
 func (p *PublicKey) MarshalText() ([]byte, error) {
 	return common.Bytes(p.Serialize()).MarshalText()
+}
+
+
+func init(){
+	binary.ImportCodeC(reflect.TypeOf(PublicKey{}), &secpPubKeyCodeC{})
+}
+
+type secpPubKeyCodeC struct{}
+
+// Encode encodes a value into the encoder.
+func (c *secpPubKeyCodeC) EncodeTo(e *binary.Encoder, rv reflect.Value) error {
+	pk :=  rv.Interface().(PublicKey)
+	contents := pk.SerializeCompressed()
+	e.WriteUvarint(uint64(len(contents)))
+	e.Write(contents)
+	return nil
+}
+
+// Decode decodes into a reflect value from the decoder.
+func (c *secpPubKeyCodeC) DecodeTo(d *binary.Decoder, rv reflect.Value) (err error) {
+	length, err := d.ReadUvarint()
+	if err != nil {
+		return err
+	}
+	contents := make([]byte, length)
+	_, err = d.Read(contents)
+	if err != nil {
+		return err
+	}
+	pk, err := ParsePubKey(contents)
+	if err != nil {
+		return err
+	}
+	rv.Set(reflect.ValueOf(*pk))
+	return nil
 }

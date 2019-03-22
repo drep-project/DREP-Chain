@@ -1,7 +1,6 @@
 package database
 
 import (
-	"fmt"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/sha3"
@@ -45,9 +44,11 @@ func NewDatabase(dbPath string) (*Database, error) {
 }
 
 func (db *Database) initState() error {
+	err := db.db.Put([]byte("journal_depth"), new(big.Int).Bytes(), nil)
+	if err != nil {
+		return err
+	}
 	db.root = sha3.Hash256([]byte("state rootState"))
-	fmt.Println("root", bytes2Hex(db.root))
-	fmt.Println()
 	value, _ := db.get(db.root, false)
 	if value != nil {
 		return nil
@@ -57,7 +58,6 @@ func (db *Database) initState() error {
 		Value:    []byte{0},
 		IsLeaf:   true,
 	}
-	var err error
 	value, err = binary.Marshal(rootState)
 	if err != nil {
 		return err
@@ -89,10 +89,7 @@ func (db *Database) put(key []byte, value []byte, temporary bool) error {
 			return err
 		}
 		var depth = new(big.Int).SetBytes(depthVal).Int64() + 1
-		previous, err := db.get(key, temporary)
-		if err != nil {
-			return err
-		}
+		previous, _ := db.get(key, temporary)
 		j := &journal{
 			Op:       "put",
 			Key:      key,
@@ -124,10 +121,7 @@ func (db *Database) delete(key []byte, temporary bool) error {
 			return err
 		}
 		var depth = new(big.Int).SetBytes(depthVal).Int64() + 1
-		previous, err := db.get(key, temporary)
-		if err != nil {
-			return err
-		}
+		previous, _ := db.get(key, temporary)
 		j := &journal{
 			Op:       "del",
 			Key:      key,
