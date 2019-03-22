@@ -18,7 +18,7 @@ func (chain *ChainApi) GetBlock(height int64) *chainType.Block {
 }
 
 func (chain *ChainApi) GetMaxHeight() int64 {
-    return chain.GetMaxHeight()
+    return chain.chainService.BestChain.Height()
 }
 
 func (chain *ChainApi) GetBalance(addr crypto.CommonAddress) *big.Int{
