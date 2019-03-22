@@ -2,12 +2,12 @@ package types
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"math/big"
+	"github.com/drep-project/binary"
 )
 
 type BlockHeader struct {
@@ -25,7 +25,7 @@ type BlockHeader struct {
 }
 
 func (blockHeader *BlockHeader) Hash() *crypto.Hash {
-	b, err := json.Marshal(blockHeader)
+	b, err := binary.Marshal(blockHeader)
 	if err != nil {
 		return nil
 	}

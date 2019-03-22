@@ -12,10 +12,10 @@ import (
 
 	"bytes"
 	"encoding/hex"
-	"encoding/json"
 	"net/http"
 	"net/url"
 	"strconv"
+	"github.com/drep-project/binary"
 )
 
 var (
@@ -102,7 +102,7 @@ func (chainService *ChainService) doSync(height int64) {
 		StateRoot: chainService.DatabaseService.GetStateRoot(),
 		Trans:     childTrans,
 	}
-	data, err := json.Marshal(cct)
+	data, err := binary.Marshal(cct)
 	if err != nil {
 		return
 	}

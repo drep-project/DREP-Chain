@@ -1,8 +1,6 @@
 package database
 
 import (
-	"encoding/json"
-	"fmt"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/sha3"
@@ -10,6 +8,7 @@ import (
 	"math/big"
 	"strconv"
 	"sync"
+	"github.com/drep-project/binary"
 )
 
 type Database struct {
@@ -39,25 +38,33 @@ func NewDatabase(dbPath string) (*Database, error) {
 		temp:   nil,
 		states: nil,
 	}
-	db.initState()
+	err = db.initState()
+	if err != nil {
+		return nil, err
+	}
 	return db, nil
 }
 
-func (db *Database) initState() {
+func (db *Database) initState() error {
+	err := db.db.Put([]byte("journal_depth"), new(big.Int).Bytes(), nil)
+	if err != nil {
+		return err
+	}
 	db.root = sha3.Hash256([]byte("state rootState"))
-	fmt.Println("root", bytes2Hex(db.root))
-	fmt.Println()
 	value, _ := db.get(db.root, false)
 	if value != nil {
-		return
+		return nil
 	}
 	rootState := &State{
 		Sequence: "",
 		Value:    []byte{0},
 		IsLeaf:   true,
 	}
-	value, _ = json.Marshal(rootState)
-	db.put(db.root, value, false)
+	value, err = binary.Marshal(rootState)
+	if err != nil {
+		return err
+	}
+	return db.put(db.root, value, false)
 }
 
 func (db *Database) get(key []byte, transactional bool) ([]byte, error) {
@@ -80,10 +87,10 @@ func (db *Database) get(key []byte, transactional bool) ([]byte, error) {
 func (db *Database) put(key []byte, value []byte, temporary bool) error {
 	if !temporary {
 		depthVal, err := db.db.Get([]byte("journal_depth"), nil)
-		var depth int64 = 0
-		if err == nil {
-			depth = new(big.Int).SetBytes(depthVal).Int64() + 1
+		if err != nil {
+			return err
 		}
+		var depth = new(big.Int).SetBytes(depthVal).Int64() + 1
 		previous, _ := db.get(key, temporary)
 		j := &journal{
 			Op:       "put",
@@ -91,15 +98,19 @@ func (db *Database) put(key []byte, value []byte, temporary bool) error {
 			Value:    value,
 			Previous: previous,
 		}
-
 		err = db.db.Put(key, value, nil)
 		if err != nil {
 			return err
 		}
-		jVal, _ := json.Marshal(j)
-		db.db.Put([]byte("journal_" + strconv.FormatInt(depth, 10)), jVal, nil)
-		db.db.Put([]byte("journal_depth"), new(big.Int).SetInt64(depth).Bytes(), nil)
-		return nil
+		jVal, err := binary.Marshal(j)
+		if err != nil {
+			return err
+		}
+		err = db.db.Put([]byte("journal_" + strconv.FormatInt(depth, 10)), jVal, nil)
+		if err != nil {
+			return err
+		}
+		return db.db.Put([]byte("journal_depth"), new(big.Int).SetInt64(depth).Bytes(), nil)
 	}
 	db.temp[bytes2Hex(key)] = value
 	return nil
@@ -108,10 +119,10 @@ func (db *Database) put(key []byte, value []byte, temporary bool) error {
 func (db *Database) delete(key []byte, temporary bool) error {
 	if !temporary {
 		depthVal, err := db.db.Get([]byte("journal_depth"), nil)
-		var depth int64 = 0
-		if err == nil {
-			depth = new(big.Int).SetBytes(depthVal).Int64() + 1
+		if err != nil {
+			return err
 		}
+		var depth = new(big.Int).SetBytes(depthVal).Int64() + 1
 		previous, _ := db.get(key, temporary)
 		j := &journal{
 			Op:       "del",
@@ -122,9 +133,18 @@ func (db *Database) delete(key []byte, temporary bool) error {
 		if err != nil {
 			return err
 		}
-		jVal, _ := json.Marshal(j)
-		db.db.Put([]byte("journal_" + strconv.FormatInt(depth, 10)), jVal, nil)
-		db.db.Put([]byte("journal_depth"), new(big.Int).SetInt64(depth).Bytes(), nil)
+		jVal, err := binary.Marshal(j)
+		if err != nil {
+			return err
+		}
+		err = db.db.Put([]byte("journal_" + strconv.FormatInt(depth, 10)), jVal, nil)
+		if err != nil {
+			return err
+		}
+		err = db.db.Put([]byte("journal_depth"), new(big.Int).SetInt64(depth).Bytes(), nil)
+		if err != nil {
+			return err
+		}
 		return db.db.Delete(key, nil)
 	}
 	db.temp[bytes2Hex(key)] = nil
@@ -146,65 +166,94 @@ func (db *Database) EndTransaction() {
 }
 
 
-func (db *Database) Commit() {
+func (db *Database) Commit() error {
 	for key, value := range db.temp {
 		bk := hex2Bytes(key)
 		if value != nil {
-			db.put(bk, value, false)
+			err := db.put(bk, value, false)
+			if err != nil {
+				return err
+			}
 		} else {
-			db.delete(bk, false)
+			err := db.delete(bk, false)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	db.EndTransaction()
+	return nil
 }
 
 func (db *Database) Discard() {
 	db.EndTransaction()
 }
 
-func (db *Database) Rollback(index int64) {
+func (db *Database) Rollback(index int64) error {
 	depthVal, err := db.db.Get([]byte("journal_depth"), nil)
-	var depth int64 = 0
-	if err == nil {
-		depth = new(big.Int).SetBytes(depthVal).Int64()
+	if err != nil {
+		return err
 	}
+	var depth = new(big.Int).SetBytes(depthVal).Int64()
 
 	for i := depth; i > index; i-- {
 		key := []byte("journal_" + strconv.FormatInt(i, 10))
-		jVal, _ := db.db.Get(key, nil)
-		if jVal == nil {
-			continue
+		jVal, err := db.db.Get(key, nil)
+		if err != nil {
+			return err
 		}
 		j := &journal{}
-		err = json.Unmarshal(jVal, j)
+		err = binary.Unmarshal(jVal, j)
 		if err != nil {
-			continue
+			return err
 		}
 		if j.Op == "put" {
 			if j.Previous == nil {
-				db.db.Delete(j.Key, nil)
+				err = db.db.Delete(j.Key, nil)
+				if err != nil {
+					return err
+				}
 			} else {
-				db.db.Put(j.Key, j.Previous, nil)
+				err = db.db.Put(j.Key, j.Previous, nil)
+				if err != nil {
+					return err
+				}
 			}
 		}
 		if j.Op == "del" {
-			db.db.Put(j.Key, j.Previous, nil)
+			err = db.db.Put(j.Key, j.Previous, nil)
+			if err != nil {
+				return err
+			}
 		}
-		db.db.Delete(key, nil)
-		db.db.Put([]byte("journal_depth"), new(big.Int).SetInt64(index).Bytes(), nil)
+		err = db.db.Delete(key, nil)
+		if err != nil {
+			return err
+		}
+		err = db.db.Put([]byte("journal_depth"), new(big.Int).SetInt64(index).Bytes(), nil)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func (db *Database) Rollback2Block(height int64) {
-	indexVal, _ := db.db.Get([]byte("depth_of_height_" + strconv.FormatInt(height, 10)), nil)
+func (db *Database) Rollback2Block(height int64) error {
+	indexVal, err := db.db.Get([]byte("depth_of_height_" + strconv.FormatInt(height, 10)), nil)
+	if err != nil {
+		return err
+	}
 	index := new(big.Int).SetBytes(indexVal).Int64()
-	db.Rollback(index)
+	return db.Rollback(index)
 }
 
-func (db *Database) RecordBlockJournal(height int64) {
-	depthVal, _ := db.db.Get([]byte("journal_depth"), nil)
+func (db *Database) RecordBlockJournal(height int64) error {
+	depthVal, err := db.db.Get([]byte("journal_depth"), nil)
+	if err != nil {
+		return err
+	}
 	depth := new(big.Int).SetBytes(depthVal).Int64()
-	db.db.Put([]byte("depth_of_height_" + strconv.FormatInt(height, 10)), new(big.Int).SetInt64(depth).Bytes(), nil)
+	return db.db.Put([]byte("depth_of_height_" + strconv.FormatInt(height, 10)), new(big.Int).SetInt64(depth).Bytes(), nil)
 }
 
 func (db *Database) getStateRoot() []byte {
@@ -224,7 +273,7 @@ func (db *Database) getState(key []byte) (*State, error) {
 		return nil, err
 	}
 	state = &State{}
-	err = json.Unmarshal(b, state)
+	err = binary.Unmarshal(b, state)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +283,7 @@ func (db *Database) getState(key []byte) (*State, error) {
 }
 
 func (db *Database) putState(key []byte, state *State) error {
-	b, err := json.Marshal(state)
+	b, err := binary.Marshal(state)
 	if err != nil {
 		return err
 	}
@@ -266,13 +315,13 @@ func (db *Database) getStorage(addr *crypto.CommonAddress) *chainTypes.Storage {
 	    storage.Reputation = new(big.Int)
 		return storage
 	}
-	json.Unmarshal(value, storage)
+	binary.Unmarshal(value, storage)
 	return storage
 }
 
 func (db *Database) putStorage(addr *crypto.CommonAddress, storage *chainTypes.Storage) error {
 	key := sha3.Hash256([]byte("storage_" + addr.Hex()))
-	value, err := json.Marshal(storage)
+	value, err := binary.Marshal(storage)
 	if err != nil {
 		return err
 	}

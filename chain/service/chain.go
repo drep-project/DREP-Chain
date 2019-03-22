@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/json"
 	"github.com/drep-project/drep-chain/chain/txpool"
 	"github.com/drep-project/drep-chain/pkgs/evm"
 	"math/big"
@@ -23,6 +22,8 @@ import (
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	p2pService "github.com/drep-project/drep-chain/network/service"
 	rpc2 "github.com/drep-project/drep-chain/pkgs/rpc"
+	"github.com/drep-project/binary"
+	"fmt"
 )
 
 var (
@@ -143,6 +144,9 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 
 	chainService.genesisBlock = chainService.GenesisBlock(chainService.Config.GenesisPK)
 	hash := chainService.genesisBlock.Header.Hash()
+	fmt.Println("block: ", chainService.genesisBlock)
+	fmt.Println("header: ", chainService.genesisBlock.Header)
+	fmt.Println("hash: ", chainService.genesisBlock.Header.Hash())
 	block, err := chainService.DatabaseService.GetBlock(hash)
 	if err != nil && err.Error() != "leveldb: not found" {
 		return nil
@@ -270,7 +274,7 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey, 
 func (chainService *ChainService) GetTxHashes(ts []*chainTypes.Transaction) ([][]byte, error) {
 	txHashes := make([][]byte, len(ts))
 	for i, tx := range ts {
-		b, err := json.Marshal(tx.Data)
+		b, err := binary.Marshal(tx.Data)
 		if err != nil {
 			return nil, err
 		}
@@ -300,13 +304,16 @@ func (chainService *ChainService) GenesisBlock(genesisPubkey string) *chainTypes
 	b := common.Bytes(genesisPubkey)
 	err := b.UnmarshalText(b)
 	if err != nil {
+		fmt.Println(11111)
 		return nil
 	}
 	pubkey, err := secp256k1.ParsePubKey(b)
 	if err != nil {
+		fmt.Println(2222)
 		return nil
 	}
 	var memberPks []*secp256k1.PublicKey = nil
+	fmt.Println(3333)
 	return &chainTypes.Block{
 		Header: &chainTypes.BlockHeader{
 			Version:      common.Version,
