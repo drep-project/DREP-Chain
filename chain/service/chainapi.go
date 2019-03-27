@@ -14,7 +14,8 @@ type ChainApi struct {
 }
 
 func (chain *ChainApi) GetBlock(height int64) *chainType.Block {
-    return chain.GetBlock(height)
+    blocks, _ := chain.chainService.GetBlocksFrom(height, 1)
+    return blocks[0]
 }
 
 func (chain *ChainApi) GetMaxHeight() int64 {
@@ -30,8 +31,9 @@ func (chain *ChainApi) GetNonce(addr crypto.CommonAddress) int64 {
 }
 
 func (chain *ChainApi) GetPreviousBlockHash() string {
-    bytes := chain.GetPreviousBlockHash()
-    return "0x" + string(bytes[:])
+    block := chain.GetBlock(chain.GetMaxHeight())
+    hash := block.Header.PreviousHash.String()
+    return "0x" + hash
 }
 
 func (chain *ChainApi) GetReputation(addr crypto.CommonAddress) *big.Int {
