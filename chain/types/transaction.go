@@ -1,11 +1,11 @@
 package types
 
 import (
-	"encoding/hex"
-	"encoding/json"
 	"errors"
+	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"math/big"
@@ -32,7 +32,7 @@ type TransactionData struct {
 }
 
 func NewTransaction(from string, txType TxType ,amount *big.Int, nonce int64, gasPrice, gasLimit *big.Int, action interface{}) (*Transaction, error) {
-	actionBytes, err := json.Marshal(action)
+	actionBytes, err := binary.Marshal(action)
 	if err != nil {
 		return nil, err
 	}
@@ -215,26 +215,15 @@ func (tx *Transaction) GasPrice() *big.Int {
 	return tx.Data.GasPrice
 }
 
-func (tx *Transaction) TxId() (string, error) {
-	b, err := json.Marshal(tx.Data)
-	if err != nil {
-		return "", err
-	}
-	id := hex.EncodeToString(sha3.Hash256(b))
-	return id, nil
-}
-
-func (tx *Transaction) TxHash() ([]byte, error) {
-	b, err := json.Marshal(tx.Data)
-	if err != nil {
-		return nil, err
-	}
-	h := sha3.Hash256(b)
-	return h, nil
+func (tx *Transaction) TxHash() crypto.Hash {
+	b, _ := binary.Marshal(tx.Data)
+	h := crypto.Hash{}
+	h.SetBytes(sha3.Hash256(b))
+	return h
 }
 
 func (tx *Transaction) TxSig(prvKey *secp256k1.PrivateKey) (*secp256k1.Signature, error) {
-	b, err := json.Marshal(tx.Data)
+	b, err := binary.Marshal(tx.Data)
 	if err != nil {
 		return nil, err
 	}
@@ -273,13 +262,13 @@ func TxToMessage(tx *Transaction) (*Message, error) {
 	switch tx.Type() {
 	case CreateContractType:
 		action = &CreateContractAction{}
-		err := json.Unmarshal(tx.GetData(), action)
+		err := binary.Unmarshal(tx.GetData(), action)
 		if err != nil{
 			return  nil, err
 		}
 	case CallContractType:
 		action = &CallContractAction{}
-		err := json.Unmarshal(tx.GetData(), action)
+		err := binary.Unmarshal(tx.GetData(), action)
 		if err != nil{
 			return  nil, err
 		}

@@ -103,7 +103,7 @@ func (accountapi *AccountApi) RegisterAccount(fromAccount, newAccountName string
 	if err != nil{
 		return "",err
 	}
-	return tx.TxId()
+	return tx.TxHash().String(), nil
 }
 
 func (accountapi *AccountApi) Transfer(from, to string, amount *big.Int) (string, error) {
@@ -119,7 +119,7 @@ func (accountapi *AccountApi) Transfer(from, to string, amount *big.Int) (string
 	if err != nil{
 		return "",err
 	}
-	return tx.TxId()
+	return tx.TxHash().String(), nil
 }
 
 func (accountapi *AccountApi) Call(from, to string, input []byte, amount *big.Int, readOnly bool) (string, error) {
@@ -133,7 +133,7 @@ func (accountapi *AccountApi) Call(from, to string, input []byte, amount *big.In
 	if err != nil{
 		return "",err
 	}
-	return tx.TxId()
+	return tx.TxHash().String(), nil
 }
 
 func (accountapi *AccountApi) CreateCode(from, to string, byteCode []byte) (string, error) {
@@ -147,7 +147,7 @@ func (accountapi *AccountApi) CreateCode(from, to string, byteCode []byte) (stri
 	if err != nil{
 		return "",err
 	}
-	return tx.TxId()
+	return tx.TxHash().String(), nil
 }
 
 // DumpPrikey dumpPrivate

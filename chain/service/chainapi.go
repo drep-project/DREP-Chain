@@ -1,8 +1,6 @@
 package service
 
 import (
-    "encoding/hex"
-    "errors"
     chainType "github.com/drep-project/drep-chain/chain/types"
     "github.com/drep-project/drep-chain/database"
     "math/big"
@@ -15,11 +13,12 @@ type ChainApi struct {
 }
 
 func (chain *ChainApi) GetBlock(height int64) *chainType.Block {
-    return chain.GetBlock(height)
+    blocks, _ := chain.chainService.GetBlocksFrom(height, 1)
+    return blocks[0]
 }
 
 func (chain *ChainApi) GetMaxHeight() int64 {
-    return chain.GetMaxHeight()
+    return chain.chainService.BestChain.Height()
 }
 
 func (chain *ChainApi) GetBalance(accountName string) *big.Int{
@@ -32,11 +31,6 @@ func (chain *ChainApi) GetAccount(accountName string) (*chainType.Storage, error
 
 func (chain *ChainApi) GetNonce(accountName string) int64 {
     return chain.dbService.GetNonce(accountName, true)
-}
-
-func (chain *ChainApi) GetPreviousBlockHash() string {
-    bytes := chain.GetPreviousBlockHash()
-    return "0x" + string(bytes[:])
 }
 
 func (chain *ChainApi) GetReputation(accountName string) *big.Int {
@@ -62,61 +56,15 @@ func (chain *ChainApi) GetTransactionCountByBlockHeight(height int64) int {
 }
 
 func (chain *ChainApi) SendRawTransaction(tx *chainType.Transaction) (string, error){
-    //bytes := []byte(raw)
-    //tx := &chainType.Transaction{}
-    //json.Unmarshal(bytes, tx)
-
-    can := false
-    switch tx.Type() {
-    case chainType.TransferType:
-        can, _, _, _, _ = chain.canExecute(tx, chainType.TransferGas, nil)
-    case chainType.CreateContractType:
-        can, _, _, _, _ = chain.canExecute(tx, nil, chainType.CreateContractGas)
-    case chainType.CallContractType:
-        can, _, _, _, _ = chain.canExecute(tx,nil, chainType.CallContractGas)
+    err := chain.chainService.ValidateTransaction(tx)
+    if err != nil {
+        return "", err
     }
-
-    if !can {
-        return "", errors.New("error: can not executeTransaction this transaction")
-    }
-
-    err := chain.chainService.transactionPool.AddTransaction(tx)
+    err = chain.chainService.transactionPool.AddTransaction(tx)
     if err != nil {
         return "", err
     }
 
     chain.chainService.P2pServer.Broadcast(tx)
-
-    hash, err:= tx.TxHash()
-    encodedHash := hex.EncodeToString(hash)
-    res := "0x" + string(encodedHash)
-    return res, err
-}
-
-func (chain *ChainApi) canExecute(tx *chainType.Transaction, gasFloor, gasCap *big.Int) (canExecute bool, accountName string, balance, gasLimit, gasPrice *big.Int) {
-    chain.chainService.DatabaseService.BeginTransaction()
-    fromAccountName := tx.From()
-    balance = chain.chainService.DatabaseService.GetBalance(fromAccountName, true)
-    nonce :=  chain.chainService.DatabaseService.GetNonce(fromAccountName,true) + 1
-    chain.chainService.DatabaseService.PutNonce(fromAccountName, nonce,true)
-
-    if nonce != tx.Nonce() {
-       return
-    }
-    if gasFloor != nil {
-        amountFloor := new(big.Int).Mul(gasFloor, tx.GasPrice())
-        if tx.GasLimit().Cmp(gasFloor) < 0 || amountFloor.Cmp(balance) > 0 {
-            return
-        }
-    }
-    if gasCap != nil {
-        amountCap := new(big.Int).Mul(gasCap, tx.GasPrice())
-        if amountCap.Cmp(balance) > 0 {
-            return
-        }
-    }
-
-    canExecute = true
-    chain.chainService.DatabaseService.Discard()
-    return
+    return tx.TxHash().String(), err
 }

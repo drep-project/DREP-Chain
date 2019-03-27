@@ -1,8 +1,8 @@
 package service
 
 import (
-	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
@@ -19,6 +19,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"github.com/drep-project/binary"
 )
 
 const (
@@ -38,7 +39,7 @@ var (
 
 type P2pService struct {
 	prvKey *secp256k1.PrivateKey
-	livePeer []*p2pTypes.Peer
+	livePeer map[string]*p2pTypes.Peer //key = ip, value peer
 	deadPeer []*p2pTypes.Peer
 	apis []app.API
 	Router *p2pTypes.MessageRouter
@@ -103,7 +104,7 @@ func (p2pService *P2pService) Init(executeContext *app.ExecuteContext) error {
 		dlog.Error("generate private key error ", "Reason", err)
 		return err
 	}
-	p2pService.livePeer = []*p2pTypes.Peer{}
+	p2pService.livePeer = make(map[string]*p2pTypes.Peer)
 	p2pService.deadPeer = []*p2pTypes.Peer{}
 	p2pService.inQuene = make(chan *p2pTypes.RouteIn,MaxConnections*2)
 	p2pService.outQuene = make(chan *outMessage,MaxConnections*2)
@@ -231,7 +232,7 @@ func (p2pService *P2pService) preProcessReq(addr string, pk *secp256k1.PublicKey
 			p2pService.addPeer(deadPeer)
 			livePeer = deadPeer
 		}else {
-			livePeer = p2pTypes.NewPeer( ipPort[0], p2pTypes.DefaultPort, p2pService.handError, p2pService.sendPing) // //no way to find port
+			livePeer = p2pTypes.NewPeer( ipPort[0], p2pTypes.DefaultPort, p2pService.handleError, p2pService.sendPing) // //no way to find port
 			p2pService.addPeer(livePeer)
 		}
 	}
@@ -280,16 +281,17 @@ func (p2pService *P2pService) handPong(peer *p2pTypes.Peer, pong *p2pTypes.Pong)
 	}
 }
 
-func (p2pService *P2pService) handError(peer *p2pTypes.Peer, err error){
+func (p2pService *P2pService) handleError(peer *p2pTypes.Peer, err error){
 	if err != nil {
+		//TimeoutError
 		if pErr,ok := err.(*p2pTypes.PeerError);ok {
-			dlog.Error(pErr.Error())
+			dlog.Error("handleError", "err", pErr.Error())
 			peer.Conn.Stop()
+
 			p2pService.addDeadPeer(peer)
 		}
 	}
 }
-
 
 func (p2pService *P2pService) sendPing(peer *p2pTypes.Peer){
 	p2pService.SendAsync(peer, &p2pTypes.Ping{})
@@ -317,18 +319,20 @@ func (p2pService *P2pService) sendMessageRoutine(){
 	for {
 		select {
 		case  outMsg := <-p2pService.outQuene:
-			go func() {
-				err := p2pService.sendMessage(outMsg) //outMsg.execute()
-				if err != nil{
-					//dead peer
-					p2pService.handError(outMsg.Peer,p2pTypes.NewPeerError(err))
-					dlog.Error("", "MSG",err.Error())
-				}
-				select {
-				case outMsg.done <- err:
-				default:
-				}
-			}()
+			//消息插入到输出队列的后，网络可能出现立即不通的情况。此时消息应该被丢弃。
+				go func() {
+					err := p2pService.sendMessage(outMsg) //outMsg.execute()
+					if err != nil{
+						//dead peer
+						p2pService.handleError(outMsg.Peer,p2pTypes.NewPeerError(err))
+						dlog.Error("p2p send msg err", "msg",outMsg, "err", err.Error())
+					}
+					select {
+					case outMsg.done <- err:
+					default:
+					}
+				}()
+
 		case <- p2pService.quit:
 			return
 		}
@@ -346,32 +350,31 @@ func (p2pService *P2pService) sendMessage(outMessage *outMessage) error {
 		dlog.Error(err.Error())
 		return &common.DefaultError{}
 	}
-	var conn net.Conn
-	for i := 0; i <= 2; i++ {
-		conn, err = net.DialTimeout("tcp", outMessage.Peer.GetAddr(), d)
-		if err == nil {
-			break
-		} else {
-			dlog.Info("p2p sendmsg dial", "err", err)
-			if ope, ok := err.(*net.OpError); ok {
-				dlog.Info(strconv.FormatBool(ope.Timeout()), ope)
-			}
-			dlog.Info("Retry after 2s")
-			time.Sleep(2 * time.Second)
-		}
+
+	p2pService.peerOpLock.Lock()
+	if _, ok := p2pService.livePeer[outMessage.Peer.Ip]; !ok {
+		p2pService.peerOpLock.Unlock()
+		return errors.New("peer is offline")
 	}
+	p2pService.peerOpLock.Unlock()
+
+	conn, err := net.DialTimeout("tcp", outMessage.Peer.GetAddr(), d)
 	if err != nil {
-		dlog.Info("2 p2p sendmsg dial", "err", err)
+		if conn != nil{
+			defer conn.Close()
+		}
+		dlog.Info("p2p sendmsg dial", "err", err)
 		if ope, ok := err.(*net.OpError); ok {
-			dlog.Info(strconv.FormatBool(ope.Timeout()), ope)
 			if ope.Timeout() {
 				return &common.TimeoutError{MyError:common.MyError{Err:ope}}
 			} else {
 				return &common.ConnectionError{MyError:common.MyError{Err:ope}}
 			}
 		}
+
+		return err
 	}
-	defer conn.Close()
+
 	now := time.Now()
 	d2, err := time.ParseDuration("5s")
 	if err != nil {
@@ -380,7 +383,7 @@ func (p2pService *P2pService) sendMessage(outMessage *outMessage) error {
 	} else {
 		conn.SetDeadline(now.Add(d2))
 	}
-	if bytes, err := json.Marshal(message); err == nil {
+	if bytes, err := binary.Marshal(message); err == nil {
 		size := len(bytes)
 		sizeBytes := make([]byte, 4)
 		sizeBytes[0] = byte((size & 0xFF000000) >> 24)
@@ -453,8 +456,12 @@ func (p2pService *P2pService) GetRouter() (*p2pTypes.MessageRouter) {
 	return  p2pService.Router
 }
 
-func (p2pService *P2pService) Peers()([]*p2pTypes.Peer){
-	return p2pService.livePeer
+func (p2pService *P2pService) Peers() ([]*p2pTypes.Peer) {
+	peers := make([]*p2pTypes.Peer, 0, len(p2pService.livePeer))
+	for _, v := range p2pService.livePeer {
+		peers = append(peers, v)
+	}
+	return peers
 }
 
 func (p2pService *P2pService) GetPeer(ip string)(*p2pTypes.Peer){
@@ -491,7 +498,7 @@ func (p2pService *P2pService) AddPeer(addr string) error {
 	if p2pService.isLocalIp(ip) {
 		return nil
 	}
-	peer := p2pTypes.NewPeer(ip, port, p2pService.handError, p2pService.sendPing)
+	peer := p2pTypes.NewPeer(ip, port, p2pService.handleError, p2pService.sendPing)
 	if peer.Conn.Connect() {
 		peer.Conn.Start()
 		p2pService.addPeer(peer)
@@ -512,12 +519,7 @@ func (p2pService *P2pService) RemovePeer(addr string)  {
 	p2pService.peerOpLock.Lock()
 	defer p2pService.peerOpLock.Unlock()
 
-	for index, peer := range p2pService.livePeer {
-		if peer.Ip ==  ip {
-			p2pService.livePeer = append(p2pService.livePeer[0:index], p2pService.livePeer[index+1:len(p2pService.livePeer)]...)
-			break
-		}
-	}
+	delete(p2pService.livePeer, ip)
 
 	for index, peer := range p2pService.deadPeer {
 		if peer.Ip ==  ip {
@@ -534,7 +536,12 @@ func (p2pService *P2pService) addPeer(peer *p2pTypes.Peer){
 	if len(p2pService.livePeer) > MaxLivePeer {
 		return
 	}
-	p2pService.livePeer = append(p2pService.livePeer, peer)
+
+	if _,ok := p2pService.livePeer[peer.Ip];ok {
+		return
+	}
+	p2pService.livePeer[peer.Ip] = peer
+	fmt.Println("add peer ip:", peer.Ip)
 
 	index := p2pService.indexPeer(p2pService.deadPeer,peer)
 	if index > -1 {
@@ -546,13 +553,9 @@ func (p2pService *P2pService) addDeadPeer(peer *p2pTypes.Peer){
 	p2pService.peerOpLock.Lock()
 	defer p2pService.peerOpLock.Unlock()
 
-	index :=  p2pService.indexPeer(p2pService.livePeer,peer)
-	if index > -1 {
-		p2pService.livePeer = append(p2pService.livePeer[0:index], p2pService.livePeer[index+1:len(p2pService.livePeer)]...)
-	}
+	delete(p2pService.livePeer,peer.Ip)
 
-
-	index = p2pService.indexPeer(p2pService.deadPeer,peer)
+	index := p2pService.indexPeer(p2pService.deadPeer,peer)
 	if index == -1 {
 		if len(p2pService.deadPeer) > MaxDeadPeer {
 			//remove top peer

@@ -13,7 +13,7 @@ type State struct {
 	ChildKeys [17][]byte
 	Value     []byte
 	IsLeaf    bool
-	db        *Database
+	db        *Database `binary:"ignore"`
 }
 
 func (state *State) resetValue(children [17]*State) {

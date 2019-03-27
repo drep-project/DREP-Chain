@@ -159,7 +159,7 @@ func (m *txSortedMap) Remove(nonce int64) bool {
 func (m *txSortedMap) Ready(start int64) []*chainTypes.Transaction {
 	// Short circuit if no transactions are available
 	if m.index.Len() == 0 || (*m.index)[0] > start {
-		dlog.Warn("ready err, index[0]:%d > req start:%d", (*m.index)[0], start)
+		dlog.Warn("txSortedMap Ready", "index[0]:",(*m.index)[0], "req start:", start)
 		return nil
 	}
 	// Otherwise start accumulating incremental transactions

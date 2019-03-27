@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/json"
 	"errors"
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/dlog"
@@ -18,6 +17,7 @@ import (
 	"gopkg.in/urfave/cli.v1"
 	"math"
 	"time"
+	"github.com/drep-project/binary"
 )
 
 var (
@@ -250,7 +250,7 @@ func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, erro
 	dlog.Trace("node member finishes consensus for round 1")
 
 	block := &chainTypes.Block{}
-	err = json.Unmarshal(blockBytes, block)
+	err = binary.Unmarshal(blockBytes, block)
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +261,7 @@ func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, erro
 		return nil, err
 	}
 	multiSig := &chainTypes.MultiSignature{}
-	err = json.Unmarshal(multiSigBytes, multiSig)
+	err = binary.Unmarshal(multiSigBytes, multiSig)
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +292,7 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 	}
 
 	dlog.Trace("node leader is preparing process consensus for round 1", "Block", block)
-	msg, err := json.Marshal(block)
+	msg, err := binary.Marshal(block)
 	if err != nil {
 		return nil, err
 	}
@@ -307,7 +307,7 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 	multiSig := &chainTypes.MultiSignature{Sig: *sig, Bitmap: bitmap}
 	dlog.Trace("node leader is preparing process consensus for round 2")
 	consensusService.leader.Reset()
-	msg, err = json.Marshal(multiSig)
+	msg, err = binary.Marshal(multiSig)
 	if err != nil {
 		return nil, err
 	}
@@ -332,7 +332,7 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 
 func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error) {
 	block, _ := consensusService.ChainService.GenerateBlock(consensusService.Config.Me)
-	msg, err := json.Marshal(block)
+	msg, err := binary.Marshal(block)
 	if err != nil {
 		return block, nil
 	}

@@ -3,8 +3,8 @@ package listenpool
 import (
     "sync"
     chainTypes "github.com/drep-project/drep-chain/chain/types"
-    "encoding/json"
     "github.com/drep-project/dlog"
+    "github.com/drep-project/binary"
 )
 /*
     Ethan
@@ -38,7 +38,7 @@ func (p *ListenPool) Obtain(cp func(interface{})bool, tranSizeLimit int) []chain
     tmpSize := p.Size
     i:=len(p.Transactions) - 1
     for tmpSize > tranSizeLimit && i>=0 {
-        if bytes,err:=json.Marshal(p.Transactions[i]); err!=nil{
+        if bytes,err:=binary.Marshal(p.Transactions[i]); err!=nil{
             dlog.Error("Error, can not json.Marsha(transaction)")
         } else {
             tmpSize-=len(bytes)
@@ -54,7 +54,7 @@ func (p *ListenPool) Push(tran chainTypes.Transaction)  {
     defer p.lock.Unlock()
     p.Transactions = append(p.Transactions, tran)
 
-    if bytes, err := json.Marshal(tran); err!=nil{
+    if bytes, err := binary.Marshal(tran); err!=nil{
         dlog.Error("Error, can not json.Marsha(transaction)")
     } else {
         p.Size += len(bytes)
@@ -63,7 +63,7 @@ func (p *ListenPool) Push(tran chainTypes.Transaction)  {
 }
 
 func (p *ListenPool) PackageTransaction(transactions []chainTypes.Transaction)  {
-    if _,err:=json.Marshal(transactions); err!=nil{
+    if _,err:=binary.Marshal(transactions); err!=nil{
         dlog.Error("Error, can not json.Marsha(transactions)")
     } else {
         //Todo send bytes to MainChain by using http api

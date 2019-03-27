@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"strconv"
 	"sync"
@@ -31,6 +32,10 @@ type Peer struct {
 	Conn       *ShortConnection `json:"-"`
 	addrUpdate sync.Mutex       `json:"-"`
 	idle       bool             `json:"-"`
+
+
+	height      int64
+	exchangeTxs map[crypto.Hash]struct{}
 }
 
 func NewPeer(ip string, port int, handError func(*Peer, error), sendPing func(*Peer)) *Peer {

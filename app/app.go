@@ -121,7 +121,7 @@ func GetServiceTag(field reflect.StructField) string {
 func (mApp DrepApp) Run() error {
 	mApp.Before = mApp.before
 	mApp.Flags = append(mApp.Flags, ConfigFileFlag)
-
+	mApp.Flags = append(mApp.Flags, HomeDirFlag)
 	allCommands, allFlags := mApp.Context.AggerateFlags()
 	for i:= 0; i < len(allCommands); i++ {
 		allCommands[i].Flags = append(allCommands[i].Flags, allFlags...)
@@ -154,7 +154,6 @@ func (mApp DrepApp) action(ctx *cli.Context) error {
 	for _, service := range mApp.Context.Services {
 		err := service.Init(mApp.Context)
 		if err != nil {
-			fmt.Println(service.Name())
 			return err
 		}
 	}

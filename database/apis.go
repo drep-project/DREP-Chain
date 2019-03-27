@@ -1,15 +1,14 @@
 package database
 
 import (
-    "encoding/binary"
     "encoding/hex"
-    "encoding/json"
     "errors"
     chainType "github.com/drep-project/drep-chain/chain/types"
     "github.com/drep-project/drep-chain/crypto"
     "github.com/drep-project/drep-chain/crypto/sha3"
     "github.com/syndtr/goleveldb/leveldb/util"
     "math/big"
+    "github.com/drep-project/binary"
 )
 
 var (
@@ -26,7 +25,7 @@ func (database *DatabaseService) GetStateRoot() []byte {
 func (database *DatabaseService) PutBlock(block *chainType.Block) error {
     hash := block.Header.Hash()
     key := append(BlockPrefix, hash[:]...)
-    value, err := json.Marshal(block)
+    value, err := binary.Marshal(block)
     if err != nil {
         return err
     }
@@ -40,7 +39,7 @@ func (database *DatabaseService) GetBlock(hash *crypto.Hash) (*chainType.Block, 
         return nil, err
     }
     block := &chainType.Block{}
-    json.Unmarshal(value, block)
+    binary.Unmarshal(value, block)
     return block, nil
 }
 
@@ -50,7 +49,7 @@ func (database *DatabaseService) BlockIterator(handle func(*chainType.Block) err
     var err error
     for iter.Next() {
         block := &chainType.Block{}
-        err = json.Unmarshal(iter.Value(), block)
+        err = binary.Unmarshal(iter.Value(), block)
         if err != nil {
            break
         }
@@ -68,7 +67,7 @@ func (database *DatabaseService) BlockIterator(handle func(*chainType.Block) err
 
 func (database *DatabaseService) PutBlockNode(blockNode *chainType.BlockNode) error {
     header := blockNode.Header()
-    value, err := json.Marshal(header)
+    value, err := binary.Marshal(header)
     if err != nil {
         return err
     }
@@ -92,7 +91,7 @@ func (database *DatabaseService) GetBlockNode(hash *crypto.Hash, height int64) (
         return nil, 0, err
     }
     blockHeader := &chainType.BlockHeader{}
-    json.Unmarshal(value[0:len(value)-1], blockHeader)
+    binary.Unmarshal(value[0:len(value)-1], blockHeader)
     status :=  value[len(value)-1:len(value)][0]
     return blockHeader, chainType.BlockStatus(status), nil
 }
@@ -104,7 +103,7 @@ func (database *DatabaseService) BlockNodeIterator(handle func(*chainType.BlockH
     for iter.Next() {
         val := iter.Value()
         blockHeader := &chainType.BlockHeader{}
-        err = json.Unmarshal(val[0:len(val)-1], blockHeader)
+        err = binary.Unmarshal(val[0:len(val)-1], blockHeader)
         if err != nil {
             break
         }
@@ -122,7 +121,7 @@ func (database *DatabaseService) BlockNodeIterator(handle func(*chainType.BlockH
 
 func (database *DatabaseService) PutChainState(chainState *chainType.BestState) error {
     key := ChainStatePrefix
-    value, err := json.Marshal(chainState)
+    value, err := binary.Marshal(chainState)
     if err != nil {
         return err
     }
@@ -136,7 +135,7 @@ func (database *DatabaseService) GetChainState() *chainType.BestState {
         return nil
     }
     state := &chainType.BestState{}
-    json.Unmarshal(value, state)
+    binary.Unmarshal(value, state)
     return state
 }
 
@@ -179,7 +178,7 @@ func (database *DatabaseService) PutStorage(accountName string, storage *chainTy
         database.db.stores = make(map[string] *chainType.Storage)
     }
     key := sha3.Hash256([]byte("storage_" + accountName))
-    value, err := json.Marshal(storage)
+    value, err := binary.Marshal(storage)
     if err != nil {
         return err
     }
@@ -268,7 +267,7 @@ func (database *DatabaseService) GetLogs(txHash []byte, ) []*chainType.Log {
         return make([]*chainType.Log, 0)
     }
     var logs []*chainType.Log
-    err = json.Unmarshal(value, &logs)
+    err = binary.Unmarshal(value, &logs)
     if err != nil {
         return make([]*chainType.Log, 0)
     }
@@ -277,7 +276,7 @@ func (database *DatabaseService) GetLogs(txHash []byte, ) []*chainType.Log {
 
 func (database *DatabaseService) PutLogs(logs []*chainType.Log, txHash []byte, ) error {
     key := sha3.Hash256([]byte("logs_" + hex.EncodeToString(txHash)))
-    value, err := json.Marshal(logs)
+    value, err := binary.Marshal(logs)
     if err != nil {
         return err
     }

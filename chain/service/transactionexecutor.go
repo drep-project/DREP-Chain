@@ -11,7 +11,7 @@ import (
 
 	"bytes"
 	"encoding/hex"
-	"encoding/json"
+	"github.com/drep-project/binary"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -101,7 +101,7 @@ func (chainService *ChainService) doSync(height int64) {
 		StateRoot: chainService.DatabaseService.GetStateRoot(),
 		Trans:     childTrans,
 	}
-	data, err := json.Marshal(cct)
+	data, err := binary.Marshal(cct)
 	if err != nil {
 		return
 	}
@@ -132,7 +132,7 @@ func (chainService *ChainService) executeTransaction(tx *chainTypes.Transaction)
 	switch tx.Type() {
 	case chainTypes.RegisterAccountType:
 		action := &chainTypes.RegisterAccountAction{}
-		err = json.Unmarshal(tx.GetData(), action)
+		err = binary.Unmarshal(tx.GetData(), action)
 		if err != nil{
 			return  nil, nil, err
 		}
@@ -149,7 +149,7 @@ func (chainService *ChainService) executeTransaction(tx *chainTypes.Transaction)
 		//TODO how to control add miner right
 		panic(errors.New("unpupport add miners runtime"))
 		action := &chainTypes.RegisterMinerAction{}
-		err = json.Unmarshal(tx.GetData(), action)
+		err = binary.Unmarshal(tx.GetData(), action)
 		if err != nil{
 			return  nil, nil, err
 		}
@@ -164,7 +164,7 @@ func (chainService *ChainService) executeTransaction(tx *chainTypes.Transaction)
 		}
 	case chainTypes.TransferType:
 		action := &chainTypes.TransferAction{}
-		err = json.Unmarshal(tx.GetData(), action)
+		err = binary.Unmarshal(tx.GetData(), action)
 		if err != nil{
 			return  nil, nil, err
 		}
@@ -363,7 +363,7 @@ func (chainService *ChainService) deduct(chainId app.ChainIdType, balance, gasFe
 //    }
 //
 //    cct := &chainTypes.CrossChainTransaction{}
-//    err := json.Unmarshal(t.Data.Data, cct)
+//    err := binary.Unmarshal(t.Data.Data, cct)
 //    if err != nil {
 //        fmt.Println("err: ", err)
 //        return new(big.Int), new(big.Int)
@@ -410,7 +410,7 @@ func (chainService *ChainService) deduct(chainId app.ChainIdType, balance, gasFe
 //    }
 //
 //    cct := &chainTypes.CrossChainTransaction{}
-//    err := json.Unmarshal(t.Data.Data, &cct)
+//    err := binary.Unmarshal(t.Data.Data, &cct)
 //    if err != nil {
 //        return new(big.Int), new(big.Int)
 //    }
@@ -425,7 +425,7 @@ func (chainService *ChainService) deduct(chainId app.ChainIdType, balance, gasFe
 //    }
 //
 //    cct.StateRoot = subDt.GetChainStateRoot(database.ChildCHAIN)
-//    t.Data.Data, _ = json.Marshal(cct)
+//    t.Data.Data, _ = binary.Marshal(cct)
 //
 //    amountSum := new(big.Int).Mul(gasSum, gasPrice)
 //    balance = database.GetBalance(addr, t.Data.ChainId)

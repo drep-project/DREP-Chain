@@ -2,13 +2,13 @@ package crypto
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"math/big"
 	"reflect"
+	"github.com/drep-project/binary"
 )
 
 const (
@@ -106,7 +106,7 @@ func GetByteCodeHash(byteCode ByteCode) Hash {
 }
 
 func GetByteCodeAddress(callerAddr CommonAddress, nonce int64) CommonAddress {
-	b, err := json.Marshal(
+	b, err := binary.Marshal(
 		struct {
 			CallerAddr CommonAddress
 			Nonce      int64

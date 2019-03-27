@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/json"
 	"errors"
 	"github.com/drep-project/drep-chain/chain/txpool"
 	"github.com/drep-project/drep-chain/pkgs/evm"
@@ -24,6 +23,7 @@ import (
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	p2pService "github.com/drep-project/drep-chain/network/service"
 	rpc2 "github.com/drep-project/drep-chain/pkgs/rpc"
+	"github.com/drep-project/binary"
 )
 
 var (
@@ -59,6 +59,7 @@ type ChainService struct {
 
 	prvKey       *secp256k1.PrivateKey
 	peerStateMap map[string]*chainTypes.PeerState
+    	peerStateLock sync.RWMutex
 
 	Index         *chainTypes.BlockIndex
 	BestChain     *chainTypes.ChainView
@@ -270,7 +271,7 @@ func (chainService *ChainService) GenerateBlock(leaderKey string) (*chainTypes.B
 func (chainService *ChainService) GetTxHashes(ts []*chainTypes.Transaction) ([][]byte, error) {
 	txHashes := make([][]byte, len(ts))
 	for i, tx := range ts {
-		b, err := json.Marshal(tx.Data)
+		b, err := binary.Marshal(tx.Data)
 		if err != nil {
 			return nil, err
 		}

@@ -59,9 +59,9 @@ func NewTransactionPool(databaseApi *database.DatabaseService) *TransactionPool 
 	pool.tranCp = func(a interface{}, b interface{}) bool {
 		ta, oka := a.(*chainTypes.Transaction)
 		tb, okb := b.(*chainTypes.Transaction)
-		sa, ea := ta.TxId()
-		sb, eb := tb.TxId()
-		return oka && okb && ea == nil && eb == nil && sa == sb
+		sa := ta.TxHash().String()
+		sb := tb.TxHash().String()
+		return oka && okb && sa == sb
 	}
 
 	pool.allTxs = make(map[string]bool)
@@ -99,10 +99,7 @@ func (pool *TransactionPool) AddTransaction(tx *chainTypes.Transaction) error {
 	if err != nil {
 		return err
 	}
-	id, err := tx.TxId()
-	if err != nil {
-		return err
-	}
+	id := tx.TxHash().String()
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 	if len(pool.allTxs) >= maxSize {
@@ -244,9 +241,8 @@ func (pool *TransactionPool) adjust(accountNameList []string) {
 		if ok {
 			txs := list.Forward(nonce)
 			for _, tx := range txs {
-				id, _ := tx.TxId()
+				id := tx.TxHash().String()
 				delete(pool.allTxs, id)
-
 			}
 		}
 		pool.mu.Unlock()
