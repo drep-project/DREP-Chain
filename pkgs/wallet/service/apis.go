@@ -188,7 +188,7 @@ func (accountapi *AccountApi) Test3(name string) (string, error) {
 	fmt.Println(sink.Bytes())
 	sink.WriteVarBytes([]byte("tt"))
 	fmt.Println(sink.Bytes())
-	bytes :=common.PaddedBigBytes(big.NewInt(11111111),32)
+	bytes :=common.PaddedBigBytes(big.NewInt(1000000),32)
 	for i := 0; i < len(bytes)/2; i++ {
 		bytes[i], bytes[len(bytes)-i-1] = bytes[len(bytes)-i-1], bytes[i]
 	}

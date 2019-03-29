@@ -167,6 +167,7 @@ func (importFunc *ImportFunc) Notify(proc *exec.Process, ptr uint32, len uint32)
 	//	notifys := make([]*event.NotifyEventInfo, 1)
 	//	notifys[0] = notify
 	//	importFunc.Service.ContextRef.PushNotifications(notifys)
+	fmt.Println(string(bs))
 }
 
 func (importFunc *ImportFunc) ValidateAccount(proc *exec.Process, ptr uint32, len uint32) uint32 {
