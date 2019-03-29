@@ -1513,7 +1513,21 @@ var createCode = new Method({
 	call: 'account_createCode',
 	params: 4,
 });
-	
+    var test = new Method({
+        name: 'test',
+        call: 'account_test',
+        params: 1,
+    });
+    var test2 = new Method({
+        name: 'test2',
+        call: 'account_test2',
+        params: 1,
+    });
+    var test3 = new Method({
+        name: 'test3',
+        call: 'account_test3',
+        params: 1,
+    });
 var dumpPrikey = new Method({
 	name: 'dumpPrikey',
 	call: 'account_dumpPrikey',
@@ -1562,7 +1576,7 @@ var unLock = new Method({
 	params: 1,
 });
 	
-    return [listAddress,call,close,createAccount,createCode,dumpPrikey,gasPrice,getCode,lock,open,transfer,sign,unLock]
+    return [listAddress,call,close,createAccount,createCode,test,test2,test3,dumpPrikey,gasPrice,getCode,lock,open,transfer,sign,unLock]
 }
 
 module.exports = ACCOUNT;

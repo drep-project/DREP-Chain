@@ -1,18 +1,14 @@
-package vm
+package dwasm
 
 import (
 	"errors"
-	"github.com/drep-project/drep-chain/app"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
 	"math/big"
-	"sync"
 )
 
 var (
-	state                   *State
-	once                    sync.Once
 	ErrNotAccountAddress    = errors.New("a non account address occupied")
 	ErrAccountAlreadyExists = errors.New("account already exists")
 	ErrAccountNotExists     = errors.New("account not exists")
@@ -28,20 +24,6 @@ type State struct {
 	refund      uint64
 }
 
-func NewState(databaseService *database.DatabaseService) *State {
-	return &State{}
-}
-
-
-func (s *State) CreateContractAccount(callerName string, chainId app.ChainIdType, nonce int64) (*chainTypes.Account, error) {
-	account, err := chainTypes.NewContractAccount(callerName, chainId)
-	if err != nil {
-		return nil, err
-	}
-	return account, s.databaseApi.PutStorage(account.Name, account.Storage, true)
-}
-
-
 func (s *State) SubBalance(accountName string, amount *big.Int) error {
 	balance := s.databaseApi.GetBalance(accountName, true)
 	return s.databaseApi.PutBalance(accountName, new(big.Int).Sub(balance, amount), true)
@@ -56,6 +38,10 @@ func (s *State) AddBalance(accountName string, amount *big.Int) error {
 
 func (s *State) GetBalance(accountName string,) *big.Int {
 	return s.databaseApi.GetBalance(accountName, true)
+}
+
+func (s *State) GetReputation(accountName string,) *big.Int {
+	return s.databaseApi.GetReputation(accountName, true)
 }
 
 func (s *State) SetNonce(accountName string, nonce int64) error {
@@ -116,10 +102,14 @@ func (s *State) SubRefund(gas uint64) {
 	s.refund -= gas
 }
 
-func (s *State) Load(x *big.Int) []byte {
-	return s.databaseApi.Load(x.Bytes())
+func (s *State) Load(x []byte) []byte {
+	return s.databaseApi.Load(x)
 }
 
-func (s *State) Store(x, y *big.Int) {
-	s.databaseApi.Store(x.Bytes(), y.Bytes())
+func (s *State) Store(x, y []byte) {
+	s.databaseApi.Store(x, y)
+}
+
+func (s *State) Delete(x []byte) {
+	s.databaseApi.Delete(x)
 }

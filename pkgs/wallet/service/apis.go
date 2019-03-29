@@ -2,6 +2,9 @@ package service
 
 import (
 	"errors"
+	"fmt"
+	"github.com/drep-project/drep-chain/common"
+	"io/ioutil"
 	"math/big"
 
 	chainService "github.com/drep-project/drep-chain/chain/service"
@@ -149,7 +152,75 @@ func (accountapi *AccountApi) CreateCode(from, to string, byteCode []byte) (stri
 	}
 	return tx.TxHash().String(), nil
 }
+func (accountapi *AccountApi) Test(name string) (string, error) {
+	nonce := accountapi.chainService.GetTransactionCount("dreptest1")
+	fi, err := ioutil.ReadFile("C:\\Users\\Drep\\Desktop\\proj\\drep-wasm-cdt-rust\\target\\wasm32-unknown-unknown\\release\\token.wasm")
+	if err != nil{
+		return "",err
+	}
+	action := chainTypes.NewCreateContractAction(name, fi)
+	tx, err := chainTypes.NewTransaction("dreptest1", chainTypes.CreateContractType, nil, nonce, chainTypes.DefaultGasPrice, chainTypes.GasTable[chainTypes.CreateContractType], action)
+	if err != nil{
+		return "",err
+	}
+	err = accountapi.chainService.SendTransaction(tx)
+	if err != nil{
+		return "",err
+	}
+	return tx.TxHash().String(), nil
+}
 
+func (accountapi *AccountApi) Test2(name string) (*chainTypes.Storage, error) {
+	return accountapi.databaseService.GetStorage(name, false)
+}
+func (accountapi *AccountApi) Test3(name string) (string, error) {
+	nonce := accountapi.chainService.GetTransactionCount("dreptest1")
+	/*
+	fi, err := ioutil.ReadFile("C:\\Users\\Drep\\Desktop\\proj\\drep-wasm-cdt-rust\\target\\wasm32-unknown-unknown\\release\\token.wasm")
+	if err != nil{
+		return "",err
+	}
+	*/
+	sink := common.ZeroCopySink{}
+	sink.WriteString("transfer")
+	fmt.Println(sink.Bytes())
+	sink.WriteVarBytes([]byte("gg"))
+	fmt.Println(sink.Bytes())
+	sink.WriteVarBytes([]byte("tt"))
+	fmt.Println(sink.Bytes())
+	bytes :=common.PaddedBigBytes(big.NewInt(11111111),32)
+	for i := 0; i < len(bytes)/2; i++ {
+		bytes[i], bytes[len(bytes)-i-1] = bytes[len(bytes)-i-1], bytes[i]
+	}
+	sink.WriteBytes(bytes[0:32])
+	fmt.Println(sink.Bytes())
+
+	/*
+	xxx := common.NewZeroCopySource(sink.Bytes())
+	str,_,_,_ := xxx.NextString()
+	fmt.Println(str)
+	d,_,_,_ := xxx.NextVarBytes()
+	fmt.Println(string(d))
+	d,_,_,_ = xxx.NextVarBytes()
+	fmt.Println(string(d))
+	d,_ = xxx.NextBytes(32)
+
+	for i := 0; i < len(d)/2; i++ {
+		d[i], d[len(d)-i-1] = d[len(d)-i-1], d[i]
+	}
+	fmt.Println(new (big.Int).SetBytes(d).Int64())
+*/
+	action := chainTypes.NewCallContractAction(name, sink.Bytes() ,false)
+	tx, err := chainTypes.NewTransaction("dreptest1", chainTypes.CallContractType, nil, nonce, chainTypes.DefaultGasPrice, chainTypes.GasTable[chainTypes.CallContractType], action)
+	if err != nil{
+		return "",err
+	}
+	err = accountapi.chainService.SendTransaction(tx)
+	if err != nil{
+		return "",err
+	}
+	return tx.TxHash().String(), nil
+}
 // DumpPrikey dumpPrivate
 func (accountapi *AccountApi) DumpPrivkey(address *secp256k1.PublicKey) (*secp256k1.PrivateKey, error) {
 	if !accountapi.Wallet.IsOpen() {

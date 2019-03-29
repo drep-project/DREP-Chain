@@ -6,7 +6,6 @@ import (
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	"github.com/drep-project/drep-chain/pkgs/evm/vm"
 	"math/big"
 
 	"bytes"
@@ -179,6 +178,11 @@ func (chainService *ChainService) executeTransaction(tx *chainTypes.Transaction)
 		if err != nil{
 			return  nil, nil, err
 		}
+		contractName := msg.Action.(*chainTypes.CreateContractAction).ContractName
+		val, _ := chainService.DatabaseService.GetStorage(contractName, false)
+		if val != nil {
+			return nil, nil, errors.New("contract already exist")
+		}
 		err = chainService.checkBalance(gasLimit, gasPrice, originBalance,nil, chainTypes.GasTable[chainTypes.CreateContractType])
 		if err != nil {
 			return  nil, nil, err
@@ -270,8 +274,7 @@ func (chainService *ChainService) executeCreateContractTransaction(balance, gasP
 	if message.From== "" {
 		return  nil, nil, errors.New("invalidate account")
 	}
-	evm := vm.NewEVM(chainService.DatabaseService, message.ChainId)
-	refundGas, err := chainService.VmService.ApplyMessage(evm, message)
+	refundGas, err := chainService.VmService.ApplyMessage(message)
 	balance = chainService.DatabaseService.GetBalance(message.From, true)
 	gasUsed := new(big.Int).Sub(message.Gas, new(big.Int).SetUint64(refundGas))
 	gasFee  := new(big.Int).Mul(gasUsed, gasPrice)
@@ -288,8 +291,7 @@ func (chainService *ChainService) executeCallContractTransaction(balance, gasPri
 	if message.From== "" || message.Action.(*chainTypes.CallContractAction).ContractName == "" {
 		return  nil, nil, errors.New("invalidate account")
 	}
-	evm := vm.NewEVM(chainService.DatabaseService, message.ChainId)
-	returnGas, err := chainService.VmService.ApplyMessage(evm, message)
+	returnGas, err := chainService.VmService.ApplyMessage(message)
 	balance = chainService.DatabaseService.GetBalance(message.From, true)
 	gasUsed := new(big.Int).Sub(message.Gas, new(big.Int).SetUint64(returnGas))
 	gasFee  := new(big.Int).Mul(gasUsed, gasPrice)

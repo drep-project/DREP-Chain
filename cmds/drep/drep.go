@@ -11,7 +11,7 @@ import (
 	cliService "github.com/drep-project/drep-chain/pkgs/drepclient/service"
 	accountService "github.com/drep-project/drep-chain/pkgs/wallet/service"
 	consensusService "github.com/drep-project/drep-chain/pkgs/consensus/service"
-	evmService "github.com/drep-project/drep-chain/pkgs/evm"
+	dwasmService "github.com/drep-project/drep-chain/pkgs/ewasm"
 	"net/http"
 	_ "net/http/pprof"
 	"runtime/debug"
@@ -31,7 +31,7 @@ func main() {
 		rpc.RpcService{},
 		log.LogService{},
 		p2pService.P2pService{},
-		evmService.EvmService{},
+		dwasmService.VmService{},
 		chainService.ChainService{},
 		accountService.AccountService{},
 		consensusService.ConsensusService{},

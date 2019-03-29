@@ -246,14 +246,20 @@ func (tx *Transaction) GetSig() []byte {
 }
 
 type Message struct {
-	Type     TxType
-	From      string
-	ChainId   app.ChainIdType
-	DestChain app.ChainIdType
-	Gas       *big.Int
-	Value     *big.Int
-	Nonce     uint64
+	Type     	TxType
+	TxHash		crypto.Hash
+	From      	string
+	Time		int64
+	ChainId   	app.ChainIdType
+	DestChain 	app.ChainIdType
+	Gas       	*big.Int
+	Value     	*big.Int
+	Nonce     	uint64
 	Action		interface{}
+
+	//blockMsg
+	Height		int64
+	BlockHash	crypto.Hash
 }
 
 func TxToMessage(tx *Transaction) (*Message, error) {
@@ -277,10 +283,14 @@ func TxToMessage(tx *Transaction) (*Message, error) {
 	}
 
 	return &Message{
+		Type:      tx.Type(),
 		From:      tx.From(),
 		ChainId:   tx.ChainId(),
+		TxHash:    tx.TxHash(),
 		Gas:       tx.GasLimit(),
+		Time:      tx.Data.Timestamp,
 		Value:     tx.Amount(),
 		Nonce:     uint64(tx.Nonce()),
+		Action:    action,
 	}, nil
 }

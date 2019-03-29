@@ -290,13 +290,16 @@ func (database *DatabaseService) AddLog(log *chainType.Log) error {
 }
 
 
-func (database *DatabaseService) Load(x *big.Int) []byte {
-    value, _ := database.db.get(x.Bytes(), true)
+func (database *DatabaseService) Load(x []byte) []byte {
+    value, _ := database.db.get(x, true)
     return value
 }
 
-func (database *DatabaseService) Store(x, y *big.Int) error {
-    return database.db.put(x.Bytes(), y.Bytes(), true)
+func (database *DatabaseService) Store(x, y []byte) error {
+    return database.db.put(x, y, true)
+}
+func (database *DatabaseService) Delete(x []byte) error {
+    return database.db.delete(x, true)
 }
 
 func  (database *DatabaseService)Transaction(fn func() error) error{
