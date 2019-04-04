@@ -11,7 +11,7 @@ import (
 	cliService "github.com/drep-project/drep-chain/pkgs/drepclient/service"
 	accountService "github.com/drep-project/drep-chain/pkgs/wallet/service"
 	consensusService "github.com/drep-project/drep-chain/pkgs/consensus/service"
-	dwasmService "github.com/drep-project/drep-chain/pkgs/lwasm"
+	dwasmService "github.com/drep-project/drep-chain/pkgs/vm/lwasm"
 	"net/http"
 	_ "net/http/pprof"
 	"runtime/debug"

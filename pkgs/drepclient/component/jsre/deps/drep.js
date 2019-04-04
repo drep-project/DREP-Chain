@@ -1483,100 +1483,98 @@ var ACCOUNT = function (drep) {
 };
 
 var methods = function () {
-	
-var listAddress = new Method({
-	name: 'listAddress',
-	call: 'account_listAddress',
-	params: 0,
-});
-	
-var call = new Method({
-	name: 'call',
-	call: 'account_call',
-	params: 6,
-});
-	
-var close = new Method({
-	name: 'close',
-	call: 'account_close',
-	params: 0,
-});
-	
-var createAccount = new Method({
-	name: 'createAccount',
-	call: 'account_createAccount',
-	params: 0,
-});
-	
-var createCode = new Method({
-	name: 'createCode',
-	call: 'account_createCode',
-	params: 4,
-});
-    var test = new Method({
-        name: 'test',
-        call: 'account_test',
+
+    var call = new Method({
+        name: 'call',
+        call: 'account_call',
+        params: 3,
+    });
+
+    var closeWallet = new Method({
+        name: 'closeWallet',
+        call: 'account_closeWallet',
+        params: 0,
+    });
+
+    var createContract = new Method({
+        name: 'createContract',
+        call: 'account_createContract',
+        params: 3,
+    });
+
+    var createWallet = new Method({
+        name: 'createWallet',
+        call: 'account_createWallet',
         params: 1,
     });
-    var test2 = new Method({
-        name: 'test2',
-        call: 'account_test2',
+
+    var dumpPrivkey = new Method({
+        name: 'dumpPrivkey',
+        call: 'account_dumpPrivkey',
         params: 1,
     });
-    var test3 = new Method({
-        name: 'test3',
-        call: 'account_test3',
+
+    var gasPrice = new Method({
+        name: 'gasPrice',
+        call: 'account_gasPrice',
+        params: 0,
+    });
+
+    var getCode = new Method({
+        name: 'getCode',
+        call: 'account_getCode',
         params: 1,
     });
-var dumpPrikey = new Method({
-	name: 'dumpPrikey',
-	call: 'account_dumpPrikey',
-	params: 1,
-});
-	
-var gasPrice = new Method({
-	name: 'gasPrice',
-	call: 'account_gasPrice',
-	params: 0,
-});
-	
-var getCode = new Method({
-	name: 'getCode',
-	call: 'account_getCode',
-	params: 2,
-});
-	
-var lock = new Method({
-	name: 'lock',
-	call: 'account_lock',
-	params: 0,
-});
-	
-var open = new Method({
-	name: 'open',
-	call: 'account_open',
-	params: 1,
-});
-	
-var transfer = new Method({
-	name: 'transfer',
-	call: 'account_transfer',
-	params: 3,
-});
-	
-var sign = new Method({
-	name: 'sign',
-	call: 'account_sign',
-	params: 2,
-});
-	
-var unLock = new Method({
-	name: 'unLock',
-	call: 'account_unLock',
-	params: 1,
-});
-	
-    return [listAddress,call,close,createAccount,createCode,test,test2,test3,dumpPrikey,gasPrice,getCode,lock,open,transfer,sign,unLock]
+
+    var listAddress = new Method({
+        name: 'listAddress',
+        call: 'account_listAddress',
+        params: 0,
+    });
+
+    var lockWallet = new Method({
+        name: 'lockWallet',
+        call: 'account_lockWallet',
+        params: 0,
+    });
+
+    var openWallet = new Method({
+        name: 'openWallet',
+        call: 'account_openWallet',
+        params: 1,
+    });
+
+    var registerAccount = new Method({
+        name: 'registerAccount',
+        call: 'account_registerAccount',
+        params: 4,
+    });
+
+    var sign = new Method({
+        name: 'sign',
+        call: 'account_sign',
+        params: 2,
+    });
+
+    var suggestKey = new Method({
+        name: 'suggestKey',
+        call: 'account_suggestKey',
+        params: 0,
+    });
+
+    var transfer = new Method({
+        name: 'transfer',
+        call: 'account_transfer',
+        params: 3,
+    });
+
+    var unLockWallet = new Method({
+        name: 'unLockWallet',
+        call: 'account_unLockWallet',
+        params: 1,
+    });
+
+    return [call,closeWallet,createContract,createWallet,dumpPrivkey,gasPrice,getCode,listAddress,lockWallet,openWallet,registerAccount,sign,suggestKey,transfer,unLockWallet]
 }
 
 module.exports = ACCOUNT;

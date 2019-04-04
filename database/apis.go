@@ -147,6 +147,24 @@ func (database *DatabaseService) RecordBlockJournal(height int64) {
     database.db.RecordBlockJournal(height)
 }
 
+func (database *DatabaseService) ExistAccount(accountName string, transactional bool) bool {
+    if !transactional {
+        return database.db.existStorage(accountName)
+    }
+
+    if database.db.stores == nil {
+        database.db.stores = make(map[string] *chainType.Storage)
+    }
+
+    key := sha3.Hash256([]byte("storage_" + accountName))
+    hk := bytes2Hex(key)
+    _, ok := database.db.stores[hk]
+    if ok {
+        return true
+    }
+    return database.db.existStorage(accountName)
+}
+
 func (database *DatabaseService) GetStorage(accountName string, transactional bool) (*chainType.Storage, error) {
     if !transactional {
         return database.db.getStorage(accountName)
@@ -191,13 +209,12 @@ func (database *DatabaseService) PutStorage(accountName string, storage *chainTy
     return nil
 }
 
-func (database *DatabaseService) GetBalance(accountName string, transactional bool) *big.Int {
-    storage, _ := database.GetStorage(accountName, transactional)
-
-    if storage == nil {
-        return new(big.Int)
+func (database *DatabaseService) GetBalance(accountName string, transactional bool) (*big.Int, error) {
+    storage, err := database.GetStorage(accountName, transactional)
+    if err != nil {
+        return nil, err
     }
-    return storage.Balance
+    return storage.Balance, nil
 }
 
 func (database *DatabaseService) PutBalance(accountName string, balance *big.Int, transactional bool) error {
@@ -260,21 +277,21 @@ func (database *DatabaseService) GetReputation(accountName string, transactional
     return storage.Reputation
 }
 
-func (database *DatabaseService) GetLogs(txHash []byte, ) []*chainType.Log {
+func (database *DatabaseService) GetLogs(txHash []byte, ) []chainType.Log {
     key := sha3.Hash256([]byte("logs_" + hex.EncodeToString(txHash)))
     value, err := database.db.get(key, false)
     if err != nil {
-        return make([]*chainType.Log, 0)
+        return make([]chainType.Log, 0)
     }
-    var logs []*chainType.Log
+    var logs []chainType.Log
     err = binary.Unmarshal(value, &logs)
     if err != nil {
-        return make([]*chainType.Log, 0)
+        return make([]chainType.Log, 0)
     }
     return logs
 }
 
-func (database *DatabaseService) PutLogs(logs []*chainType.Log, txHash []byte, ) error {
+func (database *DatabaseService) PutLogs(logs []chainType.Log, txHash []byte) error {
     key := sha3.Hash256([]byte("logs_" + hex.EncodeToString(txHash)))
     value, err := binary.Marshal(logs)
     if err != nil {
@@ -283,7 +300,7 @@ func (database *DatabaseService) PutLogs(logs []*chainType.Log, txHash []byte, )
     return database.db.put(key, value, false)
 }
 
-func (database *DatabaseService) AddLog(log *chainType.Log) error {
+func (database *DatabaseService) AddLog(log chainType.Log) error {
     logs := database.GetLogs(log.TxHash)
     logs = append(logs, log)
     return database.PutLogs(logs, log.TxHash)
@@ -330,14 +347,17 @@ func  (database *DatabaseService) Discard() {
     database.db.Discard()
 }
 
-func (database *DatabaseService)AddBalance(accountName string, amount *big.Int, transactional bool) {
-    balance := database.GetBalance(accountName, transactional)
-    //text, _ := addr.MarshalText()
-    //x := string(text)
-    //fmt.Println("0x" + x)
+func (database *DatabaseService)AddBalance(accountName string, amount *big.Int, transactional bool)  error {
+    balance, err := database.GetBalance(accountName, transactional)
+    if err!=nil {
+        return err
+    }
     if balance == nil {
         balance = new(big.Int).SetInt64(0)
     }
-    database.PutBalance(accountName, new(big.Int).Add(balance, amount), transactional)
-    return
+   err = database.PutBalance(accountName, new(big.Int).Add(balance, amount), transactional)
+    if err!=nil {
+        return err
+    }
+    return nil
 }

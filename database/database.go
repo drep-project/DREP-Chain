@@ -304,6 +304,17 @@ func (db *Database) delState(key []byte) error {
 	return nil
 }
 
+
+func (db *Database) existStorage(accountName string) bool{
+	key := sha3.Hash256([]byte("storage_" + accountName))
+	_, err := db.get(key, false)
+	if err != nil {
+		return false
+	}
+	return true
+
+}
+
 func (db *Database) getStorage(accountName string) (*chainTypes.Storage, error) {
 	key := sha3.Hash256([]byte("storage_" + accountName))
 	value, err := db.get(key, false)
@@ -316,7 +327,6 @@ func (db *Database) getStorage(accountName string) (*chainTypes.Storage, error) 
 		return nil, err
 	}
 	return storage, nil
-
 }
 
 func (db *Database) putStorage(accountName string, storage *chainTypes.Storage) error {

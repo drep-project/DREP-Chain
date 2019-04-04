@@ -1,4 +1,4 @@
-package dwasm
+package lwasm
 
 import (
 	"github.com/AsynkronIT/protoactor-go/actor"
@@ -50,7 +50,7 @@ func (vmService *VmService)  Stop(executeContext *app.ExecuteContext) error{
 
 func (vmService *VmService)  Receive(context actor.Context) { }
 
-func  (vmService *VmService) ApplyMessage(message *types.Message) (uint64, error) {
+func  (vmService *VmService) ApplyMessage(message *types.Message) ([]byte, uint64, error) {
     vm := &WasmVm{
    		databaseApi:vmService.DatabaseApi,
 	}

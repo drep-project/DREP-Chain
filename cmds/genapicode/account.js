@@ -16,16 +16,10 @@ var ACCOUNT = function (drep) {
 
 var methods = function () {
 	
-var addressList = new Method({
-	name: 'addressList',
-	call: 'account_addressList',
-	params: 0,
-});
-	
 var call = new Method({
 	name: 'call',
 	call: 'account_call',
-	params: 5,
+	params: 3,
 });
 	
 var closeWallet = new Method({
@@ -34,9 +28,9 @@ var closeWallet = new Method({
 	params: 0,
 });
 	
-var createCode = new Method({
-	name: 'createCode',
-	call: 'account_createCode',
+var createContract = new Method({
+	name: 'createContract',
+	call: 'account_createContract',
 	params: 3,
 });
 	
@@ -62,6 +56,12 @@ var getCode = new Method({
 	name: 'getCode',
 	call: 'account_getCode',
 	params: 1,
+});
+	
+var listAddress = new Method({
+	name: 'listAddress',
+	call: 'account_listAddress',
+	params: 0,
 });
 	
 var lockWallet = new Method({
@@ -106,7 +106,7 @@ var unLockWallet = new Method({
 	params: 1,
 });
 	
-    return [addressList,call,closeWallet,createCode,createWallet,dumpPrivkey,gasPrice,getCode,lockWallet,openWallet,registerAccount,sign,suggestKey,transfer,unLockWallet]
+    return [call,closeWallet,createContract,createWallet,dumpPrivkey,gasPrice,getCode,listAddress,lockWallet,openWallet,registerAccount,sign,suggestKey,transfer,unLockWallet]
 }
 
 module.exports = ACCOUNT;

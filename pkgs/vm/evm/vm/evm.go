@@ -164,7 +164,10 @@ func run(evm *EVM, contract *Contract, input []byte, readOnly bool) ([]byte, err
 }
 
 func (evm *EVM) CanTransfer(accountName string, chainId app.ChainIdType, amount *big.Int) bool {
-	balance := evm.State.GetBalance(accountName)
+	balance, err := evm.State.GetBalance(accountName)
+	if err != nil {
+		return false
+	}
 	return balance.Cmp(amount) >= 0
 }
 

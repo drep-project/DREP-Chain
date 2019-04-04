@@ -397,7 +397,10 @@ func opBalance(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memo
 	//slot.Set(interpreter.evm.StateDB.GetBalance(BigToAddress(slot)))
 	evm := interpreter.EVM
 	accountName := string(slot.Bytes())
-	balance := evm.State.GetBalance(accountName)
+	balance, err := evm.State.GetBalance(accountName)
+	if err != nil {
+		return  nil, err
+	}
 	slot.Set(balance)
 	return nil, nil
 }
@@ -917,7 +920,10 @@ func opSuicide(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memo
 	//interpreter.evm.StateDB.AddBalance(BigToAddress(stack.pop()), balance)
 	//interpreter.evm.StateDB.Suicide(contract.GetAddress())
 
-	balance := interpreter.EVM.State.GetBalance(contract.CallerName)
+	balance, err := interpreter.EVM.State.GetBalance(contract.CallerName)
+	if err != nil {
+		return  nil, err
+	}
 	accountName := string(stack.pop().Bytes())
 	interpreter.EVM.State.AddBalance(accountName, balance)
 	interpreter.EVM.State.Suicide(contract.ContractName)

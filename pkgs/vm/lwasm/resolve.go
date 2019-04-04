@@ -1,12 +1,15 @@
 package lwasm
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/chain/types"
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/perlin-network/life/exec"
+	"github.com/go-interpreter/wagon/wasm"
+	"github.com/go-interpreter/wagon/validate"
 	"github.com/drep-project/drep-chain/crypto"
 	"io"
 	"math"
@@ -25,7 +28,7 @@ type Resolver struct {
 	Code			[]byte
 	ContractAccount string
 	CallerAccount	string
-	Logs            []types.Log
+	Logs            []chainTypes.Log
 }
 
 const (
@@ -199,8 +202,9 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 				if err != nil {
 					panic(err)
 				}
+				//int,int32,,int64,u256, []byte,string,
 				fmt.Println(string(msg))
-				log :=types.Log{
+				log :=chainTypes.Log{
 					Name:    r.ContractAccount,
 					ChainId: r.ChainId,
 					TxHash:  r.TxHash.Bytes(),
@@ -261,6 +265,51 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 					panic(err)
 				}
 				r.CallOutput = newResolve.Output
+				r.Logs = append(r.Logs, newResolve.Logs...)
+				return 0
+			}
+		case "create_contract":
+			return func(vm *exec.VirtualMachine) int64 {
+				//TODO CALL
+				accountPtr := vm.GetCurrentFrame().Locals[0]
+				accountLen := vm.GetCurrentFrame().Locals[1]
+				codePtr := vm.GetCurrentFrame().Locals[0]
+				codeLen := vm.GetCurrentFrame().Locals[1]
+				if !vm.AddAndCheckGas(CALL_CONTRACT_GAS) {
+					vm.GasLimitExceeded = true
+				}
+
+				account := make([]byte, accountLen)
+				_, err := r.ReadAt(vm.Memory, account, int64(accountPtr))
+				if err != nil {
+					panic(err)
+				}
+
+				code := make([]byte, codeLen)
+				_, err = r.ReadAt(vm.Memory, code, int64(codePtr))
+				if err != nil {
+					panic(err)
+				}
+
+				newModule, err := wasm.ReadModule(bytes.NewReader(code), nil)
+				if err != nil {
+					panic(err)
+				}
+
+				err = validate.VerifyModule(newModule)
+				if err != nil {
+					panic(err)
+				}
+				_, err = r.State.databaseApi.GetStorage(string(account), true)
+				if err != nil {
+					panic(err)
+				}
+				newContractAccount, err := chainTypes.NewContractAccount(string(account), r.ChainId)
+				if err != nil {
+					panic(err)
+				}
+				newContractAccount.Storage.ByteCode  = code
+				r.State.databaseApi.PutStorage(newContractAccount.Name, newContractAccount.Storage, true)
 				return 0
 			}
 		case "storage_read":
@@ -355,26 +404,29 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 				if err != nil {
 					panic(err)
 				}
-
-				balance := r.State.GetBalance(string(keybytes)).Bytes()
+				balance, err := r.State.GetBalance(string(keybytes))
+				if err != nil {
+					panic(err)
+				}
+				balanceBytes :=balance.Bytes()
 				if balance == nil {
 					return math.MaxUint32
 				}
 				length := vlen
-				itemlen := int64(len(balance))
+				itemlen := int64(len(balanceBytes))
 				if itemlen < vlen {
 					length = itemlen
 				}
 
-				if int64(len(balance)) < offset {
+				if int64(len(balanceBytes)) < offset {
 					panic(errors.New("offset is invalid"))
 				}
-				_, err = r.WriteAt(vm.Memory, balance[offset:offset+length], int64(vPtr))
+				_, err = r.WriteAt(vm.Memory, balanceBytes[offset:offset+length], int64(vPtr))
 
 				if err != nil {
 					panic(err)
 				}
-				return int64(len(balance))
+				return int64(len(balanceBytes))
 			}
 		case "get_reputation":
 			return func(vm *exec.VirtualMachine) int64 {

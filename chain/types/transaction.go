@@ -21,17 +21,23 @@ type TransactionData struct {
 	Version   int32
 	Nonce     int64 //交易序列号
 	Type      TxType
-	GasPrice  *big.Int
-	GasLimit  *big.Int
+	GasPrice  big.Int
+	GasLimit  big.Int
 	ChainId   app.ChainIdType
 	Timestamp int64
 	FromAccount      string
 	Comment   string
-	Amount    *big.Int
 	Data      []byte
 }
 
-func NewTransaction(from string, txType TxType ,amount *big.Int, nonce int64, gasPrice, gasLimit *big.Int, action interface{}) (*Transaction, error) {
+type ExecuteReuslt struct {
+	TxHash		string
+	Err      	error      		`json:"-"`
+	GasUsed 	*big.Int		`json:"-"`
+	GasFee  	*big.Int		`json:"-"`
+	Return  	common.Bytes
+}
+func NewTransaction(from string, txType TxType, nonce int64, gasPrice, gasLimit *big.Int, action interface{}) (*Transaction, error) {
 	actionBytes, err := binary.Marshal(action)
 	if err != nil {
 		return nil, err
@@ -40,10 +46,9 @@ func NewTransaction(from string, txType TxType ,amount *big.Int, nonce int64, ga
 		Version:   		common.Version,
 		FromAccount:    from,
 		Type:      		txType,
-		Amount:    		amount,
 		Nonce:     		nonce,
-		GasPrice:  		gasPrice,
-		GasLimit:  		gasLimit,
+		GasPrice:  		*gasPrice,
+		GasLimit:  		*gasLimit,
 		Data:			actionBytes,
 		Timestamp: 		time.Now().Unix(),
 	}
@@ -53,11 +58,13 @@ func NewTransaction(from string, txType TxType ,amount *big.Int, nonce int64, ga
 
 type TransferAction struct {
 	To        string
+	Amount    big.Int
 }
 
-func NewTransferAction(toAccount string) *TransferAction{
+func NewTransferAction(toAccount string, amount *big.Int) *TransferAction{
 	return &TransferAction{
 		To: 	toAccount,
+		Amount: *amount,
 	}
 }
 
@@ -95,7 +102,6 @@ func NewRegisterAccountAction(name string, authority Authority, chainId app.Chai
 type CallContractAction struct {
 	ContractName    string
 	Input			[]byte
-	Readonly		bool
 }
 
 func (callContractAction CallContractAction) UnmarshalJSON(input []byte) error {
@@ -106,11 +112,10 @@ func (callContractAction CallContractAction) MarshalText() ([]byte, error) {
 	return []byte(""), nil
 }
 
-func NewCallContractAction(contractName string, input []byte, readOnly bool) *CallContractAction {
+func NewCallContractAction(contractName string, input []byte) *CallContractAction {
 	return &CallContractAction{
 		ContractName: 	contractName,
 		Input: 			input,
-		Readonly:		readOnly,
 	}
 }
 
@@ -191,11 +196,6 @@ func (tx *Transaction) Type() TxType {
 	return tx.Data.Type
 }
 
-func (tx *Transaction) Amount() *big.Int {
-	return tx.Data.Amount
-}
-
-
 func (tx *Transaction) From() string {
 	return tx.Data.FromAccount
 }
@@ -209,10 +209,10 @@ func (tx *Transaction) ChainId() app.ChainIdType {
 }
 
 func (tx *Transaction) GasLimit() *big.Int {
-	return tx.Data.GasLimit
+	return &tx.Data.GasLimit
 }
 func (tx *Transaction) GasPrice() *big.Int {
-	return tx.Data.GasPrice
+	return &tx.Data.GasPrice
 }
 
 func (tx *Transaction) TxHash() crypto.Hash {
@@ -237,7 +237,7 @@ func (tx *Transaction) GetGasUsed() *big.Int {
 
 func (tx *Transaction) GetGas() *big.Int {
 	gasQuantity := tx.GetGasUsed()
-	gasUsed := new(big.Int).Mul(gasQuantity, tx.Data.GasPrice)
+	gasUsed := new(big.Int).Mul(gasQuantity, &tx.Data.GasPrice)
 	return gasUsed
 }
 
@@ -252,8 +252,8 @@ type Message struct {
 	Time		int64
 	ChainId   	app.ChainIdType
 	DestChain 	app.ChainIdType
-	Gas       	*big.Int
-	Value     	*big.Int
+	Gas       	big.Int
+	Value     	big.Int
 	Nonce     	uint64
 	Action		interface{}
 
@@ -287,9 +287,8 @@ func TxToMessage(tx *Transaction) (*Message, error) {
 		From:      tx.From(),
 		ChainId:   tx.ChainId(),
 		TxHash:    tx.TxHash(),
-		Gas:       tx.GasLimit(),
+		Gas:       *tx.GasLimit(),
 		Time:      tx.Data.Timestamp,
-		Value:     tx.Amount(),
 		Nonce:     uint64(tx.Nonce()),
 		Action:    action,
 	}, nil

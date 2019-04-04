@@ -1,4 +1,4 @@
-package evm
+package _interface
 
 import (
 	"github.com/drep-project/drep-chain/app"
@@ -7,5 +7,5 @@ import (
 
 type Vm interface {
 	app.Service
-	ApplyMessage(message *types.Message) (uint64, error)
+	ApplyMessage(message *types.Message) ([]byte, uint64, error)
 }

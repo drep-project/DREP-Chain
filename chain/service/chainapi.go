@@ -21,7 +21,7 @@ func (chain *ChainApi) GetMaxHeight() int64 {
     return chain.chainService.BestChain.Height()
 }
 
-func (chain *ChainApi) GetBalance(accountName string) *big.Int{
+func (chain *ChainApi) GetBalance(accountName string) (*big.Int, error){
     return chain.dbService.GetBalance(accountName, true)
 }
 
@@ -55,16 +55,16 @@ func (chain *ChainApi) GetTransactionCountByBlockHeight(height int64) int {
     return len(block.Data.TxList)
 }
 
-func (chain *ChainApi) SendRawTransaction(tx *chainType.Transaction) (string, error){
-    err := chain.chainService.ValidateTransaction(tx)
-    if err != nil {
-        return "", err
+func (chain *ChainApi) SendRawTransaction(tx *chainType.Transaction) (*chainType.ExecuteReuslt, error){
+    result := chain.chainService.ValidateTransaction(tx)
+    if result.Err != nil {
+        return nil, result.Err
     }
-    err = chain.chainService.transactionPool.AddTransaction(tx)
-    if err != nil {
-        return "", err
+    err := chain.chainService.transactionPool.AddTransaction(tx)
+    if result.Err != nil{
+        return nil, err
     }
-
+    result.TxHash = tx.TxHash().String()
     chain.chainService.P2pServer.Broadcast(tx)
-    return tx.TxHash().String(), err
+    return result, nil
 }

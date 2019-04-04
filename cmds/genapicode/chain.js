@@ -16,6 +16,13 @@ var CHAIN = function (drep) {
 
 var methods = function () {
 	
+var getAccount = new Method({
+	name: 'getAccount',
+	call: 'chain_getAccount',
+	params: 1,
+	outputFormatter : formatters.storageFormatter
+});
+	
 var getBalance = new Method({
 	name: 'getBalance',
 	call: 'chain_getBalance',
@@ -40,12 +47,6 @@ var getNonce = new Method({
 	call: 'chain_getNonce',
 	params: 1,
 	outputFormatter : utils.toDecimal
-});
-	
-var getPreviousBlockHash = new Method({
-	name: 'getPreviousBlockHash',
-	call: 'chain_getPreviousBlockHash',
-	params: 0,
 });
 	
 var getReputation = new Method({
@@ -78,7 +79,7 @@ var sendRawTransaction = new Method({
 	params: 1,
 });
 	
-    return [getBalance,getBlock,getMaxHeight,getNonce,getPreviousBlockHash,getReputation,getTransactionByBlockHeightAndIndex,getTransactionCountByBlockHeight,getTransactionsFromBlock,sendRawTransaction]
+    return [getAccount,getBalance,getBlock,getMaxHeight,getNonce,getReputation,getTransactionByBlockHeightAndIndex,getTransactionCountByBlockHeight,getTransactionsFromBlock,sendRawTransaction]
 }
 
 module.exports = CHAIN;

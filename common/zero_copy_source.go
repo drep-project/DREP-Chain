@@ -21,6 +21,8 @@ package common
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
+	"math/big"
 )
 
 var ErrIrregularData = errors.New("irregular data")
@@ -120,7 +122,7 @@ func (self *ZeroCopySource) NextUint16() (data uint16, eof bool) {
 		return
 	}
 
-	return binary.LittleEndian.Uint16(buf), eof
+	return binary.BigEndian.Uint16(buf), eof
 }
 
 func (self *ZeroCopySource) NextUint32() (data uint32, eof bool) {
@@ -130,7 +132,7 @@ func (self *ZeroCopySource) NextUint32() (data uint32, eof bool) {
 		return
 	}
 
-	return binary.LittleEndian.Uint32(buf), eof
+	return binary.BigEndian.Uint32(buf), eof
 }
 
 func (self *ZeroCopySource) NextUint64() (data uint64, eof bool) {
@@ -140,7 +142,7 @@ func (self *ZeroCopySource) NextUint64() (data uint64, eof bool) {
 		return
 	}
 
-	return binary.LittleEndian.Uint64(buf), eof
+	return binary.BigEndian.Uint64(buf), eof
 }
 
 func (self *ZeroCopySource) NextInt32() (data int32, eof bool) {
@@ -159,6 +161,20 @@ func (self *ZeroCopySource) NextInt16() (data int16, eof bool) {
 	var val uint16
 	val, eof = self.NextUint16()
 	return int16(val), eof
+}
+
+func (self *ZeroCopySource) Nextu256() (data *big.Int, eof bool) {
+	val := make([]byte, 32)
+	val, eof = self.NextBytes(32)
+	fmt.Println(val)
+	data = U256(new (big.Int).SetBytes(val))
+	return data, eof
+}
+
+func (self *ZeroCopySource) NextInt8() (data int8, eof bool) {
+	var val byte
+	val, eof = self.NextByte()
+	return int8(val), eof
 }
 
 func (self *ZeroCopySource) NextVarBytes() (data []byte, size uint64, irregular bool, eof bool) {

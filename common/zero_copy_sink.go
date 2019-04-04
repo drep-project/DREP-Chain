@@ -21,6 +21,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
+	"math/big"
 )
 
 type ZeroCopySink struct {
@@ -84,6 +86,8 @@ func (self *ZeroCopySink) BackUp(n uint64) {
 	self.buf = self.buf[:l]
 }
 
+
+
 func (self *ZeroCopySink) WriteUint8(data uint8) {
 	buf := self.NextBytes(1)
 	buf[0] = data
@@ -103,17 +107,17 @@ func (self *ZeroCopySink) WriteBool(data bool) {
 
 func (self *ZeroCopySink) WriteUint16(data uint16) {
 	buf := self.NextBytes(2)
-	binary.LittleEndian.PutUint16(buf, data)
+	binary.BigEndian.PutUint16(buf, data)
 }
 
 func (self *ZeroCopySink) WriteUint32(data uint32) {
 	buf := self.NextBytes(4)
-	binary.LittleEndian.PutUint32(buf, data)
+	binary.BigEndian.PutUint32(buf, data)
 }
 
 func (self *ZeroCopySink) WriteUint64(data uint64) {
 	buf := self.NextBytes(8)
-	binary.LittleEndian.PutUint64(buf, data)
+	binary.BigEndian.PutUint64(buf, data)
 }
 
 func (self *ZeroCopySink) WriteInt64(data int64) {
@@ -128,6 +132,11 @@ func (self *ZeroCopySink) WriteInt16(data int16) {
 	self.WriteUint16(uint16(data))
 }
 
+func (self *ZeroCopySink) WriteInt8(data int8) {
+	buf := self.NextBytes(1)
+	buf[0] = byte(data)
+}
+
 func (self *ZeroCopySink) WriteVarBytes(data []byte) (size uint64) {
 	l := uint64(len(data))
 	size = self.WriteVarUint(l) + l
@@ -140,6 +149,14 @@ func (self *ZeroCopySink) WriteString(data string) (size uint64) {
 	return self.WriteVarBytes([]byte(data))
 }
 
+//TODO U256
+func (self *ZeroCopySink) WriteU256(data *big.Int) {
+	bytes :=  LeftPadBytes(U256(data).Bytes(), 32)
+	fmt.Println(len(bytes))
+	fmt.Println(bytes)
+	self.WriteBytes(bytes)
+}
+
 func (self *ZeroCopySink) WriteVarUint(data uint64) (size uint64) {
 	buf := self.NextBytes(9)
 	if data < 0xFD {
@@ -147,15 +164,15 @@ func (self *ZeroCopySink) WriteVarUint(data uint64) (size uint64) {
 		size = 1
 	} else if data <= 0xFFFF {
 		buf[0] = 0xFD
-		binary.LittleEndian.PutUint16(buf[1:], uint16(data))
+		binary.BigEndian.PutUint16(buf[1:], uint16(data))
 		size = 3
 	} else if data <= 0xFFFFFFFF {
 		buf[0] = 0xFE
-		binary.LittleEndian.PutUint32(buf[1:], uint32(data))
+		binary.BigEndian.PutUint32(buf[1:], uint32(data))
 		size = 5
 	} else {
 		buf[0] = 0xFF
-		binary.LittleEndian.PutUint64(buf[1:], uint64(data))
+		binary.BigEndian.PutUint64(buf[1:], uint64(data))
 		size = 9
 	}
 

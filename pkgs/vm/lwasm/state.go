@@ -25,7 +25,10 @@ type State struct {
 }
 
 func (s *State) SubBalance(accountName string, amount *big.Int) error {
-	balance := s.databaseApi.GetBalance(accountName, true)
+	balance, err := s.databaseApi.GetBalance(accountName, true)
+	if err != nil {
+		return err
+	}
 	return s.databaseApi.PutBalance(accountName, new(big.Int).Sub(balance, amount), true)
 }
 
@@ -36,7 +39,7 @@ func (s *State) AddBalance(accountName string, amount *big.Int) error {
 	return nil
 }
 
-func (s *State) GetBalance(accountName string,) *big.Int {
+func (s *State) GetBalance(accountName string,) (*big.Int, error) {
 	return s.databaseApi.GetBalance(accountName, true)
 }
 
@@ -77,12 +80,12 @@ func (s *State) SetByteCode(accountName string, byteCode crypto.ByteCode) error 
 	return s.databaseApi.PutByteCode(accountName, byteCode, true)
 }
 
-func (s *State) GetLogs(txHash []byte,) []*chainTypes.Log {
+func (s *State) GetLogs(txHash []byte,) []chainTypes.Log {
 	return s.databaseApi.GetLogs(txHash)
 }
 
 func (s *State) AddLog(contractName string, txHash, data []byte, topics [][]byte) error {
-	log := &chainTypes.Log{
+	log := chainTypes.Log{
 		Name: contractName,
 		TxHash:  txHash,
 		Data:    data,

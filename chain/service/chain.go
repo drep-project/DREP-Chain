@@ -3,7 +3,7 @@ package service
 import (
 	"errors"
 	"github.com/drep-project/drep-chain/chain/txpool"
-	"github.com/drep-project/drep-chain/pkgs/evm"
+	vmInterface "github.com/drep-project/drep-chain/pkgs/vm/interface"
 	"math/big"
 	"sync"
 	"time"
@@ -38,7 +38,7 @@ type ChainService struct {
 	RpcService      *rpc2.RpcService          `service:"rpc"`
 	P2pServer       p2pService.P2P            `service:"p2p"`
 	DatabaseService *database.DatabaseService `service:"database"`
-	VmService       evm.Vm                    `service:"vm"`
+	VmService       vmInterface.Vm                    `service:"vm"`
 	transactionPool *txpool.TransactionPool
 	isRelay         bool
 	apis            []app.API
@@ -199,14 +199,14 @@ func (chainService *ChainService) Stop(executeContext *app.ExecuteContext) error
 	return nil
 }
 
-func (chainService *ChainService) SendTransaction(tx *chainTypes.Transaction) error {
+func (chainService *ChainService) SendTransaction(tx *chainTypes.Transaction) *chainTypes.ExecuteReuslt {
 	//if id, err := tx.TxId(); err == nil {
 	//	ForwardTransaction(id)
 	//}
 
-	err := chainService.ValidateTransaction(tx)
-	if err != nil {
-		return err
+	result := chainService.ValidateTransaction(tx)
+	if result.Err != nil {
+		return result
 	}
 	//TODO validate transaction
 	error := chainService.transactionPool.AddTransaction(tx)
@@ -214,7 +214,7 @@ func (chainService *ChainService) SendTransaction(tx *chainTypes.Transaction) er
 		chainService.P2pServer.Broadcast(tx)
 	}
 
-	return error
+	return result
 }
 
 func (chainService *ChainService) sendBlock(block *chainTypes.Block) {
@@ -235,10 +235,10 @@ func (chainService *ChainService) GenerateBlock(leaderKey string) (*chainTypes.B
 	finalTxs := make([]*chainTypes.Transaction, 0, len(txs))
 	gasUsed := new(big.Int)
 	for _, tx := range txs {
-		g, _, err := chainService.executeTransaction(tx)
-		if err == nil {
+		result := chainService.executeTransaction(tx)
+		if result.Err == nil {
 			finalTxs = append(finalTxs, tx)
-			gasUsed.Add(gasUsed, g)
+			gasUsed.Add(gasUsed, result.GasUsed)
 		}
 	}
 

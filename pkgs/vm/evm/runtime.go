@@ -7,7 +7,7 @@ import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/chain/types"
-	"github.com/drep-project/drep-chain/pkgs/evm/vm"
+	"github.com/drep-project/drep-chain/pkgs/vm/evm/vm"
 	"gopkg.in/urfave/cli.v1"
 	"math/big"
 )
@@ -42,15 +42,15 @@ func  (evmService *EvmService) ExecuteStaticCall(evm *vm.EVM, callerName, contra
 func  (evmService *EvmService) ApplyMessage(evm *vm.EVM, message *types.Message) (uint64, error) {
 	switch message.Type {
 	case types.CreateContractType:
-		createContractAction := message.Action.(*types.CreateContractAction)
-		return  evmService.ExecuteCreateCode(evm, message.From, createContractAction.ContractName, message.ChainId, createContractAction.ByteCode, message.Gas.Uint64(), message.Value)
+		//createContractAction := message.Action.(*types.CreateContractAction)
+	//	return  evmService.ExecuteCreateCode(evm, message.From, createContractAction.ContractName, message.ChainId, createContractAction.ByteCode, message.Gas.Uint64(), message.Value)
 	case types.CallContractType:
-		callContractAction := message.Action.(*types.CallContractAction)
-		if callContractAction.Readonly {
-			return  evmService.ExecuteStaticCall(evm, message.From, callContractAction.ContractName, message.ChainId, callContractAction.Input, message.Gas.Uint64())
-		}else{
-			return  evmService.ExecuteCallCode(evm, message.From, callContractAction.ContractName,message.ChainId, callContractAction.Input, message.Gas.Uint64(), message.Value)
-		}
+	//	callContractAction := message.Action.(*types.CallContractAction)
+
+	//	return  evmService.ExecuteStaticCall(evm, message.From, callContractAction.ContractName, message.ChainId, callContractAction.Input, message.Gas.Uint64())
+
+		//return  evmService.ExecuteCallCode(evm, message.From, callContractAction.ContractName,message.ChainId, callContractAction.Input, message.Gas.Uint64(), message.Value)
+
 	}
 	return 0, errors.New("not support tx type")
 }
