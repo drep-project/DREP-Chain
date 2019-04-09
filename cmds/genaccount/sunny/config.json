@@ -1,0 +1,71 @@
+{
+	"log" : {
+	      "logLevel": 3
+	},
+	"rpc" : {
+	      "IPCEnabled": true,
+	      "HTTPEnabled": true,
+	      "WSEnabled": false,
+	      "WSExposeAll": false,
+	      "RESTEnabled": false
+	},
+	"consensus" : {
+	      "consensusMode": "bft",
+	      "mypk": "0x03f1cdf0b32c6d0974c7660fcea766c1e15d3b892870c0fbda05398e93accd6b7d",
+	      "enableConsensus": true
+	},
+	"p2p" : {
+	      "Port": 55555,
+	      "BootNodes": [
+	            {
+	                  "ip": "192.168.1.198",
+	                  "port": 55555
+	            },
+	            {
+	                  "ip": "192.168.1.163",
+	                  "port": 55555
+	            },
+	            {
+	                  "ip": "192.168.1.129",
+	                  "port": 55555
+	            },
+	            {
+	                  "ip": "192.168.1.117",
+	                  "port": 55555
+	            }
+	      ]
+	},
+	"chain" : {
+	      "remoteport": 55555,
+	      "rootChain": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+	      "chainId": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+	      "producers": [
+	            {
+	                  "Public": "0x03c80350d37602718cb8d010b585841bd581cce400a16cc1ef695809860236783a",
+	                  "Ip": "192.168.1.198",
+	                  "Port": 55555
+	            },
+	            {
+	                  "Public": "0x02d29b8d8952d2be16cee8a32a4127f4e6c9eb9e11d97107d97d87451ab9068d56",
+	                  "Ip": "192.168.1.163",
+	                  "Port": 55555
+	            },
+	            {
+	                  "Public": "0x037ef9af7872f0a281424f7e83d2df0f57df7c4c357e74b73b8e1b56091c4815df",
+	                  "Ip": "192.168.1.129",
+	                  "Port": 55555
+	            },
+	            {
+	                  "Public": "0x03f1cdf0b32c6d0974c7660fcea766c1e15d3b892870c0fbda05398e93accd6b7d",
+	                  "Ip": "192.168.1.117",
+	                  "Port": 55555
+	            }
+	      ],
+	      "genesispk": "0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26",
+	      "skipCheckMutiSig": false
+	},
+	"accounts" : {
+	      "enableWallet": false,
+	      "walletPassword": "123"
+	}
+}
