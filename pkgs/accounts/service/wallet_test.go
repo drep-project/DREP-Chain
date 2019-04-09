@@ -2,9 +2,11 @@ package service
 
 import (
 	"fmt"
+	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/common"
 	"log"
 	"testing"
+	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
@@ -12,7 +14,7 @@ import (
 
 func TestWallet(t *testing.T) {
 	password := string(sha3.Hash256([]byte("AAAAAAAAAAAAAAAA")))
-	rootChain := common.ChainIdType{}
+	rootChain := app.ChainIdType{}
 	newNode := accountTypes.NewNode(nil, rootChain)
 	fmt.Println(newNode)
 
@@ -22,12 +24,12 @@ func TestWallet(t *testing.T) {
 	wallet, err := NewWallet(accountConfig, rootChain)
 	wallet.chainId = rootChain
 	if err != nil {
-		dlog.Fatal("NewWallet error")
+		log.Fatal("NewWallet error")
 	}
 
 	err = wallet.Open(password)
 	if err != nil {
-		dlog.Fatal("open wallet error")
+		log.Fatal("open wallet error")
 	}
 
 	nodes := []*accountTypes.Node{}
@@ -36,10 +38,10 @@ func TestWallet(t *testing.T) {
 		pk := node.PrivateKey.PubKey()
 		isOnCurve := secp256k1.S256().IsOnCurve(pk.X, pk.Y)
 		if !isOnCurve {
-			dlog.Fatal("error public key")
+			log.Fatal("error public key")
 		}
 		if err != nil {
-			dlog.Fatal("open wallet error")
+			log.Fatal("open wallet error")
 		}
 		nodes = append(nodes, node)
 	}
@@ -47,13 +49,13 @@ func TestWallet(t *testing.T) {
 	wallet.Lock()
 	_, err = wallet.NewAccount()
 	if err == nil {
-		dlog.Fatal("Lock not effect")
+		log.Fatal("Lock not effect")
 	}
 
 	wallet.UnLock(password)
 	_, err = wallet.NewAccount()
 	if err != nil {
-		dlog.Fatal("UnLock not effect")
+		log.Fatal("UnLock not effect")
 	}
 
 	wallet.Close()
@@ -63,15 +65,15 @@ func TestWallet(t *testing.T) {
 	for _, node := range nodes {
 		reloadNode, err := wallet.GetAccountByAddress(node.Address)
 		if err != nil {
-			dlog.Fatal("reload wallet error")
+			log.Fatal("reload wallet error")
 		}
 		pk := reloadNode.PrivateKey.PubKey()
 		isOnCurve := secp256k1.S256().IsOnCurve(pk.X, pk.Y)
 		if !isOnCurve {
-			dlog.Fatal("error public key")
+			log.Fatal("error public key")
 		}
 		if reloadNode.PrivateKey == nil {
-			dlog.Fatal("privateKey wallet error")
+			log.Fatal("privateKey wallet error")
 		}
 	}
 }

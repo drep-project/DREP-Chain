@@ -7,15 +7,18 @@ import (
 	"github.com/drep-project/drep-chain/app"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/drep-chain/crypto/secp256k1/schnorr"
+	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
 	"math/big"
 
 	"bytes"
 	"encoding/hex"
+	"github.com/drep-project/binary"
 	"net/http"
 	"net/url"
 	"strconv"
-	"github.com/drep-project/binary"
 )
 
 var (
@@ -23,10 +26,16 @@ var (
 	errBalance = errors.New("no enough blance")
 )
 
-func (chainService *ChainService) ValidateBlock(b *chainTypes.Block) bool {
+func (chainService *ChainService) ValidateBlock(block *chainTypes.Block, skipCheckSig bool) bool {
+	if !skipCheckSig {
+		if !chainService.ValidateMultiSig(block) {
+			dlog.Error("failed to validate block multiSig")
+			return false
+		}
+	}
 	var result error
 	_ = chainService.DatabaseService.Transaction(func() error {
-		_, result = chainService.executeBlock(b)
+		_, result = chainService.executeBlock(block)
 		return errors.New("just not commit")
 	})
 	if result != nil {
@@ -42,6 +51,19 @@ func (chainService *ChainService) ValidateTransaction(tx *chainTypes.Transaction
 		return errors.New("just not commit")
 	})
 	return result
+}
+
+func (chainService *ChainService) ValidateMultiSig(b *chainTypes.Block) bool {
+	participators := []*secp256k1.PublicKey{}
+	for index, val := range b.MultiSig.Bitmap {
+		if val == 1 {
+			producer := chainService.Config.Producers[index]
+			participators = append(participators, producer.Public)
+		}
+	}
+	msg := b.ToMessage()
+	sigmaPk := schnorr.CombinePubkeys(participators)
+	return schnorr.Verify(sigmaPk, sha3.Hash256(msg), b.MultiSig.Sig.R, b.MultiSig.Sig.S)
 }
 
 func (chainService *ChainService) ExecuteBlock(b *chainTypes.Block) (gasUsed *big.Int, err error) {
@@ -122,6 +144,18 @@ func (chainService *ChainService) executeTransaction(tx *chainTypes.Transaction)
 	gasPrice := tx.GasPrice()
 	gasLimit := tx.GasLimit()
 
+	if tx.Sig != nil {
+		isValid, err := chainService.verify(tx)
+		if err != nil {
+			return nil, nil, err
+		}
+		if !isValid {
+			return nil, nil, errors.New("signature not validate")
+		}
+	}else{
+		return nil, nil, errors.New("must assign a signature for transaction")
+	}
+
 	originBalance := chainService.DatabaseService.GetBalance(fromAccount, true)
 	err := chainService.checkNonce(fromAccount, nounce)
 	if err != nil {
@@ -157,6 +191,16 @@ func (chainService *ChainService) executeTransaction(tx *chainTypes.Transaction)
 	return gasUsed, gasFee, nil
 }
 
+func (chainService *ChainService) verify(tx *chainTypes.Transaction) (bool, error){
+	pk, _, err := secp256k1.RecoverCompact(tx.Sig, tx.TxHash().Bytes())
+	if err != nil {
+		return false, err
+	}
+	sig := secp256k1.RecoverSig(tx.Sig)
+	isValid := sig.Verify(tx.TxHash().Bytes(), pk)
+	return isValid, nil
+}
+
 func (chainService *ChainService) executeTransferTransaction(t *chainTypes.Transaction, fromAccount, to *crypto.CommonAddress, balance, gasPrice, gasLimit, amount *big.Int, chainId app.ChainIdType) (*big.Int, *big.Int, error) {
 	gasUsed := new(big.Int).Set(chainTypes.GasTable[chainTypes.TransferType])
 	gasFee := new(big.Int).Mul(gasUsed, gasPrice)
@@ -165,7 +209,7 @@ func (chainService *ChainService) executeTransferTransaction(t *chainTypes.Trans
 		leftBalance = new(big.Int).Sub(leftBalance, amount)
 		balanceTo := chainService.DatabaseService.GetBalance(to, true)
 		balanceTo = new(big.Int).Add(balanceTo, amount)
-		chainService.DatabaseService.PutBalance(fromAccount, balance, true)
+		chainService.DatabaseService.PutBalance(fromAccount, leftBalance, true)
 		chainService.DatabaseService.PutBalance(to, balanceTo, true)
 	} else {
 		return gasUsed, gasFee, errBalance

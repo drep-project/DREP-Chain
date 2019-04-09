@@ -113,7 +113,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	for msgType, _ := range chainP2pMessage {
 		router.RegisterMsgHandler(msgType, pid)
 	}
-	consensusService.leader = NewLeader(consensusService.pubkey, consensusService.P2pServer)
+	consensusService.leader = NewLeader(consensusService.privkey, consensusService.P2pServer)
 	consensusService.member = NewMember(consensusService.privkey, consensusService.P2pServer)
 	consensusService.syncBlockEventChan = make(chan event.SyncBlockEvent)
 	consensusService.syncBlockEventSub = consensusService.ChainService.SubscribeSyncBlockEvent(consensusService.syncBlockEventChan)
@@ -163,7 +163,7 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 	consensusService.start = true
 
 	go func() {
-		minMember := int(math.Ceil(float64(len(consensusService.Config.Producers))*2/3)) - 1
+		minMember := int(math.Ceil(float64(len(consensusService.ChainService.Config.Producers))*2/3)) - 1
 
 		select {
 		case <-consensusService.quit:
@@ -208,11 +208,9 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 				if err != nil {
 					dlog.Debug("Producer Block Fail", "Reason", err.Error())
 				} else {
-					if isL {
-						consensusService.P2pServer.Broadcast(block)
-						consensusService.ChainService.ProcessBlock(block)
-						dlog.Info("Submit Block ", "Height", consensusService.ChainService.BestChain.Height(), "txs:", block.Data.TxCount)
-					}
+					consensusService.P2pServer.Broadcast(block)
+					consensusService.ChainService.ProcessBlock(block)
+					dlog.Info("Submit Block ", "Height", consensusService.ChainService.BestChain.Height(), "txs:", block.Data.TxCount)
 				}
 				time.Sleep(time.Duration(500) * time.Millisecond) //delay a little time for block deliver
 				nextBlockTime, waitSpan := consensusService.getWaitTime()
@@ -237,39 +235,38 @@ func (consensusService *ConsensusService) Stop(executeContext *app.ExecuteContex
 
 func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, error) {
 	consensusService.member.Reset()
+
 	dlog.Trace("node member is going to process consensus for round 1")
-	blockBytes, err := consensusService.member.ProcessConsensus()
+	block := &chainTypes.Block{}
+	consensusService.member.validator = func(msg []byte) bool {
+		err := binary.Unmarshal(msg, block)
+		if err != nil {
+			return false
+		}
+
+		return consensusService.blockVerify(block)
+	}
+	_, err := consensusService.member.ProcessConsensus()
 	if err != nil {
 		return nil, err
 	}
 	dlog.Trace("node member finishes consensus for round 1")
 
-	block := &chainTypes.Block{}
-	err = binary.Unmarshal(blockBytes, block)
-	if err != nil {
-		return nil, err
-	}
 	consensusService.member.Reset()
-	dlog.Trace("node member is going to process consensus for round 2")
-	multiSigBytes, err := consensusService.member.ProcessConsensus()
-	if err != nil {
-		return nil, err
-	}
 	multiSig := &chainTypes.MultiSignature{}
-	err = binary.Unmarshal(multiSigBytes, multiSig)
+	consensusService.member.validator = func(multiSigBytes []byte) bool {
+		err := binary.Unmarshal(multiSigBytes, multiSig)
+		if err != nil {
+			return false
+		}
+		block.MultiSig = multiSig
+		return consensusService.multySigVerify(block)
+	}
+	dlog.Trace("node member is going to process consensus for round 2")
+	_, err = consensusService.member.ProcessConsensus()
 	if err != nil {
 		return nil, err
 	}
-	block.MultiSig = multiSig
-	//check multiSig
-
-	/*
-	sigmaPubKey := schnorr.CombinePubkeys(pubkeys)
-	isValid :=  schnorr.Verify(sigmaPubKey, sha3.Hash256(blockBytes), multiSig.Sig.R, multiSig.Sig.S)
-	if !isValid {
-		return nil, errors.New("signature not correct")
-	}
-	*/
 	consensusService.leader.Reset()
 	dlog.Trace("node member finishes consensus for round 2")
 	return block, nil
@@ -281,22 +278,13 @@ func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, erro
 //4 leader验证签名通过后，广播此块给所有的Peer
 func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, error) {
 	consensusService.leader.Reset()
-	membersPubkey := []*secp256k1.PublicKey{}
-	for _, pub := range consensusService.leader.producers {
-		membersPubkey = append(membersPubkey, pub.Producer.Public)
-	}
-	block, err := consensusService.ChainService.GenerateBlock(consensusService.leader.pubkey, membersPubkey)
+	block, err := consensusService.ChainService.GenerateBlock(consensusService.leader.pubkey)
 	if err != nil {
 		dlog.Error("generate block fail", "msg", err)
 	}
 
 	dlog.Trace("node leader is preparing process consensus for round 1", "Block", block)
-	msg, err := binary.Marshal(block)
-	if err != nil {
-		return nil, err
-	}
-	dlog.Trace("node leader is going to process consensus for round 1")
-	err, sig, bitmap := consensusService.leader.ProcessConsensus(msg)
+	err, sig, bitmap := consensusService.leader.ProcessConsensus(block.ToMessage())
 	if err != nil {
 		var str = err.Error()
 		dlog.Error("Error occurs", "msg", str)
@@ -306,7 +294,7 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 	multiSig := &chainTypes.MultiSignature{Sig: *sig, Bitmap: bitmap}
 	dlog.Trace("node leader is preparing process consensus for round 2")
 	consensusService.leader.Reset()
-	msg, err = binary.Marshal(multiSig)
+	msg, err := binary.Marshal(multiSig)
 	if err != nil {
 		return nil, err
 	}
@@ -323,11 +311,7 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 }
 
 func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error) {
-	membersPubkey := []*secp256k1.PublicKey{}
-	for _, produce := range consensusService.Config.Producers {
-		membersPubkey = append(membersPubkey, produce.Public)
-	}
-	block, _ := consensusService.ChainService.GenerateBlock(consensusService.pubkey, membersPubkey)
+	block, _ := consensusService.ChainService.GenerateBlock(consensusService.pubkey)
 	msg, err := binary.Marshal(block)
 	if err != nil {
 		return block, nil
@@ -338,13 +322,13 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 		dlog.Error("sign block error")
 		return nil, errors.New("sign block error")
 	}
-	multiSig := &chainTypes.MultiSignature{Sig: *sig, Bitmap: []byte{}}
+	multiSig := &chainTypes.MultiSignature{Sig: *sig, Bitmap: []byte{1}}
 	block.MultiSig = multiSig
 	return block, nil
 }
 
 func (consensusService *ConsensusService) isProduce() bool {
-	for _, produce := range consensusService.Config.Producers {
+	for _, produce := range consensusService.ChainService.Config.Producers {
 		if produce.Public.IsEqual(consensusService.pubkey) {
 			return true
 		}
@@ -353,8 +337,8 @@ func (consensusService *ConsensusService) isProduce() bool {
 }
 
 func (consensusService *ConsensusService) collectMemberStatus() []*consensusTypes.MemberInfo {
-	produceInfos := make([]*consensusTypes.MemberInfo, len(consensusService.Config.Producers))
-	for i, produce := range consensusService.Config.Producers {
+	produceInfos := make([]*consensusTypes.MemberInfo, len(consensusService.ChainService.Config.Producers))
+	for i, produce := range consensusService.ChainService.Config.Producers {
 		peer := consensusService.P2pServer.GetPeer(produce.Ip)
 		isOnLine := peer != nil
 		isMe := consensusService.pubkey.IsEqual(produce.Public)
@@ -441,4 +425,15 @@ func (consensusService *ConsensusService) getWaitTime() (time.Time, time.Duratio
 		 return time.Duration(avgSpan) * time.Nanosecond
 	 }
 	*/
+}
+
+
+func  (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) bool {
+	consensusService.ChainService.ValidateBlock(block, consensusService.ChainService.Config.SkipCheckMutiSig||false)
+	return false
+}
+
+func  (consensusService *ConsensusService) multySigVerify(block *chainTypes.Block) bool {
+	consensusService.ChainService.ValidateMultiSig(block)
+	return false
 }

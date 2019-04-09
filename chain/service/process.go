@@ -214,10 +214,12 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (bool, er
 
 func (chainService *ChainService) connectBlock(block *chainTypes.Block, newNode *chainTypes.BlockNode) error {
 	//main chain
-	if chainService.ValidateBlock(block) {
+	if chainService.ValidateBlock(block, chainService.Config.SkipCheckMutiSig||false) {
 		chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValid)
 	} else {
 		chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValidateFailed)
+		chainService.flushIndexState()
+		return errors.New("validate block fail")
 	}
 	chainService.flushIndexState()
 	_, err := chainService.ExecuteBlock(block)

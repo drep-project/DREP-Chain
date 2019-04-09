@@ -3,13 +3,12 @@ package database
 import (
     "encoding/hex"
     "errors"
+    "github.com/drep-project/binary"
     chainType "github.com/drep-project/drep-chain/chain/types"
     "github.com/drep-project/drep-chain/crypto"
     "github.com/drep-project/drep-chain/crypto/sha3"
     "github.com/syndtr/goleveldb/leveldb/util"
     "math/big"
-    "github.com/drep-project/binary"
-    "fmt"
 )
 
 var (
@@ -34,8 +33,6 @@ func (database *DatabaseService) PutBlock(block *chainType.Block) error {
 }
 
 func (database *DatabaseService) GetBlock(hash *crypto.Hash) (*chainType.Block, error) {
-    fmt.Println("block prefix: ", BlockNodePrefix)
-    fmt.Println("hash: ", hash)
     key := append(BlockPrefix, hash[:]...)
     value, err := database.db.get(key, false)
     if err != nil {

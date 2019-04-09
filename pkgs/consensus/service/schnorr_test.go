@@ -76,12 +76,10 @@ func TestAddAffine2(t *testing.T) {
 	//onchallenge
 	sig3, _ := schnorr.PartialSign(secp256k1.S256(), msg, pk3, randomPrivakey3, challengeMsg.SigmaQ)
 
-	//response
-	sigmaS := sig3
-	cSig, _  := schnorr.CombineSigs(secp256k1.S256(),[]*schnorr.Signature{sigmaS, sig2 })
 
+	cSig, _  := schnorr.CombineSigs(secp256k1.S256(),[]*schnorr.Signature{sig2, sig3 })
 	//verify
-	finalsigmaPubKey := schnorr.CombinePubkeys([]*secp256k1.PublicKey{pk3.PubKey(),pk2.PubKey()})
+	finalsigmaPubKey := schnorr.CombinePubkeys([]*secp256k1.PublicKey{pk3.PubKey(), pk2.PubKey()})
 	OK :=  schnorr.Verify(finalsigmaPubKey, msg, cSig.R, cSig.S)
 	fmt.Println(OK)
 }
