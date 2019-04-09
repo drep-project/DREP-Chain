@@ -112,6 +112,25 @@ func (wallet *Wallet) DumpPrivateKey(addr *crypto.CommonAddress) (*secp256k1.Pri
 	return node.PrivateKey, nil
 }
 
+func (wallet *Wallet) Sign(addr *crypto.CommonAddress, msg []byte) ([]byte, error) {
+	if len(msg) != 32 {
+		return nil, errors.New("wrong sise of the hash of transaction")
+	}
+	if err := wallet.checkWallet(WPERMISSION); err != nil {
+		return nil, err
+	}
+
+	node, err := wallet.cacheStore.GetKey(addr, wallet.password)
+	if err != nil {
+		return nil, err
+	}
+	sig, err := secp256k1.SignCompact(node.PrivateKey, msg, true)
+	if err != nil {
+		return nil, err
+	}
+	return sig, nil
+}
+
 // 0 is locked  1 is unlock
 func (wallet *Wallet) IsLock() bool {
 	return atomic.LoadInt32(&wallet.isLock) == LOCKED

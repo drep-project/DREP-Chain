@@ -144,9 +144,6 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 
 	chainService.genesisBlock = chainService.GenesisBlock(chainService.Config.GenesisPK)
 	hash := chainService.genesisBlock.Header.Hash()
-	fmt.Println("block: ", chainService.genesisBlock)
-	fmt.Println("header: ", chainService.genesisBlock.Header)
-	fmt.Println("hash: ", chainService.genesisBlock.Header.Hash())
 	block, err := chainService.DatabaseService.GetBlock(hash)
 	if err != nil && err.Error() != "leveldb: not found" {
 		return nil
@@ -199,14 +196,10 @@ func (chainService *ChainService) Stop(executeContext *app.ExecuteContext) error
 }
 
 func (chainService *ChainService) SendTransaction(tx *chainTypes.Transaction) error {
-	//if id, err := tx.TxId(); err == nil {
-	//	ForwardTransaction(id)
-	//}
 	err := chainService.ValidateTransaction(tx)
 	if err != nil {
 		return err
 	}
-	//TODO validate transaction
 	err = chainService.transactionPool.AddTransaction(tx)
 	if err == nil {
 		chainService.P2pServer.Broadcast(tx)
@@ -222,7 +215,7 @@ func (chainService *ChainService) blockExists(blockHash *crypto.Hash) bool {
 	return chainService.Index.HaveBlock(blockHash)
 }
 
-func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey, members []*secp256k1.PublicKey) (*chainTypes.Block, error) {
+func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey) (*chainTypes.Block, error) {
 	chainService.DatabaseService.BeginTransaction()
 	defer chainService.DatabaseService.Discard()
 
@@ -244,11 +237,6 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey, 
 	stateRoot := chainService.DatabaseService.GetStateRoot()
 	merkleRoot := chainService.deriveMerkleRoot(finalTxs)
 
-	var memberPks []*secp256k1.PublicKey
-	for _, p := range members {
-		memberPks = append(memberPks, p)
-	}
-
 	block := &chainTypes.Block{
 		Header: &chainTypes.BlockHeader{
 			Version:      common.Version,
@@ -261,7 +249,6 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey, 
 			TxRoot:       merkleRoot,
 			Height:       height,
 			LeaderPubKey: leaderKey,
-			MinorPubKeys: memberPks,
 		},
 		Data: &chainTypes.BlockData{
 			TxCount: int32(len(finalTxs)),

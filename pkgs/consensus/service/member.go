@@ -51,6 +51,8 @@ type Member struct {
 
     msgPool	chan *consensusTypes.RouteMsgWrap
     isConsensus bool   // time split 2, in consensus \ wait
+
+    validator func(msg []byte) bool
 }
 
 func NewMember(prvKey *secp256k1.PrivateKey, p2pServer p2pService.P2P) *Member {
@@ -107,13 +109,13 @@ func (member *Member) ProcessConsensus() ([]byte, error) {
     }()
     go member.WaitSetUp()
 
-PRESETUPMSG:  //process msg receive in the span of two consensus
+PRE_SETUPMSG:  //process msg receive in the span of two consensus
     for {
         select {
         case msg := <- member.msgPool:
             member.OnSetUp(msg.Peer, msg.SetUpMsg)
         default:
-            break PRESETUPMSG
+            break PRE_SETUPMSG
         }
     }
 
@@ -221,15 +223,7 @@ func (member *Member) OnChallenge(peer *p2pTypes.Peer, challengeMsg *consensusTy
     }
     dlog.Debug("recieved challenge message")
     if member.leader.Peer.Ip == peer.Ip {
-        // r := sha3.ConcatHash256(challengeMsg.SigmaPubKey.Serialize(), challengeMsg.SigmaQ.Serialize(), member.msgHash)
         r := sha3.ConcatHash256(member.msgHash)
-        // dlog.Println("Member process challenge ")
-        //r0 := new(big.Int).SetBytes(challengeMsg.R)
-        //rInt := new(big.Int).SetBytes(r)
-        //curve := secp256k1.S256()
-        //rInt.Mod(rInt, curve.Params().N)
-        //member.r = rInt
-        // if r0.Cmp(member.r) == 0{
         if bytes.Equal(r,challengeMsg.R) {
             member.response(challengeMsg)
             dlog.Debug("response has sent")
@@ -269,10 +263,6 @@ func (member *Member) commit()  {
 }
 
 func (member *Member) response(challengeMsg *consensusTypes.Challenge) {
-    //  allPksSum1 := challengeMsg.SigmaQ.
-    //  sig1, _ := schnorr.PartialSign(secp256k1.S256(), member.msgHash, member.prvKey, member.randomPrivakey, allPksSum1)
-
-    //r := sha3.ConcatHash256(challengeMsg.SigmaQ.Serialize(), challengeMsg.SigmaPubKey.Serialize(), member.msg)
     sig, err := schnorr.PartialSign(secp256k1.S256(), member.msgHash, member.prvKey, member.randomPrivakey, challengeMsg.SigmaQ)
     if err != nil {
         dlog.Error("sign chanllenge error ", "msg", err.Error())

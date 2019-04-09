@@ -2,12 +2,12 @@ package types
 
 import (
 	"encoding/hex"
+	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"math/big"
-	"github.com/drep-project/binary"
 )
 
 type BlockHeader struct {
@@ -49,6 +49,25 @@ type Block struct {
 	Header   *BlockHeader
 	Data     *BlockData
 	MultiSig *MultiSignature
+}
+
+func (block *Block) ToMessage() []byte {
+	blockTemp := &Block{
+		Header:&BlockHeader{
+			ChainId  	 :block.Header.ChainId,
+			Version      :block.Header.Version,
+			PreviousHash :block.Header.PreviousHash,
+			GasLimit     :block.Header.GasLimit,
+			GasUsed      :block.Header.GasUsed,
+			Height       :block.Header.Height,
+			Timestamp    :block.Header.Timestamp,
+			StateRoot    :block.Header.StateRoot,
+			TxRoot       :block.Header.TxRoot,
+		},
+		Data: block.Data,
+	}
+	bytes, _ := binary.Marshal(blockTemp)
+	return bytes
 }
 
 type MultiSignature struct {

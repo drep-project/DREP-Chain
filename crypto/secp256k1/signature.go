@@ -12,9 +12,9 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"github.com/drep-project/drep-chain/common"
 	"hash"
 	"math/big"
-    "github.com/francoispqt/gojay"
 )
 
 // Errors returned by canonicalPadding.
@@ -46,35 +46,6 @@ type Signature struct {
     R *big.Int
     S *big.Int
 }
-
-// UnmarshalJSONObject implements gojay's UnmarshalerJSONObject
-func (v *Signature) UnmarshalJSONObject(dec *gojay.Decoder, k string) error {
-    switch k {
-    case "r":
-        vr := ""
-        err := dec.String(&vr)
-        v.R, _ = new(big.Int).SetString(vr, 10)
-        return err
-    case "s":
-        vs := ""
-        err := dec.String(&vs)
-        v.S, _ = new(big.Int).SetString(vs, 10)
-        return err
-    }
-    return nil
-}
-
-// NKeys returns the number of keys to unmarshal
-func (v *Signature) NKeys() int { return 2 }
-
-// MarshalJSONObject implements gojay's MarshalerJSONObject
-func (v *Signature) MarshalJSONObject(enc *gojay.Encoder) {
-    enc.StringKey("r", v.R.String())
-    enc.StringKey("s", v.S.String())
-}
-
-// IsNil returns wether the structure is nil value or not
-func (v *Signature) IsNil() bool { return v == nil }
 
 // Serialize returns the ECDSA signature in the more strict DER format.  Note
 // that the serialized bytes returned do not include the appended hash type
@@ -453,6 +424,14 @@ func RecoverCompact(signature, hash []byte) (*PublicKey, bool, error) {
 	return key, ((signature[0] - 27) & 4) == 4, nil
 }
 
+
+func RecoverSig(signature []byte) *Signature {
+	bitlen := (S256().BitSize + 7) / 8
+	return &Signature{
+		R: new(big.Int).SetBytes(signature[1 : bitlen+1]),
+		S: new(big.Int).SetBytes(signature[bitlen+1:]),
+	}
+}
 // signRFC6979 generates a deterministic ECDSA signature according to RFC 6979
 // and BIP 62.
 func signRFC6979(privateKey *PrivateKey, hash []byte) (*Signature, error) {
@@ -597,4 +576,27 @@ func (sig Signature) GetS() *big.Int {
 // GetType satisfies the chainec Signature interface.
 func (sig Signature) GetType() int {
 	return ecTypeSecp256k1
+}
+
+func (sig *Signature) UnmarshalText(input []byte) error {
+	bytes := common.Bytes{}
+	err := bytes.UnmarshalJSON(input)
+	if err != nil {
+		return err
+	}
+	sig2, err := ParseSignature(bytes)
+	if err != nil {
+		return err
+	}
+	sig.S = sig2.S
+	sig.R = sig2.R
+	return nil
+}
+
+func (sig *Signature) UnmarshalJSON(input []byte) error {
+	return sig.UnmarshalText(input)
+}
+
+func (sig *Signature) MarshalText() ([]byte, error) {
+	return common.Bytes(sig.Serialize()).MarshalText()
 }

@@ -6,14 +6,6 @@ import (
 
 type ConsensusConfig struct {
 	ConsensusMode string          	`json:"consensusMode"`
-	Producers []*Producer         	`json:"producers"`
 	MyPk 	 *secp256k1.PublicKey 	`json:"mypk"`
 	EnableConsensus bool			`json:"enableConsensus"`
-}
-
-//TODO how to identify a mine pk or pr&addr
-type Producer struct {
-	Public  *secp256k1.PublicKey
-	Ip string
-	Port int
 }

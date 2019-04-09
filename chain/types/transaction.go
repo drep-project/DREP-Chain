@@ -69,6 +69,7 @@ func (tx *Transaction) ChainId() app.ChainIdType {
 func (tx *Transaction) Amount() *big.Int {
 	return tx.Data.Amount
 }
+
 func (tx *Transaction) GasLimit() *big.Int {
 	return tx.Data.GasLimit
 }

@@ -8,7 +8,6 @@ import (
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/database"
 )
 
@@ -79,7 +78,12 @@ func (accountapi *AccountApi) CloseWallet() {
 func (accountapi *AccountApi) Transfer(from crypto.CommonAddress, to crypto.CommonAddress, amount *big.Int) (string, error) {
 	nonce := accountapi.chainService.GetTransactionCount(&from)
 	t := chainTypes.NewTransaction(from, to, amount, nonce)
-	err := accountapi.chainService.SendTransaction(t)
+	sig, err := accountapi.Wallet.Sign(&from, t.TxHash().Bytes())
+	if err != nil{
+		return "",err
+	}
+	t.Sig = sig
+	err = accountapi.chainService.SendTransaction(t)
 	if err != nil{
 		return "",err
 	}
@@ -89,6 +93,11 @@ func (accountapi *AccountApi) Transfer(from crypto.CommonAddress, to crypto.Comm
 func (accountapi *AccountApi) Call(from crypto.CommonAddress, to crypto.CommonAddress, input []byte, amount *big.Int, readOnly bool) (string, error) {
 	nonce := accountapi.chainService.GetTransactionCount(&from)
 	t := chainTypes.NewCallContractTransaction(from, to, input, amount, nonce, readOnly)
+	sig, err := accountapi.Wallet.Sign(&from, t.TxHash().Bytes())
+	if err != nil{
+		return "",err
+	}
+	t.Sig = sig
 	accountapi.chainService.SendTransaction(t)
 	return t.TxHash().String(), nil
 }
@@ -96,6 +105,11 @@ func (accountapi *AccountApi) Call(from crypto.CommonAddress, to crypto.CommonAd
 func (accountapi *AccountApi) CreateCode(from crypto.CommonAddress, to crypto.CommonAddress, byteCode []byte) (string, error) {
 	nonce := accountapi.chainService.GetTransactionCount(&from)
 	t := chainTypes.NewContractTransaction(from, to, byteCode, nonce)
+	sig, err := accountapi.Wallet.Sign(&from, t.TxHash().Bytes())
+	if err != nil{
+		return "",err
+	}
+	t.Sig = sig
 	accountapi.chainService.SendTransaction(t)
 	return t.TxHash().String(), nil
 }
@@ -116,10 +130,12 @@ func (accountapi *AccountApi) DumpPrivkey(address *crypto.CommonAddress) (*secp2
 	return node.PrivateKey, nil
 }
 
-func (accountapi *AccountApi) Sign(address *crypto.CommonAddress, msg string) ([]byte, error) {
-	prv, _ := accountapi.DumpPrivkey(address)
-	bytes := sha3.Hash256([]byte(msg))
-	return crypto.Sign(bytes, prv)
+func (accountapi *AccountApi) Sign(address crypto.CommonAddress, hash []byte) ([]byte, error) {
+	sig, err := accountapi.Wallet.Sign(&address, hash)
+	if err != nil{
+		return nil, err
+	}
+	return sig, nil
 }
 
 func (accountapi *AccountApi) GasPrice() *big.Int {
