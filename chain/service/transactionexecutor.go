@@ -53,6 +53,16 @@ func (chainService *ChainService) ValidateTransaction(tx *chainTypes.Transaction
 	return result
 }
 
+
+func (chainService *ChainService) ValidateTransactionsInBlock(blockdata *chainTypes.BlockData) error {
+	var result error
+	_ = chainService.DatabaseService.Transaction(func() error {
+		_, result = chainService.executeTransactionInBlock(blockdata)
+		return errors.New("just not commit")
+	})
+	return result
+}
+
 func (chainService *ChainService) ValidateMultiSig(b *chainTypes.Block) bool {
 	participators := []*secp256k1.PublicKey{}
 	for index, val := range b.MultiSig.Bitmap {
@@ -83,15 +93,11 @@ func (chainService *ChainService) executeBlock(b *chainTypes.Block) (*big.Int, e
 		return total, nil
 	}
 
-	for _, t := range b.Data.TxList {
-		_, gasFee, err := chainService.executeTransaction(t)
-		if err != nil {
-			return nil, err
-		}
-		if gasFee != nil {
-			total.Add(total, gasFee)
-		}
+	gasFee, err := chainService.executeTransactionInBlock(b.Data)
+	if err != nil {
+		return nil, err
 	}
+	total.Add(total, gasFee)
 
 	stateRoot := chainService.DatabaseService.GetStateRoot()
 	if bytes.Equal(b.Header.StateRoot, stateRoot) {
@@ -103,6 +109,20 @@ func (chainService *ChainService) executeBlock(b *chainTypes.Block) (*big.Int, e
 	} else {
 		return nil, fmt.Errorf("%s not matched %s", hex.EncodeToString(b.Header.StateRoot), " vs ", hex.EncodeToString(stateRoot))
 	}
+}
+
+func (chainService *ChainService) executeTransactionInBlock(data *chainTypes.BlockData) (*big.Int, error) {
+	total := big.NewInt(0)
+	for _, t := range data.TxList {
+		_, gasFee, err := chainService.executeTransaction(t)
+		if err != nil {
+			return nil, err
+		}
+		if gasFee != nil {
+			total.Add(total, gasFee)
+		}
+	}
+	return total, nil
 }
 
 func (chainService *ChainService) preSync(block *chainTypes.Block) {

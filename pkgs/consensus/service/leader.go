@@ -46,7 +46,7 @@ type Leader struct {
 	commitBitmap      []byte
 	sigmaPubKey       []*secp256k1.PublicKey
 	sigmaCommitPubkey []*secp256k1.PublicKey
-	r                 []byte
+	msgHash           []byte
 
 	sigmaS         *schnorr.Signature
 	responseBitmap []byte
@@ -90,6 +90,7 @@ func (leader *Leader) Reset() {
 	leader.sigmaPubKey = nil
 	leader.sigmaCommitPubkey = nil
 	leader.sigmaS = nil
+	leader.randomPrivakey = nil
 
 	length := len(leader.producers)
 	leader.commitBitmap = make([]byte, length)
@@ -116,12 +117,10 @@ func (leader *Leader) ProcessConsensus(msg []byte) (error, *secp256k1.Signature,
 	}
 	dlog.Debug("response complete")
 
-	if leader.sigmaS == nil {
-		return errors.New("signature not valid"), nil, nil
-	}
 	valid := leader.Validate(msg, leader.sigmaS.R, leader.sigmaS.S)
 	dlog.Debug("vaidate result", "VALID", valid)
 	if !valid {
+		leader.fail("signature not valid")
 		return errors.New("signature not valid"), nil, nil
 	}
 	return nil, &secp256k1.Signature{R: leader.sigmaS.R, S: leader.sigmaS.S}, leader.responseBitmap
@@ -130,11 +129,13 @@ func (leader *Leader) ProcessConsensus(msg []byte) (error, *secp256k1.Signature,
 func (leader *Leader) setUp(msg []byte) {
 	setup := &consensusTypes.Setup{Msg: msg}
 	setup.Height = leader.currentHeight
-	leader.r = sha3.ConcatHash256(sha3.Hash256(msg))
+	leader.msgHash = sha3.Hash256(msg)
 	var err error
-	leader.randomPrivakey, _, err = schnorr.GenerateNoncePair(secp256k1.S256(), leader.r, leader.privakey,nil, schnorr.Sha256VersionStringRFC6979)
+	var nouncePk *secp256k1.PublicKey
+	leader.randomPrivakey, nouncePk, err = schnorr.GenerateNoncePair(secp256k1.S256(), leader.msgHash, leader.privakey,nil, schnorr.Sha256VersionStringRFC6979)
 	leader.sigmaPubKey = []*secp256k1.PublicKey{leader.pubkey}
-	leader.sigmaCommitPubkey =  []*secp256k1.PublicKey{leader.randomPrivakey.PubKey()}
+	leader.sigmaCommitPubkey =  []*secp256k1.PublicKey{nouncePk}
+
 	for i, v := range leader.producers {
 		if v.Producer.Public.IsEqual(leader.pubkey) {
 			leader.commitBitmap[i] = 1
@@ -165,20 +166,10 @@ func (leader *Leader) OnCommit(peer *p2pTypes.Peer, commit *consensusTypes.Commi
 		return
 	}
 
-	member := leader.getMemberByIp(peer.Ip)
-	if leader.sigmaPubKey == nil {
-		return
-	} else {
-		leader.sigmaPubKey = append(leader.sigmaPubKey, member.Producer.Public)
-	}
+	leader.sigmaPubKey = append(leader.sigmaPubKey, commit.BpKey)
+	leader.sigmaCommitPubkey = append(leader.sigmaCommitPubkey, commit.Q)
 
-	if leader.sigmaCommitPubkey == nil {
-		return
-	} else {
-		leader.sigmaCommitPubkey = append(leader.sigmaCommitPubkey, commit.Q)
-	}
-
-	leader.markCommit(peer)
+	leader.markCommit(commit.BpKey)
 	commitNum := leader.getCommitNum()
 	if commitNum >= leader.minMember  {
 		leader.setState(WAIT_COMMIT_COMPELED)
@@ -223,18 +214,13 @@ func (leader *Leader) OnResponse(peer *p2pTypes.Peer, response *consensusTypes.R
 		return
 	}
 
-	if leader.sigmaS == nil {
-			return
+	sigmaS, err := schnorr.CombineSigs(secp256k1.S256(), []*schnorr.Signature{leader.sigmaS, sig})
+	if err != nil {
+		dlog.Debug("schnorr combineSigs error", "reason", err)
+		return
 	} else {
-		sigmaS, err := schnorr.CombineSigs(secp256k1.S256(), []*schnorr.Signature{leader.sigmaS, sig})
-		if err != nil {
-			schnorr.CombineSigs(secp256k1.S256(), []*schnorr.Signature{leader.sigmaS, sig})
-			dlog.Debug("schnorr combineSigs error", "reason", err)
-			return
-		} else {
-			leader.sigmaS = sigmaS
-			leader.markResponse(peer)
-		}
+		leader.sigmaS = sigmaS
+		leader.markResponse(response.BpKey)
 	}
 
 	responseNum := leader.getResponseNum()
@@ -255,29 +241,31 @@ func (leader *Leader) challenge(msg []byte) {
 		if index ==0 {
 			continue
 		}
-		participatorsPubkeys := append(leader.sigmaPubKey[0:index], leader.sigmaPubKey[index+1:]...)
-		particateCommitPubkeys := append(leader.sigmaCommitPubkey[0:index], leader.sigmaCommitPubkey[index+1:]...)
-		sigmaPubKey := schnorr.CombinePubkeys(participatorsPubkeys)
-		commitPubkey := schnorr.CombinePubkeys(particateCommitPubkeys)
 
+		particateCommitPubkeys := []*secp256k1.PublicKey{}
+		particateCommitPubkeys = append(particateCommitPubkeys, leader.sigmaCommitPubkey[0:index]...)
+		particateCommitPubkeys = append(particateCommitPubkeys, leader.sigmaCommitPubkey[index+1:]...)
+
+		commitPubkey := schnorr.CombinePubkeys(particateCommitPubkeys)
 		challenge := &consensusTypes.Challenge{
 			Height:      leader.currentHeight,
-			SigmaPubKey: sigmaPubKey,
 			SigmaQ:      commitPubkey,
-			R:           leader.r,
+			R:           leader.msgHash,
 		}
+
 		member := leader.getMemberByPk(pk)
 		if member.IsOnline && !member.IsMe{
 			dlog.Debug("leader sent challenge message", "IP", member.Peer.GetAddr(), "Height", leader.currentHeight)
 			leader.p2pServer.SendAsync(member.Peer, challenge)
 		}
+
 	}
 }
 
 func (leader *Leader) selfSign(msg []byte) error {
 	// pk1 | pk2 | pk3 | pk4
 	commitPubkey := schnorr.CombinePubkeys(leader.sigmaCommitPubkey[1:])
-	sig, err := schnorr.PartialSign(secp256k1.S256(), leader.r, leader.privakey, leader.randomPrivakey, commitPubkey)
+	sig, err := schnorr.PartialSign(secp256k1.S256(), leader.msgHash, leader.privakey, leader.randomPrivakey, commitPubkey)
 	if err != nil {
 		return  err
 	}
@@ -346,16 +334,16 @@ func (leader *Leader) hasMarked(index int, bitmap []byte) bool {
 	return index >= 0 && index <= len(bitmap) && bitmap[index] != 1
 }
 
-func (leader *Leader) markResponse(peer *p2pTypes.Peer) {
-	index := leader.getMinerIndex(peer.Ip)
+func (leader *Leader) markResponse(pubkey *secp256k1.PublicKey) {
+	index := leader.getMinerIndex(pubkey)
 	if !leader.hasMarked(index, leader.responseBitmap) {
 		return
 	}
 	leader.responseBitmap[index] = 1
 }
 
-func (leader *Leader) markCommit(peer *p2pTypes.Peer) {
-	index := leader.getMinerIndex(peer.Ip)
+func (leader *Leader) markCommit(pubkey *secp256k1.PublicKey) {
+	index := leader.getMinerIndex(pubkey)
 	if !leader.hasMarked(index, leader.commitBitmap) {
 		return
 	}
@@ -373,17 +361,17 @@ func (leader *Leader) getMemberByIp(ip string) *consensusTypes.MemberInfo {
 
 func (leader *Leader) getMemberByPk(pk *secp256k1.PublicKey) *consensusTypes.MemberInfo {
 	for _, producer := range leader.producers {
-		if producer.Peer != nil && producer.Peer.PubKey.IsEqual(pk)  {
+		if producer.Peer != nil && producer.Producer.Public.IsEqual(pk)  {
 			return producer
 		}
 	}
 	return nil
 }
 
-func (leader *Leader) getMinerIndex(ip string) int {
+func (leader *Leader) getMinerIndex(pubkey *secp256k1.PublicKey) int {
 	// TODO if it is itself
 	for i, v := range leader.producers {
-		if v.Peer != nil &&v.Peer.Ip == ip {
+		if v.Peer != nil &&v.Producer.Public.IsEqual(pubkey) {
 			return i
 		}
 	}

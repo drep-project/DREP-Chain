@@ -1,16 +1,16 @@
 package service
 
 import (
-    "sync"
-    "time"
     "bytes"
     "errors"
     "math/big"
+    "sync"
+    "time"
 
     "github.com/drep-project/dlog"
-    "github.com/drep-project/drep-chain/crypto/sha3"
     "github.com/drep-project/drep-chain/crypto/secp256k1"
     "github.com/drep-project/drep-chain/crypto/secp256k1/schnorr"
+    "github.com/drep-project/drep-chain/crypto/sha3"
     p2pService "github.com/drep-project/drep-chain/network/service"
     p2pTypes "github.com/drep-project/drep-chain/network/types"
     consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
@@ -92,6 +92,7 @@ func (member *Member) UpdateStatus(producers []*consensusTypes.MemberInfo,minMem
 func (member *Member) Reset(){
     member.msg  = nil
     member.msgHash = nil
+    member.randomPrivakey = nil
     member.errorChanel = make(chan string,1)
     member.completed = make(chan struct{},1)
     member.cancelWaitSetUp = make(chan struct{},1)
@@ -222,19 +223,16 @@ func (member *Member) OnChallenge(peer *p2pTypes.Peer, challengeMsg *consensusTy
         return
     }
     dlog.Debug("recieved challenge message")
-    if member.leader.Peer.Ip == peer.Ip {
-        r := sha3.ConcatHash256(member.msgHash)
-        if bytes.Equal(r,challengeMsg.R) {
-            member.response(challengeMsg)
-            dlog.Debug("response has sent")
-            member.setState(COMPLETED)
-            select {
-            case member.cancelWaitChallenge <- struct{}{}:
-            default:
-            }
-            member.completed <- struct{}{}
-            return
+    if member.leader.Peer.Ip == peer.Ip && bytes.Equal(member.msgHash, challengeMsg.R) {
+        member.response(challengeMsg)
+        dlog.Debug("response has sent")
+        member.setState(COMPLETED)
+        select {
+        case member.cancelWaitChallenge <- struct{}{}:
+        default:
         }
+        member.completed <- struct{}{}
+        return
     }
     member.pushErrorMsg(ChallengeError)
     //check fail not response and start new round
@@ -249,28 +247,41 @@ func (member *Member) OnFail(peer *p2pTypes.Peer, failMsg *consensusTypes.Fail){
 }
 
 func (member *Member) commit()  {
+    if !member.validator(member.msg) {
+        member.pushErrorMsg("validate message error")
+        return
+    }
     //TODO validate block from leader
     var err error
-    member.randomPrivakey, _, err = schnorr.GenerateNoncePair(secp256k1.S256(), member.msgHash, member.prvKey,nil, schnorr.Sha256VersionStringRFC6979)
+    var nouncePk *secp256k1.PublicKey
+
+    member.randomPrivakey, nouncePk, err = schnorr.GenerateNoncePair(secp256k1.S256(), member.msgHash, member.prvKey,nil, schnorr.Sha256VersionStringRFC6979)
     if err != nil {
         dlog.Error("generate private key error", "msg", err.Error())
         return
     }
-
-    commitment := &consensusTypes.Commitment{Q: (*secp256k1.PublicKey)(&member.randomPrivakey.PublicKey)}
+    commitment := &consensusTypes.Commitment{
+        BpKey: member.prvKey.PubKey(),
+        Q: (*secp256k1.PublicKey)(nouncePk),
+    }
     commitment.Height = member.currentHeight
     member.p2pServer.SendAsync(member.leader.Peer, commitment)
 }
 
 func (member *Member) response(challengeMsg *consensusTypes.Challenge) {
-    sig, err := schnorr.PartialSign(secp256k1.S256(), member.msgHash, member.prvKey, member.randomPrivakey, challengeMsg.SigmaQ)
-    if err != nil {
-        dlog.Error("sign chanllenge error ", "msg", err.Error())
-        return
+    if bytes.Equal(member.msgHash, challengeMsg.R) {
+        sig, err := schnorr.PartialSign(secp256k1.S256(), member.msgHash, member.prvKey, member.randomPrivakey, challengeMsg.SigmaQ)
+        if err != nil {
+            dlog.Error("sign chanllenge error ", "msg", err.Error())
+            return
+        }
+        response := &consensusTypes.Response{S: sig.Serialize()}
+        response.BpKey = member.prvKey.PubKey()
+        response.Height = member.currentHeight
+        member.p2pServer.SendAsync(member.leader.Peer, response)
+    }else{
+        dlog.Error("commit messsage and chanllenge message not matched")
     }
-    response := &consensusTypes.Response{S: sig.Serialize()}
-    response.Height = member.currentHeight
-    member.p2pServer.SendAsync(member.leader.Peer, response)
 }
 
 /*
