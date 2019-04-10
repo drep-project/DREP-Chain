@@ -239,7 +239,7 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey) 
 	block := &chainTypes.Block{
 		Header: &chainTypes.BlockHeader{
 			Version:      common.Version,
-			PreviousHash: previousHash,
+			PreviousHash: *previousHash,
 			ChainId:      chainService.chainId,
 			GasLimit:     *BlockGasLimit,
 			GasUsed:      *gasUsed,
@@ -299,7 +299,7 @@ func (chainService *ChainService) GenesisBlock(genesisPubkey string) *chainTypes
 	return &chainTypes.Block{
 		Header: &chainTypes.BlockHeader{
 			Version:      common.Version,
-			PreviousHash: &crypto.Hash{},
+			PreviousHash: crypto.Hash{},
 			GasLimit:     *BlockGasLimit,
 			GasUsed:      *new(big.Int),
 			Timestamp:    1545282765,

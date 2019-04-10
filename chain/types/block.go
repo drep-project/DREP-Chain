@@ -13,7 +13,7 @@ import (
 type BlockHeader struct {
 	ChainId      app.ChainIdType
 	Version      int32
-	PreviousHash *crypto.Hash
+	PreviousHash crypto.Hash
 	GasLimit     big.Int
 	GasUsed      big.Int
 	Height       int64
