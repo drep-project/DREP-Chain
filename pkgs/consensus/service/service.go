@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/drep-project/binary"
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
 	chainService "github.com/drep-project/drep-chain/chain/service"
@@ -17,7 +18,6 @@ import (
 	"gopkg.in/urfave/cli.v1"
 	"math"
 	"time"
-	"github.com/drep-project/binary"
 )
 
 var (
@@ -99,7 +99,6 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 		return err
 	}
 	consensusService.privkey = accountNode.PrivateKey
-
 	props := actor.FromProducer(func() actor.Actor {
 		return consensusService
 	})
@@ -163,7 +162,7 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 	consensusService.start = true
 
 	go func() {
-		minMember := int(math.Ceil(float64(len(consensusService.ChainService.Config.Producers))*2/3)) - 1
+		minMember := int(math.Ceil(float64(len(consensusService.ChainService.Config.Producers))*2/3))
 
 		select {
 		case <-consensusService.quit:
@@ -235,7 +234,7 @@ func (consensusService *ConsensusService) Stop(executeContext *app.ExecuteContex
 
 func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, error) {
 	consensusService.member.Reset()
-
+	
 	dlog.Trace("node member is going to process consensus for round 1")
 	block := &chainTypes.Block{}
 	consensusService.member.validator = func(msg []byte) bool {
@@ -259,6 +258,13 @@ func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, erro
 		if err != nil {
 			return false
 		}
+		minorPubkeys := []secp256k1.PublicKey{}
+		for index, producer := range consensusService.ChainService.Config.Producers {
+			if multiSig.Bitmap[index] == 1 {
+				minorPubkeys = append(minorPubkeys, *producer.Public)
+			}
+		}
+		block.Header.MinorPubKeys = minorPubkeys
 		block.MultiSig = multiSig
 		return consensusService.multySigVerify(block)
 	}
@@ -304,6 +310,14 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 		return nil, err
 	}
 	dlog.Trace("node leader finishes process consensus for round 2")
+
+	minorPubkeys := []secp256k1.PublicKey{}
+	for index, producer := range consensusService.ChainService.Config.Producers {
+		if multiSig.Bitmap[index] == 1 {
+			minorPubkeys = append(minorPubkeys, *producer.Public)
+		}
+	}
+	block.Header.MinorPubKeys = minorPubkeys
 	block.MultiSig = multiSig
 	consensusService.leader.Reset()
 	dlog.Trace("node leader finishes sending block")
@@ -429,11 +443,10 @@ func (consensusService *ConsensusService) getWaitTime() (time.Time, time.Duratio
 
 
 func  (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) bool {
-	consensusService.ChainService.ValidateBlock(block, consensusService.ChainService.Config.SkipCheckMutiSig||false)
-	return false
+	err := consensusService.ChainService.ValidateTransactionsInBlock(block.Data)
+	return err == nil
 }
 
 func  (consensusService *ConsensusService) multySigVerify(block *chainTypes.Block) bool {
-	consensusService.ChainService.ValidateMultiSig(block)
-	return false
+	return consensusService.ChainService.ValidateMultiSig(block)
 }

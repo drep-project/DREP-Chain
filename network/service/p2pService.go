@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/drep-project/binary"
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/common"
@@ -14,12 +15,10 @@ import (
 	"gopkg.in/urfave/cli.v1"
 	"io"
 	"net"
-	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"github.com/drep-project/binary"
 )
 
 const (
@@ -204,6 +203,7 @@ func (p2pService *P2pService) receiveRoutine(){
 							return
 						}
 					}
+					//dlog.Debug("receive message", "IP", conn.RemoteAddr(), "Content", reflect.TypeOf(msg).String())
 					peer, err := p2pService.preProcessReq(addr, pubkey)
 					if err != nil {
 						return
@@ -320,18 +320,18 @@ func (p2pService *P2pService) sendMessageRoutine(){
 		select {
 		case  outMsg := <-p2pService.outQuene:
 			//消息插入到输出队列的后，网络可能出现立即不通的情况。此时消息应该被丢弃。
-				go func() {
-					err := p2pService.sendMessage(outMsg) //outMsg.execute()
-					if err != nil{
-						//dead peer
-						p2pService.handleError(outMsg.Peer,p2pTypes.NewPeerError(err))
-						dlog.Error("p2p send msg err", "msg",outMsg, "err", err.Error())
-					}
-					select {
-					case outMsg.done <- err:
-					default:
-					}
-				}()
+			go func() {
+				err := p2pService.sendMessage(outMsg) //outMsg.execute()
+				if err != nil{
+					//dead peer
+					p2pService.handleError(outMsg.Peer,p2pTypes.NewPeerError(err))
+					dlog.Error("p2p send msg err", "msg",outMsg, "err", err.Error())
+				}
+				select {
+				case outMsg.done <- err:
+				default:
+				}
+			}()
 
 		case <- p2pService.quit:
 			return
@@ -394,7 +394,7 @@ func (p2pService *P2pService) sendMessage(outMessage *outMessage) error {
 			return &common.TransmissionError{MyError: common.MyError{Err: err}}
 		}
 
-		dlog.Debug("send message", "IP", conn.RemoteAddr(), "Content", reflect.TypeOf(outMessage.Msg).Name())
+		//dlog.Debug("send message", "IP", conn.RemoteAddr(), "Content", reflect.TypeOf(outMessage.Msg).String())
 		if err := p2pService.sendMessageInternal(conn, bytes); err != nil {
 			dlog.Error("Send error ", "Msg", err)
 			return &common.TransmissionError{MyError: common.MyError{Err: err}}

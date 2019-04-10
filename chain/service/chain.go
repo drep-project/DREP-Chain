@@ -19,11 +19,10 @@ import (
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/rpc"
 
+	"github.com/drep-project/binary"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	p2pService "github.com/drep-project/drep-chain/network/service"
 	rpc2 "github.com/drep-project/drep-chain/pkgs/rpc"
-	"github.com/drep-project/binary"
-	"fmt"
 )
 
 var (
@@ -242,13 +241,13 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey) 
 			Version:      common.Version,
 			PreviousHash: previousHash,
 			ChainId:      chainService.chainId,
-			GasLimit:     BlockGasLimit,
-			GasUsed:      gasUsed,
+			GasLimit:     *BlockGasLimit,
+			GasUsed:      *gasUsed,
 			Timestamp:    timestamp,
 			StateRoot:    stateRoot,
 			TxRoot:       merkleRoot,
 			Height:       height,
-			LeaderPubKey: leaderKey,
+			LeaderPubKey: *leaderKey,
 		},
 		Data: &chainTypes.BlockData{
 			TxCount: int32(len(finalTxs)),
@@ -291,28 +290,23 @@ func (chainService *ChainService) GenesisBlock(genesisPubkey string) *chainTypes
 	b := common.Bytes(genesisPubkey)
 	err := b.UnmarshalText(b)
 	if err != nil {
-		fmt.Println(11111)
 		return nil
 	}
 	pubkey, err := secp256k1.ParsePubKey(b)
 	if err != nil {
-		fmt.Println(2222)
 		return nil
 	}
-	var memberPks []*secp256k1.PublicKey = nil
-	fmt.Println(3333)
 	return &chainTypes.Block{
 		Header: &chainTypes.BlockHeader{
 			Version:      common.Version,
 			PreviousHash: &crypto.Hash{},
-			GasLimit:     BlockGasLimit,
-			GasUsed:      new(big.Int),
+			GasLimit:     *BlockGasLimit,
+			GasUsed:      *new(big.Int),
 			Timestamp:    1545282765,
 			StateRoot:    []byte{0},
 			TxRoot:       merkleRoot,
 			Height:       0,
-			LeaderPubKey: pubkey,
-			MinorPubKeys: memberPks,
+			LeaderPubKey: *pubkey,
 		},
 		Data: &chainTypes.BlockData{
 			TxCount: 0,
@@ -324,7 +318,7 @@ func (chainService *ChainService) GenesisBlock(genesisPubkey string) *chainTypes
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
 func (chainService *ChainService) accumulateRewards(b *chainTypes.Block, totalGasBalance *big.Int) {
 	reward := new(big.Int).SetUint64(uint64(Rewards))
-	leaderAddr := crypto.PubKey2Address(b.Header.LeaderPubKey)
+	leaderAddr := crypto.PubKey2Address(&b.Header.LeaderPubKey)
 
 	r := new(big.Int)
 	r = r.Div(reward, new(big.Int).SetInt64(2))
@@ -333,9 +327,11 @@ func (chainService *ChainService) accumulateRewards(b *chainTypes.Block, totalGa
 
 	num := len(b.Header.MinorPubKeys)
 	for _, memberPK := range b.Header.MinorPubKeys {
-		memberAddr := crypto.PubKey2Address(memberPK)
-		r.Div(reward, new(big.Int).SetInt64(int64(num*2)))
-		chainService.DatabaseService.AddBalance(&memberAddr, r, true)
+		if !memberPK.IsEqual(&b.Header.LeaderPubKey) {
+			memberAddr := crypto.PubKey2Address(&memberPK)
+			r.Div(reward, new(big.Int).SetInt64(int64(num*2)))
+			chainService.DatabaseService.AddBalance(&memberAddr, r, true)
+		}
 	}
 }
 

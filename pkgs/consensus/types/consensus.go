@@ -12,7 +12,7 @@ type Setup struct {
 
 type Commitment struct {
 	Height int64
-
+	BpKey                    *secp256k1.PublicKey
 	Q                    *secp256k1.PublicKey
 }
 
@@ -26,7 +26,7 @@ type Challenge struct {
 
 type Response struct {
 	Height int64
-
+	BpKey                 *secp256k1.PublicKey
 	S                     []byte
 }
 

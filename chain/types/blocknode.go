@@ -79,13 +79,13 @@ type BlockNode struct {
 	ChainId      app.ChainIdType
 	Version      int32
 	PreviousHash *crypto.Hash
-	GasLimit     *big.Int
-	GasUsed      *big.Int
+	GasLimit     big.Int
+	GasUsed      big.Int
 	MerkleRoot   []byte
 
-	LeaderPubKey *secp256k1.PublicKey
+	LeaderPubKey secp256k1.PublicKey
 
-	MinorPubKeys []*secp256k1.PublicKey
+	MinorPubKeys []secp256k1.PublicKey
 
 	Status BlockStatus
 }

@@ -14,14 +14,14 @@ type BlockHeader struct {
 	ChainId      app.ChainIdType
 	Version      int32
 	PreviousHash *crypto.Hash
-	GasLimit     *big.Int
-	GasUsed      *big.Int
+	GasLimit     big.Int
+	GasUsed      big.Int
 	Height       int64
 	Timestamp    int64
 	StateRoot    []byte
 	TxRoot       []byte
-	LeaderPubKey *secp256k1.PublicKey
-	MinorPubKeys []*secp256k1.PublicKey
+	LeaderPubKey secp256k1.PublicKey
+	MinorPubKeys []secp256k1.PublicKey
 }
 
 func (blockHeader *BlockHeader) Hash() *crypto.Hash {
@@ -63,6 +63,7 @@ func (block *Block) ToMessage() []byte {
 			Timestamp    :block.Header.Timestamp,
 			StateRoot    :block.Header.StateRoot,
 			TxRoot       :block.Header.TxRoot,
+			LeaderPubKey :block.Header.LeaderPubKey,
 		},
 		Data: block.Data,
 	}
