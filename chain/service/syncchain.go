@@ -29,7 +29,7 @@ func (chainService *ChainService) syncTxs() {
 				chainService.P2pServer.Send(task.peer.GetMsgRW(), chainTypes.MsgTypeTransaction, task.txs[i*maxTxsCount:(i+1)*maxTxsCount])
 				time.Sleep(time.Millisecond * maxSyncSleepTime)
 			}
-			fmt.Println(len(task.txs[count*maxTxsCount:]))
+
 			chainService.P2pServer.Send(task.peer.GetMsgRW(), chainTypes.MsgTypeTransaction, task.txs[count*maxTxsCount:])
 		case <-chainService.quit:
 			return

@@ -151,11 +151,6 @@ func (chainService *ChainService) handleHeaderReq(peer *chainTypes.PeerInfo, req
 	for i := req.FromHeight; i <= req.ToHeight; i++ {
 		node := chainService.BestChain.NodeByHeight(uint64(i))
 		if node != nil {
-			//h := node.Header()
-			//fmt.Printf("%#v\n", h)
-			//fmt.Println("PreviousHash ", hex.EncodeToString( h.PreviousHash.Bytes()),"h:",h.Height)
-			//fmt.Println("currHash ",hex.EncodeToString(h.Hash().Bytes()), h.Height)
-
 			headers = append(headers, node.Header())
 		}
 	}

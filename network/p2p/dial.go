@@ -146,9 +146,6 @@ func newDialState(self enode.ID, static []*enode.Node, bootnodes []*enode.Node, 
 }
 
 func (s *dialstate) addStatic(n *enode.Node) {
-	fmt.Printf("addStaticbbbbb:%s\n", n.String())
-	fmt.Printf("addStaticbbbbb:%s\n", n.ID())
-
 	// This overwrites the task instead of updating an existing
 	// entry, giving users the opportunity to force a resolve operation.
 	s.static[n.ID()] = &dialTask{flags: staticDialedConn, dest: n}

@@ -44,9 +44,6 @@ func addTx(t *testing.T, num uint64) error {
 	txPool.databaseApi.PutBalance(&addr, new(big.Int).SetUint64(amount), true)
 	txPool.databaseApi.Commit()
 
-	//balance := txPool.databaseApi.GetBalance(&addr, true)
-	//fmt.Println("222222222222", balance, addr.Hex())
-
 	nonce := txPool.databaseApi.GetNonce(&addr, false)
 	for i := 0; uint64(i) < num; i++ {
 		tx := chainTypes.NewTransaction(addr, crypto.CommonAddress{}, new(big.Int).SetInt64(100), nonce+uint64(i))
