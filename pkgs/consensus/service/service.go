@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/binary"
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
@@ -99,19 +98,19 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 		return err
 	}
 	consensusService.privkey = accountNode.PrivateKey
-	props := actor.FromProducer(func() actor.Actor {
-		return consensusService
-	})
-	pid, err := actor.SpawnNamed(props, "consensus_dbft")
-	if err != nil {
-		panic(err)
-	}
+	//props := actor.FromProducer(func() actor.Actor {
+	//	return consensusService
+	//})
+	//pid, err := actor.SpawnNamed(props, "consensus_dbft")
+	//if err != nil {
+	//	panic(err)
+	//}
 
-	router := consensusService.P2pServer.GetRouter()
-	chainP2pMessage := consensusService.P2pMessages()
-	for msgType, _ := range chainP2pMessage {
-		router.RegisterMsgHandler(msgType, pid)
-	}
+	//router := consensusService.P2pServer.GetRouter()
+	//chainP2pMessage := consensusService.P2pMessages()
+	//for msgType, _ := range chainP2pMessage {
+	//	router.RegisterMsgHandler(msgType, pid)
+	//}
 	consensusService.leader = NewLeader(consensusService.privkey, consensusService.P2pServer)
 	consensusService.member = NewMember(consensusService.privkey, consensusService.P2pServer)
 	consensusService.syncBlockEventChan = make(chan event.SyncBlockEvent)

@@ -155,20 +155,20 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 
 	chainService.InitStates()
 	chainService.transactionPool = txpool.NewTransactionPool(chainService.DatabaseService)
-	props := actor.FromProducer(func() actor.Actor {
-		return chainService
-	})
-	pid, err := actor.SpawnNamed(props, "chain_message")
-	if err != nil {
-		panic(err)
-	}
+	//props := actor.FromProducer(func() actor.Actor {
+	//	return chainService
+	//})
+	//pid, err := actor.SpawnNamed(props, "chain_message")
+	//if err != nil {
+	//	panic(err)
+	//}
 
-	chainService.pid = pid
-	router := chainService.P2pServer.GetRouter()
-	chainP2pMessage := chainService.P2pMessages()
-	for msgType, _ := range chainP2pMessage {
-		router.RegisterMsgHandler(msgType, pid)
-	}
+	//chainService.pid = pid
+	//router := chainService.P2pServer.GetRouter()
+	//chainP2pMessage := chainService.P2pMessages()
+	//for msgType, _ := range chainP2pMessage {
+	//	router.RegisterMsgHandler(msgType, pid)
+	//}
 
 	chainService.apis = []app.API{
 		app.API{
