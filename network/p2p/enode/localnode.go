@@ -18,6 +18,7 @@ package enode
 
 import (
 	"fmt"
+	"github.com/drep-project/drep-chain/crypto"
 	"net"
 	"reflect"
 	"strconv"
@@ -60,12 +61,13 @@ type LocalNode struct {
 // NewLocalNode creates a local node.
 func NewLocalNode(db *DB, key *secp256k1.PrivateKey) *LocalNode {
 	ln := &LocalNode{
-		id:       PubkeyToIDV4(&key.PublicKey),
+
 		db:       db,
 		key:      key,
 		udpTrack: netutil.NewIPTracker(iptrackWindow, iptrackContactWindow, iptrackMinStatements),
 		entries:  make(map[string]enr.Entry),
 	}
+	copy(ln.id[:], crypto.CompressPubkey(key.PubKey())[1:])
 	ln.seq = db.localSeq(ln.id)
 	ln.invalidate()
 	return ln

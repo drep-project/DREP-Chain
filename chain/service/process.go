@@ -56,10 +56,10 @@ func (cs *ChainService) checkHeader(header *chainTypes.BlockHeader) error {
 	}
 
 	//出块时间,容忍3秒时差
-	if header.Timestamp > uint64(time.Now().Unix() + 3) {
-		dlog.Error("block time err", "HeaderTime", time.Unix(int64(header.Timestamp), 0), "Now", time.Now())
-		return fmt.Errorf("block time err")
-	}
+	//if header.Timestamp > uint64(time.Now().Unix() + 3) {
+	//	dlog.Error("block time err", "HeaderTime", time.Unix(int64(header.Timestamp), 0), "Now", time.Now())
+	//	return fmt.Errorf("block time err")
+	//}
 
 	if header.GasLimit.Cmp(new(big.Int).Set(BlockGasLimit)) > 0 {
 		return errors.New("gas out block gas limit")
