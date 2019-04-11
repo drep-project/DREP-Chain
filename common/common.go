@@ -6,10 +6,11 @@ import (
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"math/rand"
 	"net"
+	"os"
 	"time"
 )
 
-var Version int32 = 1
+var Version uint64 = 1
 
 func HmAC(message, key []byte) []byte {
 	h := hmac.New(sha512.New, key)
@@ -37,3 +38,16 @@ func GenUnique() ([]byte, error) {
 
 	return sha3.Hash256(append([]byte(uni), randBytes...)), nil
 }
+
+// FileExist checks if a file exists at filePath.
+func FileExist(filePath string) bool {
+	_, err := os.Stat(filePath)
+	if err != nil && os.IsNotExist(err) {
+		return false
+	}
+
+	return true
+}
+
+
+type PrettyDuration time.Duration

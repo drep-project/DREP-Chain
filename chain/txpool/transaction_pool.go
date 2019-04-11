@@ -21,10 +21,8 @@ const maxSize = 100000
 
 type TransactionPool struct {
 	databaseApi *database.DatabaseService
-
-	//trans       *list.LinkedList
-	queue   map[crypto.CommonAddress]*txList
-	pending map[crypto.CommonAddress]*txList
+	queue       map[crypto.CommonAddress]*txList
+	pending     map[crypto.CommonAddress]*txList
 	//accountTran map[crypto.CommonAddress]*list.SortedLinkedList
 	allTxs  map[string]bool
 	mu      sync.Mutex
@@ -32,7 +30,7 @@ type TransactionPool struct {
 	tranCp  func(a interface{}, b interface{}) bool
 
 	//当前有序的最大的nonce大小,此值应该被存储到DB中（后续考虑txpool的DB存储，一起考虑）
-	pendingNonce     map[crypto.CommonAddress]int64
+	pendingNonce     map[crypto.CommonAddress]uint64
 	eventNewBlockSub event.Subscription
 	newBlockChan     chan []*crypto.CommonAddress
 	quit             chan struct{}
@@ -69,7 +67,7 @@ func NewTransactionPool(databaseApi *database.DatabaseService) *TransactionPool 
 	pool.queue = make(map[crypto.CommonAddress]*txList)
 	pool.pending = make(map[crypto.CommonAddress]*txList)
 	pool.newBlockChan = make(chan []*crypto.CommonAddress)
-	pool.pendingNonce = make(map[crypto.CommonAddress]int64)
+	pool.pendingNonce = make(map[crypto.CommonAddress]uint64)
 
 	return pool
 }
@@ -88,9 +86,23 @@ func (pool *TransactionPool) checkAndGetAddr(tx *chainTypes.Transaction) (error,
 	addr := tx.From()
 	// TODO Check sig
 	if pool.GetTransactionCount(addr) > tx.Nonce() {
-		fmt.Println("checkAndGetAddr:", pool.getTransactionCount(addr), tx.Nonce())
-		return fmt.Errorf("nonce err ,dbNonce:%d > txNonce:%d", pool.getTransactionCount(addr), tx.Nonce()), nil
+		dlog.Info("checkAndGetAddr:", "localNonce", pool.getTransactionCount(addr), "newTxNonce", tx.Nonce())
+		return fmt.Errorf("nonce err ,dbNonce:%d > txNonce:%d", pool.GetTransactionCount(addr), tx.Nonce()), nil
 	}
+
+	amount := new(big.Int).SetBytes(tx.Amount().Bytes())
+	gasLimit := new(big.Int).SetBytes(tx.GasLimit().Bytes())
+	gasPrice := new(big.Int).SetBytes(tx.GasPrice().Bytes())
+	total := big.NewInt(0)
+	total.Mul(gasLimit, gasPrice)
+	total.Add(total, amount)
+
+	addrBalance := pool.databaseApi.GetBalance(addr, false)
+	if addrBalance.Cmp(total) < 0 {
+		dlog.Debug("Not Enough Balance", "CurrentBalance", addrBalance.Int64(), "NeedBalance", total)
+		return fmt.Errorf("no enough balance"), nil
+	}
+
 	return nil, addr
 }
 
@@ -136,7 +148,7 @@ func (pool *TransactionPool) syncToPending(address *crypto.CommonAddress) {
 		pool.pending[*address] = newTxList(true)
 	}
 
-	var nonce int64
+	var nonce uint64
 	listPending := pool.pending[*address]
 	if len(list) > 0 {
 		for _, tx := range list {
@@ -164,13 +176,25 @@ func (pool *TransactionPool) removeTransaction(tran *chainTypes.Transaction) (bo
 	return true, true
 }
 
+func (pool *TransactionPool) GetQueue() []*chainTypes.Transaction {
+	var retrunTxs []*chainTypes.Transaction
+
+	for _, list := range pool.queue {
+		if !list.Empty() {
+			txs := list.Flatten()
+			retrunTxs = append(retrunTxs, txs...)
+		}
+	}
+
+	return retrunTxs
+}
+
 //打包过程获取交易，进行打包处理
 func (pool *TransactionPool) GetPending(GasLimit *big.Int) []*chainTypes.Transaction {
 	pool.mu.Lock()
 	gasCount := new(big.Int)
 
 	//转数据结构
-	//type HeapByNonce map[crypto.CommonAddress]*nonceTxsHeap
 	hbn := make(map[crypto.CommonAddress]*nonceTxsHeap)
 	func() {
 		for addr, list := range pool.pending {
@@ -254,13 +278,13 @@ func (pool *TransactionPool) adjust(addrList []*crypto.CommonAddress) {
 }
 
 //获取总的交易个数，即获取地址对应的nonce
-func (pool *TransactionPool) GetTransactionCount(address *crypto.CommonAddress) int64 {
+func (pool *TransactionPool) GetTransactionCount(address *crypto.CommonAddress) uint64 {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 	return pool.getTransactionCount(address)
 }
 
-func (pool *TransactionPool) getTransactionCount(address *crypto.CommonAddress) int64 {
+func (pool *TransactionPool) getTransactionCount(address *crypto.CommonAddress) uint64 {
 	if nonce, ok := pool.pendingNonce[*address]; ok {
 		return nonce
 	} else {

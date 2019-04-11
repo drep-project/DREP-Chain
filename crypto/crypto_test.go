@@ -95,7 +95,7 @@ func TestSign(t *testing.T) {
 	}
 
 	pubKey, _ := secp256k1.ParsePubKey(recoveredPub)
-	recoveredAddr := PubkeyToAddress(pubKey)
+	recoveredAddr := PubKey2Address(pubKey)
 	if addr != recoveredAddr {
 		t.Errorf("GetAddress mismatch: want: %x have: %x", addr, recoveredAddr)
 	}
@@ -105,7 +105,7 @@ func TestSign(t *testing.T) {
 	if err != nil {
 		t.Errorf("ECRecover error: %s", err)
 	}
-	recoveredAddr2 := PubkeyToAddress(recoveredPub2)
+	recoveredAddr2 := PubKey2Address(recoveredPub2)
 	if addr != recoveredAddr2 {
 		t.Errorf("GetAddress mismatch: want: %x have: %x", addr, recoveredAddr2)
 	}
@@ -123,7 +123,7 @@ func TestInvalidSign(t *testing.T) {
 func TestNewContractAddress(t *testing.T) {
 	key, _ := FromPrivString(testPrivHex)
 	addr := Hex2Address(testAddrHex)
-	genAddr := PubkeyToAddress(key.PubKey())
+	genAddr := PubKey2Address(key.PubKey())
 	// sanity check before using addr to create contract address
 	checkAddr(t, genAddr, addr)
 
@@ -140,7 +140,7 @@ func TestLoadECDSAFile(t *testing.T) {
 	fileName0 := "test_key0"
 	fileName1 := "test_key1"
 	checkKey := func(k *secp256k1.PrivateKey) {
-		checkAddr(t, PubkeyToAddress(k.PubKey()), Hex2Address(testAddrHex))
+		checkAddr(t, PubKey2Address(k.PubKey()), Hex2Address(testAddrHex))
 		loadedKeyBytes := k.Serialize()
 		if !bytes.Equal(loadedKeyBytes, keyBytes) {
 			t.Fatalf("private key mismatch: want: %x have: %x", keyBytes, loadedKeyBytes)

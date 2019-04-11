@@ -238,8 +238,8 @@ func (db *Database) Rollback(index int64) error {
 	return nil
 }
 
-func (db *Database) Rollback2Block(height int64) error {
-	indexVal, err := db.db.Get([]byte("depth_of_height_" + strconv.FormatInt(height, 10)), nil)
+func (db *Database) Rollback2Block(height uint64) error {
+	indexVal, err := db.db.Get([]byte("depth_of_height_" + strconv.FormatUint(height, 10)), nil)
 	if err != nil {
 		return err
 	}
@@ -247,13 +247,13 @@ func (db *Database) Rollback2Block(height int64) error {
 	return db.Rollback(index)
 }
 
-func (db *Database) RecordBlockJournal(height int64) error {
+func (db *Database) RecordBlockJournal(height uint64) error {
 	depthVal, err := db.db.Get([]byte("journal_depth"), nil)
 	if err != nil {
 		return err
 	}
 	depth := new(big.Int).SetBytes(depthVal).Int64()
-	return db.db.Put([]byte("depth_of_height_" + strconv.FormatInt(height, 10)), new(big.Int).SetInt64(depth).Bytes(), nil)
+	return db.db.Put([]byte("depth_of_height_" + strconv.FormatUint(height, 10)), new(big.Int).SetInt64(depth).Bytes(), nil)
 }
 
 func (db *Database) getStateRoot() []byte {

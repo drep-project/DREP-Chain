@@ -7,17 +7,18 @@ package secp256k1
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/hex"
 	"testing"
 )
 
 func TestGenerateSharedSecret(t *testing.T) {
-	privKey1, err := GeneratePrivateKey()
+	privKey1, err := GeneratePrivateKey(rand.Reader)
 	if err != nil {
 		t.Errorf("private key generation error: %s", err)
 		return
 	}
-	privKey2, err := GeneratePrivateKey()
+	privKey2, err := GeneratePrivateKey(rand.Reader)
 	if err != nil {
 		t.Errorf("private key generation error: %s", err)
 		return
@@ -37,7 +38,7 @@ func TestGenerateSharedSecret(t *testing.T) {
 
 // Test 1: Encryption and decryption
 func TestCipheringBasic(t *testing.T) {
-	privkey, err := GeneratePrivateKey()
+	privkey, err := GeneratePrivateKey(rand.Reader)
 	if err != nil {
 		t.Fatal("failed to generate private key")
 	}
@@ -85,7 +86,7 @@ func TestCiphering(t *testing.T) {
 }
 
 func TestCipheringErrors(t *testing.T) {
-	privkey, err := GeneratePrivateKey()
+	privkey, err := GeneratePrivateKey(rand.Reader)
 	if err != nil {
 		t.Fatal("failed to generate private key")
 	}

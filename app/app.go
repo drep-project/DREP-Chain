@@ -140,7 +140,7 @@ func (mApp DrepApp) Run() error {
 func (mApp DrepApp) action(ctx *cli.Context) error {
 	defer func() {
 		if err:=recover();err!=nil{
-			fmt.Println(err)
+			fmt.Println("app action err", err)
 		}
 		length := len(mApp.Context.Services)
 		for i:= length; i >0; i-- {

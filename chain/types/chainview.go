@@ -120,13 +120,13 @@ func (c *ChainView) setTip(node *BlockNode) {
 	// contract the slice accordingly.  The additional capacity is chosen
 	// such that the array should only have to be extended about once a
 	// week.
-	needed := int64(node.Height + 1)
-	if int64(cap(c.nodes)) < needed {
+	needed := uint64(node.Height + 1)
+	if uint64(cap(c.nodes)) < needed {
 		nodes := make([]*BlockNode, needed, needed+approxNodesPerWeek)
 		copy(nodes, c.nodes)
 		c.nodes = nodes
 	} else {
-		prevLen := int64(len(c.nodes))
+		prevLen := uint64(len(c.nodes))
 		c.nodes = c.nodes[0:needed]
 		for i := prevLen; i < needed; i++ {
 			c.nodes[i] = nil
@@ -158,8 +158,8 @@ func (c *ChainView) SetTip(node *BlockNode) {
 // to the caller to ensure the lock is held.
 //
 // This function MUST be called with the view mutex locked (for reads).
-func (c *ChainView) height() int64 {
-	return int64(len(c.nodes) - 1)
+func (c *ChainView) height() uint64 {
+	return uint64(len(c.nodes) - 1)
 }
 
 // Height returns the height of the tip of the chain view.  It will return -1 if
@@ -167,7 +167,7 @@ func (c *ChainView) height() int64 {
 // initialized).
 //
 // This function is safe for concurrent access.
-func (c *ChainView) Height() int64 {
+func (c *ChainView) Height() uint64 {
 	c.mtx.Lock()
 	height := c.height()
 	c.mtx.Unlock()
@@ -179,8 +179,8 @@ func (c *ChainView) Height() int64 {
 // version in that it is up to the caller to ensure the lock is held.
 //
 // This function MUST be called with the view mutex locked (for reads).
-func (c *ChainView) nodeByHeight(height int64) *BlockNode {
-	if height < 0 || height >= int64(len(c.nodes)) {
+func (c *ChainView) nodeByHeight(height uint64) *BlockNode {
+	if height < 0 || height >= uint64(len(c.nodes)) {
 		return nil
 	}
 
@@ -191,7 +191,7 @@ func (c *ChainView) nodeByHeight(height int64) *BlockNode {
 // returned if the height does not exist.
 //
 // This function is safe for concurrent access.
-func (c *ChainView) NodeByHeight(height int64) *BlockNode {
+func (c *ChainView) NodeByHeight(height uint64) *BlockNode {
 	c.mtx.Lock()
 	node := c.nodeByHeight(height)
 	c.mtx.Unlock()

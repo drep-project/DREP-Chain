@@ -21,7 +21,6 @@ func main() {
 	go func() {
 		fmt.Println("http://localhost:8080/debug/pprof")
 		http.ListenAndServe("0.0.0.0:8080", nil)
-
 	}()
 
 	debug.SetGCPercent(20)

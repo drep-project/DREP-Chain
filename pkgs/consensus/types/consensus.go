@@ -5,19 +5,19 @@ import (
 )
 
 type Setup struct {
-	Height int64
+	Height uint64
 
 	Msg                  []byte
 }
 
 type Commitment struct {
-	Height int64
+	Height uint64
 	BpKey                    *secp256k1.PublicKey
 	Q                    *secp256k1.PublicKey
 }
 
 type Challenge struct {
-	Height int64
+	Height uint64
 
 	SigmaPubKey          *secp256k1.PublicKey
 	SigmaQ               *secp256k1.PublicKey
@@ -25,13 +25,13 @@ type Challenge struct {
 }
 
 type Response struct {
-	Height int64
+	Height uint64
 	BpKey                 *secp256k1.PublicKey
 	S                     []byte
 }
 
 type Fail struct {
-	Height int64
+	Height uint64
 
 	Reason string
 }

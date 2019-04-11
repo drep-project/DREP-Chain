@@ -7,7 +7,7 @@ import (
 
 type BestState struct {
 	Hash      crypto.Hash
-	Height    int64
+	Height    uint64
 	MedianTime time.Time
 }
 

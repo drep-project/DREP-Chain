@@ -3,7 +3,6 @@ package app
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/asaskevich/EventBus"
 	"github.com/pkg/errors"
 	"gopkg.in/urfave/cli.v1"
@@ -58,9 +57,8 @@ type Service interface {
 	Name() string      // service  name must be unique
 	Api() []API        // Interfaces required for services
 	CommandFlags() ([]cli.Command, []cli.Flag) // flags required for services
-	P2pMessages() map[int]interface{}
-
-	Receive(context actor.Context)
+	//P2pMessages() map[int]interface{}
+	//Receive(context actor.Context)
 	Init(executeContext *ExecuteContext) error
 	Start(executeContext *ExecuteContext) error
 	Stop(executeContext *ExecuteContext) error
@@ -134,19 +132,19 @@ func (econtext *ExecuteContext) GetApis() []API {
 	return apis
 }
 
-//	GetApis aggregate interface functions for each service to provide for use by RPC services
-func (econtext *ExecuteContext) GetMessages() (map[int]interface{}, error)  {
-	msg := map[int]interface{}{}
-	for _, service := range econtext.Services {
-		for k, v := range service.P2pMessages() {
-			if _, ok := msg[k]; ok {
-				return nil, errors.New("exist p2p message")
-			}
-			msg[k] = v
-		}
-	}
-	return msg, nil
-}
+////	GetApis aggregate interface functions for each service to provide for use by RPC services
+//func (econtext *ExecuteContext) GetMessages() (map[int]interface{}, error)  {
+//	msg := map[int]interface{}{}
+//	for _, service := range econtext.Services {
+//		for k, v := range service.P2pMessages() {
+//			if _, ok := msg[k]; ok {
+//				return nil, errors.New("exist p2p message")
+//			}
+//			msg[k] = v
+//		}
+//	}
+//	return msg, nil
+//}
 
 //	RequireService When a service depends on another service, RequireService is used to obtain the dependent service.
 func (econtext *ExecuteContext) RequireService(name string) Service {

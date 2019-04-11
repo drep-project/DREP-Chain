@@ -12,7 +12,6 @@ import (
     "github.com/drep-project/drep-chain/crypto/secp256k1/schnorr"
     "github.com/drep-project/drep-chain/crypto/sha3"
     p2pService "github.com/drep-project/drep-chain/network/service"
-    p2pTypes "github.com/drep-project/drep-chain/network/types"
     consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
 )
 
@@ -46,7 +45,7 @@ type Member struct {
     cancelWaitSetUp  chan struct{}
     cancelWaitChallenge  chan struct{}
     currentState int
-    currentHeight int64
+	currentHeight       uint64
     stateLock sync.RWMutex
 
     msgPool	chan *consensusTypes.RouteMsgWrap
@@ -68,9 +67,9 @@ func NewMember(prvKey *secp256k1.PrivateKey, p2pServer p2pService.P2P) *Member {
     return member
 }
 
-func (member *Member) UpdateStatus(producers []*consensusTypes.MemberInfo,minMember int, curHeight int64){
-    member.producers = producers
-    member.currentHeight = curHeight
+func (member *Member) UpdateStatus(producers []*consensusTypes.MemberInfo, minMember int, curHeight uint64) {
+	member.producers = producers
+	member.currentHeight = curHeight
 
     member.liveMembers = []*consensusTypes.MemberInfo{}
     for _, producer := range producers {
@@ -102,7 +101,7 @@ func (member *Member) Reset(){
 }
 
 func (member *Member) ProcessConsensus() ([]byte, error) {
-    dlog.Debug("wait for leader's setup message", "IP",  member.leader.Peer.GetAddr())
+    dlog.Debug("wait for leader's setup message", "IP",  member.leader.Peer.IP())
     member.setState(WAIT_SETUP)
     member.isConsensus = true
     defer func() {
@@ -149,15 +148,15 @@ func (member *Member) WaitSetUp(){
     }
 }
 
-func (member *Member) OnSetUp(peer *p2pTypes.Peer, setUp *consensusTypes.Setup) {
-    if !member.isConsensus {
-        member.msgPool <- &consensusTypes.RouteMsgWrap{
-            Peer: peer,
-            SetUpMsg: setUp,
-        }
-        dlog.Debug("restore setup message")
-        return
-    }
+func (member *Member) OnSetUp(peer *consensusTypes.PeerInfo, setUp *consensusTypes.Setup) {
+	if !member.isConsensus {
+		member.msgPool <- &consensusTypes.RouteMsgWrap{
+			Peer:     peer,
+			SetUpMsg: setUp,
+		}
+		dlog.Debug("restore setup message")
+		return
+	}
 
     if member.currentHeight < setUp.Height {
         dlog.Debug("setup low height", "Receive Height", setUp.Height, "Current Height", member.currentHeight, "Status", member.getState())
@@ -176,7 +175,7 @@ func (member *Member) OnSetUp(peer *p2pTypes.Peer, setUp *consensusTypes.Setup) 
     }
 
     dlog.Debug("receive setup message")
-    if member.leader.Peer.Ip == peer.Ip {
+    if member.leader.Peer.IP() == peer.IP() {
         member.msg = setUp.Msg
         member.msgHash = sha3.Hash256(setUp.Msg)
         member.commit()
@@ -207,7 +206,7 @@ func (member *Member) WaitChallenge(){
     }
 }
 
-func (member *Member) OnChallenge(peer *p2pTypes.Peer, challengeMsg *consensusTypes.Challenge) {
+func (member *Member) OnChallenge(peer *consensusTypes.PeerInfo, challengeMsg *consensusTypes.Challenge) {
     if member.currentHeight < challengeMsg.Height {
         dlog.Debug("challenge high height", "Receive Height", challengeMsg.Height, "Current Height", member.currentHeight, "Status", member.getState())
         member.pushErrorMsg(HighHeightError)
@@ -223,7 +222,7 @@ func (member *Member) OnChallenge(peer *p2pTypes.Peer, challengeMsg *consensusTy
         return
     }
     dlog.Debug("recieved challenge message")
-    if member.leader.Peer.Ip == peer.Ip && bytes.Equal(member.msgHash, challengeMsg.R) {
+    if member.leader.Peer.IP() == peer.IP() && bytes.Equal(member.msgHash, challengeMsg.R) {
         member.response(challengeMsg)
         dlog.Debug("response has sent")
         member.setState(COMPLETED)
@@ -238,12 +237,12 @@ func (member *Member) OnChallenge(peer *p2pTypes.Peer, challengeMsg *consensusTy
     //check fail not response and start new round
 }
 
-func (member *Member) OnFail(peer *p2pTypes.Peer, failMsg *consensusTypes.Fail){
-    if member.currentHeight < failMsg.Height || member.getState() == COMPLETED || member.getState() == ERROR {
-        return
-    }
-    dlog.Error("member receive leader's err message", "msg", failMsg.Reason)
-    member.pushErrorMsg(failMsg.Reason)
+func (member *Member) OnFail(peer *consensusTypes.PeerInfo, failMsg *consensusTypes.Fail) {
+	if member.currentHeight < failMsg.Height || member.getState() == COMPLETED || member.getState() == ERROR {
+		return
+	}
+	dlog.Error("member receive leader's err message", "msg", failMsg.Reason)
+	member.pushErrorMsg(failMsg.Reason)
 }
 
 func (member *Member) commit()  {
@@ -265,7 +264,7 @@ func (member *Member) commit()  {
         Q: (*secp256k1.PublicKey)(nouncePk),
     }
     commitment.Height = member.currentHeight
-    member.p2pServer.SendAsync(member.leader.Peer, commitment)
+	member.p2pServer.SendAsync(member.leader.Peer.GetMsgRW(), consensusTypes.MsgTypeCommitment, commitment)
 }
 
 func (member *Member) response(challengeMsg *consensusTypes.Challenge) {
@@ -278,7 +277,7 @@ func (member *Member) response(challengeMsg *consensusTypes.Challenge) {
         response := &consensusTypes.Response{S: sig.Serialize()}
         response.BpKey = member.prvKey.PubKey()
         response.Height = member.currentHeight
-        member.p2pServer.SendAsync(member.leader.Peer, response)
+	member.p2pServer.SendAsync(member.leader.Peer.GetMsgRW(), consensusTypes.MsgTypeResponse, response)
     }else{
         dlog.Error("commit messsage and chanllenge message not matched")
     }

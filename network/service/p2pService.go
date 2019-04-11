@@ -1,63 +1,33 @@
 package service
 
 import (
-	"errors"
-	"fmt"
-	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/drep-project/binary"
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	p2pComponent "github.com/drep-project/drep-chain/network/component"
-	"github.com/drep-project/drep-chain/network/component/nat"
+	"github.com/drep-project/drep-chain/network/p2p"
+	"github.com/drep-project/drep-chain/network/p2p/enode"
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
 	"gopkg.in/urfave/cli.v1"
-	"io"
-	"net"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
 )
 
 const (
-	MaxLivePeer = 200
-	MaxDeadPeer = 200
 	MaxConnections = 4000
-	UPnPStart  = false
-)
-
-var (
-	DefaultP2pConfig = &p2pTypes.P2pConfig{
-		ListerAddr :"0.0.0.0",
-		Port: 55555,
-		BootNodes:[]p2pTypes.BootNode{},
-	}
 )
 
 type P2pService struct {
-	prvKey *secp256k1.PrivateKey
-	livePeer map[string]*p2pTypes.Peer //key = ip, value peer
-	deadPeer []*p2pTypes.Peer
-	apis []app.API
-	Router *p2pTypes.MessageRouter
-	Config *p2pTypes.P2pConfig
-
-	outQuene chan *outMessage
-	inQuene chan *p2pTypes.RouteIn
-
-	tryTimer *time.Ticker
-	connectCount int32
-	pid *actor.PID
-	peerOpLock sync.RWMutex
-	quit chan struct{}
+	prvKey   *secp256k1.PrivateKey
+	apis     []app.API
+	Config   *p2pTypes.P2pConfig
+	outQuene chan *outMessage //消息发出去前，要进入此缓存中
+	quit     chan struct{}
+	server   *p2p.Server //底层p2p管理器
 }
 
 type outMessage struct {
-	Peer *p2pTypes.Peer
-	Msg  interface{}
-	done chan error
+	w       p2p.MsgWriter
+	msgType uint64
+	Msg     interface{}
+	done    chan error
 }
 
 func (p2pService *P2pService) Name() string {
@@ -72,55 +42,38 @@ func (p2pService *P2pService) CommandFlags() ([]cli.Command, []cli.Flag) {
 	return nil, []cli.Flag{}
 }
 
-func (p2pService *P2pService) P2pMessages() map[int]interface{} {
-	return map[int]interface{}{
-		p2pTypes.MsgTypePing : p2pTypes.Ping{},
-		p2pTypes.MsgTypePong : p2pTypes.Pong{},
-	}
-}
-
 func (p2pService *P2pService) Init(executeContext *app.ExecuteContext) error {
-	p2pMessages, err := executeContext.GetMessages()
-	if err != nil {
-		return err
-	}
-	for msgType, msgInstance := range p2pMessages {
-		err := p2pComponent.RegisterMap(msgType, msgInstance)
-		if err != nil {
-			return err
-		}
-	}
 	// config
-	p2pService.Config = DefaultP2pConfig
-	err = executeContext.UnmashalConfig(p2pService.Name(), p2pService.Config)
+	p2pService.Config = p2pTypes.DefaultP2pConfig
+	err := executeContext.UnmashalConfig(p2pService.Name(), p2pService.Config)
 	if err != nil {
+		dlog.Error("p2pService init err", "err", err)
 		return err
 	}
 
-	p2pService.prvKey, err = secp256k1.GeneratePrivateKey(nil)
-	if err != nil {
-		//TODO shoud never occur
-		dlog.Error("generate private key error ", "Reason", err)
-		return err
-	}
-	p2pService.livePeer = make(map[string]*p2pTypes.Peer)
-	p2pService.deadPeer = []*p2pTypes.Peer{}
-	p2pService.inQuene = make(chan *p2pTypes.RouteIn,MaxConnections*2)
-	p2pService.outQuene = make(chan *outMessage,MaxConnections*2)
-	props := actor.FromProducer(func() actor.Actor {
-		return p2pService
-	})
+	p2pService.Config.DataDir = executeContext.CommonConfig.HomeDir
+	p2pService.outQuene = make(chan *outMessage, MaxConnections*2)
 
-	pid, err := actor.SpawnNamed(props, "peer_message")
-	if err != nil {
-		panic(err)
+	if p2pService.Config.PrivateKey == nil {
+		p2pService.Config.PrivateKey = p2pService.Config.GeneratePrivateKey()
 	}
-	p2pService.Router = p2pTypes.NewMsgRouter(p2pService.inQuene)
-	p2pService.Router.RegisterMsgHandler(p2pTypes.MsgTypePing,pid)
-	p2pService.Router.RegisterMsgHandler(p2pTypes.MsgTypePong,pid)
-	p2pService.pid = pid
+	//n.serverConfig.Name = n.config.NodeName()
+	//n.serverConfig.Logger = n.log
+	//if n.serverConfig.StaticNodes == nil {
+	//	n.serverConfig.StaticNodes = n.config.StaticNodes()
+	//}
+	//if n.serverConfig.TrustedNodes == nil {
+	//	n.serverConfig.TrustedNodes = n.config.TrustedNodes()
+	//}
+	//if n.serverConfig.NodeDatabase == "" {
+	//	n.serverConfig.NodeDatabase = n.config.NodeDB()
+	//}
 
-	p2pService.apis =  []app.API{
+	p2pService.server = &p2p.Server{
+		Config: p2pService.Config.Config,
+	}
+
+	p2pService.apis = []app.API{
 		app.API{
 			Namespace: "p2p",
 			Version:   "1.0",
@@ -133,199 +86,49 @@ func (p2pService *P2pService) Init(executeContext *app.ExecuteContext) error {
 	return nil
 }
 
+func (p2pService *P2pService) AddProtocols(protocols []p2p.Protocol) {
+	p2pService.server.ProtocolsBlockChan = append(p2pService.server.ProtocolsBlockChan, protocols[:len(protocols)]...)
+}
+
 func (p2pService *P2pService) Start(executeContext *app.ExecuteContext) error {
-	p2pService.initBootNodes()
-	go p2pService.receiveRoutine()
+	p2pService.server.Start()
 	go p2pService.sendMessageRoutine()
-	go p2pService.recoverDeadPeer()
 	return nil
 }
 
 func (p2pService *P2pService) Stop(executeContext *app.ExecuteContext) error {
+	if p2pService.server == nil {
+		return nil
+	}
+	p2pService.server.Stop()
+	if p2pService.quit != nil{
+		close(p2pService.quit)
+	}
+
 	return nil
 }
 
-func (p2pService *P2pService) initBootNodes(){
-	//init safe
-	for _, bootNode := range p2pService.Config.BootNodes {
-		if p2pService.isLocalIp(bootNode.IP) {
-			continue
-		}
-
-		p2pService.AddPeer(bootNode.IP)
-	}
-}
-
-func (p2pService *P2pService) receiveRoutine(){
-	//room for modification addr := &net.TCPAddr{IP: net.ParseIP("x.x.x.x"), Port: receiver.listeningPort()}
-	addr := &net.TCPAddr{Port: p2pService.Config.Port}
-	if UPnPStart {
-		nat.Map("tcp", p2pService.Config.Port, p2pService.Config.Port, "drep nat")
-	}
-
-	listener, err := net.ListenTCP("tcp", addr)
-	dlog.Debug("P2p Service started", "addr", listener.Addr())
-	if err != nil {
-		dlog.Info("error", err)
-		return
-	}
-
-	for {
-		dlog.Info("start listen", "port", p2pService.Config.Port)
-		conn, err := listener.AcceptTCP()
-		dlog.Info("listen from ", "accept address", conn.RemoteAddr())
-		if err != nil {
-			continue
-		}
-
-		connChanels := make(chan *net.TCPConn,MaxConnections)
-		go func(){
-			for{
-				conn, err := listener.AcceptTCP()
-				if err != nil {
-					continue
-				}
-				connChanels <- conn
-			}
-		}()
-
-		for{
-			select {
-			case conn := <- connChanels:
-				go func(connTemp *net.TCPConn){
-					addr := connTemp.RemoteAddr().String()
-					msg, msgType, pubkey, err := p2pService.waitForMessage(connTemp)
-					if err != nil {
-						if err.Error() == "no msg"{
-							return
-						}else{
-							dlog.Debug("receive message error ","ErrMessage", err.Error())
-							return
-						}
-					}
-					//dlog.Debug("receive message", "IP", conn.RemoteAddr(), "Content", reflect.TypeOf(msg).String())
-					peer, err := p2pService.preProcessReq(addr, pubkey)
-					if err != nil {
-						return
-					}
-					p2pService.inQuene <- &p2pTypes.RouteIn{
-						Type: msgType,
-						Peer: peer,
-						Detail: msg,
-					}
-				}(conn)
-			}
-		}
-	}
-}
-
-func (p2pService *P2pService) preProcessReq(addr string, pk *secp256k1.PublicKey) (*p2pTypes.Peer, error){
-	ipPort := strings.Split(addr,":")
-	if p2pService.isLocalIp(ipPort[0]) {
-		return nil, errors.New("not allow local ip")
-	}
-	livePeer := p2pService.GetPeer(ipPort[0])
-	if livePeer == nil {
-		deadPeer := p2pService.selectDeadPeer(ipPort[0])
-		if deadPeer != nil {
-			deadPeer.Conn.ReStart()
-			p2pService.addPeer(deadPeer)
-			livePeer = deadPeer
-		}else {
-			livePeer = p2pTypes.NewPeer( ipPort[0], p2pTypes.DefaultPort, p2pService.handleError, p2pService.sendPing) // //no way to find port
-			p2pService.addPeer(livePeer)
-		}
-	}
-	return livePeer, nil
-}
-
-func (p2pService *P2pService) waitForMessage(conn *net.TCPConn)(interface{}, int, *secp256k1.PublicKey, error){
-	defer conn.Close()
-	sizeBytes, err := p2pService.receiveMessageInternal(conn, 4)
-	size := (int(sizeBytes[0]) << 24) + (int(sizeBytes[1]) << 16) + (int(sizeBytes[2]) << 8) + int(sizeBytes[3])
-	if size == 0 {
-		return nil, 0, nil, errors.New("no msg")
-	}
-	bytes, err := p2pService.receiveMessageInternal(conn, size)
-	if err != nil {
-		return nil, 0, nil, errors.New("fail to read message ")
-	}
-	//addr := conn.RemoteAddr().String()
-	//log.Debug("receive msg", "Addr", conn.RemoteAddr().String(),"Content", string(bytes))
-	return p2pComponent.Deserialize(bytes)
-}
-
-func (p2pService *P2pService) receiveMessageInternal(conn net.Conn, size int) ([]byte, error) {
-	bytes := make([]byte, size)
-	offset := 0
-	for offset < size {
-		n, err := conn.Read(bytes[offset:])
-		offset += n
-		if err == io.EOF {
-			return bytes, nil
-		} else if err != nil {
-			return nil, err
-		}
-	}
-	return bytes, nil
-}
-
-func (p2pService *P2pService) handPing(peer *p2pTypes.Peer, ping *p2pTypes.Ping){
-	p2pService.SendAsync(peer,&p2pTypes.Pong{})
-}
-
-func (p2pService *P2pService) handPong(peer *p2pTypes.Peer, pong *p2pTypes.Pong){
-	select {
-	case peer.Conn.PongTimeoutCh <- false:
-	default:
-	}
-}
-
-func (p2pService *P2pService) handleError(peer *p2pTypes.Peer, err error){
-	if err != nil {
-		//TimeoutError
-		if pErr,ok := err.(*p2pTypes.PeerError);ok {
-			dlog.Error("handleError", "err", pErr.Error())
-			peer.Conn.Stop()
-
-			p2pService.addDeadPeer(peer)
-		}
-	}
-}
-
-func (p2pService *P2pService) sendPing(peer *p2pTypes.Peer){
-	p2pService.SendAsync(peer, &p2pTypes.Ping{})
-}
-
-func (p2pService *P2pService) SendAsync(peer *p2pTypes.Peer, msg interface{}) chan error{
-	done := make(chan error,1)
-	p2pService.outQuene <-  &outMessage{Peer: peer, Msg:msg,done:done}
+func (p2pService *P2pService) SendAsync(w p2p.MsgWriter, msgType uint64, msg interface{}) chan error {
+	done := make(chan error, 1)
+	p2pService.outQuene <- &outMessage{w: w, Msg: msg, msgType: msgType, done: done}
 	return done
 }
 
-func (p2pService *P2pService) Send(peer *p2pTypes.Peer, msg interface{}) error{
-	done := make(chan error,1)
-	p2pService.outQuene <-  &outMessage{Peer: peer, Msg:msg,done:done}
+func (p2pService *P2pService) Send(rw p2p.MsgWriter, msgType uint64, msg interface{}) error {
+	done := make(chan error, 1)
+	p2pService.outQuene <- &outMessage{w: rw, Msg: msg, msgType: msgType, done: done}
 	return <-done
 }
 
-func (p2pService *P2pService) Broadcast(msg interface{}){
-	for _, peer := range p2pService.livePeer {
-		p2pService.outQuene <-  &outMessage{Peer: peer, Msg:msg}
-	}
-}
-
-func (p2pService *P2pService) sendMessageRoutine(){
+func (p2pService *P2pService) sendMessageRoutine() {
 	for {
 		select {
-		case  outMsg := <-p2pService.outQuene:
+		case outMsg := <-p2pService.outQuene:
 			//消息插入到输出队列的后，网络可能出现立即不通的情况。此时消息应该被丢弃。
 			go func() {
 				err := p2pService.sendMessage(outMsg) //outMsg.execute()
-				if err != nil{
-					//dead peer
-					p2pService.handleError(outMsg.Peer,p2pTypes.NewPeerError(err))
-					dlog.Error("p2p send msg err", "msg",outMsg, "err", err.Error())
+				if err != nil {
+					dlog.Error("p2p send msg err", "msg", outMsg.msgType, "err", err.Error())
 				}
 				select {
 				case outMsg.done <- err:
@@ -333,278 +136,57 @@ func (p2pService *P2pService) sendMessageRoutine(){
 				}
 			}()
 
-		case <- p2pService.quit:
+		case <-p2pService.quit:
 			return
 		}
 	}
 }
 
 func (p2pService *P2pService) sendMessage(outMessage *outMessage) error {
-	message, err := p2pComponent.Serialize(outMessage.Msg, p2pService.prvKey)
-	if err != nil {
-		dlog.Info("error during cipher:", "reason", err)
-		return &common.DataError{MyError:common.MyError{Err:err}}
-	}
-	d, err := time.ParseDuration("3s")
-	if err != nil {
-		dlog.Error(err.Error())
-		return &common.DefaultError{}
-	}
-
-	p2pService.peerOpLock.Lock()
-	if _, ok := p2pService.livePeer[outMessage.Peer.Ip]; !ok {
-		p2pService.peerOpLock.Unlock()
-		return errors.New("peer is offline")
-	}
-	p2pService.peerOpLock.Unlock()
-
-	conn, err := net.DialTimeout("tcp", outMessage.Peer.GetAddr(), d)
-	if err != nil {
-		if conn != nil{
-			defer conn.Close()
-		}
-		dlog.Info("p2p sendmsg dial", "err", err)
-		if ope, ok := err.(*net.OpError); ok {
-			if ope.Timeout() {
-				return &common.TimeoutError{MyError:common.MyError{Err:ope}}
-			} else {
-				return &common.ConnectionError{MyError:common.MyError{Err:ope}}
-			}
-		}
-
-		return err
-	}
-
-	now := time.Now()
-	d2, err := time.ParseDuration("5s")
-	if err != nil {
-		dlog.Error(err.Error())
-		return &common.DefaultError{}
-	} else {
-		conn.SetDeadline(now.Add(d2))
-	}
-	if bytes, err := binary.Marshal(message); err == nil {
-		size := len(bytes)
-		sizeBytes := make([]byte, 4)
-		sizeBytes[0] = byte((size & 0xFF000000) >> 24)
-		sizeBytes[1] = byte((size & 0x00FF0000) >> 16)
-		sizeBytes[2] = byte((size & 0x0000FF00) >> 8)
-		sizeBytes[3] = byte(size & 0x000000FF)
-		if err := p2pService.sendMessageInternal(conn, sizeBytes); err != nil {
-			return &common.TransmissionError{MyError: common.MyError{Err: err}}
-		}
-
-		//dlog.Debug("send message", "IP", conn.RemoteAddr(), "Content", reflect.TypeOf(outMessage.Msg).String())
-		if err := p2pService.sendMessageInternal(conn, bytes); err != nil {
-			dlog.Error("Send error ", "Msg", err)
-			return &common.TransmissionError{MyError: common.MyError{Err: err}}
-		} else {
-			return nil
-		}
-	} else {
-		return &common.DataError{MyError:common.MyError{Err:err}}
-	}
+	return p2p.Send(outMessage.w, (uint64)(outMessage.msgType), outMessage.Msg)
 }
 
-func (p2pService *P2pService) sendMessageInternal(conn net.Conn, bytes []byte) error {
-	offset := 0
-	size := len(bytes)
-	for offset < size {
-		if num, err := conn.Write(bytes[offset:]); err == nil {
-			offset += num
-		} else {
-			return err
-		}
-	}
-	return nil
-}
+func (p2pService *P2pService) Peers() ([]*p2p.Peer) {
+	peers := p2pService.server.Peers()
 
-// TODO p2p operate must be consider more details   1) less lock time； 2）fast query  3）correct peer and deadpeer state
-func (p2pService *P2pService) recoverDeadPeer(){
-	p2pService.tryTimer = time.NewTicker(time.Second * 30)
-	for {
-		select  {
-		case  <-p2pService.tryTimer.C:
-			p2pService.peerOpLock.Lock()
-			tryPeerCount := 0
-			if len(p2pService.deadPeer) < 40 { //TODO   MAXPEER * RATE  200*0.2
-				tryPeerCount = len(p2pService.deadPeer)
-			} else {
-				tryPeerCount = len(p2pService.deadPeer)/5 //RATE
-			}
-			tryPeer :=  []*p2pTypes.Peer{}
-			for i :=0; i < tryPeerCount; i++ {
-				tryPeer = append(tryPeer, p2pService.deadPeer[i])
-			}
-			p2pService.peerOpLock.Unlock()
-			for _, deadPeer := range tryPeer {
-				if deadPeer.Conn.Connect() {
-					deadPeer.Conn.ReStart()
-					p2pService.addPeer(deadPeer)
-					dlog.Trace("try to connect peer success", "Addr", deadPeer.GetAddr())
-				}else{
-					deadPeer.Conn.Stop()
-					p2pService.addDeadPeer(deadPeer)
-					dlog.Trace("try to connect peer fail", "Addr", deadPeer.GetAddr())
-				}
-			}
-		}
-	}
-}
-
-func (p2pService *P2pService) GetRouter() (*p2pTypes.MessageRouter) {
-	return  p2pService.Router
-}
-
-func (p2pService *P2pService) Peers() ([]*p2pTypes.Peer) {
-	peers := make([]*p2pTypes.Peer, 0, len(p2pService.livePeer))
-	for _, v := range p2pService.livePeer {
-		peers = append(peers, v)
-	}
 	return peers
 }
 
-func (p2pService *P2pService) GetPeer(ip string)(*p2pTypes.Peer){
-	for _,peer := range p2pService.livePeer {
-		if peer.Ip == ip {
-			return peer
-		}
+func (p2pService *P2pService) AddPeer(nodeUrl string) error {
+	n := enode.Node{}
+	err := n.UnmarshalText([]byte(nodeUrl))
+
+	if err == nil {
+		p2pService.server.AddPeer(&n)
+	} else {
+		dlog.Error("add peer", "err", err)
 	}
-	return nil
+	return err
 }
 
-func (p2pService *P2pService) selectDeadPeer(ip string)(*p2pTypes.Peer){
-	for _,peer := range p2pService.deadPeer {
-		if peer.Ip == ip {
-			return peer
-		}
-	}
-	return nil
-}
+// nodeUrl："enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555"
+func (p2pService *P2pService) RemovePeer(nodeUrl string) {
+	n := enode.Node{}
+	err := n.UnmarshalText([]byte(nodeUrl))
 
-func (p2pService *P2pService) AddPeer(addr string) error {
-	port := p2pTypes.DefaultPort
-	ip := addr
-	if strings.Contains(addr, ":") {
-		ipPort := strings.Split(addr, ":")
-
-		var err error
-		ip = ipPort[0]
-		port, err = strconv.Atoi(ipPort[1])
-		if err != nil {
-			return err
-		}
-	}
-	if p2pService.isLocalIp(ip) {
-		return nil
-	}
-	peer := p2pTypes.NewPeer(ip, port, p2pService.handleError, p2pService.sendPing)
-	if peer.Conn.Connect() {
-		peer.Conn.Start()
-		p2pService.addPeer(peer)
-		return nil
-	} else{
-		p2pService.addDeadPeer(peer)
-		return errors.New("cant not conntect ip" + ip + ":" + strconv.FormatInt(int64(port), 10))
+	if err == nil {
+		p2pService.server.RemovePeer(&n)
+	} else {
+		dlog.Error("remove peer", "err", err)
 	}
 }
 
-func (p2pService *P2pService) RemovePeer(addr string)  {
-	ip := addr
-	if strings.Contains(addr, ":") {
-		ipPort := strings.Split(addr, ":")
-		ip = ipPort[0]
-	}
-
-	p2pService.peerOpLock.Lock()
-	defer p2pService.peerOpLock.Unlock()
-
-	delete(p2pService.livePeer, ip)
-
-	for index, peer := range p2pService.deadPeer {
-		if peer.Ip ==  ip {
-			p2pService.deadPeer = append(p2pService.deadPeer[0:index], p2pService.deadPeer[index+1:len(p2pService.deadPeer)]...)
-			break
-		}
-	}
-}
-
-func (p2pService *P2pService) addPeer(peer *p2pTypes.Peer){
-	p2pService.peerOpLock.Lock()
-	defer p2pService.peerOpLock.Unlock()
-
-	if len(p2pService.livePeer) > MaxLivePeer {
-		return
-	}
-
-	if _,ok := p2pService.livePeer[peer.Ip];ok {
-		return
-	}
-	p2pService.livePeer[peer.Ip] = peer
-	fmt.Println("add peer ip:", peer.Ip)
-
-	index := p2pService.indexPeer(p2pService.deadPeer,peer)
-	if index > -1 {
-		p2pService.deadPeer = append(p2pService.deadPeer[0:index], p2pService.deadPeer[index+1:len(p2pService.deadPeer)]...)
-	}
-}
-
-func (p2pService *P2pService) addDeadPeer(peer *p2pTypes.Peer){
-	p2pService.peerOpLock.Lock()
-	defer p2pService.peerOpLock.Unlock()
-
-	delete(p2pService.livePeer,peer.Ip)
-
-	index := p2pService.indexPeer(p2pService.deadPeer,peer)
-	if index == -1 {
-		if len(p2pService.deadPeer) > MaxDeadPeer {
-			//remove top peer
-			p2pService.deadPeer = p2pService.deadPeer[1:len(p2pService.deadPeer)]
-		}
-		p2pService.deadPeer = append(p2pService.deadPeer,peer)
-	}
-}
-
-func (p2pService *P2pService) indexPeer(peers []*p2pTypes.Peer,peer *p2pTypes.Peer) int {
-	for index, _peer := range  peers {
-		if _peer == peer {
-			return index
-		}
-	}
-	return -1
-}
-
-func (p2pService *P2pService) isLocalIp(ip string) bool{
-	addrs, err := net.InterfaceAddrs()
-	if err != nil{
-		return false
-	}
-	for _, value := range addrs{
-		if ipnet, ok := value.(*net.IPNet); ok{
-			if ipnet.IP.String() == ip {
-				return  true
-			}
-		}
-	}
-	return false
-}
-
-//todo 增加ttl机制，让慢的服务器少做事
-func (p2pService *P2pService) SetIdle(peer *p2pTypes.Peer, idle bool) {
-	peer.SetIdle(idle)
-}
-
-func (p2pService *P2pService) GetIdlePeers(count int) []*p2pTypes.Peer {
-	peers := make([]*p2pTypes.Peer, 0)
-	for _, p := range p2pService.livePeer {
-		if p.GetIdle() == true{
-			peers = append(peers, p)
-			count --
-			if count <= 0 {
-				break
-			}
-		}
-	}
-
-	return peers
-}
+//func (p2pService *P2pService) isLocalIp(ip string) bool {
+//	addrs, err := net.InterfaceAddrs()
+//	if err != nil {
+//		return false
+//	}
+//	for _, value := range addrs {
+//		if ipnet, ok := value.(*net.IPNet); ok {
+//			if ipnet.IP.String() == ip {
+//				return true
+//			}
+//		}
+//	}
+//	return false
+//}

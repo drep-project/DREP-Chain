@@ -15,4 +15,7 @@ const (
 	maxSyncSleepTime      = 200                 //同步的过程中，每个周期休息200毫秒
 	maxNetworkTimeout     = 5                   //最大网络超时时间
 	Rewards               = 1000000000000000000 //每出一个块，系统奖励的币数目
+	maxLivePeer           = 20
+	broadcastRatio        = 3    //非本地产生的消息，广播的个数是broadcastRatio分之一
+	maxTxsCount           = 1024 //最多一次传输交易的个数
 )

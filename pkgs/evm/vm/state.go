@@ -32,7 +32,7 @@ func NewState(databaseService *database.DatabaseService) *State {
 }
 
 
-func (s *State) CreateContractAccount(callerAddr crypto.CommonAddress, nonce int64) (*chainTypes.Account, error) {
+func (s *State) CreateContractAccount(callerAddr crypto.CommonAddress, nonce uint64) (*chainTypes.Account, error) {
 	account, err := chainTypes.NewContractAccount(callerAddr, nonce)
 	if err != nil {
 		return nil, err
@@ -57,11 +57,11 @@ func (s *State) GetBalance(addr *crypto.CommonAddress,) *big.Int {
 	return s.databaseApi.GetBalance(addr, true)
 }
 
-func (s *State) SetNonce(addr *crypto.CommonAddress, nonce int64) error {
+func (s *State) SetNonce(addr *crypto.CommonAddress, nonce uint64) error {
 	return s.databaseApi.PutNonce(addr, nonce, true)
 }
 
-func (s *State) GetNonce(addr *crypto.CommonAddress,) int64 {
+func (s *State) GetNonce(addr *crypto.CommonAddress,) uint64 {
 	return s.databaseApi.GetNonce(addr, true)
 }
 

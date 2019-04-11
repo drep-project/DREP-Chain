@@ -4,6 +4,7 @@ import (
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
+
 	"math/big"
 	"sort"
 	"time"
@@ -72,20 +73,19 @@ type BlockNode struct {
 
 	StateRoot []byte
 
-	TimeStamp int64
+	TimeStamp uint64
 	// heigh is the position in the block chain.
-	Height int64
+	Height uint64
 
 	ChainId      app.ChainIdType
-	Version      int32
+	Version      uint64
 	PreviousHash *crypto.Hash
 	GasLimit     big.Int
 	GasUsed      big.Int
 	MerkleRoot   []byte
 
-	LeaderPubKey secp256k1.PublicKey
-
-	MinorPubKeys []secp256k1.PublicKey
+	LeaderPubKey *secp256k1.PublicKey
+	MinorPubKeys []*secp256k1.PublicKey
 
 	Status BlockStatus
 }
@@ -102,8 +102,8 @@ func InitBlockNode(node *BlockNode, blockHeader *BlockHeader, parent *BlockNode)
 		TimeStamp:    blockHeader.Timestamp,
 		ChainId:      blockHeader.ChainId,
 		Version:      blockHeader.Version,
-		GasLimit:     blockHeader.GasLimit,
-		GasUsed:      blockHeader.GasUsed,
+		GasLimit:     *blockHeader.GasLimit,
+		GasUsed:      *blockHeader.GasUsed,
 		MerkleRoot:   blockHeader.TxRoot,
 		LeaderPubKey: blockHeader.LeaderPubKey,
 		MinorPubKeys: blockHeader.MinorPubKeys,
@@ -139,9 +139,9 @@ func (node *BlockNode) Header() BlockHeader {
 		Timestamp:    node.TimeStamp,
 		ChainId:      node.ChainId,
 		Version:      node.Version,
-		PreviousHash: *prevHash,
-		GasLimit:     node.GasLimit,
-		GasUsed:      node.GasUsed,
+		PreviousHash: prevHash,
+		GasLimit:     &node.GasLimit,
+		GasUsed:      &node.GasUsed,
 		TxRoot:       node.MerkleRoot,
 		LeaderPubKey: node.LeaderPubKey,
 		MinorPubKeys: node.MinorPubKeys,
@@ -154,7 +154,7 @@ func (node *BlockNode) Header() BlockHeader {
 // than zero.
 //
 // This function is safe for concurrent access.
-func (node *BlockNode) Ancestor(height int64) *BlockNode {
+func (node *BlockNode) Ancestor(height uint64) *BlockNode {
 	if height < 0 || height > node.Height {
 		return nil
 	}
@@ -172,7 +172,7 @@ func (node *BlockNode) Ancestor(height int64) *BlockNode {
 // height minus provided distance.
 //
 // This function is safe for concurrent access.
-func (node *BlockNode) RelativeAncestor(distance int64) *BlockNode {
+func (node *BlockNode) RelativeAncestor(distance uint64) *BlockNode {
 	return node.Ancestor(node.Height - distance)
 }
 
@@ -187,7 +187,7 @@ func (node *BlockNode) CalcPastMedianTime() time.Time {
 	numNodes := 0
 	iterNode := node
 	for i := 0; i < medianTimeBlocks && iterNode != nil; i++ {
-		timestamps[i] = iterNode.TimeStamp
+		timestamps[i] = int64(iterNode.TimeStamp)
 		numNodes++
 
 		iterNode = iterNode.Parent

@@ -8,8 +8,6 @@ import (
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/crypto/secp256k1/schnorr"
-	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
 	"math/big"
 
@@ -64,16 +62,17 @@ func (chainService *ChainService) ValidateTransactionsInBlock(blockdata *chainTy
 }
 
 func (chainService *ChainService) ValidateMultiSig(b *chainTypes.Block) bool {
-	participators := []*secp256k1.PublicKey{}
-	for index, val := range b.MultiSig.Bitmap {
-		if val == 1 {
-			producer := chainService.Config.Producers[index]
-			participators = append(participators, producer.Public)
-		}
-	}
-	msg := b.ToMessage()
-	sigmaPk := schnorr.CombinePubkeys(participators)
-	return schnorr.Verify(sigmaPk, sha3.Hash256(msg), b.MultiSig.Sig.R, b.MultiSig.Sig.S)
+	return true
+	//participators := []*secp256k1.PublicKey{}
+	//for index, val := range b.MultiSig.Bitmap {
+	//	if val == 1 {
+	//		//producer := chainService.Config.Producers[index]
+	//		//participators = append(participators, producer.Public)
+	//	}
+	//}
+	//msg := b.ToMessage()
+	//sigmaPk := schnorr.CombinePubkeys(participators)
+	//return schnorr.Verify(sigmaPk, sha3.Hash256(msg), b.MultiSig.Sig.R, b.MultiSig.Sig.S)
 }
 
 func (chainService *ChainService) ExecuteBlock(b *chainTypes.Block) (gasUsed *big.Int, err error) {
@@ -135,7 +134,7 @@ func (chainService *ChainService) preSync(block *chainTypes.Block) {
 	childTrans = append(childTrans, block.Data.TxList...)
 }
 
-func (chainService *ChainService) doSync(height int64) {
+func (chainService *ChainService) doSync(height uint64) {
 	if !chainService.isRelay || chainService.chainId == chainService.RootChain() || height%2 != 0 || height == 0 {
 		return
 	}
@@ -267,7 +266,7 @@ func (chainService *ChainService) executeCallContractTransaction(t *chainTypes.T
 	}
 }
 
-func  (chainService *ChainService) checkNonce(fromAccount *crypto.CommonAddress, nounce int64) error{
+func  (chainService *ChainService) checkNonce(fromAccount *crypto.CommonAddress, nounce uint64) error{
 	nonce := chainService.DatabaseService.GetNonce(fromAccount, true)
 	if nonce > nounce {
 		return errors.New("error nounce")

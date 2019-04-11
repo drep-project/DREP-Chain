@@ -36,7 +36,7 @@ func (chainService *ChainService) checkBody(block *chainTypes.Block) error {
 		return fmt.Errorf("transaction root hash mismatch: have %x, want %x", string(txRoot), string(block.Header.TxRoot))
 	}
 
-	//签名是否正确
+	//todo 签名是否正确
 	//crypto.ValidateSignatureValues()
 	return nil
 }
@@ -50,15 +50,16 @@ func (cs *ChainService) checkHeader(header *chainTypes.BlockHeader) error {
 		return nil
 	}
 
-	parentBlock, err := cs.DatabaseService.GetBlock(&header.PreviousHash)
-	if err == nil && header.Height != parentBlock.Header.Height +1 {
+	parentBlock, err := cs.DatabaseService.GetBlock(header.PreviousHash)
+	if err == nil && header.Height != parentBlock.Header.Height+1 {
 		return errors.New("head height err")
 	}
 
-	//出块时间
-	//if header.Timestamp > time.Now().Unix() {
-	//	return fmt.Errorf("block time err", "HeaderTime", time.Unix(header.Timestamp,0), "Now", time.Now())
-	//}
+	//出块时间,容忍3秒时差
+	if header.Timestamp > uint64(time.Now().Unix() + 3) {
+		dlog.Error("block time err", "HeaderTime", time.Unix(int64(header.Timestamp), 0), "Now", time.Now())
+		return fmt.Errorf("block time err")
+	}
 
 	if header.GasLimit.Cmp(new(big.Int).Set(BlockGasLimit)) > 0 {
 		return errors.New("gas out block gas limit")
@@ -80,6 +81,7 @@ func (cs *ChainService) checkBlock(block *chainTypes.Block) error {
 	}
 
 	//todo check sig
+	//todo 确认块的生产者是否正确
 	return nil
 }
 
@@ -89,7 +91,7 @@ func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, b
 
 	err := chainService.checkBlock(block)
 	if err != nil {
-		dlog.Info("process Block", "err", err)
+		dlog.Info("process Block check block", "err", err)
 		return false, false, err
 	}
 
@@ -107,8 +109,8 @@ func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, b
 	// Handle orphan blocks.
 	zeroHash := crypto.Hash{}
 	prevHash := block.Header.PreviousHash
-	prevHashExists := chainService.blockExists(&prevHash)
-	if !prevHashExists && prevHash != zeroHash {
+	prevHashExists := chainService.blockExists(prevHash)
+	if !prevHashExists && *prevHash != zeroHash {
 		chainService.addOrphanBlock(block)
 		return false, true, nil
 	}
@@ -167,7 +169,7 @@ func (chainService *ChainService) processOrphans(hash *crypto.Hash) error {
 }
 
 func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (bool, error) {
-	prevNode := chainService.Index.LookupNode(&block.Header.PreviousHash)
+	prevNode := chainService.Index.LookupNode(block.Header.PreviousHash)
 	//store block
 	err := chainService.DatabaseService.PutBlock(block)
 	if err != nil {
@@ -381,13 +383,13 @@ func (chainService *ChainService) InitStates() error {
 			if !blockHash.IsEqual(chainService.genesisBlock.Header.Hash()) {
 				return fmt.Errorf("initChainState: Expected  first entry in block index to be genesis block, found %s", blockHash)
 			}
-		} else if header.PreviousHash == *lastNode.Hash {
+		} else if header.PreviousHash == lastNode.Hash {
 			// Since we iterate block headers in order of height, if the
 			// blocks are mostly linear there is a very good chance the
 			// previous header processed is the parent.
 			parent = lastNode
 		} else {
-			parent = chainService.Index.LookupNode(&header.PreviousHash)
+			parent = chainService.Index.LookupNode(header.PreviousHash)
 			if parent == nil {
 				return fmt.Errorf(fmt.Sprintf("initChainState: Could not find parent for block %s", header.Hash()))
 			}
@@ -457,7 +459,7 @@ func (chainService *ChainService) createChainState() error {
 	// Initialize the state related to the best block.  Since it is the
 	// genesis block, use its timestamp for the median time.
 
-	chainService.StateSnapshot = chainTypes.NewBestState(node, time.Unix(node.TimeStamp, 0))
+	chainService.StateSnapshot = chainTypes.NewBestState(node, time.Unix(int64(node.TimeStamp), 0))
 
 	//blockIndexBucketName
 

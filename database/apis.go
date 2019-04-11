@@ -76,7 +76,7 @@ func (database *DatabaseService) PutBlockNode(blockNode *chainType.BlockNode) er
     return database.db.db.Put(key, value, nil)
 }
 
-func (database *DatabaseService) blockIndexKey(blockHash *crypto.Hash, blockHeight int64) []byte {
+func (database *DatabaseService) blockIndexKey(blockHash *crypto.Hash, blockHeight uint64) []byte {
     indexKey := make([]byte, len(BlockNodePrefix)+crypto.HashLength+8)
     copy(indexKey[0:len(BlockNodePrefix)], BlockNodePrefix[:])
     binary.BigEndian.PutUint64(indexKey[len(BlockNodePrefix):len(BlockNodePrefix)+8], uint64(blockHeight))
@@ -84,7 +84,7 @@ func (database *DatabaseService) blockIndexKey(blockHash *crypto.Hash, blockHeig
     return indexKey
 }
 
-func (database *DatabaseService) GetBlockNode(hash *crypto.Hash, height int64) (*chainType.BlockHeader, chainType.BlockStatus, error) {
+func (database *DatabaseService) GetBlockNode(hash *crypto.Hash, height uint64) (*chainType.BlockHeader, chainType.BlockStatus, error) {
     key := database.blockIndexKey(hash, height)
     value, err := database.db.get(key, false)
     if err != nil {
@@ -139,11 +139,11 @@ func (database *DatabaseService) GetChainState() *chainType.BestState {
     return state
 }
 
-func (database *DatabaseService) Rollback2Block(height int64) {
+func (database *DatabaseService) Rollback2Block(height uint64) {
      database.db.Rollback2Block(height)
 }
 
-func (database *DatabaseService) RecordBlockJournal(height int64) {
+func (database *DatabaseService) RecordBlockJournal(height uint64) {
     database.db.RecordBlockJournal(height)
 }
 
@@ -207,15 +207,15 @@ func (database *DatabaseService) PutBalance(addr *crypto.CommonAddress, balance 
     return database.PutStorage(addr, storage, transactional)
 }
 
-func (database *DatabaseService) GetNonce(addr *crypto.CommonAddress, transactional bool) int64 {
+func (database *DatabaseService) GetNonce(addr *crypto.CommonAddress, transactional bool) uint64 {
     storage := database.GetStorage(addr, transactional)
     if storage == nil {
-        return -1
+        return 0
     }
     return storage.Nonce
 }
 
-func (database *DatabaseService) PutNonce(addr *crypto.CommonAddress, nonce int64, transactional bool) error {
+func (database *DatabaseService) PutNonce(addr *crypto.CommonAddress, nonce uint64, transactional bool) error {
     storage := database.GetStorage(addr, transactional)
     if storage == nil {
         return errors.New("no account storage found")

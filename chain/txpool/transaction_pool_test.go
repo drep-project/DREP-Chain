@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-var txNum1 int = 1000000
+var txNum1 uint64 = 1000000
 var txNum2 int = 100000
 var txPool *TransactionPool
 var feed event.Feed
@@ -32,7 +32,7 @@ func TestNewTransactions(t *testing.T) {
 	txPool.Start(&feed)
 }
 
-func addTx(t *testing.T, num int) error {
+func addTx(t *testing.T, num uint64) error {
 	b := common.Bytes("0x0373654ccdb250f2cfcfe64c783a44b9ea85bc47f2f00c480d05082428d277d6d0")
 	b.UnmarshalText(b)
 	pubkey, _ := secp256k1.ParsePubKey(b)
@@ -48,8 +48,8 @@ func addTx(t *testing.T, num int) error {
 	//fmt.Println("222222222222", balance, addr.Hex())
 
 	nonce := txPool.databaseApi.GetNonce(&addr, false)
-	for i := 0; i < num; i++ {
-		tx := chainTypes.NewTransaction(addr, crypto.CommonAddress{}, new(big.Int).SetInt64(100), nonce+int64(i))
+	for i := 0; uint64(i) < num; i++ {
+		tx := chainTypes.NewTransaction(addr, crypto.CommonAddress{}, new(big.Int).SetInt64(100), nonce+uint64(i))
 		err := txPool.AddTransaction(tx)
 		if err != nil {
 			return err
@@ -82,7 +82,7 @@ func TestAddIntevalTX(t *testing.T) {
 			continue
 		}
 
-		tx := chainTypes.NewTransaction(addr, crypto.CommonAddress{}, new(big.Int).SetInt64(100000000), int64(i))
+		tx := chainTypes.NewTransaction(addr, crypto.CommonAddress{}, new(big.Int).SetUint64(100000000), uint64(i))
 		txPool.AddTransaction(tx)
 	}
 }
@@ -94,7 +94,7 @@ func TestSyncTx(t *testing.T) {
 //池子里面的都是未处理的交易
 func TestGetPendingTxs(t *testing.T) {
 	TestNewTransactions(t)
-	ch := make(chan int64)
+	ch := make(chan uint64)
 	go func() {
 		err := addTx(t, txNum1)
 		if err != nil {
@@ -102,11 +102,11 @@ func TestGetPendingTxs(t *testing.T) {
 		}
 
 		time.Sleep(time.Second * 10)
-		ch <- int64(txNum1)
+		ch <- txNum1
 	}()
 
 	func() {
-		var nonce int64
+		var nonce uint64
 		for {
 			select {
 			case num := <-ch:

@@ -778,7 +778,7 @@ func TestSplitKRand(t *testing.T) {
 
 // Test this curve's usage with the ecdsa package.
 func testKeyGeneration(t *testing.T, c *KoblitzCurve, tag string) {
-	priv, err := GeneratePrivateKey()
+	priv, err := GeneratePrivateKey(rand.Reader)
 	if err != nil {
 		t.Errorf("%s: error: %s", tag, err)
 		return
@@ -793,7 +793,7 @@ func TestKeyGeneration(t *testing.T) {
 }
 
 func testSignAndVerify(t *testing.T, c *KoblitzCurve, tag string) {
-	priv, _ := GeneratePrivateKey()
+	priv, _ := GeneratePrivateKey(rand.Reader)
 	pubx, puby := priv.Public()
 	pub := NewPublicKey(pubx, puby)
 

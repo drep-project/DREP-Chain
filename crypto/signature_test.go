@@ -18,13 +18,16 @@ package crypto
 
 import (
 	"bytes"
+	"crypto/rand"
+	"encoding/hex"
+	"fmt"
+	"github.com/drep-project/drep-chain/common/math"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"reflect"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/drep-chain/common/hexutil"
 )
 
 var (
@@ -120,16 +123,26 @@ func TestPubkeyRandom(t *testing.T) {
 	const runs = 200
 
 	for i := 0; i < runs; i++ {
-		key, err := GenerateKey(nil)
+		key, err := GenerateKey(rand.Reader)
 		if err != nil {
 			t.Fatalf("iteration %d: %v", i, err)
 		}
-		pubkey2, err := DecompressPubkey(CompressPubkey(key.PubKey()))
+
+		id := fmt.Sprintf("%x", CompressPubkey(key.PubKey())[1:])
+		b := make([]byte, len([]byte(id))/2)
+		j, err := hex.Decode(b, []byte(id))
+
+		c := append([]byte{0x3}, []byte(b)...)
+		pubkey2, err := DecompressPubkey([]byte(c))
+		//pubkey2, err := DecompressPubkey(CompressPubkey(key.PubKey()))
 		if err != nil {
-			t.Fatalf("iteration %d: %v", i, err)
+			fmt.Println("iteration:", i,j, err)
+			continue
 		}
-		if !reflect.DeepEqual(key.PublicKey, *pubkey2) {
-			t.Fatalf("iteration %d: keys not equal", i)
+		if !reflect.DeepEqual(key.PubKey(), pubkey2) {
+			fmt.Println("iteration : keys not equal", i, CompressPubkey(key.PubKey())[:1])
+		} else {
+			fmt.Println("iteration : keys equal", i, CompressPubkey(key.PubKey())[:1])
 		}
 	}
 }

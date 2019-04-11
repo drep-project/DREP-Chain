@@ -5,14 +5,14 @@ import (
 	"github.com/drep-project/drep-chain/crypto"
 )
 
-type heightHeap []int64
+type heightHeap []uint64
 
 func (h heightHeap) Len() int           { return len(h) }
 func (h heightHeap) Less(i, j int) bool { return h[i] < h[j] }
 func (h heightHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
 
 func (h *heightHeap) Push(x interface{}) {
-	*h = append(*h, x.(int64))
+	*h = append(*h, x.(uint64))
 }
 
 func (h *heightHeap) Pop() interface{} {
@@ -25,19 +25,19 @@ func (h *heightHeap) Pop() interface{} {
 
 //根据hash对应的块高度，对hash排队
 type heightSortedMap struct {
-	items map[int64]*syncHeaderHash // Hash map storing the syncHeaderHash data
+	items map[uint64]*syncHeaderHash // Hash map storing the syncHeaderHash data
 	index *heightHeap               // Heap of nonces of all the stored syncHeaderHash (non-strict mode)
 }
 
 // newHeightSortedMap creates a new nonce-sorted syncHeaderHash map.
 func newHeightSortedMap() *heightSortedMap {
 	return &heightSortedMap{
-		items: make(map[int64]*syncHeaderHash),
+		items: make(map[uint64]*syncHeaderHash),
 		index: new(heightHeap),
 	}
 }
 
-func (m *heightSortedMap) Get(nonce int64) *syncHeaderHash {
+func (m *heightSortedMap) Get(nonce uint64) *syncHeaderHash {
 	return m.items[nonce]
 }
 
@@ -51,7 +51,7 @@ func (m *heightSortedMap) Put(shh *syncHeaderHash) {
 
 // Remove deletes a syncHeaderHash from the maintained map, returning whether the
 // syncHeaderHash was found.
-func (m *heightSortedMap) Remove(height int64) bool {
+func (m *heightSortedMap) Remove(height uint64) bool {
 	// Short circuit if no transaction is present
 	_, ok := m.items[height]
 	if !ok {
@@ -74,12 +74,12 @@ func (m *heightSortedMap) Len() int {
 	return len(m.items)
 }
 
-func (m *heightSortedMap) GetSortedHashs(count int) ([]crypto.Hash, map[crypto.Hash]int64) {
+func (m *heightSortedMap) GetSortedHashs(count int) ([]crypto.Hash, map[crypto.Hash]uint64) {
 	hashs := make([]crypto.Hash, 0, count)
-	syncHeaderHashs := make(map[crypto.Hash]int64)
+	syncHeaderHashs := make(map[crypto.Hash]uint64)
 
 	for i := 0; i < count && m.Len() > 0; i++ {
-		h := heap.Pop(m.index).(int64)
+		h := heap.Pop(m.index).(uint64)
 		hashs = append(hashs, *m.items[h].headerHash)
 		syncHeaderHashs[*m.items[h].headerHash] = h
 		delete(m.items, h)

@@ -11,6 +11,7 @@ import (
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/database"
+	"github.com/drep-project/drep-chain/network/p2p"
 	p2pService "github.com/drep-project/drep-chain/network/service"
 	accountService "github.com/drep-project/drep-chain/pkgs/accounts/service"
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
@@ -51,6 +52,7 @@ type ConsensusService struct {
 	//During the process of synchronizing blocks, the miner stopped mining
 	pauseForSync bool
 	start        bool
+	peersInfo    map[string]*consensusTypes.PeerInfo
 
 	quit chan struct{}
 }
@@ -65,16 +67,6 @@ func (consensusService *ConsensusService) Api() []app.API {
 
 func (consensusService *ConsensusService) CommandFlags() ([]cli.Command, []cli.Flag) {
 	return nil, []cli.Flag{EnableConsensusFlag}
-}
-
-func (consensusService *ConsensusService) P2pMessages() map[int]interface{} {
-	return map[int]interface{}{
-		consensusTypes.MsgTypeSetUp:      consensusTypes.Setup{},
-		consensusTypes.MsgTypeCommitment: consensusTypes.Commitment{},
-		consensusTypes.MsgTypeChallenge:  consensusTypes.Challenge{},
-		consensusTypes.MsgTypeResponse:   consensusTypes.Response{},
-		consensusTypes.MsgTypeFail:       consensusTypes.Fail{},
-	}
 }
 
 func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContext) error {
@@ -98,19 +90,25 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 		return err
 	}
 	consensusService.privkey = accountNode.PrivateKey
-	//props := actor.FromProducer(func() actor.Actor {
-	//	return consensusService
-	//})
-	//pid, err := actor.SpawnNamed(props, "consensus_dbft")
-	//if err != nil {
-	//	panic(err)
-	//}
+	consensusService.peersInfo = make(map[string]*consensusTypes.PeerInfo)
 
-	//router := consensusService.P2pServer.GetRouter()
-	//chainP2pMessage := consensusService.P2pMessages()
-	//for msgType, _ := range chainP2pMessage {
-	//	router.RegisterMsgHandler(msgType, pid)
-	//}
+	consensusService.P2pServer.AddProtocols([]p2p.Protocol{
+		p2p.Protocol{
+			Name:   "consensusService",
+			Length: consensusTypes.NumberOfMsg,
+			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
+				if _, ok := consensusService.Config.Producers[peer.IP()]; ok {
+					pi := consensusTypes.NewPeerInfo(peer, rw)
+					consensusService.peersInfo[peer.IP()] = pi
+					defer delete(consensusService.peersInfo, peer.IP())
+					return consensusService.receiveMsg(pi, rw)
+				}
+				//非骨干节点，不启动共识相关处理
+				return nil
+			},
+		},
+	})
+
 	consensusService.leader = NewLeader(consensusService.privkey, consensusService.P2pServer)
 	consensusService.member = NewMember(consensusService.privkey, consensusService.P2pServer)
 	consensusService.syncBlockEventChan = make(chan event.SyncBlockEvent)
@@ -161,7 +159,7 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 	consensusService.start = true
 
 	go func() {
-		minMember := int(math.Ceil(float64(len(consensusService.ChainService.Config.Producers))*2/3))
+		minMember := int(math.Ceil(float64(len(consensusService.Config.Producers)) * 2 / 3))
 
 		select {
 		case <-consensusService.quit:
@@ -206,7 +204,7 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 				if err != nil {
 					dlog.Debug("Producer Block Fail", "Reason", err.Error())
 				} else {
-					consensusService.P2pServer.Broadcast(block)
+					consensusService.ChainService.BroadcastBlock(chainTypes.MsgTypeBlock, block, true)
 					consensusService.ChainService.ProcessBlock(block)
 					dlog.Info("Submit Block ", "Height", consensusService.ChainService.BestChain.Height(), "txs:", block.Data.TxCount)
 				}
@@ -222,7 +220,7 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 }
 
 func (consensusService *ConsensusService) Stop(executeContext *app.ExecuteContext) error {
-	if !consensusService.Config.EnableConsensus {
+	if consensusService.Config == nil || !consensusService.Config.EnableConsensus {
 		return nil
 	}
 
@@ -233,7 +231,7 @@ func (consensusService *ConsensusService) Stop(executeContext *app.ExecuteContex
 
 func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, error) {
 	consensusService.member.Reset()
-	
+
 	dlog.Trace("node member is going to process consensus for round 1")
 	block := &chainTypes.Block{}
 	consensusService.member.validator = func(msg []byte) bool {
@@ -257,11 +255,11 @@ func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, erro
 		if err != nil {
 			return false
 		}
-		minorPubkeys := []secp256k1.PublicKey{}
-		for index, producer := range consensusService.ChainService.Config.Producers {
-			if multiSig.Bitmap[index] == 1 {
-				minorPubkeys = append(minorPubkeys, *producer.Public)
-			}
+		minorPubkeys := []*secp256k1.PublicKey{}
+		for _, pubkey := range consensusService.Config.Producers {
+			//if multiSig.Bitmap[index] == 1 {
+				minorPubkeys = append(minorPubkeys, pubkey)
+			//}
 		}
 		block.Header.MinorPubKeys = minorPubkeys
 		block.MultiSig = multiSig
@@ -310,11 +308,11 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 	}
 	dlog.Trace("node leader finishes process consensus for round 2")
 
-	minorPubkeys := []secp256k1.PublicKey{}
-	for index, producer := range consensusService.ChainService.Config.Producers {
-		if multiSig.Bitmap[index] == 1 {
-			minorPubkeys = append(minorPubkeys, *producer.Public)
-		}
+	minorPubkeys := []*secp256k1.PublicKey{}
+	for _, pubkey := range consensusService.Config.Producers {
+		//if multiSig.Bitmap[index] == 1 {
+			minorPubkeys = append(minorPubkeys, pubkey)
+		//}
 	}
 	block.Header.MinorPubKeys = minorPubkeys
 	block.MultiSig = multiSig
@@ -341,8 +339,8 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 }
 
 func (consensusService *ConsensusService) isProduce() bool {
-	for _, produce := range consensusService.ChainService.Config.Producers {
-		if produce.Public.IsEqual(consensusService.pubkey) {
+	for _, pubkey := range consensusService.Config.Producers {
+		if pubkey.IsEqual(consensusService.pubkey) {
 			return true
 		}
 	}
@@ -350,20 +348,29 @@ func (consensusService *ConsensusService) isProduce() bool {
 }
 
 func (consensusService *ConsensusService) collectMemberStatus() []*consensusTypes.MemberInfo {
-	produceInfos := make([]*consensusTypes.MemberInfo, len(consensusService.ChainService.Config.Producers))
-	for i, produce := range consensusService.ChainService.Config.Producers {
-		peer := consensusService.P2pServer.GetPeer(produce.Ip)
-		isOnLine := peer != nil
-		isMe := consensusService.pubkey.IsEqual(produce.Public)
+	produceInfos := make([]*consensusTypes.MemberInfo, 0, len(consensusService.Config.Producers))
+	for ip, pubkey := range consensusService.Config.Producers {
+		var (
+			IsOnline, ok bool
+			pi           *consensusTypes.PeerInfo
+		)
+
+		isMe := consensusService.pubkey.IsEqual(pubkey)
 		if isMe {
-			isOnLine = true
+			IsOnline = true
+		} else {
+			//todo  peer获取到的IP地址和配置的ip地址是否相等（nat后是否相等,从tcp原理来看是相等的）
+			if pi, ok = consensusService.peersInfo[ip]; ok {
+				IsOnline = true
+			}
 		}
-		produceInfos[i] = &consensusTypes.MemberInfo{
-			Producer: produce,
-			Peer:     peer,
+
+		produceInfos = append(produceInfos, &consensusTypes.MemberInfo{
+			Producer: &consensusTypes.Producer{Public: pubkey, Ip: ip},
+			Peer:     pi,
 			IsMe:     isMe,
-			IsOnline: isOnLine,
-		}
+			IsOnline: IsOnline,
+		})
 	}
 	return produceInfos
 }
@@ -377,7 +384,7 @@ func (consensusService *ConsensusService) moveToNextMiner(produceInfos []*consen
 		}
 	}
 	curentHeight := consensusService.ChainService.BestChain.Height()
-	liveMinerIndex := int(curentHeight % int64(len(liveMembers)))
+	liveMinerIndex := int(curentHeight % uint64(len(liveMembers)))
 	curMiner := liveMembers[liveMinerIndex]
 
 	for index, produce := range produceInfos {
@@ -398,12 +405,21 @@ func (consensusService *ConsensusService) moveToNextMiner(produceInfos []*consen
 	}
 }
 
+//本函数只能广播本模块定义的消息
+func (consensusService *ConsensusService) BroadcastConsensusMsg(msgType int, msg interface{}) {
+	go func() {
+		for _, peer := range consensusService.peersInfo {
+			consensusService.P2pServer.Send(peer.GetMsgRW(), uint64(msgType), msg)
+		}
+	}()
+}
+
 func (consensusService *ConsensusService) getWaitTime() (time.Time, time.Duration) {
 	// max_delay_time +(min_block_interval)*windows = expected_block_interval*windows
 	// 6h + 5s*windows = 10s*windows
 	// windows = 4320
 
-	lastBlockTime := time.Unix(consensusService.ChainService.BestChain.Tip().TimeStamp, 0)
+	lastBlockTime := time.Unix(int64(consensusService.ChainService.BestChain.Tip().TimeStamp), 0)
 	targetTime := lastBlockTime.Add(blockInterval)
 	now := time.Now()
 	if targetTime.Before(now) {
@@ -440,12 +456,11 @@ func (consensusService *ConsensusService) getWaitTime() (time.Time, time.Duratio
 	*/
 }
 
-
-func  (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) bool {
+func (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) bool {
 	err := consensusService.ChainService.ValidateTransactionsInBlock(block.Data)
 	return err == nil
 }
 
-func  (consensusService *ConsensusService) multySigVerify(block *chainTypes.Block) bool {
+func (consensusService *ConsensusService) multySigVerify(block *chainTypes.Block) bool {
 	return consensusService.ChainService.ValidateMultiSig(block)
 }

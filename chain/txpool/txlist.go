@@ -10,14 +10,14 @@ import (
 
 // nonceHeap is a heap.Interface implementation over 64bit unsigned integers for
 // retrieving sorted transactions from the possibly gapped future queue.
-type nonceHeap []int64
+type nonceHeap []uint64
 
 func (h nonceHeap) Len() int           { return len(h) }
 func (h nonceHeap) Less(i, j int) bool { return h[i] < h[j] }
 func (h nonceHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
 
 func (h *nonceHeap) Push(x interface{}) {
-	*h = append(*h, x.(int64))
+	*h = append(*h, x.(uint64))
 }
 
 func (h *nonceHeap) Pop() interface{} {
@@ -31,21 +31,21 @@ func (h *nonceHeap) Pop() interface{} {
 // txSortedMap is a nonce->transaction hash map with a heap based index to allow
 // iterating over the contents in a nonce-incrementing way.
 type txSortedMap struct {
-	items map[int64]*chainTypes.Transaction // Hash map storing the transaction data
-	index *nonceHeap                   // Heap of nonces of all the stored transactions (non-strict mode)
-	cache []*chainTypes.Transaction         // Cache of the transactions already sorted
+	items map[uint64]*chainTypes.Transaction // Hash map storing the transaction data
+	index *nonceHeap                         // Heap of nonces of all the stored transactions (non-strict mode)
+	cache []*chainTypes.Transaction          // Cache of the transactions already sorted
 }
 
 // newTxSortedMap creates a new nonce-sorted transaction map.
 func newTxSortedMap() *txSortedMap {
 	return &txSortedMap{
-		items: make(map[int64]*chainTypes.Transaction),
+		items: make(map[uint64]*chainTypes.Transaction),
 		index: new(nonceHeap),
 	}
 }
 
 // Get retrieves the current transactions associated with the given nonce.
-func (m *txSortedMap) Get(nonce int64) *chainTypes.Transaction {
+func (m *txSortedMap) Get(nonce uint64) *chainTypes.Transaction {
 	return m.items[nonce]
 }
 
@@ -62,12 +62,12 @@ func (m *txSortedMap) Put(tx *chainTypes.Transaction) {
 // Forward removes all transactions from the map with a nonce lower than the
 // provided threshold. Every removed transaction is returned for any post-removal
 // maintenance.
-func (m *txSortedMap) Forward(threshold int64) []*chainTypes.Transaction {
+func (m *txSortedMap) Forward(threshold uint64) []*chainTypes.Transaction {
 	var removed []*chainTypes.Transaction
 
 	// Pop off heap items until the threshold is reached
 	for m.index.Len() > 0 && (*m.index)[0] < threshold {
-		nonce := heap.Pop(m.index).(int64)
+		nonce := heap.Pop(m.index).(uint64)
 		removed = append(removed, m.items[nonce])
 		delete(m.items, nonce)
 	}
@@ -92,7 +92,7 @@ func (m *txSortedMap) Filter(filter func(*chainTypes.Transaction) bool) []*chain
 	}
 	// If transactions were removed, the heap and cache are ruined
 	if len(removed) > 0 {
-		*m.index = make([]int64, 0, len(m.items))
+		*m.index = make([]uint64, 0, len(m.items))
 		for nonce := range m.items {
 			*m.index = append(*m.index, nonce)
 		}
@@ -130,7 +130,7 @@ func (m *txSortedMap) Cap(threshold int) []*chainTypes.Transaction {
 
 // Remove deletes a transaction from the maintained map, returning whether the
 // transaction was found.
-func (m *txSortedMap) Remove(nonce int64) bool {
+func (m *txSortedMap) Remove(nonce uint64) bool {
 	// Short circuit if no transaction is present
 	_, ok := m.items[nonce]
 	if !ok {
@@ -156,10 +156,10 @@ func (m *txSortedMap) Remove(nonce int64) bool {
 // Note, all transactions with nonces lower than start will also be returned to
 // prevent getting into and invalid state. This is not something that should ever
 // happen but better to be self correcting than failing!
-func (m *txSortedMap) Ready(start int64) []*chainTypes.Transaction {
+func (m *txSortedMap) Ready(start uint64) []*chainTypes.Transaction {
 	// Short circuit if no transactions are available
 	if m.index.Len() == 0 || (*m.index)[0] > start {
-		dlog.Warn("txSortedMap Ready", "index[0]:",(*m.index)[0], "req start:", start)
+		dlog.Warn("txSortedMap Ready", "index[0]:", (*m.index)[0], "req start:", start)
 		return nil
 	}
 	// Otherwise start accumulating incremental transactions
@@ -186,7 +186,11 @@ func (m *txSortedMap) Flatten() []*chainTypes.Transaction {
 	// If the sorting was not cached yet, create and cache it
 	if m.cache == nil {
 		m.cache = make([]*chainTypes.Transaction, 0, len(m.items))
-		for _, tx := range m.items {
+		for nonce, tx := range m.items {
+			if nonce != tx.Nonce() {
+				dlog.Error("call flatten nonce err", "nonce", nonce, "tx.nonoce", tx.Nonce())
+				return nil
+			}
 			m.cache = append(m.cache, tx)
 		}
 		sort.Sort(TxByNonce(m.cache))
@@ -210,8 +214,8 @@ type txList struct {
 // gapped, sortable transaction lists.
 func newTxList(strict bool) *txList {
 	return &txList{
-		strict:  strict,
-		txs:     newTxSortedMap(),
+		strict: strict,
+		txs:    newTxSortedMap(),
 	}
 }
 
@@ -234,7 +238,7 @@ func (l *txList) Add(tx *chainTypes.Transaction) bool {
 // Forward removes all transactions from the list with a nonce lower than the
 // provided threshold. Every removed transaction is returned for any post-removal
 // maintenance.
-func (l *txList) Forward(threshold int64) []*chainTypes.Transaction {
+func (l *txList) Forward(threshold uint64) []*chainTypes.Transaction {
 	return l.txs.Forward(threshold)
 }
 
@@ -262,7 +266,7 @@ func (l *txList) Filter(costLimit *big.Int, gasLimit uint64) ([]chainTypes.Trans
 	//var invalids []types.Transaction
 	//
 	//if l.strict && len(removed) > 0 {
-	//	lowest := int64(math.MaxUint64)
+	//	lowest := uint64(math.MaxUint64)
 	//	for _, tx := range removed {
 	//		if nonce := tx.Nonce(); lowest > nonce {
 	//			lowest = nonce
@@ -272,7 +276,7 @@ func (l *txList) Filter(costLimit *big.Int, gasLimit uint64) ([]chainTypes.Trans
 	//}
 	//return removed, invalids
 
-	return nil ,nil
+	return nil, nil
 }
 
 // Cap places a hard limit on the number of items, returning all transactions
@@ -304,7 +308,7 @@ func (l *txList) Remove(tx *chainTypes.Transaction) (bool, []*chainTypes.Transac
 // Note, all transactions with nonces lower than start will also be returned to
 // prevent getting into and invalid state. This is not something that should ever
 // happen but better to be self correcting than failing!
-func (l *txList) Ready(start int64) []*chainTypes.Transaction {
+func (l *txList) Ready(start uint64) []*chainTypes.Transaction {
 	return l.txs.Ready(start)
 }
 
@@ -481,16 +485,14 @@ func (l *txList) Flatten() []*chainTypes.Transaction {
 //	return drop
 //}
 
-
 type TxByNonce []*chainTypes.Transaction
 
 func (s TxByNonce) Len() int           { return len(s) }
-func (s TxByNonce) Less(i, j int) bool { return s[i].Nonce() < s[j].Nonce()}
+func (s TxByNonce) Less(i, j int) bool { return s[i].Nonce() < s[j].Nonce() }
 func (s TxByNonce) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
-
-
 type nonceTxsHeap []*chainTypes.Transaction
+
 func (h nonceTxsHeap) Len() int           { return len(h) }
 func (h nonceTxsHeap) Less(i, j int) bool { return h[i].Nonce() < h[j].Nonce() }
 func (h nonceTxsHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }

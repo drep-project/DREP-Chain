@@ -1,33 +1,35 @@
 package main
 
 import (
-	"github.com/drep-project/drep-chain/app"
-	"os"
-	"fmt"
-	path2 "path"
-	"io/ioutil"
 	"crypto/hmac"
 	"crypto/sha512"
 	"encoding/json"
-	"gopkg.in/urfave/cli.v1"
+	"fmt"
+	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/drep-chain/crypto/sha3"
+	"github.com/drep-project/drep-chain/network/p2p/enode"
 	"github.com/drep-project/drep-chain/pkgs/log"
+	"gopkg.in/urfave/cli.v1"
+	"io/ioutil"
+	"net"
+	"os"
+	path2 "path"
 
-	p2pTypes "github.com/drep-project/drep-chain/network/types"
-	"github.com/drep-project/drep-chain/rpc"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	p2pTypes "github.com/drep-project/drep-chain/network/types"
+	accountComponent "github.com/drep-project/drep-chain/pkgs/accounts/component"
 	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
-	accountComponent "github.com/drep-project/drep-chain/pkgs/accounts/component"
+	"github.com/drep-project/drep-chain/rpc"
 )
 
 var (
-	pasword = "123"
-	parentNode = chainTypes.NewNode(nil,app.ChainIdType{})
-	pathFlag = common.DirectoryFlag{
+	pasword    = "123"
+	parentNode = chainTypes.NewNode(nil, app.ChainIdType{})
+	pathFlag   = common.DirectoryFlag{
 		Name:  "path",
 		Usage: "keystore save to",
 	}
@@ -47,7 +49,7 @@ func main() {
 
 func gen(ctx *cli.Context) error {
 	appPath := getCurPath()
-	cfgPath := path2.Join(appPath,"config.json")
+	cfgPath := path2.Join(appPath, "config.json")
 	nodeItems, err := parserConfig(cfgPath)
 	if err != nil {
 		return err
@@ -55,30 +57,26 @@ func gen(ctx *cli.Context) error {
 	path := ""
 	if ctx.GlobalIsSet(pathFlag.Name) {
 		path = ctx.GlobalString(pathFlag.Name)
-	}else{
+	} else {
 		path = appPath
 	}
-	bootsNodes := []p2pTypes.BootNode{}
+	bootsNodes := []*enode.Node{}
 	standbyKey := []*secp256k1.PrivateKey{}
 	nodes := []*chainTypes.Node{}
-	produces := []*consensusTypes.Producer{}
-	for i:=0; i< len(nodeItems); i++{
+	produces := consensusTypes.NewProducers()
+	for i := 0; i < len(nodeItems); i++ {
 		aNode := getAccount(nodeItems[i].Name)
 		nodes = append(nodes, aNode)
-		bootsNodes = append(bootsNodes,p2pTypes.BootNode{
-			//PubKey:(*secp256k1.PublicKey)(&aNode.PrivateKey.PublicKey),
-			IP :nodeItems[i].Ip,
-			Port:nodeItems[i].Port,
-		})
-		standbyKey = append(standbyKey, aNode.PrivateKey)
-		producer := &consensusTypes.Producer{
-			Ip:nodeItems[i].Ip,
-			Port:nodeItems[i].Port,
-			Public: (*secp256k1.PublicKey)(&aNode.PrivateKey.PublicKey),
+		ip := net.IP{}
+		err := ip.UnmarshalText([]byte(nodeItems[i].Ip))
+		if err != nil {
+			return err
 		}
-		produces = append(produces, producer)
+		node := enode.NewV4(aNode.PrivateKey.PubKey(), ip, nodeItems[i].Port, nodeItems[i].Port)
+		bootsNodes = append(bootsNodes, node)
+		standbyKey = append(standbyKey, aNode.PrivateKey)
+		produces[nodeItems[i].Ip] = aNode.PrivateKey.PubKey()
 	}
-
 
 	logConfig := log.LogConfig{}
 	logConfig.LogLevel = 3
@@ -87,9 +85,13 @@ func gen(ctx *cli.Context) error {
 	rpcConfig.IPCEnabled = true
 	rpcConfig.HTTPEnabled = true
 	p2pConfig := p2pTypes.P2pConfig{}
-	p2pConfig.ListerAddr = "0.0.0.0"
-	p2pConfig.Port = 55555
-	p2pConfig.BootNodes = bootsNodes
+	p2pConfig.MaxPeers = 20
+	p2pConfig.NoDiscovery = false
+	p2pConfig.DiscoveryV5 = true
+	p2pConfig.Name = "drepnode"
+	p2pConfig.ProduceNodes = bootsNodes
+	p2pConfig.StaticNodes = bootsNodes
+	p2pConfig.ListenAddr = "0.0.0.0:55555"
 
 	consensusConfig := consensusTypes.ConsensusConfig{}
 	consensusConfig.EnableConsensus = true
@@ -97,50 +99,49 @@ func gen(ctx *cli.Context) error {
 	consensusConfig.Producers = produces
 
 	chainConfig := chainTypes.ChainConfig{}
-	chainConfig.RemotePort = 55555
+	chainConfig.RemotePort = 55556
 	chainConfig.ChainId = app.ChainIdType{}
 	chainConfig.GenesisPK = "0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26"
-	
+
 	walletConfig := accountTypes.Config{}
 	walletConfig.WalletPassword = pasword
-	for i:=0; i<len(nodeItems); i++{
+	for i := 0; i < len(nodeItems); i++ {
 		consensusConfig.MyPk = (*secp256k1.PublicKey)(&standbyKey[i].PublicKey)
-		p2pConfig.PrvKey = standbyKey[i]
-		userDir :=  path2.Join(path,nodeItems[i].Name)
+		userDir := path2.Join(path, nodeItems[i].Name)
 		os.MkdirAll(userDir, os.ModeDir|os.ModePerm)
 		keyStorePath := path2.Join(userDir, "keystore")
 
 		store := accountComponent.NewFileStore(keyStorePath)
 		password := string(sha3.Hash256([]byte(pasword)))
-		store.StoreKey(nodes[i],password)
+		store.StoreKey(nodes[i], password)
+
 
 		cfgPath := path2.Join(userDir, "config.json")
 		fs, _ := os.Create(cfgPath)
 		offset := int64(0)
-		fs.WriteAt([]byte("{\n"),offset)
+		fs.WriteAt([]byte("{\n"), offset)
 		offset = int64(2)
 
 		offset = writePhase(fs, "log", logConfig, offset)
-		offset = writePhase(fs, "rpc",rpcConfig, offset)
-		offset = writePhase(fs, "consensus",consensusConfig, offset)
-		offset = writePhase(fs, "p2p",p2pConfig, offset)
-		offset = writePhase(fs, "chain",chainConfig, offset)
-		offset = writePhase(fs, "accounts",walletConfig, offset)
+		offset = writePhase(fs, "rpc", rpcConfig, offset)
+		offset = writePhase(fs, "consensus", consensusConfig, offset)
+		offset = writePhase(fs, "p2p", p2pConfig, offset)
+		offset = writePhase(fs, "chain", chainConfig, offset)
+		offset = writePhase(fs, "accounts", walletConfig, offset)
 
 		fs.Truncate(offset - 2)
 		fs.WriteAt([]byte("\n}"), offset-2)
-
 	}
 	return nil
 }
 
-func writePhase(fs *os.File, name string, config interface{},  offset int64) int64 {
+func writePhase(fs *os.File, name string, config interface{}, offset int64) int64 {
 	bytes, _ := json.MarshalIndent(config, "	", "      ")
 	bytes = append([]byte("	\""+name+"\" : "), bytes...)
 	fs.WriteAt(bytes, offset)
 	offset += int64(len(bytes))
 
-	fs.WriteAt([]byte(",\n"),offset)
+	fs.WriteAt([]byte(",\n"), offset)
 	offset += 2
 	return offset
 }
@@ -152,19 +153,19 @@ func getAccount(name string) *chainTypes.Node {
 
 func RandomNode(seed []byte) *chainTypes.Node {
 	var (
-		prvKey *secp256k1.PrivateKey
+		prvKey    *secp256k1.PrivateKey
 		chainCode []byte
 	)
 
 	h := hmAC(seed, chainTypes.DrepMark)
 	prvKey, _ = secp256k1.PrivKeyFromBytes(h[:chainTypes.KeyBitSize])
 	chainCode = h[chainTypes.KeyBitSize:]
-	addr :=  crypto.PubKey2Address(prvKey.PubKey())
+	addr := crypto.PubKey2Address(prvKey.PubKey())
 	return &chainTypes.Node{
 		PrivateKey: prvKey,
-		Address: &addr,
-		ChainId: app.ChainIdType{},
-		ChainCode: chainCode,
+		Address:    &addr,
+		ChainId:    app.ChainIdType{},
+		ChainCode:  chainCode,
 	}
 }
 
@@ -182,19 +183,18 @@ func getCurPath() string {
 func parserConfig(cfgPath string) ([]*NodeItem, error) {
 	content, err := ioutil.ReadFile(cfgPath)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	cfg := []*NodeItem{}
 	err = json.Unmarshal([]byte(content), &cfg)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	return cfg, nil
 }
 
-
 type NodeItem struct {
 	Name string
-	Ip string
+	Ip   string
 	Port int
 }

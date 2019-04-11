@@ -2,7 +2,7 @@ package types
 
 import "math/big"
 
-type TxType  int
+type TxType  uint64
 const(
 	TransferType TxType = iota
 	MinerType

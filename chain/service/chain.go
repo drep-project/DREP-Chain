@@ -1,9 +1,9 @@
 package service
 
 import (
-	"github.com/drep-project/drep-chain/chain/txpool"
-	"github.com/drep-project/drep-chain/pkgs/evm"
+	"fmt"
 	"math/big"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -11,6 +11,9 @@ import (
 	"github.com/drep-project/drep-chain/app"
 	"gopkg.in/urfave/cli.v1"
 
+	"github.com/drep-project/drep-chain/chain/txpool"
+	"github.com/drep-project/drep-chain/network/p2p"
+	"github.com/drep-project/drep-chain/pkgs/evm"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
@@ -18,8 +21,9 @@ import (
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/rpc"
-
+	"github.com/drep-project/dlog"
 	"github.com/drep-project/binary"
+
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	p2pService "github.com/drep-project/drep-chain/network/service"
 	rpc2 "github.com/drep-project/drep-chain/pkgs/rpc"
@@ -28,7 +32,7 @@ import (
 var (
 	rootChain          app.ChainIdType
 	DefaultChainConfig = &chainTypes.ChainConfig{
-		RemotePort: 55555,
+		RemotePort: 55556,
 		ChainId:    app.ChainIdType{},
 		GenesisPK:  "0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26",
 	}
@@ -57,9 +61,7 @@ type ChainService struct {
 	prevOrphans  map[crypto.Hash][]*chainTypes.OrphanBlock
 	oldestOrphan *chainTypes.OrphanBlock
 
-	prvKey       *secp256k1.PrivateKey
-	peerStateMap map[string]*chainTypes.PeerState
-    peerStateLock sync.RWMutex
+	prvKey *secp256k1.PrivateKey
 
 	Index         *chainTypes.BlockIndex
 	BestChain     *chainTypes.ChainView
@@ -88,12 +90,19 @@ type ChainService struct {
 	allTasks *heightSortedMap
 
 	//正在同步中的任务列表，如果对应的块未到，会重新发布请求的
-	pendingSyncTasks map[crypto.Hash]int64
+	pendingSyncTasks map[crypto.Hash]uint64
+	taskTxsCh chan tasksTxsSync
+
+	//与此模块通信的所有Peer
+	peersInfo map[string]*chainTypes.PeerInfo
+	newPeerCh chan *chainTypes.PeerInfo
+
+	quit chan struct{}
 }
 
 type syncHeaderHash struct {
 	headerHash *crypto.Hash
-	height     int64
+	height     uint64
 }
 
 func (chainService *ChainService) ChainID() app.ChainIdType {
@@ -112,19 +121,6 @@ func (chainService *ChainService) CommandFlags() ([]cli.Command, []cli.Flag) {
 	return nil, []cli.Flag{}
 }
 
-func (chainService *ChainService) P2pMessages() map[int]interface{} {
-	return map[int]interface{}{
-		chainTypes.MsgTypeBlockReq:     chainTypes.BlockReq{},
-		chainTypes.MsgTypeBlockResp:    chainTypes.BlockResp{},
-		chainTypes.MsgTypeBlock:        chainTypes.Block{},
-		chainTypes.MsgTypeTransaction:  chainTypes.Transaction{},
-		chainTypes.MsgTypePeerState:    chainTypes.PeerState{},
-		chainTypes.MsgTypeReqPeerState: chainTypes.ReqPeerState{},
-		chainTypes.MsgTypeHeaderReq:    chainTypes.HeaderReq{},
-		chainTypes.MsgTypeHeaderRsp:    chainTypes.HeaderRsp{},
-	}
-}
-
 func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error {
 	chainService.Config = DefaultChainConfig
 	err := executeContext.UnmashalConfig(chainService.Name(), chainService.Config)
@@ -135,13 +131,15 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 	chainService.BestChain = chainTypes.NewChainView(nil)
 	chainService.orphans = make(map[crypto.Hash]*chainTypes.OrphanBlock)
 	chainService.prevOrphans = make(map[crypto.Hash][]*chainTypes.OrphanBlock)
-	chainService.peerStateMap = make(map[string]*chainTypes.PeerState)
 	chainService.headerHashCh = make(chan []*syncHeaderHash)
 	chainService.blocksCh = make(chan []*chainTypes.Block)
 	chainService.allTasks = newHeightSortedMap()
-	chainService.pendingSyncTasks = make(map[crypto.Hash]int64)
-
+	chainService.pendingSyncTasks = make(map[crypto.Hash]uint64)
+	chainService.peersInfo = make(map[string]*chainTypes.PeerInfo)
+	chainService.newPeerCh = make(chan *chainTypes.PeerInfo, maxLivePeer)
 	chainService.genesisBlock = chainService.GenesisBlock(chainService.Config.GenesisPK)
+	chainService.taskTxsCh = make(chan tasksTxsSync, maxLivePeer)
+
 	hash := chainService.genesisBlock.Header.Hash()
 	block, err := chainService.DatabaseService.GetBlock(hash)
 	if err != nil && err.Error() != "leveldb: not found" {
@@ -155,20 +153,22 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 
 	chainService.InitStates()
 	chainService.transactionPool = txpool.NewTransactionPool(chainService.DatabaseService)
-	//props := actor.FromProducer(func() actor.Actor {
-	//	return chainService
-	//})
-	//pid, err := actor.SpawnNamed(props, "chain_message")
-	//if err != nil {
-	//	panic(err)
-	//}
 
-	//chainService.pid = pid
-	//router := chainService.P2pServer.GetRouter()
-	//chainP2pMessage := chainService.P2pMessages()
-	//for msgType, _ := range chainP2pMessage {
-	//	router.RegisterMsgHandler(msgType, pid)
-	//}
+	chainService.P2pServer.AddProtocols([]p2p.Protocol{
+		p2p.Protocol{
+			Name:   "chainService",
+			Length: chainTypes.NumberOfMsg,
+			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
+				if len(chainService.peersInfo) >= maxLivePeer {
+					return fmt.Errorf("enough peer")
+				}
+				pi := chainTypes.NewPeerInfo(peer, rw)
+				chainService.peersInfo[peer.IP()] = pi
+				defer delete(chainService.peersInfo, peer.IP())
+				return chainService.receiveMsg(pi, rw)
+			},
+		},
+	})
 
 	chainService.apis = []app.API{
 		app.API{
@@ -187,27 +187,60 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 func (chainService *ChainService) Start(executeContext *app.ExecuteContext) error {
 	chainService.transactionPool.Start(&chainService.newBlockFeed)
 	go chainService.synchronise()
+	go chainService.syncTxs()
 	return nil
 }
 
 func (chainService *ChainService) Stop(executeContext *app.ExecuteContext) error {
+	if chainService.quit != nil {
+		close(chainService.quit)
+	}
+
 	return nil
 }
 
 func (chainService *ChainService) SendTransaction(tx *chainTypes.Transaction) error {
-	err := chainService.ValidateTransaction(tx)
-	if err != nil {
-		return err
+	//TODO validate transaction
+	error := chainService.transactionPool.AddTransaction(tx)
+	if error == nil {
+		chainService.BroadcastTx(chainTypes.MsgTypeTransaction, tx, true)
 	}
-	err = chainService.transactionPool.AddTransaction(tx)
-	if err == nil {
-		chainService.P2pServer.Broadcast(tx)
-	}
-	return err
+
+	return error
 }
 
-func (chainService *ChainService) sendBlock(block *chainTypes.Block) {
-	chainService.P2pServer.Broadcast(block)
+func (chainService *ChainService) BroadcastBlock(msgType int32, block *chainTypes.Block, isLocal bool) {
+	for _, peer := range chainService.peersInfo {
+		b := peer.KnownBlock(block)
+		if !b {
+			if !isLocal {
+				//收到远端来的消息，仅仅广播给1/3的peer
+				rd := rand.Intn(broadcastRatio)
+				if rd > 1 {
+					continue
+				}
+			}
+			peer.MarkBlock(block)
+			chainService.P2pServer.Send(peer.GetMsgRW(), uint64(msgType), block)
+		}
+	}
+}
+
+func (chainService *ChainService) BroadcastTx(msgType int32, tx *chainTypes.Transaction, isLocal bool) {
+	for _, peer := range chainService.peersInfo {
+		b := peer.KnownTx(tx)
+		if !b {
+			if !isLocal {
+				//收到远端来的消息，仅仅广播给1/3的peer
+				rd := rand.Intn(broadcastRatio)
+				if rd > 1 {
+					continue
+				}
+			}
+			peer.MarkTx(tx)
+			chainService.P2pServer.Send(peer.GetMsgRW(), uint64(msgType), chainTypes.Transactions{*tx})
+		}
+	}
 }
 
 func (chainService *ChainService) blockExists(blockHash *crypto.Hash) bool {
@@ -228,10 +261,12 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey) 
 		if err == nil {
 			finalTxs = append(finalTxs, t)
 			gasUsed.Add(gasUsed, g)
+		}else {
+			dlog.Info("execute tx","err", err)
 		}
 	}
 
-	timestamp := time.Now().Unix()
+	timestamp := uint64(time.Now().Unix())
 	previousHash := chainService.BestChain.Tip().Hash
 	stateRoot := chainService.DatabaseService.GetStateRoot()
 	merkleRoot := chainService.deriveMerkleRoot(finalTxs)
@@ -239,18 +274,18 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey) 
 	block := &chainTypes.Block{
 		Header: &chainTypes.BlockHeader{
 			Version:      common.Version,
-			PreviousHash: *previousHash,
+			PreviousHash: previousHash,
 			ChainId:      chainService.chainId,
-			GasLimit:     *BlockGasLimit,
-			GasUsed:      *gasUsed,
+			GasLimit:     BlockGasLimit,
+			GasUsed:      gasUsed,
 			Timestamp:    timestamp,
 			StateRoot:    stateRoot,
 			TxRoot:       merkleRoot,
 			Height:       height,
-			LeaderPubKey: *leaderKey,
+			LeaderPubKey: leaderKey,
 		},
 		Data: &chainTypes.BlockData{
-			TxCount: int32(len(finalTxs)),
+			TxCount: uint64(len(finalTxs)),
 			TxList:  finalTxs,
 		},
 	}
@@ -284,9 +319,7 @@ func (chainService *ChainService) GenesisBlock(genesisPubkey string) *chainTypes
 	chainService.DatabaseService.BeginTransaction()
 	defer chainService.DatabaseService.Discard()
 
-	merkle := chainService.DatabaseService.NewMerkle([][]byte{})
-	merkleRoot := merkle.Root.Hash
-
+	merkleRoot := chainService.deriveMerkleRoot(nil)
 	b := common.Bytes(genesisPubkey)
 	err := b.UnmarshalText(b)
 	if err != nil {
@@ -299,14 +332,14 @@ func (chainService *ChainService) GenesisBlock(genesisPubkey string) *chainTypes
 	return &chainTypes.Block{
 		Header: &chainTypes.BlockHeader{
 			Version:      common.Version,
-			PreviousHash: crypto.Hash{},
-			GasLimit:     *BlockGasLimit,
-			GasUsed:      *new(big.Int),
+			PreviousHash: &crypto.Hash{},
+			GasLimit:     BlockGasLimit,
+			GasUsed:      new(big.Int),
 			Timestamp:    1545282765,
-			StateRoot:    []byte{0},
+			StateRoot:    nil,
 			TxRoot:       merkleRoot,
 			Height:       0,
-			LeaderPubKey: *pubkey,
+			LeaderPubKey: pubkey,
 		},
 		Data: &chainTypes.BlockData{
 			TxCount: 0,
@@ -318,7 +351,7 @@ func (chainService *ChainService) GenesisBlock(genesisPubkey string) *chainTypes
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
 func (chainService *ChainService) accumulateRewards(b *chainTypes.Block, totalGasBalance *big.Int) {
 	reward := new(big.Int).SetUint64(uint64(Rewards))
-	leaderAddr := crypto.PubKey2Address(&b.Header.LeaderPubKey)
+	leaderAddr := crypto.PubKey2Address(b.Header.LeaderPubKey)
 
 	r := new(big.Int)
 	r = r.Div(reward, new(big.Int).SetInt64(2))
@@ -327,8 +360,8 @@ func (chainService *ChainService) accumulateRewards(b *chainTypes.Block, totalGa
 
 	num := len(b.Header.MinorPubKeys)
 	for _, memberPK := range b.Header.MinorPubKeys {
-		if !memberPK.IsEqual(&b.Header.LeaderPubKey) {
-			memberAddr := crypto.PubKey2Address(&memberPK)
+		if !memberPK.IsEqual(b.Header.LeaderPubKey) {
+			memberAddr := crypto.PubKey2Address(memberPK)
 			r.Div(reward, new(big.Int).SetInt64(int64(num*2)))
 			chainService.DatabaseService.AddBalance(&memberAddr, r, true)
 		}
@@ -339,11 +372,11 @@ func (chainService *ChainService) SubscribeSyncBlockEvent(subchan chan event.Syn
 	return chainService.syncBlockEvent.Subscribe(subchan)
 }
 
-func (chainService *ChainService) GetTransactionCount(addr *crypto.CommonAddress) int64 {
+func (chainService *ChainService) GetTransactionCount(addr *crypto.CommonAddress) uint64 {
 	return chainService.transactionPool.GetTransactionCount(addr)
 }
 
-func (chainService *ChainService) GetBlocksFrom(start, size int64) ([]*chainTypes.Block, error) {
+func (chainService *ChainService) GetBlocksFrom(start, size uint64) ([]*chainTypes.Block, error) {
 	blocks := []*chainTypes.Block{}
 	for i := start; i < start+size; i++ {
 		node := chainService.BestChain.NodeByHeight(i)

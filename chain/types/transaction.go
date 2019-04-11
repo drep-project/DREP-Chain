@@ -17,18 +17,17 @@ type Transaction struct {
 }
 
 type TransactionData struct {
-	Version   int32
-	Nonce     int64 //交易序列号
+	Version   uint64
+	Nonce     uint64 //交易序列号
 	Type      TxType
 	To        crypto.CommonAddress
 	ChainId   app.ChainIdType
 	Amount    *big.Int
 	GasPrice  *big.Int
 	GasLimit  *big.Int
-	Timestamp int64
+	Timestamp uint64
 	Data      []byte
 	From      crypto.CommonAddress
-
 
 	// Signature values
 	V *big.Int `json:"v" gencodec:"required"`
@@ -36,7 +35,7 @@ type TransactionData struct {
 	S *big.Int `json:"s" gencodec:"required"`
 }
 
-func (tx *Transaction) Nonce() int64 {
+func (tx *Transaction) Nonce() uint64 {
 	return tx.Data.Nonce
 }
 
@@ -112,7 +111,7 @@ func (tx *Transaction) GetSig() []byte {
 	return tx.Sig
 }
 
-func NewTransaction(from crypto.CommonAddress, to crypto.CommonAddress, amount *big.Int, nonce int64) *Transaction {
+func NewTransaction(from crypto.CommonAddress, to crypto.CommonAddress, amount *big.Int, nonce uint64) *Transaction {
 	data := &TransactionData{
 		Version:   common.Version,
 		Nonce:     nonce,
@@ -121,20 +120,20 @@ func NewTransaction(from crypto.CommonAddress, to crypto.CommonAddress, amount *
 		Amount:    amount,
 		GasPrice:  DefaultGasPrice,
 		GasLimit:  TransferGas,
-		Timestamp: time.Now().Unix(),
+		Timestamp: uint64(time.Now().Unix()),
 		From:      from,
 	}
 	return &Transaction{Data: data}
 }
 
-func NewContractTransaction(from crypto.CommonAddress, to crypto.CommonAddress, byteCode []byte, nonce int64) *Transaction {
+func NewContractTransaction(from crypto.CommonAddress, to crypto.CommonAddress, byteCode []byte, nonce uint64) *Transaction {
 	nonce++
 	data := &TransactionData{
 		Nonce:     nonce,
 		Type:      CreateContractType,
 		GasPrice:  DefaultGasPrice,
 		GasLimit:  CreateContractGas,
-		Timestamp: time.Now().Unix(),
+		Timestamp: uint64(time.Now().Unix()),
 		Data:      make([]byte, len(byteCode)+1),
 		From:      from,
 	}
@@ -143,7 +142,7 @@ func NewContractTransaction(from crypto.CommonAddress, to crypto.CommonAddress, 
 	return &Transaction{Data: data}
 }
 
-func NewCallContractTransaction(from crypto.CommonAddress, to crypto.CommonAddress, input []byte, amount *big.Int, nonce int64, readOnly bool) *Transaction {
+func NewCallContractTransaction(from crypto.CommonAddress, to crypto.CommonAddress, input []byte, amount *big.Int, nonce uint64, readOnly bool) *Transaction {
 	nonce++
 	data := &TransactionData{
 		Nonce:     nonce,
@@ -152,7 +151,7 @@ func NewCallContractTransaction(from crypto.CommonAddress, to crypto.CommonAddre
 		Amount:    amount,
 		GasPrice:  DefaultGasPrice,
 		GasLimit:  CallContractGas,
-		Timestamp: time.Now().Unix(),
+		Timestamp: uint64(time.Now().Unix()),
 		From:      from,
 		Data:      make([]byte, len(input)+1),
 	}

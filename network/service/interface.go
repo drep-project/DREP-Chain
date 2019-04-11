@@ -2,20 +2,16 @@ package service
 
 import (
 	"github.com/drep-project/drep-chain/app"
-	p2pTypes "github.com/drep-project/drep-chain/network/types"
+	"github.com/drep-project/drep-chain/network/p2p"
 )
 
 type P2P interface {
 	app.Service
-
-	SendAsync(peer *p2pTypes.Peer, msg interface{}) chan error
-	Send(peer *p2pTypes.Peer, msg interface{}) error
-	Broadcast(msg interface{})
-	Peers() []*p2pTypes.Peer
-	GetPeer(ip string) *p2pTypes.Peer
-	//GetRouter() *p2pTypes.MessageRouter
-	AddPeer(addr string) error
-	RemovePeer(addr string)
-	SetIdle(peer *p2pTypes.Peer, idle bool)
-	GetIdlePeers(count int)[]*p2pTypes.Peer
+	SendAsync(w p2p.MsgWriter, msgType uint64, msg interface{}) chan error
+	Send(w p2p.MsgWriter, msgType uint64, msg interface{}) error
+	Peers() []*p2p.Peer
+	AddPeer(nodeUrl string) error
+	RemovePeer(url string)
+	AddProtocols(protocols []p2p.Protocol)
+	//GetBackbonesID() map[enode.ID]struct{}
 }

@@ -1,33 +1,63 @@
 package service
 
 import (
-	"github.com/AsynkronIT/protoactor-go/actor"
-	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
+	"errors"
+	"fmt"
 	"github.com/drep-project/dlog"
-	p2pTypes "github.com/drep-project/drep-chain/network/types"
+	"github.com/drep-project/drep-chain/network/p2p"
+	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
 )
 
-func (consensusService *ConsensusService) Receive(context actor.Context) {
-	routeMsg, ok := context.Message().(*p2pTypes.RouteIn)
-	if !ok {
-		return
+func (cs *ConsensusService) receiveMsg(peer *consensusTypes.PeerInfo, rw p2p.MsgReadWriter) error {
+	fmt.Println("ConsensusService peeraddr:", peer.IP())
+	for {
+		msg, err := rw.ReadMsg()
+		if err != nil {
+			dlog.Info("consensus receive msg", "err", err)
+			return err
+		}
+
+		if msg.Size > consensusTypes.MaxMsgSize {
+			return errors.New("err msg size")
+		}
+
+		dlog.Debug("Receive setup msg ", "addr", peer.IP(), "code", msg.Code)
+
+		switch msg.Code {
+		case consensusTypes.MsgTypeSetUp:
+			var req consensusTypes.Setup
+			if err := msg.Decode(&req); err != nil {
+				return fmt.Errorf("setup msg:%v err:%v", msg, err)
+			}
+			cs.member.OnSetUp(peer, &req)
+		case consensusTypes.MsgTypeCommitment:
+			var req consensusTypes.Commitment
+			if err := msg.Decode(&req); err != nil {
+				return fmt.Errorf("commit msg:%v err:%v", msg, err)
+			}
+			cs.leader.OnCommit(peer, &req)
+		case consensusTypes.MsgTypeResponse:
+			var req consensusTypes.Response
+			if err := msg.Decode(&req); err != nil {
+				return fmt.Errorf("response msg:%v err:%v", msg, err)
+			}
+			cs.leader.OnResponse(peer, &req)
+		case consensusTypes.MsgTypeChallenge:
+			var req consensusTypes.Challenge
+			if err := msg.Decode(&req); err != nil {
+				return fmt.Errorf("challenge msg:%v err:%v", msg, err)
+			}
+			cs.member.OnChallenge(peer, &req)
+		case consensusTypes.MsgTypeFail:
+			var req consensusTypes.Fail
+			if err := msg.Decode(&req); err != nil {
+				return fmt.Errorf("challenge msg:%v err:%v", msg, err)
+			}
+			cs.member.OnFail(peer, &req)
+		default:
+			return fmt.Errorf("consensus unkonw msg type:%d", msg.Code)
+		}
 	}
 
-	switch msg := routeMsg.Detail.(type) {
-	case *consensusTypes.Setup:
-		dlog.Debug("Receive setup msg "+ routeMsg.Peer.GetAddr())
-		consensusService.member.OnSetUp(routeMsg.Peer, msg)
-	case *consensusTypes.Commitment:
-		dlog.Debug("Receive Commitment msg " + routeMsg.Peer.GetAddr())
-		consensusService.leader.OnCommit(routeMsg.Peer, msg)
-	case *consensusTypes.Challenge:
-		dlog.Debug("Receive Challenge msg "+ routeMsg.Peer.GetAddr())
-		consensusService.member.OnChallenge(routeMsg.Peer, msg)
-	case *consensusTypes.Response:
-		dlog.Debug("Receive Response msg "+ routeMsg.Peer.GetAddr())
-		consensusService.leader.OnResponse(routeMsg.Peer, msg)
-	case *consensusTypes.Fail:
-		dlog.Debug("Receive Fail msg")
-		consensusService.member.OnFail(routeMsg.Peer, msg)
-	}
+	return nil
 }
