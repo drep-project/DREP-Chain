@@ -21,6 +21,8 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"github.com/drep-project/drep-chain/common/hexutil"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"io/ioutil"
 	"math/big"
@@ -252,4 +254,15 @@ func FromPrivString(str string) (*secp256k1.PrivateKey, error) {
 	}
 	prikey, _ := secp256k1.PrivKeyFromBytes(bytes)
 	return prikey, nil
+}
+
+func TestPubkey(t *testing.T) {
+	//stmp, _ := GeneratePrivateKey(rand.Reader)
+	b, _ := hexutil.Decode("0x03ad000bc9a4a29c11227d6b5ee05076b594c1c22567cdd85fbb8222e6a715924e")
+	pk, err := DecompressPubkey(b)
+	//crypto.FromECDSAPub(&key)[1:]
+	c := PubKey2Address(pk)
+	a := hexutil.Encode(c[:])
+	//a := fmt.Sprintf("%x", c)
+	fmt.Println(err, a)
 }

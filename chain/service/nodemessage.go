@@ -106,7 +106,7 @@ func (chainService *ChainService) dealMsg(peer *chainTypes.PeerInfo, rw p2p.MsgR
 
 			_, isOrPhan, err := chainService.ProcessBlock(&newBlock)
 			if err != nil {
-				return err
+				//return err
 			}
 
 			peer.MarkBlock(&newBlock)

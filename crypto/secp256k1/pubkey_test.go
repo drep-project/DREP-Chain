@@ -7,10 +7,6 @@ package secp256k1
 
 import (
 	"bytes"
-	"crypto/rand"
-	"encoding/hex"
-	"fmt"
-	"github.com/drep-project/drep-chain/crypto"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
@@ -280,10 +276,4 @@ func TestPublicKeyIsEqual(t *testing.T) {
 		t.Fatalf("value of IsEqual is incorrect, %v is not "+
 			"equal to %v", pubKey1, pubKey2)
 	}
-}
-
-func TestPubkey(t *testing.T)  {
-	stmp, _ := GeneratePrivateKey(rand.Reader)
-	//crypto.FromECDSAPub(&key)[1:]
-	fmt.Println(hex.EncodeToString(crypto.FromECDSAPub(stmp.PubKey())[1:]))
 }
