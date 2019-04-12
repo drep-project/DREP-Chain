@@ -255,10 +255,10 @@ func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, erro
 		if err != nil {
 			return false
 		}
-		minorPubkeys := []*secp256k1.PublicKey{}
+		minorPubkeys := []secp256k1.PublicKey{}
 		for _, pubkey := range consensusService.Config.Producers {
 			//if multiSig.Bitmap[index] == 1 {
-				minorPubkeys = append(minorPubkeys, pubkey)
+				minorPubkeys = append(minorPubkeys, *pubkey)
 			//}
 		}
 		block.Header.MinorPubKeys = minorPubkeys
@@ -308,10 +308,10 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 	}
 	dlog.Trace("node leader finishes process consensus for round 2")
 
-	minorPubkeys := []*secp256k1.PublicKey{}
+	minorPubkeys := []secp256k1.PublicKey{}
 	for _, pubkey := range consensusService.Config.Producers {
 		//if multiSig.Bitmap[index] == 1 {
-			minorPubkeys = append(minorPubkeys, pubkey)
+			minorPubkeys = append(minorPubkeys, *pubkey)
 		//}
 	}
 	block.Header.MinorPubKeys = minorPubkeys

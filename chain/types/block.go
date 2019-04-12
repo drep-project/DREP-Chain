@@ -11,17 +11,17 @@ import (
 )
 
 type BlockHeader struct {
-	ChainId      app.ChainIdType        `json:"chainid"    gencodec:"required"`
-	Version      uint64                 `json:"version"    gencodec:"required"`
-	PreviousHash *crypto.Hash           `json:"prehash"    gencodec:"required"`
-	GasLimit     *big.Int               `json:"gaslimit"   gencodec:"required"`
-	GasUsed      *big.Int               `json:"gasused"    gencodec:"required"`
-	Height       uint64                 `json:"height"     gencodec:"required"`
-	Timestamp    uint64                 `json:"timestamp"  gencodec:"required"`
-	StateRoot    []byte                 `json:"stateroot"  gencodec:"required"`
-	TxRoot       []byte                 `json:"txroot"     gencodec:"required"`
-	LeaderPubKey *secp256k1.PublicKey   `json:"leaderpubkey"  gencodec:"required"` //存储pubkey序列化后的值
-	MinorPubKeys []*secp256k1.PublicKey `json:"minorpubkey"   gencodec:"required"`
+	ChainId      app.ChainIdType
+	Version      int32
+	PreviousHash crypto.Hash
+	GasLimit     big.Int
+	GasUsed      big.Int
+	Height       uint64
+	Timestamp    uint64
+	StateRoot    []byte
+	TxRoot       []byte
+	LeaderPubKey secp256k1.PublicKey
+	MinorPubKeys []secp256k1.PublicKey
 }
 
 func (blockHeader *BlockHeader) Hash() *crypto.Hash {

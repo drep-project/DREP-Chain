@@ -274,15 +274,15 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey) 
 	block := &chainTypes.Block{
 		Header: &chainTypes.BlockHeader{
 			Version:      common.Version,
-			PreviousHash: previousHash,
+			PreviousHash: *previousHash,
 			ChainId:      chainService.chainId,
-			GasLimit:     BlockGasLimit,
-			GasUsed:      gasUsed,
+			GasLimit:     *BlockGasLimit,
+			GasUsed:      *gasUsed,
 			Timestamp:    timestamp,
 			StateRoot:    stateRoot,
 			TxRoot:       merkleRoot,
 			Height:       height,
-			LeaderPubKey: leaderKey,
+			LeaderPubKey: *leaderKey,
 		},
 		Data: &chainTypes.BlockData{
 			TxCount: uint64(len(finalTxs)),
@@ -332,14 +332,14 @@ func (chainService *ChainService) GenesisBlock(genesisPubkey string) *chainTypes
 	return &chainTypes.Block{
 		Header: &chainTypes.BlockHeader{
 			Version:      common.Version,
-			PreviousHash: &crypto.Hash{},
-			GasLimit:     BlockGasLimit,
-			GasUsed:      new(big.Int),
+			PreviousHash: crypto.Hash{},
+			GasLimit:     *BlockGasLimit,
+			GasUsed:      *new(big.Int),
 			Timestamp:    1545282765,
 			StateRoot:    nil,
 			TxRoot:       merkleRoot,
 			Height:       0,
-			LeaderPubKey: pubkey,
+			LeaderPubKey: *pubkey,
 		},
 		Data: &chainTypes.BlockData{
 			TxCount: 0,
@@ -351,7 +351,7 @@ func (chainService *ChainService) GenesisBlock(genesisPubkey string) *chainTypes
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
 func (chainService *ChainService) accumulateRewards(b *chainTypes.Block, totalGasBalance *big.Int) {
 	reward := new(big.Int).SetUint64(uint64(Rewards))
-	leaderAddr := crypto.PubKey2Address(b.Header.LeaderPubKey)
+	leaderAddr := crypto.PubKey2Address(&b.Header.LeaderPubKey)
 
 	r := new(big.Int)
 	r = r.Div(reward, new(big.Int).SetInt64(2))
@@ -360,8 +360,8 @@ func (chainService *ChainService) accumulateRewards(b *chainTypes.Block, totalGa
 
 	num := len(b.Header.MinorPubKeys)
 	for _, memberPK := range b.Header.MinorPubKeys {
-		if !memberPK.IsEqual(b.Header.LeaderPubKey) {
-			memberAddr := crypto.PubKey2Address(memberPK)
+		if !memberPK.IsEqual(&b.Header.LeaderPubKey) {
+			memberAddr := crypto.PubKey2Address(&memberPK)
 			r.Div(reward, new(big.Int).SetInt64(int64(num*2)))
 			chainService.DatabaseService.AddBalance(&memberAddr, r, true)
 		}

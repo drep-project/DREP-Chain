@@ -21,7 +21,7 @@ import (
 
 var (
 	childTrans []*chainTypes.Transaction
-	errBalance = errors.New("no enough blance")
+	errBalance = errors.New("no enough balance")
 )
 
 func (chainService *ChainService) ValidateBlock(block *chainTypes.Block, skipCheckSig bool) bool {

@@ -50,7 +50,7 @@ func (cs *ChainService) checkHeader(header *chainTypes.BlockHeader) error {
 		return nil
 	}
 
-	parentBlock, err := cs.DatabaseService.GetBlock(header.PreviousHash)
+	parentBlock, err := cs.DatabaseService.GetBlock(&header.PreviousHash)
 	if err == nil && header.Height != parentBlock.Header.Height+1 {
 		return errors.New("head height err")
 	}
@@ -109,8 +109,8 @@ func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, b
 	// Handle orphan blocks.
 	zeroHash := crypto.Hash{}
 	prevHash := block.Header.PreviousHash
-	prevHashExists := chainService.blockExists(prevHash)
-	if !prevHashExists && *prevHash != zeroHash {
+	prevHashExists := chainService.blockExists(&prevHash)
+	if !prevHashExists && prevHash != zeroHash {
 		chainService.addOrphanBlock(block)
 		return false, true, nil
 	}
@@ -169,7 +169,7 @@ func (chainService *ChainService) processOrphans(hash *crypto.Hash) error {
 }
 
 func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (bool, error) {
-	prevNode := chainService.Index.LookupNode(block.Header.PreviousHash)
+	prevNode := chainService.Index.LookupNode(&block.Header.PreviousHash)
 	//store block
 	err := chainService.DatabaseService.PutBlock(block)
 	if err != nil {
@@ -383,13 +383,13 @@ func (chainService *ChainService) InitStates() error {
 			if !blockHash.IsEqual(chainService.genesisBlock.Header.Hash()) {
 				return fmt.Errorf("initChainState: Expected  first entry in block index to be genesis block, found %s", blockHash)
 			}
-		} else if header.PreviousHash == lastNode.Hash {
+		} else if header.PreviousHash == *lastNode.Hash {
 			// Since we iterate block headers in order of height, if the
 			// blocks are mostly linear there is a very good chance the
 			// previous header processed is the parent.
 			parent = lastNode
 		} else {
-			parent = chainService.Index.LookupNode(header.PreviousHash)
+			parent = chainService.Index.LookupNode(&header.PreviousHash)
 			if parent == nil {
 				return fmt.Errorf(fmt.Sprintf("initChainState: Could not find parent for block %s", header.Hash()))
 			}

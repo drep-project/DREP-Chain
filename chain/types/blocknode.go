@@ -78,14 +78,14 @@ type BlockNode struct {
 	Height uint64
 
 	ChainId      app.ChainIdType
-	Version      uint64
+	Version      int32
 	PreviousHash *crypto.Hash
 	GasLimit     big.Int
 	GasUsed      big.Int
 	MerkleRoot   []byte
 
-	LeaderPubKey *secp256k1.PublicKey
-	MinorPubKeys []*secp256k1.PublicKey
+	LeaderPubKey secp256k1.PublicKey
+	MinorPubKeys []secp256k1.PublicKey
 
 	Status BlockStatus
 }
@@ -102,8 +102,8 @@ func InitBlockNode(node *BlockNode, blockHeader *BlockHeader, parent *BlockNode)
 		TimeStamp:    blockHeader.Timestamp,
 		ChainId:      blockHeader.ChainId,
 		Version:      blockHeader.Version,
-		GasLimit:     *blockHeader.GasLimit,
-		GasUsed:      *blockHeader.GasUsed,
+		GasLimit:     blockHeader.GasLimit,
+		GasUsed:      blockHeader.GasUsed,
 		MerkleRoot:   blockHeader.TxRoot,
 		LeaderPubKey: blockHeader.LeaderPubKey,
 		MinorPubKeys: blockHeader.MinorPubKeys,
@@ -139,9 +139,9 @@ func (node *BlockNode) Header() BlockHeader {
 		Timestamp:    node.TimeStamp,
 		ChainId:      node.ChainId,
 		Version:      node.Version,
-		PreviousHash: prevHash,
-		GasLimit:     &node.GasLimit,
-		GasUsed:      &node.GasUsed,
+		PreviousHash: *prevHash,
+		GasLimit:     node.GasLimit,
+		GasUsed:      node.GasUsed,
 		TxRoot:       node.MerkleRoot,
 		LeaderPubKey: node.LeaderPubKey,
 		MinorPubKeys: node.MinorPubKeys,

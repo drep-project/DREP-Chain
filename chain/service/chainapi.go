@@ -2,7 +2,9 @@ package service
 
 import (
     chainType "github.com/drep-project/drep-chain/chain/types"
+    "github.com/drep-project/drep-chain/common"
     "github.com/drep-project/drep-chain/crypto"
+    "github.com/drep-project/binary"
     "github.com/drep-project/drep-chain/database"
     "math/big"
 )
@@ -13,9 +15,9 @@ type ChainApi struct {
     dbService *database.DatabaseService `service:"database"`
 }
 
-func (chain *ChainApi) GetBlock(height uint64) *chainType.Block {
+func (chain *ChainApi) GetBlock(height uint64) *chainType.RpcBlock  {
     blocks, _ := chain.chainService.GetBlocksFrom(height, 1)
-    return blocks[0]
+    return  new (chainType.RpcBlock).From(blocks[0])
 }
 
 func (chain *ChainApi) GetMaxHeight() uint64 {
@@ -32,38 +34,39 @@ func (chain *ChainApi) GetNonce(addr crypto.CommonAddress) uint64 {
 
 func (chain *ChainApi) GetPreviousBlockHash() string {
     block := chain.GetBlock(chain.GetMaxHeight())
-    hash := block.Header.PreviousHash.String()
-    return "0x" + hash
+    return block.PreviousHash.String()
 }
 
 func (chain *ChainApi) GetReputation(addr crypto.CommonAddress) *big.Int {
     return chain.dbService.GetReputation(&addr, true)
 }
 
-func (chain *ChainApi) GetTransactionsFromBlock(height uint64) []*chainType.Transaction {
+func (chain *ChainApi) GetTransactionsFromBlock(height uint64) []*chainType.RpcTransaction  {
     block := chain.GetBlock(height)
-    return block.Data.TxList
+    return block.Txs
 }
 
-func (chain *ChainApi) GetTransactionByBlockHeightAndIndex(height uint64, index int) *chainType.Transaction{
+func (chain *ChainApi) GetTransactionByBlockHeightAndIndex(height uint64, index int) *chainType.RpcTransaction {
     block := chain.GetBlock(height)
-    if index > len(block.Data.TxList) {
+    if index > len(block.Txs) {
         return nil
     }
-    return block.Data.TxList[index]
+    return block.Txs[index]
 }
 
 func (chain *ChainApi) GetTransactionCountByBlockHeight(height uint64) int {
     block := chain.GetBlock(height)
-    return len(block.Data.TxList)
+    return len(block.Txs)
 }
 
-func (chain *ChainApi) SendRawTransaction(tx *chainType.Transaction) (string, error){
-    err := chain.chainService.ValidateTransaction(tx)
+func (chain *ChainApi) SendRawTransaction(txbytes common.Bytes) (string, error){
+    tx := &chainType.Transaction{}
+    err := binary.Unmarshal(txbytes,tx)
     if err != nil {
         return "", err
     }
-    err = chain.chainService.transactionPool.AddTransaction(tx)
+
+    err = chain.chainService.ValidateTransaction(tx)
     if err != nil {
         return "", err
     }
