@@ -11,7 +11,6 @@ import (
 )
 
 func (chainService *ChainService) receiveMsg(peer *chainTypes.PeerInfo, rw p2p.MsgReadWriter) error {
-
 	//1 与peer同步一下状态
 	timeout := time.After(time.Second * maxNetworkTimeout)
 	errCh := make(chan error)
@@ -43,7 +42,6 @@ func (chainService *ChainService) receiveMsg(peer *chainTypes.PeerInfo, rw p2p.M
 			return fmt.Errorf("err msg type:%d", msg.Code)
 		}
 	}
-
 
 	//通知给同步协程
 	chainService.newPeerCh <- peer

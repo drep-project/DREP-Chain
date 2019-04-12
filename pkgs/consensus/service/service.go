@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"github.com/drep-project/binary"
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
@@ -53,6 +54,7 @@ type ConsensusService struct {
 	pauseForSync bool
 	start        bool
 	peersInfo    map[string]*consensusTypes.PeerInfo
+	producers    map[string]*secp256k1.PublicKey
 
 	quit chan struct{}
 }
@@ -70,6 +72,14 @@ func (consensusService *ConsensusService) CommandFlags() ([]cli.Command, []cli.F
 }
 
 func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContext) error {
+	if consensusService.ChainService == nil {
+		return fmt.Errorf("chainService not init")
+	}
+	consensusService.producers = make(map[string]*secp256k1.PublicKey)
+	for _, producer := range consensusService.ChainService.Config.Producers {
+		consensusService.producers[producer.IP] = producer.Pubkey
+	}
+
 	consensusService.Config = &consensusTypes.ConsensusConfig{}
 	err := executeContext.UnmashalConfig(consensusService.Name(), consensusService.Config)
 	if err != nil {
@@ -97,7 +107,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 			Name:   "consensusService",
 			Length: consensusTypes.NumberOfMsg,
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
-				if _, ok := consensusService.Config.Producers[peer.IP()]; ok {
+				if _, ok := consensusService.producers[peer.IP()]; ok {
 					pi := consensusTypes.NewPeerInfo(peer, rw)
 					consensusService.peersInfo[peer.IP()] = pi
 					defer delete(consensusService.peersInfo, peer.IP())
@@ -159,7 +169,7 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 	consensusService.start = true
 
 	go func() {
-		minMember := int(math.Ceil(float64(len(consensusService.Config.Producers)) * 2 / 3))
+		minMember := int(math.Ceil(float64(len(consensusService.producers)) * 2 / 3))
 
 		select {
 		case <-consensusService.quit:
@@ -256,10 +266,10 @@ func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, erro
 			return false
 		}
 		minorPubkeys := []*secp256k1.PublicKey{}
-		for _, pubkey := range consensusService.Config.Producers {
-			//if multiSig.Bitmap[index] == 1 {
-				minorPubkeys = append(minorPubkeys, pubkey)
-			//}
+		for index, producer := range consensusService.ChainService.Config.Producers {
+			if multiSig.Bitmap[index] == 1 {
+				minorPubkeys = append(minorPubkeys, producer.Pubkey)
+			}
 		}
 		block.Header.MinorPubKeys = minorPubkeys
 		block.MultiSig = multiSig
@@ -309,10 +319,10 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 	dlog.Trace("node leader finishes process consensus for round 2")
 
 	minorPubkeys := []*secp256k1.PublicKey{}
-	for _, pubkey := range consensusService.Config.Producers {
-		//if multiSig.Bitmap[index] == 1 {
-			minorPubkeys = append(minorPubkeys, pubkey)
-		//}
+	for index, producer := range consensusService.ChainService.Config.Producers {
+		if multiSig.Bitmap[index] == 1 {
+			minorPubkeys = append(minorPubkeys, producer.Pubkey)
+		}
 	}
 	block.Header.MinorPubKeys = minorPubkeys
 	block.MultiSig = multiSig
@@ -339,7 +349,7 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 }
 
 func (consensusService *ConsensusService) isProduce() bool {
-	for _, pubkey := range consensusService.Config.Producers {
+	for _, pubkey := range consensusService.producers {
 		if pubkey.IsEqual(consensusService.pubkey) {
 			return true
 		}
@@ -348,8 +358,8 @@ func (consensusService *ConsensusService) isProduce() bool {
 }
 
 func (consensusService *ConsensusService) collectMemberStatus() []*consensusTypes.MemberInfo {
-	produceInfos := make([]*consensusTypes.MemberInfo, 0, len(consensusService.Config.Producers))
-	for ip, pubkey := range consensusService.Config.Producers {
+	produceInfos := make([]*consensusTypes.MemberInfo, 0, len(consensusService.producers))
+	for ip, pubkey := range consensusService.producers {
 		var (
 			IsOnline, ok bool
 			pi           *consensusTypes.PeerInfo
