@@ -317,7 +317,7 @@ func (chainService *ChainService) GetBestPeer() (*p2pTypes.Peer, *chainTypes.Pee
 func (cs *ChainService) checkHeaderChain(chain []chainTypes.BlockHeader) (error) {
 	// Do a sanity check that the provided chain is actually ordered and linked
 	for i := 1; i < len(chain); i++ {
-		if chain[i].Height != chain[i-1].Height+1 || *chain[i].PreviousHash != *chain[i-1].Hash() {
+		if chain[i].Height != chain[i-1].Height+1 || chain[i].PreviousHash != *chain[i-1].Hash() {
 			// Chain broke ancestry, log a message (programming error) and skip insertion
 			dlog.Error("Non contiguous header", "number", chain[i].Height, "hash", hex.EncodeToString(chain[i].Hash().Bytes()),
 				"parent", hex.EncodeToString(chain[i].PreviousHash.Bytes()), "prevnumber", chain[i-1].Height, "prevhash", hex.EncodeToString(chain[i-1].Hash().Bytes()))

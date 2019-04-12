@@ -61,7 +61,7 @@ func gen(ctx *cli.Context) error {
 	bootsNodes := []p2pTypes.BootNode{}
 	standbyKey := []*secp256k1.PrivateKey{}
 	nodes := []*chainTypes.Node{}
-	produces := []*chainTypes.Producer{}
+	produces := []*consensusTypes.Producer{}
 	for i:=0; i< len(nodeItems); i++{
 		aNode := getAccount(nodeItems[i].Name)
 		nodes = append(nodes, aNode)
@@ -71,7 +71,7 @@ func gen(ctx *cli.Context) error {
 			Port:nodeItems[i].Port,
 		})
 		standbyKey = append(standbyKey, aNode.PrivateKey)
-		producer := &chainTypes.Producer{
+		producer := &consensusTypes.Producer{
 			Ip:nodeItems[i].Ip,
 			Port:nodeItems[i].Port,
 			Public: (*secp256k1.PublicKey)(&aNode.PrivateKey.PublicKey),
@@ -94,13 +94,13 @@ func gen(ctx *cli.Context) error {
 	consensusConfig := consensusTypes.ConsensusConfig{}
 	consensusConfig.EnableConsensus = true
 	consensusConfig.ConsensusMode = "bft"
+	consensusConfig.Producers = produces
 
 	chainConfig := chainTypes.ChainConfig{}
 	chainConfig.RemotePort = 55555
 	chainConfig.ChainId = app.ChainIdType{}
 	chainConfig.GenesisPK = "0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26"
-	chainConfig.Producers = produces
-
+	
 	walletConfig := accountTypes.Config{}
 	walletConfig.WalletPassword = pasword
 	for i:=0; i<len(nodeItems); i++{

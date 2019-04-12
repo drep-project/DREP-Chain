@@ -124,6 +124,7 @@ func (wallet *Wallet) Sign(addr *crypto.CommonAddress, msg []byte) ([]byte, erro
 	if err != nil {
 		return nil, err
 	}
+
 	sig, err := secp256k1.SignCompact(node.PrivateKey, msg, true)
 	if err != nil {
 		return nil, err

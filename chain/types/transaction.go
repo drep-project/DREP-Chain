@@ -12,7 +12,7 @@ import (
 )
 
 type Transaction struct {
-	Data *TransactionData
+	Data TransactionData
 	Sig  []byte
 }
 
@@ -22,18 +22,12 @@ type TransactionData struct {
 	Type      TxType
 	To        crypto.CommonAddress
 	ChainId   app.ChainIdType
-	Amount    *big.Int
-	GasPrice  *big.Int
-	GasLimit  *big.Int
+	Amount    big.Int
+	GasPrice  big.Int
+	GasLimit  big.Int
 	Timestamp int64
 	Data      []byte
 	From      crypto.CommonAddress
-
-
-	// Signature values
-	V *big.Int `json:"v" gencodec:"required"`
-	R *big.Int `json:"r" gencodec:"required"`
-	S *big.Int `json:"s" gencodec:"required"`
 }
 
 func (tx *Transaction) Nonce() int64 {
@@ -67,14 +61,14 @@ func (tx *Transaction) ChainId() app.ChainIdType {
 }
 
 func (tx *Transaction) Amount() *big.Int {
-	return tx.Data.Amount
+	return &tx.Data.Amount
 }
 
 func (tx *Transaction) GasLimit() *big.Int {
-	return tx.Data.GasLimit
+	return &tx.Data.GasLimit
 }
 func (tx *Transaction) GasPrice() *big.Int {
-	return tx.Data.GasPrice
+	return &tx.Data.GasPrice
 }
 
 //func (tx *Transaction) PubKey() *secp256k1.PublicKey {
@@ -104,7 +98,7 @@ func (tx *Transaction) GetGasUsed() *big.Int {
 
 func (tx *Transaction) GetGas() *big.Int {
 	gasQuantity := tx.GetGasUsed()
-	gasUsed := new(big.Int).Mul(gasQuantity, tx.Data.GasPrice)
+	gasUsed := new(big.Int).Mul(gasQuantity, &tx.Data.GasPrice)
 	return gasUsed
 }
 
@@ -113,14 +107,14 @@ func (tx *Transaction) GetSig() []byte {
 }
 
 func NewTransaction(from crypto.CommonAddress, to crypto.CommonAddress, amount *big.Int, nonce int64) *Transaction {
-	data := &TransactionData{
+	data := TransactionData{
 		Version:   common.Version,
 		Nonce:     nonce,
 		Type:      TransferType,
 		To:        to,
-		Amount:    amount,
-		GasPrice:  DefaultGasPrice,
-		GasLimit:  TransferGas,
+		Amount:    *amount,
+		GasPrice:  *DefaultGasPrice,
+		GasLimit:  *TransferGas,
 		Timestamp: time.Now().Unix(),
 		From:      from,
 	}
@@ -129,11 +123,11 @@ func NewTransaction(from crypto.CommonAddress, to crypto.CommonAddress, amount *
 
 func NewContractTransaction(from crypto.CommonAddress, to crypto.CommonAddress, byteCode []byte, nonce int64) *Transaction {
 	nonce++
-	data := &TransactionData{
+	data := TransactionData{
 		Nonce:     nonce,
 		Type:      CreateContractType,
-		GasPrice:  DefaultGasPrice,
-		GasLimit:  CreateContractGas,
+		GasPrice:  *DefaultGasPrice,
+		GasLimit:  *CreateContractGas,
 		Timestamp: time.Now().Unix(),
 		Data:      make([]byte, len(byteCode)+1),
 		From:      from,
@@ -145,13 +139,13 @@ func NewContractTransaction(from crypto.CommonAddress, to crypto.CommonAddress, 
 
 func NewCallContractTransaction(from crypto.CommonAddress, to crypto.CommonAddress, input []byte, amount *big.Int, nonce int64, readOnly bool) *Transaction {
 	nonce++
-	data := &TransactionData{
+	data := TransactionData{
 		Nonce:     nonce,
 		Type:      CallContractType,
 		To:        to,
-		Amount:    amount,
-		GasPrice:  DefaultGasPrice,
-		GasLimit:  CallContractGas,
+		Amount:    *amount,
+		GasPrice:  *DefaultGasPrice,
+		GasLimit:  *CallContractGas,
 		Timestamp: time.Now().Unix(),
 		From:      from,
 		Data:      make([]byte, len(input)+1),

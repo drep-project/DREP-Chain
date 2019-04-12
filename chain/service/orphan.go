@@ -50,7 +50,7 @@ func (b *ChainService) GetOrphanRoot(hash *crypto.Hash) *crypto.Hash {
 			break
 		}
 		orphanRoot = prevHash
-		prevHash = orphan.Block.Header.PreviousHash
+		prevHash = &orphan.Block.Header.PreviousHash
 	}
 
 	return orphanRoot
@@ -72,7 +72,7 @@ func (b *ChainService) removeOrphanBlock(orphan *chainTypes.OrphanBlock) {
 	// reevaluate the slice on each iteration nor does it adjust the index
 	// for the modified slice.
 	prevHash := orphan.Block.Header.PreviousHash
-	orphans := b.prevOrphans[*prevHash]
+	orphans := b.prevOrphans[prevHash]
 	for i := 0; i < len(orphans); i++ {
 		hash := orphans[i].Block.Header.Hash()
 		if hash.IsEqual(orphanHash) {
@@ -82,12 +82,12 @@ func (b *ChainService) removeOrphanBlock(orphan *chainTypes.OrphanBlock) {
 			i--
 		}
 	}
-	b.prevOrphans[*prevHash] = orphans
+	b.prevOrphans[prevHash] = orphans
 
 	// Remove the map entry altogether if there are no longer any orphans
 	// which depend on the parent hash.
-	if len(b.prevOrphans[*prevHash]) == 0 {
-		delete(b.prevOrphans, *prevHash)
+	if len(b.prevOrphans[prevHash]) == 0 {
+		delete(b.prevOrphans, prevHash)
 	}
 }
 
@@ -136,5 +136,5 @@ func (b *ChainService) addOrphanBlock(block *chainTypes.Block) {
 
 	// Add to previous hash lookup index for faster dependency lookups.
 	prevHash := block.Header.PreviousHash
-	b.prevOrphans[*prevHash] = append(b.prevOrphans[*prevHash], oBlock)
+	b.prevOrphans[prevHash] = append(b.prevOrphans[prevHash], oBlock)
 }

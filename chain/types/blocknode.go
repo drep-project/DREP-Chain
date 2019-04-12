@@ -139,7 +139,7 @@ func (node *BlockNode) Header() BlockHeader {
 		Timestamp:    node.TimeStamp,
 		ChainId:      node.ChainId,
 		Version:      node.Version,
-		PreviousHash: prevHash,
+		PreviousHash: *prevHash,
 		GasLimit:     node.GasLimit,
 		GasUsed:      node.GasUsed,
 		TxRoot:       node.MerkleRoot,
