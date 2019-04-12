@@ -8,6 +8,8 @@ import (
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/drep-chain/crypto/secp256k1/schnorr"
+	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
 	"math/big"
 
@@ -62,17 +64,16 @@ func (chainService *ChainService) ValidateTransactionsInBlock(blockdata *chainTy
 }
 
 func (chainService *ChainService) ValidateMultiSig(b *chainTypes.Block) bool {
-	return true
-	//participators := []*secp256k1.PublicKey{}
-	//for index, val := range b.MultiSig.Bitmap {
-	//	if val == 1 {
-	//		//producer := chainService.Config.Producers[index]
-	//		//participators = append(participators, producer.Public)
-	//	}
-	//}
-	//msg := b.ToMessage()
-	//sigmaPk := schnorr.CombinePubkeys(participators)
-	//return schnorr.Verify(sigmaPk, sha3.Hash256(msg), b.MultiSig.Sig.R, b.MultiSig.Sig.S)
+	participators := []*secp256k1.PublicKey{}
+	for index, val := range b.MultiSig.Bitmap {
+		if val == 1 {
+			producer := chainService.Config.Producers[index]
+			participators = append(participators, producer.Pubkey)
+		}
+	}
+	msg := b.ToMessage()
+	sigmaPk := schnorr.CombinePubkeys(participators)
+	return schnorr.Verify(sigmaPk, sha3.Hash256(msg), b.MultiSig.Sig.R, b.MultiSig.Sig.S)
 }
 
 func (chainService *ChainService) ExecuteBlock(b *chainTypes.Block) (gasUsed *big.Int, err error) {

@@ -63,7 +63,7 @@ func gen(ctx *cli.Context) error {
 	bootsNodes := []*enode.Node{}
 	standbyKey := []*secp256k1.PrivateKey{}
 	nodes := []*chainTypes.Node{}
-	produces := consensusTypes.NewProducers()
+	produces := make([]chainTypes.Producers, 0)
 	for i := 0; i < len(nodeItems); i++ {
 		aNode := getAccount(nodeItems[i].Name)
 		nodes = append(nodes, aNode)
@@ -75,7 +75,10 @@ func gen(ctx *cli.Context) error {
 		node := enode.NewV4(aNode.PrivateKey.PubKey(), ip, nodeItems[i].Port, nodeItems[i].Port)
 		bootsNodes = append(bootsNodes, node)
 		standbyKey = append(standbyKey, aNode.PrivateKey)
-		produces[nodeItems[i].Ip] = aNode.PrivateKey.PubKey()
+		produces = append(produces, chainTypes.Producers{
+			IP:     nodeItems[i].Ip,
+			Pubkey: aNode.PrivateKey.PubKey(),
+		})
 	}
 
 	logConfig := log.LogConfig{}
@@ -96,11 +99,12 @@ func gen(ctx *cli.Context) error {
 	consensusConfig := consensusTypes.ConsensusConfig{}
 	consensusConfig.EnableConsensus = true
 	consensusConfig.ConsensusMode = "bft"
-	consensusConfig.Producers = produces
+	//consensusConfig.Producers = produces
 
 	chainConfig := chainTypes.ChainConfig{}
 	chainConfig.RemotePort = 55556
 	chainConfig.ChainId = app.ChainIdType{}
+	chainConfig.Producers = produces
 	chainConfig.GenesisPK = "0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26"
 
 	walletConfig := accountTypes.Config{}
@@ -114,7 +118,6 @@ func gen(ctx *cli.Context) error {
 		store := accountComponent.NewFileStore(keyStorePath)
 		password := string(sha3.Hash256([]byte(pasword)))
 		store.StoreKey(nodes[i], password)
-
 
 		cfgPath := path2.Join(userDir, "config.json")
 		fs, _ := os.Create(cfgPath)

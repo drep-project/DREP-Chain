@@ -73,8 +73,6 @@ type ChainService struct {
 	genesisBlock *chainTypes.Block
 	//Events related to sync blocks
 	syncBlockEvent event.Feed
-	//Maximum block height being synced
-	//syncingMaxHeight int64
 	syncMut sync.Mutex
 
 	//提供新块订阅
