@@ -25,11 +25,11 @@ func (chain *ChainApi) GetMaxHeight() int64 {
 }
 
 func (chain *ChainApi) GetBalance(addr crypto.CommonAddress) *big.Int{
-    return chain.dbService.GetBalance(&addr, true)
+    return chain.dbService.GetBalance(&addr, false)
 }
 
 func (chain *ChainApi) GetNonce(addr crypto.CommonAddress) int64 {
-    return chain.dbService.GetNonce(&addr, true)
+    return chain.dbService.GetNonce(&addr, false)
 }
 
 func (chain *ChainApi) GetPreviousBlockHash() string {
@@ -38,7 +38,7 @@ func (chain *ChainApi) GetPreviousBlockHash() string {
 }
 
 func (chain *ChainApi) GetReputation(addr crypto.CommonAddress) *big.Int {
-    return chain.dbService.GetReputation(&addr, true)
+    return chain.dbService.GetReputation(&addr, false)
 }
 
 func (chain *ChainApi) GetTransactionsFromBlock(height int64) []*chainType.RpcTransaction {
