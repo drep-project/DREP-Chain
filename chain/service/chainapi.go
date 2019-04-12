@@ -1,6 +1,7 @@
 package service
 
 import (
+    "errors"
     chainType "github.com/drep-project/drep-chain/chain/types"
     "github.com/drep-project/drep-chain/common"
     "github.com/drep-project/drep-chain/crypto"
@@ -15,9 +16,15 @@ type ChainApi struct {
     dbService *database.DatabaseService `service:"database"`
 }
 
-func (chain *ChainApi) GetBlock(height uint64) *chainType.RpcBlock  {
-    blocks, _ := chain.chainService.GetBlocksFrom(height, 1)
-    return  new (chainType.RpcBlock).From(blocks[0])
+func (chain *ChainApi) GetBlock(height uint64) (*chainType.RpcBlock , error) {
+    blocks, err := chain.chainService.GetBlocksFrom(height, 1)
+    if err != nil {
+        return nil, err
+    }
+    if len(blocks) == 0 {
+        return nil, errors.New("block not exist")
+    }
+    return  new (chainType.RpcBlock).From(blocks[0]), nil
 }
 
 func (chain *ChainApi) GetMaxHeight() uint64 {
@@ -32,34 +39,46 @@ func (chain *ChainApi) GetNonce(addr crypto.CommonAddress) uint64 {
     return chain.dbService.GetNonce(&addr, false)
 }
 
-func (chain *ChainApi) GetPreviousBlockHash() string {
-    block := chain.GetBlock(chain.GetMaxHeight())
-    return block.PreviousHash.String()
+func (chain *ChainApi) GetPreviousBlockHash() (string, error) {
+    block, err := chain.GetBlock(chain.GetMaxHeight())
+    if err != nil {
+        return "", err
+    }
+    return block.PreviousHash.String(), nil
 }
 
 func (chain *ChainApi) GetReputation(addr crypto.CommonAddress) *big.Int {
     return chain.dbService.GetReputation(&addr, false)
 }
 
-func (chain *ChainApi) GetTransactionsFromBlock(height uint64) []*chainType.RpcTransaction  {
-    block := chain.GetBlock(height)
-    return block.Txs
-}
-
-func (chain *ChainApi) GetTransactionByBlockHeightAndIndex(height uint64, index int) *chainType.RpcTransaction {
-    block := chain.GetBlock(height)
-    if index > len(block.Txs) {
-        return nil
+func (chain *ChainApi) GetTransactionsFromBlock(height uint64) ([]*chainType.RpcTransaction, error)  {
+    block, err := chain.GetBlock(height)
+    if err != nil {
+        return nil, err
     }
-    return block.Txs[index]
+    return block.Txs, nil
 }
 
-func (chain *ChainApi) GetTransactionCountByBlockHeight(height uint64) int {
-    block := chain.GetBlock(height)
-    return len(block.Txs)
+func (chain *ChainApi) GetTransactionByBlockHeightAndIndex(height uint64, index int) (*chainType.RpcTransaction, error) {
+    block, err := chain.GetBlock(height)
+    if err != nil {
+        return nil, err
+    }
+    if index > len(block.Txs) {
+        return nil, errors.New("tx index out of range")
+    }
+    return block.Txs[index], nil
 }
 
-func (chain *ChainApi) SendRawTransaction(txbytes common.Bytes) (string, error){
+func (chain *ChainApi) GetTransactionCountByBlockHeight(height uint64) (int, error) {
+    block, err := chain.GetBlock(height)
+    if err != nil {
+        return 0, err
+    }
+    return len(block.Txs), nil
+}
+
+func (chain *ChainApi) SendRawTransaction(txbytes common.Bytes) (string, error) {
     tx := &chainType.Transaction{}
     err := binary.Unmarshal(txbytes,tx)
     if err != nil {

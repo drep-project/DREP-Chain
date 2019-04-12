@@ -18,9 +18,27 @@ var (
 	errOrphanBlockExsist = errors.New("already have block (orphan)")
 )
 
-func (chainService *ChainService) ProcessGenisisBlock() {
-	chainService.ExecuteBlock(chainService.genesisBlock)
+func (chainService *ChainService) ProcessGenisisBlock() error {
+	var err error
+	err = chainService.DatabaseService.Transaction(func() error {
+		_, err = chainService.executeBlock(chainService.genesisBlock)
+		if err != nil {
+			return err
+		}
+		for _, producer := range chainService.Config.Producers {
+			//add account
+			storage := chainTypes.NewStorage()
+			storage.Balance = big.NewInt(0).Mul(big.NewInt(100000000000000000), big.NewInt(1000000000))
+			addr := crypto.PubKey2Address(producer.Pubkey)
+			chainService.DatabaseService.PutStorage(&addr, storage, true)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
 	chainService.DatabaseService.RecordBlockJournal(0)
+	return nil
 }
 
 func (chainService *ChainService) checkBody(block *chainTypes.Block) error {

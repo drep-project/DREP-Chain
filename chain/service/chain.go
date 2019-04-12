@@ -145,7 +145,10 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 	}
 	if block == nil {
 		//generate genisis block
-		chainService.ProcessGenisisBlock()
+		err = chainService.ProcessGenisisBlock()
+		if err != nil {
+			return err
+		}
 		chainService.createChainState()
 	}
 
@@ -334,7 +337,7 @@ func (chainService *ChainService) GenesisBlock(genesisPubkey string) *chainTypes
 			GasLimit:     *BlockGasLimit,
 			GasUsed:      *new(big.Int),
 			Timestamp:    1545282765,
-			StateRoot:    nil,
+			StateRoot:    []byte{0},
 			TxRoot:       merkleRoot,
 			Height:       0,
 			LeaderPubKey: *pubkey,
