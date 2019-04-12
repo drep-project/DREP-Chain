@@ -52,6 +52,12 @@ func (tx *Transaction) GetData() []byte {
 	return tx.Data.Data
 }
 
+func (tx *Transaction) Cost() *big.Int {
+	total := new(big.Int).Mul(&tx.Data.GasPrice, new(big.Int).SetUint64(tx.Data.GasLimit.Uint64()))
+	total.Add(total, &tx.Data.Amount)
+	return total
+}
+
 func (tx *Transaction) To() *crypto.CommonAddress {
 	return &tx.Data.To
 }

@@ -92,7 +92,9 @@ func (chainService *ChainService) executeBlock(b *chainTypes.Block) (*big.Int, e
 	if b.Data == nil {
 		return total, nil
 	}
-
+	//TODO Check stateroot
+	//TODO Check merketroot
+	//TODO Consider Check every field in block
 	gasFee, err := chainService.executeTransactionInBlock(b.Data)
 	if err != nil {
 		return nil, err
@@ -107,7 +109,7 @@ func (chainService *ChainService) executeBlock(b *chainTypes.Block) (*big.Int, e
 		chainService.doSync(b.Header.Height)
 		return total, nil
 	} else {
-		return nil, fmt.Errorf("%s not matched %s", hex.EncodeToString(b.Header.StateRoot), " vs ", hex.EncodeToString(stateRoot))
+		return nil, fmt.Errorf("%s not matched %s", hex.EncodeToString(b.Header.StateRoot), hex.EncodeToString(stateRoot))
 	}
 }
 
@@ -117,6 +119,7 @@ func (chainService *ChainService) executeTransactionInBlock(data *chainTypes.Blo
 		_, gasFee, err := chainService.executeTransaction(t)
 		if err != nil {
 			return nil, err
+			//dlog.Debug("execute transaction fail", "txhash", t.Data, "reason", err.Error())
 		}
 		if gasFee != nil {
 			total.Add(total, gasFee)
@@ -156,6 +159,7 @@ func (chainService *ChainService) doSync(height uint64) {
 	childTrans = nil
 }
 
+//TODO 交易验证存在的问题， 合约是否需要执行
 func (chainService *ChainService) executeTransaction(tx *chainTypes.Transaction) (*big.Int, *big.Int, error) {
 	to := tx.To()
 	nounce := tx.Nonce()
@@ -177,6 +181,10 @@ func (chainService *ChainService) executeTransaction(tx *chainTypes.Transaction)
 	}
 
 	originBalance := chainService.DatabaseService.GetBalance(fromAccount, true)
+	//TODO need test
+//	if originBalance.Cmp(tx.Cost()) <0 {
+//		return nil, nil, errors.New("token not enough")
+//	}
 	err := chainService.checkNonce(fromAccount, nounce)
 	if err != nil {
 		return  nil, nil, err
