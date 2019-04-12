@@ -18,7 +18,6 @@ package discv5
 
 import (
 	"crypto/ecdsa"
-	"crypto/elliptic"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -261,7 +260,7 @@ const nodeIDBits = 512
 
 // NodeID is a unique identifier for each node.
 // The node identifier is a marshaled elliptic curve public key.
-type NodeID [nodeIDBits / 8]byte
+type NodeID [nodeIDBits / 16]byte
 
 // NodeID prints as a long hexadecimal number.
 func (n NodeID) String() string {
@@ -305,7 +304,8 @@ func MustHexID(in string) NodeID {
 // PubkeyID returns a marshaled representation of the given public key.
 func PubkeyID(pub *ecdsa.PublicKey) NodeID {
 	var id NodeID
-	pbytes := elliptic.Marshal(pub.Curve, pub.X, pub.Y)
+	//pbytes := elliptic.Marshal(pub.Curve, pub.X, pub.Y)
+	pbytes := crypto.CompressPubkey((*secp256k1.PublicKey)(pub))
 	if len(pbytes)-1 != len(id) {
 		panic(fmt.Errorf("need %d bit pubkey, got %d bits", (len(id)+1)*8, len(pbytes)))
 	}

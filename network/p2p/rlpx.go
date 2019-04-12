@@ -147,6 +147,7 @@ func (t *rlpx) doProtoHandshake(our *protoHandshake) (their *protoHandshake, err
 func readProtocolHandshake(rw MsgReader, our *protoHandshake) (*protoHandshake, error) {
 	msg, err := rw.ReadMsg()
 	if err != nil {
+		fmt.Println("readProtocolHandshake, err:", err)
 		return nil, err
 	}
 	if msg.Size > baseProtocolMaxMsgSize {
@@ -197,6 +198,7 @@ func (t *rlpx) doEncHandshake(prv *secp256k1.PrivateKey, dial *secp256k1.PublicK
 		sec, err = initiatorEncHandshake(t.fd, prv, dial)
 	}
 	if err != nil {
+		fmt.Println("doEncHandShake, err:", err)
 		return nil, err
 	}
 	t.wmu.Lock()
@@ -534,15 +536,7 @@ func readHandshakeMsg(msg plainDecoder, plainSize int, prv *secp256k1.PrivateKey
 	if _, err := io.ReadFull(r, buf[plainSize:]); err != nil {
 		return buf, err
 	}
-	//dec, err := key.Decrypt(buf[2:], nil, prefix)
-	//if err != nil {
-	//	return buf, err
-	//}
-	//// Can't use rlp.DecodeBytes here because it rejects
-	//// trailing data (forward-compatibility).
-	//s := rlp.NewStream(bytes.NewReader(dec), 0)
 	return buf, nil
-	//return buf, rlp.DecodeBytes(buf,)
 }
 
 // importPublicKey unmarshals 512 bit public keys.
@@ -703,7 +697,6 @@ func (rw *rlpxFrameRW) ReadMsg() (msg Msg, err error) {
 	}
 	framebuf := make([]byte, rsize)
 	if _, err := io.ReadFull(rw.conn, framebuf); err != nil {
-		fmt.Println(err)
 		return msg, err
 	}
 

@@ -305,6 +305,7 @@ func (p *Peer) handle(msg Msg) error {
 		if err != nil {
 			return fmt.Errorf("dismsg unmarshal msg err:%v", err)
 		}
+		p.log.Info("dis connect from peer", "peer ip", p.IP())
 		return reason[0]
 	case msg.Code < baseProtocolLength:
 		// ignore other base protocol messages
@@ -380,10 +381,10 @@ func (p *Peer) startProtocols(writeStart <-chan struct{}, writeErr chan<- error)
 			//本peer发送的消息，通过rw发送出去
 			err := proto.Run(p, rw)
 			if err == nil {
-				p.log.Trace(fmt.Sprintf("Protocol %s/%d returned", proto.Name, proto.Version))
+				p.log.Info(fmt.Sprintf("Protocol %s/%d returned", proto.Name, proto.Version))
 				err = errProtocolReturned
 			} else if err != io.EOF {
-				p.log.Trace(fmt.Sprintf("Protocol %s/%d failed", proto.Name, proto.Version), "err", err)
+				p.log.Info(fmt.Sprintf("Protocol %s/%d failed", proto.Name, proto.Version), "err", err)
 			}
 			p.protoErr <- err
 			p.wg.Done()
