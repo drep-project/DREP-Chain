@@ -350,15 +350,17 @@ func (cs *ChainService) checkHeaderChain(chain []chainTypes.BlockHeader) (error)
 			return fmt.Errorf("non contiguous headers")
 		}
 
-		cs.checkHeader(&chain[i])
+		err := cs.VerifyHeader(&chain[i],&chain[i-1])
+		if err != nil {
+			return  err
+		}
 	}
-
 	return nil
 }
 
 func (cs *ChainService) deriveMerkleRoot(txs []*chainTypes.Transaction) []byte {
 	if len(txs) == 0{
-		return nil
+		return []byte{}
 	}
 	txHashes, _ := cs.GetTxHashes(txs)
 	merkle := cs.DatabaseService.NewMerkle(txHashes)

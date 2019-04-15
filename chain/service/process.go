@@ -1,7 +1,6 @@
 package service
 
 import (
-	"bytes"
 	"container/list"
 	"encoding/hex"
 	"errors"
@@ -21,16 +20,18 @@ var (
 func (chainService *ChainService) ProcessGenisisBlock() error {
 	var err error
 	err = chainService.DatabaseService.Transaction(func() error {
-		_, err = chainService.executeBlock(chainService.genesisBlock)
-		if err != nil {
-			return err
-		}
 		for _, producer := range chainService.Config.Producers {
 			//add account
 			storage := chainTypes.NewStorage()
-			storage.Balance = big.NewInt(0).Mul(big.NewInt(100000000000000000), big.NewInt(1000000000))
+			storage.Balance = big.NewInt(0).Mul(big.NewInt(1000000000000000000), big.NewInt(1000000000))
 			addr := crypto.PubKey2Address(producer.Pubkey)
 			chainService.DatabaseService.PutStorage(&addr, storage, true)
+		}
+		root := chainService.DatabaseService.GetStateRoot()
+		chainService.genesisBlock.Header.StateRoot = root   //for genesis block we set correct state
+		err := chainService.createChainState()
+		if err != nil {
+			return err
 		}
 		return nil
 	})
@@ -41,77 +42,9 @@ func (chainService *ChainService) ProcessGenisisBlock() error {
 	return nil
 }
 
-func (chainService *ChainService) checkBody(block *chainTypes.Block) error {
-	//todo check state root
-
-	// Check whether the block's known, and if not, that it's linkable
-	if chainService.blockExists(block.Header.Hash()) {
-		return errBlockExsist
-	}
-
-	txRoot := chainService.deriveMerkleRoot(block.Data.TxList)
-	if !bytes.Equal(txRoot, block.Header.TxRoot) {
-		return fmt.Errorf("transaction root hash mismatch: have %x, want %x", string(txRoot), string(block.Header.TxRoot))
-	}
-
-	//todo 签名是否正确
-	//crypto.ValidateSignatureValues()
-	return nil
-}
-
-func (cs *ChainService) checkHeader(header *chainTypes.BlockHeader) error {
-	//第0个块，不做检查
-	if header.Height == 0 {
-		return nil
-	}
-	if cs.Index.HaveBlock(header.Hash()) {
-		return nil
-	}
-
-	parentBlock, err := cs.DatabaseService.GetBlock(&header.PreviousHash)
-	if err == nil && header.Height != parentBlock.Header.Height+1 {
-		return errors.New("head height err")
-	}
-
-	//出块时间,容忍3秒时差
-	//if header.Timestamp > uint64(time.Now().Unix() + 3) {
-	//	dlog.Error("block time err", "HeaderTime", time.Unix(int64(header.Timestamp), 0), "Now", time.Now())
-	//	return fmt.Errorf("block time err")
-	//}
-
-	if header.GasLimit.Cmp(new(big.Int).Set(BlockGasLimit)) > 0 {
-		return errors.New("gas out block gas limit")
-	}
-
-	return nil
-}
-
-func (cs *ChainService) checkBlock(block *chainTypes.Block) error {
-	// check header
-	err := cs.checkHeader(block.Header)
-	if err != nil {
-		return err
-	}
-	// check body
-	err = cs.checkBody(block)
-	if err != nil {
-		return err
-	}
-
-	//todo check sig
-	//todo 确认块的生产者是否正确
-	return nil
-}
-
 func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, bool, error) {
 	chainService.addBlockSync.Lock()
 	defer chainService.addBlockSync.Unlock()
-
-	err := chainService.checkBlock(block)
-	if err != nil {
-		dlog.Info("process Block check block", "err", err)
-		return false, false, err
-	}
 
 	blockHash := block.Header.Hash()
 	exist := chainService.blockExists(blockHash)
@@ -188,8 +121,20 @@ func (chainService *ChainService) processOrphans(hash *crypto.Hash) error {
 
 func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (bool, error) {
 	prevNode := chainService.Index.LookupNode(&block.Header.PreviousHash)
+	preBlock := prevNode.Header()
+	if !(chainService.ValidateMultiSig(block, chainService.Config.SkipCheckMutiSig||false)) {
+		return false, errors.New("verify multisig error")
+	}
+	err := chainService.VerifyHeader(block.Header, &preBlock)
+	if err != nil {
+		return false, err
+	}
+	err = chainService.ValidateBody(block)
+	if err != nil {
+		return false, err
+	}
 	//store block
-	err := chainService.DatabaseService.PutBlock(block)
+	err = chainService.DatabaseService.PutBlock(block)
 	if err != nil {
 		return false, err
 	}
@@ -233,21 +178,28 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (bool, er
 }
 
 func (chainService *ChainService) connectBlock(block *chainTypes.Block, newNode *chainTypes.BlockNode) error {
-	//main chain
-	if chainService.ValidateBlock(block, chainService.Config.SkipCheckMutiSig||false) {
+	err := chainService.DatabaseService.Transaction(func() error {
+		//process transaction
+		_, err := chainService.executeTransactionInBlock(block.Data)
+		if err != nil {
+			return err
+		}
+		err = chainService.ValidateState(block)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if err == nil {
 		chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValid)
 	} else {
 		chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValidateFailed)
 		chainService.flushIndexState()
-		return errors.New("validate block fail")
-	}
-	chainService.flushIndexState()
-	_, err := chainService.ExecuteBlock(block)
-	if err != nil {
-		chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValidateFailed)
-		chainService.flushIndexState()
 		return err
 	}
+	chainService.flushIndexState()
+
 	chainService.markState(newNode)
 	chainService.clearTxPool(block)
 	// If this is fast add, or this block node isn't yet marked as

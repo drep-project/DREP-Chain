@@ -2,23 +2,24 @@ package service
 
 import (
 	"errors"
-	"fmt"
+	"github.com/drep-project/binary"
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
+	"github.com/drep-project/drep-chain/chain/params"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/crypto/secp256k1/schnorr"
-	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
+	"math"
 	"math/big"
-
-	"bytes"
-	"encoding/hex"
-	"github.com/drep-project/binary"
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
+)
+
+const (
+	allowedFutureBlockTime    = 15 * time.Second
 )
 
 var (
@@ -26,137 +27,90 @@ var (
 	errBalance = errors.New("not enough balance")
 )
 
-func (chainService *ChainService) ValidateBlock(block *chainTypes.Block, skipCheckSig bool) bool {
-	if !skipCheckSig {
-		if !chainService.ValidateMultiSig(block) {
-			dlog.Error("failed to validate block multiSig")
-			return false
-		}
-	}
+func (chainService *ChainService) VerifyTransaction(tx *chainTypes.Transaction) error {
+	return chainService.verifyTransaction(tx)
+}
+
+func (chainService *ChainService) verifyTransaction(tx *chainTypes.Transaction) error {
 	var result error
 	_ = chainService.DatabaseService.Transaction(func() error {
-		_, result = chainService.executeBlock(block)
-		return errors.New("just not commit")
-	})
-	if result != nil {
-		return false
-	}
-	return true
-}
+		from := tx.From()
+		nounce := tx.Nonce()
 
-func (chainService *ChainService) ValidateTransaction(tx *chainTypes.Transaction) error {
-	var result error
-	_ = chainService.DatabaseService.Transaction(func() error {
-		_, _, result = chainService.executeTransaction(tx)
-		return errors.New("just not commit")
-	})
-	return result
-}
-
-
-func (chainService *ChainService) ValidateTransactionsInBlock(blockdata *chainTypes.BlockData) error {
-	var result error
-	_ = chainService.DatabaseService.Transaction(func() error {
-		_, result = chainService.executeTransactionInBlock(blockdata)
-		return errors.New("just not commit")
-	})
-	return result
-}
-
-func (chainService *ChainService) ValidateMultiSig(b *chainTypes.Block) bool {
-	participators := []*secp256k1.PublicKey{}
-	for index, val := range b.MultiSig.Bitmap {
-		if val == 1 {
-			producer := chainService.Config.Producers[index]
-			participators = append(participators, producer.Pubkey)
-		}
-	}
-	msg := b.ToMessage()
-	sigmaPk := schnorr.CombinePubkeys(participators)
-	return schnorr.Verify(sigmaPk, sha3.Hash256(msg), b.MultiSig.Sig.R, b.MultiSig.Sig.S)
-}
-
-func (chainService *ChainService) ExecuteBlock(b *chainTypes.Block) (gasUsed *big.Int, err error) {
-	err = chainService.DatabaseService.Transaction(func() error {
-		gasUsed, err = chainService.executeBlock(b)
-		return err
-	})
-	return
-}
-
-func (chainService *ChainService) executeBlock(b *chainTypes.Block) (*big.Int, error) {
-	if b == nil || b.Header == nil {
-		return nil, errors.New("error block nil or header nil")
-	}
-	total := big.NewInt(0)
-	if b.Data == nil {
-		return total, nil
-	}
-	//TODO Check stateroot
-	//TODO Check merketroot
-	//TODO Consider Check every field in block
-	gasFee, err := chainService.executeTransactionInBlock(b.Data)
-	if err != nil {
-		return nil, err
-	}
-	total.Add(total, gasFee)
-
-	stateRoot := chainService.DatabaseService.GetStateRoot()
-	if bytes.Equal(b.Header.StateRoot, stateRoot) {
-		dlog.Debug("matched ", "BlockStateRoot", hex.EncodeToString(b.Header.StateRoot), "CalcStateRoot", hex.EncodeToString(stateRoot))
-		chainService.accumulateRewards(b,total)
-		chainService.preSync(b)
-		chainService.doSync(b.Header.Height)
-		return total, nil
-	} else {
-		return nil, fmt.Errorf("%s not matched %s", hex.EncodeToString(b.Header.StateRoot), hex.EncodeToString(stateRoot))
-	}
-}
-
-func (chainService *ChainService) executeTransactionInBlock(data *chainTypes.BlockData) (*big.Int, error) {
-	total := big.NewInt(0)
-	for _, t := range data.TxList {
-		_, gasFee, err := chainService.executeTransaction(t)
+		_, err := chainService.verify(tx)
 		if err != nil {
-			return nil, err
-			//dlog.Debug("execute transaction fail", "txhash", t.Data, "reason", err.Error())
+			return err
 		}
-		if gasFee != nil {
-			total.Add(total, gasFee)
+
+		err = chainService.checkNonce(from, nounce)
+		if err != nil {
+			return  err
 		}
-	}
-	return total, nil
+
+		// Check the transaction doesn't exceed the current
+		// block limit gas.
+		block, _ := chainService.GetBlockByHash(chainService.BestChain.Tip().Hash)
+		if block.Header.GasLimit.Uint64() < tx.Gas() {
+			return errors.New("gas limit in tx has exceed block limit")
+		}
+
+		// Transactions can't be negative. This may never happen
+		// using RLP decoded transactions but may occur if you create
+		// a transaction using the RPC for example.
+		if tx.Amount().Sign() < 0 {
+			return errors.New("negative amount in tx")
+		}
+
+		// Transactor should have enough funds to cover the costs
+		// cost == V + GP * GL
+		originBalance := chainService.DatabaseService.GetBalance(from, true)
+		if originBalance.Cmp(tx.Cost()) < 0 {
+			return errors.New("not enough balance")
+		}
+
+		// Should supply enough intrinsic gas
+		gas, err := chainService.IntrinsicGas(tx.Data.Data, tx.To() == nil)
+		if err != nil {
+			return err
+		}
+		if tx.Gas() < gas {
+			return errors.New("not enough balance")
+		}
+		return errors.New("just not commit")
+	})
+	return result
 }
 
-func (chainService *ChainService) preSync(block *chainTypes.Block) {
-	if !chainService.isRelay && chainService.chainId != chainService.RootChain() {
-		return
+func (chainService *ChainService) IntrinsicGas(data []byte, contractCreation bool) (uint64, error) {
+	// Set the starting gas for the raw transaction
+	var gas uint64
+	if contractCreation {
+		gas = params.TxGasContractCreation
+	} else {
+		gas = params.TxGas
 	}
-	if childTrans == nil {
-		childTrans = make([]*chainTypes.Transaction, 0)
-	}
-	childTrans = append(childTrans, block.Data.TxList...)
-}
+	// Bump the required gas by the amount of transactional data
+	if len(data) > 0 {
+		// Zero and non-zero bytes are priced differently
+		var nz uint64
+		for _, byt := range data {
+			if byt != 0 {
+				nz++
+			}
+		}
+		// Make sure we don't exceed uint64 for all data combinations
+		if (math.MaxUint64-gas)/params.TxDataNonZeroGas < nz {
+			return 0, vm.ErrOutOfGas
+		}
+		gas += nz * params.TxDataNonZeroGas
 
-func (chainService *ChainService) doSync(height uint64) {
-	if !chainService.isRelay || chainService.chainId == chainService.RootChain() || height%2 != 0 || height == 0 {
-		return
+		z := uint64(len(data)) - nz
+		if (math.MaxUint64-gas)/params.TxDataZeroGas < z {
+			return 0, vm.ErrOutOfGas
+		}
+		gas += z * params.TxDataZeroGas
 	}
-	cct := &chainTypes.CrossChainTransaction{
-		ChainId:   chainService.chainId,
-		StateRoot: chainService.DatabaseService.GetStateRoot(),
-		Trans:     childTrans,
-	}
-	data, err := binary.Marshal(cct)
-	if err != nil {
-		return
-	}
-	values := url.Values{}
-	values.Add("data", string(data))
-	body := values.Encode()
-	urlStr := "http://localhost:" + strconv.Itoa(chainService.Config.RemotePort) + "/SyncChildChain?" + body
-	http.Get(urlStr)
-	childTrans = nil
+	return gas, nil
 }
 
 //TODO 交易验证存在的问题， 合约是否需要执行
@@ -168,28 +122,13 @@ func (chainService *ChainService) executeTransaction(tx *chainTypes.Transaction)
 	gasPrice := tx.GasPrice()
 	gasLimit := tx.GasLimit()
 
-	if tx.Sig != nil {
-		isValid, err := chainService.verify(tx)
-		if err != nil {
-			return nil, nil, err
-		}
-		if !isValid {
-			return nil, nil, errors.New("signature not validate")
-		}
-	}else{
-		return nil, nil, errors.New("must assign a signature for transaction")
+	_, err := chainService.verify(tx)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	originBalance := chainService.DatabaseService.GetBalance(fromAccount, true)
 	//TODO need test
-//	if originBalance.Cmp(tx.Cost()) <0 {
-//		return nil, nil, errors.New("token not enough")
-//	}
-	err := chainService.checkNonce(fromAccount, nounce)
-	if err != nil {
-		return  nil, nil, err
-	}
-
 	var gasUsed *big.Int
 	var gasFee *big.Int
 	switch tx.Type() {
@@ -220,13 +159,23 @@ func (chainService *ChainService) executeTransaction(tx *chainTypes.Transaction)
 }
 
 func (chainService *ChainService) verify(tx *chainTypes.Transaction) (bool, error){
-	pk, _, err := secp256k1.RecoverCompact(tx.Sig, tx.TxHash().Bytes())
-	if err != nil {
-		return false, err
+	if tx.Sig != nil {
+		pk, _, err := secp256k1.RecoverCompact(tx.Sig, tx.TxHash().Bytes())
+		if err != nil {
+			return false, err
+		}
+		sig := secp256k1.RecoverSig(tx.Sig)
+		isValid := sig.Verify(tx.TxHash().Bytes(), pk)
+		if err != nil {
+			return false, err
+		}
+		if !isValid {
+			return false, errors.New("signature not validate")
+		}
+		return true, nil
+	}else{
+		return false, errors.New("must assign a signature for transaction")
 	}
-	sig := secp256k1.RecoverSig(tx.Sig)
-	isValid := sig.Verify(tx.TxHash().Bytes(), pk)
-	return isValid, nil
 }
 
 func (chainService *ChainService) executeTransferTransaction(t *chainTypes.Transaction, fromAccount, to *crypto.CommonAddress, balance, gasPrice, gasLimit, amount *big.Int, chainId app.ChainIdType) (*big.Int, *big.Int, error) {
@@ -309,7 +258,36 @@ func (chainService *ChainService) deduct(chainId app.ChainIdType, balance, gasFe
 	return leftBalance, actualFee
 }
 
+func (chainService *ChainService) preSync(block *chainTypes.Block) {
+	if !chainService.isRelay && chainService.chainId != chainService.RootChain() {
+		return
+	}
+	if childTrans == nil {
+		childTrans = make([]*chainTypes.Transaction, 0)
+	}
+	childTrans = append(childTrans, block.Data.TxList...)
+}
 
+func (chainService *ChainService) doSync(height uint64) {
+	if !chainService.isRelay || chainService.chainId == chainService.RootChain() || height%2 != 0 || height == 0 {
+		return
+	}
+	cct := &chainTypes.CrossChainTransaction{
+		ChainId:   chainService.chainId,
+		StateRoot: chainService.DatabaseService.GetStateRoot(),
+		Trans:     childTrans,
+	}
+	data, err := binary.Marshal(cct)
+	if err != nil {
+		return
+	}
+	values := url.Values{}
+	values.Add("data", string(data))
+	body := values.Encode()
+	urlStr := "http://localhost:" + strconv.Itoa(chainService.Config.RemotePort) + "/SyncChildChain?" + body
+	http.Get(urlStr)
+	childTrans = nil
+}
 
 
 

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"math/rand"
@@ -11,18 +12,17 @@ import (
 	"github.com/drep-project/drep-chain/app"
 	"gopkg.in/urfave/cli.v1"
 
+	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/chain/txpool"
-	"github.com/drep-project/drep-chain/network/p2p"
-	"github.com/drep-project/drep-chain/pkgs/evm"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/database"
+	"github.com/drep-project/drep-chain/network/p2p"
+	"github.com/drep-project/drep-chain/pkgs/evm"
 	"github.com/drep-project/drep-chain/rpc"
-	"github.com/drep-project/dlog"
-	"github.com/drep-project/binary"
 
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	p2pService "github.com/drep-project/drep-chain/network/service"
@@ -149,7 +149,6 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 		if err != nil {
 			return err
 		}
-		chainService.createChainState()
 	}
 
 	chainService.InitStates()
@@ -263,7 +262,7 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey) 
 			finalTxs = append(finalTxs, t)
 			gasUsed.Add(gasUsed, g)
 		}else {
-			dlog.Info("execute tx","err", err)
+		   return nil, err
 		}
 	}
 
@@ -400,4 +399,20 @@ func (chainService *ChainService) GetHighestBlock() (*chainTypes.Block, error) {
 		return nil, err
 	}
 	return block, nil
+}
+
+func (chainService *ChainService) GetBlockByHash(hash *crypto.Hash)  (*chainTypes.Block, error) {
+	block, err := chainService.DatabaseService.GetBlock(hash)
+	if err != nil {
+		return nil, err
+	}
+	return block, nil
+}
+func (chainService *ChainService) GetBlockHeaderByHash(hash *crypto.Hash)  (*chainTypes.BlockHeader, error) {
+	blockNode, ok := chainService.Index.Index[*hash]
+	if !ok {
+		return nil, errors.New("block not exist")
+	}
+	blockHeader := blockNode.Header()
+	return &blockHeader, nil
 }

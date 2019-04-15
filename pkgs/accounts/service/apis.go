@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"github.com/drep-project/drep-chain/common"
 	"math/big"
 
 	chainService "github.com/drep-project/drep-chain/chain/service"
@@ -75,9 +76,10 @@ func (accountapi *AccountApi) CloseWallet() {
 	accountapi.Wallet.Close()
 }
 
-func (accountapi *AccountApi) Transfer(from crypto.CommonAddress, to crypto.CommonAddress, amount *big.Int) (string, error) {
+func (accountapi *AccountApi) Transfer(from crypto.CommonAddress, to crypto.CommonAddress, amount common.Big) (string, error) {
 	nonce := accountapi.chainService.GetTransactionCount(&from)
-	t := chainTypes.NewTransaction(from, to, amount, nonce)
+	bigInt := big.Int(amount)
+	t := chainTypes.NewTransaction(from, to, &bigInt, nonce)
 	sig, err := accountapi.Wallet.Sign(&from, t.TxHash().Bytes())
 	if err != nil{
 		return "",err
@@ -90,9 +92,10 @@ func (accountapi *AccountApi) Transfer(from crypto.CommonAddress, to crypto.Comm
 	return t.TxHash().String(), nil
 }
 
-func (accountapi *AccountApi) Call(from crypto.CommonAddress, to crypto.CommonAddress, input []byte, amount *big.Int, readOnly bool) (string, error) {
+func (accountapi *AccountApi) Call(from crypto.CommonAddress, to crypto.CommonAddress, input []byte, amount common.Big, readOnly bool) (string, error) {
 	nonce := accountapi.chainService.GetTransactionCount(&from)
-	t := chainTypes.NewCallContractTransaction(from, to, input, amount, nonce, readOnly)
+	bigInt := big.Int(amount)
+	t := chainTypes.NewCallContractTransaction(from, to, input, &bigInt, nonce, readOnly)
 	sig, err := accountapi.Wallet.Sign(&from, t.TxHash().Bytes())
 	if err != nil{
 		return "",err

@@ -1,7 +1,10 @@
 package main
 
 import (
+    "encoding/json"
+    "fmt"
     "github.com/drep-project/binary"
+    "github.com/drep-project/drep-chain/common"
     "github.com/drep-project/drep-chain/crypto/secp256k1"
     "log"
     "math/big"
@@ -16,6 +19,10 @@ type AAA struct {
 }
 
 func main(){
+    bigValue := &common.Big{}
+    valStr := "\"0x9184e72a\""
+    err := json.Unmarshal([]byte(valStr), bigValue)
+    fmt.Println(err)
     binary.ImportCodeC(reflect.TypeOf(secp256k1.PublicKey{}), &secpPubKeyCodeC{})
     pri, _ := secp256k1.GeneratePrivateKey(nil)
     a := AAA{

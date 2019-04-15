@@ -467,10 +467,21 @@ func (consensusService *ConsensusService) getWaitTime() (time.Time, time.Duratio
 }
 
 func (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) bool {
-	err := consensusService.ChainService.ValidateTransactionsInBlock(block.Data)
+	preBlockHash, err := consensusService.ChainService.GetBlockHeaderByHash(&block.Header.PreviousHash)
+	if err != nil {
+		return false
+	}
+	err = consensusService.ChainService.VerifyHeader(block.Header, preBlockHash)
+	if err != nil {
+		return false
+	}
+	err = consensusService.ChainService.ValidateBody(block)
+	if err != nil {
+		return false
+	}
 	return err == nil
 }
 
 func (consensusService *ConsensusService) multySigVerify(block *chainTypes.Block) bool {
-	return consensusService.ChainService.ValidateMultiSig(block)
+	return consensusService.ChainService.ValidateMultiSig(block, consensusService.ChainService.Config.SkipCheckMutiSig||false)
 }
