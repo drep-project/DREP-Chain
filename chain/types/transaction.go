@@ -25,7 +25,7 @@ type TransactionData struct {
 	Amount    big.Int
 	GasPrice  big.Int
 	GasLimit  big.Int
-	Timestamp uint64
+	Timestamp int64
 	Data      []byte
 	From      crypto.CommonAddress
 }
@@ -121,7 +121,7 @@ func NewTransaction(from crypto.CommonAddress, to crypto.CommonAddress, amount *
 		Amount:    *amount,
 		GasPrice:  *DefaultGasPrice,
 		GasLimit:  *TransferGas,
-		Timestamp: uint64(time.Now().Unix()),
+		Timestamp: time.Now().Unix(),
 		From:      from,
 	}
 	return &Transaction{Data: data}
@@ -134,7 +134,7 @@ func NewContractTransaction(from crypto.CommonAddress, to crypto.CommonAddress, 
 		Type:      CreateContractType,
 		GasPrice:  *DefaultGasPrice,
 		GasLimit:  *CreateContractGas,
-		Timestamp: uint64(time.Now().Unix()),
+		Timestamp: time.Now().Unix(),
 		Data:      make([]byte, len(byteCode)+1),
 		From:      from,
 	}
@@ -152,7 +152,7 @@ func NewCallContractTransaction(from crypto.CommonAddress, to crypto.CommonAddre
 		Amount:    *amount,
 		GasPrice:  *DefaultGasPrice,
 		GasLimit:  *CallContractGas,
-		Timestamp: uint64(time.Now().Unix()),
+		Timestamp: time.Now().Unix(),
 		From:      from,
 		Data:      make([]byte, len(input)+1),
 	}
