@@ -2,12 +2,14 @@ package service
 
 import (
     "errors"
+    "fmt"
     chainType "github.com/drep-project/drep-chain/chain/types"
     "github.com/drep-project/drep-chain/common"
     "github.com/drep-project/drep-chain/crypto"
     "github.com/drep-project/binary"
     "github.com/drep-project/drep-chain/database"
     "math/big"
+    "time"
 )
 
 
@@ -24,6 +26,8 @@ func (chain *ChainApi) GetBlock(height uint64) (*chainType.RpcBlock , error) {
     if len(blocks) == 0 {
         return nil, errors.New("block not exist")
     }
+    block := blocks[0]
+    fmt.Println(time.Unix(int64(block.Header.Timestamp), 0 ))
     return  new (chainType.RpcBlock).From(blocks[0]), nil
 }
 
@@ -90,7 +94,7 @@ func (chain *ChainApi) SendRawTransaction(txbytes common.Bytes) (string, error) 
     if err != nil {
         return "", err
     }
-
+    chain.chainService.transactionPool.AddTransaction(tx)
     chain.chainService.BroadcastTx(chainType.MsgTypeTransaction, tx, true)
 
     return tx.TxHash().String(), err
