@@ -5,7 +5,7 @@ import (
 	accountService "github.com/drep-project/drep-chain/pkgs/accounts/service"
 	chainService "github.com/drep-project/drep-chain/chain/service"
 	consensusService "github.com/drep-project/drep-chain/pkgs/consensus/service"
-	logService "github.com/drep-project/dlog"
+	logService "github.com/drep-project/drep-chain/pkgs/log"
 	p2pService "github.com/drep-project/drep-chain/network/service"
 	"io"
 	"os"
@@ -40,6 +40,10 @@ module.exports = %s;
 `
 
 var (
+	inputFormatMap = map[string]string{
+		"common.Big": "utils.fromDecimal",
+		"crypto.CommonAddress":"formatters.inputAddressFormatter",
+	}
 	formatMap = map[string]string{
 		"big.Int": "formatters.outputBigNumberFormatter",
 		"int64":"utils.toDecimal",
@@ -106,6 +110,7 @@ var %s = new Method({
 	name: '%s',
 	call: '%s_%s',
 	params: %d,%s
+    inputFormatter: [%s]
 });
 	`
 	code := ""
@@ -116,7 +121,9 @@ var %s = new Method({
 		numIn:=m.Func.Type().NumIn()
 		oNmae := m.Name
 		methodName := Capitalize(oNmae)
-
+		if oNmae == "Transfer" {
+			fmt.Println("x")
+		}
 		name := ""
 		if m.Func.Type().NumOut() > 0 {
 			var resultType = m.Func.Type().Out(0)
@@ -127,13 +134,34 @@ var %s = new Method({
 				name = resultType.Name()
 			}
 		}
-		formater := ""
-		ok := false
-		if formater, ok = formatMap[name];ok {
-			formater = "\n\toutputFormatter : " + formater
+		outputFormater := ""
+		if formater, ok := formatMap[name]; ok {
+			outputFormater = "\n\toutputFormatter : " + formater
 		}
 
-		code += fmt.Sprintf(template,methodName, methodName,prefix, methodName,numIn-1,formater)
+		inputFormat := ""
+		if m.Func.Type().NumIn() > 1 {
+			for j:=1;j <m.Func.Type().NumIn();j++{
+				var inputType = m.Func.Type().In(j)
+				inputTypeName := ""
+				if inputType.Kind() == reflect.Ptr {
+					inputType = inputType.Elem()
+					inputTypeName = inputType.String()
+				}else{
+					inputTypeName = inputType.String()
+				}
+				if formater, ok := inputFormatMap[inputTypeName]; ok {
+					inputFormat = inputFormat + formater +", "
+				}else{
+					inputFormat = inputFormat  +"null, "
+				}
+			}
+			if len(inputFormat) >0 {
+				inputFormat = inputFormat[:len(inputFormat)-2]
+			}
+		}
+
+		code += fmt.Sprintf(template,methodName, methodName,prefix, methodName,numIn-1,outputFormater, inputFormat)
 		methodNames += methodName +","
 	}
 	methodNames = strings.Trim(methodNames,",")

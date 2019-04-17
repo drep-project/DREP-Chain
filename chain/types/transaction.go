@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/json"
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
@@ -113,6 +114,22 @@ func (tx *Transaction) GetSig() []byte {
 	return tx.Sig
 }
 
+func (tx *Transaction) AsPersistentMessage() []byte {
+	txBytes, _ := json.Marshal(tx)
+	return txBytes
+}
+
+type Message struct {
+	To         *crypto.CommonAddress
+	From       *crypto.CommonAddress
+	Nonce      uint64
+	Amount     *big.Int
+	GasLimit   uint64
+	GasPrice   *big.Int
+	Data       []byte
+	CheckNonce bool
+}
+
 func NewTransaction(from crypto.CommonAddress, to crypto.CommonAddress, amount *big.Int, nonce uint64) *Transaction {
 	data := TransactionData{
 		Version:   common.Version,
@@ -128,24 +145,20 @@ func NewTransaction(from crypto.CommonAddress, to crypto.CommonAddress, amount *
 	return &Transaction{Data: data}
 }
 
-func NewContractTransaction(from crypto.CommonAddress, to crypto.CommonAddress, byteCode []byte, nonce uint64) *Transaction {
-	nonce++
+func NewContractTransaction(from crypto.CommonAddress, byteCode []byte, nonce uint64) *Transaction {
 	data := TransactionData{
 		Nonce:     nonce,
 		Type:      CreateContractType,
 		GasPrice:  *DefaultGasPrice,
 		GasLimit:  *CreateContractGas,
 		Timestamp: time.Now().Unix(),
-		Data:      make([]byte, len(byteCode)+1),
+		Data:      byteCode,
 		From:      from,
 	}
-	copy(data.Data[1:], byteCode)
-	data.Data[0] = 2
 	return &Transaction{Data: data}
 }
 
-func NewCallContractTransaction(from crypto.CommonAddress, to crypto.CommonAddress, input []byte, amount *big.Int, nonce uint64, readOnly bool) *Transaction {
-	nonce++
+func NewCallContractTransaction(from crypto.CommonAddress, to crypto.CommonAddress, input []byte, amount *big.Int, nonce uint64) *Transaction {
 	data := TransactionData{
 		Nonce:     nonce,
 		Type:      CallContractType,
@@ -155,13 +168,7 @@ func NewCallContractTransaction(from crypto.CommonAddress, to crypto.CommonAddre
 		GasLimit:  *CallContractGas,
 		Timestamp: time.Now().Unix(),
 		From:      from,
-		Data:      make([]byte, len(input)+1),
-	}
-	copy(data.Data[1:], input)
-	if readOnly {
-		data.Data[0] = 1
-	} else {
-		data.Data[0] = 0
+		Data:      input,
 	}
 	return &Transaction{Data: data}
 }

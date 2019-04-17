@@ -294,6 +294,7 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 	block, err := consensusService.ChainService.GenerateBlock(consensusService.leader.pubkey)
 	if err != nil {
 		dlog.Error("generate block fail", "msg", err)
+		return nil, err
 	}
 
 	dlog.Trace("node leader is preparing process consensus for round 1", "Block", block)
@@ -332,7 +333,10 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 }
 
 func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error) {
-	block, _ := consensusService.ChainService.GenerateBlock(consensusService.pubkey)
+	block, err := consensusService.ChainService.GenerateBlock(consensusService.pubkey)
+	if err != nil {
+		return nil, err
+	}
 	msg, err := binary.Marshal(block)
 	if err != nil {
 		return block, nil

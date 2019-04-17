@@ -47,6 +47,8 @@ type ChainService struct {
 	isRelay         bool
 	apis            []app.API
 
+	stateProcessor  *StateProcessor
+
 	chainId app.ChainIdType
 
 	lock          sync.RWMutex
@@ -60,8 +62,6 @@ type ChainService struct {
 	orphans      map[crypto.Hash]*chainTypes.OrphanBlock
 	prevOrphans  map[crypto.Hash][]*chainTypes.OrphanBlock
 	oldestOrphan *chainTypes.OrphanBlock
-
-	prvKey *secp256k1.PrivateKey
 
 	Index         *chainTypes.BlockIndex
 	BestChain     *chainTypes.ChainView
@@ -135,22 +135,23 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 	chainService.pendingSyncTasks = make(map[crypto.Hash]uint64)
 	chainService.peersInfo = make(map[string]*chainTypes.PeerInfo)
 	chainService.newPeerCh = make(chan *chainTypes.PeerInfo, maxLivePeer)
-	chainService.genesisBlock = chainService.GenesisBlock(chainService.Config.GenesisPK)
 	chainService.taskTxsCh = make(chan tasksTxsSync, maxLivePeer)
+	chainService.stateProcessor = NewStateProcessor(chainService)
 
-	hash := chainService.genesisBlock.Header.Hash()
-	block, err := chainService.DatabaseService.GetBlock(hash)
-	if err != nil && err.Error() != "leveldb: not found" {
-		return nil
-	}
-	if block == nil {
-		//generate genisis block
-		err = chainService.ProcessGenisisBlock()
+	//TODO ENSURE SAFE IN GENESIS BLOCK
+	chainState := chainService.DatabaseService.GetChainState()
+	if chainState == nil {
+		chainService.genesisBlock, err = chainService.GenesisBlock(chainService.Config.GenesisPK)
+		if err != nil {
+			return nil
+		}
+		err = chainService.createChainState()
 		if err != nil {
 			return err
 		}
+	}else{
+		chainService.genesisBlock = chainService.GetGenisiBlock()
 	}
-
 	chainService.InitStates()
 	chainService.transactionPool = txpool.NewTransactionPool(chainService.DatabaseService)
 
@@ -201,12 +202,16 @@ func (chainService *ChainService) Stop(executeContext *app.ExecuteContext) error
 
 func (chainService *ChainService) SendTransaction(tx *chainTypes.Transaction) error {
 	//TODO validate transaction
-	error := chainService.transactionPool.AddTransaction(tx)
-	if error == nil {
-		chainService.BroadcastTx(chainTypes.MsgTypeTransaction, tx, true)
+	err := chainService.verifyTransaction(tx)
+	if err != nil {
+		return err
 	}
-
-	return error
+	err = chainService.transactionPool.AddTransaction(tx)
+	if err != nil {
+		return err
+	}
+	chainService.BroadcastTx(chainTypes.MsgTypeTransaction, tx, true)
+	return nil
 }
 
 func (chainService *ChainService) BroadcastBlock(msgType int32, block *chainTypes.Block, isLocal bool) {
@@ -254,36 +259,39 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey) 
 	height := chainService.BestChain.Height() + 1
 	txs := chainService.transactionPool.GetPending(BlockGasLimit)
 
+	previousHash := chainService.BestChain.Tip().Hash
+	timestamp := uint64(time.Now().Unix())
+
+	blockHeader := &chainTypes.BlockHeader{
+		Version:      common.Version,
+		PreviousHash: *previousHash,
+		ChainId:      chainService.chainId,
+		GasLimit:     *BlockGasLimit,
+		Timestamp:    timestamp,
+		Height:       height,
+		LeaderPubKey: *leaderKey,
+	}
+
 	finalTxs := make([]*chainTypes.Transaction, 0, len(txs))
 	gasUsed := new(big.Int)
+	gp := new(GasPool).AddGas(blockHeader.GasLimit.Uint64())
 	for _, t := range txs {
-		g, _, err := chainService.executeTransaction(t)
+		g, _, err := chainService.executeTransaction(t, gp, blockHeader)
 		if err == nil {
 			finalTxs = append(finalTxs, t)
 			gasUsed.Add(gasUsed, g)
 		}else {
-		   return nil, err
+			//TODO err or continue
+			continue
+		 //  return nil, err
 		}
 	}
-
-	timestamp := uint64(time.Now().Unix())
-	previousHash := chainService.BestChain.Tip().Hash
-	stateRoot := chainService.DatabaseService.GetStateRoot()
-	merkleRoot := chainService.deriveMerkleRoot(finalTxs)
+	blockHeader.GasUsed = *new (big.Int).SetUint64(gp.Gas())
+	blockHeader.StateRoot = chainService.DatabaseService.GetStateRoot()
+	blockHeader.TxRoot = chainService.deriveMerkleRoot(finalTxs)
 
 	block := &chainTypes.Block{
-		Header: &chainTypes.BlockHeader{
-			Version:      common.Version,
-			PreviousHash: *previousHash,
-			ChainId:      chainService.chainId,
-			GasLimit:     *BlockGasLimit,
-			GasUsed:      *gasUsed,
-			Timestamp:    timestamp,
-			StateRoot:    stateRoot,
-			TxRoot:       merkleRoot,
-			Height:       height,
-			LeaderPubKey: *leaderKey,
-		},
+		Header: blockHeader,
 		Data: &chainTypes.BlockData{
 			TxCount: uint64(len(finalTxs)),
 			TxList:  finalTxs,
@@ -313,39 +321,6 @@ func (chainService *ChainService) Attach() (*rpc.Client, error) {
 
 func (chainService *ChainService) RootChain() app.ChainIdType {
 	return rootChain
-}
-
-func (chainService *ChainService) GenesisBlock(genesisPubkey string) *chainTypes.Block {
-	chainService.DatabaseService.BeginTransaction()
-	defer chainService.DatabaseService.Discard()
-
-	merkleRoot := chainService.deriveMerkleRoot(nil)
-	b := common.Bytes(genesisPubkey)
-	err := b.UnmarshalText(b)
-	if err != nil {
-		return nil
-	}
-	pubkey, err := secp256k1.ParsePubKey(b)
-	if err != nil {
-		return nil
-	}
-	return &chainTypes.Block{
-		Header: &chainTypes.BlockHeader{
-			Version:      common.Version,
-			PreviousHash: crypto.Hash{},
-			GasLimit:     *BlockGasLimit,
-			GasUsed:      *new(big.Int),
-			Timestamp:    1545282765,
-			StateRoot:    []byte{0},
-			TxRoot:       merkleRoot,
-			Height:       0,
-			LeaderPubKey: *pubkey,
-		},
-		Data: &chainTypes.BlockData{
-			TxCount: 0,
-			TxList:  []*chainTypes.Transaction{},
-		},
-	}
 }
 
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
@@ -415,4 +390,9 @@ func (chainService *ChainService) GetBlockHeaderByHash(hash *crypto.Hash)  (*cha
 	}
 	blockHeader := blockNode.Header()
 	return &blockHeader, nil
+}
+
+func (chainService *ChainService) GetHeader(hash crypto.Hash, number uint64) *chainTypes.BlockHeader {
+	header, _ := chainService.GetBlockHeaderByHash(&hash)
+	return header
 }

@@ -82,10 +82,13 @@ func (chainService *ChainService) ValidateMultiSig(b *chainTypes.Block, skipChec
 	return schnorr.Verify(sigmaPk, sha3.Hash256(msg), b.MultiSig.Sig.R, b.MultiSig.Sig.S)
 }
 
-func (chainService *ChainService) executeTransactionInBlock(data *chainTypes.BlockData) (*big.Int, error) {
+func (chainService *ChainService) executeTransactionInBlock(block *chainTypes.Block, gp *GasPool) (*big.Int, error) {
 	total := big.NewInt(0)
-	for _, t := range data.TxList {
-		_, gasFee, err := chainService.executeTransaction(t)
+	if len(block.Data.TxList)  <0 {
+		return new (big.Int), nil
+	}
+	for _, t := range block.Data.TxList {
+		_, gasFee, err := chainService.executeTransaction(t, gp, block.Header)
 		if err != nil {
 			return nil, err
 			//dlog.Debug("execute transaction fail", "txhash", t.Data, "reason", err.Error())
@@ -96,3 +99,5 @@ func (chainService *ChainService) executeTransactionInBlock(data *chainTypes.Blo
 	}
 	return total, nil
 }
+
+

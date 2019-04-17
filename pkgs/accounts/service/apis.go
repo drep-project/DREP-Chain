@@ -92,10 +92,10 @@ func (accountapi *AccountApi) Transfer(from crypto.CommonAddress, to crypto.Comm
 	return t.TxHash().String(), nil
 }
 
-func (accountapi *AccountApi) Call(from crypto.CommonAddress, to crypto.CommonAddress, input []byte, amount common.Big, readOnly bool) (string, error) {
+func (accountapi *AccountApi) Call(from crypto.CommonAddress, to crypto.CommonAddress, input common.Bytes, amount common.Big) (string, error) {
 	nonce := accountapi.chainService.GetTransactionCount(&from)
 	bigInt := big.Int(amount)
-	t := chainTypes.NewCallContractTransaction(from, to, input, &bigInt, nonce, readOnly)
+	t := chainTypes.NewCallContractTransaction(from, to, input, &bigInt, nonce)
 	sig, err := accountapi.Wallet.Sign(&from, t.TxHash().Bytes())
 	if err != nil{
 		return "",err
@@ -105,9 +105,9 @@ func (accountapi *AccountApi) Call(from crypto.CommonAddress, to crypto.CommonAd
 	return t.TxHash().String(), nil
 }
 
-func (accountapi *AccountApi) CreateCode(from crypto.CommonAddress, to crypto.CommonAddress, byteCode []byte) (string, error) {
+func (accountapi *AccountApi) CreateCode(from crypto.CommonAddress, byteCode common.Bytes) (string, error) {
 	nonce := accountapi.chainService.GetTransactionCount(&from)
-	t := chainTypes.NewContractTransaction(from, to, byteCode, nonce)
+	t := chainTypes.NewContractTransaction(from, byteCode, nonce)
 	sig, err := accountapi.Wallet.Sign(&from, t.TxHash().Bytes())
 	if err != nil{
 		return "",err

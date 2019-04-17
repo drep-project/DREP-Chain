@@ -7,6 +7,22 @@ import (
 
 type Hash [HashLength]byte
 
+// BytesToHash sets b to hash.
+// If b is larger than len(h), b will be cropped from the left.
+func BytesToHash(b []byte) Hash {
+	var h Hash
+	h.SetBytes(b)
+	return h
+}
+
+// BigToHash sets byte representation of b to hash.
+// If b is larger than len(h), b will be cropped from the left.
+func BigToHash(b *big.Int) Hash { return BytesToHash(b.Bytes()) }
+
+// HexToHash sets byte representation of s to hash.
+// If b is larger than len(h), b will be cropped from the left.
+func HexToHash(s string) Hash { return BytesToHash(common.FromHex(s)) }
+
 func Bytes2Hash(b []byte) Hash {
 	if b == nil {
 		return Hash{}
@@ -55,7 +71,9 @@ func (hash *Hash) IsEqual(target *Hash) bool {
 	}
 	return *hash == *target
 }
-
+func (hash *Hash) IsEmpty() bool {
+	return *hash == [HashLength]byte{}
+}
 // UnmarshalJSON parses a hash in hex syntax.
 func (h *Hash) UnmarshalJSON(input []byte) error {
 	return common.UnmarshalFixedJSON(hashT, input, h[:])

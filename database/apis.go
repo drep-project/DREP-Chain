@@ -147,7 +147,6 @@ func (database *DatabaseService) RecordBlockJournal(height uint64) {
     database.db.RecordBlockJournal(height)
 }
 
-
 func (database *DatabaseService) GetStorage(addr *crypto.CommonAddress, transactional bool) *chainType.Storage {
     if !transactional {
         return database.db.getStorage(addr)
@@ -195,7 +194,7 @@ func (database *DatabaseService) GetBalance(addr *crypto.CommonAddress, transact
     if storage == nil {
         return new(big.Int)
     }
-    return storage.Balance
+    return &storage.Balance
 }
 
 func (database *DatabaseService) PutBalance(addr *crypto.CommonAddress, balance *big.Int, transactional bool) error {
@@ -203,7 +202,7 @@ func (database *DatabaseService) PutBalance(addr *crypto.CommonAddress, balance 
     if storage == nil {
         return errors.New("no account storage found")
     }
-    storage.Balance = balance
+    storage.Balance = *balance
     return database.PutStorage(addr, storage, transactional)
 }
 
@@ -255,7 +254,7 @@ func (database *DatabaseService) GetReputation(addr *crypto.CommonAddress, trans
     if storage == nil {
         return big.NewInt(0)
     }
-    return storage.Reputation
+    return &storage.Reputation
 }
 
 func (database *DatabaseService) GetLogs(txHash []byte, ) []*chainType.Log {

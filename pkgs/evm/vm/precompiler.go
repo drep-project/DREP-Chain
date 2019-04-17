@@ -10,10 +10,6 @@ import (
 	"github.com/drep-project/drep-chain/crypto/bn256"
 )
 
-var (
-	ErrOutOfGas = errors.New("out of gas")
-)
-
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
 // requires a deterministic gas count based on the input size of the Run method of the
 // contract.

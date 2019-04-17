@@ -54,16 +54,15 @@ func NewNode(parent *Node, chainId app.ChainIdType) *Node {
 }
 
 type Storage struct {
-	Balance    *big.Int
+	Balance    big.Int
 	Nonce      uint64
 	ByteCode   crypto.ByteCode
 	CodeHash   crypto.Hash
-	Reputation *big.Int
+	Reputation big.Int
 }
 
 func NewStorage() *Storage {
 	storage := &Storage{}
-	storage.Balance = new(big.Int)
 	storage.Nonce = 0
 	return storage
 }
@@ -94,8 +93,7 @@ func NewNormalAccount(parent *Node, chainId app.ChainIdType) (*Account, error) {
 	return account, nil
 }
 
-func NewContractAccount(callerAddr crypto.CommonAddress, nonce uint64) (*Account, error) {
-	address := crypto.GetByteCodeAddress(callerAddr, nonce)
+func NewContractAccount(address crypto.CommonAddress) (*Account, error) {
 	storage := NewStorage()
 	account := &Account{
 		Address: &address,

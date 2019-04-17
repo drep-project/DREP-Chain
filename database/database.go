@@ -310,9 +310,6 @@ func (db *Database) getStorage(addr *crypto.CommonAddress) *chainTypes.Storage {
 	key := sha3.Hash256([]byte("storage_" + addr.Hex()))
 	value, err := db.get(key, false)
 	if err != nil {
-	    storage.Balance = new(big.Int)
-	    storage.Nonce = 0
-	    storage.Reputation = new(big.Int)
 		return storage
 	}
 	binary.Unmarshal(value, storage)

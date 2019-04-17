@@ -151,7 +151,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 	return nil, nil
 }
 
-func (in *EVMInterpreter) canRun(byteCode crypto.ByteCode) bool {
+func (in *EVMInterpreter) CanRun(byteCode crypto.ByteCode) bool {
 	return true
 }
 

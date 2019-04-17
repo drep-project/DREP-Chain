@@ -1,80 +1,24 @@
 package evm
 
 import (
-	"bytes"
-	"encoding/hex"
-	"fmt"
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/pkgs/evm/vm"
 	"github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/database"
+	"github.com/drep-project/dlog"
+	"github.com/drep-project/drep-chain/pkgs/evm/vm"
 	"gopkg.in/urfave/cli.v1"
 	"math/big"
 )
 
 var (
-	DefaultEvmConfig = &VMConfig{}
+	DefaultEvmConfig = &vm.VMConfig{}
 )
-func  (evmService *EvmService) ExecuteCreateCode(evm *vm.EVM, callerAddr crypto.CommonAddress, chainId app.ChainIdType, code []byte, gas uint64, value *big.Int) (uint64, error) {
-	ret, _, returnGas, err := evm.CreateContractCode(callerAddr, chainId, code, gas, value)
-	fmt.Println("gas: ", gas)
-	fmt.Println("code: ", hex.EncodeToString(code))
-	fmt.Println("ret: ", ret)
-	fmt.Println("err: ", err)
-	return returnGas, err
-}
-
-func  (evmService *EvmService) ExecuteCallCode(evm *vm.EVM, callerAddr, contractAddr crypto.CommonAddress, chainId app.ChainIdType, input []byte, gas uint64, value *big.Int) (uint64, error) {
-	ret, returnGas, err := evm.CallContractCode(callerAddr, contractAddr, chainId, input, gas, value)
-	fmt.Println("ret: ", ret)
-	fmt.Println("err: ", err)
-	return returnGas, err
-}
-
-func  (evmService *EvmService) ExecuteStaticCall(evm *vm.EVM, callerAddr, contractAddr crypto.CommonAddress, chainId app.ChainIdType, input []byte, gas uint64) (uint64, error) {
-	ret, returnGas, err := evm.StaticCall(callerAddr, contractAddr, chainId, input, gas)
-	fmt.Println("ret: ", ret)
-	fmt.Println("err: ", err)
-	return returnGas, err
-}
-
-func  (evmService *EvmService) Tx2Message(tx *types.Transaction) *Message {
-	readOnly := false
-	if bytes.Equal(tx.GetData()[:1], []byte{1}) {
-		readOnly = true
-	}
-
-	return &Message{
-		From:      *tx.From(),
-		To:        *tx.To(),
-		ChainId:   tx.ChainId(),
-		Gas:       tx.GasLimit().Uint64(),
-		Value:     tx.Amount(),
-		Nonce:     uint64(tx.Nonce()),
-		Input:     tx.GetData()[1:],
-		ReadOnly:  readOnly,
-	}
-}
-
-func  (evmService *EvmService) ApplyMessage(evm *vm.EVM, message *Message) (uint64, error) {
-	contractCreation := message.To.IsEmpty()
-	if contractCreation {
-		return  evmService.ExecuteCreateCode(evm, message.From, message.ChainId, message.Input, message.Gas, message.Value)
-	} else if !message.ReadOnly {
-		return  evmService.ExecuteCallCode(evm, message.From, message.To, message.ChainId, message.Input, message.Gas, message.Value)
-	} else {
-		return  evmService.ExecuteStaticCall(evm, message.From, message.To, message.ChainId, message.Input, message.Gas)
-	}
-}
-
-func  (evmService *EvmService) ApplyTransaction(evm *vm.EVM, tx *types.Transaction) (uint64, error) {
-	return evmService.ApplyMessage(evm,  evmService.Tx2Message(tx))
-}
 
 
 type EvmService struct {
-	Config *VMConfig
+	Config *vm.VMConfig
+	DatabaseService *database.DatabaseService `service:"database"`
 }
 
 func (evmService *EvmService) Name() string {
@@ -111,4 +55,39 @@ func (evmService *EvmService)  Stop(executeContext *app.ExecuteContext) error{
 }
 
 func (evmService *EvmService)  Receive(context actor.Context) { }
+
+func (evmService *EvmService)  Eval(state *vm.State,tx *types.Transaction, header *types.BlockHeader, bc ChainContext, gas uint64, value *big.Int) (ret []byte, failed bool, err error)  {
+	sender := tx.From()
+	contractCreation := tx.To() == nil|| tx.To().IsEmpty()
+
+	// Create a new context to be used in the EVM environment
+	context := NewEVMContext(tx, header, bc)
+	// Create a new environment which holds all relevant information
+	// about the transaction and calling mechanisms.
+	vmenv := vm.NewEVM(context, state, evmService.Config)
+	var (
+		// vm errors do not effect consensus and are therefor
+		// not assigned to err, except for insufficient balance
+		// error.
+		vmerr error
+	)
+	if contractCreation {
+		ret, _, gas, vmerr = vmenv.Create(*sender, tx.Data.Data, gas, value)
+	} else {
+		// Increment the nonce for the next transaction
+		state.SetNonce(tx.From(), state.GetNonce(sender)+1)
+		ret, gas, vmerr = vmenv.Call(*sender, *tx.To(), vmenv.ChainId, tx.Data.Data, gas, value)
+	}
+	if vmerr != nil {
+		dlog.Debug("VM returned with error", "err", vmerr)
+		// The only possible consensus-error would be if there wasn't
+		// sufficient balance to make the transfer happen. The first
+		// balance transfer may never fail.
+		if vmerr == vm.ErrInsufficientBalance {
+			return nil, false, vmerr
+		}
+	}
+	return ret, vmerr != nil, err
+}
+
 

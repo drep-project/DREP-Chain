@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"github.com/drep-project/binary"
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
@@ -10,12 +11,12 @@ import (
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
-	"math"
 	"math/big"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
+	"math"
 )
 
 const (
@@ -39,123 +40,67 @@ func (chainService *ChainService) verifyTransaction(tx *chainTypes.Transaction) 
 
 		_, err := chainService.verify(tx)
 		if err != nil {
-			return err
+			result = err
 		}
 
 		err = chainService.checkNonce(from, nounce)
 		if err != nil {
-			return  err
+			result =  err
 		}
 
 		// Check the transaction doesn't exceed the current
 		// block limit gas.
 		block, _ := chainService.GetBlockByHash(chainService.BestChain.Tip().Hash)
 		if block.Header.GasLimit.Uint64() < tx.Gas() {
-			return errors.New("gas limit in tx has exceed block limit")
+			result = errors.New("gas limit in tx has exceed block limit")
 		}
 
 		// Transactions can't be negative. This may never happen
 		// using RLP decoded transactions but may occur if you create
 		// a transaction using the RPC for example.
 		if tx.Amount().Sign() < 0 {
-			return errors.New("negative amount in tx")
+			result = errors.New("negative amount in tx")
 		}
 
 		// Transactor should have enough funds to cover the costs
 		// cost == V + GP * GL
 		originBalance := chainService.DatabaseService.GetBalance(from, true)
 		if originBalance.Cmp(tx.Cost()) < 0 {
-			return errors.New("not enough balance")
+			result = errors.New("not enough balance")
 		}
 
 		// Should supply enough intrinsic gas
-		gas, err := chainService.IntrinsicGas(tx.Data.Data, tx.To() == nil)
+		gas, err := IntrinsicGas(tx.AsPersistentMessage(), tx.To() == nil|| tx.To().IsEmpty() )
 		if err != nil {
-			return err
+			result = err
 		}
 		if tx.Gas() < gas {
-			return errors.New("not enough balance")
+			result = errors.New("not enough balance")
 		}
 		return errors.New("just not commit")
 	})
 	return result
 }
 
-func (chainService *ChainService) IntrinsicGas(data []byte, contractCreation bool) (uint64, error) {
-	// Set the starting gas for the raw transaction
-	var gas uint64
-	if contractCreation {
-		gas = params.TxGasContractCreation
-	} else {
-		gas = params.TxGas
-	}
-	// Bump the required gas by the amount of transactional data
-	if len(data) > 0 {
-		// Zero and non-zero bytes are priced differently
-		var nz uint64
-		for _, byt := range data {
-			if byt != 0 {
-				nz++
-			}
-		}
-		// Make sure we don't exceed uint64 for all data combinations
-		if (math.MaxUint64-gas)/params.TxDataNonZeroGas < nz {
-			return 0, vm.ErrOutOfGas
-		}
-		gas += nz * params.TxDataNonZeroGas
-
-		z := uint64(len(data)) - nz
-		if (math.MaxUint64-gas)/params.TxDataZeroGas < z {
-			return 0, vm.ErrOutOfGas
-		}
-		gas += z * params.TxDataZeroGas
-	}
-	return gas, nil
-}
-
 //TODO 交易验证存在的问题， 合约是否需要执行
-func (chainService *ChainService) executeTransaction(tx *chainTypes.Transaction) (*big.Int, *big.Int, error) {
-	to := tx.To()
-	nounce := tx.Nonce()
-	amount := tx.Amount()
-	fromAccount := tx.From()
-	gasPrice := tx.GasPrice()
-	gasLimit := tx.GasLimit()
-
+func (chainService *ChainService) executeTransaction(tx *chainTypes.Transaction, gp *GasPool, header *chainTypes.BlockHeader) (*big.Int, *big.Int, error) {
+	//gp       = new(GasPool).AddGas(block.GasLimit())
+	newState := vm.NewState(chainService.DatabaseService)
 	_, err := chainService.verify(tx)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	originBalance := chainService.DatabaseService.GetBalance(fromAccount, true)
 	//TODO need test
-	var gasUsed *big.Int
-	var gasFee *big.Int
-	switch tx.Type() {
-	case chainTypes.TransferType:
-		err = chainService.checkBalance(gasLimit, gasPrice, originBalance, chainTypes.GasTable[chainTypes.TransferType], nil)
-		if err != nil {
-			return  nil, nil, err
-		}
-		gasUsed, gasFee, err = chainService.executeTransferTransaction(tx, fromAccount, to, originBalance, gasPrice, gasLimit, amount, tx.ChainId())
-	case chainTypes.CreateContractType:
-		err = chainService.checkBalance(gasLimit, gasPrice, originBalance,nil, chainTypes.GasTable[chainTypes.CreateContractType])
-		if err != nil {
-			return  nil, nil, err
-		}
-		gasUsed, gasFee, err = chainService.executeCreateContractTransaction(tx, fromAccount, to, originBalance, gasPrice, gasLimit, amount, tx.ChainId())
-	case chainTypes.CallContractType:
-		err = chainService.checkBalance(gasLimit, gasPrice, originBalance,nil, chainTypes.GasTable[chainTypes.CallContractType])
-		if err != nil {
-			return  nil, nil, err
-		}
-		gasUsed, gasFee, err = chainService.executeCallContractTransaction(tx, fromAccount, to, originBalance, gasPrice, gasLimit, amount, tx.ChainId())
-	}
+	gasUsed := new(uint64)
+	receipt, _, err := chainService.stateProcessor.ApplyTransaction(newState, chainService, gp, header,tx, gasUsed)
+	fmt.Println(receipt.ContractAddress.Hex())
 	if err != nil {
 		dlog.Error("executeTransaction transaction error", "reason", err)
+		return nil, nil, err
 	}
-	chainService.DatabaseService.PutNonce(fromAccount, nounce+1, true)
-	return gasUsed, gasFee, nil
+	gasFee := new (big.Int).Mul(new(big.Int).SetUint64(*gasUsed), tx.GasPrice())
+	return new(big.Int).SetUint64(*gasUsed), gasFee, nil
 }
 
 func (chainService *ChainService) verify(tx *chainTypes.Transaction) (bool, error){
@@ -175,52 +120,6 @@ func (chainService *ChainService) verify(tx *chainTypes.Transaction) (bool, erro
 		return true, nil
 	}else{
 		return false, errors.New("must assign a signature for transaction")
-	}
-}
-
-func (chainService *ChainService) executeTransferTransaction(t *chainTypes.Transaction, fromAccount, to *crypto.CommonAddress, balance, gasPrice, gasLimit, amount *big.Int, chainId app.ChainIdType) (*big.Int, *big.Int, error) {
-	gasUsed := new(big.Int).Set(chainTypes.GasTable[chainTypes.TransferType])
-	gasFee := new(big.Int).Mul(gasUsed, gasPrice)
-	leftBalance, gasFee := chainService.deduct(chainId, balance, gasFee)  //sub gas fee
-	if leftBalance.Cmp(amount) >= 0 {				//sub transfer amount
-		leftBalance = new(big.Int).Sub(leftBalance, amount)
-		balanceTo := chainService.DatabaseService.GetBalance(to, true)
-		balanceTo = new(big.Int).Add(balanceTo, amount)
-		chainService.DatabaseService.PutBalance(fromAccount, leftBalance, true)
-		chainService.DatabaseService.PutBalance(to, balanceTo, true)
-	} else {
-		return gasUsed, gasFee, errBalance
-	}
-	return gasUsed, gasFee, nil
-}
-
-func (chainService *ChainService) executeCreateContractTransaction(t *chainTypes.Transaction, fromAccount, to *crypto.CommonAddress, balance, gasPrice, gasLimit, amount *big.Int, chainId app.ChainIdType) (*big.Int, *big.Int, error) {
-	evm := vm.NewEVM(chainService.DatabaseService)
-	refundGas, err := chainService.VmService.ApplyTransaction(evm, t)
-	balance = chainService.DatabaseService.GetBalance(fromAccount, true)
-	gasUsed := new(big.Int).Sub(gasLimit, new(big.Int).SetUint64(refundGas))
-	gasFee  := new(big.Int).Mul(gasUsed, gasPrice)
-	leftBalance, gasFee := chainService.deduct(chainId, balance, gasFee)
-	if leftBalance.Sign() >= 0{
-		chainService.DatabaseService.PutBalance(fromAccount, leftBalance, true)
-		return gasUsed, gasFee, err
-	}else{
-		return gasUsed, gasFee, errBalance
-	}
-}
-
-func (chainService *ChainService) executeCallContractTransaction(t *chainTypes.Transaction, fromAccount, to *crypto.CommonAddress, balance, gasPrice, gasLimit, amount *big.Int, chainId app.ChainIdType) (*big.Int, *big.Int, error) {
-	evm := vm.NewEVM(chainService.DatabaseService)
-	returnGas, err := chainService.VmService.ApplyTransaction(evm, t)
-	balance = chainService.DatabaseService.GetBalance(fromAccount, true)
-	gasUsed := new(big.Int).Sub(gasLimit, new(big.Int).SetUint64(returnGas))
-	gasFee  := new(big.Int).Mul(gasUsed, gasPrice)
-	leftBalance, gasFee := chainService.deduct(t.ChainId(), balance, gasFee)
-	if leftBalance.Sign() >= 0{
-		chainService.DatabaseService.PutBalance(fromAccount, leftBalance, true)
-		return gasUsed, gasFee, err
-	}else{
-		return gasUsed, gasFee, errBalance
 	}
 }
 
@@ -287,6 +186,39 @@ func (chainService *ChainService) doSync(height uint64) {
 	urlStr := "http://localhost:" + strconv.Itoa(chainService.Config.RemotePort) + "/SyncChildChain?" + body
 	http.Get(urlStr)
 	childTrans = nil
+}
+
+// IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
+func IntrinsicGas(data []byte, contractCreation bool) (uint64, error) {
+	// Set the starting gas for the raw transaction
+	var gas uint64
+	if contractCreation {
+		gas = params.TxGasContractCreation
+	} else {
+		gas = params.TxGas
+	}
+	// Bump the required gas by the amount of transactional data
+	if len(data) > 0 {
+		// Zero and non-zero bytes are priced differently
+		var nz uint64
+		for _, byt := range data {
+			if byt != 0 {
+				nz++
+			}
+		}
+		// Make sure we don't exceed uint64 for all data combinations
+		if (math.MaxUint64-gas)/params.TxDataNonZeroGas < nz {
+			return 0, vm.ErrOutOfGas
+		}
+		gas += nz * params.TxDataNonZeroGas
+
+		z := uint64(len(data)) - nz
+		if (math.MaxUint64-gas)/params.TxDataZeroGas < z {
+			return 0, vm.ErrOutOfGas
+		}
+		gas += z * params.TxDataZeroGas
+	}
+	return gas, nil
 }
 
 

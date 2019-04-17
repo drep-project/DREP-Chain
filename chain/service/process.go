@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"github.com/drep-project/dlog"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"math/big"
 	"time"
 )
@@ -17,29 +19,50 @@ var (
 	errOrphanBlockExsist = errors.New("already have block (orphan)")
 )
 
-func (chainService *ChainService) ProcessGenisisBlock() error {
+func (chainService *ChainService) GenesisBlock(genesisPubkey string) (*chainTypes.Block, error) {
 	var err error
+	var root []byte
+	//NOTICE pre mine
 	err = chainService.DatabaseService.Transaction(func() error {
 		for _, producer := range chainService.Config.Producers {
 			//add account
 			storage := chainTypes.NewStorage()
-			storage.Balance = big.NewInt(0).Mul(big.NewInt(1000000000000000000), big.NewInt(1000000000))
+			storage.Balance = *big.NewInt(0).Mul(big.NewInt(1000000000000000000), big.NewInt(1000000000))
 			addr := crypto.PubKey2Address(producer.Pubkey)
 			chainService.DatabaseService.PutStorage(&addr, storage, true)
 		}
-		root := chainService.DatabaseService.GetStateRoot()
-		chainService.genesisBlock.Header.StateRoot = root   //for genesis block we set correct state
-		err := chainService.createChainState()
-		if err != nil {
-			return err
-		}
+		root = chainService.DatabaseService.GetStateRoot()
 		return nil
 	})
+
 	if err != nil {
-		return err
+		return nil, err
+	}
+
+	merkleRoot := chainService.deriveMerkleRoot(nil)
+	b := common.MustDecode(genesisPubkey)
+	pubkey, err := secp256k1.ParsePubKey(b)
+	if err != nil {
+		return nil, err
 	}
 	chainService.DatabaseService.RecordBlockJournal(0)
-	return nil
+	return &chainTypes.Block{
+		Header: &chainTypes.BlockHeader{
+			Version:      common.Version,
+			PreviousHash: crypto.Hash{},
+			GasLimit:     *BlockGasLimit,
+			GasUsed:      *new(big.Int),
+			Timestamp:    1545282765,
+			StateRoot:    root,
+			TxRoot:       merkleRoot,
+			Height:       0,
+			LeaderPubKey: *pubkey,
+		},
+		Data: &chainTypes.BlockData{
+			TxCount: 0,
+			TxList:  []*chainTypes.Transaction{},
+		},
+	}, nil
 }
 
 func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, bool, error) {
@@ -179,8 +202,9 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (bool, er
 
 func (chainService *ChainService) connectBlock(block *chainTypes.Block, newNode *chainTypes.BlockNode) error {
 	err := chainService.DatabaseService.Transaction(func() error {
+		gp := new (GasPool).AddGas(block.Header.GasLimit.Uint64())
 		//process transaction
-		_, err := chainService.executeTransactionInBlock(block.Data)
+		_, err := chainService.executeTransactionInBlock(block, gp)
 		if err != nil {
 			return err
 		}
@@ -326,8 +350,15 @@ func (chainService *ChainService) markState(blockNode *chainTypes.BlockNode) {
 	chainService.DatabaseService.RecordBlockJournal(state.Height)
 }
 
+func (chainService *ChainService) GetGenisiBlock() *chainTypes.Block {
+	var block *chainTypes.Block
+	_ = chainService.DatabaseService.BlockNodeIterator(func(header *chainTypes.BlockHeader, status chainTypes.BlockStatus) error {
+		block, _ = chainService.DatabaseService.GetBlock(header.Hash())
+		return errors.New("_")
+	})
+	return block
+}
 func (chainService *ChainService) InitStates() error {
-
 	chainState := chainService.DatabaseService.GetChainState()
 
 	var blockCount int32
@@ -350,6 +381,7 @@ func (chainService *ChainService) InitStates() error {
 		var parent *chainTypes.BlockNode
 		if lastNode == nil {
 			blockHash := header.Hash()
+			//TODO skip check genesis block hash
 			if !blockHash.IsEqual(chainService.genesisBlock.Header.Hash()) {
 				return fmt.Errorf("initChainState: Expected  first entry in block index to be genesis block, found %s", blockHash)
 			}

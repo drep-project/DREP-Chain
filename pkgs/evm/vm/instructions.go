@@ -17,22 +17,14 @@
 package vm
 
 import (
+	"errors"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/sha3"
-	"errors"
 	"fmt"
 	"math/big"
 )
 
-var (
-	bigZero                  = new(big.Int)
-	errWriteProtection       = errors.New("evm: write protection")
-	errReturnDataOutOfBounds = errors.New("evm: return data out of bounds")
-	errExecutionReverted     = errors.New("evm: execution reverted")
-	//errMaxCodeSizeExceeded   = errors.New("evm: max code size exceeded")
-	ErrCodeStoreOutOfGas        = errors.New("contract creation code storage out of gas")
-)
 
 func opAdd(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	x, y := stack.pop(), stack.peek()
@@ -564,10 +556,12 @@ func opBlockhash(pc *uint64, interpreter *EVMInterpreter, contract *Contract, me
 }
 
 func opCoinbase(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	x := interpreter.EVM.CoinBase.Big()
+	return nil, errors.New("coin base not support")
+
+//	x := interpreter.EVM.CoinBase.Big()
 	//stack.push(interpreter.evm.Coinbase.Big())
-	stack.push(x)
-	return nil, nil
+//	stack.push(x)
+//	return nil, nil
 }
 
 func opTimestamp(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
@@ -720,7 +714,7 @@ func opCreate(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memor
 
 	contract.UseGas(gas)
 	//res, addr, returnGas, suberr := interpreter.evm.Create(contract, input, gas, value)
-	res, addr, returnGas, suberr := interpreter.EVM.CreateContractCode(contract.CallerAddr, contract.ChainId, contract.ByteCode, gas, value)
+	res, addr, returnGas, suberr := interpreter.EVM.Create(contract.CallerAddr, contract.ByteCode, gas, value)
 	// Push item on the stack based on the returned error. If the ruleset is
 	// homestead we must check for CodeStoreOutOfGasError (homestead only
 	// rule) and treat as an error, if the ruleset is frontier we must
@@ -786,7 +780,7 @@ func opCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 	if value.Sign() != 0 {
 		gas += CallStipend
 	}
-	ret, returnGas, err := interpreter.EVM.CallContractCode(contract.CallerAddr, contract.ContractAddr, contract.ChainId, args, gas, value)
+	ret, returnGas, err := interpreter.EVM.Call(contract.CallerAddr, contract.ContractAddr, contract.ChainId, args, gas, value)
 	if err != nil {
 		stack.push(interpreter.IntPool.getZero())
 	} else {
@@ -817,7 +811,7 @@ func opCallCode(pc *uint64, interpreter *EVMInterpreter, contract *Contract, mem
 	if value.Sign() != 0 {
 		gas += CallStipend
 	}
-	ret, returnGas, err := interpreter.EVM.CallContractCode(contract.CallerAddr, toAddr, contract.ChainId, args, gas, value)
+	ret, returnGas, err := interpreter.EVM.CallCode(contract.CallerAddr, toAddr, args, gas, value)
 	if err != nil {
 		stack.push(interpreter.IntPool.getZero())
 	} else {
@@ -870,7 +864,7 @@ func opStaticCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, m
 	// Get arguments from the memory.
 	args := memory.Get(inOffset.Int64(), inSize.Int64())
 
-	ret, returnGas, err := interpreter.EVM.StaticCall(contract.CallerAddr, toAddr, contract.ChainId, args, gas)
+	ret, returnGas, err := interpreter.EVM.StaticCall(contract.CallerAddr, toAddr, args, gas)
 	if err != nil {
 		stack.push(interpreter.IntPool.getZero())
 	} else {

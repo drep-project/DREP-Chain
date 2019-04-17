@@ -14,7 +14,7 @@ const(
 
 var (
 	DefaultGasPrice    *big.Int
-	TransferGas              = big.NewInt(20)
+	TransferGas              = big.NewInt(60000)
 	MinerGas                 = big.NewInt(20000)
 	CreateContractGas        = big.NewInt(1000000)
 	CallContractGas          = big.NewInt(10000000)

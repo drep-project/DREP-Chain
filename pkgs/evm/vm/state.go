@@ -1,7 +1,6 @@
 package vm
 
 import (
-	"errors"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
@@ -12,14 +11,6 @@ import (
 var (
 	state                   *State
 	once                    sync.Once
-	ErrNotAccountAddress    = errors.New("a non account address occupied")
-	ErrAccountAlreadyExists = errors.New("account already exists")
-	ErrAccountNotExists     = errors.New("account not exists")
-	ErrInsufficientBalance  = errors.New("insufficient balance")
-	ErrCodeAlreadyExists    = errors.New("code already exists")
-	ErrCodeNotExists        = errors.New("code not exists")
-	ErrNotLogAddress        = errors.New("a non log address occupied")
-	ErrLogAlreadyExists     = errors.New("log already exists")
 )
 
 type State struct {
@@ -28,15 +19,18 @@ type State struct {
 }
 
 func NewState(databaseService *database.DatabaseService) *State {
-	return &State{}
+	return &State{
+		databaseApi:databaseService,
+	}
 }
 
 
-func (s *State) CreateContractAccount(callerAddr crypto.CommonAddress, nonce uint64) (*chainTypes.Account, error) {
-	account, err := chainTypes.NewContractAccount(callerAddr, nonce)
+func (s *State) CreateContractAccount(addr crypto.CommonAddress, byteCode []byte) (*chainTypes.Account, error) {
+	account, err := chainTypes.NewContractAccount(addr)
 	if err != nil {
 		return nil, err
 	}
+	account.Storage.ByteCode = byteCode
 	return account, s.databaseApi.PutStorage(account.Address, account.Storage, true)
 }
 
@@ -61,14 +55,12 @@ func (s *State) SetNonce(addr *crypto.CommonAddress, nonce uint64) error {
 	return s.databaseApi.PutNonce(addr, nonce, true)
 }
 
-func (s *State) GetNonce(addr *crypto.CommonAddress,) uint64 {
+func (s *State) GetNonce(addr *crypto.CommonAddress) uint64 {
 	return s.databaseApi.GetNonce(addr, true)
 }
 
 func (s *State) Suicide(addr *crypto.CommonAddress,) error {
 	storage := s.databaseApi.GetStorage(addr, true)
-	storage.Balance = new(big.Int)
-	storage.Nonce = 0
 	return s.databaseApi.PutStorage(addr, storage, true)
 }
 
@@ -115,10 +107,19 @@ func (s *State) SubRefund(gas uint64) {
 	s.refund -= gas
 }
 
+func (self *State) GetRefund() uint64 {
+	return self.refund
+}
+
 func (s *State) Load(x *big.Int) []byte {
 	return s.databaseApi.Load(x)
 }
 
 func (s *State) Store(x, y *big.Int) {
 	s.databaseApi.Store(x, y)
+}
+
+func (s *State) Exist(contractAddr crypto.CommonAddress) bool {
+	storage := s.databaseApi.GetStorage(&contractAddr, true)
+	return len(storage.ByteCode) > 0
 }
