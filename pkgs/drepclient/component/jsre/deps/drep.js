@@ -134,6 +134,9 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
         module.exports = Drep;
 
+        Drep.prototype.createBatch = function () {
+            return new Batch(this);
+        };
 
     },{"./drep/batch":2,"./drep/extend":4,"./drep/httpprovider":6,"./drep/iban":7,"./drep/ipcprovider":8,"./drep/methods/account":11,"./drep/methods/chain":12,"./drep/methods/consensus":13,"./drep/methods/p2p":14,"./drep/property":15,"./drep/requestmanager":16,"./drep/settings":17,"./utils/sha3":20,"./utils/utils":21,"./version.json":22,"bignumber.js":"bignumber.js"}],2:[function(require,module,exports){
         /*
@@ -302,15 +305,23 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         /*
     This file is part of drep.js.
 
-    drep.js is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+        var inputBlockNumberFormatter = function (blockNumber) {
+            if (blockNumber === undefined) {
+                return undefined;
+            } else if (isPredefinedBlockNumber(blockNumber)) {
+                return blockNumber;
+            }
+            return utils.toHex(blockNumber);
+        };
 
-    drep.js is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+        /**
+         * Formats the input of a transaction and converts all values to HEX
+         *
+         * @method inputCallFormatter
+         * @param {Object} transaction options
+         * @returns object
+         */
+        var inputCallFormatter = function (options) {
 
     You should have received a copy of the GNU Lesser General Public License
     along with drep.js.  If not, see <http://www.gnu.org/licenses/>.
@@ -324,6 +335,9 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
 
         'use strict';
 
+            if (options.to) { // it might be contract creation
+                options.to = inputAddressFormatter(options.to);
+            }
 
         var utils = require('../utils/utils');
         var config = require('../utils/config');
@@ -633,6 +647,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             outputSyncingFormatter: outputSyncingFormatter,
         };
 
+        module.exports = HttpProvider;
 
     },{"../utils/config":19,"../utils/utils":21,"./iban":7}],6:[function(require,module,exports){
         /*
@@ -12478,12 +12493,18 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 return arr.reverse();
             }
 
+            function toExponential(str, e) {
+                return (str.length > 1 ? str.charAt(0) + '.' + str.slice(1) : str) +
+                    (e < 0 ? 'e' : 'e+') + e;
+            }
 
             function toExponential( str, e ) {
                 return ( str.length > 1 ? str.charAt(0) + '.' + str.slice(1) : str ) +
                     ( e < 0 ? 'e' : 'e+' ) + e;
             }
 
+            function toFixedPoint(str, e) {
+                var len, z;
 
             function toFixedPoint( str, e ) {
                 var len, z;

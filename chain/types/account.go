@@ -58,7 +58,8 @@ type Storage struct {
 	Nonce      uint64
 	ByteCode   crypto.ByteCode
 	CodeHash   crypto.Hash
-	Reputation big.Int
+	Reputation *big.Int
+	Alias      string
 }
 
 func NewStorage() *Storage {

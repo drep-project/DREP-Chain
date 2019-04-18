@@ -81,13 +81,28 @@ func (accountapi *AccountApi) Transfer(from crypto.CommonAddress, to crypto.Comm
 	bigInt := big.Int(amount)
 	t := chainTypes.NewTransaction(from, to, &bigInt, nonce)
 	sig, err := accountapi.Wallet.Sign(&from, t.TxHash().Bytes())
-	if err != nil{
-		return "",err
+	if err != nil {
+		return "", err
 	}
 	t.Sig = sig
 	err = accountapi.chainService.SendTransaction(t)
-	if err != nil{
-		return "",err
+	if err != nil {
+		return "", err
+	}
+	return t.TxHash().String(), nil
+}
+
+func (accountapi *AccountApi) SetAlias(srcAddr crypto.CommonAddress, alias string) (string, error) {
+	nonce := accountapi.chainService.GetTransactionCount(&srcAddr)
+	t := chainTypes.NewAliasTransaction(srcAddr, alias, nonce)
+	sig, err := accountapi.Wallet.Sign(&srcAddr, t.TxHash().Bytes())
+	if err != nil {
+		return "", err
+	}
+	t.Sig = sig
+	err = accountapi.chainService.SendTransaction(t)
+	if err != nil {
+		return "", err
 	}
 	return t.TxHash().String(), nil
 }
@@ -97,8 +112,8 @@ func (accountapi *AccountApi) Call(from crypto.CommonAddress, to crypto.CommonAd
 	bigInt := big.Int(amount)
 	t := chainTypes.NewCallContractTransaction(from, to, input, &bigInt, nonce)
 	sig, err := accountapi.Wallet.Sign(&from, t.TxHash().Bytes())
-	if err != nil{
-		return "",err
+	if err != nil {
+		return "", err
 	}
 	t.Sig = sig
 	accountapi.chainService.SendTransaction(t)
@@ -109,8 +124,8 @@ func (accountapi *AccountApi) CreateCode(from crypto.CommonAddress, byteCode com
 	nonce := accountapi.chainService.GetTransactionCount(&from)
 	t := chainTypes.NewContractTransaction(from, byteCode, nonce)
 	sig, err := accountapi.Wallet.Sign(&from, t.TxHash().Bytes())
-	if err != nil{
-		return "",err
+	if err != nil {
+		return "", err
 	}
 	t.Sig = sig
 	accountapi.chainService.SendTransaction(t)
@@ -135,7 +150,7 @@ func (accountapi *AccountApi) DumpPrivkey(address *crypto.CommonAddress) (*secp2
 
 func (accountapi *AccountApi) Sign(address crypto.CommonAddress, hash []byte) ([]byte, error) {
 	sig, err := accountapi.Wallet.Sign(&address, hash)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	return sig, nil

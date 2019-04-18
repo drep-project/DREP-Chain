@@ -12,10 +12,9 @@ import (
     "time"
 )
 
-
 type ChainApi struct {
-    chainService *ChainService
-    dbService *database.DatabaseService `service:"database"`
+	chainService *ChainService
+	dbService    *database.DatabaseService `service:"database"`
 }
 
 func (chain *ChainApi) GetBlock(height uint64) (*chainType.RpcBlock , error) {
@@ -32,7 +31,7 @@ func (chain *ChainApi) GetBlock(height uint64) (*chainType.RpcBlock , error) {
 }
 
 func (chain *ChainApi) GetMaxHeight() uint64 {
-    return chain.chainService.BestChain.Height()
+	return chain.chainService.BestChain.Height()
 }
 
 func (chain *ChainApi) GetBalance(addr crypto.CommonAddress) *big.Int{
@@ -84,7 +83,7 @@ func (chain *ChainApi) GetTransactionCountByBlockHeight(height uint64) (int, err
 
 func (chain *ChainApi) SendRawTransaction(txbytes common.Bytes) (string, error) {
     tx := &chainType.Transaction{}
-    err := binary.Unmarshal(txbytes,tx)
+    err := binary.Unmarshal(txbytes, tx)
     if err != nil {
         return "", err
     }
@@ -98,4 +97,13 @@ func (chain *ChainApi) SendRawTransaction(txbytes common.Bytes) (string, error) 
     chain.chainService.BroadcastTx(chainType.MsgTypeTransaction, tx, true)
 
     return tx.TxHash().String(), err
+}
+
+//根据地址获取地址对应的别名
+func (chain *ChainApi) GetAliasByAddress(addr *crypto.CommonAddress) string {
+	return chain.chainService.DatabaseService.GetStorageAlias(addr, false)
+}
+//根据别名获取别名对应的地址
+func (chain *ChainApi) GetAddressByAlias(alias string) *crypto.CommonAddress {
+	return chain.chainService.DatabaseService.AliasGet(alias)
 }
