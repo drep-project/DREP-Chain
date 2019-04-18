@@ -1,13 +1,5 @@
 package service
 
-import (
-	"math/big"
-)
-
-var (
-	BlockGasLimit = big.NewInt(5000000000000000000)
-)
-
 const (
 	maxHeaderHashCountReq = 255                 //最多一次请求的头部hash个数
 	maxBlockCountReq      = 16                  //最多一次请求的头部hash个数

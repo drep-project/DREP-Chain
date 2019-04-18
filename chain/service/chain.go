@@ -255,9 +255,14 @@ func (chainService *ChainService) blockExists(blockHash *crypto.Hash) bool {
 func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey) (*chainTypes.Block, error) {
 	chainService.DatabaseService.BeginTransaction()
 	defer chainService.DatabaseService.Discard()
-
+	parent, err := chainService.GetHighestBlock()
+	if err != nil {
+		return nil, err
+	}
+	newGasLimit := chainService.CalcGasLimit(parent.Header, params.MinGasLimit, params.MaxGasLimit)
+	fmt.Println("gas limit:", newGasLimit.Uint64())
 	height := chainService.BestChain.Height() + 1
-	txs := chainService.transactionPool.GetPending(BlockGasLimit)
+	txs := chainService.transactionPool.GetPending(newGasLimit)
 
 	previousHash := chainService.BestChain.Tip().Hash
 	timestamp := uint64(time.Now().Unix())
@@ -266,7 +271,7 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey) 
 		Version:      common.Version,
 		PreviousHash: *previousHash,
 		ChainId:      chainService.chainId,
-		GasLimit:     *BlockGasLimit,
+		GasLimit:     *newGasLimit,
 		Timestamp:    timestamp,
 		Height:       height,
 		LeaderPubKey: *leaderKey,
@@ -276,7 +281,7 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey) 
 	gasUsed := new(big.Int)
 	gp := new(GasPool).AddGas(blockHeader.GasLimit.Uint64())
 	stopchanel := make(chan struct{})
-	time.AfterFunc(time.Second*5, func() {
+	time.AfterFunc(time.Second*5000000, func() {
 		stopchanel <- struct{}{}
 	})
 
@@ -284,16 +289,20 @@ SELECT_TX:
 	for _, t := range txs {
 		select {
 			case <-stopchanel:
-				break SELECT_TX
+
 		default:
 			g, _, err := chainService.executeTransaction(t, gp, blockHeader)
 			if err == nil {
 				finalTxs = append(finalTxs, t)
 				gasUsed.Add(gasUsed, g)
 			}else {
-				//TODO err or continue
-				continue
-				//  return nil, err
+				if err.Error() == "gas limit reached" {
+					break SELECT_TX
+				}else{
+					//TODO err or continue
+					continue
+					//  return nil, err
+				}
 			}
 		}
 	}
@@ -413,12 +422,12 @@ func (chainService *ChainService) GetHeader(hash crypto.Hash, number uint64) *ch
 // to keep the baseline gas above the provided floor, and increase it towards the
 // ceil if the blocks are full. If the ceil is exceeded, it will always decrease
 // the gas allowance.
-func (chainService *ChainService)  CalcGasLimit(parent *chainTypes.Block, gasFloor, gasCeil uint64) uint64 {
+func (chainService *ChainService)  CalcGasLimit(parent *chainTypes.BlockHeader, gasFloor, gasCeil uint64) *big.Int {
 	// contrib = (parentGasUsed * 3 / 2) / 1024
-	contrib := (parent.GasUsed() + parent.GasUsed()/2) / params.GasLimitBoundDivisor
+	contrib := (parent.GasLimit.Uint64() + parent.GasUsed.Uint64()/2) / params.GasLimitBoundDivisor
 
 	// decay = parentGasLimit / 1024 -1
-	decay := parent.GasLimit()/params.GasLimitBoundDivisor - 1
+	decay := parent.GasLimit.Uint64()/params.GasLimitBoundDivisor - 1
 
 	/*
 		strategy: gasLimit of block-to-mine is set based on parent's
@@ -427,21 +436,54 @@ func (chainService *ChainService)  CalcGasLimit(parent *chainTypes.Block, gasFlo
 		at that usage) the amount increased/decreased depends on how far away
 		from parentGasLimit * (2/3) parentGasUsed is.
 	*/
-	limit := parent.GasLimit() - decay + contrib
+	limit := parent.GasLimit.Uint64() - decay + contrib
 	if limit < params.MinGasLimit {
 		limit = params.MinGasLimit
 	}
 	// If we're outside our allowed gas range, we try to hone towards them
 	if limit < gasFloor {
-		limit = parent.GasLimit() + decay
+		limit = parent.GasLimit.Uint64() + decay
 		if limit > gasFloor {
 			limit = gasFloor
 		}
 	} else if limit > gasCeil {
-		limit = parent.GasLimit() - decay
+		limit = parent.GasLimit.Uint64() - decay
 		if limit < gasCeil {
 			limit = gasCeil
 		}
 	}
-	return limit
+	return new (big.Int).SetUint64(limit)
+}
+
+func (chainService *ChainService)  CalcGasLimit2(parent *chainTypes.BlockHeader, gasFloor, gasCeil uint64) *big.Int {
+	// contrib = (parentGasUsed * 3 / 2) / 1024
+	contrib := (parent.GasLimit.Uint64() + parent.GasUsed.Uint64()/2) / params.GasLimitBoundDivisor
+
+	// decay = parentGasLimit / 1024 -1
+	decay := parent.GasLimit.Uint64()/params.GasLimitBoundDivisor - 1
+
+	/*
+		strategy: gasLimit of block-to-mine is set based on parent's
+		gasUsed value.  if parentGasUsed > parentGasLimit * (2/3) then we
+		increase it, otherwise lower it (or leave it unchanged if it's right
+		at that usage) the amount increased/decreased depends on how far away
+		from parentGasLimit * (2/3) parentGasUsed is.
+	*/
+	limit := parent.GasLimit.Uint64() - decay + contrib
+	if limit < params.MinGasLimit {
+		limit = params.MinGasLimit
+	}
+	// If we're outside our allowed gas range, we try to hone towards them
+	if limit < gasFloor {
+		limit = parent.GasLimit.Uint64() + decay
+		if limit > gasFloor {
+			limit = gasFloor
+		}
+	} else if limit > gasCeil {
+		limit = parent.GasLimit.Uint64() - decay
+		if limit < gasCeil {
+			limit = gasCeil
+		}
+	}
+	return new (big.Int).SetUint64(limit)
 }

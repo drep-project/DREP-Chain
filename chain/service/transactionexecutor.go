@@ -130,6 +130,12 @@ func  (chainService *ChainService) checkNonce(fromAccount *crypto.CommonAddress,
 	}
 	return nil
 }
+func (chainService *ChainService) executeSetAliasTransaction(t *chainTypes.Transaction, fromAccount *crypto.CommonAddress, alias string, gasPrice, gasLimit *big.Int, chainId app.ChainIdType) (*big.Int, *big.Int, error) {
+
+	//2 设置
+	err := chainService.DatabaseService.AliasSet(fromAccount,alias)
+	return chainTypes.GasTable[chainTypes.SetAliasType], gasPrice, err
+}
 
 func (chainService *ChainService) checkBalance(gaslimit, gasPrice, balance, gasFloor, gasCap *big.Int) error {
 	if gasFloor != nil {

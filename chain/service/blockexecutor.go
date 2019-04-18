@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/drep-project/dlog"
+	"github.com/drep-project/drep-chain/chain/params"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/secp256k1/schnorr"
@@ -28,17 +29,10 @@ func (chainService *ChainService) VerifyHeader(header, parent *chainTypes.BlockH
 	}
 
 	//TODO Verify that the gas limit remains within allowed bounds
-	/*
-	diff := parent.GasLimit.Uint64() - header.GasLimit.Uint64()
-	if diff < 0 {
-		diff *= -1
+	nextGasLimit := chainService.CalcGasLimit(parent, params.MinGasLimit, params.MaxGasLimit)
+	if nextGasLimit.Cmp(&header.GasLimit) != 0 {
+		return fmt.Errorf("invalid gas limit: have %d, want %d += %d", header.GasLimit, parent.GasLimit, nextGasLimit)
 	}
-	limit := parent.GasLimit / params.GasLimitBoundDivisor
-
-	if uint64(diff) >= limit || header.GasLimit < params.MinGasLimit {
-		return fmt.Errorf("invalid gas limit: have %d, want %d += %d", header.GasLimit, parent.GasLimit, limit)
-	}
-		*/
 	// Verify that the block number is parent's +1
 	if  header.Height - parent.Height != 1 {
 		return errors.New("invalid block number")

@@ -37,12 +37,6 @@ func (database *DatabaseService) CommandFlags() ([]cli.Command, []cli.Flag) {
 	return nil, []cli.Flag{DataDirFlag}
 }
 
-//func (database *DatabaseService) Receive(context actor.Context) {}
-//
-//func (database *DatabaseService) P2pMessages() map[int]interface{} {
-//	return map[int]interface{}{}
-//}
-
 func (database *DatabaseService) Init(executeContext *app.ExecuteContext) error {
 	err := executeContext.UnmashalConfig(database.Name(), database.config)
 	if err != nil {

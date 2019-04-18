@@ -1586,6 +1586,13 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 inputFormatter: [null]
             });
 
+            var setAlias = new Method({
+                name: 'setAlias',
+                call: 'account_setAlias',
+                params: 2,
+                inputFormatter: [formatters.inputAddressFormatter, null]
+            });
+
             var sign = new Method({
                 name: 'sign',
                 call: 'account_sign',
@@ -1607,7 +1614,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 inputFormatter: [null]
             });
 
-            return [call,closeWallet,createAccount,createCode,createWallet,dumpPrivkey,gasPrice,getCode,listAddress,lockWallet,openWallet,sign,transfer,unLockWallet]
+            return [call,closeWallet,createAccount,createCode,createWallet,dumpPrivkey,gasPrice,getCode,listAddress,lockWallet,openWallet,setAlias,sign,transfer,unLockWallet]
         }
 
         module.exports = ACCOUNT;
@@ -1630,6 +1637,20 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         };
 
         var methods = function () {
+
+            var getAddressByAlias = new Method({
+                name: 'getAddressByAlias',
+                call: 'chain_getAddressByAlias',
+                params: 1,
+                inputFormatter: [null]
+            });
+
+            var getAliasByAddress = new Method({
+                name: 'getAliasByAddress',
+                call: 'chain_getAliasByAddress',
+                params: 1,
+                inputFormatter: [formatters.inputAddressFormatter]
+            });
 
             var getBalance = new Method({
                 name: 'getBalance',
@@ -1701,7 +1722,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 inputFormatter: [null]
             });
 
-            return [getBalance,getBlock,getMaxHeight,getNonce,getPreviousBlockHash,getReputation,getTransactionByBlockHeightAndIndex,getTransactionCountByBlockHeight,getTransactionsFromBlock,sendRawTransaction]
+            return [getAddressByAlias,getAliasByAddress,getBalance,getBlock,getMaxHeight,getNonce,getPreviousBlockHash,getReputation,getTransactionByBlockHeightAndIndex,getTransactionCountByBlockHeight,getTransactionsFromBlock,sendRawTransaction]
         }
 
         module.exports = CHAIN;
@@ -1743,7 +1764,6 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         }
 
         module.exports = CONSENSUS;
-        CONSENSUS;
 
     },{"../../utils/utils":21,"../formatters":5,"../method":10}],14:[function(require,module,exports){
 
@@ -1788,7 +1808,6 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             return [addPeers,getPeers,removePeers]
         }
 
-        module.exports = P2P;
         module.exports = P2P;
 
     },{"../../utils/utils":21,"../formatters":5,"../method":10}],15:[function(require,module,exports){

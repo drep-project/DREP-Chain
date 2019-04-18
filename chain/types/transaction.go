@@ -1,7 +1,7 @@
 package types
 
 import (
-	"encoding/json"
+	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
@@ -9,7 +9,6 @@ import (
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"math/big"
 	"time"
-	"github.com/drep-project/binary"
 )
 
 type Transaction struct {
@@ -115,7 +114,7 @@ func (tx *Transaction) GetSig() []byte {
 }
 
 func (tx *Transaction) AsPersistentMessage() []byte {
-	txBytes, _ := json.Marshal(tx)
+	txBytes, _ := binary.Marshal(tx)
 	return txBytes
 }
 
@@ -169,6 +168,23 @@ func NewCallContractTransaction(from crypto.CommonAddress, to crypto.CommonAddre
 		Timestamp: time.Now().Unix(),
 		From:      from,
 		Data:      input,
+	}
+	return &Transaction{Data: data}
+}
+
+//给地址srcAddr设置别名
+func NewAliasTransaction(srcAddr crypto.CommonAddress, alias string, nonce uint64) *Transaction {
+	data := TransactionData{
+		Version:   common.Version,
+		Nonce:     nonce,
+		Type:      SetAliasType,
+		To:        crypto.CommonAddress{},
+		Amount:    *new(big.Int).SetInt64(0),
+		GasPrice:  *DefaultGasPrice,
+		GasLimit:  *SeAliasGas,
+		Timestamp: int64(time.Now().Unix()),
+		From:      srcAddr,
+		Data:      []byte(alias),
 	}
 	return &Transaction{Data: data}
 }

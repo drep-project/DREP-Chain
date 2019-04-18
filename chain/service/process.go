@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/drep-project/dlog"
+	"github.com/drep-project/drep-chain/chain/params"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
@@ -50,7 +51,7 @@ func (chainService *ChainService) GenesisBlock(genesisPubkey string) (*chainType
 		Header: &chainTypes.BlockHeader{
 			Version:      common.Version,
 			PreviousHash: crypto.Hash{},
-			GasLimit:     *BlockGasLimit,
+			GasLimit:     *new (big.Int).SetUint64(params.GenesisGasLimit),
 			GasUsed:      *new(big.Int),
 			Timestamp:    1545282765,
 			StateRoot:    root,

@@ -1,13 +1,12 @@
 package params
 
 const (
-	GasLimitBoundDivisor uint64 = 1024    // The bound divisor of the gas limit, used in update calculations.
-	MinGasLimit          uint64 = 5000    // Minimum the gas limit may ever be.
-	GenesisGasLimit      uint64 = 4712388 // Gas limit of the Genesis block.
-
+	GasLimitBoundDivisor uint64 = 64    // The bound divisor of the gas limit, used in update calculations.
+	MinGasLimit          uint64 = 5000000    // Minimum the gas limit may ever be.
+	GenesisGasLimit      uint64 = 5000000 // Gas limit of the Genesis block.
 	//MIN_GAS_IN_BLOCK uint64 = 60000000 / 2
-	//MAX_GAS_IN_BLOCK uint64 = 60000000 * 2  // tps 1000 transfer
-
+	MaxGasLimit 	 	 uint64 = 180000000  // tps 3000 transfer  60000gas per transfer tx
+	MaxSupply			 uint64 = 10000000000
 
 
 	MaximumExtraDataSize  uint64 = 32    // Maximum size extra data may be after Genesis.
