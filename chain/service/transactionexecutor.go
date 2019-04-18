@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"github.com/drep-project/binary"
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
@@ -11,12 +10,12 @@ import (
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
+	"math"
 	"math/big"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
-	"math"
 )
 
 const (
@@ -93,8 +92,7 @@ func (chainService *ChainService) executeTransaction(tx *chainTypes.Transaction,
 
 	//TODO need test
 	gasUsed := new(uint64)
-	receipt, _, err := chainService.stateProcessor.ApplyTransaction(newState, chainService, gp, header,tx, gasUsed)
-	fmt.Println(receipt.ContractAddress.Hex())
+	_, _, err = chainService.stateProcessor.ApplyTransaction(newState, chainService, gp, header,tx, gasUsed)
 	if err != nil {
 		dlog.Error("executeTransaction transaction error", "reason", err)
 		return nil, nil, err
@@ -123,12 +121,12 @@ func (chainService *ChainService) verify(tx *chainTypes.Transaction) (bool, erro
 	}
 }
 
-func (chainService *ChainService) executeSetAliasTransaction(t *chainTypes.Transaction, fromAccount *crypto.CommonAddress, alias string, gasPrice, gasLimit *big.Int, chainId app.ChainIdType) (*big.Int, *big.Int, error) {
-
-	//2 设置
-	err := chainService.DatabaseService.AliasSet(fromAccount,alias)
-	return chainTypes.GasTable[chainTypes.SetAliasType], gasPrice, err
-}
+//func (chainService *ChainService) executeSetAliasTransaction(t *chainTypes.Transaction, fromAccount *crypto.CommonAddress, alias string, gasPrice, gasLimit *big.Int, chainId app.ChainIdType) (*big.Int, *big.Int, error) {
+//
+//	//2 设置
+//	err := chainService.DatabaseService.AliasSet(fromAccount,alias)
+//	return chainTypes.GasTable[chainTypes.SetAliasType], gasPrice, err
+//}
 
 func (chainService *ChainService) checkNonce(fromAccount *crypto.CommonAddress, nounce uint64) error {
 	nonce := chainService.DatabaseService.GetNonce(fromAccount, true)
