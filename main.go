@@ -1,11 +1,13 @@
 package main
 
 import (
+    "errors"
     "fmt"
     "github.com/drep-project/binary"
     "github.com/drep-project/drep-chain/chain/types"
     "github.com/drep-project/drep-chain/common"
     "github.com/drep-project/drep-chain/crypto/secp256k1"
+    "time"
 
     "math/big"
     "reflect"
@@ -19,11 +21,38 @@ type AAA struct {
 }
 
 func main(){
- xxxx := "0x0201002049000a8f1f0fba4503d44f0c207bb9ea0955e700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080de0b6b3a7640000031e848001c8a8cfa2cb0b00f93b3acab6f8ce3a62f3d19e3416c6c02fd5a06c"
+ xxxx := "0x02cca975000a5a79a051afa6d526653440ab6988db65cd54f5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000502540be4000504a817c80002ea60e2ebc0cb0b00c4ac59f52b3052e5c14566ed397453ea913c6fbc4120884f8e4d26c77b82e07568ba6cca026063b484883f3fdd8a43d47c4ae44b4f6339480674bc7b2b683a3f5561d3c922a174f127a6678d1eb627ad87fbdf74468e"
  bytesss := common.MustDecode(xxxx)
     tx := &types.Transaction{}
     err := binary.Unmarshal(bytesss,tx)
+
+    fmt.Println(time.Now())
+    for i:=0; i<5000;i++{
+        verify(tx)
+    }
+    fmt.Println(time.Now())
     fmt.Println(err)
+}
+
+func verify(tx *types.Transaction) (bool, error) {
+    if tx.Sig != nil {
+        pk, _, err := secp256k1.RecoverCompact(tx.Sig, tx.TxHash().Bytes())
+        if err != nil {
+            return false, err
+        }
+        sig := secp256k1.RecoverSig(tx.Sig)
+        isValid := sig.Verify(tx.TxHash().Bytes(), pk)
+        if err != nil {
+            return false, err
+        }
+        if !isValid {
+            return false, errors.New("signature not validate")
+        }
+        return true, nil
+    } else {
+        return false, errors.New("must assign a signature for transaction")
+    }
+ return true, nil
 }
 
 type secpPubKeyCodeC struct{}

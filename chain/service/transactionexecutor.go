@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"github.com/drep-project/binary"
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
@@ -33,53 +32,55 @@ func (chainService *ChainService) VerifyTransaction(tx *chainTypes.Transaction) 
 }
 
 func (chainService *ChainService) verifyTransaction(tx *chainTypes.Transaction) error {
-	var result error
-	_ = chainService.DatabaseService.Transaction(func() error {
-		from := tx.From()
-		nounce := tx.Nonce()
+	from := tx.From()
+	nounce := tx.Nonce()
 
-		_, err := chainService.verify(tx)
-		if err != nil {
-			result = err
-		}
+	_, err := chainService.verify(tx)
+	if err != nil {
+		return err
+	}
 
-		err = chainService.checkNonce(from, nounce)
-		if err != nil {
-			result =  err
-		}
+	// Transactions can't be negative. This may never happen using RLP decoded
+	// transactions but may occur if you create a transaction using the RPC.
+	if tx.Data.Amount.Sign() < 0 {
+		return errors.New("engative amount in tx")
+	}
 
-		// Check the transaction doesn't exceed the current
-		// block limit gas.
-		block, _ := chainService.GetBlockByHash(chainService.BestChain.Tip().Hash)
-		if block.Header.GasLimit.Uint64() < tx.Gas() {
-			result = errors.New("gas limit in tx has exceed block limit")
-		}
+	err = chainService.checkNonce(from, nounce)
+	if err != nil {
+		return err
+	}
 
-		// Transactions can't be negative. This may never happen
-		// using RLP decoded transactions but may occur if you create
-		// a transaction using the RPC for example.
-		if tx.Amount().Sign() < 0 {
-			result = errors.New("negative amount in tx")
-		}
+	// Check the transaction doesn't exceed the current
+	// block limit gas.
+	gasLimit := chainService.BestChain.Tip().GasLimit
+	if gasLimit.Uint64() < tx.Gas() {
+		return errors.New("gas limit in tx has exceed block limit")
+	}
 
-		// Transactor should have enough funds to cover the costs
-		// cost == V + GP * GL
-		originBalance := chainService.DatabaseService.GetBalance(from, true)
-		if originBalance.Cmp(tx.Cost()) < 0 {
-			result = errors.New("not enough balance")
-		}
+	// Transactions can't be negative. This may never happen
+	// using RLP decoded transactions but may occur if you create
+	// a transaction using the RPC for example.
+	if tx.Amount().Sign() < 0 {
+		return errors.New("negative amount in tx")
+	}
 
-		// Should supply enough intrinsic gas
-		gas, err := IntrinsicGas(tx.AsPersistentMessage(), tx.To() == nil|| tx.To().IsEmpty() )
-		if err != nil {
-			result = err
-		}
-		if tx.Gas() < gas {
-			result = errors.New("not enough balance")
-		}
-		return errors.New("just not commit")
-	})
-	return result
+	// Transactor should have enough funds to cover the costs
+	// cost == V + GP * GL
+	originBalance := chainService.DatabaseService.GetBalance(from, false)
+	if originBalance.Cmp(tx.Cost()) < 0 {
+		return errors.New("not enough balance")
+	}
+
+	// Should supply enough intrinsic gas
+	gas, err := IntrinsicGas(tx.AsPersistentMessage(), tx.To() == nil|| tx.To().IsEmpty() )
+	if err != nil {
+		return err
+	}
+	if tx.Gas() < gas {
+		return errors.New("not enough balance")
+	}
+	return nil
 }
 
 //TODO 交易验证存在的问题， 合约是否需要执行
@@ -93,8 +94,7 @@ func (chainService *ChainService) executeTransaction(tx *chainTypes.Transaction,
 
 	//TODO need test
 	gasUsed := new(uint64)
-	receipt, _, err := chainService.stateProcessor.ApplyTransaction(newState, chainService, gp, header,tx, gasUsed)
-	fmt.Println(receipt.ContractAddress.Hex())
+	_, _, err = chainService.stateProcessor.ApplyTransaction(newState, chainService, gp, header,tx, gasUsed)
 	if err != nil {
 		dlog.Error("executeTransaction transaction error", "reason", err)
 		return nil, nil, err
@@ -124,7 +124,7 @@ func (chainService *ChainService) verify(tx *chainTypes.Transaction) (bool, erro
 }
 
 func  (chainService *ChainService) checkNonce(fromAccount *crypto.CommonAddress, nounce uint64) error{
-	nonce := chainService.DatabaseService.GetNonce(fromAccount, true)
+	nonce := chainService.DatabaseService.GetNonce(fromAccount, false)
 	if nonce > nounce {
 		return errors.New("error nounce")
 	}

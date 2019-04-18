@@ -51,6 +51,14 @@ type Block struct {
 	MultiSig *MultiSignature
 }
 
+func (block *Block) GasUsed() uint64 {
+	return block.Header.GasUsed.Uint64()
+}
+
+func (block *Block) GasLimit() uint64 {
+	return block.Header.GasLimit.Uint64()
+}
+
 func (block *Block) ToMessage() []byte {
 	blockTemp := &Block{
 		Header: &BlockHeader{

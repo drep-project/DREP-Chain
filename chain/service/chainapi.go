@@ -88,14 +88,9 @@ func (chain *ChainApi) SendRawTransaction(txbytes common.Bytes) (string, error) 
     if err != nil {
         return "", err
     }
-
-    chain.chainService.transactionPool.AddTransaction(tx)
-    err = chain.chainService.VerifyTransaction(tx)
+    err = chain.chainService.SendTransaction(tx)
     if err != nil {
         return "", err
     }
-    chain.chainService.transactionPool.AddTransaction(tx)
-    chain.chainService.BroadcastTx(chainType.MsgTypeTransaction, tx, true)
-
-    return tx.TxHash().String(), err
+    return tx.TxHash().String(), nil
 }
