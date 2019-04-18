@@ -144,6 +144,13 @@ func (st *StateTransition) TransitionTransferDb() (ret []byte, failed bool, err 
 	return nil,  true, nil
 }
 
+func (st *StateTransition) TransitionAliasDb() (ret []byte, failed bool, err error) {
+	from := st.tx.From()
+	alias := st.tx.GetData()
+	err = st.databaseService.AliasSet(from,string(alias))
+	return nil,  true, err
+}
+
 func (st *StateTransition) refundGas() {
 	// Apply refund counter, capped to half of the used gas.
 	refund := st.gasUsed() / 2

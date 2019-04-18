@@ -32,14 +32,14 @@ import (
 // StateProcessor implements Processor.
 type StateProcessor struct {
 	chainService *ChainService
-	databaseApi *database.DatabaseService
+	databaseApi  *database.DatabaseService
 }
 
 // NewStateProcessor initialises a new StateProcessor.
 func NewStateProcessor(chainservice *ChainService) *StateProcessor {
 	return &StateProcessor{
 		chainService: chainservice,
-		databaseApi : chainservice.DatabaseService,
+		databaseApi:  chainservice.DatabaseService,
 	}
 }
 
@@ -47,9 +47,9 @@ func NewStateProcessor(chainservice *ChainService) *StateProcessor {
 // and uses the input parameters for its environment. It returns the receipt
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
-func (stateProcessor *StateProcessor) ApplyTransaction(state *vm.State,bc evm.ChainContext, gp *GasPool, header *types.BlockHeader, tx *types.Transaction, usedGas *uint64) (*types.Receipt,uint64, error) {
+func (stateProcessor *StateProcessor) ApplyTransaction(state *vm.State, bc evm.ChainContext, gp *GasPool, header *types.BlockHeader, tx *types.Transaction, usedGas *uint64) (*types.Receipt, uint64, error) {
 	// Apply the transaction to the current state (included in the env)
-	_, gas, gasFee, failed, err := stateProcessor.ApplyMessage(tx,state, header, bc, gp)
+	_, gas, gasFee, failed, err := stateProcessor.ApplyMessage(tx, state, header, bc, gp)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -61,7 +61,7 @@ func (stateProcessor *StateProcessor) ApplyTransaction(state *vm.State,bc evm.Ch
 	receipt := types.NewReceipt(root, failed, *usedGas)
 	receipt.TxHash = *tx.TxHash()
 	receipt.GasUsed = gas
-	receipt.GasFee =  gasFee
+	receipt.GasFee = gasFee
 	// if the transaction created a contract, store the creation address in the receipt.
 	if tx.To() == nil || tx.To().IsEmpty() {
 		receipt.ContractAddress = crypto.CreateAddress(tx.Data.From, tx.Nonce())
@@ -78,13 +78,13 @@ func (stateProcessor *StateProcessor) ApplyTransaction(state *vm.State,bc evm.Ch
 // the gas used (which includes gas refunds) and an error if it failed. An error always
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
-func (stateProcessor *StateProcessor)  ApplyMessage(tx *types.Transaction, state *vm.State, header *types.BlockHeader,bc evm.ChainContext, gp *GasPool) ([]byte, uint64,uint64, bool, error) {
-	stateTransaction := NewStateTransition(stateProcessor.databaseApi, stateProcessor.chainService.VmService,tx, state, header, bc, gp)
+func (stateProcessor *StateProcessor) ApplyMessage(tx *types.Transaction, state *vm.State, header *types.BlockHeader, bc evm.ChainContext, gp *GasPool) ([]byte, uint64, uint64, bool, error) {
+	stateTransaction := NewStateTransition(stateProcessor.databaseApi, stateProcessor.chainService.VmService, tx, state, header, bc, gp)
 	if err := stateTransaction.preCheck(); err != nil {
 		return nil, 0, 0, false, err
 	}
 	// Pay intrinsic gastx
-	contractCreation := tx.To() == nil|| tx.To().IsEmpty()
+	contractCreation := tx.To() == nil || tx.To().IsEmpty()
 	gas, err := IntrinsicGas(tx.AsPersistentMessage(), contractCreation)
 	if err != nil {
 		return nil, 0, 0, false, err
@@ -97,13 +97,15 @@ func (stateProcessor *StateProcessor)  ApplyMessage(tx *types.Transaction, state
 	var fail bool
 	if tx.Type() == types.TransferType {
 		ret, fail, err = stateTransaction.TransitionTransferDb()
-	} else if tx.Type() == types.CallContractType || tx.Type() == types.CreateContractType{
+	} else if tx.Type() == types.CallContractType || tx.Type() == types.CreateContractType {
 		ret, fail, err = stateTransaction.TransitionVmTxDb()
-	}else {
-		return nil, 0, 0,false, errors.New("not support transaction type")
+	} else if tx.Type() == types.SetAliasType {
+		ret, fail, err = stateTransaction.TransitionAliasDb()
+	} else {
+		return nil, 0, 0, false, errors.New("not support transaction type")
 	}
 
 	stateTransaction.refundGas()
 	gasFee := new(big.Int).Mul(new(big.Int).SetUint64(stateTransaction.gasUsed()), stateTransaction.gasPrice).Uint64()
-	return ret, stateTransaction.gasUsed(), gasFee,  fail, err
+	return ret, stateTransaction.gasUsed(), gasFee, fail, err
 }

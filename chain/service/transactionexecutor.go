@@ -10,12 +10,12 @@ import (
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
+	"math"
 	"math/big"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
-	"math"
 )
 
 const (
@@ -129,12 +129,6 @@ func  (chainService *ChainService) checkNonce(fromAccount *crypto.CommonAddress,
 		return errors.New("error nounce")
 	}
 	return nil
-}
-func (chainService *ChainService) executeSetAliasTransaction(t *chainTypes.Transaction, fromAccount *crypto.CommonAddress, alias string, gasPrice, gasLimit *big.Int, chainId app.ChainIdType) (*big.Int, *big.Int, error) {
-
-	//2 设置
-	err := chainService.DatabaseService.AliasSet(fromAccount,alias)
-	return chainTypes.GasTable[chainTypes.SetAliasType], gasPrice, err
 }
 
 func (chainService *ChainService) checkBalance(gaslimit, gasPrice, balance, gasFloor, gasCap *big.Int) error {
