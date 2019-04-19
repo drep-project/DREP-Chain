@@ -18,7 +18,9 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/pkgs/evm"
@@ -65,6 +67,7 @@ func (stateProcessor *StateProcessor) ApplyTransaction(state *vm.State, bc evm.C
 	// if the transaction created a contract, store the creation address in the receipt.
 	if tx.To() == nil || tx.To().IsEmpty() {
 		receipt.ContractAddress = crypto.CreateAddress(tx.Data.From, tx.Nonce())
+		fmt.Println(common.Encode(receipt.ContractAddress[:]))
 	}
 	// Set the receipt logs and create a bloom for filtering
 	receipt.Logs = state.GetLogs(tx.TxHash().Bytes())

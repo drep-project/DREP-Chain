@@ -4,8 +4,6 @@
 
 package sha3
 
-import "crypto/sha256"
-
 // spongeDirection indicates the direction bytes are flowing through the sponge.
 type spongeDirection int
 
@@ -195,12 +193,14 @@ func (d *state) Sum(in []byte) []byte {
 }
 
 func Hash256(data []byte) []byte {
-	h := sha256.New()
-	h.Write(data)
-	ret := h.Sum(nil)
-	hash := make([]byte, ByteLen)
-	copy(hash[ByteLen-len(ret):], ret)
-	return hash
+	//h := sha256.New()
+	//h.Write(data)
+	//ret := h.Sum(nil)
+	//hash := make([]byte, ByteLen)
+	//copy(hash[ByteLen-len(ret):], ret)
+	d := &state{rate: 136, outputLen: 32, dsbyte: 0x01}
+	d.Write(data)
+	return d.Sum(nil)
 }
 
 func HashS256(data ...[]byte) []byte {
@@ -214,21 +214,6 @@ func HashS256(data ...[]byte) []byte {
 		d.Write(b)
 	}
 	return d.Sum(nil)
-}
-
-func ConcatHash256(args ...[]byte) []byte {
-	totalLen := 0
-	for _, bytes := range args {
-		totalLen += len(bytes)
-	}
-	concat := make([]byte, totalLen)
-	i := 0
-	for _, bytes := range args {
-		copy(concat[i:], bytes)
-		i += len(bytes)
-	}
-	hash := Sum256(concat)
-	return hash[:]
 }
 
 func StackHash(hashList [][]byte) []byte {

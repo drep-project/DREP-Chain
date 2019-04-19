@@ -7,7 +7,6 @@ const (
   "chainId": "0x00",
   "boot": true,
 	"chain":{
-		"blockprize": "0x1158e460913d00000"
 	},
   "default_rep": "10",
 	"log": {
