@@ -132,7 +132,7 @@ var (
 			DiscoveryV5:     true,
 			NAT:             nat.Any(),
 			BootstrapNodes:  nil,
-			Name:            "drep",
+			Name:            "drepnode",
 		},
 		DataDir: "",
 	}
