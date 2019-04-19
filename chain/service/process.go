@@ -226,7 +226,7 @@ func (chainService *ChainService) connectBlock(block *chainTypes.Block, newNode 
 	chainService.flushIndexState()
 
 	chainService.markState(newNode)
-	chainService.clearTxPool(block)
+	chainService.notifyBlock(block)
 	// If this is fast add, or this block node isn't yet marked as
 	// valid, then we'll update its status and flush the state to
 	// disk again.
@@ -303,6 +303,16 @@ func (chainService *ChainService) reorganizeChain(detachNodes, attachNodes *list
 		chainService.DatabaseService.Rollback2Block(height)
 		dlog.Info("REORGANIZE:RollBack state root", "Height", height)
 		chainService.markState(lastBlock.Parent)
+		elem = attachNodes.Front()
+		for elem != nil {
+			blockNode := elem.Value.(*chainTypes.BlockNode)
+			block, err := chainService.DatabaseService.GetBlock(blockNode.Hash)
+			if err != nil {
+				return err
+			}
+			chainService.notifyDetachBlock(block)
+			elem = elem.Next()
+		}
 	}
 
 	if attachNodes.Len() != 0 && detachNodes.Len() != 0 {
@@ -325,20 +335,11 @@ func (chainService *ChainService) reorganizeChain(detachNodes, attachNodes *list
 	return nil
 }
 
-func (chainService *ChainService) clearTxPool(block *chainTypes.Block) {
-	addrMap := make(map[crypto.CommonAddress]struct{})
-	var addrs []*crypto.CommonAddress
-	for _, tx := range block.Data.TxList {
-		addr := tx.From()
-		if _, ok := addrMap[*addr]; !ok {
-			addrMap[*addr] = struct{}{}
-			addrs = append(addrs, addr)
-		}
-	}
-
-	if len(addrs) > 0 {
-		chainService.newBlockFeed.Send(addrs)
-	}
+func (chainService *ChainService) notifyBlock(block *chainTypes.Block) {
+	chainService.NewBlockFeed.Send(block)
+}
+func (chainService *ChainService) notifyDetachBlock(block *chainTypes.Block) {
+	chainService.DetachBlockFeed.Send(block)
 }
 
 func (chainService *ChainService) markState(blockNode *chainTypes.BlockNode) {
