@@ -77,7 +77,8 @@ type ChainService struct {
 	syncMut sync.Mutex
 
 	//提供新块订阅
-	newBlockFeed event.Feed
+	NewBlockFeed    event.Feed
+	DetachBlockFeed event.Feed
 
 	//从远端接收块头hash组
 	headerHashCh chan []*syncHeaderHash
@@ -187,7 +188,7 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 }
 
 func (chainService *ChainService) Start(executeContext *app.ExecuteContext) error {
-	chainService.transactionPool.Start(&chainService.newBlockFeed)
+	chainService.transactionPool.Start(&chainService.NewBlockFeed)
 	go chainService.synchronise()
 	go chainService.syncTxs()
 	return nil

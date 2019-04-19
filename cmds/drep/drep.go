@@ -10,6 +10,7 @@ import (
 	consensusService "github.com/drep-project/drep-chain/pkgs/consensus/service"
 	cliService "github.com/drep-project/drep-chain/pkgs/drepclient/service"
 	evmService "github.com/drep-project/drep-chain/pkgs/evm"
+	"github.com/drep-project/drep-chain/pkgs/trace"
 	"github.com/drep-project/drep-chain/pkgs/log"
 	"github.com/drep-project/drep-chain/pkgs/rpc"
 	"net/http"
@@ -34,6 +35,7 @@ func main() {
 		p2pService.P2pService{},
 		evmService.EvmService{},
 		chainService.ChainService{},
+		trace.TraceService{},
 		accountService.AccountService{},
 		consensusService.ConsensusService{},
 		cliService.CliService{},

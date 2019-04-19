@@ -32,7 +32,7 @@ type TransactionPool struct {
 	//当前有序的最大的nonce大小,此值应该被存储到DB中（后续考虑txpool的DB存储，一起考虑）
 	pendingNonce     map[crypto.CommonAddress]uint64
 	eventNewBlockSub event.Subscription
-	newBlockChan     chan []*crypto.CommonAddress
+	newBlockChan     chan *chainTypes.Block
 	quit             chan struct{}
 }
 
@@ -66,7 +66,7 @@ func NewTransactionPool(databaseApi *database.DatabaseService) *TransactionPool 
 	pool.allTxs = make(map[string]bool)
 	pool.queue = make(map[crypto.CommonAddress]*txList)
 	pool.pending = make(map[crypto.CommonAddress]*txList)
-	pool.newBlockChan = make(chan []*crypto.CommonAddress)
+	pool.newBlockChan = make(chan *chainTypes.Block)
 	pool.pendingNonce = make(map[crypto.CommonAddress]uint64)
 
 	return pool
@@ -247,8 +247,8 @@ func (pool *TransactionPool) Stop() {
 func (pool *TransactionPool) checkUpdate() {
 	for {
 		select {
-		case addrList := <-pool.newBlockChan:
-			pool.adjust(addrList)
+		case block := <-pool.newBlockChan:
+			pool.adjust(block)
 		case <-pool.quit:
 			return
 		}
@@ -256,25 +256,37 @@ func (pool *TransactionPool) checkUpdate() {
 }
 
 //已经被处理过NONCE都被清理出去
-func (pool *TransactionPool) adjust(addrList []*crypto.CommonAddress) {
-	for _, addr := range addrList {
-		// 获取数据库里面的nonce
-		//根据nonce是否被处理，删除对应的交易
-		nonce := pool.databaseApi.GetNonce(addr, true)
-		pool.mu.Lock()
-		list, ok := pool.pending[*addr]
-		if ok {
-			txs := list.Forward(nonce)
-			for _, tx := range txs {
-				id := tx.TxHash()
-				delete(pool.allTxs, id.String())
-
+func (pool *TransactionPool) adjust(block *chainTypes.Block) {
+		addrMap := make(map[crypto.CommonAddress]struct{})
+		var addrs []*crypto.CommonAddress
+		for _, tx := range block.Data.TxList {
+			addr := tx.From()
+			if _, ok := addrMap[*addr]; !ok {
+				addrMap[*addr] = struct{}{}
+				addrs = append(addrs, addr)
 			}
 		}
-		pool.mu.Unlock()
 
-		dlog.Warn("clear txpool",  "max tx.nonce:", nonce,"txpool tx count:", len(pool.allTxs))
-	}
+		if len(addrs) > 0 {
+			for addr, _ := range addrMap {
+				// 获取数据库里面的nonce
+				//根据nonce是否被处理，删除对应的交易
+				nonce := pool.databaseApi.GetNonce(&addr, true)
+				pool.mu.Lock()
+				list, ok := pool.pending[addr]
+				if ok {
+					txs := list.Forward(nonce)
+					for _, tx := range txs {
+						id := tx.TxHash()
+						delete(pool.allTxs, id.String())
+
+					}
+				}
+				pool.mu.Unlock()
+
+				dlog.Warn("clear txpool",  "max tx.nonce:", nonce,"txpool tx count:", len(pool.allTxs))
+			}
+		}
 }
 
 //获取总的交易个数，即获取地址对应的nonce

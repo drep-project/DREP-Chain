@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"github.com/drep-project/binary"
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
@@ -78,7 +79,9 @@ func (chainService *ChainService) verifyTransaction(tx *chainTypes.Transaction) 
 		return err
 	}
 	if tx.Gas() < gas {
-		return errors.New("not enough balance")
+		fmt.Println(tx.Gas())
+		fmt.Println(gas)
+		return errors.New("gas exceed tx gaslimit")
 	}
 	return nil
 }

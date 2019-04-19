@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime/debug"
 	"strings"
 
 	"github.com/drep-project/drep-chain/common"
@@ -140,6 +141,7 @@ func (mApp DrepApp) Run() error {
 func (mApp DrepApp) action(ctx *cli.Context) error {
 	defer func() {
 		if err:=recover();err!=nil{
+			debug.PrintStack()
 			fmt.Println("app action err", err)
 		}
 		length := len(mApp.Context.Services)

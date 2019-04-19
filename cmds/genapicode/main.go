@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	accountService "github.com/drep-project/drep-chain/pkgs/accounts/service"
 	chainService "github.com/drep-project/drep-chain/chain/service"
-	consensusService "github.com/drep-project/drep-chain/pkgs/consensus/service"
-	logService "github.com/drep-project/drep-chain/pkgs/log"
 	p2pService "github.com/drep-project/drep-chain/network/service"
+	accountService "github.com/drep-project/drep-chain/pkgs/accounts/service"
+	consensusService "github.com/drep-project/drep-chain/pkgs/consensus/service"
+	traceService "github.com/drep-project/drep-chain/pkgs/trace"
+	logService "github.com/drep-project/drep-chain/pkgs/log"
 	"io"
 	"os"
 	path2 "path"
@@ -91,6 +92,9 @@ func main() {
 
 	vType=reflect.TypeOf(&consensusService.ConsensusApi{})
 	resolveType(output,"consensus", "CONSENSUS", "consensus",vType)
+
+	vType=reflect.TypeOf(&traceService.TraceApi{})
+	resolveType(output,"trace", "TRACE", "trace",vType)
 }
 
 func resolveType(output string, fileName, className string,prefix string, vType reflect.Type){
