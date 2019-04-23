@@ -129,27 +129,27 @@ type Message struct {
 	CheckNonce bool
 }
 
-func NewTransaction(from crypto.CommonAddress, to crypto.CommonAddress, amount *big.Int, nonce uint64) *Transaction {
+func NewTransaction(from crypto.CommonAddress, to crypto.CommonAddress, amount, gasPrice, gasLimit *big.Int, nonce uint64) *Transaction {
 	data := TransactionData{
 		Version:   common.Version,
 		Nonce:     nonce,
 		Type:      TransferType,
 		To:        to,
 		Amount:    *amount,
-		GasPrice:  *DefaultGasPrice,
-		GasLimit:  *TransferGas,
+		GasPrice:  *gasPrice,
+		GasLimit:  *gasLimit,
 		Timestamp: time.Now().Unix(),
 		From:      from,
 	}
 	return &Transaction{Data: data}
 }
 
-func NewContractTransaction(from crypto.CommonAddress, byteCode []byte, nonce uint64) *Transaction {
+func NewContractTransaction(from crypto.CommonAddress, byteCode []byte, gasPrice, gasLimit *big.Int, nonce uint64,) *Transaction {
 	data := TransactionData{
 		Nonce:     nonce,
 		Type:      CreateContractType,
-		GasPrice:  *DefaultGasPrice,
-		GasLimit:  *CreateContractGas,
+		GasPrice:  *gasPrice,
+		GasLimit:  *gasLimit,
 		Timestamp: time.Now().Unix(),
 		Data:      byteCode,
 		From:      from,
@@ -157,14 +157,14 @@ func NewContractTransaction(from crypto.CommonAddress, byteCode []byte, nonce ui
 	return &Transaction{Data: data}
 }
 
-func NewCallContractTransaction(from crypto.CommonAddress, to crypto.CommonAddress, input []byte, amount *big.Int, nonce uint64) *Transaction {
+func NewCallContractTransaction(from crypto.CommonAddress, to crypto.CommonAddress, input []byte, amount, gasPrice, gasLimit *big.Int, nonce uint64) *Transaction {
 	data := TransactionData{
 		Nonce:     nonce,
 		Type:      CallContractType,
 		To:        to,
 		Amount:    *amount,
-		GasPrice:  *DefaultGasPrice,
-		GasLimit:  *CallContractGas,
+		GasPrice:  *gasPrice,
+		GasLimit:  *gasLimit,
 		Timestamp: time.Now().Unix(),
 		From:      from,
 		Data:      input,

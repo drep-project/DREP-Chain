@@ -86,6 +86,7 @@ func (stateProcessor *StateProcessor) ApplyMessage(tx *types.Transaction, state 
 	if err := stateTransaction.preCheck(); err != nil {
 		return nil, 0, 0, false, err
 	}
+
 	// Pay intrinsic gastx
 	contractCreation := tx.To() == nil || tx.To().IsEmpty()
 	gas, err := IntrinsicGas(tx.AsPersistentMessage(), contractCreation)
@@ -96,6 +97,7 @@ func (stateProcessor *StateProcessor) ApplyMessage(tx *types.Transaction, state 
 	if err = stateTransaction.useGas(gas); err != nil {
 		return nil, 0, 0, false, err
 	}
+
 	var ret []byte
 	var fail bool
 	if tx.Type() == types.TransferType {

@@ -43,6 +43,8 @@ module.exports = %s;
 var (
 	inputFormatMap = map[string]string{
 		"common.Big": "utils.fromDecimal",
+		"int64": "utils.fromDecimal",
+		"uint64": "utils.fromDecimal",
 		"crypto.CommonAddress":"formatters.inputAddressFormatter",
 	}
 	formatMap = map[string]string{

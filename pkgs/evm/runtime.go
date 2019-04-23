@@ -26,7 +26,9 @@ func (evmService *EvmService) Name() string {
 }
 
 func (evmService *EvmService) Api() []app.API {
-	return []app.API{}
+	return []app.API{
+
+	}
 }
 
 func (evmService *EvmService) CommandFlags() ([]cli.Command, []cli.Flag) {

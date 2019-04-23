@@ -12,9 +12,17 @@ type ChainConfig struct {
 	GenesisPK        string          `json:"genesispk"`
 	SkipCheckMutiSig bool            `json:"skipCheckMutiSig"`
 	Producers        []Producers     `json:"producers"`
+	GasPrice		 OracleConfig    `json:"gasprice"`
 }
 
 type Producers struct {
 	Pubkey *secp256k1.PublicKey `json:"pubkey"`
 	IP     string               `json:"ip"`
+}
+
+type OracleConfig struct {
+	Blocks     int
+	Percentile int
+	Default    uint64
+	MaxPrice   uint64
 }

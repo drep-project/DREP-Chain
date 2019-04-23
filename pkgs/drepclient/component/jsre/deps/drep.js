@@ -1514,8 +1514,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             var call = new Method({
                 name: 'call',
                 call: 'account_call',
-                params: 4,
-                inputFormatter: [formatters.inputAddressFormatter, formatters.inputAddressFormatter, null, utils.fromDecimal]
+                params: 6,
+                inputFormatter: [formatters.inputAddressFormatter, formatters.inputAddressFormatter, null, utils.fromDecimal, utils.fromDecimal, utils.fromDecimal]
             });
 
             var closeWallet = new Method({
@@ -1535,8 +1535,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             var createCode = new Method({
                 name: 'createCode',
                 call: 'account_createCode',
-                params: 2,
-                inputFormatter: [formatters.inputAddressFormatter, null]
+                params: 5,
+                inputFormatter: [formatters.inputAddressFormatter, null, utils.fromDecimal, utils.fromDecimal, utils.fromDecimal]
             });
 
             var createWallet = new Method({
@@ -1605,8 +1605,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             var transfer = new Method({
                 name: 'transfer',
                 call: 'account_transfer',
-                params: 3,
-                inputFormatter: [formatters.inputAddressFormatter, formatters.inputAddressFormatter, utils.fromDecimal]
+                params: 6,
+                inputFormatter: [formatters.inputAddressFormatter, formatters.inputAddressFormatter, utils.fromDecimal, utils.fromDecimal, utils.fromDecimal, null]
             });
 
             var unLockWallet = new Method({
@@ -1639,6 +1639,13 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         };
 
         var methods = function () {
+
+            var gasPrice = new Method({
+                name: 'gasPrice',
+                call: 'chain_gasPrice',
+                params: 0,
+                inputFormatter: []
+            });
 
             var getAddressByAlias = new Method({
                 name: 'getAddressByAlias',
@@ -1724,7 +1731,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 inputFormatter: [null]
             });
 
-            return [getAddressByAlias,getAliasByAddress,getBalance,getBlock,getMaxHeight,getNonce,getPreviousBlockHash,getReputation,getTransactionByBlockHeightAndIndex,getTransactionCountByBlockHeight,getTransactionsFromBlock,sendRawTransaction]
+            return [gasPrice,getAddressByAlias,getAliasByAddress,getBalance,getBlock,getMaxHeight,getNonce,getPreviousBlockHash,getReputation,getTransactionByBlockHeightAndIndex,getTransactionCountByBlockHeight,getTransactionsFromBlock,sendRawTransaction]
         }
 
         module.exports = CHAIN;
@@ -1859,14 +1866,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 inputFormatter: [null]
             });
 
-            var mock = new Method({
-                name: 'mock',
-                call: 'trace_mock',
-                params: 0,
-                inputFormatter: []
-            });
-
-            return [decodeTrasnaction,getAddrTransaction,getRawTrasnaction,getTrasnaction,mock]
+            return [decodeTrasnaction,getAddrTransaction,getRawTrasnaction,getTrasnaction]
         }
 
         module.exports = TRACE;

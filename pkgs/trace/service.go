@@ -122,6 +122,7 @@ func  (traceService *TraceService) InsertRecord(block *chainTypes.Block)  {
 			fmt.Println(err)
 			return
 		}
+
 	}
 }
 

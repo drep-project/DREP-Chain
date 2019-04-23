@@ -360,23 +360,16 @@ func (chainService *ChainService) GetGenisiBlock() *chainTypes.Block {
 	})
 	return block
 }
+//TODO need to  improves the performan
 func (chainService *ChainService) InitStates() error {
 	chainState := chainService.DatabaseService.GetChainState()
 
-	var blockCount int32
-	err := chainService.DatabaseService.BlockNodeIterator(func(header *chainTypes.BlockHeader, status chainTypes.BlockStatus) error {
-		blockCount++
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
+	blockCount := chainService.DatabaseService.BlockNodeCount()
 	blockNodes := make([]chainTypes.BlockNode, blockCount)
 
 	var i int32
 	var lastNode *chainTypes.BlockNode
-	err = chainService.DatabaseService.BlockNodeIterator(func(header *chainTypes.BlockHeader, status chainTypes.BlockStatus) error {
+	err := chainService.DatabaseService.BlockNodeIterator(func(header *chainTypes.BlockHeader, status chainTypes.BlockStatus) error {
 		// Determine the parent block node. Since we iterate block headers
 		// in order of height, if the blocks are mostly linear there is a
 		// very good chance the previous header processed is the parent.

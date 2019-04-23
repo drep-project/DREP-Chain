@@ -105,3 +105,6 @@ func (chain *ChainApi) GetAddressByAlias(alias string) *crypto.CommonAddress {
 	return chain.chainService.DatabaseService.AliasGet(alias)
 }
 
+func (chain *ChainApi) GasPrice() (*big.Int, error) {
+    return chain.chainService.gpo.SuggestPrice()
+}

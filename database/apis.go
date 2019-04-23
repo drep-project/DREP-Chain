@@ -98,6 +98,16 @@ func (database *DatabaseService) GetBlockNode(hash *crypto.Hash, height uint64) 
 	return blockHeader, chainType.BlockStatus(status), nil
 }
 
+func (database *DatabaseService) BlockNodeCount() int64 {
+	count := int64(64)
+	iter := database.db.db.NewIterator(util.BytesPrefix(BlockNodePrefix), nil)
+	defer iter.Release()
+	for iter.Next() {
+		count++
+	}
+	return count
+}
+
 func (database *DatabaseService) BlockNodeIterator(handle func(*chainType.BlockHeader, chainType.BlockStatus) error) error {
 	iter := database.db.db.NewIterator(util.BytesPrefix(BlockNodePrefix), nil)
 	defer iter.Release()

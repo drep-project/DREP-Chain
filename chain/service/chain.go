@@ -32,72 +32,81 @@ import (
 
 var (
 	rootChain          app.ChainIdType
+	DefaultOracleConfig  = chainTypes.OracleConfig{
+		Blocks:     	20,
+		Default:    	big.NewInt(params.GWei).Uint64(),
+		Percentile: 	60,
+		MaxPrice:  		big.NewInt(500 * params.GWei).Uint64(),
+
+	}
 	DefaultChainConfig = &chainTypes.ChainConfig{
-		RemotePort: 55556,
-		ChainId:    app.ChainIdType{},
-		GenesisPK:  "0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26",
+		RemotePort: 	55556,
+		ChainId:    	app.ChainIdType{},
+		GasPrice:		DefaultOracleConfig,
+		GenesisPK:  	"0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26",
 	}
 )
 
 type ChainService struct {
-	RpcService      *rpc2.RpcService          `service:"rpc"`
-	P2pServer       p2pService.P2P            `service:"p2p"`
-	DatabaseService *database.DatabaseService `service:"database"`
-	VmService       evm.Vm                    `service:"vm"`
-	transactionPool *txpool.TransactionPool
-	isRelay         bool
-	apis            []app.API
+	RpcService      	*rpc2.RpcService          `service:"rpc"`
+	P2pServer       	p2pService.P2P            `service:"p2p"`
+	DatabaseService 	*database.DatabaseService `service:"database"`
+	VmService       	evm.Vm                    `service:"vm"`
+	transactionPool 	*txpool.TransactionPool
+	isRelay         	bool
+	apis            	[]app.API
 
-	stateProcessor  *StateProcessor
+	stateProcessor  	*StateProcessor
 
-	chainId app.ChainIdType
+	chainId 			app.ChainIdType
 
-	lock          sync.RWMutex
-	addBlockSync  sync.Mutex
-	StartComplete chan struct{}
-	stopChanel    chan struct{}
+	lock          		sync.RWMutex
+	addBlockSync  		sync.Mutex
+	StartComplete 		chan struct{}
+	stopChanel    		chan struct{}
 
 	// These fields are related to handling of orphan blocks.  They are
 	// protected by a combination of the chain lock and the orphan lock.
-	orphanLock   sync.RWMutex
-	orphans      map[crypto.Hash]*chainTypes.OrphanBlock
-	prevOrphans  map[crypto.Hash][]*chainTypes.OrphanBlock
-	oldestOrphan *chainTypes.OrphanBlock
+	orphanLock   		sync.RWMutex
+	orphans      		map[crypto.Hash]*chainTypes.OrphanBlock
+	prevOrphans  		map[crypto.Hash][]*chainTypes.OrphanBlock
+	oldestOrphan 		*chainTypes.OrphanBlock
 
-	Index         *chainTypes.BlockIndex
-	BestChain     *chainTypes.ChainView
-	stateLock     sync.RWMutex
-	StateSnapshot *chainTypes.BestState
+	Index         		*chainTypes.BlockIndex
+	BestChain     		*chainTypes.ChainView
+	stateLock     		sync.RWMutex
+	StateSnapshot 		*chainTypes.BestState
 
-	Config       *chainTypes.ChainConfig
-	pid          *actor.PID
-	genesisBlock *chainTypes.Block
+	Config       		*chainTypes.ChainConfig
+	pid          		*actor.PID
+	genesisBlock 		*chainTypes.Block
 	//Events related to sync blocks
-	syncBlockEvent event.Feed
-	syncMut sync.Mutex
+	syncBlockEvent 		event.Feed
+	syncMut 			sync.Mutex
 
 	//提供新块订阅
-	NewBlockFeed    event.Feed
-	DetachBlockFeed event.Feed
+	NewBlockFeed    	event.Feed
+	DetachBlockFeed 	event.Feed
 
 	//从远端接收块头hash组
-	headerHashCh chan []*syncHeaderHash
+	headerHashCh 		chan []*syncHeaderHash
 
 	//从远端接收到块
-	blocksCh chan []*chainTypes.Block
+	blocksCh 			chan []*chainTypes.Block
 
 	//所有需要同步的任务列表
-	allTasks *heightSortedMap
+	allTasks 			*heightSortedMap
 
 	//正在同步中的任务列表，如果对应的块未到，会重新发布请求的
-	pendingSyncTasks map[crypto.Hash]uint64
-	taskTxsCh chan tasksTxsSync
+	pendingSyncTasks 	map[crypto.Hash]uint64
+	taskTxsCh 			chan tasksTxsSync
 
 	//与此模块通信的所有Peer
-	peersInfo map[string]*chainTypes.PeerInfo
-	newPeerCh chan *chainTypes.PeerInfo
+	peersInfo 			map[string]*chainTypes.PeerInfo
+	newPeerCh 			chan *chainTypes.PeerInfo
 
-	quit chan struct{}
+	gpo 				*Oracle
+	quit 				chan struct{}
 }
 
 type syncHeaderHash struct {
@@ -123,6 +132,7 @@ func (chainService *ChainService) CommandFlags() ([]cli.Command, []cli.Flag) {
 
 func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error {
 	chainService.Config = DefaultChainConfig
+
 	err := executeContext.UnmashalConfig(chainService.Name(), chainService.Config)
 	if err != nil {
 		return err
@@ -139,7 +149,7 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 	chainService.newPeerCh = make(chan *chainTypes.PeerInfo, maxLivePeer)
 	chainService.taskTxsCh = make(chan tasksTxsSync, maxLivePeer)
 	chainService.stateProcessor = NewStateProcessor(chainService)
-
+	chainService.gpo = NewOracle(chainService, chainService.Config.GasPrice)
 	//TODO ENSURE SAFE IN GENESIS BLOCK
 	chainState := chainService.DatabaseService.GetChainState()
 	if chainState == nil {
@@ -281,16 +291,18 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey) 
 	gasUsed := new(big.Int)
 	gp := new(GasPool).AddGas(blockHeader.GasLimit.Uint64())
 	stopchanel := make(chan struct{})
-	time.AfterFunc(time.Second*5000000, func() {
+	time.AfterFunc(time.Second*5, func() {
 		stopchanel <- struct{}{}
 	})
 
 SELECT_TX:
-	for _, t := range txs {
+	for index, t := range txs {
+_ = index
 		select {
 			case <-stopchanel:
-
+				break SELECT_TX
 		default:
+
 			g, _, err := chainService.executeTransaction(t, gp, blockHeader)
 			if err == nil {
 				finalTxs = append(finalTxs, t)
@@ -299,6 +311,7 @@ SELECT_TX:
 				if err.Error() == "gas limit reached" {
 					break SELECT_TX
 				}else{
+
 					//TODO err or continue
 					continue
 					//  return nil, err
@@ -418,14 +431,28 @@ func (chainService *ChainService) GetHeader(hash crypto.Hash, number uint64) *ch
 	return header
 }
 
+func (chainService *ChainService) GetBlockByHeight(number uint64) (*chainTypes.Block, error) {
+	blockNode := chainService.BestChain.NodeByHeight(number)
+	return chainService.GetBlockByHash(blockNode.Hash)
+}
+
+func (chainService *ChainService) GetBlockHeaderByHeight(number uint64) (*chainTypes.BlockHeader, error) {
+	blockNode := chainService.BestChain.NodeByHeight(number)
+	if blockNode == nil {
+		return nil, errors.New("block not exit")
+	}
+	header := blockNode.Header()
+	return &header, nil
+}
+
 //180000000/360
 func (chainService *ChainService)  CalcGasLimit(parent *chainTypes.BlockHeader, gasFloor, gasCeil uint64) *big.Int {
 	limit := uint64(0)
 	span := uint64(180000000/360)
-	if  parent.GasUsed.Uint64() - parent.GasLimit.Uint64()*2/3 > 0{
-		limit = parent.GasLimit.Uint64() + span
-	} else{
+	if  parent.GasLimit.Uint64()*2/3 > parent.GasUsed.Uint64(){
 		limit = parent.GasLimit.Uint64() - span
+	} else{
+		limit = parent.GasLimit.Uint64() + span
 	}
 
 	if limit < params.MinGasLimit {
