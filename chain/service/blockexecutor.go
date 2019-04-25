@@ -25,13 +25,13 @@ func (chainService *ChainService) VerifyHeader(header, parent *chainTypes.BlockH
 	}
 	// Verify that the gasUsed is <= gasLimit
 	if header.GasUsed.Uint64() > header.GasLimit.Uint64() {
-		return fmt.Errorf("invalid gasUsed: have %d, gasLimit %d", header.GasUsed, header.GasLimit)
+		return fmt.Errorf("invalid gasUsed: have %v, gasLimit %v", header.GasUsed, header.GasLimit)
 	}
 
 	//TODO Verify that the gas limit remains within allowed bounds
 	nextGasLimit := chainService.CalcGasLimit(parent, params.MinGasLimit, params.MaxGasLimit)
 	if nextGasLimit.Cmp(&header.GasLimit) != 0 {
-		return fmt.Errorf("invalid gas limit: have %d, want %d += %d", header.GasLimit, parent.GasLimit, nextGasLimit)
+		return fmt.Errorf("invalid gas limit: have %v, want %v += %v", header.GasLimit, parent.GasLimit, nextGasLimit)
 	}
 	// Verify that the block number is parent's +1
 	if  header.Height - parent.Height != 1 {

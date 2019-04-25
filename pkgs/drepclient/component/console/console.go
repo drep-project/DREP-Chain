@@ -330,6 +330,7 @@ func (c *Console) Interactive() {
 				close(scheduler)
 				return
 			}
+			fmt.Println("ppppp:",line)
 			// User input retrieved, send for interpretation and loop
 			scheduler <- line
 		}

@@ -62,6 +62,7 @@ func (abi ABI) Pack(name string, args ...interface{}) ([]byte, error) {
 // Unpack output in v according to the abi specification
 func (abi ABI) Unpack(v interface{}, name string, output []byte) (err error) {
 	if len(output) == 0 {
+		fmt.Println("(abi ABI) Unpack")
 		return fmt.Errorf("abi: unmarshalling empty output")
 	}
 	// since there can't be naming collisions with contracts and events,

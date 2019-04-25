@@ -214,9 +214,11 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 				if err != nil {
 					dlog.Debug("Producer Block Fail", "Reason", err.Error())
 				} else {
-					consensusService.ChainService.BroadcastBlock(chainTypes.MsgTypeBlock, block, true)
-					consensusService.ChainService.ProcessBlock(block)
-					dlog.Info("Submit Block ", "Height", consensusService.ChainService.BestChain.Height(), "txs:", block.Data.TxCount)
+					_, _, err := consensusService.ChainService.ProcessBlock(block)
+					if err == nil{
+						consensusService.ChainService.BroadcastBlock(chainTypes.MsgTypeBlock, block, true)
+					}
+					dlog.Info("Submit Block ", "Height", consensusService.ChainService.BestChain.Height(), "txs:", block.Data.TxCount, "err", err)
 				}
 				time.Sleep(time.Duration(500) * time.Millisecond) //delay a little time for block deliver
 				nextBlockTime, waitSpan := consensusService.getWaitTime()
@@ -487,5 +489,5 @@ func (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) b
 }
 
 func (consensusService *ConsensusService) multySigVerify(block *chainTypes.Block) bool {
-	return consensusService.ChainService.ValidateMultiSig(block, consensusService.ChainService.Config.SkipCheckMutiSig||false)
+	return consensusService.ChainService.ValidateMultiSig(block, consensusService.ChainService.Config.SkipCheckMutiSig || false)
 }
