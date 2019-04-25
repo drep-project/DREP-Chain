@@ -102,6 +102,7 @@ func (v Secp256k1) secp2561PublicKey() *secp256k1.PublicKey{
 
 func (v Secp256k1) ENRKey() string { return "secp256k1" }
 
+
 func init(){
 	binary.ImportCodeC(reflect.TypeOf(Secp256k1{}), &secpPubKeyCodeC{})
 }

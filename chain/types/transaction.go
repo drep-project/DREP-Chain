@@ -8,12 +8,18 @@ import (
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"math/big"
+	"sync/atomic"
 	"time"
 )
 
 type Transaction struct {
 	Data TransactionData
 	Sig  []byte
+
+	txHash 		*crypto.Hash			`json:"-" binary:"ignore"`
+	signMessage []byte					`json:"-" binary:"ignore" bson:"-"`
+	message 	[]byte					`json:"-" binary:"ignore" bson:"-"`
+	from 		atomic.Value			`json:"-" binary:"ignore"`
 }
 
 type TransactionData struct {
@@ -22,12 +28,11 @@ type TransactionData struct {
 	Type      TxType
 	To        crypto.CommonAddress
 	ChainId   app.ChainIdType
-	Amount    big.Int
-	GasPrice  big.Int
-	GasLimit  big.Int
+	Amount    common.Big
+	GasPrice  common.Big
+	GasLimit  common.Big
 	Timestamp int64
 	Data      []byte
-	From      crypto.CommonAddress
 }
 
 func (tx *Transaction) Nonce() uint64 {
@@ -37,10 +42,23 @@ func (tx *Transaction) Nonce() uint64 {
 func (tx *Transaction) Type() TxType {
 	return tx.Data.Type
 }
-func (tx *Transaction) Gas() uint64        { return tx.Data.GasLimit.Uint64() }
+func (tx *Transaction) Gas() uint64  {
+	bigInt := (big.Int)(tx.Data.GasLimit)
+	return (&bigInt).Uint64()
+}
 
-func (tx *Transaction) From() *crypto.CommonAddress {
-	return &tx.Data.From
+func (tx *Transaction) From() (*crypto.CommonAddress, error) {
+	if sc := tx.from.Load(); sc != nil {
+		return sc.(*crypto.CommonAddress), nil
+	}
+
+	pk, _, err := secp256k1.RecoverCompact(tx.Sig, tx.TxHash().Bytes())
+	if err != nil {
+		return nil, err
+	}
+	addr := crypto.PubKey2Address(pk)
+	tx.from.Store(&addr)
+	return &addr, nil
 }
 
 type CrossChainTransaction struct {
@@ -54,8 +72,8 @@ func (tx *Transaction) GetData() []byte {
 }
 
 func (tx *Transaction) Cost() *big.Int {
-	total := new(big.Int).Mul(&tx.Data.GasPrice, new(big.Int).SetUint64(tx.Data.GasLimit.Uint64()))
-	total.Add(total, &tx.Data.Amount)
+	total := new(big.Int).Mul(tx.GasPrice(), new(big.Int).SetUint64(tx.Gas()))
+	total.Add(total, tx.Amount())
 	return total
 }
 
@@ -68,14 +86,17 @@ func (tx *Transaction) ChainId() app.ChainIdType {
 }
 
 func (tx *Transaction) Amount() *big.Int {
-	return &tx.Data.Amount
+	bigint := (big.Int)(tx.Data.Amount)
+	return &bigint
 }
 
 func (tx *Transaction) GasLimit() *big.Int {
-	return &tx.Data.GasLimit
+	bigint := (big.Int)(tx.Data.GasLimit)
+	return &bigint
 }
 func (tx *Transaction) GasPrice() *big.Int {
-	return &tx.Data.GasPrice
+	bigint := (big.Int)(tx.Data.GasPrice)
+	return &bigint
 }
 
 //func (tx *Transaction) PubKey() *secp256k1.PublicKey {
@@ -83,39 +104,31 @@ func (tx *Transaction) GasPrice() *big.Int {
 //}
 
 func (tx *Transaction) TxHash() *crypto.Hash {
-	b, _ := binary.Marshal(tx.Data)
-	h := sha3.Hash256(b)
-	hash := crypto.Hash{}
-	hash.SetBytes(h)
-	return &hash
-}
-
-func (tx *Transaction) TxSig(prvKey *secp256k1.PrivateKey) (*secp256k1.Signature, error) {
-	b, err := binary.Marshal(tx.Data)
-	if err != nil {
-		return nil, err
+	if tx.txHash == nil {
+		b := tx.AsSignMessage()
+		h := sha3.Hash256(b)
+		tx.txHash = &crypto.Hash{}
+		tx.txHash.SetBytes(h)
 	}
-
-	return prvKey.Sign(sha3.Hash256(b))
-}
-
-func (tx *Transaction) GetGasUsed() *big.Int {
-	return new(big.Int).SetInt64(int64(100))
-}
-
-func (tx *Transaction) GetGas() *big.Int {
-	gasQuantity := tx.GetGasUsed()
-	gasUsed := new(big.Int).Mul(gasQuantity, &tx.Data.GasPrice)
-	return gasUsed
+	return tx.txHash
 }
 
 func (tx *Transaction) GetSig() []byte {
 	return tx.Sig
 }
 
+func (tx *Transaction) AsSignMessage() []byte {
+	if tx.signMessage == nil {
+		tx.signMessage, _ = binary.Marshal(tx.Data)
+	}
+	return tx.signMessage
+}
+
 func (tx *Transaction) AsPersistentMessage() []byte {
-	txBytes, _ := binary.Marshal(tx)
-	return txBytes
+	if tx.message == nil {
+		tx.message, _ = binary.Marshal(tx)
+	}
+	return tx.message
 }
 
 type Message struct {
@@ -129,61 +142,57 @@ type Message struct {
 	CheckNonce bool
 }
 
-func NewTransaction(from crypto.CommonAddress, to crypto.CommonAddress, amount, gasPrice, gasLimit *big.Int, nonce uint64) *Transaction {
+func NewTransaction(to crypto.CommonAddress, amount, gasPrice, gasLimit *big.Int, nonce uint64) *Transaction {
 	data := TransactionData{
 		Version:   common.Version,
 		Nonce:     nonce,
 		Type:      TransferType,
 		To:        to,
-		Amount:    *amount,
-		GasPrice:  *gasPrice,
-		GasLimit:  *gasLimit,
+		Amount:    *(*common.Big)(amount),
+		GasPrice:  *(*common.Big)(gasPrice),
+		GasLimit:  *(*common.Big)(gasLimit),
 		Timestamp: time.Now().Unix(),
-		From:      from,
 	}
 	return &Transaction{Data: data}
 }
 
-func NewContractTransaction(from crypto.CommonAddress, byteCode []byte, gasPrice, gasLimit *big.Int, nonce uint64,) *Transaction {
+func NewContractTransaction(byteCode []byte, gasPrice, gasLimit *big.Int, nonce uint64,) *Transaction {
 	data := TransactionData{
 		Nonce:     nonce,
 		Type:      CreateContractType,
-		GasPrice:  *gasPrice,
-		GasLimit:  *gasLimit,
+		GasPrice:  *(*common.Big)(gasPrice),
+		GasLimit:   *(*common.Big)(gasLimit),
 		Timestamp: time.Now().Unix(),
 		Data:      byteCode,
-		From:      from,
 	}
 	return &Transaction{Data: data}
 }
 
-func NewCallContractTransaction(from crypto.CommonAddress, to crypto.CommonAddress, input []byte, amount, gasPrice, gasLimit *big.Int, nonce uint64) *Transaction {
+func NewCallContractTransaction(to crypto.CommonAddress, input []byte, amount, gasPrice, gasLimit *big.Int, nonce uint64) *Transaction {
 	data := TransactionData{
 		Nonce:     nonce,
 		Type:      CallContractType,
 		To:        to,
-		Amount:    *amount,
-		GasPrice:  *gasPrice,
-		GasLimit:  *gasLimit,
+		Amount:    *(*common.Big)(amount),
+		GasPrice:  *(*common.Big)(gasPrice),
+		GasLimit:  *(*common.Big)(gasLimit),
 		Timestamp: time.Now().Unix(),
-		From:      from,
 		Data:      input,
 	}
 	return &Transaction{Data: data}
 }
 
 //给地址srcAddr设置别名
-func NewAliasTransaction(srcAddr crypto.CommonAddress, alias string, nonce uint64) *Transaction {
+func NewAliasTransaction(alias string, gasPrice, gasLimit *big.Int, nonce uint64) *Transaction {
 	data := TransactionData{
 		Version:   common.Version,
 		Nonce:     nonce,
 		Type:      SetAliasType,
 		To:        crypto.CommonAddress{},
-		Amount:    *new(big.Int).SetInt64(0),
-		GasPrice:  *DefaultGasPrice,
-		GasLimit:  *SeAliasGas,
+		Amount:    *(*common.Big)(new (big.Int)),
+		GasPrice:  *(*common.Big)(gasPrice),
+		GasLimit:  *(*common.Big)(gasLimit),
 		Timestamp: int64(time.Now().Unix()),
-		From:      srcAddr,
 		Data:      []byte(alias),
 	}
 	return &Transaction{Data: data}

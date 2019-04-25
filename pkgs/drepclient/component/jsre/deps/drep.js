@@ -1672,7 +1672,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 name: 'getBlock',
                 call: 'chain_getBlock',
                 params: 1,
-                inputFormatter: [null]
+                inputFormatter: [utils.fromDecimal]
             });
 
             var getMaxHeight = new Method({
@@ -1707,21 +1707,21 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 name: 'getTransactionByBlockHeightAndIndex',
                 call: 'chain_getTransactionByBlockHeightAndIndex',
                 params: 2,
-                inputFormatter: [null, null]
+                inputFormatter: [utils.fromDecimal, null]
             });
 
             var getTransactionCountByBlockHeight = new Method({
                 name: 'getTransactionCountByBlockHeight',
                 call: 'chain_getTransactionCountByBlockHeight',
                 params: 1,
-                inputFormatter: [null]
+                inputFormatter: [utils.fromDecimal]
             });
 
             var getTransactionsFromBlock = new Method({
                 name: 'getTransactionsFromBlock',
                 call: 'chain_getTransactionsFromBlock',
                 params: 1,
-                inputFormatter: [null]
+                inputFormatter: [utils.fromDecimal]
             });
 
             var sendRawTransaction = new Method({
@@ -1845,28 +1845,34 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 inputFormatter: [null]
             });
 
-            var getAddrTransaction = new Method({
-                name: 'getAddrTransaction',
-                call: 'trace_getAddrTransaction',
+            var getRawTransaction = new Method({
+                name: 'getRawTransaction',
+                call: 'trace_getRawTransaction',
+                params: 1,
+                inputFormatter: [null]
+            });
+
+            var getReceiveTransactionByAddr = new Method({
+                name: 'getReceiveTransactionByAddr',
+                call: 'trace_getReceiveTransactionByAddr',
                 params: 3,
                 inputFormatter: [formatters.inputAddressFormatter, null, null]
             });
 
-            var getRawTrasnaction = new Method({
-                name: 'getRawTrasnaction',
-                call: 'trace_getRawTrasnaction',
+            var getSendTransactionByAddr = new Method({
+                name: 'getSendTransactionByAddr',
+                call: 'trace_getSendTransactionByAddr',
+                params: 3,
+                inputFormatter: [formatters.inputAddressFormatter, null, null]
+            });
+            var getTransaction = new Method({
+                name: 'getTransaction',
+                call: 'trace_getTransaction',
                 params: 1,
                 inputFormatter: [null]
             });
 
-            var getTrasnaction = new Method({
-                name: 'getTrasnaction',
-                call: 'trace_getTrasnaction',
-                params: 1,
-                inputFormatter: [null]
-            });
-
-            return [decodeTrasnaction,getAddrTransaction,getRawTrasnaction,getTrasnaction]
+            return [decodeTrasnaction,getRawTransaction,getReceiveTransactionByAddr,getSendTransactionByAddr,getTransaction]
         }
 
         module.exports = TRACE;

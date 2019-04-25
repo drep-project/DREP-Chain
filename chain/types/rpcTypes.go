@@ -9,9 +9,10 @@ import (
 )
 
 type RpcTransaction struct {
-	Hash crypto.Hash
-	Data TransactionData
-	Sig  common.Bytes
+	Hash 				crypto.Hash
+	From 				crypto.CommonAddress
+	TransactionData 	`bson:",inline"`
+	Sig  				common.Bytes
 }
 
 type RpcBlock struct {
@@ -30,17 +31,26 @@ type RpcBlock struct {
 	Txs         []*RpcTransaction
 }
 
-func (rpcTransaction *RpcTransaction) From(tx *Transaction) *RpcTransaction {
+func (rpcTransaction *RpcTransaction) FromTx(tx *Transaction) *RpcTransaction {
+	from, _ := tx.From()
 	rpcTransaction.Hash = *tx.TxHash()
-	rpcTransaction.Data = tx.Data
+	rpcTransaction.TransactionData = tx.Data
+	rpcTransaction.From = *from
 	rpcTransaction.Sig = common.Bytes(tx.Sig)
 	return rpcTransaction
+}
+
+func  (rpcTx *RpcTransaction) ToTx() *Transaction{
+	tx := &Transaction{}
+	tx.Data = rpcTx.TransactionData
+	tx.Sig = rpcTx.Sig
+	return tx
 }
 
 func (rpcBlock *RpcBlock) From(block *Block) *RpcBlock {
 	txs := make([]*RpcTransaction, len(block.Data.TxList))
 	for i, tx := range block.Data.TxList {
-		txs[i] = new (RpcTransaction).From(tx)
+		txs[i] = new (RpcTransaction).FromTx(tx)
 	}
 
 	rpcBlock.Hash = *block.Header.Hash()
@@ -57,4 +67,53 @@ func (rpcBlock *RpcBlock) From(block *Block) *RpcBlock {
 	rpcBlock.MinorPubKeys = block.Header.MinorPubKeys
 	rpcBlock.Txs = txs
 	return rpcBlock
+}
+
+
+type RpcBlockHeader struct {
+	ChainId      app.ChainIdType
+	Version      int32
+	PreviousHash crypto.Hash
+	GasLimit     common.Big
+	GasUsed      common.Big
+	Height       uint64
+	Timestamp    uint64
+	StateRoot    []byte
+	TxRoot       []byte
+	LeaderPubKey secp256k1.PublicKey
+	MinorPubKeys []secp256k1.PublicKey
+
+	Hash 	*crypto.Hash
+}
+
+
+func (rpcBlockHeader *RpcBlockHeader)FromBlockHeader(header *BlockHeader){
+	rpcBlockHeader.ChainId 		= header.ChainId
+	rpcBlockHeader.Version 		= header.Version
+	rpcBlockHeader.PreviousHash = header.PreviousHash
+	rpcBlockHeader.GasLimit 	= common.Big(header.GasLimit)
+	rpcBlockHeader.GasUsed 		= common.Big(header.GasUsed)
+	rpcBlockHeader.Height 		= header.Height
+	rpcBlockHeader.Timestamp 	= header.Timestamp
+	rpcBlockHeader.StateRoot 	= header.StateRoot
+	rpcBlockHeader.TxRoot 		= header.TxRoot
+	rpcBlockHeader.LeaderPubKey = header.LeaderPubKey
+	rpcBlockHeader.MinorPubKeys = header.MinorPubKeys
+	rpcBlockHeader.Hash 		= header.Hash()
+}
+
+func (rpcBlockHeader *RpcBlockHeader) ToHeader() *BlockHeader{
+	blockHeader:= &BlockHeader{}
+	blockHeader.ChainId 	 = rpcBlockHeader.ChainId
+	blockHeader.Version 	 = rpcBlockHeader.Version
+	blockHeader.PreviousHash = rpcBlockHeader.PreviousHash
+	blockHeader.GasLimit 	 = (big.Int)(rpcBlockHeader.GasLimit)
+	blockHeader.GasUsed 	 = (big.Int)(rpcBlockHeader.GasUsed)
+	blockHeader.Height 		 = rpcBlockHeader.Height
+	blockHeader.Timestamp 	 = rpcBlockHeader.Timestamp
+	blockHeader.StateRoot 	 = rpcBlockHeader.StateRoot
+	blockHeader.TxRoot 		 = rpcBlockHeader.TxRoot
+	blockHeader.LeaderPubKey = rpcBlockHeader.LeaderPubKey
+	blockHeader.MinorPubKeys = rpcBlockHeader.MinorPubKeys
+	return blockHeader
 }

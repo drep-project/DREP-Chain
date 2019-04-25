@@ -19,8 +19,11 @@ package common
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"math/big"
+	"go.mongodb.org/mongo-driver/bson/bsontype"
+	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
+	mathBig "math/big"
 	"reflect"
 	"strconv"
 )
@@ -130,11 +133,25 @@ func UnmarshalFixedUnprefixedText(typname string, input, out []byte) error {
 // Negative integers are not supported at this time. Attempting to marshal them will
 // return an error. Values larger than 256bits are rejected by Unmarshal but will be
 // marshaled without error.
-type Big big.Int
+type Big mathBig.Int
+
+func (m Big) MarshalBSONValue() (bsontype.Type, []byte, error) {
+	return bsontype.String, bsoncore.AppendString(nil, m.ToInt().String()), nil
+}
+
+func (b *Big) UnmarshalBSON(data []byte) error {
+	str, _, success := bsoncore.ReadString(data)
+	if !success  {
+		return errors.New("read bson string error")
+	}
+	bigInt := (*mathBig.Int)(b)
+	bigInt.SetString(str, 10)
+	return nil
+}
 
 // MarshalText implements encoding.TextMarshaler
 func (b Big) MarshalText() ([]byte, error) {
-	return []byte(EncodeBig((*big.Int)(&b))), nil
+	return []byte(EncodeBig((*mathBig.Int)(&b))), nil
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -154,7 +171,7 @@ func (b *Big) UnmarshalText(input []byte) error {
 	if len(raw) > 64 {
 		return ErrBig256Range
 	}
-	words := make([]big.Word, len(raw)/bigWordNibbles+1)
+	words := make([]mathBig.Word, len(raw)/bigWordNibbles+1)
 	end := len(raw)
 	for i := range words {
 		start := end - bigWordNibbles
@@ -167,19 +184,19 @@ func (b *Big) UnmarshalText(input []byte) error {
 				return ErrSyntax
 			}
 			words[i] *= 16
-			words[i] += big.Word(nib)
+			words[i] += mathBig.Word(nib)
 		}
 		end = start
 	}
-	var dec big.Int
+	var dec mathBig.Int
 	dec.SetBits(words)
 	*b = (Big)(dec)
 	return nil
 }
 
 // ToInt converts b to a big.Int.
-func (b *Big) ToInt() *big.Int {
-	return (*big.Int)(b)
+func (b *Big) ToInt() *mathBig.Int {
+	return (*mathBig.Int)(b)
 }
 
 // String returns the hex encoding of b.

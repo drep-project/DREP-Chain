@@ -83,7 +83,10 @@ func (pool *TransactionPool) Contains(id string) bool {
 }
 
 func (pool *TransactionPool) checkAndGetAddr(tx *chainTypes.Transaction) (error, *crypto.CommonAddress) {
-	addr := tx.From()
+	addr, err := tx.From()
+	if err != nil {
+		return err, nil
+	}
 	// TODO Check sig
 	if pool.GetTransactionCount(addr) > tx.Nonce() {
 		dlog.Info("checkAndGetAddr:", "localNonce", pool.getTransactionCount(addr), "newTxNonce", tx.Nonce())
@@ -128,11 +131,11 @@ func (pool *TransactionPool) AddTransaction(tx *chainTypes.Transaction) error {
 	} else {
 		pool.allTxs[id.String()] = true
 
-		if list, ok := pool.queue[*tx.From()]; ok {
+		if list, ok := pool.queue[*addr]; ok {
 			list.Add(tx)
 		} else {
-			pool.queue[*tx.From()] = newTxList(true)
-			pool.queue[*tx.From()].Add(tx)
+			pool.queue[*addr] = newTxList(true)
+			pool.queue[*addr].Add(tx)
 		}
 
 		pool.syncToPending(addr)
@@ -260,7 +263,7 @@ func (pool *TransactionPool) adjust(block *chainTypes.Block) {
 		addrMap := make(map[crypto.CommonAddress]struct{})
 		var addrs []*crypto.CommonAddress
 		for _, tx := range block.Data.TxList {
-			addr := tx.From()
+			addr, _ := tx.From()
 			if _, ok := addrMap[*addr]; !ok {
 				addrMap[*addr] = struct{}{}
 				addrs = append(addrs, addr)
@@ -279,12 +282,10 @@ func (pool *TransactionPool) adjust(block *chainTypes.Block) {
 					for _, tx := range txs {
 						id := tx.TxHash()
 						delete(pool.allTxs, id.String())
-
 					}
 				}
 				pool.mu.Unlock()
-
-				dlog.Warn("clear txpool",  "max tx.nonce:", nonce,"txpool tx count:", len(pool.allTxs))
+				dlog.Warn("clear txpool",  "addr", addr.Hex() ,"max tx.nonce:", nonce,"txpool tx count:", len(pool.allTxs))
 			}
 		}
 }

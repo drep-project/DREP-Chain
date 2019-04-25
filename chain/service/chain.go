@@ -45,6 +45,7 @@ var (
 		GasPrice:		DefaultOracleConfig,
 		GenesisPK:  	"0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26",
 	}
+	span = uint64(params.MaxGasLimit/360)
 )
 
 type ChainService struct {
@@ -271,6 +272,7 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey) 
 		return nil, err
 	}
 	newGasLimit := chainService.CalcGasLimit(parent.Header, params.MinGasLimit, params.MaxGasLimit)
+	fmt.Println(newGasLimit.Uint64())
 	height := chainService.BestChain.Height() + 1
 	txs := chainService.transactionPool.GetPending(newGasLimit)
 
@@ -296,13 +298,11 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey) 
 	})
 
 SELECT_TX:
-	for index, t := range txs {
-_ = index
+	for _, t := range txs {
 		select {
 			case <-stopchanel:
 				break SELECT_TX
 		default:
-
 			g, _, err := chainService.executeTransaction(t, gp, blockHeader)
 			if err == nil {
 				finalTxs = append(finalTxs, t)
@@ -448,7 +448,6 @@ func (chainService *ChainService) GetBlockHeaderByHeight(number uint64) (*chainT
 //180000000/360
 func (chainService *ChainService)  CalcGasLimit(parent *chainTypes.BlockHeader, gasFloor, gasCeil uint64) *big.Int {
 	limit := uint64(0)
-	span := uint64(180000000/360)
 	if  parent.GasLimit.Uint64()*2/3 > parent.GasUsed.Uint64(){
 		limit = parent.GasLimit.Uint64() - span
 	} else{

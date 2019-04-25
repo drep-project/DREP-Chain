@@ -50,6 +50,7 @@ The state transitioning model does all the necessary work to work out a valid ne
 type StateTransition struct {
 	gp         *GasPool
 	tx        *types.Transaction
+	from	   *crypto.CommonAddress
 	gas        uint64
 	gasPrice   *big.Int
 	initialGas uint64
@@ -63,12 +64,13 @@ type StateTransition struct {
 }
 
 // NewStateTransition initialises and returns a new state transition object.
-func NewStateTransition(databaseService *database.DatabaseService, vmService evm.Vm,tx *types.Transaction, state *vm.State, header *types.BlockHeader, bc evm.ChainContext, gp *GasPool) *StateTransition {
+func NewStateTransition(databaseService *database.DatabaseService, vmService evm.Vm,tx *types.Transaction, from *crypto.CommonAddress, state *vm.State, header *types.BlockHeader, bc evm.ChainContext, gp *GasPool) *StateTransition {
 	return &StateTransition{
 		gp:       gp,
 		tx:       tx,
+		from:	  from,
 		gasPrice: tx.GasPrice(),
-		value:    &tx.Data.Amount,
+		value:    tx.Amount(),
 		data:     tx.Data.Data,
 		state:    state,
 		header:	  header,
@@ -97,7 +99,7 @@ func (st *StateTransition) useGas(amount uint64) error {
 
 func (st *StateTransition) buyGas() error {
 	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.tx.Gas()), st.gasPrice)
-	if st.state.GetBalance(st.tx.From()).Cmp(mgval) < 0 {
+	if st.state.GetBalance(st.from).Cmp(mgval) < 0 {
 		return errInsufficientBalanceForGas
 	}
 	if err := st.gp.SubGas(st.tx.Gas()); err != nil {
@@ -106,13 +108,13 @@ func (st *StateTransition) buyGas() error {
 	st.gas += st.tx.Gas()
 
 	st.initialGas = st.tx.Gas()
-	st.state.SubBalance(st.tx.From(), mgval)
+	st.state.SubBalance(st.from, mgval)
 	return nil
 }
 
 func (st *StateTransition) preCheck() error {
 	// Make sure this transaction's nonce is correct.
-	nonce := st.state.GetNonce(st.tx.From())
+	nonce := st.state.GetNonce(st.from)
 	if nonce < st.tx.Nonce() {
 		return  errors.New("nonce too high")
 	} else if nonce > st.tx.Nonce() {
@@ -130,7 +132,7 @@ func (st *StateTransition) TransitionVmTxDb() (ret []byte, failed bool, err erro
 }
 
 func (st *StateTransition) TransitionTransferDb() (ret []byte, failed bool, err error) {
-	from := st.tx.From()
+	from := st.from
 	originBalance := st.databaseService.GetBalance(from, true)
 	toBalance :=  st.databaseService.GetBalance(st.tx.To(), true)
 	leftBalance := originBalance.Sub(originBalance, st.tx.Amount())
@@ -145,7 +147,7 @@ func (st *StateTransition) TransitionTransferDb() (ret []byte, failed bool, err 
 }
 
 func (st *StateTransition) TransitionAliasDb() (ret []byte, failed bool, err error) {
-	from := st.tx.From()
+	from := st.from
 	alias := st.tx.GetData()
 	err = st.databaseService.AliasSet(from,string(alias))
 	return nil,  true, err
@@ -161,7 +163,7 @@ func (st *StateTransition) refundGas() {
 
 	// Return DREP for remaining gas, exchanged at the original rate.
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
-	st.state.AddBalance(st.tx.From(), remaining)
+	st.state.AddBalance(st.from, remaining)
 
 	// Also return remaining gas to the block gas counter so it is
 	// available for the next transaction.

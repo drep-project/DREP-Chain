@@ -33,11 +33,11 @@ type ChainContext interface {
 }
 
 // NewEVMContext creates a new context for use in the EVM.
-func NewEVMContext(msg *types.Transaction, header *types.BlockHeader, chain ChainContext) vm.Context {
+func NewEVMContext(msg *types.Transaction, header *types.BlockHeader, sender *crypto.CommonAddress, chain ChainContext) vm.Context {
 	return vm.Context{
 		CanTransfer: CanTransfer,
 		Transfer:    Transfer,
-		Origin:      *msg.From(),
+		Origin:      *sender,
 		BlockNumber: big.NewInt(int64(header.Height)),
 		Time:        big.NewInt(int64(header.Timestamp)),
 		GasLimit:    header.GasLimit.Uint64(),

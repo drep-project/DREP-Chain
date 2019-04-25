@@ -42,7 +42,10 @@ func (database *DatabaseService) GetBlock(hash *crypto.Hash) (*chainType.Block, 
 		return nil, err
 	}
 	block := &chainType.Block{}
-	binary.Unmarshal(value, block)
+	err = binary.Unmarshal(value, block)
+	if err != nil {
+		return nil, err
+	}
 	return block, nil
 }
 

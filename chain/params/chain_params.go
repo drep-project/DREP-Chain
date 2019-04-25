@@ -6,10 +6,10 @@ const (
 	Ether 				 = 1e18
 
 	GasLimitBoundDivisor uint64 = 64    // The bound divisor of the gas limit, used in update calculations.
-	MinGasLimit          uint64 = 5000000    // Minimum the gas limit may ever be.
-	GenesisGasLimit      uint64 = 5000000 // Gas limit of the Genesis block.
+	MinGasLimit          uint64 = 180000000    // Minimum the gas limit may ever be.
+	GenesisGasLimit      uint64 = 180000000 // Gas limit of the Genesis block.
 	//MIN_GAS_IN_BLOCK uint64 = 60000000 / 2
-	MaxGasLimit 	 	 uint64 = 180000000  // tps 3000 transfer  60000gas per transfer tx
+	MaxGasLimit 	 	 uint64 = 360000000  // tps 3000 transfer  60000gas per transfer tx
 	MaxSupply			 uint64 = 10000000000
 
 

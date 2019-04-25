@@ -78,23 +78,22 @@ func (accountapi *AccountApi) CloseWallet() {
 
 func (accountapi *AccountApi) Transfer(from crypto.CommonAddress, to crypto.CommonAddress, amount, gasprice, gaslimit *common.Big, data common.Bytes) (string, error) {
 	nonce := accountapi.chainService.GetTransactionCount(&from)
-
-	t := chainTypes.NewTransaction(from, to, (*big.Int)(amount),(*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
-	sig, err := accountapi.Wallet.Sign(&from, t.TxHash().Bytes())
+	tx := chainTypes.NewTransaction(to, (*big.Int)(amount),(*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
+	sig, err := accountapi.Wallet.Sign(&from, tx.TxHash().Bytes())
 	if err != nil {
 		return "", err
 	}
-	t.Sig = sig
-	err = accountapi.chainService.SendTransaction(t)
+	tx.Sig = sig
+	err = accountapi.chainService.SendTransaction(tx)
 	if err != nil {
 		return "", err
 	}
-	return t.TxHash().String(), nil
+	return tx.TxHash().String(), nil
 }
 
-func (accountapi *AccountApi) SetAlias(srcAddr crypto.CommonAddress, alias string) (string, error) {
+func (accountapi *AccountApi) SetAlias(srcAddr crypto.CommonAddress, alias string, gasprice, gaslimit *common.Big,) (string, error) {
 	nonce := accountapi.chainService.GetTransactionCount(&srcAddr)
-	t := chainTypes.NewAliasTransaction(srcAddr, alias, nonce)
+	t := chainTypes.NewAliasTransaction(alias, (*big.Int)(gasprice), (*big.Int)(gasprice), nonce)
 	sig, err := accountapi.Wallet.Sign(&srcAddr, t.TxHash().Bytes())
 	if err != nil {
 		return "", err
@@ -109,7 +108,7 @@ func (accountapi *AccountApi) SetAlias(srcAddr crypto.CommonAddress, alias strin
 
 func (accountapi *AccountApi) Call(from crypto.CommonAddress, to crypto.CommonAddress, input common.Bytes, amount, gasprice, gaslimit *common.Big) (string, error) {
 	nonce := accountapi.chainService.GetTransactionCount(&from)
-	t := chainTypes.NewCallContractTransaction(from, to, input, (*big.Int)(amount),(*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
+	t := chainTypes.NewCallContractTransaction(to, input, (*big.Int)(amount),(*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
 	sig, err := accountapi.Wallet.Sign(&from, t.TxHash().Bytes())
 	if err != nil {
 		return "", err
@@ -121,7 +120,7 @@ func (accountapi *AccountApi) Call(from crypto.CommonAddress, to crypto.CommonAd
 
 func (accountapi *AccountApi) CreateCode(from crypto.CommonAddress, byteCode common.Bytes, amount, gasprice, gaslimit *common.Big) (string, error) {
 	nonce := accountapi.chainService.GetTransactionCount(&from)
-	t := chainTypes.NewContractTransaction(from, byteCode, (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
+	t := chainTypes.NewContractTransaction(byteCode, (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
 	sig, err := accountapi.Wallet.Sign(&from, t.TxHash().Bytes())
 	if err != nil {
 		return "", err

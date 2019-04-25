@@ -2,14 +2,12 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"github.com/drep-project/binary"
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/chain/params"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
 	"math"
 	"math/big"
@@ -33,17 +31,12 @@ func (chainService *ChainService) VerifyTransaction(tx *chainTypes.Transaction) 
 }
 
 func (chainService *ChainService) verifyTransaction(tx *chainTypes.Transaction) error {
-	from := tx.From()
+	from, err := tx.From()
 	nounce := tx.Nonce()
-
-	_, err := chainService.verify(tx)
-	if err != nil {
-		return err
-	}
 
 	// Transactions can't be negative. This may never happen using RLP decoded
 	// transactions but may occur if you create a transaction using the RPC.
-	if tx.Data.Amount.Sign() < 0 {
+	if tx.Amount().Sign() < 0 {
 		return errors.New("engative amount in tx")
 	}
 
@@ -79,8 +72,6 @@ func (chainService *ChainService) verifyTransaction(tx *chainTypes.Transaction) 
 		return err
 	}
 	if tx.Gas() < gas {
-		fmt.Println(tx.Gas())
-		fmt.Println(gas)
 		return errors.New("gas exceed tx gaslimit")
 	}
 	return nil
@@ -90,40 +81,20 @@ func (chainService *ChainService) verifyTransaction(tx *chainTypes.Transaction) 
 func (chainService *ChainService) executeTransaction(tx *chainTypes.Transaction, gp *GasPool, header *chainTypes.BlockHeader) (*big.Int, *big.Int, error) {
 	//gp       = new(GasPool).AddGas(block.GasLimit())
 	newState := vm.NewState(chainService.DatabaseService)
-	_, err := chainService.verify(tx)
+	from, err := tx.From()
 	if err != nil {
 		return nil, nil, err
 	}
 
 	//TODO need test
 	gasUsed := new(uint64)
-	_, _, err = chainService.stateProcessor.ApplyTransaction(newState, chainService, gp, header,tx, gasUsed)
+	_, _, err = chainService.stateProcessor.ApplyTransaction(newState, chainService, gp, header,tx, from, gasUsed)
 	if err != nil {
 		dlog.Error("executeTransaction transaction error", "reason", err)
 		return nil, nil, err
 	}
 	gasFee := new (big.Int).Mul(new(big.Int).SetUint64(*gasUsed), tx.GasPrice())
 	return new(big.Int).SetUint64(*gasUsed), gasFee, nil
-}
-
-func (chainService *ChainService) verify(tx *chainTypes.Transaction) (bool, error){
-	if tx.Sig != nil {
-		pk, _, err := secp256k1.RecoverCompact(tx.Sig, tx.TxHash().Bytes())
-		if err != nil {
-			return false, err
-		}
-		sig := secp256k1.RecoverSig(tx.Sig)
-		isValid := sig.Verify(tx.TxHash().Bytes(), pk)
-		if err != nil {
-			return false, err
-		}
-		if !isValid {
-			return false, errors.New("signature not validate")
-		}
-		return true, nil
-	}else{
-		return false, errors.New("must assign a signature for transaction")
-	}
 }
 
 func  (chainService *ChainService) checkNonce(fromAccount *crypto.CommonAddress, nounce uint64) error{

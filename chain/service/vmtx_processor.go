@@ -49,9 +49,9 @@ func NewStateProcessor(chainservice *ChainService) *StateProcessor {
 // and uses the input parameters for its environment. It returns the receipt
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
-func (stateProcessor *StateProcessor) ApplyTransaction(state *vm.State, bc evm.ChainContext, gp *GasPool, header *types.BlockHeader, tx *types.Transaction, usedGas *uint64) (*types.Receipt, uint64, error) {
+func (stateProcessor *StateProcessor) ApplyTransaction(state *vm.State, bc evm.ChainContext, gp *GasPool, header *types.BlockHeader, tx *types.Transaction, from *crypto.CommonAddress, usedGas *uint64) (*types.Receipt, uint64, error) {
 	// Apply the transaction to the current state (included in the env)
-	_, gas, gasFee, failed, err := stateProcessor.ApplyMessage(tx, state, header, bc, gp)
+	_, gas, gasFee, failed, err := stateProcessor.ApplyMessage(tx, from, state, header, bc, gp)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -66,7 +66,7 @@ func (stateProcessor *StateProcessor) ApplyTransaction(state *vm.State, bc evm.C
 	receipt.GasFee = gasFee
 	// if the transaction created a contract, store the creation address in the receipt.
 	if tx.To() == nil || tx.To().IsEmpty() {
-		receipt.ContractAddress = crypto.CreateAddress(tx.Data.From, tx.Nonce())
+		receipt.ContractAddress = crypto.CreateAddress(*from, tx.Nonce())
 		fmt.Println(common.Encode(receipt.ContractAddress[:]))
 	}
 	// Set the receipt logs and create a bloom for filtering
@@ -81,8 +81,8 @@ func (stateProcessor *StateProcessor) ApplyTransaction(state *vm.State, bc evm.C
 // the gas used (which includes gas refunds) and an error if it failed. An error always
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
-func (stateProcessor *StateProcessor) ApplyMessage(tx *types.Transaction, state *vm.State, header *types.BlockHeader, bc evm.ChainContext, gp *GasPool) ([]byte, uint64, uint64, bool, error) {
-	stateTransaction := NewStateTransition(stateProcessor.databaseApi, stateProcessor.chainService.VmService, tx, state, header, bc, gp)
+func (stateProcessor *StateProcessor) ApplyMessage(tx *types.Transaction, from *crypto.CommonAddress, state *vm.State, header *types.BlockHeader, bc evm.ChainContext, gp *GasPool) ([]byte, uint64, uint64, bool, error) {
+	stateTransaction := NewStateTransition(stateProcessor.databaseApi, stateProcessor.chainService.VmService, tx, from, state, header, bc, gp)
 	if err := stateTransaction.preCheck(); err != nil {
 		return nil, 0, 0, false, err
 	}

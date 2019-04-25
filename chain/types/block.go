@@ -22,17 +22,21 @@ type BlockHeader struct {
 	TxRoot       []byte
 	LeaderPubKey secp256k1.PublicKey
 	MinorPubKeys []secp256k1.PublicKey
+
+	blockHash 	*crypto.Hash			`binary:"ignore"`
 }
 
 func (blockHeader *BlockHeader) Hash() *crypto.Hash {
-	b, err := binary.Marshal(blockHeader)
-	if err != nil {
-		return nil
+	if blockHeader.blockHash == nil {
+		b, err := binary.Marshal(blockHeader)
+		if err != nil {
+			return nil
+		}
+		bytes := sha3.Hash256(b)
+		blockHeader.blockHash = &crypto.Hash{}
+		blockHeader.blockHash.SetBytes(bytes)
 	}
-	bytes := sha3.Hash256(b)
-	hash := crypto.Hash{}
-	hash.SetBytes(bytes)
-	return &hash
+	return blockHeader.blockHash
 }
 
 func (blockHeader *BlockHeader) String() string {
