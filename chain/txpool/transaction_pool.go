@@ -126,7 +126,7 @@ func (pool *TransactionPool) AddTransaction(tx *chainTypes.Transaction) error {
 
 	if _, exists := pool.allTxs[id.String()]; exists {
 		msg := "transaction %s exists" + id.String()
-		dlog.Error("transaction %s exists", id.String())
+		dlog.Error(msg)
 		return errors.New(msg)
 	} else {
 		pool.allTxs[id.String()] = true

@@ -28,6 +28,7 @@ import (
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	p2pService "github.com/drep-project/drep-chain/network/service"
 	rpc2 "github.com/drep-project/drep-chain/pkgs/rpc"
+	"github.com/drep-project/dlog"
 )
 
 var (
@@ -312,6 +313,7 @@ SELECT_TX:
 				}else{
 
 					//TODO err or continue
+					dlog.Warn("generate block", "exe tx err",err)
 					continue
 					//  return nil, err
 				}

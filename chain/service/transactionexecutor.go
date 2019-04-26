@@ -100,7 +100,7 @@ func (chainService *ChainService) executeTransaction(tx *chainTypes.Transaction,
 func  (chainService *ChainService) checkNonce(fromAccount *crypto.CommonAddress, nounce uint64) error{
 	nonce := chainService.DatabaseService.GetNonce(fromAccount, false)
 	if nonce > nounce {
-		return errors.New("error nounce")
+		return fmt.Errorf("error nounce %d != %d", nonce,nounce)
 	}
 	return nil
 }

@@ -2,14 +2,13 @@ package service
 
 import (
 	"errors"
-	"github.com/drep-project/drep-chain/common"
-	"math/big"
-
 	chainService "github.com/drep-project/drep-chain/chain/service"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/database"
+	"math/big"
 )
 
 type AccountApi struct {

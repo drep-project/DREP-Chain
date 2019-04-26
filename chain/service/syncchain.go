@@ -38,7 +38,7 @@ func (chainService *ChainService) syncTxs() {
 }
 
 func (chainService *ChainService) synchronise() {
-	timer := time.NewTicker(time.Second * 5)
+	timer := time.NewTicker(time.Second * 10)
 	defer timer.Stop()
 
 	sync := func() {
@@ -141,13 +141,18 @@ func (cs *ChainService) findAncestor(peer *chainTypes.PeerInfo) (uint64, error) 
 
 		select {
 		case hash := <-cs.headerHashCh:
-			b, h := cs.checkExistHeaderHash(hash[0].headerHash)
-			if b {
-				ancestor = h
-				tmpFrom = (tmpFrom + tmpEnd) / 2
-			} else {
-				tmpEnd = (tmpFrom + tmpEnd) / 2
+			if len(hash) > 0{
+				b, h := cs.checkExistHeaderHash(hash[0].headerHash)
+				if b {
+					ancestor = h
+					tmpFrom = (tmpFrom + tmpEnd) / 2
+				} else {
+					tmpEnd = (tmpFrom + tmpEnd) / 2
+				}
+			} else{
+				dlog.Error("peer response head hash len = 0")
 			}
+
 		case <-timeout:
 			return 0, fmt.Errorf("findAncestor timeout")
 		}

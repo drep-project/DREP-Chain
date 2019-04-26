@@ -103,7 +103,7 @@ func (chainService *ChainService) dealMsg(peer *chainTypes.PeerInfo, rw p2p.MsgR
 			}
 
 			_, isOrPhan, err := chainService.ProcessBlock(&newBlock)
-			if err != nil {
+			if err == nil {
 				//return err
 			}
 
@@ -173,7 +173,8 @@ func (chainService *ChainService) handleHeaderRsp(peer *chainTypes.PeerInfo, rsp
 	if len(headerHashs) >= 1 {
 		dlog.Info("handleHeaderRsp ", "total len:", len(headerHashs), "from height:", headerHashs[0].height, "end height:", headerHashs[len(headerHashs)-1].height)
 	} else {
-		dlog.Info("handleHeaderRsp rsp nil")
+		dlog.Error("handleHeaderRsp rsp nil")
+		return
 	}
 
 	chainService.headerHashCh <- headerHashs

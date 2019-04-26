@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"net"
 	"sort"
 	"sync"
@@ -474,7 +473,6 @@ func (srv *Server) Start() (err error) {
 func (srv *Server) setupLocalNode() error {
 	// Create the devp2p handshake.
 	pubkey := crypto.CompressPubkey(srv.PrivateKey.PubKey())
-	fmt.Println("pubkey:", hex.EncodeToString(pubkey))
 	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name, ID: pubkey[1:]}
 	for _, p := range srv.ProtocolsBlockChan {
 		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
