@@ -147,18 +147,16 @@ func (wallet *Wallet) Lock() error {
 
 func (wallet *Wallet) UnLock(password string) error {
 	if wallet.cacheStore == nil {
-		wallet.Open(password)
+		return wallet.Open(password)
 	} else {
-		wallet.unLock(password)
+		return wallet.unLock(password)
 	}
-	return nil
 }
 
 func (wallet *Wallet) unLock(password string) error {
 	atomic.StoreInt32(&wallet.isLock, UNLOCKED)
 	wallet.password = wallet.cryptoPassword(password)
-	wallet.cacheStore.ReloadKeys(wallet.password)
-	return nil
+	return wallet.cacheStore.ReloadKeys(wallet.password)
 }
 
 func (wallet *Wallet) checkWallet(op int) error {

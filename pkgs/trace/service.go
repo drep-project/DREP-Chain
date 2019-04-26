@@ -69,6 +69,7 @@ func (traceService *TraceService) Init(executeContext *app.ExecuteContext) error
 	}
 	traceService.newBlockChan = make(chan *chainTypes.Block, 1000)
 	traceService.detachBlockChan = make(chan *chainTypes.Block, 1000)
+	traceService.readyToQuit = make(chan struct{})
 	homeDir := executeContext.CommonConfig.HomeDir
 	traceService.Config.HistoryDir = path.Join(homeDir, "trace")
 
@@ -92,15 +93,15 @@ func (traceService *TraceService) Start(executeContext *app.ExecuteContext) erro
 func  (traceService *TraceService) Process() error {
 	for {
 		select {
-			case block := <- traceService.newBlockChan:
-				traceService.store.InsertRecord(block)
-			case block := <- traceService.detachBlockChan:
-				traceService.store.DelRecord(block)
-		default:
-			select {
-			   case <-traceService.readyToQuit:
-			   default:
-			}
+			case <-traceService.readyToQuit:
+			default:
+				select {
+				case block := <- traceService.newBlockChan:
+					traceService.store.InsertRecord(block)
+				case block := <- traceService.detachBlockChan:
+					traceService.store.DelRecord(block)
+				   default:
+				}
 		}
 	}
 }
@@ -108,13 +109,14 @@ func  (traceService *TraceService) Process() error {
 func (traceService *TraceService) Stop(executeContext *app.ExecuteContext) error{
 	traceService.eventNewBlockSub.Unsubscribe()
 	traceService.detachBlockSub.Unsubscribe()
+	traceService.readyToQuit <- struct{}{}
+	traceService.readyToQuit <- struct{}{}
 	traceService.store.Close()
 	return nil
 }
 
 func (traceService *TraceService) Receive(context actor.Context) {
-    traceService.readyToQuit <- struct{}{}
-	traceService.readyToQuit <- struct{}{}
+
 }
 
 

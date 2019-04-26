@@ -73,7 +73,7 @@ func (cacheStore *CacheStore) ReloadKeys(auth string) error {
 		if node.PrivateKey == nil {
 			key, err := cacheStore.store.GetKey(node.Address, auth)
 			if err != nil {
-				return err
+				return errors.New("password not correct")
 			} else {
 				node.PrivateKey = key.PrivateKey
 			}

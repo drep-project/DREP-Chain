@@ -38,7 +38,7 @@ import (
 )
 
 var (
-	passwordRegexp = regexp.MustCompile(`personal.[nus]`)
+	passwordRegexp = regexp.MustCompile(`account.[cou]`)
 	onlyWhitespace = regexp.MustCompile(`^\s*$`)
 	exit           = regexp.MustCompile(`^\s*exit\s*;*\s*$`)
 )
@@ -145,6 +145,18 @@ func (c *Console) init(preload []string) error {
 
 	flatten := ""
 	for api := range apis {
+		if file, ok := Modules[api]; ok {
+			// Load our extension for the module.
+			if err = c.jsre.Compile(fmt.Sprintf("%s.js", api), file); err != nil {
+				return fmt.Errorf("%s.js: %v", api, err)
+			}
+			flatten += fmt.Sprintf("var %s = drep.%s; ", api, api)
+		} else if obj, err := c.jsre.Run("drep." + api); err == nil && obj.IsObject() {
+			// Enable drep.js built-in extension if available.
+			flatten += fmt.Sprintf("var %s = drep.%s; ", api, api)
+		}
+	}
+	for api := range apis {
 		if obj, err := c.jsre.Run("drep." + api); err == nil && obj.IsObject() {
 			// Enable drep.js built-in extension if available.
 			flatten += fmt.Sprintf("var %s = drep.%s; ", api, api)
@@ -160,10 +172,8 @@ func (c *Console) init(preload []string) error {
 
 	// If the console is in interactive mode, instrument password related methods to query the user
 	if c.prompter != nil {
-		/*
-			//TODO   account manage
 			// Retrieve the account management object to instrument
-			personal, err := c.jsre.Get("personal")
+			account, err := c.jsre.Get("account")
 			if err != nil {
 				return err
 			}
@@ -172,22 +182,28 @@ func (c *Console) init(preload []string) error {
 			// original drep callbacks. These will be called by the jeth.* methods after
 			// they got the password from the user and send the original drep request to
 			// the backend.
-			if obj := personal.Object(); obj != nil { // make sure the personal api is enabled over the interface
-				if _, err = c.jsre.Run(`jeth.openWallet = personal.openWallet;`); err != nil {
-					return fmt.Errorf("personal.openWallet: %v", err)
-				}
-				if _, err = c.jsre.Run(`jeth.unlockAccount = personal.unlockAccount;`); err != nil {
-					return fmt.Errorf("personal.unlockAccount: %v", err)
-				}
-				if _, err = c.jsre.Run(`jeth.newAccount = personal.newAccount;`); err != nil {
-					return fmt.Errorf("personal.newAccount: %v", err)
-				}
-				if _, err = c.jsre.Run(`jeth.sign = personal.sign;`); err != nil {
-					return fmt.Errorf("personal.sign: %v", err)
-				}
-				obj.Set("newAccount", bridge.NewAccount)
+			//NOTICE
+			if _, err = c.jsre.Run(`jeth.WARN = 'should never invoke function here directory';`); err != nil {
+				return fmt.Errorf("NOTICEt: %v", err)
 			}
-		*/
+			if obj := account.Object(); obj != nil { // make sure the personal api is enabled over the interface
+				if _, err = c.jsre.Run(`jeth.createWallet = account.createWallet;`); err != nil {
+					return fmt.Errorf("account.openWallet: %v", err)
+				}
+				if _, err = c.jsre.Run(`jeth.openWallet = account.openWallet;`); err != nil {
+					return fmt.Errorf("account.openWallet: %v", err)
+				}
+				if _, err = c.jsre.Run(`jeth.unLockWallet = account.unLockWallet;`); err != nil {
+					return fmt.Errorf("account.unlockAccount: %v", err)
+				}
+				if _, err = c.jsre.Run(`jeth.dumpPrivkey = account.dumpPrivkey;`); err != nil {
+					return fmt.Errorf("account.dumpPrivkey: %v", err)
+				}
+				obj.Set("createWallet", bridge.CreateWallet)
+				obj.Set("openWallet", bridge.OpenWallet)
+				obj.Set("unLockWallet", bridge.UnLockWallet)
+			}
+
 	}
 	// The admin.sleep and admin.sleepBlocks are offered by the console and not by the RPC layer.
 	admin, err := c.jsre.Get("admin")

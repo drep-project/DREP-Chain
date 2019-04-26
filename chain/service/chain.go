@@ -272,7 +272,6 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey) 
 		return nil, err
 	}
 	newGasLimit := chainService.CalcGasLimit(parent.Header, params.MinGasLimit, params.MaxGasLimit)
-	fmt.Println(newGasLimit.Uint64())
 	height := chainService.BestChain.Height() + 1
 	txs := chainService.transactionPool.GetPending(newGasLimit)
 

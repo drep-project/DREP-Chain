@@ -44,7 +44,97 @@ func newBridge(client *rpc.Client, prompter UserPrompter, printer io.Writer) *br
 	}
 }
 
-// NewAccount is a wrapper around the personal.newAccount RPC method that uses a
+func (b *bridge) UnLockWallet(call otto.FunctionCall) (response otto.Value) {
+	var (
+		password string
+		err      error
+	)
+	switch {
+	// No password was specified, prompt the user for it
+	case len(call.ArgumentList) == 0:
+		if password, err = b.prompter.PromptPassword("Passphrase: "); err != nil {
+			throwJSException(err.Error())
+		}
+	// A single string password was specified, use that
+	case len(call.ArgumentList) == 1 && call.Argument(0).IsString():
+		password, _ = call.Argument(0).ToString()
+
+	// Otherwise fail with some error
+	default:
+		throwJSException("expected 0 or 1 string argument")
+	}
+	// Password acquired, execute the call and return
+	ret, err := call.Otto.Call("jeth.unLockWallet", nil, password)
+	if err != nil {
+		throwJSException(err.Error())
+	}
+	return ret
+}
+
+func (b *bridge) OpenWallet(call otto.FunctionCall) (response otto.Value) {
+	var (
+		password string
+		err      error
+	)
+	switch {
+	// No password was specified, prompt the user for it
+	case len(call.ArgumentList) == 0:
+		if password, err = b.prompter.PromptPassword("Passphrase: "); err != nil {
+			throwJSException(err.Error())
+		}
+
+	// A single string password was specified, use that
+	case len(call.ArgumentList) == 1 && call.Argument(0).IsString():
+		password, _ = call.Argument(0).ToString()
+
+	// Otherwise fail with some error
+	default:
+		throwJSException("expected 0 or 1 string argument")
+	}
+	// Password acquired, execute the call and return
+	ret, err := call.Otto.Call("jeth.openWallet", nil, password)
+	if err != nil {
+		throwJSException(err.Error())
+	}
+	return ret
+}
+
+func (b *bridge) CreateWallet(call otto.FunctionCall) (response otto.Value) {
+	var (
+		password string
+		confirm  string
+		err      error
+	)
+	switch {
+	// No password was specified, prompt the user for it
+	case len(call.ArgumentList) == 0:
+		if password, err = b.prompter.PromptPassword("Passphrase: "); err != nil {
+			throwJSException(err.Error())
+		}
+		if confirm, err = b.prompter.PromptPassword("Repeat passphrase: "); err != nil {
+			throwJSException(err.Error())
+		}
+		if password != confirm {
+			throwJSException("passphrases don't match!")
+		}
+
+	// A single string password was specified, use that
+	case len(call.ArgumentList) == 1 && call.Argument(0).IsString():
+		password, _ = call.Argument(0).ToString()
+
+	// Otherwise fail with some error
+	default:
+		throwJSException("expected 0 or 1 string argument")
+	}
+	// Password acquired, execute the call and return
+	ret, err := call.Otto.Call("jeth.createWallet", nil, password)
+	if err != nil {
+		throwJSException(err.Error())
+	}
+	return ret
+}
+
+// NewAccount is a wrapper around the account.newAccount RPC method that uses a
 // non-echoing password prompt to acquire the passphrase and executes the original
 // RPC method (saved in jeth.newAccount) with it to actually execute the RPC call.
 func (b *bridge) NewAccount(call otto.FunctionCall) (response otto.Value) {

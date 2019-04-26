@@ -66,11 +66,11 @@ func EachChildFile(directory string, process func(path string) (bool, error)) er
 	for _, fi := range fds {
 		if !fi.IsDir() {
 			isContinue, err := process(path.Join(directory, fi.Name()))
-			if !isContinue {
-				return nil
-			}
 			if err != nil {
 				return err
+			}
+			if !isContinue {
+				return nil
 			}
 		}
 	}
@@ -86,11 +86,11 @@ func EachDirectory(directory string, process func(path string) (bool, error)) er
 	for _, fi := range fds {
 		if fi.IsDir() {
 			isContinue, err := process(path.Join(directory, fi.Name()))
-			if !isContinue {
-				return nil
-			}
 			if err != nil {
 				return err
+			}
+			if !isContinue {
+				return nil
 			}
 		}
 	}
