@@ -17,15 +17,15 @@
 package rpc
 
 import (
-	"io"
-	"fmt"
-	"sync"
 	"bytes"
+	"encoding/json"
+	"fmt"
+	"github.com/drep-project/dlog"
+	"io"
 	"reflect"
 	"strconv"
 	"strings"
-	"encoding/json"
-	"github.com/drep-project/dlog"
+	"sync"
 )
 
 const (
@@ -43,7 +43,7 @@ type jsonRequest struct {
 	Payload json.RawMessage `json:"params,omitempty"`
 }
 
-type jsonSuccessResponse struct {
+type JsonSuccessResponse struct {
 	Version string      `json:"jsonrpc"`
 	Id      interface{} `json:"id,omitempty"`
 	Result  interface{} `json:"result"`
@@ -290,6 +290,7 @@ func parsePositionalArguments(rawArgs json.RawMessage, types []reflect.Type) ([]
 	if tok, _ := dec.Token(); tok != json.Delim('[') {
 		return nil, &InvalidParamsError{"non-array args"}
 	}
+
 	// Read args.
 	args := make([]reflect.Value, 0, len(types))
 	for i := 0; dec.More(); i++ {
@@ -297,6 +298,7 @@ func parsePositionalArguments(rawArgs json.RawMessage, types []reflect.Type) ([]
 			return nil, &InvalidParamsError{fmt.Sprintf("too many arguments, want at most %d", len(types))}
 		}
 		argval := reflect.New(types[i])
+
 		if err := dec.Decode(argval.Interface()); err != nil {
 			return nil, &InvalidParamsError{fmt.Sprintf("invalid argument %d: %v", i, err)}
 		}
@@ -321,7 +323,7 @@ func parsePositionalArguments(rawArgs json.RawMessage, types []reflect.Type) ([]
 
 // CreateResponse will create a JSON-RPC success response with the given id and reply as result.
 func (c *jsonCodec) CreateResponse(id interface{}, reply interface{}) interface{} {
-	return &jsonSuccessResponse{Version: JsonrpcVersion, Id: id, Result: reply}
+	return &JsonSuccessResponse{Version: JsonrpcVersion, Id: id, Result: reply}
 }
 
 // CreateErrorResponse will create a JSON-RPC error response with the given id and error.

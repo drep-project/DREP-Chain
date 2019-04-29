@@ -16,10 +16,10 @@ type Transaction struct {
 	Data TransactionData
 	Sig  []byte
 
-	txHash 		*crypto.Hash			`json:"-" binary:"ignore"`
-	signMessage []byte					`json:"-" binary:"ignore" bson:"-"`
-	message 	[]byte					`json:"-" binary:"ignore" bson:"-"`
-	from 		atomic.Value			`json:"-" binary:"ignore"`
+	txHash      *crypto.Hash `json:"-" binary:"ignore"`
+	signMessage []byte       `json:"-" binary:"ignore" bson:"-"`
+	message     []byte       `json:"-" binary:"ignore" bson:"-"`
+	from        atomic.Value `json:"-" binary:"ignore"`
 }
 
 type TransactionData struct {
@@ -42,7 +42,7 @@ func (tx *Transaction) Nonce() uint64 {
 func (tx *Transaction) Type() TxType {
 	return tx.Data.Type
 }
-func (tx *Transaction) Gas() uint64  {
+func (tx *Transaction) Gas() uint64 {
 	bigInt := (big.Int)(tx.Data.GasLimit)
 	return (&bigInt).Uint64()
 }
@@ -156,12 +156,18 @@ func NewTransaction(to crypto.CommonAddress, amount, gasPrice, gasLimit *big.Int
 	return &Transaction{Data: data}
 }
 
-func NewContractTransaction(byteCode []byte, gasPrice, gasLimit *big.Int, nonce uint64,) *Transaction {
+func NewContractTransaction(byteCode []byte, gasPrice, gasLimit *big.Int, nonce uint64, ) *Transaction {
+	if gasPrice == nil {
+		gasPrice = DefaultGasPrice
+	}
+	if gasLimit == nil {
+		gasLimit = CreateContractGas
+	}
 	data := TransactionData{
 		Nonce:     nonce,
 		Type:      CreateContractType,
 		GasPrice:  *(*common.Big)(gasPrice),
-		GasLimit:   *(*common.Big)(gasLimit),
+		GasLimit:  *(*common.Big)(gasLimit),
 		Timestamp: time.Now().Unix(),
 		Data:      byteCode,
 	}
@@ -169,6 +175,12 @@ func NewContractTransaction(byteCode []byte, gasPrice, gasLimit *big.Int, nonce 
 }
 
 func NewCallContractTransaction(to crypto.CommonAddress, input []byte, amount, gasPrice, gasLimit *big.Int, nonce uint64) *Transaction {
+	if gasPrice == nil {
+		gasPrice = DefaultGasPrice
+	}
+	if gasLimit == nil {
+		gasLimit = CallContractGas
+	}
 	data := TransactionData{
 		Nonce:     nonce,
 		Type:      CallContractType,
@@ -189,7 +201,7 @@ func NewAliasTransaction(alias string, gasPrice, gasLimit *big.Int, nonce uint64
 		Nonce:     nonce,
 		Type:      SetAliasType,
 		To:        crypto.CommonAddress{},
-		Amount:    *(*common.Big)(new (big.Int)),
+		Amount:    *(*common.Big)(new(big.Int)),
 		GasPrice:  *(*common.Big)(gasPrice),
 		GasLimit:  *(*common.Big)(gasLimit),
 		Timestamp: int64(time.Now().Unix()),

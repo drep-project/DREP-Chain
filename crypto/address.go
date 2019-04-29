@@ -3,12 +3,12 @@ package crypto
 import (
 	"encoding/hex"
 	"errors"
+	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"math/big"
 	"reflect"
-	"github.com/drep-project/binary"
 )
 
 const (
@@ -86,7 +86,7 @@ func (addr CommonAddress) MarshalText() ([]byte, error) {
 }
 
 // UnmarshalText parses a hash in hex syntax.
-func (addr CommonAddress) UnmarshalText(input []byte) error {
+func (addr *CommonAddress) UnmarshalText(input []byte) error {
 	return common.UnmarshalFixedText("Address", input, addr[:])
 }
 

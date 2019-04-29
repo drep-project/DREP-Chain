@@ -17,6 +17,7 @@
 package vm
 
 import (
+	"fmt"
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/chain/params"
 	"github.com/drep-project/drep-chain/crypto"
@@ -42,6 +43,7 @@ type (
 func run(evm *EVM, contract *Contract, input []byte, readOnly bool) ([]byte, error) {
 	if !contract.ContractAddr.IsEmpty() {
 		precompiles := PrecompiledContracts
+		//原生合约
 		if p := precompiles[contract.ContractAddr]; p != nil {
 			return RunPrecompiledContract(p, input, contract)
 		}
@@ -81,12 +83,12 @@ type Context struct {
 
 	// Message information
 	Origin   crypto.CommonAddress // Provides information for ORIGIN
-	GasPrice *big.Int       // Provides information for GASPRICE
+	GasPrice *big.Int             // Provides information for GASPRICE
 
 	// Block information
-	GasLimit    uint64         // Provides information for GASLIMIT
-	BlockNumber *big.Int       // Provides information for NUMBER
-	Time        *big.Int       // Provides information for TIME
+	GasLimit    uint64   // Provides information for GASLIMIT
+	BlockNumber *big.Int // Provides information for NUMBER
+	Time        *big.Int // Provides information for TIME
 }
 
 // EVM is the Ethereum Virtual Machine base object and provides
@@ -102,7 +104,7 @@ type EVM struct {
 	// Context provides auxiliary blockchain related information
 	Context
 	// StateDB gives access to the underlying state
-	State  *State
+	State *State
 	// Depth is the current call stack
 	depth int
 
@@ -111,7 +113,7 @@ type EVM struct {
 	vmConfig *VMConfig
 	// global (to this context) ethereum virtual machine
 	// used throughout the execution of the tx.
-	interpreter  *EVMInterpreter
+	interpreter *EVMInterpreter
 	// abort is used to abort the EVM calling operations
 	// NOTE: must be set atomically
 	abort int32
@@ -121,16 +123,16 @@ type EVM struct {
 	CallGasTemp uint64
 
 	ChainId app.ChainIdType
-	Abort int32
+	Abort   int32
 }
 
 // NewEVM returns a new EVM. The returned EVM is not thread safe and should
 // only ever be used *once*.
-func NewEVM(ctx Context, statedb *State,vmConfig *VMConfig) *EVM {
+func NewEVM(ctx Context, statedb *State, vmConfig *VMConfig) *EVM {
 	evm := &EVM{
-		Context:      ctx,
-		State:      statedb,
-		vmConfig:     vmConfig,
+		Context:  ctx,
+		State:    statedb,
+		vmConfig: vmConfig,
 	}
 
 	evm.interpreter = NewEVMInterpreter(evm)
@@ -168,7 +170,7 @@ func (evm *EVM) Call(caller crypto.CommonAddress, addr crypto.CommonAddress, cha
 	}
 
 	var (
-		to       = addr
+		to = addr
 	)
 	if !evm.State.Exist(addr) {
 		precompiles := PrecompiledContracts
@@ -220,7 +222,7 @@ func (evm *EVM) Call(caller crypto.CommonAddress, addr crypto.CommonAddress, cha
 //
 // CallCode differs from Call in the sense that it executes the given address'
 // code with the caller as context.
-func (evm *EVM) CallCode(caller crypto.CommonAddress, addr crypto.CommonAddress,  input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
+func (evm *EVM) CallCode(caller crypto.CommonAddress, addr crypto.CommonAddress, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
 		return nil, gas, nil
 	}
@@ -249,7 +251,7 @@ func (evm *EVM) CallCode(caller crypto.CommonAddress, addr crypto.CommonAddress,
 	return ret, contract.Gas, err
 }
 
-func (evm *EVM) DelegateCall(con *Contract, contractAddr crypto.CommonAddress,  input []byte, gas uint64) (ret []byte, leftGas uint64, err error) {
+func (evm *EVM) DelegateCall(con *Contract, contractAddr crypto.CommonAddress, input []byte, gas uint64) (ret []byte, leftGas uint64, err error) {
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
 		return nil, gas, nil
 	}
@@ -282,11 +284,12 @@ func (evm *EVM) DelegateCall(con *Contract, contractAddr crypto.CommonAddress,  
 
 	return ret, con.Gas, err
 }
+
 // StaticCall executes the contract associated with the addr with the given input
 // as parameters while disallowing any modifications to the state during the call.
 // Opcodes that attempt to perform such modifications will result in exceptions
 // instead of performing the modifications.
-func (evm *EVM) StaticCall(caller crypto.CommonAddress, addr crypto.CommonAddress,  input []byte, gas uint64) (ret []byte, leftOverGas uint64, err error) {
+func (evm *EVM) StaticCall(caller crypto.CommonAddress, addr crypto.CommonAddress, input []byte, gas uint64) (ret []byte, leftOverGas uint64, err error) {
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
 		return nil, gas, nil
 	}
@@ -409,6 +412,7 @@ func (evm *EVM) CreateContractCode(caller crypto.CommonAddress, codeAndHash *cod
 // Create creates a new contract using code as deployment code.
 func (evm *EVM) Create(caller crypto.CommonAddress, code []byte, gas uint64, value *big.Int) (ret []byte, contractAddr crypto.CommonAddress, leftOverGas uint64, err error) {
 	contractAddr = crypto.CreateAddress(caller, evm.State.GetNonce(&caller))
+	fmt.Println("new contractAddr:", contractAddr.Hex())
 	return evm.CreateContractCode(caller, &codeAndHash{code: code}, gas, value, contractAddr)
 }
 

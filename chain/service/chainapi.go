@@ -35,6 +35,7 @@ func (chain *ChainApi) GetMaxHeight() uint64 {
 }
 
 func (chain *ChainApi) GetBalance(addr crypto.CommonAddress) *big.Int{
+    fmt.Println("balance:", chain.dbService.GetBalance(&addr, false))
     return chain.dbService.GetBalance(&addr, false)
 }
 

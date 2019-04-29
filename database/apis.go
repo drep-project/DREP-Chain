@@ -217,6 +217,7 @@ func (database *DatabaseService) PutBalance(addr *crypto.CommonAddress, balance 
     if storage == nil {
         return errors.New("no account storage found")
     }
+    fmt.Println("++++++:",addr.Hex(), *balance)
     storage.Balance = *balance
     return database.PutStorage(addr, storage, transactional)
 }

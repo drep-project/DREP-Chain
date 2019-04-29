@@ -2,6 +2,14 @@ package service
 
 import (
 	"errors"
+	"fmt"
+	"math"
+	"math/big"
+	"net/http"
+	"net/url"
+	"strconv"
+	"time"
+
 	"github.com/drep-project/binary"
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
@@ -9,16 +17,10 @@ import (
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
-	"math"
-	"math/big"
-	"net/http"
-	"net/url"
-	"strconv"
-	"time"
 )
 
 const (
-	allowedFutureBlockTime    = 15 * time.Second
+	allowedFutureBlockTime = 15 * time.Second
 )
 
 var (
@@ -67,7 +69,7 @@ func (chainService *ChainService) verifyTransaction(tx *chainTypes.Transaction) 
 	}
 
 	// Should supply enough intrinsic gas
-	gas, err := IntrinsicGas(tx.AsPersistentMessage(), tx.To() == nil|| tx.To().IsEmpty() )
+	gas, err := IntrinsicGas(tx.AsPersistentMessage(), tx.To() == nil || tx.To().IsEmpty())
 	if err != nil {
 		return err
 	}
@@ -88,19 +90,19 @@ func (chainService *ChainService) executeTransaction(tx *chainTypes.Transaction,
 
 	//TODO need test
 	gasUsed := new(uint64)
-	_, _, err = chainService.stateProcessor.ApplyTransaction(newState, chainService, gp, header,tx, from, gasUsed)
+	_, _, err = chainService.stateProcessor.ApplyTransaction(newState, chainService, gp, header, tx, from, gasUsed)
 	if err != nil {
 		dlog.Error("executeTransaction transaction error", "reason", err)
 		return nil, nil, err
 	}
-	gasFee := new (big.Int).Mul(new(big.Int).SetUint64(*gasUsed), tx.GasPrice())
+	gasFee := new(big.Int).Mul(new(big.Int).SetUint64(*gasUsed), tx.GasPrice())
 	return new(big.Int).SetUint64(*gasUsed), gasFee, nil
 }
 
-func  (chainService *ChainService) checkNonce(fromAccount *crypto.CommonAddress, nounce uint64) error{
+func (chainService *ChainService) checkNonce(fromAccount *crypto.CommonAddress, nounce uint64) error {
 	nonce := chainService.DatabaseService.GetNonce(fromAccount, false)
 	if nonce > nounce {
-		return fmt.Errorf("error nounce %d != %d", nonce,nounce)
+		return fmt.Errorf("error nounce %d != %d", nonce, nounce)
 	}
 	return nil
 }
@@ -194,17 +196,6 @@ func IntrinsicGas(data []byte, contractCreation bool) (uint64, error) {
 	}
 	return gas, nil
 }
-
-
-
-
-
-
-
-
-
-
-
 
 //func (chainService *ChainService) executeCrossChainTransaction(t *chainTypes.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
 //    var (

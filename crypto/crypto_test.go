@@ -262,7 +262,44 @@ func TestPubkey(t *testing.T) {
 	pk, err := DecompressPubkey(b)
 	//crypto.FromECDSAPub(&key)[1:]
 	c := PubKey2Address(pk)
+	bb,_ := c.MarshalText()
+	fmt.Println(string(bb))
+	c2 := &CommonAddress{}
+	err = c2.UnmarshalJSON(bb)
+	//fmt.Println(err)
+	//fmt.Println(c.Hex())
+
 	a := hexutil.Encode(c[:])
 	//a := fmt.Sprintf("%x", c)
 	fmt.Println(err, a)
+}
+
+func TestPAddrJson(t *testing.T) {
+	addr := `"0xe91f67944ec2f7223bf6d0272557a5b13ecc1f28"`
+	ca := &CommonAddress{}
+
+	//addrBuf, err := hexutil.Decode(addr)
+	//ca.SetBytes(addrBuf)
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	//buf, err := ca.MarshalText()
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	//fmt.Println(string(buf))
+
+	//ca1 := &CommonAddress{}
+	//err := ca.UnmarshalText([]byte(addr))
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	//fmt.Println(ca.Hex())
+
+	err := ca.UnmarshalJSON([]byte(addr))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println(ca.Hex())
 }

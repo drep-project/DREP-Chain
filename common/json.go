@@ -135,6 +135,10 @@ func UnmarshalFixedUnprefixedText(typname string, input, out []byte) error {
 // marshaled without error.
 type Big mathBig.Int
 
+func (m *Big)SetMathBig(v mathBig.Int){
+	*m = Big(v)
+}
+
 func (m Big) MarshalBSONValue() (bsontype.Type, []byte, error) {
 	return bsontype.String, bsoncore.AppendString(nil, m.ToInt().String()), nil
 }
@@ -154,6 +158,11 @@ func (b Big) MarshalText() ([]byte, error) {
 	return []byte(EncodeBig((*mathBig.Int)(&b))), nil
 }
 
+//func (b Big)MarshalJSON()([]byte,error){
+//	buf, err:= b.MarshalText()
+//	//bigJson := `"` + string(buf) + `"`
+//	return []byte(buf), err
+//}
 // UnmarshalJSON implements json.Unmarshaler.
 func (b *Big) UnmarshalJSON(input []byte) error {
 	if !isString(input) {
