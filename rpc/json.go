@@ -43,7 +43,7 @@ type jsonRequest struct {
 	Payload json.RawMessage `json:"params,omitempty"`
 }
 
-type JsonSuccessResponse struct {
+type jsonSuccessResponse struct {
 	Version string      `json:"jsonrpc"`
 	Id      interface{} `json:"id,omitempty"`
 	Result  interface{} `json:"result"`
@@ -323,7 +323,7 @@ func parsePositionalArguments(rawArgs json.RawMessage, types []reflect.Type) ([]
 
 // CreateResponse will create a JSON-RPC success response with the given id and reply as result.
 func (c *jsonCodec) CreateResponse(id interface{}, reply interface{}) interface{} {
-	return &JsonSuccessResponse{Version: JsonrpcVersion, Id: id, Result: reply}
+	return &jsonSuccessResponse{Version: JsonrpcVersion, Id: id, Result: reply}
 }
 
 // CreateErrorResponse will create a JSON-RPC error response with the given id and error.
