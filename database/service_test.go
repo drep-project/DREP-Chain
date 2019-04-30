@@ -92,7 +92,7 @@ func TestRollBack(t *testing.T) {
 		idb.RecordBlockJournal(uint64(i+1))
 	}
 
-	seqVal, err := db.db.Get([]byte(dbOperaterMaxSeqKey), nil)
+	seqVal, err := db.db.Get([]byte(dbOperaterMaxSeqKey))
 	seq := new(big.Int).SetBytes(seqVal)
 
 	if seq.Uint64() != (i)*(j)*2+1{

@@ -1,4 +1,4 @@
-package database
+package common
 
 import (
     "bytes"
@@ -23,7 +23,7 @@ type Merkle struct {
     Height int
 }
 
-func (databaseService *DatabaseService) NewMerkle(hashes [][]byte) *Merkle {
+func NewMerkle(hashes [][]byte) *Merkle {
     if hashes == nil || len(hashes) == 0 {
         return &Merkle{Root: &MerkleNode{Hash: []byte{}}}
     }

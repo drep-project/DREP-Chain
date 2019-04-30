@@ -2,13 +2,13 @@ package txpool
 
 import (
 	"container/heap"
+	"errors"
 	"fmt"
 	"github.com/drep-project/dlog"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
-	"errors"
 	"math/big"
 	"sync"
 )
@@ -20,7 +20,8 @@ const maxSize = 100000
 //3 池子里面的交易根据块中的各个地址的交易对应的Nonce进行删除
 
 type TransactionPool struct {
-	databaseApi *database.DatabaseService
+	database *database.Database
+	rlock sync.RWMutex
 	queue       map[crypto.CommonAddress]*txList
 	pending     map[crypto.CommonAddress]*txList
 	//accountTran map[crypto.CommonAddress]*list.SortedLinkedList
@@ -36,8 +37,8 @@ type TransactionPool struct {
 	quit             chan struct{}
 }
 
-func NewTransactionPool(databaseApi *database.DatabaseService) *TransactionPool {
-	pool := &TransactionPool{databaseApi: databaseApi}
+func NewTransactionPool(database *database.Database) *TransactionPool {
+	pool := &TransactionPool{database: database}
 	pool.nonceCp = func(a interface{}, b interface{}) int {
 		ta, oka := a.(*chainTypes.Transaction)
 		tb, okb := b.(*chainTypes.Transaction)
@@ -72,6 +73,12 @@ func NewTransactionPool(databaseApi *database.DatabaseService) *TransactionPool 
 	return pool
 }
 
+func (pool *TransactionPool) UpdateState(database *database.Database) {
+	pool.rlock.Lock()
+	defer pool.rlock.Unlock()
+	pool.database = database
+}
+
 func (pool *TransactionPool) Contains(id string) bool {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
@@ -82,36 +89,9 @@ func (pool *TransactionPool) Contains(id string) bool {
 	return exists || value
 }
 
-func (pool *TransactionPool) checkAndGetAddr(tx *chainTypes.Transaction) (error, *crypto.CommonAddress) {
-	addr, err := tx.From()
-	if err != nil {
-		return err, nil
-	}
-	// TODO Check sig
-	if pool.GetTransactionCount(addr) > tx.Nonce() {
-		dlog.Info("checkAndGetAddr:", "localNonce", pool.getTransactionCount(addr), "newTxNonce", tx.Nonce())
-		return fmt.Errorf("nonce err ,dbNonce:%d > txNonce:%d", pool.GetTransactionCount(addr), tx.Nonce()), nil
-	}
-
-	amount := new(big.Int).SetBytes(tx.Amount().Bytes())
-	gasLimit := new(big.Int).SetBytes(tx.GasLimit().Bytes())
-	gasPrice := new(big.Int).SetBytes(tx.GasPrice().Bytes())
-	total := big.NewInt(0)
-	total.Mul(gasLimit, gasPrice)
-	total.Add(total, amount)
-
-	addrBalance := pool.databaseApi.GetBalance(addr, false)
-	if addrBalance.Cmp(total) < 0 {
-		dlog.Debug("Not Enough Balance", "CurrentBalance", addrBalance.Int64(), "NeedBalance", total)
-		return fmt.Errorf("not enough balance"), nil
-	}
-
-	return nil, addr
-}
-
 //func AddTransaction(id string, transaction *common.transaction) {
 func (pool *TransactionPool) AddTransaction(tx *chainTypes.Transaction) error {
-	err, addr := pool.checkAndGetAddr(tx)
+	addr, err := tx.From()
 	if err != nil {
 		return err
 	}
@@ -274,7 +254,9 @@ func (pool *TransactionPool) adjust(block *chainTypes.Block) {
 			for addr, _ := range addrMap {
 				// 获取数据库里面的nonce
 				//根据nonce是否被处理，删除对应的交易
-				nonce := pool.databaseApi.GetNonce(&addr, true)
+				pool.rlock.RLock()
+				nonce := pool.database.GetNonce(&addr)
+				pool.rlock.RUnlock()
 				pool.mu.Lock()
 				list, ok := pool.pending[addr]
 				if ok {
@@ -301,7 +283,7 @@ func (pool *TransactionPool) getTransactionCount(address *crypto.CommonAddress) 
 	if nonce, ok := pool.pendingNonce[*address]; ok {
 		return nonce
 	} else {
-		nonce := pool.databaseApi.GetNonce(address, true)
+		nonce := pool.database.GetNonce(address)
 		pool.pendingNonce[*address] = nonce
 		return nonce
 	}

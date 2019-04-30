@@ -87,13 +87,7 @@ func (chainService *ChainService) dealMsg(peer *chainTypes.PeerInfo, rw p2p.MsgR
 				dlog.Trace("comming transaction", "transaction", tx.Nonce())
 				tx := tx
 				peer.MarkTx(&tx)
-				err := chainService.transactionPool.AddTransaction(&tx)
-				if err == nil {
-					dlog.Debug("Succeed to add this transaction ", "transaction", tx)
-					chainService.BroadcastTx(chainTypes.MsgTypeTransaction, &tx, false)
-				} else {
-					dlog.Debug("Fail to add this transaction ", "reason", err, "transaction", tx)
-				}
+				chainService.SendTransaction(&tx)
 			}
 
 		case chainTypes.MsgTypeBlock:

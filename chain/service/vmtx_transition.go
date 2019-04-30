@@ -60,11 +60,11 @@ type StateTransition struct {
 	header *types.BlockHeader
 	bc evm.ChainContext
 	vmService       evm.Vm
-	databaseService *database.DatabaseService
+	databaseService *database.Database
 }
 
 // NewStateTransition initialises and returns a new state transition object.
-func NewStateTransition(databaseService *database.DatabaseService, vmService evm.Vm,tx *types.Transaction, from *crypto.CommonAddress, state *vm.State, header *types.BlockHeader, bc evm.ChainContext, gp *GasPool) *StateTransition {
+func NewStateTransition(databaseService *database.Database, vmService evm.Vm,tx *types.Transaction, from *crypto.CommonAddress, state *vm.State, header *types.BlockHeader, bc evm.ChainContext, gp *GasPool) *StateTransition {
 	return &StateTransition{
 		gp:       gp,
 		tx:       tx,
@@ -76,7 +76,7 @@ func NewStateTransition(databaseService *database.DatabaseService, vmService evm
 		header:	  header,
 		bc:		  bc,
 		vmService: vmService,
-		databaseService:databaseService,
+		databaseService: databaseService,
 	}
 }
 
@@ -133,16 +133,16 @@ func (st *StateTransition) TransitionVmTxDb() (ret []byte, failed bool, err erro
 
 func (st *StateTransition) TransitionTransferDb() (ret []byte, failed bool, err error) {
 	from := st.from
-	originBalance := st.databaseService.GetBalance(from, true)
-	toBalance :=  st.databaseService.GetBalance(st.tx.To(), true)
+	originBalance := st.databaseService.GetBalance(from)
+	toBalance :=  st.databaseService.GetBalance(st.tx.To())
 	leftBalance := originBalance.Sub(originBalance, st.tx.Amount())
 	if leftBalance.Sign() <0 {
 		return nil,  false, errors.New("from addr in tx is not eenough")
 	}
 	addBalance := toBalance.Add(toBalance, st.tx.Amount())
-	st.databaseService.PutBalance(from, leftBalance, true)
-	st.databaseService.PutBalance(st.tx.To(), addBalance, true)
-	st.databaseService.PutNonce(from, st.tx.Nonce()+1, true)
+	st.databaseService.PutBalance(from, leftBalance)
+	st.databaseService.PutBalance(st.tx.To(), addBalance)
+	st.databaseService.PutNonce(from, st.tx.Nonce()+1)
 	return nil,  true, nil
 }
 

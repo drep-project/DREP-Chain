@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"github.com/drep-project/drep-chain/common"
 	"math/big"
 	"time"
 
@@ -367,7 +368,7 @@ func (cs *ChainService) deriveMerkleRoot(txs []*chainTypes.Transaction) []byte {
 	if len(txs) == 0{
 		return []byte{}
 	}
-	txHashes, _ := cs.GetTxHashes(txs)
-	merkle := cs.DatabaseService.NewMerkle(txHashes)
+	ts, _ := cs.GetTxHashes(txs)
+	merkle := common.NewMerkle(ts)
 	return merkle.Root.Hash
 }
