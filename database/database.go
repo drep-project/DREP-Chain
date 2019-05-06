@@ -1,12 +1,6 @@
 package database
 
 import (
-<<<<<<< HEAD
-=======
-	"encoding/hex"
-	"errors"
-	"fmt"
->>>>>>> 5253736cba2a848aa565c98bb7cc37df233a652c
 	"github.com/drep-project/binary"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
@@ -81,7 +75,6 @@ func (db *Database) initState() error {
 	if err != nil {
 		return err
 	}
-<<<<<<< HEAD
 	return db.put(db.root, value, false)
 }
 
@@ -215,9 +208,6 @@ func (db *Database) Commit() error {
 
 func (db *Database) Discard() {
 	db.EndTransaction()
-=======
-	return db.db.Put(db.root, value)
->>>>>>> 5253736cba2a848aa565c98bb7cc37df233a652c
 }
 
 func (db *Database) rollback(maxBlockSeq int64, maxSeqKey, journalKey string) (error, int64) {
