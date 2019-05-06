@@ -4,8 +4,12 @@ import (
 	"fmt"
 )
 
+func constructAliasKey(inputKey []byte) string {
+	return aliasKey + bytes2Hex(inputKey)
+}
+
 func (db *Database) AliasPut(key, value []byte) error {
-	k := bytes2Hex(key)
+	k := constructAliasKey(key)
 	v := bytes2Hex(value)
 
 	//在缓存中，地址是否已经被设置过别名
@@ -17,12 +21,13 @@ func (db *Database) AliasPut(key, value []byte) error {
 }
 
 func (db *Database) AliasGet(key []byte) ([]byte, error) {
-	value, err := db.db.Get([]byte(key), nil)
+	k := constructAliasKey(key)
+	value, err := db.db.Get([]byte(k), nil)
 	return value, err
 }
 
 func (db *Database) AliasDelete(key []byte) error {
-	k := bytes2Hex(key)
+	k := constructAliasKey(key)
 	db.aliasAddress.Insert(k, nil)
 	return nil
 }

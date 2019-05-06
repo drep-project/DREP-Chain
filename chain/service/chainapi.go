@@ -3,6 +3,7 @@ package service
 import (
     "errors"
     "fmt"
+
     chainType "github.com/drep-project/drep-chain/chain/types"
     "github.com/drep-project/drep-chain/common"
     "github.com/drep-project/drep-chain/crypto"
@@ -109,3 +110,11 @@ func (chain *ChainApi) GetAddressByAlias(alias string) *crypto.CommonAddress {
 func (chain *ChainApi) GasPrice() (*big.Int, error) {
     return chain.chainService.gpo.SuggestPrice()
 }
+
+func (chain *ChainApi) GetPoolTransactions(addr *crypto.CommonAddress)[]chainType.Transactions {
+    return chain.chainService.GetPoolTransactions(addr)
+}
+func (chain *ChainApi) GetPoolMiniPendingNonce(addr *crypto.CommonAddress) uint64{
+    return chain.chainService.GetPoolMiniPendingNonce(addr)
+}
+

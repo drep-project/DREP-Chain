@@ -6,3 +6,5 @@ tools/gencode/*.js
 dreptest*
 data
 drep
+drepClient.exe
+drepClient

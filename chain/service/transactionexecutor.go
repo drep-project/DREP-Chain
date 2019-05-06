@@ -74,7 +74,8 @@ func (chainService *ChainService) verifyTransaction(tx *chainTypes.Transaction) 
 		return err
 	}
 	if tx.Gas() < gas {
-		return errors.New("gas exceed tx gaslimit")
+		msg := fmt.Sprintf("gas exceed tx gaslimit,need gas:%d,tx.gas:%d", gas, tx.Gas())
+		return errors.New(msg)
 	}
 	return nil
 }

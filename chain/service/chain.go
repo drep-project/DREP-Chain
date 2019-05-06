@@ -466,3 +466,11 @@ func (chainService *ChainService)  CalcGasLimit(parent *chainTypes.BlockHeader, 
 	}
 	return new (big.Int).SetUint64(limit)
 }
+
+
+func (chainService *ChainService) GetPoolTransactions(addr *crypto.CommonAddress)[]chainTypes.Transactions {
+	return chainService.transactionPool.GetTransactions(addr)
+}
+func (chainService *ChainService) GetPoolMiniPendingNonce(addr *crypto.CommonAddress) uint64{
+	return chainService.transactionPool.GetMiniPendingNonce(addr)
+}

@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/drep-project/drep-chain/common"
 	"math/big"
 	"net/url"
 	"os"
 	"sync"
 	"time"
 
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/rpc"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -21,6 +22,9 @@ var (
 func init() {
 	//key是完整的方法名称
 	methods["chain_getBalance"] = callGetBalance
+	methods["chain_getPoolTransactions"] = callgetPoolTransactions
+	methods["chain_getPoolMiniPendingNonce"] = callGetPoolMiniPendingNonce
+
 	methods["account_createCode"] = callCreateCode
 	methods["account_call"] = callContract
 }
@@ -81,7 +85,6 @@ func callGetBalance(args cli.Args, client *rpc.Client, ctx context.Context) {
 
 func callCreateCode(args cli.Args, client *rpc.Client, ctx context.Context) {
 	r := ""
-	//strs := strings.Split(args[2], ",")
 	if err := client.CallContext(ctx, &r, args[0], args[1], args[2]); err != nil {
 		fmt.Println(err)
 		return
@@ -105,7 +108,7 @@ func callContract(args cli.Args, client *rpc.Client, ctx context.Context) {
 				return
 			}
 
-			cb :=  new(common.Big)
+			cb := new(common.Big)
 			cb.SetMathBig(*value)
 			//big.Int转换成json格式发出去
 			buf, err := cb.MarshalText()
@@ -129,4 +132,36 @@ func callContract(args cli.Args, client *rpc.Client, ctx context.Context) {
 		return
 	}
 	fmt.Println(r)
+}
+
+func callgetPoolTransactions(args cli.Args, client *rpc.Client, ctx context.Context) {
+	resp := make([]chainTypes.Transactions, 0, 2)
+	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
+		fmt.Println(err)
+	}
+
+	//if len(resp) > 1 {
+	fmt.Println("queue txs:")
+	for _, tx := range resp[0] {
+		fmt.Println("type:", tx.Type(), "nonce:", tx.Nonce(), "amount:", tx.Amount(), "gas:", tx.Gas(), "gasPrice:", tx.GasPrice())
+	}
+
+	fmt.Println("pending txs:")
+	for _, tx := range resp[1] {
+		fmt.Println("type:", tx.Type(), "nonce:", tx.Nonce(), "amount:", tx.Amount(), "gas:", tx.Gas(), "gasPrice:", tx.GasPrice())
+	}
+	//} else {
+	//	fmt.Println("pending txs:")
+	//	for _, tx := range resp[0] {
+	//		fmt.Println("type:", tx.Type(), "nonce:", tx.Nonce(), "amount:", tx.Amount(), "gas:", tx.Gas(), "gasPrice:", tx.GasPrice())
+	//	}
+	//}
+}
+
+func callGetPoolMiniPendingNonce(args cli.Args, client *rpc.Client, ctx context.Context) {
+	var resp uint64
+	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(resp)
 }

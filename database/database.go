@@ -1,7 +1,6 @@
 package database
 
 import (
-	"fmt"
 	"github.com/drep-project/binary"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
@@ -37,6 +36,7 @@ const (
 	dbOperaterJournal   = "addrOperatesJournal" //每一次数据读写过程的记录
 	addressStorage      = "addressStorage"      //以地址作为KEY的对象存储
 	stateRoot           = "state rootState"
+	aliasKey            = "aliasKey" //构建aliasKey时，添加的前缀
 )
 
 func NewDatabase(dbPath string) (*Database, error) {
@@ -138,7 +138,6 @@ func (db *Database) delete(key []byte, temporary bool) error {
 			return err
 		}
 		var seq = new(big.Int).SetBytes(seqVal).Int64() + 1
-		fmt.Println("del operate seq：", seq)
 		previous, _ := db.get(key, temporary)
 		j := &journal{
 			Op:       "del",

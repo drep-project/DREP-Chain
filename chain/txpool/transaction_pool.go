@@ -2,18 +2,22 @@ package txpool
 
 import (
 	"container/heap"
+	"errors"
 	"fmt"
 	"github.com/drep-project/dlog"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
-	"errors"
 	"math/big"
 	"sync"
 )
 
-const maxSize = 100000
+const (
+	maxAllTxsCount  = 100000
+	maxTxsOfQueue   = 20  //乱序队列中，最多容纳交易数目
+	maxTxsOfPending = 200 //有序队列中，最多容纳交易数目
+)
 
 //1 池子里的交易按照nonce是否连续，分为乱序的和已经排序的在两个不同的队列中
 //2 已经排序好的可以被打包入块
@@ -118,8 +122,8 @@ func (pool *TransactionPool) AddTransaction(tx *chainTypes.Transaction) error {
 	id := tx.TxHash()
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
-	if len(pool.allTxs) >= maxSize {
-		msg := fmt.Sprintf("transaction pool full.txid:%s fail to add.pool tx count:%d, maxSize:%d",id, len(pool.allTxs),maxSize)
+	if len(pool.allTxs) >= maxAllTxsCount {
+		msg := fmt.Sprintf("transaction pool full.txid:%s fail to add.pool tx count:%d, maxSize:%d", id, len(pool.allTxs), maxAllTxsCount)
 		dlog.Error(msg)
 		return errors.New(msg)
 	}
@@ -132,6 +136,10 @@ func (pool *TransactionPool) AddTransaction(tx *chainTypes.Transaction) error {
 		pool.allTxs[id.String()] = true
 
 		if list, ok := pool.queue[*addr]; ok {
+			//地址对应的队列空间是否已经满
+			if list.Len() > maxTxsOfQueue {
+				return errors.New("queue full")
+			}
 			list.Add(tx)
 		} else {
 			pool.queue[*addr] = newTxList(true)
@@ -144,15 +152,17 @@ func (pool *TransactionPool) AddTransaction(tx *chainTypes.Transaction) error {
 }
 
 func (pool *TransactionPool) syncToPending(address *crypto.CommonAddress) {
-	//从queue找nonce连续的交易放入到pending中
-	list := pool.queue[*address].Ready(pool.getTransactionCount(address))
-
 	if _, ok := pool.pending[*address]; !ok {
 		pool.pending[*address] = newTxList(true)
 	}
-
-	var nonce uint64
 	listPending := pool.pending[*address]
+	if listPending.Len() > maxTxsOfPending {
+		return
+	}
+
+	//从queue找nonce连续的交易放入到pending中
+	list := pool.queue[*address].Ready(pool.getTransactionCount(address))
+	var nonce uint64
 	if len(list) > 0 {
 		for _, tx := range list {
 			listPending.Add(tx)
@@ -260,34 +270,36 @@ func (pool *TransactionPool) checkUpdate() {
 
 //已经被处理过NONCE都被清理出去
 func (pool *TransactionPool) adjust(block *chainTypes.Block) {
-		addrMap := make(map[crypto.CommonAddress]struct{})
-		var addrs []*crypto.CommonAddress
-		for _, tx := range block.Data.TxList {
-			addr, _ := tx.From()
-			if _, ok := addrMap[*addr]; !ok {
-				addrMap[*addr] = struct{}{}
-				addrs = append(addrs, addr)
-			}
+	addrMap := make(map[crypto.CommonAddress]struct{})
+	var addrs []*crypto.CommonAddress
+	for _, tx := range block.Data.TxList {
+		addr, _ := tx.From()
+		if _, ok := addrMap[*addr]; !ok {
+			addrMap[*addr] = struct{}{}
+			addrs = append(addrs, addr)
 		}
+	}
 
-		if len(addrs) > 0 {
-			for addr, _ := range addrMap {
-				// 获取数据库里面的nonce
-				//根据nonce是否被处理，删除对应的交易
-				nonce := pool.databaseApi.GetNonce(&addr, true)
-				pool.mu.Lock()
-				list, ok := pool.pending[addr]
-				if ok {
-					txs := list.Forward(nonce)
-					for _, tx := range txs {
-						id := tx.TxHash()
-						delete(pool.allTxs, id.String())
-					}
+	if len(addrs) > 0 {
+		for addr, _ := range addrMap {
+			// 获取数据库里面的nonce
+			//根据nonce是否被处理，删除对应的交易
+			nonce := pool.databaseApi.GetNonce(&addr, true)
+			pool.mu.Lock()
+			list, ok := pool.pending[addr]
+			if ok {
+				txs := list.Forward(nonce)
+				for _, tx := range txs {
+					id := tx.TxHash()
+					delete(pool.allTxs, id.String())
 				}
-				pool.mu.Unlock()
-				dlog.Warn("clear txpool",  "addr", addr.Hex() ,"max tx.nonce:", nonce,"txpool tx count:", len(pool.allTxs))
 			}
+
+			pool.syncToPending(&addr)
+			pool.mu.Unlock()
+			dlog.Warn("clear txpool", "addr", addr.Hex(), "max tx.nonce:", nonce, "txpool tx count:", len(pool.allTxs))
 		}
+	}
 }
 
 //获取总的交易个数，即获取地址对应的nonce
@@ -305,4 +317,44 @@ func (pool *TransactionPool) getTransactionCount(address *crypto.CommonAddress) 
 		pool.pendingNonce[*address] = nonce
 		return nonce
 	}
+}
+
+func (pool *TransactionPool) GetTransactions(addr *crypto.CommonAddress) []chainTypes.Transactions {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
+	twoQueueTxs := make([]chainTypes.Transactions, 0, 2)
+	if queueList, ok := pool.queue[*addr]; ok {
+		queueTxs := make([]chainTypes.Transaction, 0, queueList.Len())
+		txs := queueList.Flatten()
+		for _, tx := range txs {
+			queueTxs = append(queueTxs, *tx)
+		}
+		twoQueueTxs = append(twoQueueTxs, queueTxs)
+	}
+
+	if pendingList, ok := pool.pending[*addr]; ok {
+		pendingTxs := make([]chainTypes.Transaction, 0, pendingList.Len())
+		txs := pendingList.Flatten()
+		for _, tx := range txs {
+			pendingTxs = append(pendingTxs, *tx)
+		}
+		twoQueueTxs = append(twoQueueTxs, pendingTxs)
+	}
+
+	return twoQueueTxs
+}
+
+func (pool *TransactionPool) GetMiniPendingNonce(addr *crypto.CommonAddress) uint64 {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
+	if pendingList, ok := pool.pending[*addr]; ok {
+		txs := pendingList.Flatten()
+		if len(txs) > 0{
+			return txs[0].Nonce()
+		}
+	}
+
+	return 0
 }
