@@ -36,12 +36,11 @@ func (chain *ChainApi) GetMaxHeight() uint64 {
 }
 
 func (chain *ChainApi) GetBalance(addr crypto.CommonAddress) *big.Int{
-    fmt.Println("balance:", chain.dbService.GetBalance(&addr, false))
-    return chain.dbService.GetBalance(&addr, false)
+    return chain.dbService.GetBalance(&addr)
 }
 
 func (chain *ChainApi) GetNonce(addr crypto.CommonAddress) uint64 {
-    return chain.dbService.GetNonce(&addr, false)
+    return chain.dbService.GetNonce(&addr)
 }
 
 func (chain *ChainApi) GetPreviousBlockHash() (string, error) {
@@ -53,7 +52,7 @@ func (chain *ChainApi) GetPreviousBlockHash() (string, error) {
 }
 
 func (chain *ChainApi) GetReputation(addr crypto.CommonAddress) *big.Int {
-    return chain.dbService.GetReputation(&addr, false)
+    return chain.dbService.GetReputation(&addr)
 }
 
 func (chain *ChainApi) GetTransactionsFromBlock(height uint64) ([]*chainType.RpcTransaction, error)  {
@@ -100,7 +99,7 @@ func (chain *ChainApi) SendRawTransaction(txbytes common.Bytes) (string, error) 
 
 //根据地址获取地址对应的别名
 func (chain *ChainApi) GetAliasByAddress(addr *crypto.CommonAddress) string {
-	return chain.chainService.DatabaseService.GetStorageAlias(addr, false)
+	return chain.chainService.DatabaseService.GetStorageAlias(addr)
 }
 //根据别名获取别名对应的地址
 func (chain *ChainApi) GetAddressByAlias(alias string) *crypto.CommonAddress {

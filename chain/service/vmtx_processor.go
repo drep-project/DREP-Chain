@@ -34,14 +34,12 @@ import (
 // StateProcessor implements Processor.
 type StateProcessor struct {
 	chainService *ChainService
-	databaseApi  *database.DatabaseService
 }
 
 // NewStateProcessor initialises a new StateProcessor.
 func NewStateProcessor(chainservice *ChainService) *StateProcessor {
 	return &StateProcessor{
 		chainService: chainservice,
-		databaseApi:  chainservice.DatabaseService,
 	}
 }
 
@@ -49,15 +47,16 @@ func NewStateProcessor(chainservice *ChainService) *StateProcessor {
 // and uses the input parameters for its environment. It returns the receipt
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
-func (stateProcessor *StateProcessor) ApplyTransaction(state *vm.State, bc evm.ChainContext, gp *GasPool, header *types.BlockHeader, tx *types.Transaction, from *crypto.CommonAddress, usedGas *uint64) (*types.Receipt, uint64, error) {
+func (stateProcessor *StateProcessor) ApplyTransaction(db *database.Database, bc evm.ChainContext, gp *GasPool, header *types.BlockHeader, tx *types.Transaction, from *crypto.CommonAddress, usedGas *uint64) (*types.Receipt, uint64, error) {
 	// Apply the transaction to the current state (included in the env)
-	_, gas, gasFee, failed, err := stateProcessor.ApplyMessage(tx, from, state, header, bc, gp)
+	newState := vm.NewState(db)
+	_, gas, gasFee, failed, err := stateProcessor.ApplyMessage(db, tx, from, newState, header, bc, gp)
 	if err != nil {
 		return nil, 0, err
 	}
 	*usedGas += gas
 
-	root := stateProcessor.databaseApi.GetStateRoot()
+	root := db.GetStateRoot()
 	// Create a new receipt for the transaction, storing the intermediate root and gas used by the tx
 	// based on the eip phase, we're passing whether the root touch-delete accounts.
 	receipt := types.NewReceipt(root, failed, *usedGas)
@@ -70,7 +69,7 @@ func (stateProcessor *StateProcessor) ApplyTransaction(state *vm.State, bc evm.C
 		fmt.Println(common.Encode(receipt.ContractAddress[:]))
 	}
 	// Set the receipt logs and create a bloom for filtering
-	receipt.Logs = state.GetLogs(tx.TxHash().Bytes())
+	receipt.Logs = db.GetLogs(tx.TxHash().Bytes())
 	return receipt, gas, err
 }
 
@@ -81,8 +80,8 @@ func (stateProcessor *StateProcessor) ApplyTransaction(state *vm.State, bc evm.C
 // the gas used (which includes gas refunds) and an error if it failed. An error always
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
-func (stateProcessor *StateProcessor) ApplyMessage(tx *types.Transaction, from *crypto.CommonAddress, state *vm.State, header *types.BlockHeader, bc evm.ChainContext, gp *GasPool) ([]byte, uint64, uint64, bool, error) {
-	stateTransaction := NewStateTransition(stateProcessor.databaseApi, stateProcessor.chainService.VmService, tx, from, state, header, bc, gp)
+func (stateProcessor *StateProcessor) ApplyMessage(db *database.Database, tx *types.Transaction, from *crypto.CommonAddress, state *vm.State, header *types.BlockHeader, bc evm.ChainContext, gp *GasPool) ([]byte, uint64, uint64, bool, error) {
+	stateTransaction := NewStateTransition(db, stateProcessor.chainService.VmService, tx, from, state, header, bc, gp)
 	if err := stateTransaction.preCheck(); err != nil {
 		return nil, 0, 0, false, err
 	}

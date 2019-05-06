@@ -2,15 +2,14 @@ package service
 
 import (
 	"bytes"
-	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/chain/params"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/secp256k1/schnorr"
 	"github.com/drep-project/drep-chain/crypto/sha3"
+	"github.com/drep-project/drep-chain/database"
 	"math/big"
 )
 
@@ -50,16 +49,6 @@ func (chainService *ChainService) ValidateBody(block *chainTypes.Block) error {
 	return nil
 }
 
-func (chainService *ChainService) ValidateState(block *chainTypes.Block) error {
-	stateRoot := chainService.DatabaseService.GetStateRoot()
-	if bytes.Equal(block.Header.StateRoot, stateRoot) {
-		dlog.Debug("matched ", "BlockStateRoot", hex.EncodeToString(block.Header.StateRoot), "CalcStateRoot", hex.EncodeToString(stateRoot))
-		return nil
-	} else {
-		return fmt.Errorf("%s not matched %s", hex.EncodeToString(block.Header.StateRoot), hex.EncodeToString(stateRoot))
-	}
-}
-
 func (chainService *ChainService) ValidateMultiSig(b *chainTypes.Block, skipCheckSig bool) bool {
 	if skipCheckSig {  //just for solo
 		return true
@@ -76,13 +65,13 @@ func (chainService *ChainService) ValidateMultiSig(b *chainTypes.Block, skipChec
 	return schnorr.Verify(sigmaPk, sha3.Hash256(msg), b.MultiSig.Sig.R, b.MultiSig.Sig.S)
 }
 
-func (chainService *ChainService) executeTransactionInBlock(block *chainTypes.Block, gp *GasPool) (*big.Int, error) {
+func (chainService *ChainService) executeTransactionInBlock(db *database.Database,block *chainTypes.Block, gp *GasPool) (*big.Int, error) {
 	total := big.NewInt(0)
 	if len(block.Data.TxList)  <0 {
 		return new (big.Int), nil
 	}
 	for _, t := range block.Data.TxList {
-		_, gasFee, err := chainService.executeTransaction(t, gp, block.Header)
+		_, gasFee, err := chainService.executeTransaction(db, t, gp, block.Header)
 		if err != nil {
 			return nil, err
 			//dlog.Debug("execute transaction fail", "txhash", t.Data, "reason", err.Error())

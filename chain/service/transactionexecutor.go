@@ -3,24 +3,23 @@ package service
 import (
 	"errors"
 	"fmt"
+	"github.com/drep-project/binary"
+	"github.com/drep-project/dlog"
+	"github.com/drep-project/drep-chain/app"
+	"github.com/drep-project/drep-chain/chain/params"
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/database"
+	"github.com/drep-project/drep-chain/pkgs/evm/vm"
 	"math"
 	"math/big"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
-
-	"github.com/drep-project/binary"
-	"github.com/drep-project/dlog"
-	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/chain/params"
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/pkgs/evm/vm"
 )
 
 const (
-	allowedFutureBlockTime = 15 * time.Second
+	allowedFutureBlockTime    = 15 * time.Second
 )
 
 var (
@@ -28,11 +27,11 @@ var (
 	errBalance = errors.New("not enough balance")
 )
 
-func (chainService *ChainService) VerifyTransaction(tx *chainTypes.Transaction) error {
-	return chainService.verifyTransaction(tx)
+func (chainService *ChainService) VerifyTransaction(db *database.Database, tx *chainTypes.Transaction) error {
+	return chainService.verifyTransaction(db, tx)
 }
 
-func (chainService *ChainService) verifyTransaction(tx *chainTypes.Transaction) error {
+func (chainService *ChainService) verifyTransaction(db *database.Database,tx *chainTypes.Transaction) error {
 	from, err := tx.From()
 	nounce := tx.Nonce()
 
@@ -42,9 +41,9 @@ func (chainService *ChainService) verifyTransaction(tx *chainTypes.Transaction) 
 		return errors.New("engative amount in tx")
 	}
 
-	err = chainService.checkNonce(from, nounce)
-	if err != nil {
-		return err
+	nonce := db.GetNonce(from)
+	if nonce > nounce {
+		return fmt.Errorf("error nounce %d != %d", nonce,nounce)
 	}
 
 	// Check the transaction doesn't exceed the current
@@ -63,13 +62,13 @@ func (chainService *ChainService) verifyTransaction(tx *chainTypes.Transaction) 
 
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
-	originBalance := chainService.DatabaseService.GetBalance(from, false)
+	originBalance := db.GetBalance(from)
 	if originBalance.Cmp(tx.Cost()) < 0 {
 		return errors.New("not enough balance")
 	}
 
 	// Should supply enough intrinsic gas
-	gas, err := IntrinsicGas(tx.AsPersistentMessage(), tx.To() == nil || tx.To().IsEmpty())
+	gas, err := IntrinsicGas(tx.AsPersistentMessage(), tx.To() == nil|| tx.To().IsEmpty() )
 	if err != nil {
 		return err
 	}
@@ -81,9 +80,7 @@ func (chainService *ChainService) verifyTransaction(tx *chainTypes.Transaction) 
 }
 
 //TODO 交易验证存在的问题， 合约是否需要执行
-func (chainService *ChainService) executeTransaction(tx *chainTypes.Transaction, gp *GasPool, header *chainTypes.BlockHeader) (*big.Int, *big.Int, error) {
-	//gp       = new(GasPool).AddGas(block.GasLimit())
-	newState := vm.NewState(chainService.DatabaseService)
+func (chainService *ChainService) executeTransaction(db *database.Database, tx *chainTypes.Transaction, gp *GasPool, header *chainTypes.BlockHeader) (*big.Int, *big.Int, error) {
 	from, err := tx.From()
 	if err != nil {
 		return nil, nil, err
@@ -91,21 +88,13 @@ func (chainService *ChainService) executeTransaction(tx *chainTypes.Transaction,
 
 	//TODO need test
 	gasUsed := new(uint64)
-	_, _, err = chainService.stateProcessor.ApplyTransaction(newState, chainService, gp, header, tx, from, gasUsed)
+	_, _, err = chainService.stateProcessor.ApplyTransaction(db, chainService, gp, header,tx, from, gasUsed)
 	if err != nil {
 		dlog.Error("executeTransaction transaction error", "reason", err)
 		return nil, nil, err
 	}
-	gasFee := new(big.Int).Mul(new(big.Int).SetUint64(*gasUsed), tx.GasPrice())
+	gasFee := new (big.Int).Mul(new(big.Int).SetUint64(*gasUsed), tx.GasPrice())
 	return new(big.Int).SetUint64(*gasUsed), gasFee, nil
-}
-
-func (chainService *ChainService) checkNonce(fromAccount *crypto.CommonAddress, nounce uint64) error {
-	nonce := chainService.DatabaseService.GetNonce(fromAccount, false)
-	if nonce > nounce {
-		return fmt.Errorf("error nounce %d != %d", nonce, nounce)
-	}
-	return nil
 }
 
 func (chainService *ChainService) checkBalance(gaslimit, gasPrice, balance, gasFloor, gasCap *big.Int) error {
@@ -197,6 +186,17 @@ func IntrinsicGas(data []byte, contractCreation bool) (uint64, error) {
 	}
 	return gas, nil
 }
+
+
+
+
+
+
+
+
+
+
+
 
 //func (chainService *ChainService) executeCrossChainTransaction(t *chainTypes.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
 //    var (

@@ -77,7 +77,7 @@ type ChainService struct {
 	Index         		*chainTypes.BlockIndex
 	BestChain     		*chainTypes.ChainView
 	stateLock     		sync.RWMutex
-	StateSnapshot 		*chainTypes.BestState
+	StateSnapshot 		*ChainState
 
 	Config       		*chainTypes.ChainConfig
 	pid          		*actor.PID
@@ -116,6 +116,11 @@ type syncHeaderHash struct {
 	height     uint64
 }
 
+type ChainState struct {
+	chainTypes.BestState
+	db *database.Database
+}
+
 func (chainService *ChainService) ChainID() app.ChainIdType {
 	return chainService.chainId
 }
@@ -152,22 +157,18 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 	chainService.taskTxsCh = make(chan tasksTxsSync, maxLivePeer)
 	chainService.stateProcessor = NewStateProcessor(chainService)
 	chainService.gpo = NewOracle(chainService, chainService.Config.GasPrice)
-	//TODO ENSURE SAFE IN GENESIS BLOCK
-	chainState := chainService.DatabaseService.GetChainState()
-	if chainState == nil {
-		chainService.genesisBlock, err = chainService.GenesisBlock(chainService.Config.GenesisPK)
-		if err != nil {
-			return nil
-		}
+
+	chainService.genesisBlock = chainService.GetGenisiBlock(chainService.Config.GenesisPK)
+	hash := chainService.genesisBlock.Header.Hash()
+	if !chainService.DatabaseService.HasBlock(hash) {
+		chainService.genesisBlock, err = chainService.ProcessGenesisBlock(chainService.Config.GenesisPK)
 		err = chainService.createChainState()
 		if err != nil {
 			return err
 		}
-	}else{
-		chainService.genesisBlock = chainService.GetGenisiBlock()
 	}
 	chainService.InitStates()
-	chainService.transactionPool = txpool.NewTransactionPool(chainService.DatabaseService)
+	chainService.transactionPool = txpool.NewTransactionPool(chainService.StateSnapshot.db)
 
 	chainService.P2pServer.AddProtocols([]p2p.Protocol{
 		p2p.Protocol{
@@ -215,15 +216,20 @@ func (chainService *ChainService) Stop(executeContext *app.ExecuteContext) error
 }
 
 func (chainService *ChainService) SendTransaction(tx *chainTypes.Transaction) error {
-	err := chainService.VerifyTransaction(tx)
+	chainService.stateLock.Lock()
+	db := chainService.StateSnapshot.db
+	chainService.stateLock.Unlock()
+	err := chainService.VerifyTransaction(db, tx)
+
 	if err != nil {
 		return err
 	}
 	err = chainService.transactionPool.AddTransaction(tx)
 	if err != nil {
 		return err
+	}else{
+		chainService.BroadcastTx(chainTypes.MsgTypeTransaction, tx, true)
 	}
-	chainService.BroadcastTx(chainTypes.MsgTypeTransaction, tx, true)
 	return nil
 }
 
@@ -245,20 +251,22 @@ func (chainService *ChainService) BroadcastBlock(msgType int32, block *chainType
 }
 
 func (chainService *ChainService) BroadcastTx(msgType int32, tx *chainTypes.Transaction, isLocal bool) {
-	for _, peer := range chainService.peersInfo {
-		b := peer.KnownTx(tx)
-		if !b {
-			if !isLocal {
-				//收到远端来的消息，仅仅广播给1/3的peer
-				rd := rand.Intn(broadcastRatio)
-				if rd > 1 {
-					continue
+	go func() {
+		for _, peer := range chainService.peersInfo {
+			b := peer.KnownTx(tx)
+			if !b {
+				if !isLocal {
+					//收到远端来的消息，仅仅广播给1/3的peer
+					rd := rand.Intn(broadcastRatio)
+					if rd > 1 {
+						continue
+					}
 				}
+				peer.MarkTx(tx)
+				chainService.P2pServer.Send(peer.GetMsgRW(), uint64(msgType), chainTypes.Transactions{*tx})
 			}
-			peer.MarkTx(tx)
-			chainService.P2pServer.Send(peer.GetMsgRW(), uint64(msgType), chainTypes.Transactions{*tx})
 		}
-	}
+	}()
 }
 
 func (chainService *ChainService) blockExists(blockHash *crypto.Hash) bool {
@@ -266,8 +274,8 @@ func (chainService *ChainService) blockExists(blockHash *crypto.Hash) bool {
 }
 
 func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey) (*chainTypes.Block, error) {
-	chainService.DatabaseService.BeginTransaction()
-	defer chainService.DatabaseService.Discard()
+	db := chainService.DatabaseService.BeginTransaction()
+	defer db.Discard()
 	parent, err := chainService.GetHighestBlock()
 	if err != nil {
 		return nil, err
@@ -303,7 +311,7 @@ SELECT_TX:
 			case <-stopchanel:
 				break SELECT_TX
 		default:
-			g, _, err := chainService.executeTransaction(t, gp, blockHeader)
+			g, _, err := chainService.executeTransaction(db, t, gp, blockHeader)
 			if err == nil {
 				finalTxs = append(finalTxs, t)
 				gasUsed.Add(gasUsed, g)
@@ -322,7 +330,7 @@ SELECT_TX:
 	}
 
 	blockHeader.GasUsed = *new (big.Int).SetUint64(gasUsed.Uint64())
-	blockHeader.StateRoot = chainService.DatabaseService.GetStateRoot()
+	blockHeader.StateRoot = db.GetStateRoot()
 	blockHeader.TxRoot = chainService.deriveMerkleRoot(finalTxs)
 
 	block := &chainTypes.Block{
@@ -359,21 +367,21 @@ func (chainService *ChainService) RootChain() app.ChainIdType {
 }
 
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
-func (chainService *ChainService) accumulateRewards(b *chainTypes.Block, totalGasBalance *big.Int) {
+func (chainService *ChainService) accumulateRewards(db *database.Database,b *chainTypes.Block, totalGasBalance *big.Int) {
 	reward := new(big.Int).SetUint64(uint64(Rewards))
 	leaderAddr := crypto.PubKey2Address(&b.Header.LeaderPubKey)
 
 	r := new(big.Int)
 	r = r.Div(reward, new(big.Int).SetInt64(2))
 	r.Add(r, totalGasBalance)
-	chainService.DatabaseService.AddBalance(&leaderAddr, r, true)
+	db.AddBalance(&leaderAddr, r)
 
 	num := len(b.Header.MinorPubKeys)
 	for _, memberPK := range b.Header.MinorPubKeys {
 		if !memberPK.IsEqual(&b.Header.LeaderPubKey) {
 			memberAddr := crypto.PubKey2Address(&memberPK)
 			r.Div(reward, new(big.Int).SetInt64(int64(num*2)))
-			chainService.DatabaseService.AddBalance(&memberAddr, r, true)
+			db.AddBalance(&memberAddr, r)
 		}
 	}
 }

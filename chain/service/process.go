@@ -1,17 +1,15 @@
 package service
 
 import (
+	"bytes"
 	"container/list"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/drep-project/dlog"
-	"github.com/drep-project/drep-chain/chain/params"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"math/big"
+	"github.com/drep-project/drep-chain/database"
 	"time"
 )
 
@@ -19,52 +17,6 @@ var (
 	errBlockExsist       = errors.New("already have block")
 	errOrphanBlockExsist = errors.New("already have block (orphan)")
 )
-
-func (chainService *ChainService) GenesisBlock(genesisPubkey string) (*chainTypes.Block, error) {
-	var err error
-	var root []byte
-	//NOTICE pre mine
-	err = chainService.DatabaseService.Transaction(func() error {
-		for _, producer := range chainService.Config.Producers {
-			//add account
-			storage := chainTypes.NewStorage()
-			storage.Balance = *big.NewInt(0).Mul(big.NewInt(1000000000000000000), big.NewInt(1000000000))
-			addr := crypto.PubKey2Address(producer.Pubkey)
-			chainService.DatabaseService.PutStorage(&addr, storage, true)
-		}
-		root = chainService.DatabaseService.GetStateRoot()
-		return nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	merkleRoot := chainService.deriveMerkleRoot(nil)
-	b := common.MustDecode(genesisPubkey)
-	pubkey, err := secp256k1.ParsePubKey(b)
-	if err != nil {
-		return nil, err
-	}
-	chainService.DatabaseService.RecordBlockJournal(0)
-	return &chainTypes.Block{
-		Header: &chainTypes.BlockHeader{
-			Version:      common.Version,
-			PreviousHash: crypto.Hash{},
-			GasLimit:     *new (big.Int).SetUint64(params.GenesisGasLimit),
-			GasUsed:      *new(big.Int),
-			Timestamp:    1545282765,
-			StateRoot:    root,
-			TxRoot:       merkleRoot,
-			Height:       0,
-			LeaderPubKey: *pubkey,
-		},
-		Data: &chainTypes.BlockData{
-			TxCount: 0,
-			TxList:  []*chainTypes.Transaction{},
-		},
-	}, nil
-}
 
 func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, bool, error) {
 	chainService.addBlockSync.Lock()
@@ -143,13 +95,21 @@ func (chainService *ChainService) processOrphans(hash *crypto.Hash) error {
 	return nil
 }
 
-func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (bool, error) {
+func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainChain bool, err error) {
+	db := chainService.DatabaseService.BeginTransaction()
+	defer func() {
+		if err == nil {
+			db.Commit()
+		}else{
+			db.Discard()
+		}
+	}()
 	prevNode := chainService.Index.LookupNode(&block.Header.PreviousHash)
 	preBlock := prevNode.Header()
 	if !(chainService.ValidateMultiSig(block, chainService.Config.SkipCheckMutiSig||false)) {
 		return false, errors.New("verify multisig error")
 	}
-	err := chainService.VerifyHeader(block.Header, &preBlock)
+	err = chainService.VerifyHeader(block.Header, &preBlock)
 	if err != nil {
 		return false, err
 	}
@@ -171,8 +131,9 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (bool, er
 	if err != nil {
 		return false, err
 	}
+
 	if block.Header.PreviousHash.IsEqual(chainService.BestChain.Tip().Hash) {
- 		err = chainService.connectBlock(block, newNode)
+ 		err = chainService.connectBlock(db, block, newNode)
 		if err != nil {
 			return false, err
 		}
@@ -189,7 +150,7 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (bool, er
 
 	// Reorganize the chain.
 	dlog.Info("REORGANIZE: Block is causing a reorganize.", "hash", newNode.Hash)
-	err = chainService.reorganizeChain(detachNodes, attachNodes)
+	err = chainService.reorganizeChain(db, detachNodes, attachNodes)
 
 	// Either getReorganizeNodes or reorganizeChain could have made unsaved
 	// changes to the block index, so flush regardless of whether there was an
@@ -201,20 +162,22 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (bool, er
 	return err == nil, err
 }
 
-func (chainService *ChainService) connectBlock(block *chainTypes.Block, newNode *chainTypes.BlockNode) error {
-	err := chainService.DatabaseService.Transaction(func() error {
-		gp := new (GasPool).AddGas(block.Header.GasLimit.Uint64())
-		//process transaction
-		_, err := chainService.executeTransactionInBlock(block, gp)
-		if err != nil {
-			return err
-		}
-		err = chainService.ValidateState(block)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+func (chainService *ChainService) connectBlock(db *database.Database, block *chainTypes.Block, newNode *chainTypes.BlockNode) (err error) {
+	gp := new (GasPool).AddGas(block.Header.GasLimit.Uint64())
+	//process transaction
+	_, err = chainService.executeTransactionInBlock(db, block, gp)
+	if err != nil {
+		chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValidateFailed)
+		chainService.flushIndexState()
+		return err
+	}
+
+	stateRoot := db.GetStateRoot()
+	if bytes.Equal(block.Header.StateRoot, stateRoot) {
+		dlog.Debug("matched ", "BlockStateRoot", hex.EncodeToString(block.Header.StateRoot), "CalcStateRoot", hex.EncodeToString(stateRoot))
+	} else {
+		err = fmt.Errorf("%s not matched %s", hex.EncodeToString(block.Header.StateRoot), hex.EncodeToString(stateRoot))
+	}
 
 	if err == nil {
 		chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValid)
@@ -225,7 +188,7 @@ func (chainService *ChainService) connectBlock(block *chainTypes.Block, newNode 
 	}
 	chainService.flushIndexState()
 
-	chainService.markState(newNode)
+	chainService.markState(db, newNode)
 	chainService.notifyBlock(block)
 	// If this is fast add, or this block node isn't yet marked as
 	// valid, then we'll update its status and flush the state to
@@ -292,7 +255,7 @@ func (chainService *ChainService) getReorganizeNodes(node *chainTypes.BlockNode)
 	return detachNodes, attachNodes
 }
 
-func (chainService *ChainService) reorganizeChain(detachNodes, attachNodes *list.List) error {
+func (chainService *ChainService) reorganizeChain(db *database.Database,detachNodes, attachNodes *list.List) error {
 	if detachNodes.Len() == 0 && attachNodes.Len() == 0 {
 		return nil
 	}
@@ -300,9 +263,10 @@ func (chainService *ChainService) reorganizeChain(detachNodes, attachNodes *list
 		elem := detachNodes.Back()
 		lastBlock := elem.Value.(*chainTypes.BlockNode)
 		height := lastBlock.Height - 1
-		chainService.DatabaseService.Rollback2Block(height)
+		//TODO how to roll back while in transaction
+		db.Rollback2Block(height)
 		dlog.Info("REORGANIZE:RollBack state root", "Height", height)
-		chainService.markState(lastBlock.Parent)
+		chainService.markState(db, lastBlock.Parent)
 		elem = attachNodes.Front()
 		for elem != nil {
 			blockNode := elem.Value.(*chainTypes.BlockNode)
@@ -323,7 +287,7 @@ func (chainService *ChainService) reorganizeChain(detachNodes, attachNodes *list
 			if err != nil {
 				return err
 			}
-			err = chainService.connectBlock(block, blockNode)
+			err = chainService.connectBlock(db, block, blockNode)
 			if err != nil {
 				return err
 			}
@@ -342,24 +306,20 @@ func (chainService *ChainService) notifyDetachBlock(block *chainTypes.Block) {
 	chainService.DetachBlockFeed.Send(block)
 }
 
-func (chainService *ChainService) markState(blockNode *chainTypes.BlockNode) {
+func (chainService *ChainService) markState(db *database.Database,blockNode *chainTypes.BlockNode) {
 	state := chainTypes.NewBestState(blockNode, blockNode.CalcPastMedianTime())
-	chainService.DatabaseService.PutChainState(state)
+	db.PutChainState(state)
 	chainService.BestChain.SetTip(blockNode)
 	chainService.stateLock.Lock()
-	chainService.StateSnapshot = state
+	chainService.StateSnapshot = &ChainState{
+		BestState: *state,
+		db: db,
+	}
+	chainService.transactionPool.UpdateState(db)
 	chainService.stateLock.Unlock()
-	chainService.DatabaseService.RecordBlockJournal(state.Height)
+	db.RecordBlockJournal(state.Height)
 }
 
-func (chainService *ChainService) GetGenisiBlock() *chainTypes.Block {
-	var block *chainTypes.Block
-	_ = chainService.DatabaseService.BlockNodeIterator(func(header *chainTypes.BlockHeader, status chainTypes.BlockStatus) error {
-		block, _ = chainService.DatabaseService.GetBlock(header.Hash())
-		return errors.New("_")
-	})
-	return block
-}
 //TODO need to  improves the performan
 func (chainService *ChainService) InitStates() error {
 	chainState := chainService.DatabaseService.GetChainState()
@@ -417,9 +377,8 @@ func (chainService *ChainService) InitStates() error {
 	chainService.BestChain.SetTip(tip)
 
 	// Load the raw block bytes for the best block.
-	_, err = chainService.DatabaseService.GetBlock(&chainState.Hash)
-	if err != nil {
-		return err
+	if !chainService.DatabaseService.HasBlock(&chainState.Hash) {
+		return fmt.Errorf(fmt.Sprintf("block not exist: cannot find block %s in block index", chainState.Hash))
 	}
 
 	// As a final consistency check, we'll run through all the
@@ -436,8 +395,12 @@ func (chainService *ChainService) InitStates() error {
 			chainService.Index.SetStatusFlags(iterNode, chainTypes.StatusValid)
 		}
 	}
-
-	chainService.StateSnapshot = chainTypes.NewBestState(tip, tip.CalcPastMedianTime())
+	chainService.stateLock.Lock()
+	chainService.StateSnapshot = &ChainState{
+		BestState: *chainTypes.NewBestState(tip, tip.CalcPastMedianTime()),
+		db: chainService.DatabaseService.BeginTransaction(),
+	}
+	chainService.stateLock.Unlock()
 
 	// As we might have updated the index after it was loaded, we'll
 	// attempt to flush the index to the DB. This will only result in a
@@ -455,14 +418,12 @@ func (chainService *ChainService) createChainState() error {
 
 	// Initialize the state related to the best block.  Since it is the
 	// genesis block, use its timestamp for the median time.
-
-	chainService.StateSnapshot = chainTypes.NewBestState(node, time.Unix(int64(node.TimeStamp), 0))
-
-	//blockIndexBucketName
-
-	//hashIndexBucketName
-
-	//heightIndexBucketName
+	chainService.stateLock.Lock()
+	chainService.StateSnapshot = &ChainState{
+		BestState: *chainTypes.NewBestState(node, time.Unix(int64(node.TimeStamp), 0)),
+		db: chainService.DatabaseService.BeginTransaction(),
+	}
+	chainService.stateLock.Unlock()
 
 	// Save the genesis block to the block index database.
 	err := chainService.DatabaseService.PutBlockNode(node)
@@ -471,7 +432,10 @@ func (chainService *ChainService) createChainState() error {
 	}
 
 	// Store the current best chain state into the database.
-	err = chainService.DatabaseService.PutChainState(chainService.StateSnapshot)
+	chainService.stateLock.Lock()
+	state := chainService.StateSnapshot.BestState
+	chainService.stateLock.Unlock()
+	err = chainService.DatabaseService.PutChainState(&state)
 	if err != nil {
 		return err
 	}
