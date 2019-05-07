@@ -1,6 +1,9 @@
 package database
 
 import (
+	"encoding/hex"
+	"errors"
+	"fmt"
 	"github.com/drep-project/binary"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
@@ -25,7 +28,6 @@ const (
 	dbOperaterJournal   = "addrOperatesJournal" //每一次数据读写过程的记录
 	addressStorage      = "addressStorage"      //以地址作为KEY的对象存储
 	stateRoot           = "state rootState"
-	aliasKey            = "aliasKey" //构建aliasKey时，添加的前缀
 )
 
 func NewDatabase(dbPath string) (*Database, error) {
@@ -75,139 +77,7 @@ func (db *Database) initState() error {
 	if err != nil {
 		return err
 	}
-	return db.put(db.root, value, false)
-}
-
-func (db *Database) get(key []byte, transactional bool) ([]byte, error) {
-	if !transactional {
-		return db.db.Get(key, nil)
-	}
-	hk := bytes2Hex(key)
-	value, ok := db.temp[hk]
-	if !ok {
-		var err error
-		value, err = db.db.Get(key, nil)
-		if err != nil {
-			return nil, err
-		}
-		db.temp[hk] = value
-	}
-	return value, nil
-}
-
-func (db *Database) put(key []byte, value []byte, temporary bool) error {
-	if !temporary {
-		seqVal, err := db.db.Get([]byte(dbOperaterMaxSeqKey), nil)
-		if err != nil {
-			return err
-		}
-
-		var seq = new(big.Int).SetBytes(seqVal).Int64() + 1
-		previous, _ := db.get(key, temporary)
-		j := &journal{
-			Op:       "put",
-			Key:      key,
-			Value:    value,
-			Previous: previous,
-		}
-		err = db.db.Put(key, value, nil)
-		if err != nil {
-			return err
-		}
-		jVal, err := binary.Marshal(j)
-		if err != nil {
-			return err
-		}
-		//存储seq-operater kv对
-		err = db.db.Put([]byte(dbOperaterJournal+strconv.FormatInt(seq, 10)), jVal, nil)
-		if err != nil {
-			return err
-		}
-		//记录当前最高的seq
-		return db.db.Put([]byte(dbOperaterMaxSeqKey), new(big.Int).SetInt64(seq).Bytes(), nil)
-	}
-	db.temp[bytes2Hex(key)] = value
-	return nil
-}
-
-func (db *Database) delete(key []byte, temporary bool) error {
-	if !temporary {
-		seqVal, err := db.db.Get([]byte(dbOperaterMaxSeqKey), nil)
-		if err != nil {
-			return err
-		}
-		var seq = new(big.Int).SetBytes(seqVal).Int64() + 1
-		previous, _ := db.get(key, temporary)
-		j := &journal{
-			Op:       "del",
-			Key:      key,
-			Previous: previous,
-		}
-		err = db.db.Delete(key, nil)
-		if err != nil {
-			return err
-		}
-		jVal, err := binary.Marshal(j)
-		if err != nil {
-			return err
-		}
-		err = db.db.Put([]byte(dbOperaterJournal+strconv.FormatInt(seq, 10)), jVal, nil)
-		if err != nil {
-			return err
-		}
-		err = db.db.Put([]byte(dbOperaterMaxSeqKey), new(big.Int).SetInt64(seq).Bytes(), nil)
-		if err != nil {
-			return err
-		}
-		return db.db.Delete(key, nil)
-	}
-	db.temp[bytes2Hex(key)] = nil
-	return nil
-}
-
-func (db *Database) BeginTransaction() {
-	db.txLock.Lock()
-	db.temp = make(map[string][]byte)
-	db.states = make(map[string]*State)
-	db.stores = make(map[string]*chainTypes.Storage)
-	db.aliasAddress = bimap.NewBiMap() //make(map[string][]byte)
-}
-
-func (db *Database) EndTransaction() {
-	db.temp = nil
-	db.states = nil
-	db.stores = nil
-	db.aliasAddress = nil
-	db.txLock.Unlock()
-}
-
-func (db *Database) Commit() error {
-	for key, value := range db.temp {
-		bk := hex2Bytes(key)
-		if value != nil {
-			err := db.put(bk, value, false)
-			if err != nil {
-				return err
-			}
-		} else {
-			err := db.delete(bk, false)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	err := db.aliasCommit()
-	if err != nil {
-		return err
-	}
-
-	db.EndTransaction()
-	return nil
-}
-
-func (db *Database) Discard() {
-	db.EndTransaction()
+	return db.db.Put(db.root, value)
 }
 
 func (db *Database) rollback(maxBlockSeq int64, maxSeqKey, journalKey string) (error, int64) {

@@ -264,7 +264,7 @@ func (pool *TransactionPool) adjust(block *chainTypes.Block) {
 		for addr, _ := range addrMap {
 			// 获取数据库里面的nonce
 			//根据nonce是否被处理，删除对应的交易
-			nonce := pool.databaseApi.GetNonce(&addr, true)
+			nonce := pool.database.GetNonce(&addr)
 			pool.mu.Lock()
 			list, ok := pool.pending[addr]
 			if ok {

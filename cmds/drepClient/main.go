@@ -140,7 +140,6 @@ func callgetPoolTransactions(args cli.Args, client *rpc.Client, ctx context.Cont
 		fmt.Println(err)
 	}
 
-	//if len(resp) > 1 {
 	fmt.Println("queue txs:")
 	for _, tx := range resp[0] {
 		fmt.Println("type:", tx.Type(), "nonce:", tx.Nonce(), "amount:", tx.Amount(), "gas:", tx.Gas(), "gasPrice:", tx.GasPrice())
@@ -150,12 +149,6 @@ func callgetPoolTransactions(args cli.Args, client *rpc.Client, ctx context.Cont
 	for _, tx := range resp[1] {
 		fmt.Println("type:", tx.Type(), "nonce:", tx.Nonce(), "amount:", tx.Amount(), "gas:", tx.Gas(), "gasPrice:", tx.GasPrice())
 	}
-	//} else {
-	//	fmt.Println("pending txs:")
-	//	for _, tx := range resp[0] {
-	//		fmt.Println("type:", tx.Type(), "nonce:", tx.Nonce(), "amount:", tx.Amount(), "gas:", tx.Gas(), "gasPrice:", tx.GasPrice())
-	//	}
-	//}
 }
 
 func callGetPoolMiniPendingNonce(args cli.Args, client *rpc.Client, ctx context.Context) {
