@@ -66,8 +66,14 @@ func (store *LevelDbStore) DelRecord(block *chainTypes.Block)  {
 		key := store.TxKey(txHash)
 		store.db.Delete(key, nil)
 		from, _ := tx.From()
-		historyKey := store.TxSendHistoryKey(from, txHash)
-		store.db.Delete(historyKey, nil)
+		sendHistoryKey := store.TxSendHistoryKey(from, txHash)
+		store.db.Delete(sendHistoryKey, nil)
+
+		to := tx.To()
+		if to != nil {
+			receiveHistoryKey := store.TxReceiveHistoryKey(to, txHash)
+			store.db.Delete(receiveHistoryKey, nil)
+		}
 	}
 }
 
