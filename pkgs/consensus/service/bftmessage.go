@@ -1,8 +1,8 @@
 package service
 
 import (
-	"errors"
 	"fmt"
+
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/network/p2p"
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
@@ -18,7 +18,7 @@ func (cs *ConsensusService) receiveMsg(peer *consensusTypes.PeerInfo, rw p2p.Msg
 		}
 
 		if msg.Size > consensusTypes.MaxMsgSize {
-			return errors.New("err msg size")
+			return ErrMsgSize
 		}
 
 		dlog.Debug("Receive setup msg ", "addr", peer.IP(), "code", msg.Code)

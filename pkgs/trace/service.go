@@ -105,6 +105,7 @@ func (traceService *TraceService) Process() error {
 			default:
 				select {
 				case <-traceService.readyToQuit:
+					<-traceService.readyToQuit
 					goto STOP
 				default:
 				}

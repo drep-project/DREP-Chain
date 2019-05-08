@@ -205,7 +205,7 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 							break
 						}
 					} else {
-						err = errors.New("BFT node not ready")
+						err =  ErrBFTNotReady
 						time.Sleep(time.Second * 10)
 					}
 				} else {

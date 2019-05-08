@@ -2,7 +2,6 @@ package service
 
 import (
 	"bytes"
-	"errors"
 	"github.com/drep-project/drep-chain/network/p2p/enode"
 	"math/big"
 	"sync"
@@ -107,14 +106,14 @@ func (leader *Leader) ProcessConsensus(msg []byte) (error, *secp256k1.Signature,
 	if !leader.waitForCommit() {
 		//send reason and reset
 		leader.fail("waitForCommit fail")
-		return errors.New("waitForCommit fail"), nil, nil
+		return ErrWaitCommit, nil, nil
 	}
 
 	leader.challenge(msg)
 	if !leader.waitForResponse() {
 		//send reason and reset
 		leader.fail("waitForResponse fail")
-		return errors.New("waitForResponse fail"), nil, nil
+		return ErrWaitResponse, nil, nil
 	}
 	dlog.Debug("response complete")
 
@@ -122,7 +121,7 @@ func (leader *Leader) ProcessConsensus(msg []byte) (error, *secp256k1.Signature,
 	dlog.Debug("vaidate result", "VALID", valid)
 	if !valid {
 		leader.fail("signature not valid")
-		return errors.New("signature not valid"), nil, nil
+		return ErrSignatureNotValid, nil, nil
 	}
 	return nil, &secp256k1.Signature{R: leader.sigmaS.R, S: leader.sigmaS.S}, leader.responseBitmap
 }
