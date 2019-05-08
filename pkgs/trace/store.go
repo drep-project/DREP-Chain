@@ -5,6 +5,7 @@ import (
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 )
 
+// IStore determine the interface to be implementation for storage
 type IStore interface {
 
 	InsertRecord(block *chainTypes.Block)

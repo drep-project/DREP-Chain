@@ -16,7 +16,10 @@ const (
 	TX_RECEIVE_HISTORY_PREFIX =  "RECEIVE_TXHISTORY"
 )
 
-
+// LevelDbStore used to save data to level db, there are 3 kinds of prefix in db.
+// "TX" for transaction collection,   							format "TX" + hash
+// "SEND_TXHISTORY" for transaction group by sender addr,   	format "SEND_TXHISTORY" + addr + hash
+// "RECEIVE_TXHISTORY" for transaction group by receive addr	format "RECEIVE_TXHISTORY" + addr + hash
 type LevelDbStore struct {
 	path string
 	db        *leveldb.DB
@@ -31,6 +34,7 @@ func NewLevelDbStore(path string) *LevelDbStore{
 	return &LevelDbStore{path,db}
 }
 
+// InsertRecord check block ,if tx exist, save to to history and send history , if to is not nil, save tx receive history
 func  (store *LevelDbStore) InsertRecord(block *chainTypes.Block)  {
 	for _, tx := range block.Data.TxList {
 		rawdata := tx.AsPersistentMessage()
