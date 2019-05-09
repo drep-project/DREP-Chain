@@ -1,15 +1,15 @@
 package service
 
 import (
-	"github.com/drep-project/drep-chain/app"
 	"sync/atomic"
-	"errors"
+
+	"github.com/drep-project/drep-chain/app"
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/drep-chain/crypto/sha3"
 	accountsComponent "github.com/drep-project/drep-chain/pkgs/accounts/component"
 	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
 )
 
 const (
@@ -42,7 +42,7 @@ func NewWallet(config *accountTypes.Config, chainId app.ChainIdType) (*Wallet, e
 
 func (wallet *Wallet) Open(password string) error {
 	if wallet.cacheStore != nil {
-		return errors.New("wallet is already open")
+		return ErrClosedWallet
 	}
 	cryptedPassword := wallet.cryptoPassword(password)
 	accountCacheStore, err := accountsComponent.NewCacheStore(wallet.config.KeyStoreDir, cryptedPassword)
@@ -72,14 +72,14 @@ func (wallet *Wallet) NewAccount() (*chainTypes.Node, error) {
 
 func (wallet *Wallet) GetAccountByAddress(addr *crypto.CommonAddress) (*chainTypes.Node, error) {
 	if err := wallet.checkWallet(RPERMISSION); err != nil {
-		return nil, errors.New("wallet is not open")
+		return nil, ErrClosedWallet
 	}
 	return wallet.cacheStore.GetKey(addr, wallet.password)
 }
 
 func (wallet *Wallet) GetAccountByPubkey(pubkey *secp256k1.PublicKey) (*chainTypes.Node, error) {
 	if err := wallet.checkWallet(RPERMISSION); err != nil {
-		return nil, errors.New("wallet is not open")
+		return nil, ErrClosedWallet
 	}
 	addr := crypto.PubKey2Address(pubkey)
 	return wallet.GetAccountByAddress(&addr)
@@ -87,7 +87,7 @@ func (wallet *Wallet) GetAccountByPubkey(pubkey *secp256k1.PublicKey) (*chainTyp
 
 func (wallet *Wallet) ListAddress() ([]*crypto.CommonAddress, error) {
 	if err := wallet.checkWallet(RPERMISSION); err != nil {
-		return nil, errors.New("wallet is not open")
+		return nil, ErrClosedWallet
 	}
 	nodes, err := wallet.cacheStore.ExportKey(wallet.password)
 	if err != nil {
@@ -114,7 +114,7 @@ func (wallet *Wallet) DumpPrivateKey(addr *crypto.CommonAddress) (*secp256k1.Pri
 
 func (wallet *Wallet) Sign(addr *crypto.CommonAddress, msg []byte) ([]byte, error) {
 	if len(msg) != 32 {
-		return nil, errors.New("wrong sise of the hash of transaction")
+		return nil, ErrNotAHash
 	}
 	if err := wallet.checkWallet(WPERMISSION); err != nil {
 		return nil, err
@@ -161,11 +161,11 @@ func (wallet *Wallet) unLock(password string) error {
 
 func (wallet *Wallet) checkWallet(op int) error {
 	if wallet.cacheStore == nil {
-		return errors.New("wallet is not open")
+		return ErrClosedWallet
 	}
 	if op == WPERMISSION {
 		if wallet.IsLock() {
-			return errors.New("wallet is locked")
+			return ErrLockedWallet
 		}
 	}
 	return nil

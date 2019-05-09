@@ -2,12 +2,12 @@ package component
 
 import (
 	"encoding/json"
+
 	"github.com/drep-project/drep-chain/app"
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/aes"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	"errors"
 )
 
 type KeyStore interface {
@@ -24,7 +24,7 @@ type KeyStore interface {
 type CryptedNode struct {
 	CryptoPrivateKey []byte                `json:"cryptoPrivateKey"`
 	PrivateKey       *secp256k1.PrivateKey `json:"-"`
-	ChainId          app.ChainIdType    `json:"chainId"`
+	ChainId          app.ChainIdType       `json:"chainId"`
 	ChainCode        []byte                `json:"chainCode"`
 
 	Key []byte `json:"-"`
@@ -51,7 +51,7 @@ func (cryptedNode *CryptedNode) DeCrypt() *chainTypes.Node {
 func bytesToCryptoNode(data []byte, auth string) (node *chainTypes.Node, errRef error) {
 	defer func() {
 		if err := recover(); err != nil {
-			errRef = errors.New("decryption failed")
+			errRef = ErrDecryptFail
 		}
 	}()
 	cryptoNode := new(CryptedNode)
@@ -62,4 +62,3 @@ func bytesToCryptoNode(data []byte, auth string) (node *chainTypes.Node, errRef 
 	node = cryptoNode.DeCrypt()
 	return
 }
-

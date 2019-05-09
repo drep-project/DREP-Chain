@@ -1,8 +1,6 @@
 package service
 
 import (
-	"errors"
-	"fmt"
 	"github.com/drep-project/binary"
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
@@ -10,6 +8,7 @@ import (
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
+	"github.com/pkg/errors"
 	"math"
 	"math/big"
 	"net/http"
@@ -19,62 +18,54 @@ import (
 )
 
 const (
-	allowedFutureBlockTime    = 15 * time.Second
+	allowedFutureBlockTime = 15 * time.Second
 )
 
 var (
 	childTrans []*chainTypes.Transaction
-	errBalance = errors.New("not enough balance")
 )
 
 func (chainService *ChainService) VerifyTransaction(db *database.Database, tx *chainTypes.Transaction) error {
 	return chainService.verifyTransaction(db, tx)
 }
 
-func (chainService *ChainService) verifyTransaction(db *database.Database,tx *chainTypes.Transaction) error {
+func (chainService *ChainService) verifyTransaction(db *database.Database, tx *chainTypes.Transaction) error {
 	from, err := tx.From()
 	nounce := tx.Nonce()
 
 	// Transactions can't be negative. This may never happen using RLP decoded
 	// transactions but may occur if you create a transaction using the RPC.
 	if tx.Amount().Sign() < 0 {
-		return errors.New("engative amount in tx")
+		return ErrNegativeAmount
 	}
 
 	nonce := db.GetNonce(from)
 	if nonce > nounce {
-		return fmt.Errorf("error nounce %d != %d", nonce,nounce)
+		return errors.Wrapf(errBalance, "error nounce %d != %d", nonce, nounce) 
 	}
 
 	// Check the transaction doesn't exceed the current
 	// block limit gas.
 	gasLimit := chainService.BestChain.Tip().GasLimit
 	if gasLimit.Uint64() < tx.Gas() {
-		return errors.New("gas limit in tx has exceed block limit")
-	}
-
-	// Transactions can't be negative. This may never happen
-	// using RLP decoded transactions but may occur if you create
-	// a transaction using the RPC for example.
-	if tx.Amount().Sign() < 0 {
-		return errors.New("negative amount in tx")
+		return ErrExceedGasLimit
 	}
 
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
 	originBalance := db.GetBalance(from)
 	if originBalance.Cmp(tx.Cost()) < 0 {
-		return errors.New("not enough balance")
+		return errBalance
 	}
 
 	// Should supply enough intrinsic gas
-	gas, err := IntrinsicGas(tx.AsPersistentMessage(), tx.To() == nil|| tx.To().IsEmpty() )
+	gas, err := IntrinsicGas(tx.AsPersistentMessage(), tx.To() == nil || tx.To().IsEmpty())
 	if err != nil {
 		return err
 	}
 	if tx.Gas() < gas {
-		msg := fmt.Sprintf("gas exceed tx gaslimit,need gas:%d,tx.gas:%d", gas, tx.Gas())
-		return errors.New(msg)
+		dlog.Error("gas exceed tx gaslimit ", "gas", gas, "tx.gas", tx.Gas())
+		return ErrReachGasLimit
 	}
 	return nil
 }
@@ -88,12 +79,12 @@ func (chainService *ChainService) executeTransaction(db *database.Database, tx *
 
 	//TODO need test
 	gasUsed := new(uint64)
-	_, _, err = chainService.stateProcessor.ApplyTransaction(db, chainService, gp, header,tx, from, gasUsed)
+	_, _, err = chainService.stateProcessor.ApplyTransaction(db, chainService, gp, header, tx, from, gasUsed)
 	if err != nil {
 		dlog.Error("executeTransaction transaction error", "reason", err)
 		return nil, nil, err
 	}
-	gasFee := new (big.Int).Mul(new(big.Int).SetUint64(*gasUsed), tx.GasPrice())
+	gasFee := new(big.Int).Mul(new(big.Int).SetUint64(*gasUsed), tx.GasPrice())
 	return new(big.Int).SetUint64(*gasUsed), gasFee, nil
 }
 
@@ -101,13 +92,13 @@ func (chainService *ChainService) checkBalance(gaslimit, gasPrice, balance, gasF
 	if gasFloor != nil {
 		amountFloor := new(big.Int).Mul(gasFloor, gasPrice)
 		if gaslimit.Cmp(gasFloor) < 0 || amountFloor.Cmp(balance) > 0 {
-			return errors.New("not enough gas")
+			return errGas
 		}
 	}
 	if gasCap != nil {
 		amountCap := new(big.Int).Mul(gasCap, gasPrice)
 		if amountCap.Cmp(balance) > 0 {
-			return errors.New("too much gaslimit")
+			return errBalance
 		}
 	}
 	return nil
@@ -186,17 +177,6 @@ func IntrinsicGas(data []byte, contractCreation bool) (uint64, error) {
 	}
 	return gas, nil
 }
-
-
-
-
-
-
-
-
-
-
-
 
 //func (chainService *ChainService) executeCrossChainTransaction(t *chainTypes.Transaction) (gasUsed *big.Int, gasFee *big.Int) {
 //    var (

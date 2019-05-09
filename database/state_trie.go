@@ -1,12 +1,12 @@
 package database
 
 import (
-	"errors"
-	"github.com/drep-project/drep-chain/crypto/sha3"
 	"strconv"
-)
-type StateStore interface {
 
+	"github.com/drep-project/drep-chain/crypto/sha3"
+)
+
+type StateStore interface {
 }
 
 type State struct {
@@ -44,7 +44,7 @@ func (state *State) getChildKey(key []byte, nib int) []byte {
 	return sha3.HashS256(key, []byte("child"), []byte(strconv.Itoa(nib)))
 }
 
-func newLeaf(db *Database,seq string, key, value []byte) (*State, error) {
+func newLeaf(db *Database, seq string, key, value []byte) (*State, error) {
 	leaf := &State{
 		Sequence: seq,
 		Value:    value,
@@ -58,7 +58,7 @@ func newLeaf(db *Database,seq string, key, value []byte) (*State, error) {
 	return leaf, nil
 }
 
-func  insert(db *Database, seq string, key, value []byte) (*State, error) {
+func insert(db *Database, seq string, key, value []byte) (*State, error) {
 	state, err := db.GetState(key)
 	if err != nil {
 		return newLeaf(db, seq, key, value)
@@ -208,7 +208,7 @@ func (state *State) del(key []byte, seq string) (*State, error) {
 		if seq == state.Sequence {
 			return state.delExistedLeaf(key)
 		} else {
-			return nil, errors.New("current Key not found")
+			return nil, ErrKeyNotFound
 		}
 	}
 	return state.delProceedingOnCurrentBranch(seq, key)
@@ -225,7 +225,7 @@ func (state *State) delExistedLeaf(key []byte) (*State, error) {
 func (state *State) delProceedingOnCurrentBranch(seq string, key []byte) (*State, error) {
 	_, offset := getCommonPrefix(seq, state.Sequence)
 	if offset < len(state.Sequence) {
-		return nil, errors.New("current Key not found")
+		return nil, ErrKeyNotFound
 	}
 	nib := getNextNibble(seq, offset)
 	state.ChildKeys[nib] = state.getChildKey(key, nib)
@@ -274,7 +274,7 @@ func (state *State) get(key []byte, seq string) (*State, error) {
 		if seq == state.Sequence {
 			return state, nil
 		}
-		return nil, errors.New("current Key not found")
+		return nil, ErrKeyNotFound
 	}
 	return state.getProceedingOnCurrentBranch(seq)
 }
@@ -282,7 +282,7 @@ func (state *State) get(key []byte, seq string) (*State, error) {
 func (state *State) getProceedingOnCurrentBranch(seq string) (*State, error) {
 	_, offset := getCommonPrefix(seq, state.Sequence)
 	if offset < len(state.Sequence) {
-		return nil, errors.New("current Key not found")
+		return nil, ErrKeyNotFound
 	}
 	nib := getNextNibble(seq, offset)
 	return state.get(state.ChildKeys[nib], seq[offset:])

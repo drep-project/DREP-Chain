@@ -1,7 +1,6 @@
 package database
 
 import (
-	"errors"
 	"sync"
 )
 
@@ -13,7 +12,7 @@ type TransactionDatabase struct {
 func NewTransactionDatabase(store IStore) *TransactionDatabase {
 	return &TransactionDatabase{
 		store: store,
-		temp: new (sync.Map),
+		temp:  new(sync.Map),
 	}
 }
 func (tDb *TransactionDatabase) Get(key []byte) ([]byte, error) {
@@ -28,21 +27,21 @@ func (tDb *TransactionDatabase) Get(key []byte) ([]byte, error) {
 	return val, nil
 }
 
-func (tDb *TransactionDatabase) Put(key []byte, value  []byte)  error {
-	 tDb.temp.Store(string(key), value)
-	 return nil
+func (tDb *TransactionDatabase) Put(key []byte, value []byte) error {
+	tDb.temp.Store(string(key), value)
+	return nil
 }
 
-func (tDb *TransactionDatabase) Delete(key []byte)  error {
+func (tDb *TransactionDatabase) Delete(key []byte) error {
 	tDb.temp.Store(string(key), nil)
 	return nil
 }
 
 func (tDb *TransactionDatabase) NewIterator(key []byte) Iterator {
-   panic(errors.New("not support iterator"))
+	panic(ErrKeyUnSpport)
 }
 
-func (tDb *TransactionDatabase) Flush()  {
+func (tDb *TransactionDatabase) Flush() {
 	tDb.temp.Range(func(key, value interface{}) bool {
 		bk := []byte(key.(string))
 		val := value.([]byte)
@@ -61,6 +60,6 @@ func (tDb *TransactionDatabase) Flush()  {
 	})
 }
 
-func (tDb *TransactionDatabase) Clear()  {
-	tDb.temp = new (sync.Map)
+func (tDb *TransactionDatabase) Clear() {
+	tDb.temp = new(sync.Map)
 }

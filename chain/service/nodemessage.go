@@ -1,13 +1,13 @@
 package service
 
 import (
-	"errors"
-	"fmt"
+	"time"
+
 	"github.com/drep-project/dlog"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/network/p2p"
-	"time"
+	"github.com/pkg/errors"
 )
 
 func (chainService *ChainService) receiveMsg(peer *chainTypes.PeerInfo, rw p2p.MsgReadWriter) error {
@@ -29,17 +29,17 @@ func (chainService *ChainService) receiveMsg(peer *chainTypes.PeerInfo, rw p2p.M
 	case err := <-errCh:
 		return err
 	case <-timeout:
-		return fmt.Errorf("req state timeout")
+		return ErrReqStateTimeout
 	case msg := <-msgCh:
 		switch msg.Code {
 		case chainTypes.MsgTypePeerStateReq:
 			var req chainTypes.PeerStateReq
 			if err := msg.Decode(&req); err != nil {
-				return fmt.Errorf("peerstatereq msg:%v err:%v", msg, err)
+				return errors.Wrapf(ErrDecodeMsg, "PeerStateReq msg:%v err:%v", msg, err)
 			}
 			chainService.handleReqPeerState(peer, &req)
 		default:
-			return fmt.Errorf("err msg type:%d", msg.Code)
+			return errors.Wrapf(ErrMsgType, "expected type:%d, receive type:%d", chainTypes.MsgTypePeerStateReq, msg.Code)
 		}
 	}
 
@@ -51,7 +51,7 @@ func (chainService *ChainService) receiveMsg(peer *chainTypes.PeerInfo, rw p2p.M
 }
 
 func (chainService *ChainService) dealMsg(peer *chainTypes.PeerInfo, rw p2p.MsgReadWriter) error {
-	dlog.Info("new peer", "peer addr:" ,peer.GetAddr())
+	dlog.Info("new peer", "peer addr:", peer.GetAddr())
 	for {
 		msg, err := rw.ReadMsg()
 		if err != nil {
@@ -60,30 +60,30 @@ func (chainService *ChainService) dealMsg(peer *chainTypes.PeerInfo, rw p2p.MsgR
 		}
 
 		if msg.Size > chainTypes.MaxMsgSize {
-			return errors.New("err msg size")
+			return ErrOverFlowMaxMsgSize
 		}
 
 		switch msg.Code {
 		case chainTypes.MsgTypeBlockReq:
 			var req chainTypes.BlockReq
 			if err := msg.Decode(&req); err != nil {
-				return fmt.Errorf("blockreq msg:%v err:%v", msg, err)
+				return errors.Wrapf(ErrDecodeMsg, "MsgTypeBlockReq msg:%v err:%v", msg, err)
 			}
 			go chainService.HandleBlockReqMsg(peer, &req)
 		case chainTypes.MsgTypeBlockResp:
 			var resp chainTypes.BlockResp
 			if err := msg.Decode(&resp); err != nil {
-				return fmt.Errorf("block resp msg:%v err:%v", msg, err)
+				return errors.Wrapf(ErrDecodeMsg, "BlockResp msg:%v err:%v", msg, err)
 			}
 			go chainService.HandleBlockRespMsg(&resp)
 		case chainTypes.MsgTypeTransaction:
 			var txs chainTypes.Transactions
 			if err := msg.Decode(&txs); err != nil {
-				return fmt.Errorf("tx msg:%v err:%v", msg, err)
+				return errors.Wrapf(ErrDecodeMsg, "Transactions msg:%v err:%v", msg, err)
 			}
 
 			// TODO backup nodes should not add
-			for _,tx := range txs {
+			for _, tx := range txs {
 				dlog.Trace("comming transaction", "transaction", tx.Nonce())
 				tx := tx
 				peer.MarkTx(&tx)
@@ -93,7 +93,7 @@ func (chainService *ChainService) dealMsg(peer *chainTypes.PeerInfo, rw p2p.MsgR
 		case chainTypes.MsgTypeBlock:
 			var newBlock chainTypes.Block
 			if err := msg.Decode(&newBlock); err != nil {
-				return fmt.Errorf("new block msg:%v err:%v", msg, err)
+				return errors.Wrapf(ErrDecodeMsg, "Block msg:%v err:%v", msg, err)
 			}
 
 			_, isOrPhan, err := chainService.ProcessBlock(&newBlock)
@@ -111,25 +111,25 @@ func (chainService *ChainService) dealMsg(peer *chainTypes.PeerInfo, rw p2p.MsgR
 		case chainTypes.MsgTypePeerState:
 			var resp chainTypes.PeerState
 			if err := msg.Decode(&resp); err != nil {
-				return fmt.Errorf("peerstate rsp msg:%v err:%v", msg, err)
+				return errors.Wrapf(ErrDecodeMsg, "PeerState msg:%v err:%v", msg, err)
 			}
 			go chainService.handlePeerState(peer, &resp)
 		case chainTypes.MsgTypePeerStateReq:
 			var req chainTypes.PeerStateReq
 			if err := msg.Decode(&req); err != nil {
-				return fmt.Errorf("peerstatereq msg:%v err:%v", msg, err)
+				return errors.Wrapf(ErrDecodeMsg, "PeerStateReq msg:%v err:%v", msg, err)
 			}
 			go chainService.handleReqPeerState(peer, &req)
 		case chainTypes.MsgTypeHeaderReq:
 			var req chainTypes.HeaderReq
 			if err := msg.Decode(&req); err != nil {
-				return fmt.Errorf("peerstate rsp msg:%v err:%v", msg, err)
+				return errors.Wrapf(ErrDecodeMsg, "HeaderReq msg:%v err:%v", msg, err)
 			}
 			go chainService.handleHeaderReq(peer, &req)
 		case chainTypes.MsgTypeHeaderRsp:
 			var resp chainTypes.HeaderRsp
 			if err := msg.Decode(&resp); err != nil {
-				return fmt.Errorf("peerstate rsp msg:%v err:%v", msg, err)
+				return errors.Wrapf(ErrDecodeMsg, "HeaderRsp msg:%v err:%v", msg, err)
 			}
 			go chainService.handleHeaderRsp(peer, &resp)
 		}

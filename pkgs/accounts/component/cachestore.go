@@ -1,11 +1,11 @@
 package component
 
 import (
-	"sync"
-	"errors"
 	"path/filepath"
-	"github.com/drep-project/drep-chain/crypto"
+	"sync"
+
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/crypto"
 )
 
 // accountCache This is used for buffering real storage and upper applications to speed up reading.
@@ -44,7 +44,7 @@ func (cacheStore *CacheStore) GetKey(addr *crypto.CommonAddress, auth string) (*
 			return node, nil
 		}
 	}
-	return nil, errors.New("key not found")
+	return nil, ErrKeyNotFound
 }
 
 // ExportKey export all key in cache by password
@@ -59,7 +59,7 @@ func (cacheStore *CacheStore) StoreKey(k *chainTypes.Node, auth string) error {
 
 	err := cacheStore.store.StoreKey(k, auth)
 	if err != nil {
-		return errors.New("save key failed" + err.Error())
+		return ErrSaveKey
 	}
 	cacheStore.nodes = append(cacheStore.nodes, k)
 	return nil
@@ -73,7 +73,7 @@ func (cacheStore *CacheStore) ReloadKeys(auth string) error {
 		if node.PrivateKey == nil {
 			key, err := cacheStore.store.GetKey(node.Address, auth)
 			if err != nil {
-				return errors.New("password not correct")
+				return ErrPassword
 			} else {
 				node.PrivateKey = key.PrivateKey
 			}

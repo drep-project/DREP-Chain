@@ -2,15 +2,15 @@ package app
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"github.com/drep-project/drep-chain/common/fileutil"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
 	"runtime/debug"
 	"strings"
+
+	"github.com/drep-project/drep-chain/common/fileutil"
 
 	"github.com/drep-project/drep-chain/common"
 	"gopkg.in/urfave/cli.v1"
@@ -22,7 +22,7 @@ var (
 		Name:  "config",
 		Usage: "TODO add config description",
 	}
-	
+
 	HomeDirFlag = common.DirectoryFlag{
 		Name:  "homedir",
 		Usage: "Home directory for the datadir logdir and keystore",
@@ -40,9 +40,9 @@ type DrepApp struct {
 func NewApp() *DrepApp {
 	return &DrepApp{
 		Context: &ExecuteContext{
-			Quit:make(chan struct{}),
+			Quit: make(chan struct{}),
 		},
-		App:     cli.NewApp(),
+		App: cli.NewApp(),
 	}
 }
 
@@ -55,14 +55,14 @@ func (mApp DrepApp) addServiceInstance(service Service) {
 func (mApp DrepApp) AddServices(serviceInstances ...interface{}) error {
 	nilService := reflect.TypeOf((*Service)(nil)).Elem()
 
-	for _, serviceInstance := range  serviceInstances {
+	for _, serviceInstance := range serviceInstances {
 		serviceType := reflect.TypeOf(serviceInstance)
 		if serviceType.Kind() == reflect.Ptr {
 			serviceType = serviceType.Elem()
 		}
 		serviceVal := reflect.New(serviceType)
 		if !serviceVal.Type().Implements(nilService) {
-			return errors.New("the service added not match service interface")
+			return ErrNotMatchedService
 		}
 		mApp.addService(serviceVal)
 	}
@@ -74,7 +74,7 @@ func (mApp DrepApp) AddServices(serviceInstances ...interface{}) error {
 func (mApp DrepApp) addService(serviceValue reflect.Value) {
 	serviceType := serviceValue.Type()
 	serviceNumFields := serviceType.Elem().NumField()
-	for i := 0; i < serviceNumFields; i++{
+	for i := 0; i < serviceNumFields; i++ {
 		serviceValueField := serviceValue.Elem().Field(i)
 		serviceTypeField := serviceType.Elem().Field(i)
 		if serviceValueField.Type().Implements(reflect.TypeOf((*Service)(nil)).Elem()) {
@@ -110,7 +110,7 @@ func GetServiceTag(field reflect.StructField) string {
 	serviceName := strings.Split(serviceTagStr, ",")
 	if len(serviceName) == 0 {
 		return field.Name
-	}else {
+	} else {
 		return serviceName[0]
 	}
 }
@@ -124,7 +124,7 @@ func (mApp DrepApp) Run() error {
 	mApp.Flags = append(mApp.Flags, ConfigFileFlag)
 	mApp.Flags = append(mApp.Flags, HomeDirFlag)
 	allCommands, allFlags := mApp.Context.AggerateFlags()
-	for i:= 0; i < len(allCommands); i++ {
+	for i := 0; i < len(allCommands); i++ {
 		allCommands[i].Flags = append(allCommands[i].Flags, allFlags...)
 		allCommands[i].Action = mApp.action
 	}
@@ -140,19 +140,19 @@ func (mApp DrepApp) Run() error {
 // action used to init and run each services
 func (mApp DrepApp) action(ctx *cli.Context) error {
 	defer func() {
-		if err:=recover();err!=nil{
+		if err := recover(); err != nil {
 			debug.PrintStack()
 			fmt.Println("app action err", err)
 		}
 		length := len(mApp.Context.Services)
-		for i:= length; i >0; i-- {
-			err := mApp.Context.Services[i - 1].Stop(mApp.Context)
+		for i := length; i > 0; i-- {
+			err := mApp.Context.Services[i-1].Stop(mApp.Context)
 			if err != nil {
 				return
 			}
 		}
 	}()
-	mApp.Context.Cli = ctx   //NOTE this set is for different commmands
+	mApp.Context.Cli = ctx //NOTE this set is for different commmands
 	for _, service := range mApp.Context.Services {
 		err := service.Init(mApp.Context)
 		if err != nil {
@@ -202,7 +202,7 @@ func loadConfigFile(ctx *cli.Context, homeDir string) (map[string]json.RawMessag
 		file := ctx.GlobalString(ConfigFileFlag.Name)
 		if fileutil.IsFileExists(file) {
 			//report error when user specify
-			return nil, errors.New("specify config file not exist")
+			return nil, ErrConfigiNotFound
 		}
 		configFile = file
 	}
@@ -210,15 +210,15 @@ func loadConfigFile(ctx *cli.Context, homeDir string) (map[string]json.RawMessag
 	if !fileutil.IsFileExists(configFile) {
 		//use default
 		cfg := &CommonConfig{
-			HomeDir: homeDir,
+			HomeDir:    homeDir,
 			ConfigFile: configFile,
 		}
-		originConfigBytes, err := json.MarshalIndent(cfg,"", "\t")
+		originConfigBytes, err := json.MarshalIndent(cfg, "", "\t")
 		if err != nil {
 			return nil, err
 		}
 		fileutil.EnsureFile(configFile)
-		file, err :=  os.OpenFile(configFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0777)
+		file, err := os.OpenFile(configFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0777)
 		if err != nil {
 			return nil, err
 		}

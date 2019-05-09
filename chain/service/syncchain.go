@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/drep-project/drep-chain/common"
 	"math/big"
 	"time"
+
+	"github.com/drep-project/drep-chain/common"
 
 	"github.com/drep-project/dlog"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
@@ -126,14 +127,14 @@ func (cs *ChainService) findAncestor(peer *chainTypes.PeerInfo) (uint64, error) 
 			}
 		}
 	case <-timeout:
-		return 0, fmt.Errorf("findAncestor timeout")
+		return 0, ErrFindAncesstorTimeout
 	}
 
 	//通过二分查找找相同的HASH
 	var ancestor uint64 = 0
 	var tmpFrom uint64 = 0
 	var tmpEnd uint64 = remoteHeight
-	for ; tmpFrom+1 < tmpEnd; {
+	for tmpFrom+1 < tmpEnd {
 		timeout = time.After(time.Second * maxNetworkTimeout)
 		err = cs.requestHeaders(peer, (tmpFrom+tmpEnd)/2, 1)
 		if err != nil {
@@ -142,7 +143,7 @@ func (cs *ChainService) findAncestor(peer *chainTypes.PeerInfo) (uint64, error) 
 
 		select {
 		case hash := <-cs.headerHashCh:
-			if len(hash) > 0{
+			if len(hash) > 0 {
 				b, h := cs.checkExistHeaderHash(hash[0].headerHash)
 				if b {
 					ancestor = h
@@ -150,15 +151,14 @@ func (cs *ChainService) findAncestor(peer *chainTypes.PeerInfo) (uint64, error) 
 				} else {
 					tmpEnd = (tmpFrom + tmpEnd) / 2
 				}
-			} else{
+			} else {
 				dlog.Error("peer response head hash len = 0")
 			}
 
 		case <-timeout:
-			return 0, fmt.Errorf("findAncestor timeout")
+			return 0, ErrFindAncesstorTimeout
 		}
 	}
-	fmt.Println("common ancenstor:", ancestor)
 	return ancestor, nil
 }
 
@@ -193,7 +193,7 @@ func (cs *ChainService) batchReqBlocks(hashs []crypto.Hash) {
 			//cs.P2pServer.SetIdle(bodyReqPeer, true)
 			cs.syncMut.Unlock()
 			if err != nil {
-				errNum ++
+				errNum++
 			}
 		}
 		if errNum < len(cs.peersInfo) {
@@ -245,7 +245,7 @@ func (cs *ChainService) fetchBlocks(peer *chainTypes.PeerInfo) error {
 				dlog.Info("fetchBlocks", "tasks len", cs.allTasks.Len())
 
 			case <-timeout:
-				errCh <- fmt.Errorf("get header hash timeout")
+				errCh <- ErrGetHeaderHashTimeout
 				return
 			case <-quit:
 				dlog.Info("fetch headers goroutine quit")
@@ -303,7 +303,7 @@ func (cs *ChainService) fetchBlocks(peer *chainTypes.PeerInfo) error {
 				}
 
 			case <-timeout:
-				errCh <- fmt.Errorf("fetch blocks timeout")
+				errCh <- ErrGetBlockTimeout
 			case <-quit:
 				dlog.Info("fetch blocks routine quit")
 				return
@@ -345,7 +345,7 @@ func (chainService *ChainService) GetBestPeerInfo() *chainTypes.PeerInfo {
 	return curPeer
 }
 
-func (cs *ChainService) checkHeaderChain(chain []chainTypes.BlockHeader) (error) {
+func (cs *ChainService) checkHeaderChain(chain []chainTypes.BlockHeader) error {
 	// Do a sanity check that the provided chain is actually ordered and linked
 	for i := 1; i < len(chain); i++ {
 		if chain[i].Height != chain[i-1].Height+1 || !chain[i].PreviousHash.IsEqual(chain[i-1].Hash()) {
@@ -353,19 +353,19 @@ func (cs *ChainService) checkHeaderChain(chain []chainTypes.BlockHeader) (error)
 			dlog.Error("Non contiguous header", "number", chain[i].Height, "hash", hex.EncodeToString(chain[i].Hash().Bytes()),
 				"prevnumber", chain[i-1].Height, "prevhash", hex.EncodeToString(chain[i-1].Hash().Bytes()), "!= parent", hex.EncodeToString(chain[i].PreviousHash.Bytes()))
 
-			return fmt.Errorf("non contiguous headers")
+			return ErrNotContinueHeader
 		}
 
-		err := cs.VerifyHeader(&chain[i],&chain[i-1])
+		err := cs.VerifyHeader(&chain[i], &chain[i-1])
 		if err != nil {
-			return  err
+			return err
 		}
 	}
 	return nil
 }
 
 func (cs *ChainService) deriveMerkleRoot(txs []*chainTypes.Transaction) []byte {
-	if len(txs) == 0{
+	if len(txs) == 0 {
 		return []byte{}
 	}
 	ts, _ := cs.GetTxHashes(txs)

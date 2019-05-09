@@ -2,15 +2,15 @@ package txpool
 
 import (
 	"container/heap"
-	"errors"
-	"fmt"
+	"math/big"
+	"sync"
+
 	"github.com/drep-project/dlog"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
-	"math/big"
-	"sync"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -25,9 +25,9 @@ const (
 
 type TransactionPool struct {
 	database *database.Database
-	rlock sync.RWMutex
-	queue       map[crypto.CommonAddress]*txList
-	pending     map[crypto.CommonAddress]*txList
+	rlock    sync.RWMutex
+	queue    map[crypto.CommonAddress]*txList
+	pending  map[crypto.CommonAddress]*txList
 	//accountTran map[crypto.CommonAddress]*list.SortedLinkedList
 	allTxs  map[string]bool
 	mu      sync.Mutex
@@ -103,22 +103,18 @@ func (pool *TransactionPool) AddTransaction(tx *chainTypes.Transaction) error {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 	if len(pool.allTxs) >= maxAllTxsCount {
-		msg := fmt.Sprintf("transaction pool full.txid:%s fail to add.pool tx count:%d, maxSize:%d", id, len(pool.allTxs), maxAllTxsCount)
-		dlog.Error(msg)
-		return errors.New(msg)
+		return errors.Wrapf(ErrTxPoolFull, "txid:%s count:%d, maxSize:%d", id, len(pool.allTxs), maxAllTxsCount)
 	}
 
 	if _, exists := pool.allTxs[id.String()]; exists {
-		msg := "transaction %s exists" + id.String()
-		dlog.Error(msg)
-		return errors.New(msg)
+		return errors.Wrapf(ErrTxExist, "hash %s"+id.String())
 	} else {
 		pool.allTxs[id.String()] = true
 
 		if list, ok := pool.queue[*addr]; ok {
 			//地址对应的队列空间是否已经满
 			if list.Len() > maxTxsOfQueue {
-				return errors.New("queue full")
+				return ErrQueueFull
 			}
 			list.Add(tx)
 		} else {
@@ -331,7 +327,7 @@ func (pool *TransactionPool) GetMiniPendingNonce(addr *crypto.CommonAddress) uin
 
 	if pendingList, ok := pool.pending[*addr]; ok {
 		txs := pendingList.Flatten()
-		if len(txs) > 0{
+		if len(txs) > 0 {
 			return txs[0].Nonce()
 		}
 	}

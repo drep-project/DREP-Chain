@@ -1,16 +1,17 @@
 package component
 
 import (
-	"os"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"encoding/json"
+	"os"
 	"path/filepath"
+
 	"github.com/drep-project/dlog"
-	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/common/fileutil"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/drep-chain/common/fileutil"
+	"github.com/drep-project/drep-chain/crypto"
 )
 
 type FileStore struct {

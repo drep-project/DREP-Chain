@@ -1,18 +1,18 @@
 package service
 
 import (
-	"errors"
 	path2 "path"
-	"gopkg.in/urfave/cli.v1"
+
 	"github.com/drep-project/drep-chain/app"
+	chainService "github.com/drep-project/drep-chain/chain/service"
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/database"
-	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/common/fileutil"
+	"github.com/drep-project/drep-chain/crypto/sha3"
+	"github.com/drep-project/drep-chain/database"
 	accountComponent "github.com/drep-project/drep-chain/pkgs/accounts/component"
 	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	chainService "github.com/drep-project/drep-chain/chain/service"
+	"gopkg.in/urfave/cli.v1"
 )
 
 var (
@@ -35,11 +35,11 @@ var (
 // CliService provides an interactive command line window
 type AccountService struct {
 	DatabaseService *database.DatabaseService  `service:"database"`
-	ChainService *chainService.ChainService  `service:"chain"`
-	CommonConfig *app.CommonConfig
-	Config       *accountTypes.Config
-	Wallet       *Wallet
-	apis         []app.API
+	ChainService    *chainService.ChainService `service:"chain"`
+	CommonConfig    *app.CommonConfig
+	Config          *accountTypes.Config
+	Wallet          *Wallet
+	apis            []app.API
 }
 
 // Name name
@@ -49,14 +49,14 @@ func (accountService *AccountService) Name() string {
 
 // Api api none
 func (accountService *AccountService) Api() []app.API {
-	return  []app.API{
+	return []app.API{
 		app.API{
 			Namespace: "account",
 			Version:   "1.0",
 			Service: &AccountApi{
-				Wallet: accountService.Wallet,
-				chainService: accountService.ChainService,
-				accountService: accountService,
+				Wallet:          accountService.Wallet,
+				chainService:    accountService.ChainService,
+				accountService:  accountService,
 				databaseService: accountService.DatabaseService,
 			},
 			Public: true,
@@ -65,11 +65,11 @@ func (accountService *AccountService) Api() []app.API {
 }
 
 // Flags flags  enable load js and execute before run
-func (accountService *AccountService) CommandFlags() ([]cli.Command, []cli.Flag)  {
+func (accountService *AccountService) CommandFlags() ([]cli.Command, []cli.Flag) {
 	return nil, []cli.Flag{KeyStoreDirFlag, WalletPasswordFlag}
 }
 
-func (accountService *AccountService)  P2pMessages() map[int]interface{} {
+func (accountService *AccountService) P2pMessages() map[int]interface{} {
 	return map[int]interface{}{}
 }
 
@@ -97,7 +97,7 @@ func (accountService *AccountService) Init(executeContext *app.ExecuteContext) e
 		return err
 	}
 	if accountService.Config.WalletPassword != "" {
-		accountService.Wallet.Open(accountService.Config.WalletPassword )
+		accountService.Wallet.Open(accountService.Config.WalletPassword)
 	}
 	return nil
 }
@@ -113,9 +113,9 @@ func (accountService *AccountService) Stop(executeContext *app.ExecuteContext) e
 func (accountService *AccountService) CreateWallet(password string) error {
 	if fileutil.IsDirExists(accountService.Config.KeyStoreDir) {
 		if !fileutil.IsEmptyDir(accountService.Config.KeyStoreDir) {
-			return errors.New("exist keystore")
+			return ErrExistKeystore
 		}
-	}else {
+	} else {
 		fileutil.EnsureDir(accountService.Config.KeyStoreDir)
 	}
 

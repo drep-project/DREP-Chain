@@ -1,14 +1,14 @@
 package service
 
 import (
-	"errors"
+	"math/big"
+
 	chainService "github.com/drep-project/drep-chain/chain/service"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/database"
-	"math/big"
 )
 
 type AccountApi struct {
@@ -20,7 +20,7 @@ type AccountApi struct {
 
 func (accountapi *AccountApi) ListAddress() ([]*crypto.CommonAddress, error) {
 	if !accountapi.Wallet.IsOpen() {
-		return nil, errors.New("wallet is not open")
+		return nil, ErrClosedWallet
 	}
 	return accountapi.Wallet.ListAddress()
 }
@@ -28,7 +28,7 @@ func (accountapi *AccountApi) ListAddress() ([]*crypto.CommonAddress, error) {
 // CreateAccount create a new account and return address
 func (accountapi *AccountApi) CreateAccount() (*crypto.CommonAddress, error) {
 	if !accountapi.Wallet.IsOpen() {
-		return nil, errors.New("wallet is not open")
+		return nil, ErrClosedWallet
 	}
 	newAaccount, err := accountapi.Wallet.NewAccount()
 	if err != nil {
@@ -48,23 +48,23 @@ func (accountapi *AccountApi) CreateWallet(password string) error {
 // Lock lock the wallet to protect private key
 func (accountapi *AccountApi) LockWallet() error {
 	if !accountapi.Wallet.IsOpen() {
-		return errors.New("wallet is not open")
+		return ErrClosedWallet
 	}
 	if !accountapi.Wallet.IsLock() {
 		return accountapi.Wallet.Lock()
 	}
-	return errors.New("wallet is already locked")
+	return ErrLockedWallet
 }
 
 // UnLock unlock the wallet
 func (accountapi *AccountApi) UnLockWallet(password string) error {
 	if !accountapi.Wallet.IsOpen() {
-		return errors.New("wallet is not open")
+		return ErrClosedWallet
 	}
 	if accountapi.Wallet.IsLock() {
 		return accountapi.Wallet.UnLock(password)
 	}
-	return errors.New("wallet is already unlock")
+	return ErrAlreadyUnLocked
 }
 
 func (accountapi *AccountApi) OpenWallet(password string) error {
@@ -77,7 +77,7 @@ func (accountapi *AccountApi) CloseWallet() {
 
 func (accountapi *AccountApi) Transfer(from crypto.CommonAddress, to crypto.CommonAddress, amount, gasprice, gaslimit *common.Big, data common.Bytes) (string, error) {
 	nonce := accountapi.chainService.GetTransactionCount(&from)
-	tx := chainTypes.NewTransaction(to, (*big.Int)(amount),(*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
+	tx := chainTypes.NewTransaction(to, (*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
 	sig, err := accountapi.Wallet.Sign(&from, tx.TxHash().Bytes())
 	if err != nil {
 		return "", err
@@ -90,7 +90,7 @@ func (accountapi *AccountApi) Transfer(from crypto.CommonAddress, to crypto.Comm
 	return tx.TxHash().String(), nil
 }
 
-func (accountapi *AccountApi) SetAlias(srcAddr crypto.CommonAddress, alias string, gasprice, gaslimit *common.Big,) (string, error) {
+func (accountapi *AccountApi) SetAlias(srcAddr crypto.CommonAddress, alias string, gasprice, gaslimit *common.Big) (string, error) {
 	nonce := accountapi.chainService.GetTransactionCount(&srcAddr)
 	t := chainTypes.NewAliasTransaction(alias, (*big.Int)(gasprice), (*big.Int)(gasprice), nonce)
 	sig, err := accountapi.Wallet.Sign(&srcAddr, t.TxHash().Bytes())
@@ -107,7 +107,7 @@ func (accountapi *AccountApi) SetAlias(srcAddr crypto.CommonAddress, alias strin
 
 func (accountapi *AccountApi) Call(from crypto.CommonAddress, to crypto.CommonAddress, input common.Bytes, amount, gasprice, gaslimit *common.Big) (string, error) {
 	nonce := accountapi.chainService.GetTransactionCount(&from)
-	t := chainTypes.NewCallContractTransaction(to, input, (*big.Int)(amount),(*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
+	t := chainTypes.NewCallContractTransaction(to, input, (*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
 	sig, err := accountapi.Wallet.Sign(&from, t.TxHash().Bytes())
 	if err != nil {
 		return "", err
@@ -132,10 +132,10 @@ func (accountapi *AccountApi) CreateCode(from crypto.CommonAddress, byteCode com
 // DumpPrikey dumpPrivate
 func (accountapi *AccountApi) DumpPrivkey(address *crypto.CommonAddress) (*secp256k1.PrivateKey, error) {
 	if !accountapi.Wallet.IsOpen() {
-		return nil, errors.New("wallet is not open")
+		return nil, ErrClosedWallet
 	}
 	if accountapi.Wallet.IsLock() {
-		return nil, errors.New("wallet has locked")
+		return nil, ErrLockedWallet
 	}
 
 	node, err := accountapi.Wallet.GetAccountByAddress(address)

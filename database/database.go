@@ -2,22 +2,21 @@ package database
 
 import (
 	"encoding/hex"
-	"errors"
-	"fmt"
+	"math/big"
+	"strconv"
+	"sync"
+
 	"github.com/drep-project/binary"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/sha3"
-	"math/big"
-	"strconv"
-	"sync"
 )
 
 type Database struct {
-	db           IStore
-	states       *sync.Map
+	db     IStore
+	states *sync.Map
 	//trie  Trie
-	root   []byte
+	root          []byte
 	isTransaction bool
 }
 
@@ -31,14 +30,14 @@ const (
 )
 
 func NewDatabase(dbPath string) (*Database, error) {
-	ldb, err :=  NewLdbStore(dbPath)
+	ldb, err := NewLdbStore(dbPath)
 	if err != nil {
 		return nil, err
 	}
 
 	db := &Database{
-		db:ldb,
-		states: new (sync.Map),
+		db:     ldb,
+		states: new(sync.Map),
 	}
 	err = db.initState()
 	if err != nil {
@@ -48,8 +47,8 @@ func NewDatabase(dbPath string) (*Database, error) {
 }
 func DatabaseFromStore(store IStore) (*Database, error) {
 	db := &Database{
-		db:store,
-		states: new (sync.Map),
+		db:     store,
+		states: new(sync.Map),
 	}
 	err := db.initState()
 	if err != nil {
@@ -148,9 +147,8 @@ func (db *Database) GetChainState() *chainTypes.BestState {
 	return state
 }
 
-
 func (db *Database) Rollback2Block(height uint64) (error, int64) {
-	key := []byte(maxSeqOfBlockKey+strconv.FormatUint(height, 10))
+	key := []byte(maxSeqOfBlockKey + strconv.FormatUint(height, 10))
 	value, err := db.db.Get(key)
 	if err != nil {
 		return err, 0
@@ -166,10 +164,9 @@ func (db *Database) RecordBlockJournal(height uint64) error {
 		return err
 	}
 	seq := new(big.Int).SetBytes(seqVal).Int64()
-	key := []byte(maxSeqOfBlockKey+strconv.FormatUint(height, 10))
+	key := []byte(maxSeqOfBlockKey + strconv.FormatUint(height, 10))
 	return db.db.Put(key, new(big.Int).SetInt64(seq).Bytes())
 }
-
 
 func (db *Database) GetStateRoot() []byte {
 	state, _ := db.GetState(db.root)
@@ -218,7 +215,6 @@ func (db *Database) DelState(key []byte) error {
 	return nil
 }
 
-
 func (db *Database) GetStorage(addr *crypto.CommonAddress) *chainTypes.Storage {
 	storage := &chainTypes.Storage{}
 	key := sha3.Hash256([]byte(addressStorage + addr.Hex()))
@@ -234,7 +230,6 @@ func (db *Database) AliasPut(key, value []byte) error {
 	return db.db.Put(key, value)
 }
 
-
 func (db *Database) Get(key []byte) ([]byte, error) {
 	return db.db.Get(key)
 }
@@ -246,7 +241,6 @@ func (db *Database) Put(key []byte, value []byte) error {
 func (db *Database) Delete(key []byte) error {
 	return db.db.Delete(key)
 }
-
 
 func (db *Database) PutStorage(addr *crypto.CommonAddress, storage *chainTypes.Storage) error {
 	key := sha3.Hash256([]byte(addressStorage + addr.Hex()))
@@ -277,7 +271,7 @@ func (db *Database) GetBalance(addr *crypto.CommonAddress) *big.Int {
 func (db *Database) PutBalance(addr *crypto.CommonAddress, balance *big.Int) error {
 	storage := db.GetStorage(addr)
 	if storage == nil {
-		return errors.New("no account storage found")
+		return ErrNoStorage
 	}
 	storage.Balance = *balance
 	return db.PutStorage(addr, storage)
@@ -294,7 +288,7 @@ func (db *Database) GetNonce(addr *crypto.CommonAddress) uint64 {
 func (db *Database) PutNonce(addr *crypto.CommonAddress, nonce uint64) error {
 	storage := db.GetStorage(addr)
 	if storage == nil {
-		return errors.New("no account storage found")
+		return ErrNoStorage
 	}
 	storage.Nonce = nonce
 	return db.PutStorage(addr, storage)
@@ -311,7 +305,7 @@ func (db *Database) GetStorageAlias(addr *crypto.CommonAddress) string {
 func (db *Database) setStorageAlias(addr *crypto.CommonAddress, alias string) error {
 	storage := db.GetStorage(addr)
 	if storage == nil {
-		return errors.New("no account storage found")
+		return ErrNoStorage
 	}
 	storage.Alias = alias
 	return db.PutStorage(addr, storage)
@@ -322,13 +316,13 @@ func (db *Database) AliasSet(addr *crypto.CommonAddress, alias string) (err erro
 		//1 检查别名是否存在
 		b := db.AliasExist(alias)
 		if b {
-			return fmt.Errorf("the alias has been used")
+			return ErrUsedAlias
 		}
 
 		//2 存入以alias为key的k-v对
-		err = db.AliasPut([]byte(aliasPrefix + alias), addr.Bytes())
+		err = db.AliasPut([]byte(aliasPrefix+alias), addr.Bytes())
 	} else {
-		return fmt.Errorf("set null string as alias")
+		return ErrInvalidateAlias
 	}
 
 	if err != nil {
@@ -372,14 +366,14 @@ func (db *Database) GetByteCode(addr *crypto.CommonAddress) []byte {
 func (db *Database) PutByteCode(addr *crypto.CommonAddress, byteCode []byte) error {
 	storage := db.GetStorage(addr)
 	if storage == nil {
-		return errors.New("no account storage found")
+		return ErrNoStorage
 	}
 	storage.ByteCode = byteCode
 	storage.CodeHash = crypto.GetByteCodeHash(byteCode)
 	return db.PutStorage(addr, storage)
 }
 
-func (db *Database)GetCodeHash(addr *crypto.CommonAddress) crypto.Hash {
+func (db *Database) GetCodeHash(addr *crypto.CommonAddress) crypto.Hash {
 	storage := db.GetStorage(addr)
 	if storage == nil {
 		return crypto.Hash{}
@@ -409,7 +403,7 @@ func (db *Database) GetLogs(txHash []byte) []*chainTypes.Log {
 	return logs
 }
 
-func (db *Database) PutLogs(logs []*chainTypes.Log, txHash []byte, ) error {
+func (db *Database) PutLogs(logs []*chainTypes.Log, txHash []byte) error {
 	key := sha3.Hash256([]byte("logs_" + hex.EncodeToString(txHash)))
 	value, err := binary.Marshal(logs)
 	if err != nil {
@@ -447,9 +441,9 @@ func (db *Database) AddBalance(addr *crypto.CommonAddress, amount *big.Int) {
 
 func (db *Database) BeginTransaction() *Database {
 	return &Database{
-		db: NewTransactionDatabase(db.db),
-		states  :db.states,
-		root   :db.root,
+		db:            NewTransactionDatabase(db.db),
+		states:        db.states,
+		root:          db.root,
 		isTransaction: true,
 	}
 }

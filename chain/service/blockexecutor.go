@@ -2,20 +2,20 @@ package service
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
+	"math/big"
+
 	"github.com/drep-project/drep-chain/chain/params"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/secp256k1/schnorr"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/database"
-	"math/big"
 )
 
 func (chainService *ChainService) VerifyHeader(header, parent *chainTypes.BlockHeader) error {
-	if header.Timestamp <= parent.Timestamp{
-		return errors.New("timestamp equals parent's")
+	if header.Timestamp <= parent.Timestamp {
+		return ErrInvalidateTimestamp
 	}
 	// Verify that the gas limit is <= 2^63-1
 	cap := uint64(0x7fffffffffffffff)
@@ -33,8 +33,8 @@ func (chainService *ChainService) VerifyHeader(header, parent *chainTypes.BlockH
 		return fmt.Errorf("invalid gas limit: have %v, want %v += %v", header.GasLimit, parent.GasLimit, nextGasLimit)
 	}
 	// Verify that the block number is parent's +1
-	if  header.Height - parent.Height != 1 {
-		return errors.New("invalid block number")
+	if header.Height-parent.Height != 1 {
+		return ErrInvalidateBlockNumber
 	}
 
 	return nil
@@ -43,14 +43,14 @@ func (chainService *ChainService) VerifyHeader(header, parent *chainTypes.BlockH
 func (chainService *ChainService) ValidateBody(block *chainTypes.Block) error {
 	// Header validity is known at this point, check the uncles and transactions
 	header := block.Header
-	if hash := chainService.deriveMerkleRoot(block.Data.TxList); !bytes.Equal(hash , header.TxRoot) {
+	if hash := chainService.deriveMerkleRoot(block.Data.TxList); !bytes.Equal(hash, header.TxRoot) {
 		return fmt.Errorf("transaction root hash mismatch: have %x, want %x", hash, header.TxRoot)
 	}
 	return nil
 }
 
 func (chainService *ChainService) ValidateMultiSig(b *chainTypes.Block, skipCheckSig bool) bool {
-	if skipCheckSig {  //just for solo
+	if skipCheckSig { //just for solo
 		return true
 	}
 	participators := []*secp256k1.PublicKey{}
@@ -65,10 +65,10 @@ func (chainService *ChainService) ValidateMultiSig(b *chainTypes.Block, skipChec
 	return schnorr.Verify(sigmaPk, sha3.Hash256(msg), b.MultiSig.Sig.R, b.MultiSig.Sig.S)
 }
 
-func (chainService *ChainService) executeTransactionInBlock(db *database.Database,block *chainTypes.Block, gp *GasPool) (*big.Int, error) {
+func (chainService *ChainService) executeTransactionInBlock(db *database.Database, block *chainTypes.Block, gp *GasPool) (*big.Int, error) {
 	total := big.NewInt(0)
-	if len(block.Data.TxList)  <0 {
-		return new (big.Int), nil
+	if len(block.Data.TxList) < 0 {
+		return new(big.Int), nil
 	}
 	for _, t := range block.Data.TxList {
 		_, gasFee, err := chainService.executeTransaction(db, t, gp, block.Header)
@@ -82,5 +82,3 @@ func (chainService *ChainService) executeTransactionInBlock(db *database.Databas
 	}
 	return total, nil
 }
-
-

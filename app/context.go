@@ -2,7 +2,7 @@ package app
 
 import (
 	"encoding/json"
-	"fmt"
+
 	"github.com/asaskevich/EventBus"
 	"github.com/pkg/errors"
 	"gopkg.in/urfave/cli.v1"
@@ -40,8 +40,8 @@ GLOBAL OPTIONS:
 
 // CommonConfig read before app run,this fuction shared by other moudles
 type CommonConfig struct {
-	HomeDir string 					`json:"homeDir,omitempty"`
-	ConfigFile string 				`json:"configFile,omitempty"`
+	HomeDir    string `json:"homeDir,omitempty"`
+	ConfigFile string `json:"configFile,omitempty"`
 }
 
 // API describes the set of methods offered over the RPC interface
@@ -54,8 +54,8 @@ type API struct {
 
 // Services can customize their own configuration, command parameters, interfaces, services
 type Service interface {
-	Name() string      // service  name must be unique
-	Api() []API        // Interfaces required for services
+	Name() string                              // service  name must be unique
+	Api() []API                                // Interfaces required for services
 	CommandFlags() ([]cli.Command, []cli.Flag) // flags required for services
 	//P2pMessages() map[int]interface{}
 	//Receive(context actor.Context)
@@ -71,12 +71,12 @@ type ExecuteContext struct {
 	CommonConfig *CommonConfig //
 	PhaseConfig  map[string]json.RawMessage
 	Cli          *cli.Context
-	LifeBus  EventBus.Bus
-	Services []Service
+	LifeBus      EventBus.Bus
+	Services     []Service
 
 	GitCommit string
 	Usage     string
-	Quit chan struct{}
+	Quit      chan struct{}
 }
 
 // AddService add a service to context, The application then initializes and starts the service.
@@ -112,7 +112,7 @@ func (econtext *ExecuteContext) AggerateFlags() ([]cli.Command, []cli.Flag) {
 	allFlags := []cli.Flag{}
 	allCommands := []cli.Command{}
 	for _, service := range econtext.Services {
-		commands, defaultFlags :=  service.CommandFlags()
+		commands, defaultFlags := service.CommandFlags()
 		if commands != nil {
 			allCommands = append(allCommands, commands...)
 		}
@@ -153,13 +153,13 @@ func (econtext *ExecuteContext) RequireService(name string) Service {
 			return service
 		}
 	}
-	panic(errors.New(fmt.Sprintf("%s service not found", name)))
+	panic(errors.Wrap(ErrServiceNotFound, name))
 }
 
 func (econtext *ExecuteContext) UnmashalConfig(serviceName string, config interface{}) error {
 	service := econtext.GetService(serviceName)
 	if service == nil {
-		return fmt.Errorf("get service err, service name:%s", serviceName)
+		return errors.Wrapf(ErrServiceNotFound, "service name:%s", serviceName)
 	}
 	phase := econtext.GetConfig(service.Name())
 	if phase == nil {

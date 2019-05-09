@@ -17,15 +17,15 @@
 package service
 
 import (
-	"errors"
 	"fmt"
+	"math/big"
+
 	"github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/pkgs/evm"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
-	"math/big"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning
@@ -106,7 +106,7 @@ func (stateProcessor *StateProcessor) ApplyMessage(db *database.Database, tx *ty
 	} else if tx.Type() == types.SetAliasType {
 		ret, fail, err = stateTransaction.TransitionAliasDb()
 	} else {
-		return nil, 0, 0, false, errors.New("not support transaction type")
+		return nil, 0, 0, false, ErrUnsupportTxType
 	}
 
 	stateTransaction.refundGas()

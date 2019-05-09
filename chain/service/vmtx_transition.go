@@ -16,19 +16,17 @@
 package service
 
 import (
-	"errors"
+	"math/big"
+
 	"github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/pkgs/evm"
-	"math/big"
 
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
 )
 
-var (
-	errInsufficientBalanceForGas = errors.New("insufficient balance to pay for gas")
-)
+var ()
 
 /*
 The State Transitioning Model
@@ -48,34 +46,34 @@ The state transitioning model does all the necessary work to work out a valid ne
 6) Derive new state root
 */
 type StateTransition struct {
-	gp         *GasPool
-	tx        *types.Transaction
-	from	   *crypto.CommonAddress
-	gas        uint64
-	gasPrice   *big.Int
-	initialGas uint64
-	value      *big.Int
-	data       []byte
-	state      *vm.State
-	header *types.BlockHeader
-	bc evm.ChainContext
+	gp              *GasPool
+	tx              *types.Transaction
+	from            *crypto.CommonAddress
+	gas             uint64
+	gasPrice        *big.Int
+	initialGas      uint64
+	value           *big.Int
+	data            []byte
+	state           *vm.State
+	header          *types.BlockHeader
+	bc              evm.ChainContext
 	vmService       evm.Vm
 	databaseService *database.Database
 }
 
 // NewStateTransition initialises and returns a new state transition object.
-func NewStateTransition(databaseService *database.Database, vmService evm.Vm,tx *types.Transaction, from *crypto.CommonAddress, state *vm.State, header *types.BlockHeader, bc evm.ChainContext, gp *GasPool) *StateTransition {
+func NewStateTransition(databaseService *database.Database, vmService evm.Vm, tx *types.Transaction, from *crypto.CommonAddress, state *vm.State, header *types.BlockHeader, bc evm.ChainContext, gp *GasPool) *StateTransition {
 	return &StateTransition{
-		gp:       gp,
-		tx:       tx,
-		from:	  from,
-		gasPrice: tx.GasPrice(),
-		value:    tx.Amount(),
-		data:     tx.Data.Data,
-		state:    state,
-		header:	  header,
-		bc:		  bc,
-		vmService: vmService,
+		gp:              gp,
+		tx:              tx,
+		from:            from,
+		gasPrice:        tx.GasPrice(),
+		value:           tx.Amount(),
+		data:            tx.Data.Data,
+		state:           state,
+		header:          header,
+		bc:              bc,
+		vmService:       vmService,
 		databaseService: databaseService,
 	}
 }
@@ -116,14 +114,14 @@ func (st *StateTransition) preCheck() error {
 	// Make sure this transaction's nonce is correct.
 	nonce := st.state.GetNonce(st.from)
 	if nonce < st.tx.Nonce() {
-		return  errors.New("nonce too high")
+		return ErrNonceTooHigh
 	} else if nonce > st.tx.Nonce() {
-		return  errors.New("nonce too low")
+		return ErrNonceTooLow
 	}
 	return st.buyGas()
 }
 
-// TransitionDb will transition the state by applying the current message and
+// TransitionVmTxDb will transition the state by applying the current message and
 // returning the result including the used gas. It returns an error if failed.
 // An error indicates a consensus issue.
 func (st *StateTransition) TransitionVmTxDb() (ret []byte, failed bool, err error) {
@@ -134,23 +132,23 @@ func (st *StateTransition) TransitionVmTxDb() (ret []byte, failed bool, err erro
 func (st *StateTransition) TransitionTransferDb() (ret []byte, failed bool, err error) {
 	from := st.from
 	originBalance := st.databaseService.GetBalance(from)
-	toBalance :=  st.databaseService.GetBalance(st.tx.To())
+	toBalance := st.databaseService.GetBalance(st.tx.To())
 	leftBalance := originBalance.Sub(originBalance, st.tx.Amount())
-	if leftBalance.Sign() <0 {
-		return nil,  false, errors.New("from addr in tx is not eenough")
+	if leftBalance.Sign() < 0 {
+		return nil, false, errBalance
 	}
 	addBalance := toBalance.Add(toBalance, st.tx.Amount())
 	st.databaseService.PutBalance(from, leftBalance)
 	st.databaseService.PutBalance(st.tx.To(), addBalance)
 	st.databaseService.PutNonce(from, st.tx.Nonce()+1)
-	return nil,  true, nil
+	return nil, true, nil
 }
 
 func (st *StateTransition) TransitionAliasDb() (ret []byte, failed bool, err error) {
 	from := st.from
 	alias := st.tx.GetData()
-	err = st.databaseService.AliasSet(from,string(alias))
-	return nil,  true, err
+	err = st.databaseService.AliasSet(from, string(alias))
+	return nil, true, err
 }
 
 func (st *StateTransition) refundGas() {

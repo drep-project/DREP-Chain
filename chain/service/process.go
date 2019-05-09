@@ -4,18 +4,14 @@ import (
 	"bytes"
 	"container/list"
 	"encoding/hex"
-	"errors"
 	"fmt"
+	"time"
+
 	"github.com/drep-project/dlog"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
-	"time"
-)
-
-var (
-	errBlockExsist       = errors.New("already have block")
-	errOrphanBlockExsist = errors.New("already have block (orphan)")
+	"github.com/pkg/errors"
 )
 
 func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, bool, error) {
@@ -100,14 +96,14 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainCh
 	defer func() {
 		if err == nil {
 			db.Commit()
-		}else{
+		} else {
 			db.Discard()
 		}
 	}()
 	prevNode := chainService.Index.LookupNode(&block.Header.PreviousHash)
 	preBlock := prevNode.Header()
-	if !(chainService.ValidateMultiSig(block, chainService.Config.SkipCheckMutiSig||false)) {
-		return false, errors.New("verify multisig error")
+	if !(chainService.ValidateMultiSig(block, chainService.Config.SkipCheckMutiSig || false)) {
+		return false, ErrInvalidateBlockMultisig
 	}
 	err = chainService.VerifyHeader(block.Header, &preBlock)
 	if err != nil {
@@ -133,7 +129,7 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainCh
 	}
 
 	if block.Header.PreviousHash.IsEqual(chainService.BestChain.Tip().Hash) {
- 		err = chainService.connectBlock(db, block, newNode)
+		err = chainService.connectBlock(db, block, newNode)
 		if err != nil {
 			return false, err
 		}
@@ -163,7 +159,7 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainCh
 }
 
 func (chainService *ChainService) connectBlock(db *database.Database, block *chainTypes.Block, newNode *chainTypes.BlockNode) (err error) {
-	gp := new (GasPool).AddGas(block.Header.GasLimit.Uint64())
+	gp := new(GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
 	_, err = chainService.executeTransactionInBlock(db, block, gp)
 	if err != nil {
@@ -176,7 +172,7 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *cha
 	if bytes.Equal(block.Header.StateRoot, stateRoot) {
 		dlog.Debug("matched ", "BlockStateRoot", hex.EncodeToString(block.Header.StateRoot), "CalcStateRoot", hex.EncodeToString(stateRoot))
 	} else {
-		err = fmt.Errorf("%s not matched %s", hex.EncodeToString(block.Header.StateRoot), hex.EncodeToString(stateRoot))
+		err = errors.Wrapf(ErrNotMathcedStateRoot, "%s not matched %s", hex.EncodeToString(block.Header.StateRoot), hex.EncodeToString(stateRoot))
 	}
 
 	if err == nil {
@@ -255,7 +251,7 @@ func (chainService *ChainService) getReorganizeNodes(node *chainTypes.BlockNode)
 	return detachNodes, attachNodes
 }
 
-func (chainService *ChainService) reorganizeChain(db *database.Database,detachNodes, attachNodes *list.List) error {
+func (chainService *ChainService) reorganizeChain(db *database.Database, detachNodes, attachNodes *list.List) error {
 	if detachNodes.Len() == 0 && attachNodes.Len() == 0 {
 		return nil
 	}
@@ -306,14 +302,14 @@ func (chainService *ChainService) notifyDetachBlock(block *chainTypes.Block) {
 	chainService.DetachBlockFeed.Send(block)
 }
 
-func (chainService *ChainService) markState(db *database.Database,blockNode *chainTypes.BlockNode) {
+func (chainService *ChainService) markState(db *database.Database, blockNode *chainTypes.BlockNode) {
 	state := chainTypes.NewBestState(blockNode, blockNode.CalcPastMedianTime())
 	db.PutChainState(state)
 	chainService.BestChain.SetTip(blockNode)
 	chainService.stateLock.Lock()
 	chainService.StateSnapshot = &ChainState{
 		BestState: *state,
-		db: db,
+		db:        db,
 	}
 	chainService.transactionPool.UpdateState(db)
 	chainService.stateLock.Unlock()
@@ -338,7 +334,7 @@ func (chainService *ChainService) InitStates() error {
 			blockHash := header.Hash()
 			//TODO skip check genesis block hash
 			if !blockHash.IsEqual(chainService.genesisBlock.Header.Hash()) {
-				return fmt.Errorf("initChainState: Expected  first entry in block index to be genesis block, found %s", blockHash)
+				return errors.Wrapf(ErrInitStateFail, "Expected  first entry in block index to be genesis block, found %s", blockHash)
 			}
 		} else if header.PreviousHash == *lastNode.Hash {
 			// Since we iterate block headers in order of height, if the
@@ -348,7 +344,7 @@ func (chainService *ChainService) InitStates() error {
 		} else {
 			parent = chainService.Index.LookupNode(&header.PreviousHash)
 			if parent == nil {
-				return fmt.Errorf(fmt.Sprintf("initChainState: Could not find parent for block %s", header.Hash()))
+				return errors.Wrapf(ErrInitStateFail, "Could not find parent for block %s", header.Hash())
 			}
 		}
 
@@ -371,14 +367,13 @@ func (chainService *ChainService) InitStates() error {
 	// Set the best chain view to the stored best state.
 	tip := chainService.Index.LookupNode(&chainState.Hash)
 	if tip == nil {
-		return fmt.Errorf(fmt.Sprintf("initChainState: cannot find "+
-			"chain tip %s in block index", chainState.Hash))
+		return errors.Wrapf(ErrInitStateFail,"cannot find chain tip %s in block index", chainState.Hash)
 	}
 	chainService.BestChain.SetTip(tip)
 
 	// Load the raw block bytes for the best block.
 	if !chainService.DatabaseService.HasBlock(&chainState.Hash) {
-		return fmt.Errorf(fmt.Sprintf("block not exist: cannot find block %s in block index", chainState.Hash))
+		return errors.Wrapf(ErrBlockNotFound, "cannot find block %s in block index", chainState.Hash)
 	}
 
 	// As a final consistency check, we'll run through all the
@@ -398,7 +393,7 @@ func (chainService *ChainService) InitStates() error {
 	chainService.stateLock.Lock()
 	chainService.StateSnapshot = &ChainState{
 		BestState: *chainTypes.NewBestState(tip, tip.CalcPastMedianTime()),
-		db: chainService.DatabaseService.BeginTransaction(),
+		db:        chainService.DatabaseService.BeginTransaction(),
 	}
 	chainService.stateLock.Unlock()
 
@@ -421,7 +416,7 @@ func (chainService *ChainService) createChainState() error {
 	chainService.stateLock.Lock()
 	chainService.StateSnapshot = &ChainState{
 		BestState: *chainTypes.NewBestState(node, time.Unix(int64(node.TimeStamp), 0)),
-		db: chainService.DatabaseService.BeginTransaction(),
+		db:        chainService.DatabaseService.BeginTransaction(),
 	}
 	chainService.stateLock.Unlock()
 
