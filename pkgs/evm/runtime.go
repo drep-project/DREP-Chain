@@ -58,10 +58,10 @@ func (evmService *EvmService)  Stop(executeContext *app.ExecuteContext) error{
 
 func (evmService *EvmService)  Receive(context actor.Context) { }
 
-func (evmService *EvmService)  Eval(state *vm.State,tx *types.Transaction, header *types.BlockHeader, bc ChainContext, gas uint64, value *big.Int) (ret []byte, failed bool, err error)  {
+func (evmService *EvmService)  Eval(state *vm.State,tx *types.Transaction, header *types.BlockHeader, bc ChainContext, gas uint64, value *big.Int) (ret []byte, gasUsed uint64, failed bool, err error)  {
 	sender, err := tx.From()
 	if err != nil {
-		return nil, false, err
+		return nil, uint64(0),false, err
 	}
 	contractCreation := tx.To() == nil|| tx.To().IsEmpty()
 
@@ -89,10 +89,10 @@ func (evmService *EvmService)  Eval(state *vm.State,tx *types.Transaction, heade
 		// sufficient balance to make the transfer happen. The first
 		// balance transfer may never fail.
 		if vmerr == vm.ErrInsufficientBalance {
-			return nil, false, vmerr
+			return nil, uint64(0),false, vmerr
 		}
 	}
-	return ret, vmerr != nil, err
+	return ret, gas, vmerr != nil, err
 }
 
 

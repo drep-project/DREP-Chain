@@ -5,6 +5,8 @@ const (
 	GWei  				 = 1e9
 	Ether 				 = 1e18
 
+	AliasGas             uint64 = 68   // gas Use when alias a address
+
 	GasLimitBoundDivisor uint64 = 64    // The bound divisor of the gas limit, used in update calculations.
 	MinGasLimit          uint64 = 180000000    // Minimum the gas limit may ever be.
 	GenesisGasLimit      uint64 = 180000000 // Gas limit of the Genesis block.

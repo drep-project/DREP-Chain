@@ -16,6 +16,7 @@
 package service
 
 import (
+	"github.com/drep-project/drep-chain/chain/params"
 	"math/big"
 
 	"github.com/drep-project/drep-chain/chain/types"
@@ -125,8 +126,8 @@ func (st *StateTransition) preCheck() error {
 // returning the result including the used gas. It returns an error if failed.
 // An error indicates a consensus issue.
 func (st *StateTransition) TransitionVmTxDb() (ret []byte, failed bool, err error) {
-	ret, fail, err := st.vmService.Eval(st.state, st.tx, st.header, st.bc, st.gas, st.value)
-	return ret, fail, err
+	ret, st.gas, failed, err = st.vmService.Eval(st.state, st.tx, st.header, st.bc, st.gas, st.value)
+	return ret, failed, err
 }
 
 func (st *StateTransition) TransitionTransferDb() (ret []byte, failed bool, err error) {
@@ -148,6 +149,7 @@ func (st *StateTransition) TransitionAliasDb() (ret []byte, failed bool, err err
 	from := st.from
 	alias := st.tx.GetData()
 	err = st.databaseService.AliasSet(from, string(alias))
+	st.gas += params.AliasGas*uint64(len(alias))
 	return nil, true, err
 }
 
