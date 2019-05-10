@@ -26,6 +26,7 @@ var (
 	ErrReqStateTimeout           = errors.New("req state timeout")
 	ErrInitStateFail             = errors.New("initChainState")
 	ErrNotMathcedStateRoot       = errors.New("state root not matched")
+	ErrGasUsed   				 = errors.New("gas used not matched")
 	ErrDecodeMsg                 = errors.New("fail to decode p2p msg")
 	ErrReadPeerMsg               = errors.New("fail to read peer msg")
 	ErrMsgType                   = errors.New("not expected msg type")

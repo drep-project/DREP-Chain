@@ -25,7 +25,6 @@ import (
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/pkgs/evm"
-	"github.com/drep-project/drep-chain/pkgs/evm/vm"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning
@@ -49,8 +48,7 @@ func NewStateProcessor(chainservice *ChainService) *StateProcessor {
 // indicating the block was invalid.
 func (stateProcessor *StateProcessor) ApplyTransaction(db *database.Database, bc evm.ChainContext, gp *GasPool, header *types.BlockHeader, tx *types.Transaction, from *crypto.CommonAddress, usedGas *uint64) (*types.Receipt, uint64, error) {
 	// Apply the transaction to the current state (included in the env)
-	newState := vm.NewState(db)
-	_, gas, gasFee, failed, err := stateProcessor.ApplyMessage(db, tx, from, newState, header, bc, gp)
+	_, gas, gasFee, failed, err := stateProcessor.ApplyMessage(db, tx, from, header, bc, gp)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -80,8 +78,8 @@ func (stateProcessor *StateProcessor) ApplyTransaction(db *database.Database, bc
 // the gas used (which includes gas refunds) and an error if it failed. An error always
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
-func (stateProcessor *StateProcessor) ApplyMessage(db *database.Database, tx *types.Transaction, from *crypto.CommonAddress, state *vm.State, header *types.BlockHeader, bc evm.ChainContext, gp *GasPool) ([]byte, uint64, uint64, bool, error) {
-	stateTransaction := NewStateTransition(db, stateProcessor.chainService.VmService, tx, from, state, header, bc, gp)
+func (stateProcessor *StateProcessor) ApplyMessage(db *database.Database, tx *types.Transaction, from *crypto.CommonAddress, header *types.BlockHeader, bc evm.ChainContext, gp *GasPool) ([]byte, uint64, uint64, bool, error) {
+	stateTransaction := NewStateTransition(db, stateProcessor.chainService.VmService, tx, from, header, bc, gp)
 	if err := stateTransaction.preCheck(); err != nil {
 		return nil, 0, 0, false, err
 	}

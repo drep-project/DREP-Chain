@@ -427,16 +427,17 @@ func (db *Database) Store(x, y *big.Int) error {
 	return db.Put(x.Bytes(), y.Bytes())
 }
 
-func (db *Database) AddBalance(addr *crypto.CommonAddress, amount *big.Int) {
+func (db *Database) AddBalance(addr *crypto.CommonAddress, amount *big.Int) error {
 	balance := db.GetBalance(addr)
-	//text, _ := addr.MarshalText()
-	//x := string(text)
-	//fmt.Println("0x" + x)
 	if balance == nil {
 		balance = new(big.Int).SetInt64(0)
 	}
-	db.PutBalance(addr, new(big.Int).Add(balance, amount))
-	return
+	return db.PutBalance(addr, new(big.Int).Add(balance, amount))
+}
+
+func (db *Database) SubBalance(addr *crypto.CommonAddress, amount *big.Int) error {
+	balance := db.GetBalance(addr)
+	return db.PutBalance(addr, new(big.Int).Sub(balance, amount))
 }
 
 func (db *Database) BeginTransaction() *Database {

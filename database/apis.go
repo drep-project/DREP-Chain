@@ -227,8 +227,8 @@ func (database *DatabaseService) Store(x, y *big.Int) error {
 	return database.db.Store(x, y)
 }
 
-func (database *DatabaseService) AddBalance(addr *crypto.CommonAddress, amount *big.Int) {
-	database.db.AddBalance(addr, amount)
+func (database *DatabaseService) AddBalance(addr *crypto.CommonAddress, amount *big.Int) error  {
+	return database.db.AddBalance(addr, amount)
 }
 
 func (database *DatabaseService)  BeginTransaction() *Database {

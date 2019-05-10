@@ -41,10 +41,7 @@ func (s *State) SubBalance(addr *crypto.CommonAddress, amount *big.Int) error {
 }
 
 func (s *State) AddBalance(addr *crypto.CommonAddress, amount *big.Int) error {
-	s.db.AddBalance(addr, amount)
-	//balance := s.db.GetBalance(addr, chainId,true)
-	//return s.db.PutBalance(addr, chainId, new(big.Int).Add(balance, amount),true)
-	return nil
+	return s.db.AddBalance(addr, amount)
 }
 
 func (s *State) GetBalance(addr *crypto.CommonAddress,) *big.Int {

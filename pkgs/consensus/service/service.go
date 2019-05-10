@@ -251,7 +251,6 @@ func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, erro
 		if err != nil {
 			return false
 		}
-
 		return consensusService.blockVerify(block)
 	}
 	_, err := consensusService.member.ProcessConsensus()
@@ -293,7 +292,9 @@ func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, erro
 //4 leader验证签名通过后，广播此块给所有的Peer
 func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, error) {
 	consensusService.leader.Reset()
-	block, err := consensusService.ChainService.GenerateBlock(consensusService.leader.pubkey)
+	db := consensusService.DatabaseService.BeginTransaction()
+	defer db.Discard()
+	block, gasFee ,err := consensusService.ChainService.GenerateBlock(db, consensusService.leader.pubkey)
 	if err != nil {
 		dlog.Error("generate block fail", "msg", err)
 		return nil, err
@@ -308,19 +309,11 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 	}
 
 	multiSig := &chainTypes.MultiSignature{Sig: *sig, Bitmap: bitmap}
-	dlog.Trace("node leader is preparing process consensus for round 2")
 	consensusService.leader.Reset()
 	msg, err := binary.Marshal(multiSig)
 	if err != nil {
 		return nil, err
 	}
-	dlog.Trace("node leader is going to process consensus for round 2")
-	err, _, _ = consensusService.leader.ProcessConsensus(msg)
-	if err != nil {
-		return nil, err
-	}
-	dlog.Trace("node leader finishes process consensus for round 2")
-
 	minorPubkeys := []secp256k1.PublicKey{}
 	for index, producer := range consensusService.ChainService.Config.Producers {
 		if multiSig.Bitmap[index] == 1 {
@@ -329,13 +322,27 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 	}
 	block.Header.MinorPubKeys = minorPubkeys
 	block.MultiSig = multiSig
+	//Determine reward points
+    err = consensusService.ChainService.AccumulateRewards(db, block, gasFee)
+	if err != nil {
+		return nil, err
+	}
+	block.Header.StateRoot = db.GetStateRoot()
+	dlog.Trace("node leader is going to process consensus for round 2")
+	err, _, _ = consensusService.leader.ProcessConsensus(msg)
+	if err != nil {
+		return nil, err
+	}
+	dlog.Trace("node leader finishes process consensus for round 2")
 	consensusService.leader.Reset()
 	dlog.Trace("node leader finishes sending block")
 	return block, nil
 }
 
 func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error) {
-	block, err := consensusService.ChainService.GenerateBlock(consensusService.pubkey)
+	db := consensusService.DatabaseService.BeginTransaction()
+	defer db.Discard()
+	block, gasFee, err := consensusService.ChainService.GenerateBlock(db, consensusService.pubkey)
 	if err != nil {
 		return nil, err
 	}
@@ -351,6 +358,11 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 	}
 	multiSig := &chainTypes.MultiSignature{Sig: *sig, Bitmap: []byte{1}}
 	block.MultiSig = multiSig
+	err = consensusService.ChainService.AccumulateRewards(db, block, gasFee)
+	if err != nil {
+		return nil, err
+	}
+	block.Header.StateRoot = db.GetStateRoot()
 	return block, nil
 }
 

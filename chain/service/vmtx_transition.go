@@ -16,8 +16,9 @@
 package service
 
 import (
-	"github.com/drep-project/drep-chain/chain/params"
 	"math/big"
+
+	"github.com/drep-project/drep-chain/chain/params"
 
 	"github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
@@ -55,15 +56,15 @@ type StateTransition struct {
 	initialGas      uint64
 	value           *big.Int
 	data            []byte
-	state           *vm.State
 	header          *types.BlockHeader
 	bc              evm.ChainContext
 	vmService       evm.Vm
 	databaseService *database.Database
+	state           *vm.State
 }
 
 // NewStateTransition initialises and returns a new state transition object.
-func NewStateTransition(databaseService *database.Database, vmService evm.Vm, tx *types.Transaction, from *crypto.CommonAddress, state *vm.State, header *types.BlockHeader, bc evm.ChainContext, gp *GasPool) *StateTransition {
+func NewStateTransition(databaseService *database.Database, vmService evm.Vm, tx *types.Transaction, from *crypto.CommonAddress, header *types.BlockHeader, bc evm.ChainContext, gp *GasPool) *StateTransition {
 	return &StateTransition{
 		gp:              gp,
 		tx:              tx,
@@ -71,11 +72,11 @@ func NewStateTransition(databaseService *database.Database, vmService evm.Vm, tx
 		gasPrice:        tx.GasPrice(),
 		value:           tx.Amount(),
 		data:            tx.Data.Data,
-		state:           state,
 		header:          header,
 		bc:              bc,
 		vmService:       vmService,
 		databaseService: databaseService,
+		state:           vm.NewState(databaseService),
 	}
 }
 
@@ -98,7 +99,7 @@ func (st *StateTransition) useGas(amount uint64) error {
 
 func (st *StateTransition) buyGas() error {
 	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.tx.Gas()), st.gasPrice)
-	if st.state.GetBalance(st.from).Cmp(mgval) < 0 {
+	if st.databaseService.GetBalance(st.from).Cmp(mgval) < 0 {
 		return errInsufficientBalanceForGas
 	}
 	if err := st.gp.SubGas(st.tx.Gas()); err != nil {
@@ -107,13 +108,13 @@ func (st *StateTransition) buyGas() error {
 	st.gas += st.tx.Gas()
 
 	st.initialGas = st.tx.Gas()
-	st.state.SubBalance(st.from, mgval)
+	st.databaseService.SubBalance(st.from, mgval)
 	return nil
 }
 
 func (st *StateTransition) preCheck() error {
 	// Make sure this transaction's nonce is correct.
-	nonce := st.state.GetNonce(st.from)
+	nonce := st.databaseService.GetNonce(st.from)
 	if nonce < st.tx.Nonce() {
 		return ErrNonceTooHigh
 	} else if nonce > st.tx.Nonce() {
@@ -149,11 +150,11 @@ func (st *StateTransition) TransitionAliasDb() (ret []byte, failed bool, err err
 	from := st.from
 	alias := st.tx.GetData()
 	err = st.databaseService.AliasSet(from, string(alias))
-	st.gas += params.AliasGas*uint64(len(alias))
+	st.gas += params.AliasGas * uint64(len(alias))
 	return nil, true, err
 }
 
-func (st *StateTransition) refundGas() {
+func (st *StateTransition) refundGas() error {
 	// Apply refund counter, capped to half of the used gas.
 	refund := st.gasUsed() / 2
 	if refund > st.state.GetRefund() {
@@ -163,11 +164,14 @@ func (st *StateTransition) refundGas() {
 
 	// Return DREP for remaining gas, exchanged at the original rate.
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
-	st.state.AddBalance(st.from, remaining)
-
+	err := st.databaseService.AddBalance(st.from, remaining)
+	if err != nil {
+		return nil
+	}
 	// Also return remaining gas to the block gas counter so it is
 	// available for the next transaction.
 	st.gp.AddGas(st.gas)
+	return nil
 }
 
 // gasUsed returns the amount of gas used up by the state transition.

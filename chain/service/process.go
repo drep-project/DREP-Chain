@@ -5,6 +5,7 @@ import (
 	"container/list"
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/drep-project/dlog"
@@ -161,18 +162,29 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainCh
 func (chainService *ChainService) connectBlock(db *database.Database, block *chainTypes.Block, newNode *chainTypes.BlockNode) (err error) {
 	gp := new(GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
-	_, err = chainService.executeTransactionInBlock(db, block, gp)
+	var gasUsed *big.Int
+	var gasFee *big.Int
+	gasUsed, gasFee, err = chainService.executeTransactionInBlock(db, block, gp)
 	if err != nil {
 		chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValidateFailed)
 		chainService.flushIndexState()
 		return err
 	}
-
-	stateRoot := db.GetStateRoot()
-	if bytes.Equal(block.Header.StateRoot, stateRoot) {
-		dlog.Debug("matched ", "BlockStateRoot", hex.EncodeToString(block.Header.StateRoot), "CalcStateRoot", hex.EncodeToString(stateRoot))
+	err = chainService.AccumulateRewards(db, block, gasFee)
+	if err != nil {
+		chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValidateFailed)
+		chainService.flushIndexState()
+		return err
+	}
+	if block.Header.GasUsed.Cmp(gasUsed) == 0 {
+		stateRoot := db.GetStateRoot()
+		if bytes.Equal(block.Header.StateRoot, stateRoot) {
+			dlog.Debug("matched ", "BlockStateRoot", hex.EncodeToString(block.Header.StateRoot), "CalcStateRoot", hex.EncodeToString(stateRoot))
+		} else {
+			err = errors.Wrapf(ErrNotMathcedStateRoot, "%s not matched %s", hex.EncodeToString(block.Header.StateRoot), hex.EncodeToString(stateRoot))
+		}
 	} else {
-		err = errors.Wrapf(ErrNotMathcedStateRoot, "%s not matched %s", hex.EncodeToString(block.Header.StateRoot), hex.EncodeToString(stateRoot))
+		err = errors.Wrapf(ErrNotMathcedStateRoot, "%s not matched %s", block.Header.GasUsed.Uint64(), gasUsed.Uint64())
 	}
 
 	if err == nil {
@@ -367,7 +379,7 @@ func (chainService *ChainService) InitStates() error {
 	// Set the best chain view to the stored best state.
 	tip := chainService.Index.LookupNode(&chainState.Hash)
 	if tip == nil {
-		return errors.Wrapf(ErrInitStateFail,"cannot find chain tip %s in block index", chainState.Hash)
+		return errors.Wrapf(ErrInitStateFail, "cannot find chain tip %s in block index", chainState.Hash)
 	}
 	chainService.BestChain.SetTip(tip)
 

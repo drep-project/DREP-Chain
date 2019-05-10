@@ -273,12 +273,10 @@ func (chainService *ChainService) blockExists(blockHash *crypto.Hash) bool {
 	return chainService.Index.HaveBlock(blockHash)
 }
 
-func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey) (*chainTypes.Block, error) {
-	db := chainService.DatabaseService.BeginTransaction()
-	defer db.Discard()
+func (chainService *ChainService) GenerateBlock(db *database.Database,leaderKey *secp256k1.PublicKey) (*chainTypes.Block, *big.Int,error) {
 	parent, err := chainService.GetHighestBlock()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	newGasLimit := chainService.CalcGasLimit(parent.Header, params.MinGasLimit, params.MaxGasLimit)
 	height := chainService.BestChain.Height() + 1
@@ -299,6 +297,7 @@ func (chainService *ChainService) GenerateBlock(leaderKey *secp256k1.PublicKey) 
 
 	finalTxs := make([]*chainTypes.Transaction, 0, len(txs))
 	gasUsed := new(big.Int)
+	gasFee := new (big.Int)
 	gp := new(GasPool).AddGas(blockHeader.GasLimit.Uint64())
 	stopchanel := make(chan struct{})
 	time.AfterFunc(time.Second*5, func() {
@@ -311,10 +310,11 @@ SELECT_TX:
 		case <-stopchanel:
 			break SELECT_TX
 		default:
-			g, _, err := chainService.executeTransaction(db, t, gp, blockHeader)
+			txGasUsed, txGasFee, err := chainService.executeTransaction(db, t, gp, blockHeader)
 			if err == nil {
 				finalTxs = append(finalTxs, t)
-				gasUsed.Add(gasUsed, g)
+				gasUsed.Add(gasUsed, txGasUsed)
+				gasFee.Add(gasFee, txGasFee)
 			} else {
 				if err.Error() == ErrReachGasLimit.Error() {
 					break SELECT_TX
@@ -330,7 +330,6 @@ SELECT_TX:
 	}
 
 	blockHeader.GasUsed = *new(big.Int).SetUint64(gasUsed.Uint64())
-	blockHeader.StateRoot = db.GetStateRoot()
 	blockHeader.TxRoot = chainService.deriveMerkleRoot(finalTxs)
 
 	block := &chainTypes.Block{
@@ -340,7 +339,7 @@ SELECT_TX:
 			TxList:  finalTxs,
 		},
 	}
-	return block, nil
+	return block, gasFee, nil
 }
 
 func (chainService *ChainService) GetTxHashes(ts []*chainTypes.Transaction) ([][]byte, error) {
@@ -367,23 +366,29 @@ func (chainService *ChainService) RootChain() app.ChainIdType {
 }
 
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
-func (chainService *ChainService) accumulateRewards(db *database.Database, b *chainTypes.Block, totalGasBalance *big.Int) {
+func (chainService *ChainService) AccumulateRewards(db *database.Database, b *chainTypes.Block, totalGasBalance *big.Int) error {
 	reward := new(big.Int).SetUint64(uint64(Rewards))
 	leaderAddr := crypto.PubKey2Address(&b.Header.LeaderPubKey)
 
 	r := new(big.Int)
 	r = r.Div(reward, new(big.Int).SetInt64(2))
 	r.Add(r, totalGasBalance)
-	db.AddBalance(&leaderAddr, r)
-
+	err := db.AddBalance(&leaderAddr, r)
+	if err != nil {
+		return err
+	}
 	num := len(b.Header.MinorPubKeys)
 	for _, memberPK := range b.Header.MinorPubKeys {
 		if !memberPK.IsEqual(&b.Header.LeaderPubKey) {
 			memberAddr := crypto.PubKey2Address(&memberPK)
 			r.Div(reward, new(big.Int).SetInt64(int64(num*2)))
-			db.AddBalance(&memberAddr, r)
+			err = db.AddBalance(&memberAddr, r)
+			if err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
 
 func (chainService *ChainService) SubscribeSyncBlockEvent(subchan chan event.SyncBlockEvent) event.Subscription {
