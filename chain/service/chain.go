@@ -40,10 +40,11 @@ var (
 		MaxPrice:   big.NewInt(500 * params.GWei).Uint64(),
 	}
 	DefaultChainConfig = &chainTypes.ChainConfig{
-		RemotePort: 55556,
-		ChainId:    app.ChainIdType{},
-		GasPrice:   DefaultOracleConfig,
-		GenesisPK:  "0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26",
+		RemotePort:  55556,
+		ChainId:     app.ChainIdType{},
+		GasPrice:    DefaultOracleConfig,
+		GenesisPK:   "0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26",
+		JournalFile: "txpool/txs",
 	}
 	span = uint64(params.MaxGasLimit / 360)
 )
@@ -167,7 +168,7 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 		}
 	}
 	chainService.InitStates()
-	chainService.transactionPool = txpool.NewTransactionPool(chainService.StateSnapshot.db,	path.Join(executeContext.CommonConfig.HomeDir, "txpool/txs"))
+	chainService.transactionPool = txpool.NewTransactionPool(chainService.StateSnapshot.db, path.Join(executeContext.CommonConfig.HomeDir, chainService.Config.JournalFile))
 
 	chainService.P2pServer.AddProtocols([]p2p.Protocol{
 		p2p.Protocol{
@@ -214,7 +215,7 @@ func (chainService *ChainService) Stop(executeContext *app.ExecuteContext) error
 	return nil
 }
 
-func (chainService *ChainService) SendTransaction(tx *chainTypes.Transaction,islocal bool) error {
+func (chainService *ChainService) SendTransaction(tx *chainTypes.Transaction, islocal bool) error {
 	chainService.stateLock.Lock()
 	db := chainService.StateSnapshot.db
 	chainService.stateLock.Unlock()

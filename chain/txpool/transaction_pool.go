@@ -15,8 +15,8 @@ import (
 
 const (
 	maxAllTxsCount  = 100000
-	maxTxsOfQueue   = 20     //单个地址对应的乱序队列中，最多容纳交易数目
-	maxTxsOfPending = 100000 //单个地址对应的有序队列中，最多容纳交易数目
+	maxTxsOfQueue   = 20   //单个地址对应的乱序队列中，最多容纳交易数目
+	maxTxsOfPending = 1000 //单个地址对应的有序队列中，最多容纳交易数目
 )
 
 //1 池子里的交易按照nonce是否连续，分为乱序的和已经排序的在两个不同的队列中
@@ -130,7 +130,7 @@ func (pool *TransactionPool) addTxs(txs []chainTypes.Transaction) []error {
 	errs := make([]error, len(txs))
 	for i, tx := range txs {
 		tx := tx
-		from,_ := tx.From()
+		from, _ := tx.From()
 		if tx.Nonce() < pool.getTransactionCount(from) {
 			continue
 		}

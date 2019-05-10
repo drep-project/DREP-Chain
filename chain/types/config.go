@@ -13,6 +13,7 @@ type ChainConfig struct {
 	SkipCheckMutiSig bool            `json:"skipCheckMutiSig"`
 	Producers        []Producers     `json:"producers"`
 	GasPrice		 OracleConfig    `json:"gasprice"`
+	JournalFile      string          `json:"journalFile"`
 }
 
 type Producers struct {
