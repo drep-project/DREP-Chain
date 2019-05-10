@@ -2,21 +2,21 @@ package txpool
 
 import (
 	"container/heap"
-	"math/big"
-	"sync"
-
+	"errors"
 	"github.com/drep-project/dlog"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
-	"github.com/pkg/errors"
+	"math/big"
+	"sync"
+	"time"
 )
 
 const (
 	maxAllTxsCount  = 100000
-	maxTxsOfQueue   = 20  //乱序队列中，最多容纳交易数目
-	maxTxsOfPending = 200 //有序队列中，最多容纳交易数目
+	maxTxsOfQueue   = 20     //单个地址对应的乱序队列中，最多容纳交易数目
+	maxTxsOfPending = 100000 //单个地址对应的有序队列中，最多容纳交易数目
 )
 
 //1 池子里的交易按照nonce是否连续，分为乱序的和已经排序的在两个不同的队列中
@@ -28,20 +28,23 @@ type TransactionPool struct {
 	rlock    sync.RWMutex
 	queue    map[crypto.CommonAddress]*txList
 	pending  map[crypto.CommonAddress]*txList
-	//accountTran map[crypto.CommonAddress]*list.SortedLinkedList
-	allTxs  map[string]bool
-	mu      sync.Mutex
-	nonceCp func(a interface{}, b interface{}) int
-	tranCp  func(a interface{}, b interface{}) bool
+	allTxs   map[string]bool //统计信息使用
+	mu       sync.Mutex
+	nonceCp  func(a interface{}, b interface{}) int
+	tranCp   func(a interface{}, b interface{}) bool
 
 	//当前有序的最大的nonce大小,此值应该被存储到DB中（后续考虑txpool的DB存储，一起考虑）
 	pendingNonce     map[crypto.CommonAddress]uint64
 	eventNewBlockSub event.Subscription
 	newBlockChan     chan *chainTypes.Block
 	quit             chan struct{}
+
+	//日志
+	journal *txJournal
+	locals  map[crypto.CommonAddress]struct{} //本地节点包含的地址
 }
 
-func NewTransactionPool(database *database.Database) *TransactionPool {
+func NewTransactionPool(database *database.Database, journalPath string) *TransactionPool {
 	pool := &TransactionPool{database: database}
 	pool.nonceCp = func(a interface{}, b interface{}) int {
 		ta, oka := a.(*chainTypes.Transaction)
@@ -74,7 +77,70 @@ func NewTransactionPool(database *database.Database) *TransactionPool {
 	pool.newBlockChan = make(chan *chainTypes.Block)
 	pool.pendingNonce = make(map[crypto.CommonAddress]uint64)
 
+	pool.journal = newTxJournal(journalPath)
+	pool.locals = make(map[crypto.CommonAddress]struct{})
+	pool.journal.load(pool.addTxs)
+	pool.journal.rotate(pool.local())
+	//todo 添加本地addr
+
 	return pool
+}
+
+func (pool *TransactionPool) journalTx(from crypto.CommonAddress, tx *chainTypes.Transaction) {
+	//fmt.Println("insert journal tx", tx.Nonce())
+	// Only journal if it's enabled and the transaction is local
+	if _, ok := pool.locals[from]; !ok || pool.journal == nil {
+		return
+	}
+
+	if err := pool.journal.insert(tx); err != nil {
+		dlog.Warn("Failed to journal local transaction", "err", err)
+	}
+}
+
+func (pool *TransactionPool) local() map[crypto.CommonAddress][]*chainTypes.Transaction {
+	isLocalAddr := func(addr crypto.CommonAddress) bool {
+		_, ok := pool.locals[addr]
+		return ok
+	}
+
+	all := make(map[crypto.CommonAddress][]*chainTypes.Transaction)
+	for addr, list := range pool.queue {
+		if !list.Empty() && isLocalAddr(addr) {
+			txs := list.Flatten()
+			all[addr] = txs
+		}
+	}
+
+	for addr, list := range pool.pending {
+		if !list.Empty() && isLocalAddr(addr) {
+			txs := list.Flatten()
+			if _, ok := all[addr]; ok {
+				txs = append(txs, all[addr]...)
+			} else {
+				all[addr] = txs
+			}
+		}
+	}
+
+	return all
+}
+
+func (pool *TransactionPool) addTxs(txs []chainTypes.Transaction) []error {
+	errs := make([]error, len(txs))
+	for i, tx := range txs {
+		tx := tx
+		from,_ := tx.From()
+		if tx.Nonce() < pool.getTransactionCount(from) {
+			continue
+		}
+		errs[i] = pool.addTx(&tx, true)
+		if errs[i] != nil {
+			dlog.Error("recover tx from journal err", "err", errs[i])
+		}
+	}
+
+	return errs
 }
 
 func (pool *TransactionPool) UpdateState(database *database.Database) {
@@ -93,37 +159,79 @@ func (pool *TransactionPool) Contains(id string) bool {
 	return exists || value
 }
 
+func (pool *TransactionPool) AddTransaction(tx *chainTypes.Transaction, isLocal bool) error {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
+	return pool.addTx(tx, isLocal)
+}
+
 //func AddTransaction(id string, transaction *common.transaction) {
-func (pool *TransactionPool) AddTransaction(tx *chainTypes.Transaction) error {
+func (pool *TransactionPool) addTx(tx *chainTypes.Transaction, isLocal bool) error {
+	id := tx.TxHash()
+	//fmt.Println("nonce:", tx.Nonce(), "id:", id.String())
+	if _, ok := pool.allTxs[id.String()]; ok {
+		dlog.Error("addtx err", "id", id.String(), "nonce", tx.Nonce())
+		return errors.New("konwn tx")
+	}
+
+	if len(pool.allTxs) > maxAllTxsCount {
+		//todo 丢弃时间较长的交易
+	}
+
 	addr, err := tx.From()
 	if err != nil {
 		return err
 	}
-	id := tx.TxHash()
-	pool.mu.Lock()
-	defer pool.mu.Unlock()
-	if len(pool.allTxs) >= maxAllTxsCount {
-		return errors.Wrapf(ErrTxPoolFull, "txid:%s count:%d, maxSize:%d", id, len(pool.allTxs), maxAllTxsCount)
+	if isLocal {
+		if _, ok := pool.locals[*addr]; !ok {
+			pool.locals[*addr] = struct{}{}
+		}
 	}
 
-	if _, exists := pool.allTxs[id.String()]; exists {
-		return errors.Wrapf(ErrTxExist, "hash %s"+id.String())
-	} else {
-		pool.allTxs[id.String()] = true
-
-		if list, ok := pool.queue[*addr]; ok {
-			//地址对应的队列空间是否已经满
-			if list.Len() > maxTxsOfQueue {
-				return ErrQueueFull
+	//在Pending中，是否满足替换要求
+	if pendingList, ok := pool.pending[*addr]; ok {
+		if pendingList.Overlaps(tx) {
+			//替换
+			ok, oldTx := pendingList.ReplaceOldTx(tx)
+			if !ok {
+				return errors.New("can't replace old tx")
 			}
-			list.Add(tx)
-		} else {
-			pool.queue[*addr] = newTxList(true)
-			pool.queue[*addr].Add(tx)
+
+			delete(pool.allTxs, oldTx.TxHash().String())
+			pool.allTxs[id.String()] = true
+			pool.journalTx(*addr, tx)
+			return nil
+		}
+	}
+
+	//添加到queue
+	if list, ok := pool.queue[*addr]; ok {
+		if list.Overlaps(tx) {
+			//替换
+			ok, oldTx := list.ReplaceOldTx(tx)
+			if !ok {
+				return errors.New("can't replace old tx")
+			}
+
+			delete(pool.allTxs, oldTx.TxHash().String())
+			pool.allTxs[id.String()] = true
+			return nil
 		}
 
-		pool.syncToPending(addr)
+		//地址对应的队列空间是否已经满 ,同时数据新的数据对应的NONCE还在queue中。直接返回错误
+		if list.Len() > maxTxsOfQueue {
+			return errors.New("queue full")
+		}
+		list.Add(tx)
+	} else {
+		pool.queue[*addr] = newTxList(true)
+		pool.queue[*addr].Add(tx)
 	}
+
+	pool.journalTx(*addr, tx)
+	pool.allTxs[id.String()] = true
+	pool.syncToPending(addr)
 	return nil
 }
 
@@ -231,11 +339,18 @@ func (pool *TransactionPool) Start(feed *event.Feed) {
 func (pool *TransactionPool) Stop() {
 	close(pool.quit)
 	pool.eventNewBlockSub.Unsubscribe()
+	pool.journal.close()
 }
 
 func (pool *TransactionPool) checkUpdate() {
+	timer := time.NewTicker(time.Second * 5)
 	for {
 		select {
+		case <-timer.C:
+			pool.mu.Lock()
+			all := pool.local()
+			pool.journal.rotate(all)
+			pool.mu.Unlock()
 		case block := <-pool.newBlockChan:
 			pool.adjust(block)
 		case <-pool.quit:

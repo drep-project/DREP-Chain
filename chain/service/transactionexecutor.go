@@ -8,13 +8,14 @@ import (
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
-	"github.com/pkg/errors"
+
 	"math"
 	"math/big"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
+	"fmt"
 )
 
 const (
@@ -31,7 +32,7 @@ func (chainService *ChainService) VerifyTransaction(db *database.Database, tx *c
 
 func (chainService *ChainService) verifyTransaction(db *database.Database, tx *chainTypes.Transaction) error {
 	from, err := tx.From()
-	nounce := tx.Nonce()
+	txNonce := tx.Nonce()
 
 	// Transactions can't be negative. This may never happen using RLP decoded
 	// transactions but may occur if you create a transaction using the RPC.
@@ -39,9 +40,10 @@ func (chainService *ChainService) verifyTransaction(db *database.Database, tx *c
 		return ErrNegativeAmount
 	}
 
-	nonce := db.GetNonce(from)
-	if nonce > nounce {
-		return errors.Wrapf(errBalance, "error nounce %d != %d", nonce, nounce) 
+	//nonce := db.GetNonce(from)
+	nonce := chainService.transactionPool.GetTransactionCount(from)
+	if nonce > txNonce {
+		return fmt.Errorf("error nounce db nonce:%d != %d", nonce, txNonce)
 	}
 
 	// Check the transaction doesn't exceed the current

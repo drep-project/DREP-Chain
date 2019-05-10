@@ -83,7 +83,7 @@ func (accountapi *AccountApi) Transfer(from crypto.CommonAddress, to crypto.Comm
 		return "", err
 	}
 	tx.Sig = sig
-	err = accountapi.chainService.SendTransaction(tx)
+	err = accountapi.chainService.SendTransaction(tx, true)
 	if err != nil {
 		return "", err
 	}
@@ -98,7 +98,7 @@ func (accountapi *AccountApi) SetAlias(srcAddr crypto.CommonAddress, alias strin
 		return "", err
 	}
 	t.Sig = sig
-	err = accountapi.chainService.SendTransaction(t)
+	err = accountapi.chainService.SendTransaction(t, true)
 	if err != nil {
 		return "", err
 	}
@@ -113,7 +113,7 @@ func (accountapi *AccountApi) Call(from crypto.CommonAddress, to crypto.CommonAd
 		return "", err
 	}
 	t.Sig = sig
-	accountapi.chainService.SendTransaction(t)
+	accountapi.chainService.SendTransaction(t, true)
 	return t.TxHash().String(), nil
 }
 
@@ -125,7 +125,7 @@ func (accountapi *AccountApi) CreateCode(from crypto.CommonAddress, byteCode com
 		return "", err
 	}
 	t.Sig = sig
-	accountapi.chainService.SendTransaction(t)
+	accountapi.chainService.SendTransaction(t, true)
 	return t.TxHash().String(), nil
 }
 

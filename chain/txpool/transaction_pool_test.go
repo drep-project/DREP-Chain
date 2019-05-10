@@ -2,12 +2,12 @@ package txpool
 
 import (
 	"fmt"
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/database"
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"math/big"
 	"testing"
 	"time"
@@ -23,8 +23,8 @@ func TestNewTransactions(t *testing.T) {
 	if err != nil {
 		t.Error("db init err")
 	}
-	db := database.NewDatabaseService(diskDb)
-	txPool = NewTransactionPool(db)
+	//db := database.NewDatabaseService(diskDb)
+	txPool = NewTransactionPool(diskDb,"./jounal/txs")
 	if txPool == nil {
 		t.Error("init database service err")
 	}
@@ -38,15 +38,15 @@ func addTx(t *testing.T, num uint64) error {
 	pubkey, _ := secp256k1.ParsePubKey(b)
 	addr := crypto.PubKey2Address(pubkey)
 	fmt.Println(string(addr.Hex()))
-	txPool.databaseApi.BeginTransaction()
+	txPool.database.BeginTransaction()
 
 	var amount uint64 = 0xefffffffffffffff
-	txPool.databaseApi.PutBalance(&addr, new(big.Int).SetUint64(amount), true)
-	txPool.databaseApi.Commit()
+	txPool.database.PutBalance(&addr, new(big.Int).SetUint64(amount))
+	txPool.database.Commit()
 
-	nonce := txPool.databaseApi.GetNonce(&addr, false)
+	nonce := txPool.database.GetNonce(&addr)
 	for i := 0; uint64(i) < num; i++ {
-		tx := chainTypes.NewTransaction(addr, crypto.CommonAddress{}, new(big.Int).SetInt64(100), nonce+uint64(i))
+		tx := chainTypes.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(100), new(big.Int).SetInt64(100), nonce+uint64(i))
 		err := txPool.AddTransaction(tx)
 		if err != nil {
 			return err
@@ -79,7 +79,7 @@ func TestAddIntevalTX(t *testing.T) {
 			continue
 		}
 
-		tx := chainTypes.NewTransaction(addr, crypto.CommonAddress{}, new(big.Int).SetUint64(100000000), uint64(i))
+		tx := chainTypes.NewTransaction(addr, new(big.Int).SetUint64(100000000), new(big.Int).SetUint64(100000000), new(big.Int).SetUint64(100000000), uint64(i))
 		txPool.AddTransaction(tx)
 	}
 }
@@ -123,7 +123,7 @@ func TestGetPendingTxs(t *testing.T) {
 				var addrs []*crypto.CommonAddress
 				mapAddr := make(map[crypto.CommonAddress]struct{})
 				for _, tx := range mapTxs {
-					from := tx.From()
+					from := &crypto.CommonAddress{}
 					if _, ok := mapAddr[*from]; !ok {
 						mapAddr[*from] = struct{}{}
 						addrs = append(addrs, from)
@@ -131,9 +131,8 @@ func TestGetPendingTxs(t *testing.T) {
 					nonce = tx.Nonce()
 				}
 				fmt.Println("recv nonce:", nonce)
-				txPool.databaseApi.BeginTransaction()
-				txPool.databaseApi.PutNonce(addrs[0], nonce+1, false)
-				txPool.databaseApi.Commit()
+				txPool.database.BeginTransaction()
+				txPool.database.Commit()
 
 				feed.Send(addrs)
 				time.Sleep(time.Second * 1)

@@ -159,7 +159,9 @@ func (m *txSortedMap) Remove(nonce uint64) bool {
 func (m *txSortedMap) Ready(start uint64) []*chainTypes.Transaction {
 	// Short circuit if no transactions are available
 	if m.index.Len() == 0 || (*m.index)[0] > start {
-		dlog.Warn("txSortedMap Ready", "index[0]:", (*m.index)[0], "req start:", start)
+		if m.index.Len() != 0 {
+			dlog.Warn("txSortedMap Ready", "index[0]:", (*m.index)[0], "req start:", start)
+		}
 		return nil
 	}
 	// Otherwise start accumulating incremental transactions
@@ -223,6 +225,15 @@ func newTxList(strict bool) *txList {
 // already contained within the list.
 func (l *txList) Overlaps(tx *chainTypes.Transaction) bool {
 	return l.txs.Get(tx.Nonce()) != nil
+}
+
+func (l *txList) ReplaceOldTx(tx *chainTypes.Transaction) (bool, *chainTypes.Transaction) {
+	oldTx := l.txs.Get(tx.Nonce())
+	if removed := l.txs.Remove(tx.Nonce()); !removed {
+		return false, nil
+	}
+	l.txs.Put(tx)
+	return true, oldTx
 }
 
 func (l *txList) Add(tx *chainTypes.Transaction) bool {

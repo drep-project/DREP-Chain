@@ -3,6 +3,7 @@ package service
 import (
 	"math/big"
 	"math/rand"
+	"path"
 	"sync"
 	"time"
 
@@ -166,7 +167,7 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 		}
 	}
 	chainService.InitStates()
-	chainService.transactionPool = txpool.NewTransactionPool(chainService.StateSnapshot.db)
+	chainService.transactionPool = txpool.NewTransactionPool(chainService.StateSnapshot.db,	path.Join(executeContext.CommonConfig.HomeDir, "txpool/txs"))
 
 	chainService.P2pServer.AddProtocols([]p2p.Protocol{
 		p2p.Protocol{
@@ -213,7 +214,7 @@ func (chainService *ChainService) Stop(executeContext *app.ExecuteContext) error
 	return nil
 }
 
-func (chainService *ChainService) SendTransaction(tx *chainTypes.Transaction) error {
+func (chainService *ChainService) SendTransaction(tx *chainTypes.Transaction,islocal bool) error {
 	chainService.stateLock.Lock()
 	db := chainService.StateSnapshot.db
 	chainService.stateLock.Unlock()
@@ -222,7 +223,7 @@ func (chainService *ChainService) SendTransaction(tx *chainTypes.Transaction) er
 	if err != nil {
 		return err
 	}
-	err = chainService.transactionPool.AddTransaction(tx)
+	err = chainService.transactionPool.AddTransaction(tx, islocal)
 	if err != nil {
 		return err
 	} else {

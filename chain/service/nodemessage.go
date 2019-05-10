@@ -87,7 +87,7 @@ func (chainService *ChainService) dealMsg(peer *chainTypes.PeerInfo, rw p2p.MsgR
 				dlog.Trace("comming transaction", "transaction", tx.Nonce())
 				tx := tx
 				peer.MarkTx(&tx)
-				chainService.SendTransaction(&tx)
+				chainService.SendTransaction(&tx, false)
 			}
 
 		case chainTypes.MsgTypeBlock:

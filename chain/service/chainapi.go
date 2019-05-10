@@ -88,7 +88,7 @@ func (chain *ChainApi) SendRawTransaction(txbytes common.Bytes) (string, error) 
 	if err != nil {
 		return "", err
 	}
-	err = chain.chainService.SendTransaction(tx)
+	err = chain.chainService.SendTransaction(tx, true)
 	if err != nil {
 		return "", err
 	}
