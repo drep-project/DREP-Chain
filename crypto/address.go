@@ -32,7 +32,7 @@ func String2Address(s string) CommonAddress {
 	if s == "" {
 		return CommonAddress{}
 	}
-	bytes := []byte(s)
+	bytes := common.MustDecode(s)
 	return Bytes2Address(bytes)
 }
 

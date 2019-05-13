@@ -10,21 +10,19 @@ import (
 	"math/big"
 )
 
-func (chainService *ChainService) GetGenisiBlock(genesisPubkey string) *chainTypes.Block {
+func (chainService *ChainService) GetGenisiBlock(biosPubkey string) *chainTypes.Block {
 	var root []byte
-	//NOTICE pre mine
 	db, err := database.DatabaseFromStore(database.NewMemoryStore())
-	for _, producer := range chainService.Config.Producers {
-		//add account
+	for addr, balance := range params.Preminer {
+		//add preminer addr and balance
 		storage := chainTypes.NewStorage()
-		storage.Balance = *big.NewInt(0).Mul(big.NewInt(1000000000000000000), big.NewInt(1000000000))
-		addr := crypto.PubKey2Address(producer.Pubkey)
+		storage.Balance = *balance
 		db.PutStorage(&addr, storage)
 	}
 	root = db.GetStateRoot()
 
 	merkleRoot := chainService.deriveMerkleRoot(nil)
-	b := common.MustDecode(genesisPubkey)
+	b := common.MustDecode(biosPubkey)
 	pubkey, err := secp256k1.ParsePubKey(b)
 	if err != nil {
 		return nil
@@ -51,16 +49,14 @@ func (chainService *ChainService) GetGenisiBlock(genesisPubkey string) *chainTyp
 func (chainService *ChainService) ProcessGenesisBlock(genesisPubkey string) (*chainTypes.Block, error) {
 	var err error
 	var root []byte
-	//NOTICE pre mine
-	for _, producer := range chainService.Config.Producers {
-		//add account
+	for addr, balance := range params.Preminer {
+		//add preminer addr and balance
 		storage := chainTypes.NewStorage()
-		storage.Balance = *big.NewInt(0).Mul(big.NewInt(1000000000000000000), big.NewInt(1000000000))
-		addr := crypto.PubKey2Address(producer.Pubkey)
+		storage.Balance = *balance
 		chainService.DatabaseService.PutStorage(&addr, storage)
 	}
-	root = chainService.DatabaseService.GetStateRoot()
 
+	root = chainService.DatabaseService.GetStateRoot()
 	if err != nil {
 		return nil, err
 	}

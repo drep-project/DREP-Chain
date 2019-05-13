@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"fmt"
+	"github.com/drep-project/drep-chain/common"
 	"math/big"
 
 	"github.com/drep-project/drep-chain/chain/params"
@@ -14,9 +15,27 @@ import (
 )
 
 func (chainService *ChainService) VerifyHeader(header, parent *chainTypes.BlockHeader) error {
+	// Verify chainId  matched
+	if header.ChainId != chainService.chainId {
+		return ErrChainId
+	}
+	// Verify version  mathch
+	if header.Version != common.Version {
+		return ErrVersion
+	}
+	//Verify header's previousHash is equal parent hash
+	if header.PreviousHash !=  *parent.Hash() {
+		return ErrPreHash
+	}
+	// Verify that the block number is parent's +1
+	if header.Height-parent.Height != 1 {
+		return ErrInvalidateBlockNumber
+	}
+	// pre block timestamp before this block time
 	if header.Timestamp <= parent.Timestamp {
 		return ErrInvalidateTimestamp
 	}
+
 	// Verify that the gas limit is <= 2^63-1
 	cap := uint64(0x7fffffffffffffff)
 	if header.GasLimit.Uint64() > cap {
@@ -32,12 +51,28 @@ func (chainService *ChainService) VerifyHeader(header, parent *chainTypes.BlockH
 	if nextGasLimit.Cmp(&header.GasLimit) != 0 {
 		return fmt.Errorf("invalid gas limit: have %v, want %v += %v", header.GasLimit, parent.GasLimit, nextGasLimit)
 	}
-	// Verify that the block number is parent's +1
-	if header.Height-parent.Height != 1 {
-		return ErrInvalidateBlockNumber
+	// check multisig
+	// leader
+	if !chainService.isInLocalBp(&header.LeaderPubKey) {
+		return ErrBpNotInList
 	}
-
+	// minor
+	for _, minor := range header.MinorPubKeys {
+		if !chainService.isInLocalBp(&minor) {
+			return ErrBpNotInList
+		}
+	}
 	return nil
+}
+
+// isInLocalBp check the specific pubket  is a bp node
+func (chainService *ChainService) isInLocalBp(key *secp256k1.PublicKey) bool {
+	for _, bp := range chainService.Config.Producers {
+		if !bp.Pubkey.IsEqual(key) {
+			return false
+		}
+	}
+	return true
 }
 
 func (chainService *ChainService) ValidateBody(block *chainTypes.Block) error {
