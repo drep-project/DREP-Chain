@@ -26,7 +26,7 @@ package database
 //    fmt.Println("err2:   ", err)
 //    fmt.Println()
 //
-//    fmt.Println("temp:   ", db.temp)
+//    fmt.Println("dirties:   ", db.dirties)
 //    fmt.Println("states: ", db.states)
 //    fmt.Println()
 //}

@@ -497,6 +497,7 @@ func (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) b
 	if err != nil {
 		return false
 	}
+	//TODO need to verify traansaction , a lot of time
 	return err == nil
 }
 

@@ -184,17 +184,17 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *cha
 			err = errors.Wrapf(ErrNotMathcedStateRoot, "%s not matched %s", hex.EncodeToString(block.Header.StateRoot), hex.EncodeToString(stateRoot))
 		}
 	} else {
-		err = errors.Wrapf(ErrNotMathcedStateRoot, "%s not matched %s", block.Header.GasUsed.Uint64(), gasUsed.Uint64())
+		err = errors.Wrapf(ErrGasUsed, "%d not matched %d", block.Header.GasUsed.Uint64(), gasUsed.Uint64())
 	}
 
 	if err == nil {
 		chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValid)
+		chainService.flushIndexState()
 	} else {
 		chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValidateFailed)
 		chainService.flushIndexState()
 		return err
 	}
-	chainService.flushIndexState()
 
 	chainService.markState(db, newNode)
 	chainService.notifyBlock(block)

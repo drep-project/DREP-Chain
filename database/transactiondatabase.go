@@ -5,35 +5,35 @@ import (
 )
 
 type TransactionDatabase struct {
-	store IStore
-	temp  *sync.Map
+	store   IStore
+	dirties *sync.Map
 }
 
 func NewTransactionDatabase(store IStore) *TransactionDatabase {
 	return &TransactionDatabase{
-		store: store,
-		temp:  new(sync.Map),
+		store:   store,
+		dirties: new(sync.Map),
 	}
 }
 func (tDb *TransactionDatabase) Get(key []byte) ([]byte, error) {
-	if val, ok := tDb.temp.Load(string(key)); ok {
+	if val, ok := tDb.dirties.Load(string(key)); ok {
 		return val.([]byte), nil
 	}
 	val, err := tDb.store.Get(key)
 	if err != nil {
 		return nil, err
 	}
-	tDb.temp.Store(string(key), val)
+	tDb.dirties.Store(string(key), val)
 	return val, nil
 }
 
 func (tDb *TransactionDatabase) Put(key []byte, value []byte) error {
-	tDb.temp.Store(string(key), value)
+	tDb.dirties.Store(string(key), value)
 	return nil
 }
 
 func (tDb *TransactionDatabase) Delete(key []byte) error {
-	tDb.temp.Store(string(key), nil)
+	tDb.dirties.Store(string(key), nil)
 	return nil
 }
 
@@ -42,7 +42,7 @@ func (tDb *TransactionDatabase) NewIterator(key []byte) Iterator {
 }
 
 func (tDb *TransactionDatabase) Flush() {
-	tDb.temp.Range(func(key, value interface{}) bool {
+	tDb.dirties.Range(func(key, value interface{}) bool {
 		bk := []byte(key.(string))
 		val := value.([]byte)
 		if value != nil {
@@ -61,5 +61,5 @@ func (tDb *TransactionDatabase) Flush() {
 }
 
 func (tDb *TransactionDatabase) Clear() {
-	tDb.temp = new(sync.Map)
+	tDb.dirties = new(sync.Map)
 }
