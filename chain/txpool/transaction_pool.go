@@ -3,6 +3,7 @@ package txpool
 import (
 	"container/heap"
 	"errors"
+	"fmt"
 	"github.com/drep-project/dlog"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common/event"
@@ -14,9 +15,9 @@ import (
 )
 
 const (
-	maxAllTxsCount  = 100000
-	maxTxsOfQueue   = 20   //单个地址对应的乱序队列中，最多容纳交易数目
-	maxTxsOfPending = 1000 //单个地址对应的有序队列中，最多容纳交易数目
+	maxAllTxsCount  = 100000 //交易池所弄容纳的总的交易数量
+	maxTxsOfQueue   = 20     //单个地址对应的乱序队列中，最多容纳交易数目
+	maxTxsOfPending = 100    //单个地址对应的有序队列中，最多容纳交易数目
 )
 
 //1 池子里的交易按照nonce是否连续，分为乱序的和已经排序的在两个不同的队列中
@@ -24,14 +25,15 @@ const (
 //3 池子里面的交易根据块中的各个地址的交易对应的Nonce进行删除
 
 type TransactionPool struct {
-	database *database.Database
-	rlock    sync.RWMutex
-	queue    map[crypto.CommonAddress]*txList
-	pending  map[crypto.CommonAddress]*txList
-	allTxs   map[string]bool //统计信息使用
-	mu       sync.Mutex
-	nonceCp  func(a interface{}, b interface{}) int
-	tranCp   func(a interface{}, b interface{}) bool
+	database     *database.Database
+	rlock        sync.RWMutex
+	queue        map[crypto.CommonAddress]*txList
+	pending      map[crypto.CommonAddress]*txList
+	allTxs       map[string]bool //统计信息使用
+	allPricedTxs *txPricedList   //按照价格排序的tx列表
+	mu           sync.Mutex
+	nonceCp      func(a interface{}, b interface{}) int
+	tranCp       func(a interface{}, b interface{}) bool
 
 	//当前有序的最大的nonce大小,此值应该被存储到DB中（后续考虑txpool的DB存储，一起考虑）
 	pendingNonce     map[crypto.CommonAddress]uint64
@@ -71,11 +73,13 @@ func NewTransactionPool(database *database.Database, journalPath string) *Transa
 		return oka && okb && sa == sb
 	}
 
-	pool.allTxs = make(map[string]bool)
 	pool.queue = make(map[crypto.CommonAddress]*txList)
 	pool.pending = make(map[crypto.CommonAddress]*txList)
 	pool.newBlockChan = make(chan *chainTypes.Block)
 	pool.pendingNonce = make(map[crypto.CommonAddress]uint64)
+
+	pool.allTxs = make(map[string]bool)
+	pool.allPricedTxs = newTxPricedList()
 
 	pool.journal = newTxJournal(journalPath)
 	pool.locals = make(map[crypto.CommonAddress]struct{})
@@ -87,7 +91,6 @@ func NewTransactionPool(database *database.Database, journalPath string) *Transa
 }
 
 func (pool *TransactionPool) journalTx(from crypto.CommonAddress, tx *chainTypes.Transaction) {
-	//fmt.Println("insert journal tx", tx.Nonce())
 	// Only journal if it's enabled and the transaction is local
 	if _, ok := pool.locals[from]; !ok || pool.journal == nil {
 		return
@@ -169,68 +172,109 @@ func (pool *TransactionPool) AddTransaction(tx *chainTypes.Transaction, isLocal 
 //func AddTransaction(id string, transaction *common.transaction) {
 func (pool *TransactionPool) addTx(tx *chainTypes.Transaction, isLocal bool) error {
 	id := tx.TxHash()
-	//fmt.Println("nonce:", tx.Nonce(), "id:", id.String())
 	if _, ok := pool.allTxs[id.String()]; ok {
-		dlog.Error("addtx err", "id", id.String(), "nonce", tx.Nonce())
+		//dlog.Error("addtx err", "id", id.String(), "nonce", tx.Nonce())
 		return errors.New("konwn tx")
-	}
-
-	if len(pool.allTxs) > maxAllTxsCount {
-		//todo 丢弃时间较长的交易
 	}
 
 	addr, err := tx.From()
 	if err != nil {
 		return err
 	}
+
+	//交易替换
+	for i, maplist := range []map[crypto.CommonAddress]*txList{pool.pending, pool.queue} {
+		if list, ok := maplist[*addr]; ok {
+			if list.Overlaps(tx) {
+				//替换
+				ok, oldTx := list.ReplaceOldTx(tx)
+				if !ok {
+					return errors.New("can't replace old tx")
+				}
+
+				dlog.Warn("replace", "nonce", tx.Nonce(), "old price", oldTx.GasPrice(), "new pirce", tx.GasPrice(), "pending", i)
+
+				delete(pool.allTxs, oldTx.TxHash().String())
+				pool.allPricedTxs.Remove(oldTx)
+
+				pool.allTxs[id.String()] = true
+				pool.allPricedTxs.Put(tx)
+				pool.journalTx(*addr, tx)
+				return nil
+			}
+		}
+	}
+
+	//新的一个交易到来，先看看pool是否满；满的话，删除一些价格较低的tx
+	miniPrice := new(big.Int)
+	if len(pool.allTxs) >= maxAllTxsCount {
+		//todo 价格较低的交易将被丢弃
+		txs := pool.allPricedTxs.Discard(1, pool.locals)
+		for _, t := range txs {
+			if t.GasPrice().Cmp(miniPrice) < 0 || miniPrice.Cmp(new(big.Int)) == 0 {
+				miniPrice = t.GasPrice()
+			}
+			delAddr, _ := tx.From()
+			delete(pool.allTxs, t.TxHash().String())
+
+			remove := func(list *txList, pending bool) bool {
+				//queue /pending中的tx都要删除掉
+				removeSuccess, deleteTxs := list.Remove(&t)
+				if removeSuccess {
+					for _, delTx := range deleteTxs {
+						if pending {
+							pool.pendingNonce[*delAddr]--
+						}
+
+						delete(pool.allTxs, delTx.TxHash().String())
+						pool.allPricedTxs.Remove(delTx)
+					}
+				}
+				return removeSuccess
+			}
+
+			for i, maplist := range []map[crypto.CommonAddress]*txList{pool.pending, pool.queue} {
+				if list, ok := maplist[*delAddr]; ok {
+					b := remove(list, i == 0)
+					if b {
+						break
+					}
+				}
+			}
+		}
+	}
+
+	//如果新到来的交易的价格很低，而且不是本地的。那么返回一个错误(需要优化)
+	if miniPrice.Cmp(new(big.Int)) != 0 && tx.GasPrice().Cmp(miniPrice) < 0 && !isLocal {
+		return fmt.Errorf("new tx gasprice is too low")
+	}
+
 	if isLocal {
 		if _, ok := pool.locals[*addr]; !ok {
 			pool.locals[*addr] = struct{}{}
 		}
 	}
 
-	//在Pending中，是否满足替换要求
-	if pendingList, ok := pool.pending[*addr]; ok {
-		if pendingList.Overlaps(tx) {
-			//替换
-			ok, oldTx := pendingList.ReplaceOldTx(tx)
-			if !ok {
-				return errors.New("can't replace old tx")
-			}
-
-			delete(pool.allTxs, oldTx.TxHash().String())
-			pool.allTxs[id.String()] = true
-			pool.journalTx(*addr, tx)
-			return nil
-		}
-	}
-
 	//添加到queue
 	if list, ok := pool.queue[*addr]; ok {
-		if list.Overlaps(tx) {
-			//替换
-			ok, oldTx := list.ReplaceOldTx(tx)
-			if !ok {
-				return errors.New("can't replace old tx")
-			}
-
-			delete(pool.allTxs, oldTx.TxHash().String())
-			pool.allTxs[id.String()] = true
-			return nil
-		}
-
-		//地址对应的队列空间是否已经满 ,同时数据新的数据对应的NONCE还在queue中。直接返回错误
+		//地址对应的队列空间是否已经满 ,删除一些老的tx
 		if list.Len() > maxTxsOfQueue {
-			return errors.New("queue full")
+			//丢弃老的交易
+			txs := list.Cap(list.Len())
+			for _, delTx := range txs {
+				delete(pool.allTxs, delTx.TxHash().String())
+				pool.allPricedTxs.Remove(delTx)
+			}
 		}
 		list.Add(tx)
 	} else {
-		pool.queue[*addr] = newTxList(true)
+		pool.queue[*addr] = newTxList(false)
 		pool.queue[*addr].Add(tx)
 	}
 
 	pool.journalTx(*addr, tx)
 	pool.allTxs[id.String()] = true
+	pool.allPricedTxs.Put(tx)
 	pool.syncToPending(addr)
 	return nil
 }

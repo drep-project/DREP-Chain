@@ -4,6 +4,7 @@ import (
 	"container/heap"
 	"github.com/drep-project/dlog"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/crypto"
 	"math/big"
 	"sort"
 )
@@ -342,159 +343,91 @@ func (l *txList) Flatten() []*chainTypes.Transaction {
 
 // priceHeap is a heap.Interface implementation over transactions for retrieving
 // price-sorted transactions to discard when the pool fills up.
-//type priceHeap []*types.Transaction
-//
-//func (h priceHeap) Len() int      { return len(h) }
-//func (h priceHeap) Swap(i, j int) { h[i], h[j] = h[j], h[i] }
-//
-//func (h priceHeap) Less(i, j int) bool {
-//	// Sort primarily by price, returning the cheaper one
-//	switch h[i].GasPrice().Cmp(h[j].GasPrice()) {
-//	case -1:
-//		return true
-//	case 1:
-//		return false
-//	}
-//	// If the prices match, stabilize via nonces (high nonce is worse)
-//	return h[i].Nonce() > h[j].Nonce()
-//}
-//
-//func (h *priceHeap) Push(x interface{}) {
-//	*h = append(*h, x.(*types.Transaction))
-//}
-//
-//func (h *priceHeap) Pop() interface{} {
-//	old := *h
-//	n := len(old)
-//	x := old[n-1]
-//	*h = old[0 : n-1]
-//	return x
-//}
+type priceHeap []*chainTypes.Transaction
 
-// txPricedList is a price-sorted heap to allow operating on transactions pool
-// contents in a price-incrementing way.
-//type txPricedList struct {
-//	all    *txLookup  // Pointer to the map of all transactions
-//	items  *priceHeap // Heap of prices of all the stored transactions
-//	stales int        // Number of stale price points to (re-heap trigger)
-//}
-
-// newTxPricedList creates a new price-sorted transaction heap.
-//func newTxPricedList(all *txLookup) *txPricedList {
-//	return &txPricedList{
-//		all:   all,
-//		items: new(priceHeap),
-//	}
-//}
-
-// Put inserts a new transaction into the heap.
-//func (l *txPricedList) Put(tx *types.Transaction) {
-//	heap.Push(l.items, tx)
-//}
-
-// Removed notifies the prices transaction list that an old transaction dropped
-// from the pool. The list will just keep a counter of stale objects and update
-// the heap if a large enough ratio of transactions go stale.
-//func (l *txPricedList) Removed() {
-//	// Bump the stale counter, but exit if still too low (< 25%)
-//	l.stales++
-//	if l.stales <= len(*l.items)/4 {
-//		return
-//	}
-//	// Seems we've reached a critical number of stale transactions, reheap
-//	reheap := make(priceHeap, 0, l.all.Count())
 //
-//	l.stales, l.items = 0, &reheap
-//	l.all.Range(func(hash common.Hash, tx *types.Transaction) bool {
-//		*l.items = append(*l.items, tx)
-//		return true
-//	})
-//	heap.Init(l.items)
-//}
+func (h priceHeap) Len() int      { return len(h) }
+func (h priceHeap) Swap(i, j int) { h[i], h[j] = h[j], h[i] }
 
-// Cap finds all the transactions below the given price threshold, drops them
-// from the priced list and returns them for further removal from the entire pool.
-//func (l *txPricedList) Cap(threshold *big.Int, local *accountSet) types.Transactions {
-//	drop := make(types.Transactions, 0, 128) // Remote underpriced transactions to drop
-//	save := make(types.Transactions, 0, 64)  // Local underpriced transactions to keep
-//
-//	for len(*l.items) > 0 {
-//		// Discard stale transactions if found during cleanup
-//		tx := heap.Pop(l.items).(*types.Transaction)
-//		if l.all.Get(tx.Hash()) == nil {
-//			l.stales--
-//			continue
-//		}
-//		// Stop the discards if we've reached the threshold
-//		if tx.GasPrice().Cmp(threshold) >= 0 {
-//			save = append(save, tx)
-//			break
-//		}
-//		// Non stale transaction found, discard unless local
-//		if local.containsTx(tx) {
-//			save = append(save, tx)
-//		} else {
-//			drop = append(drop, tx)
-//		}
-//	}
-//	for _, tx := range save {
-//		heap.Push(l.items, tx)
-//	}
-//	return drop
-//}
+func (h priceHeap) Less(i, j int) bool {
+	// Sort primarily by price, returning the cheaper one
+	switch h[i].GasPrice().Cmp(h[j].GasPrice()) {
+	case -1:
+		return true
+	case 1:
+		return false
+	}
+	// If the prices match, stabilize via nonces (high nonce is worse)
+	return h[i].Nonce() > h[j].Nonce()
+}
 
-// Underpriced checks whether a transaction is cheaper than (or as cheap as) the
-// lowest priced transaction currently being tracked.
-//func (l *txPricedList) Underpriced(tx *types.Transaction, local *accountSet) bool {
-//	// Local transactions cannot be underpriced
-//	if local.containsTx(tx) {
-//		return false
-//	}
-//	// Discard stale price points if found at the heap start
-//	for len(*l.items) > 0 {
-//		head := []*types.Transaction(*l.items)[0]
-//		if l.all.Get(head.Hash()) == nil {
-//			l.stales--
-//			heap.Pop(l.items)
-//			continue
-//		}
-//		break
-//	}
-//	// Check if the transaction is underpriced or not
-//	if len(*l.items) == 0 {
-//		log.Error("Pricing query for empty pool") // This cannot happen, print to catch programming errors
-//		return false
-//	}
-//	cheapest := []*types.Transaction(*l.items)[0]
-//	return cheapest.GasPrice().Cmp(tx.GasPrice()) >= 0
-//}
+func (h *priceHeap) Push(x interface{}) {
+	*h = append(*h, x.(*chainTypes.Transaction))
+}
 
-//// Discard finds a number of most underpriced transactions, removes them from the
-//// priced list and returns them for further removal from the entire pool.
-//func (l *txPricedList) Discard(count int, local *accountSet) types.Transactions {
-//	drop := make(types.Transactions, 0, count) // Remote underpriced transactions to drop
-//	save := make(types.Transactions, 0, 64)    // Local underpriced transactions to keep
-//
-//	for len(*l.items) > 0 && count > 0 {
-//		// Discard stale transactions if found during cleanup
-//		tx := heap.Pop(l.items).(*types.Transaction)
-//		if l.all.Get(tx.Hash()) == nil {
-//			l.stales--
-//			continue
-//		}
-//		// Non stale transaction found, discard unless local
-//		if local.containsTx(tx) {
-//			save = append(save, tx)
-//		} else {
-//			drop = append(drop, tx)
-//			count--
-//		}
-//	}
-//	for _, tx := range save {
-//		heap.Push(l.items, tx)
-//	}
-//	return drop
-//}
+func (h *priceHeap) Pop() interface{} {
+	old := *h
+	n := len(old)
+	x := old[n-1]
+	*h = old[0 : n-1]
+	return x
+}
+
+//txPricedList is a price-sorted heap to allow operating on transactions pool
+//contents in a price-incrementing way.
+type txPricedList struct {
+	items *priceHeap // Heap of prices of all the stored transactions
+	//stales int        // Number of stale price points to (re-heap trigger)
+}
+
+//newTxPricedList creates a new price-sorted transaction heap.
+func newTxPricedList() *txPricedList {
+	return &txPricedList{
+		items: new(priceHeap),
+	}
+}
+
+//Put inserts a new transaction into the heap.
+func (l *txPricedList) Put(tx *chainTypes.Transaction) {
+	heap.Push(l.items, tx)
+}
+
+func (l *txPricedList) Remove(tx *chainTypes.Transaction) {
+	all := new(priceHeap)
+	for len(*l.items) > 0 {
+		// Discard stale transactions if found during cleanup
+		temp := heap.Pop(l.items).(*chainTypes.Transaction)
+		if tx.TxHash() != temp.TxHash() {
+			*all = append(*all, temp)
+		}
+	}
+
+	heap.Init(all)
+}
+
+// Discard finds a number of most underpriced transactions, removes them from the
+// priced list and returns them for further removal from the entire pool.
+func (l *txPricedList) Discard(count int, local map[crypto.CommonAddress]struct{}) chainTypes.Transactions {
+	drop := make(chainTypes.Transactions, 0, count) // Remote underpriced transactions to drop
+	save := make(chainTypes.Transactions, 0, 64)    // Local underpriced transactions to keep
+
+	for len(*l.items) > 0 && count > 0 {
+		// Discard stale transactions if found during cleanup
+		tx := heap.Pop(l.items).(*chainTypes.Transaction)
+		from, _ := tx.From()
+		// Non stale transaction found, discard unless local
+		if _, ok := local[*from]; ok {
+			save = append(save, *tx)
+		} else {
+			drop = append(drop, *tx)
+			count--
+		}
+	}
+	for _, tx := range save {
+		heap.Push(l.items, &tx)
+	}
+	return drop
+}
 
 type TxByNonce []*chainTypes.Transaction
 

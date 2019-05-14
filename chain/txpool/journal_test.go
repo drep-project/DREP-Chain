@@ -40,19 +40,19 @@ func loadTx(t *testing.T, maxNonce uint64) {
 
 var generateMaxNonce uint64 = 10
 
-func generateTxs() chainTypes.Transactions {
+func generateTxs() []*chainTypes.Transaction {
 	b := common.Bytes("0x0373654ccdb250f2cfcfe64c783a44b9ea85bc47f2f00c480d05082428d277d6d0")
 	b.UnmarshalText(b)
 	pubkey, _ := secp256k1.ParsePubKey(b)
 	addr := crypto.PubKey2Address(pubkey)
 
-	txs := make(chainTypes.Transactions, 0)
+	txs := make([]*chainTypes.Transaction, 0)
 
 	for i := 0; i <= int(generateMaxNonce); i++ {
 		amount := new(big.Int).SetUint64(100000000)
 		tx := chainTypes.NewTransaction(addr, amount.Mul(amount, new(big.Int).SetUint64(uint64(i+1))), new(big.Int).SetUint64(100000000), new(big.Int).SetUint64(100000000), uint64(i))
 		//fmt.Println(tx.Nonce(),tx.Amount(),tx.Type(),tx.GasPrice())
-		txs = append(txs, *tx)
+		txs = append(txs, tx)
 	}
 
 	return txs
@@ -66,7 +66,7 @@ func TestLoadAndRotateNull(t *testing.T) {
 func TestLoadAndRotate(t *testing.T) {
 	loadTx(t, 0)
 
-	all := make(map[crypto.CommonAddress]chainTypes.Transactions)
+	all := make(map[crypto.CommonAddress][]*chainTypes.Transaction)
 	for j := 0; j < 1; j++ {
 		txs := generateTxs()
 		privateKey, _ := crypto.GenerateKey(rand.Reader)

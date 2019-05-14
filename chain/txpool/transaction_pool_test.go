@@ -1,6 +1,7 @@
 package txpool
 
 import (
+	"crypto/rand"
 	"fmt"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common"
@@ -24,7 +25,7 @@ func TestNewTransactions(t *testing.T) {
 		t.Error("db init err")
 	}
 	//db := database.NewDatabaseService(diskDb)
-	txPool = NewTransactionPool(diskDb,"./jounal/txs")
+	txPool = NewTransactionPool(diskDb, "./jounal/txs")
 	if txPool == nil {
 		t.Error("init database service err")
 	}
@@ -47,7 +48,7 @@ func addTx(t *testing.T, num uint64) error {
 	nonce := txPool.database.GetNonce(&addr)
 	for i := 0; uint64(i) < num; i++ {
 		tx := chainTypes.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(100), new(big.Int).SetInt64(100), nonce+uint64(i))
-		err := txPool.AddTransaction(tx)
+		err := txPool.AddTransaction(tx, true)
 		if err != nil {
 			return err
 		}
@@ -80,7 +81,7 @@ func TestAddIntevalTX(t *testing.T) {
 		}
 
 		tx := chainTypes.NewTransaction(addr, new(big.Int).SetUint64(100000000), new(big.Int).SetUint64(100000000), new(big.Int).SetUint64(100000000), uint64(i))
-		txPool.AddTransaction(tx)
+		txPool.AddTransaction(tx, true)
 	}
 }
 
@@ -140,3 +141,103 @@ func TestGetPendingTxs(t *testing.T) {
 		}
 	}()
 }
+
+//测试queue里面的tx被删除
+func TestReplace(t *testing.T) {
+	TestNewTransactions(t)
+
+	privKey, _ := crypto.GenerateKey(rand.Reader)
+	addr := crypto.PubKey2Address(privKey.PubKey())
+	txPool.database.BeginTransaction()
+
+	var amount uint64 = 0xefffffffffffffff
+	txPool.database.PutBalance(&addr, new(big.Int).SetUint64(amount))
+	txPool.database.Commit()
+
+	nonce := txPool.database.GetNonce(&addr)
+	for i := 0; uint64(i) < maxTxsOfPending; i++ {
+		tx := chainTypes.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(int64(100+i)), new(big.Int).SetInt64(100), nonce+uint64(i))
+		sig, err := secp256k1.SignCompact(privKey, tx.TxHash().Bytes(), true)
+		tx.Sig = sig
+		err = txPool.AddTransaction(tx, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	nonce += maxTxsOfPending
+	//20个到queue
+	for i := 0; uint64(i) < maxTxsOfQueue; i++ {
+		tx := chainTypes.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(int64(100+i+maxTxsOfPending)), new(big.Int).SetInt64(100), nonce+uint64(i))
+		sig, err := secp256k1.SignCompact(privKey, tx.TxHash().Bytes(), true)
+		tx.Sig = sig
+		err = txPool.AddTransaction(tx, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	nonce1 := nonce - 1
+	//替换发生在pending
+	for i := 0; uint64(i) < 1; i++ {
+		tx := chainTypes.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(int64(100*4)), new(big.Int).SetInt64(100), nonce1+uint64(i))
+		sig, err := secp256k1.SignCompact(privKey, tx.TxHash().Bytes(), true)
+		tx.Sig = sig
+		err = txPool.AddTransaction(tx, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	nonce1 = nonce + 1
+	//替换发生在queue
+	for i := 0; uint64(i) < 1; i++ {
+		tx := chainTypes.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(int64(100*4)), new(big.Int).SetInt64(100), nonce1+uint64(i))
+		sig, err := secp256k1.SignCompact(privKey, tx.TxHash().Bytes(), true)
+		tx.Sig = sig
+		err = txPool.AddTransaction(tx, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+}
+
+//测试pending里面tx被删除；同时删除导致nonce不连续，导致删除了多个tx
+func TestDelTx(t *testing.T) {
+	TestNewTransactions(t)
+
+	privKey, _ := crypto.GenerateKey(rand.Reader)
+	addr := crypto.PubKey2Address(privKey.PubKey())
+	txPool.database.BeginTransaction()
+
+	var amount uint64 = 0xefffffffffffffff
+	txPool.database.PutBalance(&addr, new(big.Int).SetUint64(amount))
+	txPool.database.Commit()
+
+
+	nonce := txPool.getTransactionCount(&addr)
+	for i := 0; uint64(i) < maxTxsOfQueue+maxTxsOfPending; i++ {
+		tx := chainTypes.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(int64(100+i)), new(big.Int).SetInt64(100), nonce+uint64(i))
+		sig, err := secp256k1.SignCompact(privKey, tx.TxHash().Bytes(), true)
+		tx.Sig = sig
+		err = txPool.AddTransaction(tx, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	nonce += maxTxsOfQueue+maxTxsOfPending
+	//删除发生在pending
+	for i := 0; uint64(i) < 20; i++ {
+		tx := chainTypes.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(int64(100*5)), new(big.Int).SetInt64(100), nonce+uint64(i))
+		sig, err := secp256k1.SignCompact(privKey, tx.TxHash().Bytes(), true)
+		tx.Sig = sig
+		err = txPool.AddTransaction(tx, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+//低gas 交易不能被添加
