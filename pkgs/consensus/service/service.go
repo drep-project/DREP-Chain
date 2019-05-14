@@ -351,7 +351,7 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 		return block, nil
 	}
 
-	sig, err := consensusService.privkey.Sign(sha3.Hash256(msg))
+	sig, err := consensusService.privkey.Sign(sha3.Keccak256(msg))
 	if err != nil {
 		dlog.Error("sign block error")
 		return nil, errors.New("sign block error")

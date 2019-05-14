@@ -39,9 +39,10 @@ import (
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/ecies"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/network/p2p/enr"
 	"github.com/golang/snappy"
-	"golang.org/x/crypto/sha3"
+	originSha3 "golang.org/x/crypto/sha3"
 )
 
 const (
@@ -257,19 +258,19 @@ func (h *encHandshake) secrets(auth, authResp []byte) (secrets, error) {
 	}
 
 	// derive base secrets from ephemeral key agreement
-	sharedSecret := crypto.Keccak256(ecdheSecret, crypto.Keccak256(h.respNonce, h.initNonce))
-	aesSecret := crypto.Keccak256(ecdheSecret, sharedSecret)
+	sharedSecret := sha3.Keccak256(ecdheSecret, sha3.Keccak256(h.respNonce, h.initNonce))
+	aesSecret := sha3.Keccak256(ecdheSecret, sharedSecret)
 	s := secrets{
 		Remote: h.remote,
 		AES:    aesSecret,
-		MAC:    crypto.Keccak256(ecdheSecret, aesSecret),
+		MAC:    sha3.Keccak256(ecdheSecret, aesSecret),
 	}
 
 	// setup sha3 instances for the MACs
-	mac1 := sha3.NewLegacyKeccak256()
+	mac1 := originSha3.NewLegacyKeccak256()
 	mac1.Write(xor(s.MAC, h.respNonce))
 	mac1.Write(auth)
-	mac2 := sha3.NewLegacyKeccak256()
+	mac2 := originSha3.NewLegacyKeccak256()
 	mac2.Write(xor(s.MAC, h.initNonce))
 	mac2.Write(authResp)
 	if h.initiator {
@@ -442,7 +443,7 @@ func (h *encHandshake) makeAuthResp() (msg *authRespV4, err error) {
 func (msg *authMsgV4) sealPlain(h *encHandshake) ([]byte, error) {
 	buf := make([]byte, authMsgLen)
 	n := copy(buf, msg.Signature[:])
-	n += copy(buf[n:], crypto.Keccak256(exportPubkey(h.randomPrivKey.PubKey())))
+	n += copy(buf[n:], sha3.Keccak256(exportPubkey(h.randomPrivKey.PubKey())))
 	n += copy(buf[n:], msg.InitiatorPubkey[:])
 	n += copy(buf[n:], msg.Nonce[:])
 	buf[n] = 0 // token-flag

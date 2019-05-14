@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/drep-project/drep-chain/crypto/sha3"
 	"net"
 	"time"
 
@@ -361,14 +362,14 @@ func encodePacket(priv *secp256k1.PrivateKey, ptype byte, req interface{}) (p, h
 	}
 	b.Write(buf)
 	packet := b.Bytes()
-	sig, err := crypto.Sign(crypto.Keccak256(packet[headSize:]), priv)
+	sig, err := crypto.Sign(sha3.Keccak256(packet[headSize:]), priv)
 	if err != nil {
 		log.Error(fmt.Sprint("could not sign packet:", err))
 		return nil, nil, err
 	}
 	copy(packet, versionPrefix)
 	copy(packet[versionPrefixSize:], sig)
-	hash = crypto.Keccak256(packet[versionPrefixSize:])
+	hash = sha3.Keccak256(packet[versionPrefixSize:])
 	return packet, hash, nil
 }
 
@@ -417,12 +418,12 @@ func decodePacket(buffer []byte, pkt *ingressPacket) error {
 	if !bytes.Equal(prefix, versionPrefix) {
 		return errBadPrefix
 	}
-	fromID, err := recoverNodeID(crypto.Keccak256(buf[headSize:]), sig)
+	fromID, err := recoverNodeID(sha3.Keccak256(buf[headSize:]), sig)
 	if err != nil {
 		return err
 	}
 	pkt.rawData = buf
-	pkt.hash = crypto.Keccak256(buf[versionPrefixSize:])
+	pkt.hash = sha3.Keccak256(buf[versionPrefixSize:])
 	pkt.remoteID = fromID
 	switch pkt.ev = nodeEvent(sigdata[0]); pkt.ev {
 	case pingPacket:

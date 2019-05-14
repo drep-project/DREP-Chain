@@ -21,6 +21,7 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
+	"github.com/drep-project/drep-chain/crypto/sha3"
 	"net"
 	"sync"
 	"time"
@@ -546,7 +547,7 @@ func encodePacket(priv *secp256k1.PrivateKey, ptype byte, req interface{}) (pack
 	//	return nil, nil, err
 	//}
 	packet = b.Bytes()
-	sig, err := crypto.Sign(crypto.Keccak256(packet[headSize:]), priv)
+	sig, err := crypto.Sign(sha3.Keccak256(packet[headSize:]), priv)
 	if err != nil {
 		log.Error("Can't sign discv4 packet", "err", err)
 		return nil, nil, err
@@ -555,7 +556,7 @@ func encodePacket(priv *secp256k1.PrivateKey, ptype byte, req interface{}) (pack
 	// add the hash to the front. Note: this doesn't protect the
 	// packet in any way. Our public key will be part of this hash in
 	// The future.
-	hash = crypto.Keccak256(packet[macSize:])
+	hash = sha3.Keccak256(packet[macSize:])
 	copy(packet, hash)
 	return packet, hash, nil
 }
@@ -613,11 +614,11 @@ func decodePacket(buf []byte) (packet, encPubkey, []byte, error) {
 		return nil, encPubkey{}, nil, errPacketTooSmall
 	}
 	hash, sig, sigdata := buf[:macSize], buf[macSize:headSize], buf[headSize:]
-	shouldhash := crypto.Keccak256(buf[macSize:])
+	shouldhash := sha3.Keccak256(buf[macSize:])
 	if !bytes.Equal(hash, shouldhash) {
 		return nil, encPubkey{}, nil, errBadHash
 	}
-	fromKey, err := recoverNodeKey(crypto.Keccak256(buf[headSize:]), sig)
+	fromKey, err := recoverNodeKey(sha3.Keccak256(buf[headSize:]), sig)
 	if err != nil {
 		return nil, fromKey, hash, err
 	}

@@ -32,7 +32,7 @@ func (blockHeader *BlockHeader) Hash() *crypto.Hash {
 		if err != nil {
 			return nil
 		}
-		bytes := sha3.Hash256(b)
+		bytes := sha3.Keccak256(b)
 		blockHeader.blockHash = &crypto.Hash{}
 		blockHeader.blockHash.SetBytes(bytes)
 	}

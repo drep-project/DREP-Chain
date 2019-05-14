@@ -24,7 +24,7 @@ func (state *State) resetValue(children [17]*State) {
 			copy(stack[i*17:(i+1)*17], children[i].Value)
 		}
 	}
-	state.Value = sha3.Hash256(stack)
+	state.Value = sha3.Keccak256(stack)
 }
 
 func (state *State) getChildren() [17]*State {

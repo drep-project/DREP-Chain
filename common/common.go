@@ -36,7 +36,7 @@ func GenUnique() ([]byte, error) {
 		panic("key generation: could not read from random source: " + err.Error())
 	}
 
-	return sha3.Hash256(append([]byte(uni), randBytes...)), nil
+	return sha3.Keccak256(append([]byte(uni), randBytes...)), nil
 }
 
 // FileExist checks if a file exists at filePath.

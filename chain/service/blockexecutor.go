@@ -97,7 +97,7 @@ func (chainService *ChainService) ValidateMultiSig(b *chainTypes.Block, skipChec
 	}
 	msg := b.ToMessage()
 	sigmaPk := schnorr.CombinePubkeys(participators)
-	return schnorr.Verify(sigmaPk, sha3.Hash256(msg), b.MultiSig.Sig.R, b.MultiSig.Sig.S)
+	return schnorr.Verify(sigmaPk, sha3.Keccak256(msg), b.MultiSig.Sig.R, b.MultiSig.Sig.S)
 }
 
 func (chainService *ChainService) executeTransactionInBlock(db *database.Database, block *chainTypes.Block, gp *GasPool) (*big.Int, *big.Int, error) {

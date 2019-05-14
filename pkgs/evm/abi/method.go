@@ -56,5 +56,5 @@ func (method Method) String() string {
 }
 
 func (method Method) Id() []byte {
-	return sha3.Hash256([]byte(method.Sig()))[:4]
+	return sha3.Keccak256([]byte(method.Sig()))[:4]
 }

@@ -57,7 +57,7 @@ func DatabaseFromStore(store IStore) (*Database, error) {
 	return db, nil
 }
 func (db *Database) initState() error {
-	db.root = sha3.Hash256([]byte(stateRoot))
+	db.root = sha3.Keccak256([]byte(stateRoot))
 	value, _ := db.db.Get(db.root)
 	if value != nil {
 		return nil
@@ -217,7 +217,7 @@ func (db *Database) DelState(key []byte) error {
 
 func (db *Database) GetStorage(addr *crypto.CommonAddress) *chainTypes.Storage {
 	storage := &chainTypes.Storage{}
-	key := sha3.Hash256([]byte(addressStorage + addr.Hex()))
+	key := sha3.Keccak256([]byte(addressStorage + addr.Hex()))
 	value, err := db.db.Get(key)
 	if err != nil {
 		return storage
@@ -243,7 +243,7 @@ func (db *Database) Delete(key []byte) error {
 }
 
 func (db *Database) PutStorage(addr *crypto.CommonAddress, storage *chainTypes.Storage) error {
-	key := sha3.Hash256([]byte(addressStorage + addr.Hex()))
+	key := sha3.Keccak256([]byte(addressStorage + addr.Hex()))
 	value, err := binary.Marshal(storage)
 	if err != nil {
 		return err
@@ -254,7 +254,7 @@ func (db *Database) PutStorage(addr *crypto.CommonAddress, storage *chainTypes.S
 	}
 
 	seq := bytes2Hex(key)
-	val := sha3.Hash256(value)
+	val := sha3.Keccak256(value)
 	insert(db, seq, db.root, val)
 	return nil
 }
@@ -390,7 +390,7 @@ func (db *Database) GetReputation(addr *crypto.CommonAddress) *big.Int {
 }
 
 func (db *Database) GetLogs(txHash []byte) []*chainTypes.Log {
-	key := sha3.Hash256([]byte("logs_" + hex.EncodeToString(txHash)))
+	key := sha3.Keccak256([]byte("logs_" + hex.EncodeToString(txHash)))
 	value, err := db.Get(key)
 	if err != nil {
 		return make([]*chainTypes.Log, 0)
@@ -404,7 +404,7 @@ func (db *Database) GetLogs(txHash []byte) []*chainTypes.Log {
 }
 
 func (db *Database) PutLogs(logs []*chainTypes.Log, txHash []byte) error {
-	key := sha3.Hash256([]byte("logs_" + hex.EncodeToString(txHash)))
+	key := sha3.Keccak256([]byte("logs_" + hex.EncodeToString(txHash)))
 	value, err := binary.Marshal(logs)
 	if err != nil {
 		return err

@@ -33,7 +33,7 @@ func TestAddAffine2sds (t *testing.T){
 
 
 		//setup
-		msg := sha3.Hash256([]byte{1,2,3})
+		msg := sha3.Keccak256([]byte{1,2,3})
 		fmt.Println(msg)
 		//commit
 		randomPrivakey1, pubNonce1, _ := schnorr.GenerateNoncePair(secp256k1.S256(), msg, priv1,nil, schnorr.Sha256VersionStringRFC6979)
@@ -114,7 +114,7 @@ func TestAddAffine2(t *testing.T) {
 	pk3,_ := secp256k1.GeneratePrivateKey(nil)
 
 	//setup
-	msg := sha3.Hash256([]byte{1,2,3})
+	msg := sha3.Keccak256([]byte{1,2,3})
 
 	//commit
 	randomPrivakey2, _, _ := schnorr.GenerateNoncePair(secp256k1.S256(), msg, pk2,nil, schnorr.Sha256VersionStringRFC6979)
@@ -183,7 +183,7 @@ func TestAddAffine2(t *testing.T) {
 
 func TestAddAffine(t *testing.T) {
 	msg := []byte{1,5,12,12,5,7,}
-	hash :=sha3.Hash256(msg)
+	hash :=sha3.Keccak256(msg)
 
 	pk1,_ := secp256k1.GeneratePrivateKey(nil)
 	pk2,_ := secp256k1.GeneratePrivateKey(nil)

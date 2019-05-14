@@ -36,5 +36,5 @@ func (e Event) Id() crypto.Hash {
 		types[i] = input.Type.String()
 		i++
 	}
-	return crypto.Bytes2Hash(sha3.Hash256(([]byte(fmt.Sprintf("%v(%v)", e.Name, strings.Join(types, ","))))))
+	return crypto.Bytes2Hash(sha3.Keccak256(([]byte(fmt.Sprintf("%v(%v)", e.Name, strings.Join(types, ","))))))
 }

@@ -349,7 +349,7 @@ func (chainService *ChainService) GetTxHashes(ts []*chainTypes.Transaction) ([][
 		if err != nil {
 			return nil, err
 		}
-		txHashes[i] = sha3.Hash256(b)
+		txHashes[i] = sha3.Keccak256(b)
 	}
 	return txHashes, nil
 }

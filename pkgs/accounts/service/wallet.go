@@ -172,5 +172,5 @@ func (wallet *Wallet) checkWallet(op int) error {
 }
 
 func (wallet *Wallet) cryptoPassword(password string) string {
-	return string(sha3.Hash256([]byte(password)))
+	return string(sha3.Keccak256([]byte(password)))
 }

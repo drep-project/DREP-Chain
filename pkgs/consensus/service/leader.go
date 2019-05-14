@@ -129,7 +129,7 @@ func (leader *Leader) ProcessConsensus(msg []byte) (error, *secp256k1.Signature,
 func (leader *Leader) setUp(msg []byte) {
 	setup := &consensusTypes.Setup{Msg: msg}
 	setup.Height = leader.currentHeight
-	leader.msgHash = sha3.Hash256(msg)
+	leader.msgHash = sha3.Keccak256(msg)
 	var err error
 	var nouncePk *secp256k1.PublicKey
 	leader.randomPrivakey, nouncePk, err = schnorr.GenerateNoncePair(secp256k1.S256(), leader.msgHash, leader.privakey,nil, schnorr.Sha256VersionStringRFC6979)
@@ -326,7 +326,7 @@ func (leader *Leader) Validate(msg []byte, r *big.Int, s *big.Int) bool {
 	}
 
 	sigmaPubKey := schnorr.CombinePubkeys(leader.getResponsePubkey())
-	return schnorr.Verify(sigmaPubKey, sha3.Hash256(msg), r, s)
+	return schnorr.Verify(sigmaPubKey, sha3.Keccak256(msg), r, s)
 }
 
 func (leader *Leader) hasMarked(index int, bitmap []byte) bool {

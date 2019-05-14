@@ -38,15 +38,6 @@ var (
 	errInvalidPubkey = errors.New("invalid secp256k1 public key")
 )
 
-// Keccak256 calculates and returns the Keccak256 hash of the input data.
-func Keccak256(data ...[]byte) []byte {
-	d := sha3.NewKeccak256()
-	for _, b := range data {
-		d.Write(b)
-	}
-	return d.Sum(nil)
-}
-
 // Keccak256Hash calculates and returns the Keccak256 hash of the input data,
 // converting it to an internal Hash data structure.
 func Keccak256Hash(data ...[]byte) (h Hash) {
@@ -63,13 +54,13 @@ func CreateAddress(b CommonAddress, nonce uint64) CommonAddress {
 	var buf = make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, nonce)
 	data := append(b.Bytes(), buf...)
-	return Bytes2Address(Keccak256(data)[12:])
+	return Bytes2Address(sha3.Keccak256(data)[12:])
 }
 
 // CreateAddress2 creates an ethereum address given the address bytes, initial
 // contract code and a salt.
 func CreateAddress2(b CommonAddress, salt [32]byte, code []byte) CommonAddress {
-	return Bytes2Address(Keccak256([]byte{0xff}, b.Bytes(), salt[:], Keccak256(code))[12:])
+	return Bytes2Address(sha3.Keccak256([]byte{0xff}, b.Bytes(), salt[:], sha3.Keccak256(code))[12:])
 }
 
 // LoadECDSA loads a secp256k1 private key from the given file.

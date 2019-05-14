@@ -116,7 +116,7 @@ func gen(ctx *cli.Context) error {
 		keyStorePath := path2.Join(userDir, "keystore")
 
 		store := accountComponent.NewFileStore(keyStorePath)
-		password := string(sha3.Hash256([]byte(pasword)))
+		password := string(sha3.Keccak256([]byte(pasword)))
 		store.StoreKey(nodes[i], password)
 
 		cfgPath := path2.Join(userDir, "config.json")

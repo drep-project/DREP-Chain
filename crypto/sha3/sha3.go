@@ -216,6 +216,15 @@ func HashS256(data ...[]byte) []byte {
 	return d.Sum(nil)
 }
 
+// Keccak256 calculates and returns the Keccak256 hash of the input data.
+func Keccak256(data ...[]byte) []byte {
+	d := NewKeccak256()
+	for _, b := range data {
+		d.Write(b)
+	}
+	return d.Sum(nil)
+}
+
 func StackHash(hashList [][]byte) []byte {
 	totalLen := 0
 	buf := make([]byte, len(hashList)*ByteLen)

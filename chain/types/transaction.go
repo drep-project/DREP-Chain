@@ -106,7 +106,7 @@ func (tx *Transaction) GasPrice() *big.Int {
 func (tx *Transaction) TxHash() *crypto.Hash {
 	if tx.txHash == nil {
 		b := tx.AsSignMessage()
-		h := sha3.Hash256(b)
+		h := sha3.Keccak256(b)
 		tx.txHash = &crypto.Hash{}
 		tx.txHash.SetBytes(h)
 	}

@@ -168,7 +168,7 @@ func (member *Member) OnSetUp(peer *consensusTypes.PeerInfo, setUp *consensusTyp
 	dlog.Debug("receive setup message")
 	if member.leader.Peer.IP() == peer.IP() {
 		member.msg = setUp.Msg
-		member.msgHash = sha3.Hash256(setUp.Msg)
+		member.msgHash = sha3.Keccak256(setUp.Msg)
 		member.commit()
 		dlog.Debug("sent commit message to leader")
 		member.setState(WAIT_CHALLENGE)

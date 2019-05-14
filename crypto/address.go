@@ -96,13 +96,13 @@ func (addr *CommonAddress) UnmarshalJSON(input []byte) error {
 }
 
 func PubKey2Address(pubKey *secp256k1.PublicKey) CommonAddress {
-	return Bytes2Address(sha3.Hash256(pubKey.Serialize()))
+	return Bytes2Address(sha3.Keccak256(pubKey.Serialize()))
 }
 
 type ByteCode []byte
 
 func GetByteCodeHash(byteCode ByteCode) Hash {
-	return Bytes2Hash(sha3.Hash256(byteCode))
+	return Bytes2Hash(sha3.Keccak256(byteCode))
 }
 
 func GetByteCodeAddress(callerAddr CommonAddress, nonce uint64) CommonAddress {
@@ -117,5 +117,5 @@ func GetByteCodeAddress(callerAddr CommonAddress, nonce uint64) CommonAddress {
 	if err != nil {
 		return CommonAddress{}
 	}
-	return Bytes2Address(sha3.Hash256(b))
+	return Bytes2Address(sha3.Keccak256(b))
 }
