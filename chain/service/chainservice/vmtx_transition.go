@@ -100,7 +100,7 @@ func (st *StateTransition) useGas(amount uint64) error {
 func (st *StateTransition) buyGas() error {
 	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.tx.Gas()), st.gasPrice)
 	if st.databaseService.GetBalance(st.from).Cmp(mgval) < 0 {
-		return errInsufficientBalanceForGas
+		return ErrInsufficientBalanceForGas
 	}
 	if err := st.gp.SubGas(st.tx.Gas()); err != nil {
 		return err
@@ -137,7 +137,7 @@ func (st *StateTransition) TransitionTransferDb() (ret []byte, failed bool, err 
 	toBalance := st.databaseService.GetBalance(st.tx.To())
 	leftBalance := originBalance.Sub(originBalance, st.tx.Amount())
 	if leftBalance.Sign() < 0 {
-		return nil, false, errBalance
+		return nil, false, ErrBalance
 	}
 	addBalance := toBalance.Add(toBalance, st.tx.Amount())
 	st.databaseService.PutBalance(from, leftBalance)

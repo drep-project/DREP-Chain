@@ -78,7 +78,7 @@ func (chainService *ChainService) isInLocalBp(key *secp256k1.PublicKey) bool {
 func (chainService *ChainService) ValidateBody(block *chainTypes.Block) error {
 	// Header validity is known at this point, check the uncles and transactions
 	header := block.Header
-	if hash := chainService.deriveMerkleRoot(block.Data.TxList); !bytes.Equal(hash, header.TxRoot) {
+	if hash := chainService.DeriveMerkleRoot(block.Data.TxList); !bytes.Equal(hash, header.TxRoot) {
 		return fmt.Errorf("transaction root hash mismatch: have %x, want %x", hash, header.TxRoot)
 	}
 	return nil

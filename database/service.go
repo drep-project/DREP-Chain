@@ -22,7 +22,6 @@ type DatabaseService struct {
 func NewDatabaseService(db *Database) *DatabaseService {
 	ds := &DatabaseService{db: db}
 	return ds
-
 }
 
 func (database *DatabaseService) Name() string {
@@ -60,4 +59,8 @@ func (database *DatabaseService) Start(executeContext *app.ExecuteContext) error
 
 func (database *DatabaseService) Stop(executeContext *app.ExecuteContext) error {
 	return nil
+}
+
+func (database *DatabaseService) Db() *Database {
+	return database.db
 }

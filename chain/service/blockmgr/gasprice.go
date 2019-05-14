@@ -18,6 +18,7 @@ package service
 
 import (
 	"github.com/drep-project/drep-chain/chain/types"
+	xxx "github.com/drep-project/drep-chain/chain/service/chainservice"
 	"github.com/drep-project/drep-chain/crypto"
 	"math/big"
 	"sort"
@@ -33,12 +34,12 @@ type Oracle struct {
 
 	checkBlocks, maxEmpty, maxBlocks int
 	percentile                       int
-	chainService  *ChainService
+	chainService  *xxx.ChainService
 	maxPrice   *big.Int
 }
 
 // NewOracle returns a new oracle.
-func NewOracle(chainService *ChainService, params types.OracleConfig) *Oracle {
+func NewOracle(chainService *xxx.ChainService, params types.OracleConfig) *Oracle {
 	blocks := params.Blocks
 	if blocks < 1 {
 		blocks = 1

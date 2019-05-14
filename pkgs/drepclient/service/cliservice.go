@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/drep-chain/app"
-	chainService "github.com/drep-project/drep-chain/chain/service"
+	blockmgr "github.com/drep-project/drep-chain/chain/service/blockmgr"
+	accountService "github.com/drep-project/drep-chain/pkgs/accounts/service"
 	"github.com/drep-project/drep-chain/pkgs/drepclient/component/console"
 	cliTypes "github.com/drep-project/drep-chain/pkgs/drepclient/types"
 	"github.com/drep-project/drep-chain/pkgs/log"
-	accountService "github.com/drep-project/drep-chain/pkgs/accounts/service"
-	"github.com/drep-project/drep-chain/rpc"
 	rpc2 "github.com/drep-project/drep-chain/pkgs/rpc"
+	"github.com/drep-project/drep-chain/rpc"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -26,7 +26,7 @@ var (
 type CliService struct {
 	config *cliTypes.Config
 	Log *log.LogService `service:"log"`
-	ChainService *chainService.ChainService `service:"chain"`
+	Blockmgr *blockmgr.BlockMgr `service:"blockmgr"`
 	AccountService *accountService.AccountService `service:"accounts"`
 	RpcService *rpc2.RpcService `service:"rpc"`
 }
@@ -101,7 +101,7 @@ func (cliService *CliService) localConsole(executeContext *app.ExecuteContext) e
 		return errors.New("ipc must be enable in console mode")
 	}
 	// Attach to the newly started node and start the JavaScript console
-	client, err := cliService.ChainService.Attach()
+	client, err := cliService.Blockmgr.Attach()
 	if err != nil {
 		return errors.New(fmt.Sprintf("Failed to attach to the inproc drep: %v", err))
 	}

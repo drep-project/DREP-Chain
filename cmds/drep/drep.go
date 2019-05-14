@@ -3,7 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/drep-project/drep-chain/app"
-	chainService "github.com/drep-project/drep-chain/chain/service"
+	chainService "github.com/drep-project/drep-chain/chain/service/chainservice"
+	blockService "github.com/drep-project/drep-chain/chain/service/blockmgr"
 	"github.com/drep-project/drep-chain/database"
 	p2pService "github.com/drep-project/drep-chain/network/service"
 	accountService "github.com/drep-project/drep-chain/pkgs/accounts/service"
@@ -35,6 +36,7 @@ func main() {
 		p2pService.P2pService{},
 		evmService.EvmService{},
 		chainService.ChainService{},
+		blockService.BlockMgr{},
 		trace.TraceService{},
 		accountService.AccountService{},
 		consensusService.ConsensusService{},

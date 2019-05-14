@@ -17,7 +17,7 @@ import (
 const (
 	maxAllTxsCount  = 100000 //交易池所弄容纳的总的交易数量
 	maxTxsOfQueue   = 20     //单个地址对应的乱序队列中，最多容纳交易数目
-	maxTxsOfPending = 100    //单个地址对应的有序队列中，最多容纳交易数目
+	maxTxsOfPending = 1000000    //单个地址对应的有序队列中，最多容纳交易数目
 )
 
 //1 池子里的交易按照nonce是否连续，分为乱序的和已经排序的在两个不同的队列中

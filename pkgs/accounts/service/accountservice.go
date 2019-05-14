@@ -4,7 +4,7 @@ import (
 	path2 "path"
 
 	"github.com/drep-project/drep-chain/app"
-	chainService "github.com/drep-project/drep-chain/chain/service"
+	blockmgr "github.com/drep-project/drep-chain/chain/service/blockmgr"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/common/fileutil"
@@ -35,7 +35,7 @@ var (
 // CliService provides an interactive command line window
 type AccountService struct {
 	DatabaseService *database.DatabaseService  `service:"database"`
-	ChainService    *chainService.ChainService `service:"chain"`
+	Blockmgr        *blockmgr.BlockMgr `service:"blockmgr"`
 	CommonConfig    *app.CommonConfig
 	Config          *accountTypes.Config
 	Wallet          *Wallet
@@ -55,7 +55,7 @@ func (accountService *AccountService) Api() []app.API {
 			Version:   "1.0",
 			Service: &AccountApi{
 				Wallet:          accountService.Wallet,
-				chainService:    accountService.ChainService,
+				blockmgr:        accountService.Blockmgr,
 				accountService:  accountService,
 				databaseService: accountService.DatabaseService,
 			},
@@ -92,7 +92,7 @@ func (accountService *AccountService) Init(executeContext *app.ExecuteContext) e
 		accountService.Config.KeyStoreDir = executeContext.Cli.GlobalString(KeyStoreDirFlag.Name)
 	}
 
-	accountService.Wallet, err = NewWallet(accountService.Config, accountService.ChainService.Config.ChainId)
+	accountService.Wallet, err = NewWallet(accountService.Config, accountService.Blockmgr.ChainService.ChainID())
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func (accountService *AccountService) CreateWallet(password string) error {
 
 	store := accountComponent.NewFileStore(accountService.Config.KeyStoreDir)
 	password = string(sha3.Keccak256([]byte(password)))
-	newNode := chainTypes.NewNode(nil, accountService.ChainService.Config.ChainId)
+	newNode := chainTypes.NewNode(nil, accountService.Blockmgr.ChainService.Config.ChainId)
 	store.StoreKey(newNode, password)
 	return nil
 }

@@ -56,6 +56,7 @@ func (tDb *TransactionDatabase) Flush() {
 				return false
 			}
 		}
+		tDb.dirties.Delete(key)
 		return true
 	})
 }

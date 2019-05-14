@@ -5,8 +5,8 @@ import (
 	"container/list"
 	"encoding/hex"
 	"fmt"
+	"github.com/drep-project/drep-chain/chain/params"
 	"math/big"
-	"time"
 
 	"github.com/drep-project/dlog"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
@@ -20,20 +20,20 @@ func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, b
 	defer chainService.addBlockSync.Unlock()
 
 	blockHash := block.Header.Hash()
-	exist := chainService.blockExists(blockHash)
+	exist := chainService.BlockExists(blockHash)
 	if exist {
-		return false, false, errBlockExsist
+		return false, false, ErrBlockExsist
 	}
 
 	// The block must not already exist as an orphan.
 	if _, exists := chainService.orphans[*blockHash]; exists {
-		return false, false, errOrphanBlockExsist
+		return false, false, ErrOrphanBlockExsist
 	}
 
 	// Handle orphan blocks.
 	zeroHash := crypto.Hash{}
 	prevHash := block.Header.PreviousHash
-	prevHashExists := chainService.blockExists(&prevHash)
+	prevHashExists := chainService.BlockExists(&prevHash)
 	if !prevHashExists && prevHash != zeroHash {
 		chainService.addOrphanBlock(block)
 		return false, true, nil
@@ -271,7 +271,6 @@ func (chainService *ChainService) reorganizeChain(db *database.Database, detachN
 		elem := detachNodes.Back()
 		lastBlock := elem.Value.(*chainTypes.BlockNode)
 		height := lastBlock.Height - 1
-		//TODO how to roll back while in transaction
 		db.Rollback2Block(height)
 		dlog.Info("REORGANIZE:RollBack state root", "Height", height)
 		chainService.markState(db, lastBlock.Parent)
@@ -310,6 +309,7 @@ func (chainService *ChainService) reorganizeChain(db *database.Database, detachN
 func (chainService *ChainService) notifyBlock(block *chainTypes.Block) {
 	chainService.NewBlockFeed.Send(block)
 }
+
 func (chainService *ChainService) notifyDetachBlock(block *chainTypes.Block) {
 	chainService.DetachBlockFeed.Send(block)
 }
@@ -323,12 +323,12 @@ func (chainService *ChainService) markState(db *database.Database, blockNode *ch
 		BestState: *state,
 		db:        db,
 	}
-	chainService.transactionPool.UpdateState(db)
 	chainService.stateLock.Unlock()
 	db.RecordBlockJournal(state.Height)
+	db.Commit()
 }
 
-//TODO need to  improves the performan
+//TODO improves the performan
 func (chainService *ChainService) InitStates() error {
 	chainState := chainService.DatabaseService.GetChainState()
 
@@ -344,7 +344,6 @@ func (chainService *ChainService) InitStates() error {
 		var parent *chainTypes.BlockNode
 		if lastNode == nil {
 			blockHash := header.Hash()
-			//TODO skip check genesis block hash
 			if !blockHash.IsEqual(chainService.genesisBlock.Header.Hash()) {
 				return errors.Wrapf(ErrInitStateFail, "Expected  first entry in block index to be genesis block, found %s", blockHash)
 			}
@@ -415,41 +414,49 @@ func (chainService *ChainService) InitStates() error {
 	return chainService.Index.FlushToDB(chainService.DatabaseService.PutBlockNode)
 }
 
-func (chainService *ChainService) createChainState() error {
-	node := chainTypes.NewBlockNode(chainService.genesisBlock.Header, nil)
-	node.Status = chainTypes.StatusDataStored | chainTypes.StatusValid
-	chainService.BestChain.SetTip(node)
-
-	// Add the new node to the index which is used for faster lookups.
-	chainService.Index.AddNode(node)
-
-	// Initialize the state related to the best block.  Since it is the
-	// genesis block, use its timestamp for the median time.
-	chainService.stateLock.Lock()
-	chainService.StateSnapshot = &ChainState{
-		BestState: *chainTypes.NewBestState(node, time.Unix(int64(node.TimeStamp), 0)),
-		db:        chainService.DatabaseService.BeginTransaction(),
-	}
-	chainService.stateLock.Unlock()
-
-	// Save the genesis block to the block index database.
-	err := chainService.DatabaseService.PutBlockNode(node)
-	if err != nil {
-		return err
-	}
-
-	// Store the current best chain state into the database.
-	chainService.stateLock.Lock()
-	state := chainService.StateSnapshot.BestState
-	chainService.stateLock.Unlock()
-	err = chainService.DatabaseService.PutChainState(&state)
-	if err != nil {
-		return err
-	}
-	err = chainService.DatabaseService.PutBlock(chainService.genesisBlock)
-	if err != nil {
-		return err
+//180000000/360
+func (chainService *ChainService) CalcGasLimit(parent *chainTypes.BlockHeader, gasFloor, gasCeil uint64) *big.Int {
+	limit := uint64(0)
+	if parent.GasLimit.Uint64()*2/3 > parent.GasUsed.Uint64() {
+		limit = parent.GasLimit.Uint64() - span
 	} else {
-		return nil
+		limit = parent.GasLimit.Uint64() + span
 	}
+
+	if limit < params.MinGasLimit {
+		limit = params.MinGasLimit
+	}
+	// If we're outside our allowed gas range, we try to hone towards them
+	if limit < gasFloor {
+		limit = gasFloor
+	} else if limit > gasCeil {
+		limit = gasCeil
+	}
+	return new(big.Int).SetUint64(limit)
+}
+
+// AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
+func (chainService *ChainService) AccumulateRewards(db *database.Database, b *chainTypes.Block, totalGasBalance *big.Int) error {
+	reward := new(big.Int).SetUint64(uint64(Rewards))
+	leaderAddr := crypto.PubKey2Address(&b.Header.LeaderPubKey)
+
+	r := new(big.Int)
+	r = r.Div(reward, new(big.Int).SetInt64(2))
+	r.Add(r, totalGasBalance)
+	err := db.AddBalance(&leaderAddr, r)
+	if err != nil {
+		return err
+	}
+	num := len(b.Header.MinorPubKeys)
+	for _, memberPK := range b.Header.MinorPubKeys {
+		if !memberPK.IsEqual(&b.Header.LeaderPubKey) {
+			memberAddr := crypto.PubKey2Address(&memberPK)
+			r.Div(reward, new(big.Int).SetInt64(int64(num*2)))
+			err = db.AddBalance(&memberAddr, r)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

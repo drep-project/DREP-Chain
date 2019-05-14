@@ -6,7 +6,8 @@ import (
 	"github.com/drep-project/binary"
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
-	chainService "github.com/drep-project/drep-chain/chain/service"
+	blockMgrService "github.com/drep-project/drep-chain/chain/service/blockmgr"
+	chainService "github.com/drep-project/drep-chain/chain/service/chainservice"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
@@ -34,8 +35,10 @@ const (
 )
 
 type ConsensusService struct {
-	P2pServer       p2pService.P2P                 `service:"p2p"`
-	ChainService    *chainService.ChainService     `service:"chain"`
+	P2pServer    p2pService.P2P             `service:"p2p"`
+	ChainService *chainService.ChainService `service:"chain"`
+	BlockMgr     *blockMgrService.BlockMgr  `service:"blockmgr"`
+
 	DatabaseService *database.DatabaseService      `service:"database"`
 	WalletService   *accountService.AccountService `service:"accounts"`
 
@@ -216,7 +219,7 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 				} else {
 					_, _, err := consensusService.ChainService.ProcessBlock(block)
 					if err == nil{
-						consensusService.ChainService.BroadcastBlock(chainTypes.MsgTypeBlock, block, true)
+						consensusService.BlockMgr.BroadcastBlock(chainTypes.MsgTypeBlock, block, true)
 					}
 					dlog.Info("Submit Block ", "Height", consensusService.ChainService.BestChain.Height(), "txs:", block.Data.TxCount, "err", err)
 				}
@@ -294,7 +297,7 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 	consensusService.leader.Reset()
 	db := consensusService.DatabaseService.BeginTransaction()
 	defer db.Discard()
-	block, gasFee ,err := consensusService.ChainService.GenerateBlock(db, consensusService.leader.pubkey)
+	block, gasFee ,err := consensusService.BlockMgr.GenerateBlock(db, consensusService.leader.pubkey)
 	if err != nil {
 		dlog.Error("generate block fail", "msg", err)
 		return nil, err
@@ -342,7 +345,7 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error) {
 	db := consensusService.DatabaseService.BeginTransaction()
 	defer db.Discard()
-	block, gasFee, err := consensusService.ChainService.GenerateBlock(db, consensusService.pubkey)
+	block, gasFee, err := consensusService.BlockMgr.GenerateBlock(db, consensusService.pubkey)
 	if err != nil {
 		return nil, err
 	}

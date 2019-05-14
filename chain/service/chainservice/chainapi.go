@@ -6,16 +6,14 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/drep-project/binary"
 	chainType "github.com/drep-project/drep-chain/chain/types"
-	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
 )
 
 type ChainApi struct {
 	chainService *ChainService
-	dbService    *database.DatabaseService `service:"database"`
+	dbService    *database.DatabaseService
 }
 
 func (chain *ChainApi) GetBlock(height uint64) (*chainType.RpcBlock, error) {
@@ -82,20 +80,7 @@ func (chain *ChainApi) GetTransactionCountByBlockHeight(height uint64) (int, err
 	return len(block.Txs), nil
 }
 
-func (chain *ChainApi) SendRawTransaction(txbytes common.Bytes) (string, error) {
-	tx := &chainType.Transaction{}
-	err := binary.Unmarshal(txbytes, tx)
-	if err != nil {
-		return "", err
-	}
-	err = chain.chainService.SendTransaction(tx, true)
-	if err != nil {
-		return "", err
-	}
-	chain.chainService.BroadcastTx(chainType.MsgTypeTransaction, tx, true)
 
-	return tx.TxHash().String(), err
-}
 
 //根据地址获取地址对应的别名
 func (chain *ChainApi) GetAliasByAddress(addr *crypto.CommonAddress) string {
@@ -105,15 +90,4 @@ func (chain *ChainApi) GetAliasByAddress(addr *crypto.CommonAddress) string {
 //根据别名获取别名对应的地址
 func (chain *ChainApi) GetAddressByAlias(alias string) *crypto.CommonAddress {
 	return chain.chainService.DatabaseService.AliasGet(alias)
-}
-
-func (chain *ChainApi) GasPrice() (*big.Int, error) {
-	return chain.chainService.gpo.SuggestPrice()
-}
-
-func (chain *ChainApi) GetPoolTransactions(addr *crypto.CommonAddress) []chainType.Transactions {
-	return chain.chainService.GetPoolTransactions(addr)
-}
-func (chain *ChainApi) GetPoolMiniPendingNonce(addr *crypto.CommonAddress) uint64 {
-	return chain.chainService.GetPoolMiniPendingNonce(addr)
 }

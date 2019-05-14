@@ -127,8 +127,6 @@ func NewBlockNode(blockHeader *BlockHeader, parent *BlockNode) *BlockNode {
 //
 // This function is safe for concurrent access.
 func (node *BlockNode) Header() BlockHeader {
-	//TODO bug must fix here
-	// No lock is needed because all accessed fields are immutable.
 	prevHash := &crypto.Hash{}
 	if node.Parent != nil {
 		prevHash = node.Parent.Hash

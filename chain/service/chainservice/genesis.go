@@ -21,7 +21,7 @@ func (chainService *ChainService) GetGenisiBlock(biosPubkey string) *chainTypes.
 	}
 	root = db.GetStateRoot()
 
-	merkleRoot := chainService.deriveMerkleRoot(nil)
+	merkleRoot := chainService.DeriveMerkleRoot(nil)
 	b := common.MustDecode(biosPubkey)
 	pubkey, err := secp256k1.ParsePubKey(b)
 	if err != nil {
@@ -61,7 +61,7 @@ func (chainService *ChainService) ProcessGenesisBlock(genesisPubkey string) (*ch
 		return nil, err
 	}
 
-	merkleRoot := chainService.deriveMerkleRoot(nil)
+	merkleRoot := chainService.DeriveMerkleRoot(nil)
 	b := common.MustDecode(genesisPubkey)
 	pubkey, err := secp256k1.ParsePubKey(b)
 	if err != nil {

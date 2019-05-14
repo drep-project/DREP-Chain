@@ -2,7 +2,8 @@ package main
 
 import (
 	"fmt"
-	chainService "github.com/drep-project/drep-chain/chain/service"
+	chainService "github.com/drep-project/drep-chain/chain/service/chainservice"
+	blockmgr "github.com/drep-project/drep-chain/chain/service/blockmgr"
 	p2pService "github.com/drep-project/drep-chain/network/service"
 	accountService "github.com/drep-project/drep-chain/pkgs/accounts/service"
 	consensusService "github.com/drep-project/drep-chain/pkgs/consensus/service"
@@ -85,6 +86,9 @@ func main() {
 
 	vType=reflect.TypeOf(&accountService.AccountApi{})
 	resolveType(output,"account", "ACCOUNT", "account",vType)
+
+	vType=reflect.TypeOf(&blockmgr.BlockMgr{})
+	resolveType(output,"blockmgr", "BLOCKMGT", "blockmgr",vType)
 
 	vType=reflect.TypeOf(&logService.LogApi{})
 	resolveType(output,"log", "LOG", "log",vType)

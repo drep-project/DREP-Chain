@@ -12,6 +12,10 @@ type ChainConfig struct {
 	GenesisPK        string          `json:"genesispk"`
 	SkipCheckMutiSig bool            `json:"skipCheckMutiSig"`
 	Producers        []Producers     `json:"producers"`
+
+}
+
+type BlockMgr struct {
 	GasPrice		 OracleConfig    `json:"gasprice"`
 	JournalFile      string          `json:"journalFile"`
 }
