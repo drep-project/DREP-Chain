@@ -20,4 +20,7 @@ var (
 	ErrMsgType              = errors.New("not expected msg type")
 	ErrBlockExsist          = errors.New("already have block")
 	ErrOrphanBlockExsist    = errors.New("already have block (orphan)")
+	ErrNegativeAmount            = errors.New("negative amount in tx")
+	ErrExceedGasLimit            = errors.New("gas limit in tx has exceed block limit")
+	ErrBalance                   = errors.New("not enough balance")
 )

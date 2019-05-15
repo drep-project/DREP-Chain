@@ -492,11 +492,11 @@ func (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) b
 	if err != nil {
 		return false
 	}
-	err = consensusService.ChainService.VerifyHeader(block.Header, preBlockHash)
+	err = consensusService.ChainService.BlockValidator.VerifyHeader(block.Header, preBlockHash)
 	if err != nil {
 		return false
 	}
-	err = consensusService.ChainService.ValidateBody(block)
+	err = consensusService.ChainService.BlockValidator.VerifyBody(block)
 	if err != nil {
 		return false
 	}
@@ -505,5 +505,5 @@ func (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) b
 }
 
 func (consensusService *ConsensusService) multySigVerify(block *chainTypes.Block) bool {
-	return consensusService.ChainService.ValidateMultiSig(block, consensusService.ChainService.Config.SkipCheckMutiSig || false)
+	return consensusService.ChainService.BlockValidator.VerifyMultiSig(block, consensusService.ChainService.Config.SkipCheckMutiSig || false)
 }

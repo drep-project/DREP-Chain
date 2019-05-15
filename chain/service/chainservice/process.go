@@ -103,14 +103,11 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainCh
 	}()
 	prevNode := chainService.Index.LookupNode(&block.Header.PreviousHash)
 	preBlock := prevNode.Header()
-	if !(chainService.ValidateMultiSig(block, chainService.Config.SkipCheckMutiSig || false)) {
-		return false, ErrInvalidateBlockMultisig
-	}
-	err = chainService.VerifyHeader(block.Header, &preBlock)
+	err = chainService.BlockValidator.VerifyHeader(block.Header, &preBlock)
 	if err != nil {
 		return false, err
 	}
-	err = chainService.ValidateBody(block)
+	err = chainService.BlockValidator.VerifyBody(block)
 	if err != nil {
 		return false, err
 	}
@@ -164,7 +161,7 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *cha
 	//process transaction
 	var gasUsed *big.Int
 	var gasFee *big.Int
-	gasUsed, gasFee, err = chainService.executeTransactionInBlock(db, block, gp)
+	gasUsed, gasFee, err = chainService.BlockValidator.ExecuteBlock(db, block, gp)
 	if err != nil {
 		chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValidateFailed)
 		chainService.flushIndexState()
@@ -437,7 +434,7 @@ func (chainService *ChainService) CalcGasLimit(parent *chainTypes.BlockHeader, g
 
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
 func (chainService *ChainService) AccumulateRewards(db *database.Database, b *chainTypes.Block, totalGasBalance *big.Int) error {
-	reward := new(big.Int).SetUint64(uint64(Rewards))
+	reward := new(big.Int).SetUint64(uint64(params.Rewards))
 	leaderAddr := crypto.PubKey2Address(&b.Header.LeaderPubKey)
 
 	r := new(big.Int)

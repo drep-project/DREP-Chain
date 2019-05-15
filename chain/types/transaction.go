@@ -3,10 +3,12 @@ package types
 import (
 	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/app"
+	"github.com/drep-project/drep-chain/chain/params"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
+	"math"
 	"math/big"
 	"sync/atomic"
 	"time"
@@ -129,6 +131,40 @@ func (tx *Transaction) AsPersistentMessage() []byte {
 		tx.message, _ = binary.Marshal(tx)
 	}
 	return tx.message
+}
+
+func (tx *Transaction) IntrinsicGas() (uint64, error) {
+	data := tx.AsPersistentMessage()
+	contractCreation := tx.To() == nil || tx.To().IsEmpty()
+	// Set the starting gas for the raw transaction
+	var gas uint64
+	if contractCreation {
+		gas = params.TxGasContractCreation
+	} else {
+		gas = params.TxGas
+	}
+	// Bump the required gas by the amount of transactional data
+	if len(data) > 0 {
+		// Zero and non-zero bytes are priced differently
+		var nz uint64
+		for _, byt := range data {
+			if byt != 0 {
+				nz++
+			}
+		}
+		// Make sure we don't exceed uint64 for all data combinations
+		if (math.MaxUint64-gas)/params.TxDataNonZeroGas < nz {
+			return 0, ErrOutOfGas
+		}
+		gas += nz * params.TxDataNonZeroGas
+
+		z := uint64(len(data)) - nz
+		if (math.MaxUint64-gas)/params.TxDataZeroGas < z {
+			return 0, ErrOutOfGas
+		}
+		gas += z * params.TxDataZeroGas
+	}
+	return gas, nil
 }
 
 type Message struct {

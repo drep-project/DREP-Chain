@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -64,6 +63,9 @@ type ChainService struct {
 	//提供新块订阅
 	NewBlockFeed    event.Feed
 	DetachBlockFeed event.Feed
+
+	BlockValidator IBlockValidator
+	TransactionValidator ITransactionValidator
 }
 
 type ChainState struct {
@@ -99,8 +101,9 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 	chainService.orphans = make(map[crypto.Hash]*chainTypes.OrphanBlock)
 	chainService.prevOrphans = make(map[crypto.Hash][]*chainTypes.OrphanBlock)
 	chainService.stateProcessor = NewStateProcessor(chainService)
+	chainService.TransactionValidator = NewTransactionValidator(chainService)
+	chainService.BlockValidator = NewChainBlockValidator(chainService)
 
-	fmt.Println(chainService.Config.GenesisPK)
 
 	chainService.genesisBlock = chainService.GetGenisiBlock(chainService.Config.GenesisPK)
 	hash := chainService.genesisBlock.Header.Hash()

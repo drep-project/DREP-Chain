@@ -85,8 +85,7 @@ func (stateProcessor *StateProcessor) ApplyMessage(db *database.Database, tx *ty
 	}
 
 	// Pay intrinsic gastx
-	contractCreation := tx.To() == nil || tx.To().IsEmpty()
-	gas, err := IntrinsicGas(tx.AsPersistentMessage(), contractCreation)
+	gas, err := tx.IntrinsicGas()
 	if err != nil {
 		return nil, 0, 0, false, err
 	}

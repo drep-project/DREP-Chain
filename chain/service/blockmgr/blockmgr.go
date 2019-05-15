@@ -21,9 +21,9 @@ import (
 	"github.com/drep-project/drep-chain/pkgs/evm"
 	"github.com/drep-project/drep-chain/rpc"
 
+	xxx "github.com/drep-project/drep-chain/chain/service/chainservice"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	p2pService "github.com/drep-project/drep-chain/network/service"
-	xxx "github.com/drep-project/drep-chain/chain/service/chainservice"
 
 	rpc2 "github.com/drep-project/drep-chain/pkgs/rpc"
 )
@@ -44,7 +44,7 @@ var (
 )
 
 type BlockMgr struct {
-	ChainService    *xxx.ChainService  `service:"chain"`
+	ChainService    *xxx.ChainService         `service:"chain"`
 	RpcService      *rpc2.RpcService          `service:"rpc"`
 	P2pServer       p2pService.P2P            `service:"p2p"`
 	DatabaseService *database.DatabaseService `service:"database"`
@@ -133,14 +133,13 @@ func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 		},
 	})
 
-
 	blockMgr.apis = []app.API{
 		app.API{
 			Namespace: "blockmgr",
 			Version:   "1.0",
 			Service: &BlockMgrApi{
-				blockMgr: 	blockMgr,
-				dbService:  blockMgr.DatabaseService,
+				blockMgr:  blockMgr,
+				dbService: blockMgr.DatabaseService,
 			},
 			Public: true,
 		},
@@ -181,7 +180,7 @@ func (blockMgr *BlockMgr) SendTransaction(tx *chainTypes.Transaction, islocal bo
 	if nonce > tx.Nonce() {
 		return fmt.Errorf("error nounce db nonce:%d != %d", nonce, tx.Nonce())
 	}
-	err = blockMgr.ChainService.VerifyTransaction(tx)
+	err = blockMgr.VerifyTransaction(tx)
 
 	if err != nil {
 		return err

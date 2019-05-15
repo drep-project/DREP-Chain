@@ -49,7 +49,7 @@ SELECT_TX:
 		case <-stopchanel:
 			break SELECT_TX
 		default:
-			txGasUsed, txGasFee, err := blockMgr.ChainService.ExecuteTransaction(db, t, gp, blockHeader)
+			txGasUsed, txGasFee, err := blockMgr.ChainService.TransactionValidator.ExecuteTransaction(db, t, gp, blockHeader)
 			if err == nil {
 				finalTxs = append(finalTxs, t)
 				gasUsed.Add(gasUsed, txGasUsed)

@@ -355,7 +355,7 @@ func (blockMgr *BlockMgr) checkHeaderChain(chain []chainTypes.BlockHeader) error
 			return ErrNotContinueHeader
 		}
 
-		err := blockMgr.ChainService.VerifyHeader(&chain[i], &chain[i-1])
+		err := blockMgr.ChainService.BlockValidator.VerifyHeader(&chain[i], &chain[i-1])
 		if err != nil {
 			return err
 		}

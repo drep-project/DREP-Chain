@@ -14,9 +14,21 @@ import (
 	"github.com/drep-project/drep-chain/database"
 )
 
-func (chainService *ChainService) VerifyHeader(header, parent *chainTypes.BlockHeader) error {
+type ChainBlockValidator struct {
+	txValidator ITransactionValidator
+	chain *ChainService
+}
+
+func NewChainBlockValidator(chainService *ChainService) *ChainBlockValidator {
+	return &ChainBlockValidator{
+		txValidator: chainService.TransactionValidator,
+		chain: chainService,
+	}
+}
+
+func (chainBlockValidator *ChainBlockValidator) VerifyHeader(header, parent *chainTypes.BlockHeader) error {
 	// Verify chainId  matched
-	if header.ChainId != chainService.chainId {
+	if header.ChainId != chainBlockValidator.chain.ChainID() {
 		return ErrChainId
 	}
 	// Verify version  mathch
@@ -47,18 +59,18 @@ func (chainService *ChainService) VerifyHeader(header, parent *chainTypes.BlockH
 	}
 
 	//TODO Verify that the gas limit remains within allowed bounds
-	nextGasLimit := chainService.CalcGasLimit(parent, params.MinGasLimit, params.MaxGasLimit)
+	nextGasLimit := chainBlockValidator.chain.CalcGasLimit(parent, params.MinGasLimit, params.MaxGasLimit)
 	if nextGasLimit.Cmp(&header.GasLimit) != 0 {
 		return fmt.Errorf("invalid gas limit: have %v, want %v += %v", header.GasLimit, parent.GasLimit, nextGasLimit)
 	}
 	// check multisig
 	// leader
-	if !chainService.isInLocalBp(&header.LeaderPubKey) {
+	if !chainBlockValidator.isInLocalBp(&header.LeaderPubKey) {
 		return ErrBpNotInList
 	}
 	// minor
 	for _, minor := range header.MinorPubKeys {
-		if !chainService.isInLocalBp(&minor) {
+		if !chainBlockValidator.isInLocalBp(&minor) {
 			return ErrBpNotInList
 		}
 	}
@@ -66,8 +78,8 @@ func (chainService *ChainService) VerifyHeader(header, parent *chainTypes.BlockH
 }
 
 // isInLocalBp check the specific pubket  is a bp node
-func (chainService *ChainService) isInLocalBp(key *secp256k1.PublicKey) bool {
-	for _, bp := range chainService.Config.Producers {
+func (chainBlockValidator *ChainBlockValidator) isInLocalBp(key *secp256k1.PublicKey) bool {
+	for _, bp := range chainBlockValidator.chain.Config.Producers {
 		if bp.Pubkey.IsEqual(key) {
 			return true
 		}
@@ -75,23 +87,28 @@ func (chainService *ChainService) isInLocalBp(key *secp256k1.PublicKey) bool {
 	return false
 }
 
-func (chainService *ChainService) ValidateBody(block *chainTypes.Block) error {
+func (chainBlockValidator *ChainBlockValidator) VerifyBody(block *chainTypes.Block) error {
+
+	if !(chainBlockValidator.VerifyMultiSig(block, chainBlockValidator.chain.Config.SkipCheckMutiSig || false)) {
+		return ErrInvalidateBlockMultisig
+	}
+
 	// Header validity is known at this point, check the uncles and transactions
 	header := block.Header
-	if hash := chainService.DeriveMerkleRoot(block.Data.TxList); !bytes.Equal(hash, header.TxRoot) {
+	if hash := chainBlockValidator.chain.DeriveMerkleRoot(block.Data.TxList); !bytes.Equal(hash, header.TxRoot) {
 		return fmt.Errorf("transaction root hash mismatch: have %x, want %x", hash, header.TxRoot)
 	}
 	return nil
 }
 
-func (chainService *ChainService) ValidateMultiSig(b *chainTypes.Block, skipCheckSig bool) bool {
+func (chainBlockValidator *ChainBlockValidator) VerifyMultiSig(b *chainTypes.Block, skipCheckSig bool) bool {
 	if skipCheckSig { //just for solo
 		return true
 	}
 	participators := []*secp256k1.PublicKey{}
 	for index, val := range b.MultiSig.Bitmap {
 		if val == 1 {
-			producer := chainService.Config.Producers[index]
+			producer := chainBlockValidator.chain.Config.Producers[index]
 			participators = append(participators, producer.Pubkey)
 		}
 	}
@@ -100,14 +117,14 @@ func (chainService *ChainService) ValidateMultiSig(b *chainTypes.Block, skipChec
 	return schnorr.Verify(sigmaPk, sha3.Keccak256(msg), b.MultiSig.Sig.R, b.MultiSig.Sig.S)
 }
 
-func (chainService *ChainService) executeTransactionInBlock(db *database.Database, block *chainTypes.Block, gp *GasPool) (*big.Int, *big.Int, error) {
+func (chainBlockValidator *ChainBlockValidator) ExecuteBlock(db *database.Database, block *chainTypes.Block, gp *GasPool) (*big.Int, *big.Int, error) {
 	totalGasFee := big.NewInt(0)
 	totalGasUsed := big.NewInt(0)
 	if len(block.Data.TxList) < 0 {
 		return totalGasUsed, totalGasFee, nil
 	}
 	for _, t := range block.Data.TxList {
-		gasUsed, gasFee, err := chainService.executeTransaction(db, t, gp, block.Header)
+		gasUsed, gasFee, err := chainBlockValidator.txValidator.ExecuteTransaction(db, t, gp, block.Header)
 		if err != nil {
 			return nil, nil, err
 			//dlog.Debug("execute transaction fail", "txhash", t.Data, "reason", err.Error())
@@ -118,4 +135,15 @@ func (chainService *ChainService) executeTransactionInBlock(db *database.Databas
 		}
 	}
 	return totalGasUsed, totalGasFee, nil
+}
+
+type IBlockValidator interface {
+
+	VerifyHeader(header, parent *chainTypes.BlockHeader) error
+
+	VerifyBody(block *chainTypes.Block) error
+
+	VerifyMultiSig(b *chainTypes.Block, skipCheckSig bool) bool
+
+	ExecuteBlock(db *database.Database, block *chainTypes.Block, gp *GasPool) (*big.Int, *big.Int, error)
 }
