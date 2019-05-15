@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -25,7 +26,7 @@ var (
 	DefaultChainConfig = &chainTypes.ChainConfig{
 		RemotePort:  55556,
 		ChainId:     app.ChainIdType{},
-		GenesisPK:   "0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26",
+		GenesisPK:   "0x0373654ccdb250f2cfcfe64c783a44b9ea85bc47f2f00c480d05082428d277d6d0",
 	}
 	span = uint64(params.MaxGasLimit / 360)
 )
@@ -98,6 +99,8 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 	chainService.orphans = make(map[crypto.Hash]*chainTypes.OrphanBlock)
 	chainService.prevOrphans = make(map[crypto.Hash][]*chainTypes.OrphanBlock)
 	chainService.stateProcessor = NewStateProcessor(chainService)
+
+	fmt.Println(chainService.Config.GenesisPK)
 
 	chainService.genesisBlock = chainService.GetGenisiBlock(chainService.Config.GenesisPK)
 	hash := chainService.genesisBlock.Header.Hash()
