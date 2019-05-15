@@ -1591,8 +1591,8 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             var setAlias = new Method({
                 name: 'setAlias',
                 call: 'account_setAlias',
-                params: 2,
-                inputFormatter: [formatters.inputAddressFormatter, null]
+                params: 4,
+                inputFormatter: [formatters.inputAddressFormatter, null, utils.fromDecimal, utils.fromDecimal]
             });
 
             var sign = new Method({
@@ -1639,13 +1639,6 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
         };
 
         var methods = function () {
-
-            var gasPrice = new Method({
-                name: 'gasPrice',
-                call: 'chain_gasPrice',
-                params: 0,
-                inputFormatter: []
-            });
 
             var getAddressByAlias = new Method({
                 name: 'getAddressByAlias',
@@ -1724,14 +1717,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 inputFormatter: [utils.fromDecimal]
             });
 
-            var sendRawTransaction = new Method({
-                name: 'sendRawTransaction',
-                call: 'chain_sendRawTransaction',
-                params: 1,
-                inputFormatter: [null]
-            });
-
-            return [gasPrice,getAddressByAlias,getAliasByAddress,getBalance,getBlock,getMaxHeight,getNonce,getPreviousBlockHash,getReputation,getTransactionByBlockHeightAndIndex,getTransactionCountByBlockHeight,getTransactionsFromBlock,sendRawTransaction]
+            return [getAddressByAlias,getAliasByAddress,getBalance,getBlock,getMaxHeight,getNonce,getPreviousBlockHash,getReputation,getTransactionByBlockHeightAndIndex,getTransactionCountByBlockHeight,getTransactionsFromBlock]
         }
 
         module.exports = CHAIN;
@@ -1865,6 +1851,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 params: 3,
                 inputFormatter: [formatters.inputAddressFormatter, null, null]
             });
+
             var getTransaction = new Method({
                 name: 'getTransaction',
                 call: 'trace_getTransaction',

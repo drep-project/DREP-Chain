@@ -131,9 +131,6 @@ var %s = new Method({
 		numIn:=m.Func.Type().NumIn()
 		oNmae := m.Name
 		methodName := Capitalize(oNmae)
-		if oNmae == "Transfer" {
-			fmt.Println("x")
-		}
 		name := ""
 		if m.Func.Type().NumOut() > 0 {
 			var resultType = m.Func.Type().Out(0)
