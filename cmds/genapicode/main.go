@@ -87,8 +87,8 @@ func main() {
 	vType=reflect.TypeOf(&accountService.AccountApi{})
 	resolveType(output,"account", "ACCOUNT", "account",vType)
 
-	vType=reflect.TypeOf(&blockmgr.BlockMgr{})
-	resolveType(output,"blockmgr", "BLOCKMGT", "blockmgr",vType)
+	vType=reflect.TypeOf(&blockmgr.BlockMgrApi{})
+		resolveType(output,"blockmgr", "BLOCKMGR", "blockmgr",vType)
 
 	vType=reflect.TypeOf(&logService.LogApi{})
 	resolveType(output,"log", "LOG", "log",vType)
@@ -131,9 +131,6 @@ var %s = new Method({
 		numIn:=m.Func.Type().NumIn()
 		oNmae := m.Name
 		methodName := Capitalize(oNmae)
-		if oNmae == "Transfer" {
-			fmt.Println("x")
-		}
 		name := ""
 		if m.Func.Type().NumOut() > 0 {
 			var resultType = m.Func.Type().Out(0)

@@ -68,11 +68,11 @@ func (chainService *ChainService) VerifyHeader(header, parent *chainTypes.BlockH
 // isInLocalBp check the specific pubket  is a bp node
 func (chainService *ChainService) isInLocalBp(key *secp256k1.PublicKey) bool {
 	for _, bp := range chainService.Config.Producers {
-		if !bp.Pubkey.IsEqual(key) {
-			return false
+		if bp.Pubkey.IsEqual(key) {
+			return true
 		}
 	}
-	return true
+	return false
 }
 
 func (chainService *ChainService) ValidateBody(block *chainTypes.Block) error {
