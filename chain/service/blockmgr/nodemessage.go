@@ -77,7 +77,7 @@ func (blockMgr *BlockMgr) dealMsg(peer *chainTypes.PeerInfo, rw p2p.MsgReadWrite
 			}
 			go blockMgr.HandleBlockRespMsg(&resp)
 		case chainTypes.MsgTypeTransaction:
-			var txs chainTypes.Transactions
+			var txs []*chainTypes.Transaction
 			if err := msg.Decode(&txs); err != nil {
 				return errors.Wrapf(ErrDecodeMsg, "Transactions msg:%v err:%v", msg, err)
 			}
@@ -86,8 +86,8 @@ func (blockMgr *BlockMgr) dealMsg(peer *chainTypes.PeerInfo, rw p2p.MsgReadWrite
 			for _, tx := range txs {
 				dlog.Trace("comming transaction", "transaction", tx.Nonce())
 				tx := tx
-				peer.MarkTx(&tx)
-				blockMgr.SendTransaction(&tx, false)
+				peer.MarkTx(tx)
+				blockMgr.SendTransaction(tx, false)
 			}
 
 		case chainTypes.MsgTypeBlock:
