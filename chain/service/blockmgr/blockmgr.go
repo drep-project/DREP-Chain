@@ -1,4 +1,4 @@
-package service
+package blockmgr
 
 import (
 	"fmt"
@@ -21,7 +21,7 @@ import (
 	"github.com/drep-project/drep-chain/pkgs/evm"
 	"github.com/drep-project/drep-chain/rpc"
 
-	xxx "github.com/drep-project/drep-chain/chain/service/chainservice"
+	"github.com/drep-project/drep-chain/chain/service/chainservice"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	p2pService "github.com/drep-project/drep-chain/network/service"
 
@@ -44,7 +44,7 @@ var (
 )
 
 type BlockMgr struct {
-	ChainService    *xxx.ChainService         `service:"chain"`
+	ChainService    *chainservice.ChainService         `service:"chain"`
 	RpcService      *rpc2.RpcService          `service:"rpc"`
 	P2pServer       p2pService.P2P            `service:"p2p"`
 	DatabaseService *database.DatabaseService `service:"database"`

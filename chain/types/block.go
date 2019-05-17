@@ -1,7 +1,6 @@
 package types
 
 import (
-	"encoding/hex"
 	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/crypto"
@@ -37,11 +36,6 @@ func (blockHeader *BlockHeader) Hash() *crypto.Hash {
 		blockHeader.blockHash.SetBytes(bytes)
 	}
 	return blockHeader.blockHash
-}
-
-func (blockHeader *BlockHeader) String() string {
-	h := blockHeader.Hash()
-	return "0x" + hex.EncodeToString(h[:])
 }
 
 type BlockData struct {

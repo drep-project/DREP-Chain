@@ -1,4 +1,4 @@
-package service
+package blockmgr
 
 const (
 	maxHeaderHashCountReq = 255                 //最多一次请求的头部hash个数

@@ -1,12 +1,13 @@
-package service
+package chainservice
 
 import (
 	"bytes"
 	"container/list"
 	"encoding/hex"
 	"fmt"
-	"github.com/drep-project/drep-chain/chain/params"
 	"math/big"
+
+	"github.com/drep-project/drep-chain/chain/params"
 
 	"github.com/drep-project/dlog"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
@@ -313,8 +314,8 @@ func (chainService *ChainService) notifyDetachBlock(block *chainTypes.Block) {
 
 func (chainService *ChainService) markState(db *database.Database, blockNode *chainTypes.BlockNode) {
 	state := chainTypes.NewBestState(blockNode, blockNode.CalcPastMedianTime())
-	db.PutChainState(state)
 	chainService.BestChain.SetTip(blockNode)
+	db.PutChainState(state)
 	chainService.stateLock.Lock()
 	chainService.StateSnapshot = &ChainState{
 		BestState: *state,

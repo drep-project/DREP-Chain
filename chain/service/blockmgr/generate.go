@@ -1,10 +1,11 @@
-package service
+package blockmgr
 
 import (
+	"fmt"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/database"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	xxx "github.com/drep-project/drep-chain/chain/service/chainservice"
+	"github.com/drep-project/drep-chain/chain/service/chainservice"
 	 "github.com/drep-project/drep-chain/chain/params"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/dlog"
@@ -20,24 +21,27 @@ func (blockMgr *BlockMgr) GenerateBlock(db *database.Database,leaderKey *secp256
 	newGasLimit := blockMgr.ChainService.CalcGasLimit(parent.Header, params.MinGasLimit, params.MaxGasLimit)
 	height := blockMgr.ChainService.BestChain.Height() + 1
 	txs := blockMgr.transactionPool.GetPending(newGasLimit)
-
 	previousHash := blockMgr.ChainService.BestChain.Tip().Hash
+	fmt.Println(previousHash)
+	fmt.Println(parent.Header.Hash())
 	timestamp := uint64(time.Now().Unix())
 
 	blockHeader := &chainTypes.BlockHeader{
-		Version:      common.Version,
-		PreviousHash: *previousHash,
-		ChainId:      blockMgr.ChainService.ChainID(),
-		GasLimit:     *newGasLimit,
-		Timestamp:    timestamp,
-		Height:       height,
-		LeaderPubKey: *leaderKey,
+		Version:      	common.Version,
+		PreviousHash: 	*previousHash,
+		ChainId:      	blockMgr.ChainService.ChainID(),
+		GasLimit:     	*newGasLimit,
+		Timestamp:    	timestamp,
+		Height:       	height,
+		StateRoot:  	[]byte{},
+		TxRoot: 		[]byte{},
+		LeaderPubKey: 	*leaderKey,
 	}
 
 	finalTxs := make([]*chainTypes.Transaction, 0, len(txs))
 	gasUsed := new(big.Int)
 	gasFee := new (big.Int)
-	gp := new(xxx.GasPool).AddGas(blockHeader.GasLimit.Uint64())
+	gp := new(chainservice.GasPool).AddGas(blockHeader.GasLimit.Uint64())
 	stopchanel := make(chan struct{})
 	time.AfterFunc(time.Second*5, func() {
 		stopchanel <- struct{}{}

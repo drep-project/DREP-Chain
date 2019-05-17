@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-package service
+package blockmgr
 
 import (
 	"github.com/drep-project/drep-chain/chain/types"

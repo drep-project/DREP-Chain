@@ -1,4 +1,4 @@
-package service
+package chainservice
 
 import (
 	"github.com/drep-project/dlog"

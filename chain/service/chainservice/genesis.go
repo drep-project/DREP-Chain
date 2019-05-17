@@ -1,4 +1,4 @@
-package service
+package chainservice
 
 import (
 	chainTypes "github.com/drep-project/drep-chain/chain/types"

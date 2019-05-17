@@ -66,7 +66,7 @@ type BlockNode struct {
 	// padding adds up.
 
 	// parent is the parent block for this node.
-	Parent *BlockNode
+	Parent *BlockNode							`binary:"ignore"`
 
 	// hash is the double sha 256 of the block.
 	Hash *crypto.Hash
@@ -99,6 +99,7 @@ func InitBlockNode(node *BlockNode, blockHeader *BlockHeader, parent *BlockNode)
 		Hash:         blockHeader.Hash(),
 		Height:       blockHeader.Height,
 		StateRoot:    blockHeader.StateRoot,
+		PreviousHash: &blockHeader.PreviousHash,
 		TimeStamp:    blockHeader.Timestamp,
 		ChainId:      blockHeader.ChainId,
 		Version:      blockHeader.Version,

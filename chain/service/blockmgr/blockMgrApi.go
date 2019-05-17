@@ -1,4 +1,4 @@
-package service
+package blockmgr
 
 import (
 	"github.com/drep-project/binary"

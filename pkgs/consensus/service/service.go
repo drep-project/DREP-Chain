@@ -217,11 +217,14 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 				if err != nil {
 					dlog.Debug("Producer Block Fail", "Reason", err.Error())
 				} else {
-					_, _, err := consensusService.ChainService.ProcessBlock(block)
-					if err == nil{
+					if isL {
 						consensusService.BlockMgr.BroadcastBlock(chainTypes.MsgTypeBlock, block, true)
+						_, _, err := consensusService.ChainService.ProcessBlock(block)
+						if err == nil{
+							consensusService.BlockMgr.BroadcastBlock(chainTypes.MsgTypeBlock, block, true)
+						}
+						dlog.Info("Submit Block ", "Height", consensusService.ChainService.BestChain.Height(), "txs:", block.Data.TxCount, "err", err)
 					}
-					dlog.Info("Submit Block ", "Height", consensusService.ChainService.BestChain.Height(), "txs:", block.Data.TxCount, "err", err)
 				}
 				time.Sleep(time.Duration(500) * time.Millisecond) //delay a little time for block deliver
 				nextBlockTime, waitSpan := consensusService.getWaitTime()
@@ -246,7 +249,6 @@ func (consensusService *ConsensusService) Stop(executeContext *app.ExecuteContex
 
 func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, error) {
 	consensusService.member.Reset()
-
 	dlog.Trace("node member is going to process consensus for round 1")
 	block := &chainTypes.Block{}
 	consensusService.member.validator = func(msg []byte) bool {
@@ -279,6 +281,7 @@ func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, erro
 		block.MultiSig = multiSig
 		return consensusService.multySigVerify(block)
 	}
+
 	dlog.Trace("node member is going to process consensus for round 2")
 	_, err = consensusService.member.ProcessConsensus()
 	if err != nil {
