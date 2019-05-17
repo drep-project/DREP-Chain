@@ -238,8 +238,9 @@ func (member *Member) OnFail(peer *consensusTypes.PeerInfo, failMsg *consensusTy
 
 func (member *Member) commit() {
 	if !member.validator(member.msg) {
-		member.pushErrorMsg(ErrValidateMsg)
-		return
+		//member.pushErrorMsg(ErrValidateMsg)
+		dlog.Error("member commit", "err", ErrValidateMsg)
+		//return
 	}
 	//TODO validate block from leader
 	var err error

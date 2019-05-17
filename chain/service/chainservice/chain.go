@@ -1,6 +1,7 @@
 package chainservice
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -170,6 +171,9 @@ func (chainService *ChainService) GetBlocksFrom(start, size uint64) ([]*chainTyp
 
 func (chainService *ChainService) GetHighestBlock() (*chainTypes.Block, error) {
 	heighestBlockBode := chainService.BestChain.Tip()
+	if heighestBlockBode == nil {
+		return nil, fmt.Errorf("chain not init")
+	}
 	block, err := chainService.DatabaseService.GetBlock(heighestBlockBode.Hash)
 	if err != nil {
 		return nil, err
