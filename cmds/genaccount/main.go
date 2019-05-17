@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha512"
 	"encoding/json"
 	"fmt"
@@ -17,6 +18,7 @@ import (
 	"net"
 	"os"
 	path2 "path"
+	"path/filepath"
 
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
@@ -72,8 +74,11 @@ func gen(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		node := enode.NewV4(aNode.PrivateKey.PubKey(), ip, nodeItems[i].Port, nodeItems[i].Port)
+		instanceDir := filepath.Join(path, nodeItems[i].Name,"drepnode")
+		nodePrivateKey := GeneratePrivateKey(instanceDir)
+		node := enode.NewV4(nodePrivateKey.PubKey(), ip, nodeItems[i].Port, nodeItems[i].Port)
 		bootsNodes = append(bootsNodes, node)
+
 		standbyKey = append(standbyKey, aNode.PrivateKey)
 		produces = append(produces, chainTypes.Producers{
 			IP:     nodeItems[i].Ip,
@@ -200,4 +205,22 @@ type NodeItem struct {
 	Name string
 	Ip   string
 	Port int
+}
+
+func GeneratePrivateKey(instanceDir string) *secp256k1.PrivateKey {
+	key, err := crypto.GenerateKey(rand.Reader)
+	if err != nil {
+		fmt.Println("Failed to generate node key: %v", err)
+	}
+
+	if err := os.MkdirAll(instanceDir, 0700); err != nil {
+		fmt.Println("Failed to persist node key: %v", err)
+		return key
+	}
+
+	keyfile := filepath.Join(instanceDir, "nodekey")
+	if err := crypto.SaveECDSA(keyfile, key); err != nil {
+		fmt.Println("Failed to persist node key: %v", err)
+	}
+	return key
 }
