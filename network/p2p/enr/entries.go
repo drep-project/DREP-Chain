@@ -37,13 +37,6 @@ type generic struct {
 
 func (g generic) ENRKey() string { return g.key }
 
-//func (g generic) EncodeRLP(w io.Writer) error {
-//	return rlp.Encode(w, g.value)
-//}
-
-//func (g *generic) DecodeRLP(s *rlp.Stream) error {
-//	return s.Decode(g.value)
-//}
 
 // WithEntry wraps any value with a key name. It can be used to set and load arbitrary values
 // in a record. The value v must be supported by rlp. To use WithEntry with Load, the value
@@ -73,25 +66,6 @@ func (v ID) ENRKey() string { return "id" }
 type IP net.IP
 
 func (v IP) ENRKey() string { return "ip" }
-
-// EncodeRLP implements rlp.Encoder.
-//func (v IP) EncodeRLP(w io.Writer) error {
-//	if ip4 := net.IP(v).To4(); ip4 != nil {
-//		return rlp.Encode(w, ip4)
-//	}
-//	return rlp.Encode(w, net.IP(v))
-//}
-
-// DecodeRLP implements rlp.Decoder.
-//func (v *IP) DecodeRLP(s *rlp.Stream) error {
-//	if err := s.Decode((*net.IP)(v)); err != nil {
-//		return err
-//	}
-//	if len(*v) != 4 && len(*v) != 16 {
-//		return fmt.Errorf("invalid IP address, want 4 or 16 bytes: %v", *v)
-//	}
-//	return nil
-//}
 
 // KeyError is an error related to a key.
 type KeyError struct {

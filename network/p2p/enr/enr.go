@@ -176,67 +176,6 @@ func (r Record) EncodeRLP(w io.Writer) error {
 	return err
 }
 
-// DecodeRLP implements rlp.Decoder. Decoding verifies the signature.
-//func (r *Record) DecodeRLP(s *rlp.Stream) error {
-//	dec, raw, err := decodeRecord(s)
-//	if err != nil {
-//		return err
-//	}
-//	*r = dec
-//	r.raw = raw
-//	return nil
-//}
-
-//func decodeRecord(s *rlp.Stream) (dec Record, raw []byte, err error) {
-//	raw, err = s.Raw()
-//	if err != nil {
-//		return dec, raw, err
-//	}
-//	if len(raw) > SizeLimit {
-//		return dec, raw, errTooBig
-//	}
-//
-//	// Decode the RLP container.
-//	s = rlp.NewStream(bytes.NewReader(raw), 0)
-//	if _, err := s.List(); err != nil {
-//		return dec, raw, err
-//	}
-//	if err = s.Decode(&dec.signature); err != nil {
-//		return dec, raw, err
-//	}
-//	if err = s.Decode(&dec.seq); err != nil {
-//		return dec, raw, err
-//	}
-//	// The rest of the record contains sorted k/v pairs.
-//	var prevkey string
-//	for i := 0; ; i++ {
-//		var kv pair
-//		if err := s.Decode(&kv.k); err != nil {
-//			if err == rlp.EOL {
-//				break
-//			}
-//			return dec, raw, err
-//		}
-//		if err := s.Decode(&kv.v); err != nil {
-//			if err == rlp.EOL {
-//				return dec, raw, errIncompletePair
-//			}
-//			return dec, raw, err
-//		}
-//		if i > 0 {
-//			if kv.k == prevkey {
-//				return dec, raw, errDuplicateKey
-//			}
-//			if kv.k < prevkey {
-//				return dec, raw, errNotSorted
-//			}
-//		}
-//		dec.pairs = append(dec.pairs, kv)
-//		prevkey = kv.k
-//	}
-//	return dec, raw, s.ListEnd()
-//}
-
 // IdentityScheme returns the name of the identity scheme in the record.
 func (r *Record) IdentityScheme() string {
 	var id ID

@@ -175,18 +175,3 @@ func (p2pService *P2pService) RemovePeer(nodeUrl string) {
 		dlog.Error("remove peer", "err", err)
 	}
 }
-
-//func (p2pService *P2pService) isLocalIp(ip string) bool {
-//	addrs, err := net.InterfaceAddrs()
-//	if err != nil {
-//		return false
-//	}
-//	for _, value := range addrs {
-//		if ipnet, ok := value.(*net.IPNet); ok {
-//			if ipnet.IP.String() == ip {
-//				return true
-//			}
-//		}
-//	}
-//	return false
-//}
