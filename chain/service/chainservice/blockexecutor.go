@@ -88,11 +88,6 @@ func (chainBlockValidator *ChainBlockValidator) isInLocalBp(key *secp256k1.Publi
 }
 
 func (chainBlockValidator *ChainBlockValidator) VerifyBody(block *chainTypes.Block) error {
-
-	if !(chainBlockValidator.VerifyMultiSig(block, chainBlockValidator.chain.Config.SkipCheckMutiSig || false)) {
-		return ErrInvalidateBlockMultisig
-	}
-
 	// Header validity is known at this point, check the uncles and transactions
 	header := block.Header
 	if hash := chainBlockValidator.chain.DeriveMerkleRoot(block.Data.TxList); !bytes.Equal(hash, header.TxRoot) {

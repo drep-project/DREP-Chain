@@ -8,6 +8,7 @@ import (
 	"github.com/drep-project/drep-chain/network/p2p/enode"
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
 	"gopkg.in/urfave/cli.v1"
+	"path"
 )
 
 const (
@@ -65,8 +66,8 @@ func (p2pService *P2pService) Init(executeContext *app.ExecuteContext) error {
 	//if n.serverConfig.TrustedNodes == nil {
 	//	n.serverConfig.TrustedNodes = n.config.TrustedNodes()
 	//}
-	//if n.serverConfig.NodeDatabase == "" {
-	//	n.serverConfig.NodeDatabase = n.config.NodeDB()
+	//if p2pService.Config.NodeDatabase == "" {
+	p2pService.Config.NodeDatabase = path.Join(executeContext.CommonConfig.HomeDir, "drepnode","peersnode")
 	//}
 
 	p2pService.server = &p2p.Server{
@@ -101,7 +102,7 @@ func (p2pService *P2pService) Stop(executeContext *app.ExecuteContext) error {
 		return nil
 	}
 	p2pService.server.Stop()
-	if p2pService.quit != nil{
+	if p2pService.quit != nil {
 		close(p2pService.quit)
 	}
 

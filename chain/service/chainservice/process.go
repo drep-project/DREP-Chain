@@ -112,6 +112,10 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainCh
 	if err != nil {
 		return false, err
 	}
+	if chainService.BlockValidator.VerifyMultiSig(block, chainService.Config.SkipCheckMutiSig || false) {
+		return false, ErrInvalidateBlockMultisig
+	}
+
 	//store block
 	err = chainService.DatabaseService.PutBlock(block)
 	if err != nil {
