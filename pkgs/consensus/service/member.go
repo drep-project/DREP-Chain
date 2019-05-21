@@ -22,7 +22,7 @@ type Member struct {
 	prvKey      *secp256k1.PrivateKey
 	p2pServer   p2pService.P2P
 
-	msg     []byte
+	msg     consensusTypes.IConsenMsg
 	msgHash []byte
 
 	randomPrivakey *secp256k1.PrivateKey
@@ -42,7 +42,8 @@ type Member struct {
 	msgPool     chan *consensusTypes.RouteMsgWrap
 	isConsensus bool // time split 2, in consensus \ wait
 
-	validator func(msg []byte) bool
+	validator func(msg  consensusTypes.IConsenMsg) bool
+	convertor func(msg []byte) (consensusTypes.IConsenMsg, error)
 }
 
 func NewMember(prvKey *secp256k1.PrivateKey, p2pServer p2pService.P2P) *Member {
@@ -91,7 +92,7 @@ func (member *Member) Reset() {
 	member.setState(INIT)
 }
 
-func (member *Member) ProcessConsensus() ([]byte, error) {
+func (member *Member) ProcessConsensus() (consensusTypes.IConsenMsg, error) {
 	dlog.Debug("wait for leader's setup message", "IP", member.leader.Peer.IP())
 	member.setState(WAIT_SETUP)
 	member.isConsensus = true
@@ -167,8 +168,12 @@ func (member *Member) OnSetUp(peer *consensusTypes.PeerInfo, setUp *consensusTyp
 
 	dlog.Debug("receive setup message")
 	if member.leader.Peer.IP() == peer.IP() {
-		member.msg = setUp.Msg
-		member.msgHash = sha3.Keccak256(setUp.Msg)
+		var err error
+		member.msg, err = member.convertor(setUp.Msg)
+		if err != nil {
+			return
+		}
+		member.msgHash = sha3.Keccak256(member.msg.AsSignMessage())
 		member.commit()
 		dlog.Debug("sent commit message to leader")
 		member.setState(WAIT_CHALLENGE)
@@ -238,9 +243,9 @@ func (member *Member) OnFail(peer *consensusTypes.PeerInfo, failMsg *consensusTy
 
 func (member *Member) commit() {
 	if !member.validator(member.msg) {
-		member.pushErrorMsg(ErrValidateMsg)
+		//member.pushErrorMsg(ErrValidateMsg)
 		dlog.Error("member commit", "err", ErrValidateMsg)
-		return
+		//return
 	}
 	//TODO validate block from leader
 	var err error

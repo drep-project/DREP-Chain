@@ -52,7 +52,8 @@ type Leader struct {
 	responseBitmap []byte
 	syncLock       sync.Mutex
 
-	waitTime time.Duration
+	waitForSetup time.Duration
+	waitForResponseTime time.Duration
 
 	currentHeight       uint64
 	minMember           int
@@ -64,7 +65,8 @@ type Leader struct {
 
 func NewLeader(privkey *secp256k1.PrivateKey, p2pServer p2pService.P2P) *Leader {
 	l := &Leader{}
-	l.waitTime = 10 * time.Second
+	l.waitForSetup = 10 * time.Second
+	l.waitForResponseTime = 5 * time.Second
 	l.pubkey = privkey.PubKey()
 	l.privakey = privkey
 	l.p2pServer = p2pServer
@@ -100,7 +102,7 @@ func (leader *Leader) Reset() {
 	leader.cancelWaitChallenge = make(chan struct{}, 1)
 }
 
-func (leader *Leader) ProcessConsensus(msg []byte) (error, *secp256k1.Signature, []byte) {
+func (leader *Leader) ProcessConsensus(msg consensusTypes.IConsenMsg) (error, *secp256k1.Signature, []byte) {
 	leader.setState(INIT)
 	leader.setUp(msg)
 	if !leader.waitForCommit() {
@@ -116,7 +118,6 @@ func (leader *Leader) ProcessConsensus(msg []byte) (error, *secp256k1.Signature,
 		return ErrWaitResponse, nil, nil
 	}
 	dlog.Debug("response complete")
-
 	valid := leader.Validate(msg, leader.sigmaS.R, leader.sigmaS.S)
 	dlog.Debug("vaidate result", "VALID", valid)
 	if !valid {
@@ -126,10 +127,10 @@ func (leader *Leader) ProcessConsensus(msg []byte) (error, *secp256k1.Signature,
 	return nil, &secp256k1.Signature{R: leader.sigmaS.R, S: leader.sigmaS.S}, leader.responseBitmap
 }
 
-func (leader *Leader) setUp(msg []byte) {
-	setup := &consensusTypes.Setup{Msg: msg}
+func (leader *Leader) setUp(msg consensusTypes.IConsenMsg) {
+	setup := &consensusTypes.Setup{Msg: msg.AsMessage()}
 	setup.Height = leader.currentHeight
-	leader.msgHash = sha3.Keccak256(msg)
+	leader.msgHash = sha3.Keccak256(msg.AsSignMessage())
 	var err error
 	var nouncePk *secp256k1.PublicKey
 	leader.randomPrivakey, nouncePk, err = schnorr.GenerateNoncePair(secp256k1.S256(), leader.msgHash, leader.privakey,nil, schnorr.Sha256VersionStringRFC6979)
@@ -185,7 +186,7 @@ func (leader *Leader) waitForCommit() bool {
 	leader.setState(WAIT_COMMIT)
 	for {
 		select {
-		case <-time.After(leader.waitTime):
+		case <-time.After(leader.waitForSetup):
 			commitNum := leader.getCommitNum()
 			dlog.Debug("waitForCommit  finish", "commitNum", commitNum, "producers", len(leader.producers))
 			if commitNum >= leader.minMember {
@@ -235,7 +236,7 @@ func (leader *Leader) OnResponse(peer *consensusTypes.PeerInfo, response *consen
 	}
 }
 
-func (leader *Leader) challenge(msg []byte) {
+func (leader *Leader) challenge(msg consensusTypes.IConsenMsg) {
 	leader.selfSign(msg)
 	for index, pk := range leader.sigmaPubKey {
 		if index ==0 {
@@ -261,7 +262,7 @@ func (leader *Leader) challenge(msg []byte) {
 	}
 }
 
-func (leader *Leader) selfSign(msg []byte) error {
+func (leader *Leader) selfSign(msg consensusTypes.IConsenMsg) error {
 	// pk1 | pk2 | pk3 | pk4
 	commitPubkey := schnorr.CombinePubkeys(leader.sigmaCommitPubkey[1:])
 	sig, err := schnorr.PartialSign(secp256k1.S256(), leader.msgHash, leader.privakey, leader.randomPrivakey, commitPubkey)
@@ -300,7 +301,7 @@ func (leader *Leader) waitForResponse() bool {
 	leader.setState(WAIT_RESPONSE)
 	for {
 		select {
-		case <-time.After(leader.waitTime):
+		case <-time.After(leader.waitForResponseTime):
 			responseNum := leader.getResponseNum()
 			dlog.Debug("waitForResponse finish", "responseNum", responseNum, "liveMembers", len(leader.liveMembers))
 			if responseNum == len(leader.sigmaPubKey) {
@@ -315,7 +316,7 @@ func (leader *Leader) waitForResponse() bool {
 	}
 }
 
-func (leader *Leader) Validate(msg []byte, r *big.Int, s *big.Int) bool {
+func (leader *Leader) Validate(msg consensusTypes.IConsenMsg, r *big.Int, s *big.Int) bool {
 	dlog.Debug("Validate signature", "responseBitmap", leader.responseBitmap, "commitBitmap", leader.commitBitmap)
 	if len(leader.responseBitmap) < len(leader.commitBitmap) {
 		dlog.Debug("peer in responseBitmap and commitBitmap was not correct", "responseBitmap", len(leader.responseBitmap), "commitBitmap", len(leader.commitBitmap))
@@ -324,9 +325,8 @@ func (leader *Leader) Validate(msg []byte, r *big.Int, s *big.Int) bool {
 	if len(leader.responseBitmap) < leader.minMember {
 		return false
 	}
-
 	sigmaPubKey := schnorr.CombinePubkeys(leader.getResponsePubkey())
-	return schnorr.Verify(sigmaPubKey, sha3.Keccak256(msg), r, s)
+	return schnorr.Verify(sigmaPubKey, sha3.Keccak256(msg.AsSignMessage()), r, s)
 }
 
 func (leader *Leader) hasMarked(index int, bitmap []byte) bool {

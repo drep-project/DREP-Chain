@@ -18,8 +18,8 @@ func main(){
 	for {
 		result := ""
 		err = client.Call(&result,"account_transfer",
-			"0x09926e07b4dd2a38c497da613c008ede1e2b1506",
-			"0x09926e07b4dd2a38c497da613c008ede1e2b1506",
+			"0xe91f67944ec2f7223bf6d0272557a5b13ecc1f28",
+			"0xe91f67944ec2f7223bf6d0272557a5b13ecc1f28",
 			"0x3e8",
 			"0x7530",
 			"0x7530",

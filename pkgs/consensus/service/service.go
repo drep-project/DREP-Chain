@@ -19,6 +19,7 @@ import (
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
 	"gopkg.in/urfave/cli.v1"
 	"math"
+	"math/big"
 	"time"
 )
 
@@ -217,14 +218,11 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 				if err != nil {
 					dlog.Debug("Producer Block Fail", "Reason", err.Error())
 				} else {
-					if isL {
+					_, _, err := consensusService.ChainService.ProcessBlock(block)
+					if err == nil{
 						consensusService.BlockMgr.BroadcastBlock(chainTypes.MsgTypeBlock, block, true)
-						_, _, err := consensusService.ChainService.ProcessBlock(block)
-						if err == nil{
-							consensusService.BlockMgr.BroadcastBlock(chainTypes.MsgTypeBlock, block, true)
-						}
-						dlog.Info("Submit Block ", "Height", consensusService.ChainService.BestChain.Height(), "txs:", block.Data.TxCount, "err", err)
 					}
+					dlog.Info("Submit Block ", "Height", consensusService.ChainService.BestChain.Height(), "txs:", block.Data.TxCount, "err", err)
 				}
 				time.Sleep(time.Duration(500) * time.Millisecond) //delay a little time for block deliver
 				nextBlockTime, waitSpan := consensusService.getWaitTime()
@@ -247,30 +245,30 @@ func (consensusService *ConsensusService) Stop(executeContext *app.ExecuteContex
 	return nil
 }
 
-func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, error) {
+func (consensusService *ConsensusService) runAsMember() (block *chainTypes.Block, err error) {
 	consensusService.member.Reset()
 	dlog.Trace("node member is going to process consensus for round 1")
-	block := &chainTypes.Block{}
-	consensusService.member.validator = func(msg []byte) bool {
-		err := binary.Unmarshal(msg, block)
-		if err != nil {
-			return false
-		}
+	consensusService.member.convertor = func(msg []byte) ( consensusTypes.IConsenMsg, error) {
+		return chainTypes.BlockFromMessage(msg)
+	}
+	consensusService.member.validator = func(msg consensusTypes.IConsenMsg) bool {
+		block = msg.(*chainTypes.Block)
 		return consensusService.blockVerify(block)
 	}
-	_, err := consensusService.member.ProcessConsensus()
+	_, err = consensusService.member.ProcessConsensus()
 	if err != nil {
 		return nil, err
 	}
 	dlog.Trace("node member finishes consensus for round 1")
 
 	consensusService.member.Reset()
-	multiSig := &chainTypes.MultiSignature{}
-	consensusService.member.validator = func(multiSigBytes []byte) bool {
-		err := binary.Unmarshal(multiSigBytes, multiSig)
-		if err != nil {
-			return false
-		}
+	var multiSig *chainTypes.MultiSignature
+	consensusService.member.convertor = func(msg []byte) ( consensusTypes.IConsenMsg, error) {
+		return consensusTypes.ResponseWiteRootFromMessage(msg)
+	}
+	consensusService.member.validator = func(msg consensusTypes.IConsenMsg) bool {
+		val := msg.(*consensusTypes.ResponseWiteRootMessage)
+		multiSig = &val.MultiSignature
 		minorPubkeys := []secp256k1.PublicKey{}
 		for index, producer := range consensusService.ChainService.Config.Producers {
 			if multiSig.Bitmap[index] == 1 {
@@ -278,8 +276,14 @@ func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, erro
 			}
 		}
 		block.Header.MinorPubKeys = minorPubkeys
+		block.Header.StateRoot = val.StateRoot
 		block.MultiSig = multiSig
-		return consensusService.multySigVerify(block)
+		var isMainChain bool
+		isMainChain, err = consensusService.ChainService.AcceptBlock(block)
+		if isMainChain && err != nil {
+			return false
+		}
+		return true
 	}
 
 	dlog.Trace("node member is going to process consensus for round 2")
@@ -296,18 +300,18 @@ func (consensusService *ConsensusService) runAsMember() (*chainTypes.Block, erro
 //2 其他producer收到后，签自己的构建数字签名;然后把签名后的块返回给leader
 //3 leader搜集到所有的签名或者返回的签名个数大于producer个数的三分之二后，开始验证签名
 //4 leader验证签名通过后，广播此块给所有的Peer
-func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, error) {
-	consensusService.leader.Reset()
+func (consensusService *ConsensusService) runAsLeader() (block *chainTypes.Block, err error) {
 	db := consensusService.DatabaseService.BeginTransaction()
-	defer db.Discard()
-	block, gasFee ,err := consensusService.BlockMgr.GenerateBlock(db, consensusService.leader.pubkey)
+	consensusService.leader.Reset()
+	var gasFee *big.Int
+	block, gasFee ,err = consensusService.BlockMgr.GenerateBlock(db, consensusService.leader.pubkey)
 	if err != nil {
 		dlog.Error("generate block fail", "msg", err)
 		return nil, err
 	}
 
 	dlog.Trace("node leader is preparing process consensus for round 1", "Block", block)
-	err, sig, bitmap := consensusService.leader.ProcessConsensus(block.ToMessage())
+	err, sig, bitmap := consensusService.leader.ProcessConsensus(block)
 	if err != nil {
 		var str = err.Error()
 		dlog.Error("Error occurs", "msg", str)
@@ -316,10 +320,6 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 
 	multiSig := &chainTypes.MultiSignature{Sig: *sig, Bitmap: bitmap}
 	consensusService.leader.Reset()
-	msg, err := binary.Marshal(multiSig)
-	if err != nil {
-		return nil, err
-	}
 	minorPubkeys := []secp256k1.PublicKey{}
 	for index, producer := range consensusService.ChainService.Config.Producers {
 		if multiSig.Bitmap[index] == 1 {
@@ -334,8 +334,9 @@ func (consensusService *ConsensusService) runAsLeader() (*chainTypes.Block, erro
 		return nil, err
 	}
 	block.Header.StateRoot = db.GetStateRoot()
+	rwMsg := &consensusTypes.ResponseWiteRootMessage{*multiSig, block.Header.StateRoot}
 	dlog.Trace("node leader is going to process consensus for round 2")
-	err, _, _ = consensusService.leader.ProcessConsensus(msg)
+	err, _, _ = consensusService.leader.ProcessConsensus(rwMsg)
 	if err != nil {
 		return nil, err
 	}

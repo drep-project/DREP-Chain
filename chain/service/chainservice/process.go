@@ -39,7 +39,7 @@ func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, b
 		chainService.addOrphanBlock(block)
 		return false, true, nil
 	}
-	isMainChain, err := chainService.acceptBlock(block)
+	isMainChain, err := chainService.AcceptBlock(block)
 	if err != nil {
 		return false, false, err
 	}
@@ -79,7 +79,7 @@ func (chainService *ChainService) processOrphans(hash *crypto.Hash) error {
 			i--
 
 			// Potentially accept the block into the block chain.
-			_, err := chainService.acceptBlock(orphan.Block)
+			_, err := chainService.AcceptBlock(orphan.Block)
 			if err != nil {
 				return err
 			}
@@ -93,7 +93,7 @@ func (chainService *ChainService) processOrphans(hash *crypto.Hash) error {
 	return nil
 }
 
-func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainChain bool, err error) {
+func (chainService *ChainService) AcceptBlock(block *chainTypes.Block) (inMainChain bool, err error) {
 	db := chainService.DatabaseService.BeginTransaction()
 	defer func() {
 		if err == nil {
@@ -112,7 +112,7 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainCh
 	if err != nil {
 		return false, err
 	}
-	if chainService.BlockValidator.VerifyMultiSig(block, chainService.Config.SkipCheckMutiSig || false) {
+	if !chainService.BlockValidator.VerifyMultiSig(block, chainService.Config.SkipCheckMutiSig || false) {
 		return false, ErrInvalidateBlockMultisig
 	}
 
@@ -336,7 +336,6 @@ func (chainService *ChainService) InitStates() error {
 
 	blockCount := chainService.DatabaseService.BlockNodeCount()
 	blockNodes := make([]chainTypes.BlockNode, blockCount)
-
 	var i int32
 	var lastNode *chainTypes.BlockNode
 	err := chainService.DatabaseService.BlockNodeIterator(func(header *chainTypes.BlockHeader, status chainTypes.BlockStatus) error {

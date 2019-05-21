@@ -196,7 +196,7 @@ func (m *txSortedMap) Flatten() []*chainTypes.Transaction {
 			}
 			m.cache = append(m.cache, tx)
 		}
-		sort.Sort(TxByNonce(m.cache))
+		sort.Sort(nonceTxsHeap(m.cache))
 	}
 	// Copy the cache to prevent accidental modifications
 	txs := make([]*chainTypes.Transaction, len(m.cache))

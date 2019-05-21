@@ -57,7 +57,7 @@ func (block *Block) GasLimit() uint64 {
 	return block.Header.GasLimit.Uint64()
 }
 
-func (block *Block) ToMessage() []byte {
+func (block *Block) AsSignMessage() []byte {
 	blockTemp := &Block{
 		Header: &BlockHeader{
 			ChainId:      block.Header.ChainId,
@@ -67,17 +67,47 @@ func (block *Block) ToMessage() []byte {
 			GasUsed:      block.Header.GasUsed,
 			Height:       block.Header.Height,
 			Timestamp:    block.Header.Timestamp,
-			StateRoot:    block.Header.StateRoot,
 			TxRoot:       block.Header.TxRoot,
 			LeaderPubKey: block.Header.LeaderPubKey,
 		},
-		Data: block.Data,
 	}
 	bytes, _ := binary.Marshal(blockTemp)
 	return bytes
 }
 
+func (block *Block) AsMessage() []byte {
+	bytes, _ := binary.Marshal(block)
+	return bytes
+}
+
+func BlockFromMessage(bytes []byte) (*Block, error) {
+	block := &Block{}
+	err := binary.Unmarshal(bytes, block)
+	if err != nil {
+		return nil, err
+	}
+	return block, nil
+}
+
 type MultiSignature struct {
 	Sig    secp256k1.Signature
 	Bitmap []byte
+}
+
+func (multiSignature *MultiSignature) AsSignMessage() []byte {
+	bytes, _ := binary.Marshal(multiSignature)
+	return bytes
+}
+
+func (multiSignature *MultiSignature) AsMessage() []byte {
+	return multiSignature.AsSignMessage()
+}
+
+func MultiSignatureFromMessage(bytes []byte) (*MultiSignature, error) {
+	multySig := &MultiSignature{}
+	err := binary.Unmarshal(bytes, multySig)
+	if err != nil {
+		return nil, err
+	}
+	return multySig, nil
 }

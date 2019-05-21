@@ -219,7 +219,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer *chainTypes.PeerInfo) error {
 	//2 获取所有需要同步的块的hash;然后通知给获取BODY的协程
 	go func() {
 		commonAncestor += 1
-		for height > commonAncestor {
+		for height >= commonAncestor {
 			timeout := time.After(time.Second * maxNetworkTimeout)
 
 			blockMgr.syncMut.Lock()

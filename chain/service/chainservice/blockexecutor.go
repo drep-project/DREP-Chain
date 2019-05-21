@@ -107,7 +107,7 @@ func (chainBlockValidator *ChainBlockValidator) VerifyMultiSig(b *chainTypes.Blo
 			participators = append(participators, producer.Pubkey)
 		}
 	}
-	msg := b.ToMessage()
+	msg := b.AsSignMessage()
 	sigmaPk := schnorr.CombinePubkeys(participators)
 	return schnorr.Verify(sigmaPk, sha3.Keccak256(msg), b.MultiSig.Sig.R, b.MultiSig.Sig.S)
 }
