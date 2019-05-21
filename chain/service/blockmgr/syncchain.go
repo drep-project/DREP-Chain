@@ -221,7 +221,6 @@ func (blockMgr *BlockMgr) fetchBlocks(peer *chainTypes.PeerInfo) error {
 		commonAncestor += 1
 		for height > commonAncestor {
 			timeout := time.After(time.Second * maxNetworkTimeout)
-
 			blockMgr.syncMut.Lock()
 			//blockMgr.P2pServer.SetIdle(peer, false)
 			err := blockMgr.requestHeaders(peer, commonAncestor, maxHeaderHashCountReq)

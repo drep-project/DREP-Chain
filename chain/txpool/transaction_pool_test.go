@@ -10,6 +10,8 @@ import (
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/database"
 	"math/big"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -20,12 +22,14 @@ var txPool *TransactionPool
 var feed event.Feed
 
 func TestNewTransactions(t *testing.T) {
-	diskDb, err := database.NewDatabase("./data")
+	path := filepath.Join(os.TempDir(), fmt.Sprintf("txpool/data"))
+	diskDb, err := database.NewDatabase(path)
 	if err != nil {
 		t.Error("db init err")
 	}
 	//db := database.NewDatabaseService(diskDb)
-	txPool = NewTransactionPool(diskDb, "./jounal/txs")
+	path = filepath.Join(os.TempDir(), fmt.Sprintf("./jounal/txs"))
+	txPool = NewTransactionPool(diskDb, path)
 	if txPool == nil {
 		t.Error("init database service err")
 	}
@@ -70,7 +74,6 @@ func TestAddTX(t *testing.T) {
 }
 
 func TestAddIntevalTX(t *testing.T) {
-
 	b := common.Bytes("0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26")
 	b.UnmarshalText(b)
 	pubkey, _ := secp256k1.ParsePubKey(b)
@@ -215,7 +218,6 @@ func TestDelTx(t *testing.T) {
 	txPool.database.PutBalance(&addr, new(big.Int).SetUint64(amount))
 	txPool.database.Commit()
 
-
 	nonce := txPool.getTransactionCount(&addr)
 	for i := 0; uint64(i) < maxTxsOfQueue+maxTxsOfPending; i++ {
 		tx := chainTypes.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(int64(100+i)), new(big.Int).SetInt64(100), nonce+uint64(i))
@@ -227,7 +229,7 @@ func TestDelTx(t *testing.T) {
 		}
 	}
 
-	nonce += maxTxsOfQueue+maxTxsOfPending
+	nonce += maxTxsOfQueue + maxTxsOfPending
 	//删除发生在pending
 	for i := 0; uint64(i) < 20; i++ {
 		tx := chainTypes.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(int64(100*5)), new(big.Int).SetInt64(100), nonce+uint64(i))
@@ -239,5 +241,3 @@ func TestDelTx(t *testing.T) {
 		}
 	}
 }
-
-//低gas 交易不能被添加

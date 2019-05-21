@@ -196,7 +196,7 @@ func (m *txSortedMap) Flatten() []*chainTypes.Transaction {
 			}
 			m.cache = append(m.cache, tx)
 		}
-		sort.Sort(TxByNonce(m.cache))
+		sort.Sort(nonceTxsHeap(m.cache))
 	}
 	// Copy the cache to prevent accidental modifications
 	txs := make([]*chainTypes.Transaction, len(m.cache))
@@ -429,11 +429,11 @@ func (l *txPricedList) Discard(count int, local map[crypto.CommonAddress]struct{
 	return drop
 }
 
-type TxByNonce []*chainTypes.Transaction
-
-func (s TxByNonce) Len() int           { return len(s) }
-func (s TxByNonce) Less(i, j int) bool { return s[i].Nonce() < s[j].Nonce() }
-func (s TxByNonce) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+//type TxByNonce []*chainTypes.Transaction
+//
+//func (s TxByNonce) Len() int           { return len(s) }
+//func (s TxByNonce) Less(i, j int) bool { return s[i].Nonce() < s[j].Nonce() }
+//func (s TxByNonce) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
 type nonceTxsHeap []*chainTypes.Transaction
 

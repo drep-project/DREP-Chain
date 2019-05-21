@@ -223,8 +223,9 @@ func (blockMgr *BlockMgr) BroadcastTx(msgType int32, tx *chainTypes.Transaction,
 						continue
 					}
 				}
+
 				peer.MarkTx(tx)
-				blockMgr.P2pServer.Send(peer.GetMsgRW(), uint64(msgType), chainTypes.Transactions{*tx})
+				blockMgr.P2pServer.Send(peer.GetMsgRW(), uint64(msgType), []*chainTypes.Transaction{tx})
 			}
 		}
 	}()
