@@ -151,7 +151,7 @@ func (leader *Leader) setUp(msg consensusTypes.IConsenMsg) {
 
 	for _, member := range leader.liveMembers {
 		if member.Peer != nil && !member.IsMe {
-			dlog.Warn("leader sent setup message", "IP", member.Peer.IP(), "Height", setup.Height)
+			dlog.Trace("leader sent setup message", "IP", member.Peer.IP(), "Height", setup.Height)
 			leader.p2pServer.SendAsync(member.Peer.GetMsgRW(), consensusTypes.MsgTypeSetUp, setup)
 		}
 	}
