@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"github.com/drep-project/binary"
@@ -19,7 +20,7 @@ import (
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
 	"gopkg.in/urfave/cli.v1"
 	"math"
-	"math/big"
+	"sort"
 	"time"
 )
 
@@ -209,7 +210,7 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 							break
 						}
 					} else {
-						err =  ErrBFTNotReady
+						err = ErrBFTNotReady
 						time.Sleep(time.Second * 10)
 					}
 				} else {
@@ -329,7 +330,7 @@ func (consensusService *ConsensusService) runAsLeader() (block *chainTypes.Block
 	block.Header.MinorPubKeys = minorPubkeys
 	block.MultiSig = multiSig
 	//Determine reward points
-    err = consensusService.ChainService.AccumulateRewards(db, block, gasFee)
+	err = consensusService.ChainService.AccumulateRewards(db, block, gasFee)
 	if err != nil {
 		return nil, err
 	}
@@ -407,6 +408,12 @@ func (consensusService *ConsensusService) collectMemberStatus() []*consensusType
 			IsOnline: IsOnline,
 		})
 	}
+
+	//字符串排序
+	sort.Slice(produceInfos, func(i, j int) bool {
+		return bytes.Compare(produceInfos[i].Producer.Public.Serialize(), produceInfos[j].Producer.Public.Serialize()) < 0
+	})
+
 	return produceInfos
 }
 
@@ -419,6 +426,7 @@ func (consensusService *ConsensusService) moveToNextMiner(produceInfos []*consen
 		}
 	}
 	curentHeight := consensusService.ChainService.BestChain.Height()
+
 	liveMinerIndex := int(curentHeight % uint64(len(liveMembers)))
 	curMiner := liveMembers[liveMinerIndex]
 
