@@ -39,7 +39,7 @@ func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, b
 		chainService.addOrphanBlock(block)
 		return false, true, nil
 	}
-	isMainChain, err := chainService.AcceptBlock(block)
+	isMainChain, err := chainService.acceptBlock(block)
 	if err != nil {
 		return false, false, err
 	}
@@ -79,7 +79,7 @@ func (chainService *ChainService) processOrphans(hash *crypto.Hash) error {
 			i--
 
 			// Potentially accept the block into the block chain.
-			_, err := chainService.AcceptBlock(orphan.Block)
+			_, err := chainService.acceptBlock(orphan.Block)
 			if err != nil {
 				return err
 			}
@@ -94,6 +94,12 @@ func (chainService *ChainService) processOrphans(hash *crypto.Hash) error {
 }
 
 func (chainService *ChainService) AcceptBlock(block *chainTypes.Block) (inMainChain bool, err error) {
+	chainService.addBlockSync.Lock()
+	defer chainService.addBlockSync.Unlock()
+	return chainService.acceptBlock(block)
+
+}
+func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainChain bool, err error) {
 	db := chainService.DatabaseService.BeginTransaction()
 	defer func() {
 		if err == nil {
@@ -336,11 +342,11 @@ func (chainService *ChainService) InitStates() error {
 	chainState := chainService.DatabaseService.GetChainState()
 	journalHeight := chainService.DatabaseService.GetBlockJournal()
 	if chainState.Height > journalHeight {
-		if chainState.Height - journalHeight == 1 {
+		if chainState.Height-journalHeight == 1 {
 			// commit fail and repaire here
 			//delete dirty data , and rollback state to journalHeight
 			chainService.DatabaseService.Rollback2Block(journalHeight)
-			header, _, err:= chainService.DatabaseService.GetBlockNode(&chainState.PrevHash, journalHeight)
+			header, _, err := chainService.DatabaseService.GetBlockNode(&chainState.PrevHash, journalHeight)
 			if err != nil {
 				return err
 			}
@@ -348,7 +354,7 @@ func (chainService *ChainService) InitStates() error {
 			chainState = chainTypes.NewBestState(node)
 			chainService.DatabaseService.PutChainState(chainState)
 			dlog.Info("Repair data success")
-		}else{
+		} else {
 			panic("never reach here")
 		}
 	}
