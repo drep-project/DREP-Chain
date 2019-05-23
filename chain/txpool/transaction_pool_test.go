@@ -43,7 +43,7 @@ func addTx(t *testing.T, num uint64) error {
 	pubkey, _ := secp256k1.ParsePubKey(b)
 	addr := crypto.PubKey2Address(pubkey)
 	fmt.Println(string(addr.Hex()))
-	txPool.database.BeginTransaction()
+	txPool.database.BeginLogTransaction()
 
 	var amount uint64 = 0xefffffffffffffff
 	txPool.database.PutBalance(&addr, new(big.Int).SetUint64(amount))
@@ -135,7 +135,7 @@ func TestGetPendingTxs(t *testing.T) {
 					nonce = tx.Nonce()
 				}
 				fmt.Println("recv nonce:", nonce)
-				txPool.database.BeginTransaction()
+				txPool.database.BeginLogTransaction()
 				txPool.database.Commit()
 
 				feed.Send(addrs)
@@ -151,7 +151,7 @@ func TestReplace(t *testing.T) {
 
 	privKey, _ := crypto.GenerateKey(rand.Reader)
 	addr := crypto.PubKey2Address(privKey.PubKey())
-	txPool.database.BeginTransaction()
+	txPool.database.BeginLogTransaction()
 
 	var amount uint64 = 0xefffffffffffffff
 	txPool.database.PutBalance(&addr, new(big.Int).SetUint64(amount))
@@ -212,7 +212,7 @@ func TestDelTx(t *testing.T) {
 
 	privKey, _ := crypto.GenerateKey(rand.Reader)
 	addr := crypto.PubKey2Address(privKey.PubKey())
-	txPool.database.BeginTransaction()
+	txPool.database.BeginLogTransaction()
 
 	var amount uint64 = 0xefffffffffffffff
 	txPool.database.PutBalance(&addr, new(big.Int).SetUint64(amount))

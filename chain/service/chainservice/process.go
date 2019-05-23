@@ -97,10 +97,11 @@ func (chainService *ChainService) AcceptBlock(block *chainTypes.Block) (inMainCh
 	db := chainService.DatabaseService.BeginTransaction()
 	defer func() {
 		if err == nil {
-			db.Commit()
+			db.Commit(true)
 		} else {
 			db.Discard()
 		}
+		chainService.blockDb.Commit(false)
 	}()
 	prevNode := chainService.Index.LookupNode(&block.Header.PreviousHash)
 	preBlock := prevNode.Header()
@@ -117,7 +118,7 @@ func (chainService *ChainService) AcceptBlock(block *chainTypes.Block) (inMainCh
 	}
 
 	//store block
-	err = chainService.DatabaseService.PutBlock(block)
+	err = chainService.blockDb.PutBlock(block)
 	if err != nil {
 		return false, err
 	}
@@ -126,7 +127,7 @@ func (chainService *ChainService) AcceptBlock(block *chainTypes.Block) (inMainCh
 	newNode.Status = chainTypes.StatusDataStored
 
 	chainService.Index.AddNode(newNode)
-	err = chainService.Index.FlushToDB(chainService.DatabaseService.PutBlockNode)
+	err = chainService.Index.FlushToDB(chainService.blockDb.PutBlockNode)
 	if err != nil {
 		return false, err
 	}
@@ -155,7 +156,7 @@ func (chainService *ChainService) AcceptBlock(block *chainTypes.Block) (inMainCh
 	// changes to the block index, so flush regardless of whether there was an
 	// error. The index would only be dirty if the block failed to connect, so
 	// we can ignore any errors writing.
-	if writeErr := chainService.Index.FlushToDB(chainService.DatabaseService.PutBlockNode); writeErr != nil {
+	if writeErr := chainService.Index.FlushToDB(chainService.blockDb.PutBlockNode); writeErr != nil {
 		dlog.Warn("Error flushing block index changes to disk", "Reason", writeErr)
 	}
 	return err == nil, err
@@ -211,7 +212,7 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *cha
 }
 
 func (chainService *ChainService) flushIndexState() {
-	if writeErr := chainService.Index.FlushToDB(chainService.DatabaseService.PutBlockNode); writeErr != nil {
+	if writeErr := chainService.Index.FlushToDB(chainService.blockDb.PutBlockNode); writeErr != nil {
 		dlog.Warn("Error flushing block index changes to disk: %v",
 			writeErr)
 	}
@@ -317,22 +318,40 @@ func (chainService *ChainService) notifyDetachBlock(block *chainTypes.Block) {
 }
 
 func (chainService *ChainService) markState(db *database.Database, blockNode *chainTypes.BlockNode) {
-	state := chainTypes.NewBestState(blockNode, blockNode.CalcPastMedianTime())
+	state := chainTypes.NewBestState(blockNode)
 	chainService.BestChain.SetTip(blockNode)
-	db.PutChainState(state)
 	chainService.stateLock.Lock()
 	chainService.StateSnapshot = &ChainState{
 		BestState: *state,
 		db:        db,
 	}
 	chainService.stateLock.Unlock()
+	chainService.DatabaseService.PutChainState(state)
+	db.Commit(true)
 	db.RecordBlockJournal(state.Height)
-	db.Commit()
 }
 
 //TODO improves the performan
 func (chainService *ChainService) InitStates() error {
 	chainState := chainService.DatabaseService.GetChainState()
+	journalHeight := chainService.DatabaseService.GetBlockJournal()
+	if chainState.Height > journalHeight {
+		if chainState.Height - journalHeight == 1 {
+			// commit fail and repaire here
+			//delete dirty data , and rollback state to journalHeight
+			chainService.DatabaseService.Rollback2Block(journalHeight)
+			header, _, err:= chainService.DatabaseService.GetBlockNode(&chainState.PrevHash, journalHeight)
+			if err != nil {
+				return err
+			}
+			node := chainTypes.NewBlockNode(header, nil)
+			chainState = chainTypes.NewBestState(node)
+			chainService.DatabaseService.PutChainState(chainState)
+			dlog.Info("Repair data success")
+		}else{
+			panic("never reach here")
+		}
+	}
 
 	blockCount := chainService.DatabaseService.BlockNodeCount()
 	blockNodes := make([]chainTypes.BlockNode, blockCount)
@@ -404,7 +423,7 @@ func (chainService *ChainService) InitStates() error {
 	}
 	chainService.stateLock.Lock()
 	chainService.StateSnapshot = &ChainState{
-		BestState: *chainTypes.NewBestState(tip, tip.CalcPastMedianTime()),
+		BestState: *chainTypes.NewBestState(tip),
 		db:        chainService.DatabaseService.BeginTransaction(),
 	}
 	chainService.stateLock.Unlock()

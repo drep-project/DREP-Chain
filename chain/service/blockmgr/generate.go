@@ -1,16 +1,15 @@
 package blockmgr
 
 import (
-	"fmt"
+	"github.com/drep-project/dlog"
+	"github.com/drep-project/drep-chain/chain/params"
+	"github.com/drep-project/drep-chain/chain/service/chainservice"
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/database"
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	"github.com/drep-project/drep-chain/chain/service/chainservice"
-	 "github.com/drep-project/drep-chain/chain/params"
-	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/dlog"
-	"time"
 	"math/big"
+	"time"
 )
 
 func (blockMgr *BlockMgr) GenerateBlock(db *database.Database,leaderKey *secp256k1.PublicKey) (*chainTypes.Block, *big.Int,error) {
@@ -22,8 +21,6 @@ func (blockMgr *BlockMgr) GenerateBlock(db *database.Database,leaderKey *secp256
 	height := blockMgr.ChainService.BestChain.Height() + 1
 	txs := blockMgr.transactionPool.GetPending(newGasLimit)
 	previousHash := blockMgr.ChainService.BestChain.Tip().Hash
-	fmt.Println(previousHash)
-	fmt.Println(parent.Header.Hash())
 	timestamp := uint64(time.Now().Unix())
 
 	blockHeader := &chainTypes.BlockHeader{
