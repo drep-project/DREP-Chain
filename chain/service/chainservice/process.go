@@ -99,6 +99,7 @@ func (chainService *ChainService) AcceptBlock(block *chainTypes.Block) (inMainCh
 	return chainService.acceptBlock(block)
 
 }
+
 func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainChain bool, err error) {
 	db := chainService.DatabaseService.BeginTransaction()
 	defer func() {
@@ -143,6 +144,8 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainCh
 		if err != nil {
 			return false, err
 		}
+		chainService.markState(db, newNode)
+		chainService.notifyBlock(block)
 		return true, nil
 	}
 
@@ -205,8 +208,6 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *cha
 		return err
 	}
 
-	chainService.markState(db, newNode)
-	chainService.notifyBlock(block)
 	// If this is fast add, or this block node isn't yet marked as
 	// valid, then we'll update its status and flush the state to
 	// disk again.
@@ -307,7 +308,8 @@ func (chainService *ChainService) reorganizeChain(db *database.Database, detachN
 			if err != nil {
 				return err
 			}
-
+			chainService.markState(db, blockNode)
+			chainService.notifyBlock(block)
 			dlog.Info("REORGANIZE:Append New Block", "Height", blockNode.Height, "Hash", blockNode.Hash)
 			elem = elem.Next()
 		}
