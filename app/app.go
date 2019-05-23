@@ -31,7 +31,7 @@ var (
 
 	PprofFlag = cli.StringFlag{
 		Name:  "pprof",
-		Usage: "ppfof for debug performance",
+		Usage: "ppfof for debug performance, --pprof 1",
 	}
 )
 
