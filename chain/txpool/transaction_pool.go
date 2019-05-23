@@ -289,7 +289,11 @@ func (pool *TransactionPool) syncToPending(address *crypto.CommonAddress) {
 	}
 
 	//从queue找nonce连续的交易放入到pending中
-	list := pool.queue[*address].Ready(pool.getTransactionCount(address))
+	addrList := pool.queue[*address]
+	if addrList == nil {
+		return
+	}
+	list := addrList.Ready(pool.getTransactionCount(address))
 	var nonce uint64
 	if len(list) > 0 {
 		for _, tx := range list {
