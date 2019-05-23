@@ -4,14 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
 	"runtime/debug"
 	"strings"
+	_ "net/http/pprof"
 
 	"github.com/drep-project/drep-chain/common/fileutil"
-
 	"github.com/drep-project/drep-chain/common"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -26,6 +27,11 @@ var (
 	HomeDirFlag = common.DirectoryFlag{
 		Name:  "homedir",
 		Usage: "Home directory for the datadir logdir and keystore",
+	}
+
+	PprofFlag = cli.StringFlag{
+		Name:  "pprof",
+		Usage: "ppfof for debug performance",
 	}
 )
 
@@ -123,6 +129,8 @@ func (mApp DrepApp) Run() error {
 	mApp.Before = mApp.before
 	mApp.Flags = append(mApp.Flags, ConfigFileFlag)
 	mApp.Flags = append(mApp.Flags, HomeDirFlag)
+	mApp.Flags = append(mApp.Flags, PprofFlag)
+
 	allCommands, allFlags := mApp.Context.AggerateFlags()
 	for i := 0; i < len(allCommands); i++ {
 		allCommands[i].Flags = append(allCommands[i].Flags, allFlags...)
@@ -190,6 +198,13 @@ func (mApp DrepApp) before(ctx *cli.Context) error {
 		return err
 	}
 	mApp.Context.PhaseConfig = phaseConfig
+
+	if ctx.GlobalIsSet(PprofFlag.Name) {
+		go func() {
+			fmt.Println("http://localhost:8080/debug/pprof")
+			http.ListenAndServe("0.0.0.0:8080", nil)
+		}()
+	}
 
 	return nil
 }

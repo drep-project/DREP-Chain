@@ -3,28 +3,21 @@ package main
 import (
 	"fmt"
 	"github.com/drep-project/drep-chain/app"
-	chainService "github.com/drep-project/drep-chain/chain/service/chainservice"
 	blockService "github.com/drep-project/drep-chain/chain/service/blockmgr"
+	chainService "github.com/drep-project/drep-chain/chain/service/chainservice"
 	"github.com/drep-project/drep-chain/database"
 	p2pService "github.com/drep-project/drep-chain/network/service"
 	accountService "github.com/drep-project/drep-chain/pkgs/accounts/service"
 	consensusService "github.com/drep-project/drep-chain/pkgs/consensus/service"
 	cliService "github.com/drep-project/drep-chain/pkgs/drepclient/service"
 	evmService "github.com/drep-project/drep-chain/pkgs/evm"
-	"github.com/drep-project/drep-chain/pkgs/trace"
 	"github.com/drep-project/drep-chain/pkgs/log"
 	"github.com/drep-project/drep-chain/pkgs/rpc"
-	"net/http"
-	_ "net/http/pprof"
+	"github.com/drep-project/drep-chain/pkgs/trace"
 	"runtime/debug"
 )
 
 func main() {
-	go func() {
-		fmt.Println("http://localhost:8080/debug/pprof")
-		http.ListenAndServe("0.0.0.0:8080", nil)
-	}()
-
 	debug.SetGCPercent(20)
 
 	drepApp := app.NewApp()

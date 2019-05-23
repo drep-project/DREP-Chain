@@ -105,9 +105,10 @@ func (leader *Leader) Reset() {
 func (leader *Leader) ProcessConsensus(msg consensusTypes.IConsenMsg) (error, *secp256k1.Signature, []byte) {
 	leader.setState(INIT)
 	leader.setUp(msg)
+
 	if !leader.waitForCommit() {
 		//send reason and reset
-		leader.fail("waitForCommit fail")
+		leader.fail(ErrWaitCommit.Error())
 		return ErrWaitCommit, nil, nil
 	}
 
@@ -150,7 +151,7 @@ func (leader *Leader) setUp(msg consensusTypes.IConsenMsg) {
 
 	for _, member := range leader.liveMembers {
 		if member.Peer != nil && !member.IsMe {
-			dlog.Debug("leader sent setup message", "IP", member.Peer.IP(), "Height", setup.Height)
+			dlog.Trace("leader sent setup message", "IP", member.Peer.IP(), "Height", setup.Height)
 			leader.p2pServer.SendAsync(member.Peer.GetMsgRW(), consensusTypes.MsgTypeSetUp, setup)
 		}
 	}
