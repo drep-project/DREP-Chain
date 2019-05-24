@@ -14,10 +14,28 @@ import (
 	"github.com/drep-project/drep-chain/pkgs/log"
 	"github.com/drep-project/drep-chain/pkgs/rpc"
 	"github.com/drep-project/drep-chain/pkgs/trace"
+	"os"
+	"os/signal"
 	"runtime/debug"
+	"syscall"
 )
 
 func main() {
+	c := make(chan os.Signal)
+	signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGKILL,syscall.SIGSEGV)
+	go func() {
+		for s := range c {
+			switch s {
+			case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGKILL,syscall.SIGSEGV:
+				fmt.Println("system sig`:", s)
+				os.Exit(0)
+			default:
+				fmt.Println("system sig:", s)
+				os.Exit(0)
+			}
+		}
+	}()
+
 	debug.SetGCPercent(20)
 
 	drepApp := app.NewApp()

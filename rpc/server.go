@@ -34,7 +34,7 @@ import (
 	"sync/atomic"
 
 	"github.com/drep-project/dlog"
-	"github.com/ethereum/go-ethereum/p2p/netutil"
+	"github.com/drep-project/drep-chain/network/p2p/netutil"
 
 	"github.com/deckarep/golang-set"
 	"golang.org/x/net/websocket"
