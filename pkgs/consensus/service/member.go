@@ -114,6 +114,7 @@ PRE_SETUPMSG: //process msg receive in the span of two consensus
 	for {
 		select {
 		case err := <-member.errorChanel:
+			dlog.Error("member consensus fail", "reason", err)
 			return nil, err
 		case <-member.timeOutChanel:
 			member.setState(ERROR)
@@ -245,7 +246,8 @@ func (member *Member) commit() {
 	if !member.validator(member.msg) {
 		//member.pushErrorMsg(ErrValidateMsg)
 		dlog.Error("member commit", "err", ErrValidateMsg)
-		//return
+		member.pushErrorMsg(ErrValidateMsg)
+		return
 	}
 	//TODO validate block from leader
 	var err error
@@ -253,7 +255,7 @@ func (member *Member) commit() {
 
 	member.randomPrivakey, nouncePk, err = schnorr.GenerateNoncePair(secp256k1.S256(), member.msgHash, member.prvKey, nil, schnorr.Sha256VersionStringRFC6979)
 	if err != nil {
-		dlog.Error("generate private key error", "msg", err.Error())
+		member.pushErrorMsg(ErrGenerateNouncePriv)
 		return
 	}
 	commitment := &consensusTypes.Commitment{
