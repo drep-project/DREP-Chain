@@ -26,6 +26,8 @@ import (
 	p2pService "github.com/drep-project/drep-chain/network/service"
 
 	rpc2 "github.com/drep-project/drep-chain/pkgs/rpc"
+	"github.com/drep-project/drep-chain/common"
+	"time"
 )
 
 var (
@@ -237,4 +239,22 @@ func (blockMgr *BlockMgr) GetPoolTransactions(addr *crypto.CommonAddress) []chai
 
 func (blockMgr *BlockMgr) GetPoolMiniPendingNonce(addr *crypto.CommonAddress) uint64 {
 	return blockMgr.transactionPool.GetMiniPendingNonce(addr)
+}
+
+func (blockMgr *BlockMgr) GenerateTransferTransaction(to  *crypto.CommonAddress, nonce uint64, amount, price, limit common.Big) chainTypes.Transaction {
+	t := chainTypes.Transaction{
+		Data: chainTypes.TransactionData {
+			Version:   common.Version,
+			Nonce:     nonce,
+			ChainId:   blockMgr.ChainService.ChainID(),
+			Type:      chainTypes.TxType(chainTypes.TransferType),
+			To:        *to,
+			Amount:    amount,
+			GasPrice:  price,
+			GasLimit:  limit,
+			Timestamp: time.Now().Unix(),
+			Data:      []byte{},
+		},
+	}
+	return t
 }
