@@ -40,3 +40,8 @@ func (blockMgrApi *BlockMgrApi)  GetPoolTransactions(addr *crypto.CommonAddress)
 func (blockMgrApi *BlockMgrApi)  GetPoolMiniPendingNonce(addr *crypto.CommonAddress) uint64 {
 	return blockMgrApi.blockMgr.GetPoolMiniPendingNonce(addr)
 }
+
+
+func (blockMgrApi *BlockMgrApi) GenerateTransferTransaction(to  *crypto.CommonAddress, nonce uint64, amount, price, limit common.Big) chainTypes.Transaction {
+	return blockMgrApi.blockMgr.GenerateTransferTransaction(to, nonce, amount, price, limit)
+}
