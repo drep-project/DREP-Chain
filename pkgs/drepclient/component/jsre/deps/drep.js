@@ -1649,6 +1649,13 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 inputFormatter: []
             });
 
+            var generateTransferTransaction = new Method({
+                name: 'generateTransferTransaction',
+                call: 'blockmgr_generateTransferTransaction',
+                params: 5,
+                inputFormatter: [formatters.inputAddressFormatter, utils.fromDecimal, utils.fromDecimal, utils.fromDecimal, utils.fromDecimal]
+            });
+
             var getPoolMiniPendingNonce = new Method({
                 name: 'getPoolMiniPendingNonce',
                 call: 'blockmgr_getPoolMiniPendingNonce',
@@ -1670,7 +1677,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 inputFormatter: [null]
             });
 
-            return [gasPrice,getPoolMiniPendingNonce,getPoolTransactions,sendRawTransaction]
+            return [gasPrice,generateTransferTransaction,getPoolMiniPendingNonce,getPoolTransactions,sendRawTransaction]
         }
 
         module.exports = BLOCKMGR;
