@@ -2,12 +2,10 @@ package chainservice
 
 import (
 	"fmt"
-	"sync"
-	"time"
-
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/chain/params"
 	"gopkg.in/urfave/cli.v1"
+	"sync"
 
 	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/common"
@@ -67,6 +65,8 @@ type ChainService struct {
 
 	BlockValidator IBlockValidator
 	TransactionValidator ITransactionValidator
+
+	blockDb   *database.Database
 }
 
 type ChainState struct {
@@ -104,8 +104,7 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 	chainService.stateProcessor = NewStateProcessor(chainService)
 	chainService.TransactionValidator = NewTransactionValidator(chainService)
 	chainService.BlockValidator = NewChainBlockValidator(chainService)
-
-
+	chainService.blockDb = chainService.DatabaseService.BeginTransaction()
 	chainService.genesisBlock = chainService.GetGenisiBlock(chainService.Config.GenesisPK)
 	hash := chainService.genesisBlock.Header.Hash()
 	if !chainService.DatabaseService.HasBlock(hash) {
@@ -115,7 +114,11 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 			return err
 		}
 	}
-	chainService.InitStates()
+
+	err = chainService.InitStates()
+	if err != nil {
+		return err
+	}
 
 	chainService.apis = []app.API{
 		app.API{
@@ -250,7 +253,7 @@ func (chainService *ChainService) createChainState() error {
 	// genesis block, use its timestamp for the median time.
 	chainService.stateLock.Lock()
 	chainService.StateSnapshot = &ChainState{
-		BestState: *chainTypes.NewBestState(node, time.Unix(int64(node.TimeStamp), 0)),
+		BestState: *chainTypes.NewBestState(node),
 		db:        chainService.DatabaseService.BeginTransaction(),
 	}
 	chainService.stateLock.Unlock()

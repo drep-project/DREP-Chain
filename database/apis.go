@@ -26,7 +26,7 @@ func (database *DatabaseService) PutBlock(block *chainType.Block) error {
 	if err != nil {
 		return err
 	}
-	return database.db.db.Put(key, value)
+	return database.db.store.Put(key, value)
 }
 
 func (database *DatabaseService) GetBlock(hash *crypto.Hash) (*chainType.Block, error) {
@@ -50,7 +50,7 @@ func (database *DatabaseService) HasBlock(hash *crypto.Hash) bool {
 }
 
 func (database *DatabaseService) BlockIterator(handle func(*chainType.Block) error) error {
-	iter := database.db.db.NewIterator(BlockPrefix)
+	iter := database.db.store.NewIterator(BlockPrefix)
 	defer iter.Release()
 	var err error
 	for iter.Next() {
@@ -78,7 +78,7 @@ func (database *DatabaseService) PutBlockNode(blockNode *chainType.BlockNode) er
 	}
 	key := database.blockIndexKey(blockNode.Hash, blockNode.Height)
 	value = append(value, byte(blockNode.Status)) //TODO just for now , when change binary serilize, should change a better one
-	return database.db.db.Put(key, value)
+	return database.db.store.Put(key, value)
 }
 
 func (database *DatabaseService) blockIndexKey(blockHash *crypto.Hash, blockHeight uint64) []byte {
@@ -103,7 +103,7 @@ func (database *DatabaseService) GetBlockNode(hash *crypto.Hash, height uint64) 
 
 func (database *DatabaseService) BlockNodeCount() int64 {
 	count := int64(64)
-	iter := database.db.db.NewIterator(BlockNodePrefix)
+	iter := database.db.store.NewIterator(BlockNodePrefix)
 	defer iter.Release()
 	for iter.Next() {
 		count++
@@ -112,7 +112,7 @@ func (database *DatabaseService) BlockNodeCount() int64 {
 }
 
 func (database *DatabaseService) BlockNodeIterator(handle func(*chainType.BlockHeader, chainType.BlockStatus) error) error {
-	iter := database.db.db.NewIterator(BlockNodePrefix)
+	iter := database.db.store.NewIterator(BlockNodePrefix)
 	defer iter.Release()
 	var err error
 	for iter.Next() {
@@ -149,6 +149,10 @@ func (database *DatabaseService) Rollback2Block(height uint64) (error, int64) {
 
 func (database *DatabaseService) RecordBlockJournal(height uint64) {
 	database.db.RecordBlockJournal(height)
+}
+
+func (database *DatabaseService) GetBlockJournal() uint64 {
+	return database.db.GetBlockJournal()
 }
 
 func (database *DatabaseService) GetStorage(addr *crypto.CommonAddress) *chainType.Storage {
@@ -234,9 +238,8 @@ func (database *DatabaseService) AddBalance(addr *crypto.CommonAddress, amount *
 func (database *DatabaseService)  BeginTransaction() *Database {
 	return database.db.BeginTransaction()
 }
-
-func (database *DatabaseService) Commit() {
-	 database.db.Commit()
+func (database *DatabaseService) Commit(needLog bool) {
+	 database.db.Commit(needLog)
 }
 
 func (database *DatabaseService) Discard() {

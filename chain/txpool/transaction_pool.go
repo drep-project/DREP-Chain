@@ -15,9 +15,9 @@ import (
 )
 
 const (
-	maxAllTxsCount  = 100000 //交易池所弄容纳的总的交易数量
-	maxTxsOfQueue   = 20     //单个地址对应的乱序队列中，最多容纳交易数目
-	maxTxsOfPending = 1000000    //单个地址对应的有序队列中，最多容纳交易数目
+	maxAllTxsCount  = 100000  //交易池所弄容纳的总的交易数量
+	maxTxsOfQueue   = 20      //单个地址对应的乱序队列中，最多容纳交易数目
+	maxTxsOfPending = 1000000 //单个地址对应的有序队列中，最多容纳交易数目
 )
 
 //1 池子里的交易按照nonce是否连续，分为乱序的和已经排序的在两个不同的队列中
@@ -289,7 +289,11 @@ func (pool *TransactionPool) syncToPending(address *crypto.CommonAddress) {
 	}
 
 	//从queue找nonce连续的交易放入到pending中
-	list := pool.queue[*address].Ready(pool.getTransactionCount(address))
+	addrList := pool.queue[*address]
+	if addrList == nil {
+		return
+	}
+	list := addrList.Ready(pool.getTransactionCount(address))
 	var nonce uint64
 	if len(list) > 0 {
 		for _, tx := range list {
@@ -319,6 +323,8 @@ func (pool *TransactionPool) removeTransaction(tran *chainTypes.Transaction) (bo
 
 func (pool *TransactionPool) GetQueue() []*chainTypes.Transaction {
 	var retrunTxs []*chainTypes.Transaction
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
 
 	for _, list := range pool.queue {
 		if !list.Empty() {

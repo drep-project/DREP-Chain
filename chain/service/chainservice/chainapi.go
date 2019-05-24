@@ -1,14 +1,10 @@
 package chainservice
 
 import (
-	"fmt"
-
-	"math/big"
-	"time"
-
 	chainType "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
+	"math/big"
 )
 
 type ChainApi struct {
@@ -24,8 +20,6 @@ func (chain *ChainApi) GetBlock(height uint64) (*chainType.RpcBlock, error) {
 	if len(blocks) == 0 {
 		return nil, ErrBlockNotFound
 	}
-	block := blocks[0]
-	fmt.Println(time.Unix(int64(block.Header.Timestamp), 0))
 	return new(chainType.RpcBlock).From(blocks[0]), nil
 }
 
