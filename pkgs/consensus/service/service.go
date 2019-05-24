@@ -515,7 +515,7 @@ func (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) b
 
 func (consensusService *ConsensusService) multySigVerify(block *chainTypes.Block) bool {
 	db := consensusService.ChainService.DatabaseService.BeginTransaction()
-	if consensusService.ChainService.BlockValidator.VerifyMultiSig(block, consensusService.ChainService.Config.SkipCheckMutiSig || false) {
+	if !consensusService.ChainService.BlockValidator.VerifyMultiSig(block, consensusService.ChainService.Config.SkipCheckMutiSig || false) {
 		return false
 	}
 
