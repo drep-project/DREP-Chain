@@ -281,8 +281,7 @@ func (consensusService *ConsensusService) runAsMember() (block *chainTypes.Block
 		block.Header.MinorPubKeys = minorPubkeys
 		block.Header.StateRoot = val.StateRoot
 		block.MultiSig = multiSig
-
-		return consensusService.multySigVerify(block)
+		return consensusService.verifyBlockContent(block)
 	}
 
 	_, err = consensusService.member.ProcessConsensus()
@@ -513,7 +512,7 @@ func (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) b
 	return err == nil
 }
 
-func (consensusService *ConsensusService) multySigVerify(block *chainTypes.Block) bool {
+func (consensusService *ConsensusService) verifyBlockContent(block *chainTypes.Block) bool {
 	db := consensusService.ChainService.DatabaseService.BeginTransaction()
 	if !consensusService.ChainService.BlockValidator.VerifyMultiSig(block, consensusService.ChainService.Config.SkipCheckMutiSig || false) {
 		return false
