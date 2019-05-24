@@ -34,7 +34,7 @@ var (
 	rootChain           app.ChainIdType
 	DefaultOracleConfig = chainTypes.OracleConfig{
 		Blocks:     20,
-		Default:    big.NewInt(params.GWei).Uint64(),
+		Default:    30000,
 		Percentile: 60,
 		MaxPrice:   big.NewInt(500 * params.GWei).Uint64(),
 	}
