@@ -263,6 +263,7 @@ func (consensusService *ConsensusService) runAsMember() (block *chainTypes.Block
 	}
 	dlog.Trace("node member finishes consensus for round 1")
 
+	dlog.Trace("node member is going to process consensus for round 2")
 	consensusService.member.Reset()
 	var multiSig *chainTypes.MultiSignature
 	consensusService.member.convertor = func(msg []byte) ( consensusTypes.IConsenMsg, error) {
@@ -280,15 +281,10 @@ func (consensusService *ConsensusService) runAsMember() (block *chainTypes.Block
 		block.Header.MinorPubKeys = minorPubkeys
 		block.Header.StateRoot = val.StateRoot
 		block.MultiSig = multiSig
-		var isMainChain bool
-		isMainChain, err = consensusService.ChainService.AcceptBlock(block)
-		if isMainChain && err != nil {
-			return false
-		}
-		return true
+
+		return consensusService.multySigVerify(block)
 	}
 
-	dlog.Trace("node member is going to process consensus for round 2")
 	_, err = consensusService.member.ProcessConsensus()
 	if err != nil {
 		return nil, err
@@ -518,5 +514,28 @@ func (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) b
 }
 
 func (consensusService *ConsensusService) multySigVerify(block *chainTypes.Block) bool {
-	return consensusService.ChainService.BlockValidator.VerifyMultiSig(block, consensusService.ChainService.Config.SkipCheckMutiSig || false)
+	db := consensusService.ChainService.DatabaseService.BeginTransaction()
+	if consensusService.ChainService.BlockValidator.VerifyMultiSig(block, consensusService.ChainService.Config.SkipCheckMutiSig || false) {
+		return false
+	}
+
+	gp := new(chainService.GasPool).AddGas(block.Header.GasLimit.Uint64())
+	//process transaction
+	gasUsed, gasFee, err := consensusService.ChainService.BlockValidator.ExecuteBlock(db, block, gp)
+	if err != nil {
+		return false
+	}
+	err = consensusService.ChainService.AccumulateRewards(db, block, gasFee)
+	if err != nil {
+		return false
+	}
+	if block.Header.GasUsed.Cmp(gasUsed) == 0 {
+		stateRoot := db.GetStateRoot()
+		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
+			return  false
+		}
+	} else {
+		return  false
+	}
+	return true
 }

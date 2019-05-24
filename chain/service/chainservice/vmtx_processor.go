@@ -17,11 +17,9 @@
 package chainservice
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/drep-project/drep-chain/chain/types"
-	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/pkgs/evm"
@@ -64,7 +62,6 @@ func (stateProcessor *StateProcessor) ApplyTransaction(db *database.Database, bc
 	// if the transaction created a contract, store the creation address in the receipt.
 	if tx.To() == nil || tx.To().IsEmpty() {
 		receipt.ContractAddress = crypto.CreateAddress(*from, tx.Nonce())
-		fmt.Println(common.Encode(receipt.ContractAddress[:]))
 	}
 	// Set the receipt logs and create a bloom for filtering
 	receipt.Logs = db.GetLogs(tx.TxHash().Bytes())

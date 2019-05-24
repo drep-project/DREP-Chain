@@ -18,9 +18,9 @@ type Transaction struct {
 	Data TransactionData
 	Sig  []byte
 
-	txHash      *crypto.Hash `json:"-" binary:"ignore"`
-	signMessage []byte       `json:"-" binary:"ignore" bson:"-"`
-	message     []byte       `json:"-" binary:"ignore" bson:"-"`
+	txHash      atomic.Value `json:"-" binary:"ignore"`
+	signMessage atomic.Value       `json:"-" binary:"ignore" bson:"-"`
+	message     atomic.Value       `json:"-" binary:"ignore" bson:"-"`
 	from        atomic.Value `json:"-" binary:"ignore"`
 }
 
@@ -106,13 +106,16 @@ func (tx *Transaction) GasPrice() *big.Int {
 //}
 
 func (tx *Transaction) TxHash() *crypto.Hash {
-	if tx.txHash == nil {
-		b := tx.AsSignMessage()
-		h := sha3.Keccak256(b)
-		tx.txHash = &crypto.Hash{}
-		tx.txHash.SetBytes(h)
+	if val := tx.txHash.Load(); val != nil {
+		return val.(*crypto.Hash)
 	}
-	return tx.txHash
+
+	b := tx.AsSignMessage()
+	h := sha3.Keccak256(b)
+	txHash := &crypto.Hash{}
+	txHash.SetBytes(h)
+	tx.txHash.Store(txHash)
+	return txHash
 }
 
 func (tx *Transaction) GetSig() []byte {
@@ -120,17 +123,21 @@ func (tx *Transaction) GetSig() []byte {
 }
 
 func (tx *Transaction) AsSignMessage() []byte {
-	if tx.signMessage == nil {
-		tx.signMessage, _ = binary.Marshal(tx.Data)
+	if val := tx.signMessage.Load(); val != nil {
+		return val.([]byte)
 	}
-	return tx.signMessage
+	signMessage, _ := binary.Marshal(tx.Data)
+	tx.signMessage.Store(signMessage)
+	return signMessage
 }
 
 func (tx *Transaction) AsPersistentMessage() []byte {
-	if tx.message == nil {
-		tx.message, _ = binary.Marshal(tx)
+	if val := tx.message.Load(); val != nil {
+		return val.([]byte)
 	}
-	return tx.message
+	message, _ := binary.Marshal(tx)
+	tx.message.Store(message)
+	return message
 }
 
 func (tx *Transaction) IntrinsicGas() (uint64, error) {

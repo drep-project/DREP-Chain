@@ -21,8 +21,6 @@ func (blockMgr *BlockMgr) GenerateBlock(db *database.Database,leaderKey *secp256
 	height := blockMgr.ChainService.BestChain.Height() + 1
 	txs := blockMgr.transactionPool.GetPending(newGasLimit)
 	previousHash := blockMgr.ChainService.BestChain.Tip().Hash
-	//fmt.Println(previousHash)
-	//fmt.Println(parent.Header.Hash())
 	timestamp := uint64(time.Now().Unix())
 
 	blockHeader := &chainTypes.BlockHeader{
