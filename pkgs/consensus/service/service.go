@@ -514,7 +514,8 @@ func (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) b
 
 func (consensusService *ConsensusService) verifyBlockContent(block *chainTypes.Block) bool {
 	db := consensusService.ChainService.DatabaseService.BeginTransaction()
-	if !consensusService.ChainService.BlockValidator.VerifyMultiSig(block, consensusService.ChainService.Config.SkipCheckMutiSig || false) {
+	if consensusService.ChainService.BlockValidator.VerifyMultiSig(block, consensusService.ChainService.Config.SkipCheckMutiSig || false) {
+		dlog.Debug("multySigVerify","SkipCheckMutiSig", consensusService.ChainService.Config.SkipCheckMutiSig )
 		return false
 	}
 
@@ -522,18 +523,22 @@ func (consensusService *ConsensusService) verifyBlockContent(block *chainTypes.B
 	//process transaction
 	gasUsed, gasFee, err := consensusService.ChainService.BlockValidator.ExecuteBlock(db, block, gp)
 	if err != nil {
+		dlog.Debug("multySigVerify","ExecuteBlock", err )
 		return false
 	}
 	err = consensusService.ChainService.AccumulateRewards(db, block, gasFee)
 	if err != nil {
+		dlog.Debug("multySigVerify","AccumulateRewards", err )
 		return false
 	}
 	if block.Header.GasUsed.Cmp(gasUsed) == 0 {
 		stateRoot := db.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
+			dlog.Debug("rootcmd root !====" )
 			return  false
 		}
 	} else {
+		dlog.Debug("multySigVerify","gasUsed", gasUsed )
 		return  false
 	}
 	return true
