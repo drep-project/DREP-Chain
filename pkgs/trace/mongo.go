@@ -17,7 +17,8 @@ type MongogDbStore struct {
 	client    *mongo.Client
 	db        *mongo.Database
 	txCol     *mongo.Collection
-	//headerCol *mongo.Collection
+	blockCol *mongo.Collection
+	headerCol *mongo.Collection
 }
 
 // NewMongogDbStore open a new db from url, if db not exist, auto create
@@ -33,7 +34,8 @@ func NewMongogDbStore(url string) *MongogDbStore {
 	}
 	store.db = store.client.Database("drep")
 	store.txCol = store.db.Collection("tx")
-	//store.headerCol = store.db.Collection("header")
+	store.blockCol = store.db.Collection("block")
+	store.headerCol = store.db.Collection("header")
 	return store
 }
 
@@ -42,7 +44,10 @@ func (store *MongogDbStore) InsertRecord(block *chainTypes.Block) {
 	rpcTxs := make([]interface{}, block.Data.TxCount)
 	rpcHeader := chainTypes.RpcBlockHeader{}
 	rpcHeader.FromBlockHeader(block.Header)
-	//store.headerCol.InsertOne(ctx, rpcHeader)
+	rpcBlock := &chainTypes.RpcBlock{}
+	rpcBlock.From(block)
+	store.blockCol.InsertOne(ctx, rpcBlock)
+	store.headerCol.InsertOne(ctx, rpcHeader)
 	for index, tx := range block.Data.TxList {
 		rpcTx := &chainTypes.RpcTransaction{}
 		rpcTx.FromTx(tx)
@@ -53,7 +58,8 @@ func (store *MongogDbStore) InsertRecord(block *chainTypes.Block) {
 
 func (store *MongogDbStore) DelRecord(block *chainTypes.Block) {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	//store.headerCol.DeleteOne(ctx, bson.M{"hash": block.Header.Hash()})
+	store.headerCol.DeleteOne(ctx, bson.M{"hash": block.Header.Hash()})
+	store.blockCol.DeleteOne(ctx, bson.M{"hash": block.Header.Hash()})
 	for _, tx := range block.Data.TxList {
 		store.txCol.DeleteOne(ctx, bson.M{"hash": tx.TxHash()})
 	}
