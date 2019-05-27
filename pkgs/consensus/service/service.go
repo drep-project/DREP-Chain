@@ -20,9 +20,8 @@ import (
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
 	"gopkg.in/urfave/cli.v1"
 	"math"
-	"sort"
-	"time"
 	"math/big"
+	"time"
 )
 
 var (
@@ -60,9 +59,14 @@ type ConsensusService struct {
 	pauseForSync bool
 	start        bool
 	peersInfo    map[string]*consensusTypes.PeerInfo
-	producers    map[string]*secp256k1.PublicKey
+	producers    []chainTypes.Producers
 
 	quit chan struct{}
+}
+
+type produceInfo struct {
+	PK *secp256k1.PublicKey
+	IP string
 }
 
 func (consensusService *ConsensusService) Name() string {
@@ -81,10 +85,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	if consensusService.ChainService == nil {
 		return fmt.Errorf("chainService not init")
 	}
-	consensusService.producers = make(map[string]*secp256k1.PublicKey)
-	for _, producer := range consensusService.ChainService.Config.Producers {
-		consensusService.producers[producer.IP] = producer.Pubkey
-	}
+	consensusService.producers = consensusService.ChainService.Config.Producers
 
 	consensusService.Config = &consensusTypes.ConsensusConfig{}
 	err := executeContext.UnmashalConfig(consensusService.Name(), consensusService.Config)
@@ -108,12 +109,22 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	consensusService.privkey = accountNode.PrivateKey
 	consensusService.peersInfo = make(map[string]*consensusTypes.PeerInfo)
 
+	//检查是否为系统配置的骨干节点
+	checkProduce := func(pds []chainTypes.Producers,ip string) bool{
+		for _,p := range pds{
+			if p.IP == ip {
+				return true
+			}
+		}
+		return false
+	}
+
 	consensusService.P2pServer.AddProtocols([]p2p.Protocol{
 		p2p.Protocol{
 			Name:   "consensusService",
 			Length: consensusTypes.NumberOfMsg,
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
-				if _, ok := consensusService.producers[peer.IP()]; ok {
+				if checkProduce(consensusService.producers,peer.IP()){
 					pi := consensusTypes.NewPeerInfo(peer, rw)
 					consensusService.peersInfo[peer.IP()] = pi
 					defer delete(consensusService.peersInfo, peer.IP())
@@ -371,8 +382,8 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 }
 
 func (consensusService *ConsensusService) isProduce() bool {
-	for _, pubkey := range consensusService.producers {
-		if pubkey.IsEqual(consensusService.pubkey) {
+	for _, produce := range consensusService.producers {
+		if produce.Pubkey.IsEqual(consensusService.pubkey) {
 			return true
 		}
 	}
@@ -381,24 +392,24 @@ func (consensusService *ConsensusService) isProduce() bool {
 
 func (consensusService *ConsensusService) collectMemberStatus() []*consensusTypes.MemberInfo {
 	produceInfos := make([]*consensusTypes.MemberInfo, 0, len(consensusService.producers))
-	for ip, pubkey := range consensusService.producers {
+	for _, produce := range consensusService.producers {
 		var (
 			IsOnline, ok bool
 			pi           *consensusTypes.PeerInfo
 		)
 
-		isMe := consensusService.pubkey.IsEqual(pubkey)
+		isMe := consensusService.pubkey.IsEqual(produce.Pubkey)
 		if isMe {
 			IsOnline = true
 		} else {
 			//todo  peer获取到的IP地址和配置的ip地址是否相等（nat后是否相等,从tcp原理来看是相等的）
-			if pi, ok = consensusService.peersInfo[ip]; ok {
+			if pi, ok = consensusService.peersInfo[produce.IP]; ok {
 				IsOnline = true
 			}
 		}
 
 		produceInfos = append(produceInfos, &consensusTypes.MemberInfo{
-			Producer: &consensusTypes.Producer{Public: pubkey, Ip: ip},
+			Producer: &consensusTypes.Producer{Public: produce.Pubkey, Ip: produce.IP},
 			Peer:     pi,
 			IsMe:     isMe,
 			IsOnline: IsOnline,
@@ -406,9 +417,9 @@ func (consensusService *ConsensusService) collectMemberStatus() []*consensusType
 	}
 
 	//字符串排序
-	sort.Slice(produceInfos, func(i, j int) bool {
-		return bytes.Compare(produceInfos[i].Producer.Public.Serialize(), produceInfos[j].Producer.Public.Serialize()) < 0
-	})
+	//sort.Slice(produceInfos, func(i, j int) bool {
+	//	return bytes.Compare(produceInfos[i].Producer.Public.Serialize(), produceInfos[j].Producer.Public.Serialize()) < 0
+	//})
 
 	return produceInfos
 }
