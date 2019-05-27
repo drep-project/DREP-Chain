@@ -3,6 +3,7 @@ package chainservice
 import (
 	"bytes"
 	"fmt"
+	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/common"
 	"math/big"
 
@@ -45,6 +46,7 @@ func (chainBlockValidator *ChainBlockValidator) VerifyHeader(header, parent *cha
 	}
 	// pre block timestamp before this block time
 	if header.Timestamp <= parent.Timestamp {
+		dlog.Error("*********************************************")
 		return ErrInvalidateTimestamp
 	}
 
