@@ -2,7 +2,6 @@ package chainservice
 
 import (
 	"bytes"
-	"encoding/hex"
 	"fmt"
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/common"
@@ -112,10 +111,7 @@ func (chainBlockValidator *ChainBlockValidator) VerifyMultiSig(b *chainTypes.Blo
 	}
 	msg := b.AsSignMessage()
 	sigmaPk := schnorr.CombinePubkeys(participators)
-	dlog.Error("sigmapk","sigmapk",hex.EncodeToString(sigmaPk.Serialize()))
-	dlog.Error("sigmapk","AsSignMessage",sha3.Keccak256(msg))
-	dlog.Error("sigmapk","R", b.MultiSig.Sig.R)
-	dlog.Error("sigmapk","S", b.MultiSig.Sig.S)
+
 	return schnorr.Verify(sigmaPk, sha3.Keccak256(msg), b.MultiSig.Sig.R, b.MultiSig.Sig.S)
 }
 
