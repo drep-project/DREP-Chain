@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"encoding/hex"
 	"github.com/drep-project/drep-chain/network/p2p/enode"
 	"math/big"
 	"sync"
@@ -327,6 +328,8 @@ func (leader *Leader) Validate(msg consensusTypes.IConsenMsg, r *big.Int, s *big
 		return false
 	}
 	sigmaPubKey := schnorr.CombinePubkeys(leader.getResponsePubkey())
+	dlog.Error("sigmapk","sigmapk",hex.EncodeToString(sigmaPubKey.Serialize()))
+	dlog.Error("sigmapk","AsSignMessage",sha3.Keccak256(msg.AsSignMessage()))
 	return schnorr.Verify(sigmaPubKey, sha3.Keccak256(msg.AsSignMessage()), r, s)
 }
 
