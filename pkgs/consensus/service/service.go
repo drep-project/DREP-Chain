@@ -528,7 +528,7 @@ func (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) b
 
 func (consensusService *ConsensusService) verifyBlockContent(block *chainTypes.Block) bool {
 	db := consensusService.ChainService.DatabaseService.BeginTransaction()
-	if consensusService.ChainService.BlockValidator.VerifyMultiSig(block, consensusService.ChainService.Config.SkipCheckMutiSig || false) {
+	if !consensusService.ChainService.BlockValidator.VerifyMultiSig(block, consensusService.ChainService.Config.SkipCheckMutiSig || false) {
 		dlog.Debug("bitmap","bitmap", block.MultiSig.Bitmap)
 		dlog.Debug("multySigVerify","SkipCheckMutiSig", consensusService.ChainService.Config.SkipCheckMutiSig )
 		return false
