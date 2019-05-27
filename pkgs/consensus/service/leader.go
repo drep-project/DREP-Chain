@@ -330,6 +330,8 @@ func (leader *Leader) Validate(msg consensusTypes.IConsenMsg, r *big.Int, s *big
 	sigmaPubKey := schnorr.CombinePubkeys(leader.getResponsePubkey())
 	dlog.Error("sigmapk","sigmapk",hex.EncodeToString(sigmaPubKey.Serialize()))
 	dlog.Error("sigmapk","AsSignMessage",sha3.Keccak256(msg.AsSignMessage()))
+	dlog.Error("sigmapk","R",r)
+	dlog.Error("sigmapk","S",s)
 	return schnorr.Verify(sigmaPubKey, sha3.Keccak256(msg.AsSignMessage()), r, s)
 }
 
