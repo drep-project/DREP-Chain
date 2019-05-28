@@ -1,13 +1,14 @@
 package trace
 
 import (
+	"path"
+
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/drep-chain/app"
 	chainService "github.com/drep-project/drep-chain/chain/service/chainservice"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common/event"
 	"gopkg.in/urfave/cli.v1"
-	"path"
 )
 
 var (
@@ -58,7 +59,7 @@ func (traceService *TraceService) Api() []app.API {
 }
 
 func (traceService *TraceService) CommandFlags() ([]cli.Command, []cli.Flag) {
-	return nil, []cli.Flag{HistoryDirFlag , EnableTraceFlag}
+	return nil, []cli.Flag{HistoryDirFlag, EnableTraceFlag}
 }
 
 func (traceService *TraceService) P2pMessages() map[int]interface{} {
@@ -85,7 +86,6 @@ func (traceService *TraceService) Init(executeContext *app.ExecuteContext) error
 	traceService.detachBlockChan = make(chan *chainTypes.Block, 1000)
 	traceService.readyToQuit = make(chan struct{})
 
-
 	if traceService.Config.DbType == "leveldb" {
 		traceService.store = NewLevelDbStore(traceService.Config.HistoryDir)
 	} else if traceService.Config.DbType == "mongo" {
@@ -97,7 +97,7 @@ func (traceService *TraceService) Init(executeContext *app.ExecuteContext) error
 }
 
 func (traceService *TraceService) Start(executeContext *app.ExecuteContext) error {
-	if !traceService.Config.Enable {
+	if traceService.Config == nil || !traceService.Config.Enable {
 		return nil
 	}
 	traceService.eventNewBlockSub = traceService.ChainService.NewBlockFeed.Subscribe(traceService.newBlockChan)
@@ -109,17 +109,17 @@ func (traceService *TraceService) Start(executeContext *app.ExecuteContext) erro
 func (traceService *TraceService) Process() error {
 	for {
 		select {
-			case block := <-traceService.newBlockChan:
-				traceService.store.InsertRecord(block)
-			case block := <-traceService.detachBlockChan:
-				traceService.store.DelRecord(block)
+		case block := <-traceService.newBlockChan:
+			traceService.store.InsertRecord(block)
+		case block := <-traceService.detachBlockChan:
+			traceService.store.DelRecord(block)
+		default:
+			select {
+			case <-traceService.readyToQuit:
+				<-traceService.readyToQuit
+				goto STOP
 			default:
-				select {
-				case <-traceService.readyToQuit:
-					<-traceService.readyToQuit
-					goto STOP
-				default:
-				}
+			}
 		}
 	}
 STOP:
@@ -127,7 +127,7 @@ STOP:
 }
 
 func (traceService *TraceService) Stop(executeContext *app.ExecuteContext) error {
-	if !traceService.Config.Enable {
+	if traceService.Config == nil || !traceService.Config.Enable {
 		return nil
 	}
 	traceService.eventNewBlockSub.Unsubscribe()

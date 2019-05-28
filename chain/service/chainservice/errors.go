@@ -29,4 +29,6 @@ var (
 	ErrGas                       = errors.New("not enough gas")
 	ErrInsufficientBalanceForGas = errors.New("insufficient balance to pay for gas")
 	ErrOrphanBlockExsist         = errors.New("already have block (orphan)")
+	ErrGenesisPkNotFound   		 = errors.New("genesisi pubkey not found")
+	ErrBlockProducerNotFound   	 = errors.New("block producer not found")
 )

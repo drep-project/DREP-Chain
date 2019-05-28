@@ -47,7 +47,7 @@ func (blockMgr *BlockMgr) synchronise() {
 			return
 		}
 		currentHeight := blockMgr.ChainService.BestChain.Height()
-		if pi.GetHeight() >  currentHeight {
+		if pi.GetHeight() > currentHeight {
 			fmt.Println("************", pi.GetHeight(), ">", currentHeight)
 			err := blockMgr.fetchBlocks(pi)
 			if err != nil {
@@ -284,13 +284,14 @@ func (blockMgr *BlockMgr) fetchBlocks(peer *chainTypes.PeerInfo) error {
 
 					//删除块高度对应的任务
 					delete(blockMgr.pendingSyncTasks, *b.Header.Hash())
-
 					_, _, err := blockMgr.ChainService.ProcessBlock(b)
 					//dlog.Info("sync block recv block","height", b.Header.Height, "process result", err)
 					if err != nil && err != ErrBlockExsist && err != ErrOrphanBlockExsist {
-						dlog.Error("deal sync block", "err", err)
-						errCh <- err
-						return
+						if err.Error() != ErrBlockExsist.Error() && err.Error() != ErrOrphanBlockExsist.Error() {
+							dlog.Error("deal sync block", "err", err)
+							errCh <- err
+							return
+						}
 					}
 				}
 

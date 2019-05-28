@@ -105,6 +105,12 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 	chainService.TransactionValidator = NewTransactionValidator(chainService)
 	chainService.BlockValidator = NewChainBlockValidator(chainService)
 	chainService.blockDb = chainService.DatabaseService.BeginTransaction()
+	if chainService.Config.GenesisPK == "" {
+		return ErrGenesisPkNotFound
+	}
+	if len(chainService.Config.Producers) == 0  {
+		return ErrBlockProducerNotFound
+	}
 	chainService.genesisBlock = chainService.GetGenisiBlock(chainService.Config.GenesisPK)
 	hash := chainService.genesisBlock.Header.Hash()
 	if !chainService.DatabaseService.HasBlock(hash) {
