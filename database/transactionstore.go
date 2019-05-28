@@ -21,6 +21,9 @@ func NewTransactionStore(store IStore) *TransactionStore {
 
 func (tDb *TransactionStore) Get(key []byte) ([]byte, error) {
 	if val, ok := tDb.dirties.Load(string(key)); ok {
+		if val == nil {
+			return nil, nil
+		}
 		return val.([]byte), nil
 	}
 	val, err := tDb.store.Get(key)
@@ -48,8 +51,8 @@ func (tDb *TransactionStore) NewIterator(key []byte) Iterator {
 func (tDb *TransactionStore) Flush(needLog bool) {
 	tDb.dirties.Range(func(key, value interface{}) bool {
 		bk := []byte(key.(string))
-		val := value.([]byte)
 		if value != nil {
+			val := value.([]byte)
 			if needLog {
 				err := tDb.PutOpLog(bk, val)
 				if err != nil {
@@ -62,7 +65,7 @@ func (tDb *TransactionStore) Flush(needLog bool) {
 			}
 		} else {
 			if needLog {
-				err := tDb.PutDelLog(bk, val)
+				err := tDb.PutDelLog(bk)
 				if err != nil {
 					return false
 				}
@@ -109,7 +112,7 @@ func (tDb *TransactionStore) PutOpLog(key, value []byte) error {
 	return tDb.store.Put([]byte(dbOperaterMaxSeqKey), new(big.Int).SetInt64(seq).Bytes())
 }
 
-func (tDb *TransactionStore) PutDelLog(key, value []byte) error {
+func (tDb *TransactionStore) PutDelLog(key []byte) error {
 	seqVal, err := tDb.store.Get([]byte(dbOperaterMaxSeqKey))
 	if err != nil {
 		return err
