@@ -12,9 +12,14 @@ import (
 
 var (
 	DefaultHistoryConfig = &HistoryConfig{
-		Enable: true,
+		Enable: false,
 		DbType: "leveldb",
 		Url:    "mongodb://localhost:27017",
+	}
+
+	EnableTraceFlag = cli.BoolFlag{
+		Name:  "enableTrace",
+		Usage: "is  trace enable flag",
 	}
 )
 
@@ -53,7 +58,7 @@ func (traceService *TraceService) Api() []app.API {
 }
 
 func (traceService *TraceService) CommandFlags() ([]cli.Command, []cli.Flag) {
-	return nil, []cli.Flag{HistoryDirFlag}
+	return nil, []cli.Flag{HistoryDirFlag , EnableTraceFlag}
 }
 
 func (traceService *TraceService) P2pMessages() map[int]interface{} {
@@ -69,6 +74,9 @@ func (traceService *TraceService) Init(executeContext *app.ExecuteContext) error
 		return err
 	}
 	ctx := executeContext.Cli
+	if ctx.GlobalIsSet(EnableTraceFlag.Name) {
+		traceService.Config.Enable = ctx.GlobalBool(EnableTraceFlag.Name)
+	}
 	if ctx.GlobalIsSet(HistoryDirFlag.Name) {
 		traceService.Config.HistoryDir = ctx.GlobalString(HistoryDirFlag.Name)
 	}
@@ -89,6 +97,9 @@ func (traceService *TraceService) Init(executeContext *app.ExecuteContext) error
 }
 
 func (traceService *TraceService) Start(executeContext *app.ExecuteContext) error {
+	if !traceService.Config.Enable {
+		return nil
+	}
 	traceService.eventNewBlockSub = traceService.ChainService.NewBlockFeed.Subscribe(traceService.newBlockChan)
 	traceService.detachBlockSub = traceService.ChainService.DetachBlockFeed.Subscribe(traceService.detachBlockChan)
 	go traceService.Process()
@@ -116,6 +127,9 @@ STOP:
 }
 
 func (traceService *TraceService) Stop(executeContext *app.ExecuteContext) error {
+	if !traceService.Config.Enable {
+		return nil
+	}
 	traceService.eventNewBlockSub.Unsubscribe()
 	traceService.detachBlockSub.Unsubscribe()
 	traceService.readyToQuit <- struct{}{} // tell process to stop in deal all blocks in chanel
