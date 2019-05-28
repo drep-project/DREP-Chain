@@ -149,7 +149,7 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainCh
 		return true, nil
 	}
 
-	if block.Header.Height-chainService.BestChain.Tip().Height <= 0 {
+	if block.Header.Height <= chainService.BestChain.Tip().Height {
 		// store but but not reorg
 		dlog.Debug("block store and validate true but not reorgnize")
 		return false, nil
@@ -284,10 +284,10 @@ func (chainService *ChainService) reorganizeChain(db *database.Database, detachN
 		db.Rollback2Block(height)
 		dlog.Info("REORGANIZE:RollBack state root", "Height", height)
 		chainService.markState(db, lastBlock.Parent)
-		elem = attachNodes.Front()
+		elem = detachNodes.Front()
 		for elem != nil {
 			blockNode := elem.Value.(*chainTypes.BlockNode)
-			block, err := chainService.DatabaseService.GetBlock(blockNode.Hash)
+			block, err := chainService.blockDb.GetBlock(blockNode.Hash)
 			if err != nil {
 				return err
 			}
@@ -300,7 +300,7 @@ func (chainService *ChainService) reorganizeChain(db *database.Database, detachN
 		elem := attachNodes.Front()
 		for elem != nil { //
 			blockNode := elem.Value.(*chainTypes.BlockNode)
-			block, err := chainService.DatabaseService.GetBlock(blockNode.Hash)
+			block, err := chainService.blockDb.GetBlock(blockNode.Hash)
 			if err != nil {
 				return err
 			}

@@ -16,6 +16,9 @@ func NewMemoryStore() *MemoryStore {
 
 func (mStore *MemoryStore) Get(key []byte) ([]byte, error) {
 	if val, ok := mStore.db.Load(string(key)); ok {
+		if val == nil {
+			return nil, nil
+		}
 		return val.([]byte), nil
 	}
 	return nil, ErrKeyNotFound

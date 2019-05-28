@@ -253,8 +253,14 @@ func (consensusService *ConsensusService) Stop(executeContext *app.ExecuteContex
 		return nil
 	}
 
-	close(consensusService.quit)
-	consensusService.syncBlockEventSub.Unsubscribe()
+	if consensusService.quit != nil {
+		close(consensusService.quit)
+	}
+
+	if consensusService.syncBlockEventSub != nil {
+		consensusService.syncBlockEventSub.Unsubscribe()
+	}
+
 	return nil
 }
 

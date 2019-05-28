@@ -466,6 +466,34 @@ func (db *Database) PutBlock(block *chainTypes.Block) error {
 	return db.store.Put(key, value)
 }
 
+func (db *Database) GetBlock(hash *crypto.Hash) (*chainTypes.Block, error) {
+	key := append(BlockPrefix, hash[:]...)
+	val ,err := db.store.Get(key)
+	if err != nil {
+		return nil, err
+	}
+	block := &chainTypes.Block{}
+	err = binary.Unmarshal(val, block)
+	if err != nil {
+		return nil, err
+	}
+	return block, nil
+}
+
+
+func (db *Database) GetBlockNode(hash *crypto.Hash,blockHeight uint64) (*chainTypes.BlockHeader, chainTypes.BlockStatus,error) {
+	key := db.blockIndexKey(hash, blockHeight)
+	value, err := db.Get(key)
+	if err != nil {
+		return nil, 0, err
+	}
+	blockHeader := &chainTypes.BlockHeader{}
+	binary.Unmarshal(value[0:len(value)-1], blockHeader)
+	status := value[len(value)-1:len(value)][0]
+	return blockHeader, chainTypes.BlockStatus(status), nil
+}
+
+
 func (db *Database)  PutBlockNode(blockNode *chainTypes.BlockNode) error {
 	header := blockNode.Header()
 	value, err := binary.Marshal(header)
