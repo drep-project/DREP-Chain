@@ -509,17 +509,17 @@ func (consensusService *ConsensusService) getWaitTime() (time.Time, time.Duratio
 func (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) bool {
 	preBlockHash, err := consensusService.ChainService.GetBlockHeaderByHash(&block.Header.PreviousHash)
 	if err != nil {
-		dlog.Debug("blockVerify 11","err", err)
+		dlog.Debug("blockVerify GetBlockHeaderByHash","err", err)
 		return false
 	}
 	err = consensusService.ChainService.BlockValidator.VerifyHeader(block.Header, preBlockHash)
 	if err != nil {
-		dlog.Debug("blockVerify 22", "err", err)
+		dlog.Debug("blockVerify VerifyHeader", "err", err)
 		return false
 	}
 	err = consensusService.ChainService.BlockValidator.VerifyBody(block)
 	if err != nil {
-		dlog.Debug("blockVerify 33","err", err)
+		dlog.Debug("blockVerify VerifyBody","err", err)
 		return false
 	}
 	//TODO need to verify traansaction , a lot of time
