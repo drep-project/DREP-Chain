@@ -1,6 +1,7 @@
 package blockmgr
 
 import (
+	"fmt"
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/chain/params"
 	"github.com/drep-project/drep-chain/chain/service/chainservice"
@@ -46,16 +47,21 @@ func (blockMgr *BlockMgr) GenerateBlock(db *database.Database,leaderKey *secp256
 
 SELECT_TX:
 	for _, t := range txs {
+		state := db.CopyState()
+		fmt.Println(gp)
+		newGp := *gp
 		select {
 		case <-stopchanel:
 			break SELECT_TX
 		default:
-			txGasUsed, txGasFee, err := blockMgr.ChainService.TransactionValidator.ExecuteTransaction(db, t, gp, blockHeader)
+			txGasUsed, txGasFee, err := blockMgr.ChainService.TransactionValidator.ExecuteTransaction(db, t, &newGp, blockHeader)
 			if err == nil {
 				finalTxs = append(finalTxs, t)
 				gasUsed.Add(gasUsed, txGasUsed)
 				gasFee.Add(gasFee, txGasFee)
+				gp = &newGp // use new gp and new state if success
 			} else {
+				db.RevertState(state)   //revert old state and use old gp if fail
 				if err.Error() == ErrReachGasLimit.Error() {
 					break SELECT_TX
 				} else {
