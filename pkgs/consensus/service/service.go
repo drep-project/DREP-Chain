@@ -93,7 +93,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 		return err
 	}
 
-	if executeContext.Cli.IsSet(EnableConsensusFlag.Name) {
+	if executeContext.Cli.GlobalIsSet(EnableConsensusFlag.Name) {
 		consensusService.Config.EnableConsensus = executeContext.Cli.GlobalBool(EnableConsensusFlag.Name)
 	}
 	if !consensusService.Config.EnableConsensus {
