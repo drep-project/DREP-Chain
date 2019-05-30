@@ -51,6 +51,13 @@ func (wallet *Wallet) Open(password string) error {
 	}
 	wallet.cacheStore = accountCacheStore
 	wallet.unLock(password)
+	keys, err := wallet.cacheStore.ExportKey(cryptedPassword)
+	if err != nil {
+		return err
+	}
+	if len(keys) == 0 {
+		wallet.NewAccount()
+	}
 	return nil
 }
 
