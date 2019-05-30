@@ -530,6 +530,25 @@ func (db *Database) Commit(needLog bool) {
 
 func (db *Database) Discard() {
 	if db.isTransaction {
-		//store.store.(*TransactionStore).Clear()
+		db.store.(*TransactionStore).Clear()
 	}
 }
+
+func (db *Database) RevertState(state *sync.Map) {
+	db.states = state
+}
+
+func (db *Database) CopyState() *sync.Map {
+	return copyMap(db.states)
+}
+
+func copyMap(m *sync.Map) *sync.Map {
+	newMap := new (sync.Map)
+	m.Range(func(key, value interface{}) bool {
+		newMap.Store(key, value)
+		return true
+	})
+	return newMap
+}
+
+
