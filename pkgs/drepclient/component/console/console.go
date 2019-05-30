@@ -52,13 +52,13 @@ const DefaultPrompt = "> "
 // Config is the collection of configurations to fine tune the behavior of the
 // JavaScript console.
 type Config struct {
-	HomeDir  string               // Data directory to store the console history at
-	DocRoot  string               // Filesystem path from where to load JavaScript files from
-	Client   *rpc.Client // RPC client to execute Ethereum requests through
-	Prompt   string               // Input prompt prefix string (defaults to DefaultPrompt)
-	Prompter UserPrompter         // Input prompter to allow interactive user feedback (defaults to TerminalPrompter)
-	Printer  io.Writer            // Output writer to serialize any display strings to (defaults to os.Stdout)
-	Preload  []string             // Absolute paths to JavaScript files to preload
+	HomeDir  string               `json:"homeDir"`	// Data directory to store the console history at
+	DocRoot  string               `json:"docRoot"`	// Filesystem path from where to load JavaScript files from
+	Client   *rpc.Client 		  `json:"client"` // RPC client to execute Ethereum requests through
+	Prompt   string               `json:"prompt"` 	// Input prompt prefix string (defaults to DefaultPrompt)
+	Prompter UserPrompter         `json:"prompter"`	// Input prompter to allow interactive user feedback (defaults to TerminalPrompter)
+	Printer  io.Writer            `json:"printer"`	// Output writer to serialize any display strings to (defaults to os.Stdout)
+	Preload  []string             `json:"preload"`	// Absolute paths to JavaScript files to preload
 }
 
 // Console is a JavaScript interpreted runtime environment. It is a fully fledged

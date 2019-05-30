@@ -84,20 +84,28 @@ func (accountService *AccountService) Init(executeContext *app.ExecuteContext) e
 		return err
 	}
 
+	if executeContext.Cli.GlobalIsSet(EnableWalletFlag.Name) {
+		accountService.Config.Enable = executeContext.Cli.GlobalBool(EnableWalletFlag.Name)
+	}
+
 	if executeContext.Cli.GlobalIsSet(WalletPasswordFlag.Name) {
-		accountService.Config.WalletPassword = executeContext.Cli.GlobalString(WalletPasswordFlag.Name)
+		accountService.Config.Password = executeContext.Cli.GlobalString(WalletPasswordFlag.Name)
 	}
 
 	if executeContext.Cli.GlobalIsSet(KeyStoreDirFlag.Name) {
 		accountService.Config.KeyStoreDir = executeContext.Cli.GlobalString(KeyStoreDirFlag.Name)
 	}
 
+	if !accountService.Config.Enable {
+		return nil
+	}
+
 	accountService.Wallet, err = NewWallet(accountService.Config, accountService.Blockmgr.ChainService.ChainID())
 	if err != nil {
 		return err
 	}
-	if accountService.Config.WalletPassword != "" {
-		accountService.Wallet.Open(accountService.Config.WalletPassword)
+	if accountService.Config.Password != "" {
+		accountService.Wallet.Open(accountService.Config.Password)
 	}
 	return nil
 }

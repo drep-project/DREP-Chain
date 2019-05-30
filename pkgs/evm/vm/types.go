@@ -8,23 +8,23 @@ import (
 
 type VMConfig struct {
 	// Debug enabled debugging Interpreter options
-	Debug bool
+	Debug bool							  `json:"debug"`
 	// Tracer is the op code logger
 //	Tracer Tracer
 	// NoRecursion disabled Interpreter call, callcode,
 	// delegate call and create.
-	NoRecursion bool
+	NoRecursion bool					  `json:"noRecursion"`
 	// Enable recording of SHA3/keccak preimages
-	EnablePreimageRecording bool
+	EnablePreimageRecording bool		  `json:"enablePreimageRecording"`
 	// JumpTable contains the EVM instruction table. This
 	// may be left uninitialised and will be set to the default
 	// table.
 	//JumpTable [256]vm.operation
 
 	// Type of the EWASM interpreter
-	EWASMInterpreter string
+	EWASMInterpreter string				  `json:"ewasmInterpreter"`
 	// Type of the EVM interpreter
-	EVMInterpreter string
+	EVMInterpreter string				  `json:"evmInterpreter"`
 }
 
 

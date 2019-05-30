@@ -8,7 +8,7 @@ import (
 type ChainConfig struct {
 	RemotePort       int             `json:"remoteport"`
 	RootChain        app.ChainIdType `json:"rootChain,omitempty"`
-	ChainId          app.ChainIdType `json:"chainId"`
+	ChainId          app.ChainIdType `json:"chainId,omitempty"`
 	GenesisPK        string          `json:"genesispk"`
 	SkipCheckMutiSig bool            `json:"skipCheckMutiSig"`
 	Producers        []Producers     `json:"producers"`
@@ -21,13 +21,13 @@ type BlockMgr struct {
 }
 
 type Producers struct {
-	Pubkey *secp256k1.PublicKey `json:"pubkey"`
-	IP     string               `json:"ip"`
+	Pubkey *secp256k1.PublicKey 	`json:"pubkey"`
+	IP     string               	`json:"ip"`
 }
 
 type OracleConfig struct {
-	Blocks     int
-	Percentile int
-	Default    uint64
-	MaxPrice   uint64
+	Blocks     int					`json:"blocks"`
+	Percentile int					`json:"percentile"`
+	Default    uint64				`json:"default"`
+	MaxPrice   uint64				`json:"maxPrice"`
 }
