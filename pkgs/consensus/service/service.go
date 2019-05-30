@@ -110,8 +110,8 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	consensusService.peersInfo = make(map[string]*consensusTypes.PeerInfo)
 
 	//检查是否为系统配置的骨干节点
-	checkProduce := func(pds []chainTypes.Producers,ip string) bool{
-		for _,p := range pds{
+	checkProduce := func(pds []chainTypes.Producers, ip string) bool {
+		for _, p := range pds {
 			if p.IP == ip {
 				return true
 			}
@@ -124,7 +124,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 			Name:   "consensusService",
 			Length: consensusTypes.NumberOfMsg,
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
-				if checkProduce(consensusService.producers,peer.IP()){
+				if checkProduce(consensusService.producers, peer.IP()) {
 					pi := consensusTypes.NewPeerInfo(peer, rw)
 					consensusService.peersInfo[peer.IP()] = pi
 					defer delete(consensusService.peersInfo, peer.IP())
@@ -232,7 +232,7 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 					dlog.Debug("Producer Block Fail", "Reason", err.Error())
 				} else {
 					_, _, err := consensusService.ChainService.ProcessBlock(block)
-					if err == nil{
+					if err == nil {
 						consensusService.BlockMgr.BroadcastBlock(chainTypes.MsgTypeBlock, block, true)
 					}
 					dlog.Info("Submit Block ", "Height", consensusService.ChainService.BestChain.Height(), "txs:", block.Data.TxCount, "err", err)
@@ -267,7 +267,7 @@ func (consensusService *ConsensusService) Stop(executeContext *app.ExecuteContex
 func (consensusService *ConsensusService) runAsMember() (block *chainTypes.Block, err error) {
 	consensusService.member.Reset()
 	dlog.Trace("node member is going to process consensus for round 1")
-	consensusService.member.convertor = func(msg []byte) ( consensusTypes.IConsenMsg, error) {
+	consensusService.member.convertor = func(msg []byte) (consensusTypes.IConsenMsg, error) {
 		return chainTypes.BlockFromMessage(msg)
 	}
 	consensusService.member.validator = func(msg consensusTypes.IConsenMsg) bool {
@@ -283,7 +283,7 @@ func (consensusService *ConsensusService) runAsMember() (block *chainTypes.Block
 	dlog.Trace("node member is going to process consensus for round 2")
 	consensusService.member.Reset()
 	var multiSig *chainTypes.MultiSignature
-	consensusService.member.convertor = func(msg []byte) ( consensusTypes.IConsenMsg, error) {
+	consensusService.member.convertor = func(msg []byte) (consensusTypes.IConsenMsg, error) {
 		return consensusTypes.ResponseWiteRootFromMessage(msg)
 	}
 	consensusService.member.validator = func(msg consensusTypes.IConsenMsg) bool {
@@ -318,7 +318,7 @@ func (consensusService *ConsensusService) runAsLeader() (block *chainTypes.Block
 	db := consensusService.DatabaseService.BeginTransaction()
 	consensusService.leader.Reset()
 	var gasFee *big.Int
-	block, gasFee ,err = consensusService.BlockMgr.GenerateBlock(db, consensusService.leader.pubkey)
+	block, gasFee, err = consensusService.BlockMgr.GenerateBlock(db, consensusService.leader.pubkey)
 	if err != nil {
 		dlog.Error("generate block fail", "msg", err)
 		return nil, err
@@ -515,7 +515,7 @@ func (consensusService *ConsensusService) getWaitTime() (time.Time, time.Duratio
 func (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) bool {
 	preBlockHash, err := consensusService.ChainService.GetBlockHeaderByHash(&block.Header.PreviousHash)
 	if err != nil {
-		dlog.Debug("blockVerify GetBlockHeaderByHash","err", err)
+		dlog.Debug("blockVerify GetBlockHeaderByHash", "err", err)
 		return false
 	}
 	err = consensusService.ChainService.BlockValidator.VerifyHeader(block.Header, preBlockHash)
@@ -525,7 +525,7 @@ func (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) b
 	}
 	err = consensusService.ChainService.BlockValidator.VerifyBody(block)
 	if err != nil {
-		dlog.Debug("blockVerify VerifyBody","err", err)
+		dlog.Debug("blockVerify VerifyBody", "err", err)
 		return false
 	}
 	//TODO need to verify traansaction , a lot of time
@@ -535,32 +535,34 @@ func (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) b
 func (consensusService *ConsensusService) verifyBlockContent(block *chainTypes.Block) bool {
 	db := consensusService.ChainService.DatabaseService.BeginTransaction()
 	if !consensusService.ChainService.BlockValidator.VerifyMultiSig(block, consensusService.ChainService.Config.SkipCheckMutiSig || false) {
-		dlog.Debug("bitmap","bitmap", block.MultiSig.Bitmap)
-		dlog.Debug("multySigVerify","SkipCheckMutiSig", consensusService.ChainService.Config.SkipCheckMutiSig )
+		dlog.Debug("bitmap", "bitmap", block.MultiSig.Bitmap)
+		dlog.Debug("multySigVerify", "SkipCheckMutiSig", consensusService.ChainService.Config.SkipCheckMutiSig)
 		return false
 	}
+
+	fmt.Println("&&&&&&&&&&&&&&&&&:%#v", block)
 
 	gp := new(chainService.GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
 	gasUsed, gasFee, err := consensusService.ChainService.BlockValidator.ExecuteBlock(db, block, gp)
 	if err != nil {
-		dlog.Debug("multySigVerify","ExecuteBlock", err )
+		dlog.Debug("multySigVerify", "ExecuteBlock", err)
 		return false
 	}
 	err = consensusService.ChainService.AccumulateRewards(db, block, gasFee)
 	if err != nil {
-		dlog.Debug("multySigVerify","AccumulateRewards", err )
+		dlog.Debug("multySigVerify", "AccumulateRewards", err)
 		return false
 	}
 	if block.Header.GasUsed.Cmp(gasUsed) == 0 {
 		stateRoot := db.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
-			dlog.Debug("rootcmd root !====" )
-			return  false
+			dlog.Debug("rootcmd root !====")
+			return false
 		}
 	} else {
-		dlog.Debug("multySigVerify","gasUsed", gasUsed )
-		return  false
+		dlog.Debug("multySigVerify", "gasUsed", gasUsed)
+		return false
 	}
 	return true
 }
