@@ -84,11 +84,11 @@ func (accountService *AccountService) Init(executeContext *app.ExecuteContext) e
 		return err
 	}
 
-	if executeContext.Cli.IsSet(WalletPasswordFlag.Name) {
+	if executeContext.Cli.GlobalIsSet(WalletPasswordFlag.Name) {
 		accountService.Config.WalletPassword = executeContext.Cli.GlobalString(WalletPasswordFlag.Name)
 	}
 
-	if executeContext.Cli.IsSet(KeyStoreDirFlag.Name) {
+	if executeContext.Cli.GlobalIsSet(KeyStoreDirFlag.Name) {
 		accountService.Config.KeyStoreDir = executeContext.Cli.GlobalString(KeyStoreDirFlag.Name)
 	}
 
