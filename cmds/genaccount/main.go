@@ -102,7 +102,7 @@ func gen(ctx *cli.Context) error {
 	p2pConfig.ListenAddr = "0.0.0.0:55555"
 
 	consensusConfig := consensusTypes.ConsensusConfig{}
-	consensusConfig.EnableConsensus = true
+	consensusConfig.Enable = true
 	consensusConfig.ConsensusMode = "bft"
 	//consensusConfig.Producers = produces
 
@@ -113,7 +113,8 @@ func gen(ctx *cli.Context) error {
 	chainConfig.GenesisPK = "0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26"
 
 	walletConfig := accountTypes.Config{}
-	walletConfig.WalletPassword = pasword
+	walletConfig.Enable = true
+	walletConfig.Password = pasword
 	for i := 0; i < len(nodeItems); i++ {
 		consensusConfig.MyPk = (*secp256k1.PublicKey)(&standbyKey[i].PublicKey)
 		userDir := path2.Join(path, nodeItems[i].Name)

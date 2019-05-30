@@ -146,3 +146,11 @@ func (tDb *TransactionStore) PutDelLog(key []byte) error {
 func (tDb *TransactionStore) Clear() {
 	tDb.dirties = new(sync.Map)
 }
+
+func (tDb *TransactionStore) RevertState(dirties *sync.Map) {
+	tDb.dirties = dirties
+}
+
+func (tDb *TransactionStore) CopyState() *sync.Map {
+	return copyMap(tDb.dirties)
+}

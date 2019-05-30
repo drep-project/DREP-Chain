@@ -33,7 +33,8 @@ const (
 	      "producers": []
 	},
 	"accounts" : {
-	      "enableWallet": true
+	      "enable": true,
+"password": "123"
 	},
 	"trace":{
 		"enable":false,
