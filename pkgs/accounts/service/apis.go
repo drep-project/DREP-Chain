@@ -93,7 +93,7 @@ func (accountapi *AccountApi) Transfer(from crypto.CommonAddress, to crypto.Comm
 
 func (accountapi *AccountApi) SetAlias(srcAddr crypto.CommonAddress, alias string, gasprice, gaslimit *common.Big) (string, error) {
 	nonce := accountapi.blockmgr.GetTransactionCount(&srcAddr)
-	t := chainTypes.NewAliasTransaction(alias, (*big.Int)(gasprice), (*big.Int)(gasprice), nonce)
+	t := chainTypes.NewAliasTransaction(alias, (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
 	sig, err := accountapi.Wallet.Sign(&srcAddr, t.TxHash().Bytes())
 	if err != nil {
 		return "", err

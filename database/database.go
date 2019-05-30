@@ -534,12 +534,15 @@ func (db *Database) Discard() {
 	}
 }
 
-func (db *Database) RevertState(state *sync.Map) {
-	db.states = state
+func (db *Database) RevertState(shot *SnapShot) {
+	db.states = shot.StateShot
+	db.store.RevertState(shot.StoreShot)
 }
 
-func (db *Database) CopyState() *sync.Map {
-	return copyMap(db.states)
+func (db *Database) CopyState() *SnapShot {
+	newStoreShot :=db.store.CopyState()
+	newStateShot := copyMap(db.states)
+	return &SnapShot{newStoreShot, newStateShot}
 }
 
 func copyMap(m *sync.Map) *sync.Map {
@@ -551,4 +554,9 @@ func copyMap(m *sync.Map) *sync.Map {
 	return newMap
 }
 
+
+type SnapShot struct {
+	StoreShot *sync.Map
+	StateShot *sync.Map
+}
 

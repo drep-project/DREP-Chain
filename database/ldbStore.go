@@ -4,6 +4,7 @@ import (
 	"github.com/drep-project/drep-chain/common/fileutil"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
+	"sync"
 )
 
 type LdbStore struct {
@@ -36,4 +37,12 @@ func (ldbStorte *LdbStore) Delete(key []byte)  error {
 
 func (ldbStorte *LdbStore) NewIterator(key []byte) Iterator {
 	return ldbStorte.db.NewIterator(util.BytesPrefix(key), nil)
+}
+
+func (ldbStorte *LdbStore) RevertState(dirties *sync.Map) {
+	panic(ErrKeyUnSpport)
+}
+
+func (ldbStorte *LdbStore) CopyState() *sync.Map {
+	panic(ErrKeyUnSpport)
 }

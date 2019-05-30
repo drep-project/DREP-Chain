@@ -47,7 +47,7 @@ func (blockMgr *BlockMgr) GenerateBlock(db *database.Database,leaderKey *secp256
 
 SELECT_TX:
 	for _, t := range txs {
-		state := db.CopyState()
+		snap := db.CopyState()
 		fmt.Println(gp)
 		newGp := *gp
 		select {
@@ -61,7 +61,7 @@ SELECT_TX:
 				gasFee.Add(gasFee, txGasFee)
 				gp = &newGp // use new gp and new state if success
 			} else {
-				db.RevertState(state)   //revert old state and use old gp if fail
+				db.RevertState(snap)   //revert old state and use old gp if fail
 				if err.Error() == ErrReachGasLimit.Error() {
 					break SELECT_TX
 				} else {

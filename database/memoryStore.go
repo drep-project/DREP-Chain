@@ -37,3 +37,11 @@ func (mStore *MemoryStore) Delete(key []byte) error {
 func (mStore *MemoryStore) NewIterator(key []byte) Iterator {
 	panic(ErrKeyUnSpport)
 }
+
+func (mStore *MemoryStore) RevertState(dirties *sync.Map) {
+	panic(ErrKeyUnSpport)
+}
+
+func (mStore *MemoryStore) CopyState() *sync.Map {
+	panic(ErrKeyUnSpport)
+}
