@@ -540,7 +540,7 @@ func (consensusService *ConsensusService) verifyBlockContent(block *chainTypes.B
 		return false
 	}
 
-	fmt.Println("&&&&&&&&&&&&&&&&&:%#v", block)
+	fmt.Printf("&&&&&&&&&&&&&&&&&:%#v\n", block)
 
 	gp := new(chainService.GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
