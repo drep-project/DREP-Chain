@@ -94,9 +94,9 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	}
 
 	if executeContext.Cli.GlobalIsSet(EnableConsensusFlag.Name) {
-		consensusService.Config.EnableConsensus = executeContext.Cli.GlobalBool(EnableConsensusFlag.Name)
+		consensusService.Config.Enable = executeContext.Cli.GlobalBool(EnableConsensusFlag.Name)
 	}
-	if !consensusService.Config.EnableConsensus {
+	if !consensusService.Config.Enable {
 		return nil
 	}
 
@@ -176,7 +176,7 @@ func (consensusService *ConsensusService) handlerEvent() {
 }
 
 func (consensusService *ConsensusService) Start(executeContext *app.ExecuteContext) error {
-	if !consensusService.Config.EnableConsensus {
+	if !consensusService.Config.Enable {
 		return nil
 	}
 	if !consensusService.isProduce() {
@@ -249,7 +249,7 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 }
 
 func (consensusService *ConsensusService) Stop(executeContext *app.ExecuteContext) error {
-	if consensusService.Config == nil || !consensusService.Config.EnableConsensus {
+	if consensusService.Config == nil || !consensusService.Config.Enable {
 		return nil
 	}
 

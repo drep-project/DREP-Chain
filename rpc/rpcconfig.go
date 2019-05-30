@@ -27,47 +27,47 @@ type HTTPTimeouts struct {
 	// decisions on each request body's acceptable deadline or
 	// upload rate, most users will prefer to use
 	// ReadHeaderTimeout. It is valid to use them both.
-	ReadTimeout time.Duration	`json:"omitempty"`
+	ReadTimeout time.Duration	`json:"readTimeout,omitempty"`
 
 	// WriteTimeout is the maximum duration before timing out
 	// writes of the response. It is reset whenever a new
 	// request's header is read. Like ReadTimeout, it does not
 	// let Handlers make decisions on a per-request basis.
-	WriteTimeout time.Duration	`json:"omitempty"`
+	WriteTimeout time.Duration	`json:"writeTimeout,omitempty"`
 
 	// IdleTimeout is the maximum amount of time to wait for the
 	// next request when keep-alives are enabled. If IdleTimeout
 	// is zero, the value of ReadTimeout is used. If both are
 	// zero, ReadHeaderTimeout is used.
-	IdleTimeout time.Duration	`json:"omitempty"`
+	IdleTimeout time.Duration	`json:"idleTimeout,omitempty"`
 }
 
 type RpcConfig struct {
 
 	// IPCEnabled
-	IPCEnabled bool `json:"IPCEnabled"`
+	IPCEnabled bool 	`json:"ipcEnabled"`
 
 	// IPCPath is the requested location to place the IPC endpoint. If the path is
 	// a simple file name, it is placed inside the data directory (or on the root
 	// pipe path on Windows), whereas if it's a resolvable path name (absolute or
 	// relative), then that specific path is enforced. An empty path disables IPC.
-	IPCPath string `json:"IPCPath,omitempty"`
+	IPCPath string 		`json:"ipcPath,omitempty"`
 
 	// HTTPEnabled
-	HTTPEnabled bool `json:"HTTPEnabled"`
+	HTTPEnabled bool 	`json:"httpEnabled"`
 	// HTTPHost is the host interface on which to start the HTTP RPC server. If this
 	// field is empty, no HTTP API endpoint will be started.
-	HTTPHost string `json:"HTTPHost,omitempty"`
+	HTTPHost string 	`json:"httpHost,omitempty"`
 
 	// HTTPPort is the TCP port number on which to start the HTTP RPC server. The
 	// default zero value is/ valid and will pick a port number randomly (useful
 	// for ephemeral nodes).
-	HTTPPort int `json:"HTTPPort,omitempty"`
+	HTTPPort int 		`json:"httpPort,omitempty"`
 
 	// HTTPCors is the Cross-Origin Resource Sharing header to send to requesting
 	// clients. Please be aware that CORS is a browser enforced security, it's fully
 	// useless for custom HTTP clients.
-	HTTPCors []string `json:"HTTPCors,omitempty"`
+	HTTPCors []string 	`json:"httpCors,omitempty"`
 
 	// HTTPVirtualHosts is the list of virtual hostnames which are allowed on incoming requests.
 	// This is by default {'localhost'}. Using this prevents attacks like
@@ -76,60 +76,60 @@ type RpcConfig struct {
 	// By explicitly checking the Host-header, the server will not allow requests
 	// made against the server with a malicious host domain.
 	// Requests using ip address directly are not affected
-	HTTPVirtualHosts []string `json:"HTTPVirtualHosts,omitempty"`
+	HTTPVirtualHosts []string `json:"httpVirtualHosts,omitempty"`
 
 	// HTTPModules is a list of API modules to expose via the HTTP RPC interface.
 	// If the module list is empty, all RPC API endpoints designated public will be
 	// exposed.
-	HTTPModules []string `json:"HTTPModules,omitempty"`
+	HTTPModules []string `json:"httpModules,omitempty"`
 
 	// HTTPTimeouts allows for customization of the timeout values used by the HTTP RPC
 	// interface.
-	HTTPTimeouts *HTTPTimeouts `json:"HTTPTimeouts,omitempty"`
+	HTTPTimeouts *HTTPTimeouts `json:"httpTimeouts,omitempty"`
 
 	// WSEnabled
-	WSEnabled bool `json:"WSEnabled"`
+	WSEnabled bool `json:"wsEnabled"`
 	// WSHost is the host interface on which to start the websocket RPC server. If
 	// this field is empty, no websocket API endpoint will be started.
-	WSHost string `json:"WSHost,omitempty"`
+	WSHost string `json:"wsHost,omitempty"`
 
 	// WSPort is the TCP port number on which to start the websocket RPC server. The
 	// default zero value is/ valid and will pick a port number randomly (useful for
 	// ephemeral nodes).
-	WSPort int `json:"WSPort,omitempty"`
+	WSPort int `json:"wsPort,omitempty"`
 
 	// WSOrigins is the list of domain to accept websocket requests from. Please be
 	// aware that the server can only act upon the HTTP request the client sends and
 	// cannot verify the validity of the request header.
-	WSOrigins []string `json:"WSOrigins,omitempty"`
+	WSOrigins []string `json:"wsOrigins,omitempty"`
 
 	// WSModules is a list of API modules to expose via the websocket RPC interface.
 	// If the module list is empty, all RPC API endpoints designated public will be
 	// exposed.
-	WSModules []string `json:"WSModules,omitempty"`
+	WSModules []string `json:"wsModules,omitempty"`
 
 	// WSExposeAll exposes all API modules via the WebSocket RPC interface rather
 	// than just the public ones.
 	//
 	// *WARNING* Only set this if the node is running in a trusted network, exposing
 	// private APIs to untrusted users is a major security risk.
-	WSExposeAll bool `json:"WSExposeAll"`
+	WSExposeAll bool `json:"wsExposeall"`
 
 	// RESTEnabled
-	RESTEnabled bool `json:"RESTEnabled"`
+	RESTEnabled bool `json:"restEnabled"`
 	// HTTPHost is the host interface on which to start the HTTP RPC server. If this
 	// field is empty, no HTTP API endpoint will be started.
-	RESTHost string `json:"RESTHost,omitempty"`
+	RESTHost string `json:"restHost,omitempty"`
 
 	// HTTPPort is the TCP port number on which to start the HTTP RPC server. The
 	// default zero value is/ valid and will pick a port number randomly (useful
 	// for ephemeral nodes).
-	RESTPort int `json:"RESTPort,omitempty"`
+	RESTPort int `json:"restPort,omitempty"`
 
 	// HTTPCors is the Cross-Origin Resource Sharing header to send to requesting
 	// clients. Please be aware that CORS is a browser enforced security, it's fully
 	// useless for custom HTTP clients.
-	RESTCors []string `json:"RESTCors,omitempty"`
+	RESTCors []string `json:"restCors,omitempty"`
 }
 
 // IPCEndpoint resolves an IPC endpoint based on a configured value, taking into
