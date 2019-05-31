@@ -26,8 +26,8 @@ import (
 	"time"
 
 	"github.com/drep-project/drep-chain/common/bitutil"
-	"github.com/drep-project/drep-chain/crypto"
 	"context"
+	"github.com/drep-project/drep-chain/crypto/sha3"
 )
 
 // bloomIndexes represents the bit indexes inside the bloom filter that belong
@@ -36,7 +36,7 @@ type bloomIndexes [3]uint
 
 // calcBloomIndexes returns the bloom filter bit indexes belonging to the given key.
 func calcBloomIndexes(b []byte) bloomIndexes {
-	b = crypto.Keccak256(b)
+	b = sha3.Keccak256(b)
 
 	var idxs bloomIndexes
 	for i := 0; i < len(idxs); i++ {
