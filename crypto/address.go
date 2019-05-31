@@ -24,10 +24,13 @@ var (
 
 type CommonAddress [AddressLength]byte
 
+func (addr CommonAddress) String() string {
+	return common.Encode(addr[:])
+}
+
 func (addr CommonAddress) IsEmpty() bool {
 	return addr == CommonAddress{}
 }
-
 func String2Address(s string) CommonAddress {
 	if s == "" {
 		return CommonAddress{}
