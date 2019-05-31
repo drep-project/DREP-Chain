@@ -2,7 +2,6 @@ package database
 
 import (
 	oriBinary "encoding/binary"
-	"encoding/hex"
 	"github.com/drep-project/binary"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
@@ -405,8 +404,8 @@ func (db *Database) GetReputation(addr *crypto.CommonAddress) *big.Int {
 	return storage.Reputation
 }
 
-func (db *Database) GetLogs(txHash []byte) []*chainTypes.Log {
-	key := sha3.Keccak256([]byte("logs_" + hex.EncodeToString(txHash)))
+func (db *Database) GetLogs(txHash crypto.Hash) []*chainTypes.Log {
+	key := sha3.Keccak256([]byte("logs_" + txHash.String()))
 	value, err := db.Get(key)
 	if err != nil {
 		return make([]*chainTypes.Log, 0)
@@ -419,8 +418,8 @@ func (db *Database) GetLogs(txHash []byte) []*chainTypes.Log {
 	return logs
 }
 
-func (db *Database) PutLogs(logs []*chainTypes.Log, txHash []byte) error {
-	key := sha3.Keccak256([]byte("logs_" + hex.EncodeToString(txHash)))
+func (db *Database) PutLogs(logs []*chainTypes.Log, txHash crypto.Hash) error {
+	key := sha3.Keccak256([]byte("logs_" + txHash.String()))
 	value, err := binary.Marshal(logs)
 	if err != nil {
 		return err

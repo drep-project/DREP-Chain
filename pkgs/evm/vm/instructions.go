@@ -923,10 +923,10 @@ func opSuicide(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memo
 func makeLog(size int) executionFunc {
 	return func(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 		//topics := make([]Hash, size)
-		topics := make([][]byte, size)
+		topics := make([]crypto.Hash, size)
 		mStart, mSize := stack.pop(), stack.pop()
 		for i := 0; i < size; i++ {
-			topics[i] = crypto.Big2Hash(stack.pop()).Bytes()
+			topics[i] = crypto.Big2Hash(stack.pop())
 		}
 		d := memory.Get(mStart.Int64(), mSize.Int64())
 		//interpreter.evm.StateDB.AddLog(&types.Log{
