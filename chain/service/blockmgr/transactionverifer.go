@@ -44,5 +44,15 @@ func (blockMgr *BlockMgr) verifyTransaction(tx *chainTypes.Transaction) error {
 		dlog.Error("gas exceed tx gaslimit ", "gas", gas, "tx.gas", tx.Gas())
 		return ErrReachGasLimit
 	}
+	if tx.Type() == chainTypes.SetAliasType {
+		from, err  := tx.From()
+		if err != nil {
+			return  err
+		}
+		alias := blockMgr.ChainService.DatabaseService.GetStorageAlias(from)
+		if alias != ""{
+			return ErrNotSupportRenameAlias
+		}
+	}
 	return nil
 }

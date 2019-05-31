@@ -31,4 +31,5 @@ var (
 	ErrOrphanBlockExsist         = errors.New("already have block (orphan)")
 	ErrGenesisPkNotFound   		 = errors.New("genesisi pubkey not found")
 	ErrBlockProducerNotFound   	 = errors.New("block producer not found")
+	ErrNotSupportRenameAlias 	= errors.New("not suppport rename alias")
 )

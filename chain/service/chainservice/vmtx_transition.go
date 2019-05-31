@@ -150,7 +150,13 @@ func (st *StateTransition) TransitionAliasDb() (ret []byte, failed bool, err err
 	from := st.from
 	alias := st.tx.GetData()
 	err = st.databaseService.AliasSet(from, string(alias))
-	st.gas += params.AliasGas * uint64(len(alias))
+	if err != nil {
+		return nil, false, err
+	}
+	err = st.useGas(params.AliasGas * uint64(len(alias)))
+	if err != nil {
+		return nil, false, err
+	}
 	return nil, true, err
 }
 
