@@ -56,8 +56,6 @@ type ChainService struct {
 
 	Config       *chainTypes.ChainConfig
 	genesisBlock *chainTypes.Block
-	//Events related to sync blocks
-	syncBlockEvent event.Feed
 
 	//提供新块订阅
 	NewBlockFeed    event.Feed
@@ -156,11 +154,6 @@ func (chainService *ChainService) BlockExists(blockHash *crypto.Hash) bool {
 func (chainService *ChainService) RootChain() app.ChainIdType {
 	return rootChain
 }
-
-func (chainService *ChainService) SubscribeSyncBlockEvent(subchan chan event.SyncBlockEvent) event.Subscription {
-	return chainService.syncBlockEvent.Subscribe(subchan)
-}
-
 
 func (chainService *ChainService) GetBlocksFrom(start, size uint64) ([]*chainTypes.Block, error) {
 	blocks := []*chainTypes.Block{}
