@@ -21,8 +21,8 @@ import (
 	"math/big"
 
 	"github.com/drep-project/drep-chain/common/hexutil"
-	"github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto/sha3"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
 type bytesBacked interface {

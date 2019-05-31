@@ -79,11 +79,11 @@ func (s *State) SetByteCode(addr *crypto.CommonAddress, byteCode crypto.ByteCode
 	return s.db.PutByteCode(addr, byteCode)
 }
 
-func (s *State) GetLogs(txHash []byte,) []*chainTypes.Log {
+func (s *State) GetLogs(txHash crypto.Hash) []*chainTypes.Log {
 	return s.db.GetLogs(txHash)
 }
 
-func (s *State) AddLog(contractAddr crypto.CommonAddress, txHash, data []byte, topics [][]byte) error {
+func (s *State) AddLog(contractAddr crypto.CommonAddress, txHash crypto.Hash, data []byte, topics []crypto.Hash) error {
 	log := &chainTypes.Log{
 		Address: contractAddr,
 		TxHash:  txHash,

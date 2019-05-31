@@ -64,7 +64,7 @@ func (stateProcessor *StateProcessor) ApplyTransaction(db *database.Database, bc
 		receipt.ContractAddress = crypto.CreateAddress(*from, tx.Nonce())
 	}
 	// Set the receipt logs and create a bloom for filtering
-	receipt.Logs = db.GetLogs(tx.TxHash().Bytes())
+	receipt.Logs = db.GetLogs(*tx.TxHash())
 	return receipt, gas, err
 }
 

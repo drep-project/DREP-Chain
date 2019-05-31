@@ -7,7 +7,6 @@ import (
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"math/big"
-	"github.com/drep-project/drep-chain/pkgs/evm/types"
 )
 
 type BlockHeader struct {
@@ -23,7 +22,7 @@ type BlockHeader struct {
 	TxRoot       []byte
 	LeaderPubKey secp256k1.PublicKey
 	MinorPubKeys []secp256k1.PublicKey
-	Bloom        types.Bloom
+	Bloom        Bloom
 
 	blockHash 	*crypto.Hash			`binary:"ignore"`
 }

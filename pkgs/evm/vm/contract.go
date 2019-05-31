@@ -30,7 +30,7 @@ type Contract struct {
 	Gas          uint64
 	Value        *big.Int
 	Jumpdests    destinations
-	TxHash       []byte
+	TxHash       crypto.Hash
 }
 
 func NewContract(callerAddr crypto.CommonAddress, chainId app.ChainIdType, gas uint64, value *big.Int, jumpdests destinations) *Contract {

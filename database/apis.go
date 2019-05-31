@@ -211,11 +211,11 @@ func (database *DatabaseService) GetReputation(addr *crypto.CommonAddress) *big.
 	return database.db.GetReputation(addr)
 }
 
-func (database *DatabaseService) GetLogs(txHash []byte) []*chainType.Log {
+func (database *DatabaseService) GetLogs(txHash crypto.Hash) []*chainType.Log {
 	return database.db.GetLogs(txHash)
 }
 
-func (database *DatabaseService) PutLogs(logs []*chainType.Log, txHash []byte) error {
+func (database *DatabaseService) PutLogs(logs []*chainType.Log, txHash crypto.Hash) error {
 	return database.db.PutLogs(logs, txHash)
 }
 
