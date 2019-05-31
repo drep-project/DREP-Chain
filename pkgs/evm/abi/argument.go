@@ -263,7 +263,7 @@ func (arguments Arguments) Pack(args ...interface{}) ([]byte, error) {
 
 // capitalise makes the first character of a string upper case, also removing any
 // prefixing underscores from the variable names.
-func capitalise(input string) string {
+func Capitalise(input string) string {
 	for len(input) > 0 && input[0] == '_' {
 		input = input[1:]
 	}

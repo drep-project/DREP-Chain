@@ -8,7 +8,9 @@ import (
 type Log struct {
 	Address crypto.CommonAddress
 	ChainId app.ChainIdType
-	TxHash  []byte
-	Topics  [][]byte
+	TxHash  crypto.Hash
+	Topics  []crypto.Hash
 	Data    []byte
+	Height  int64
+	Removed bool
 }
