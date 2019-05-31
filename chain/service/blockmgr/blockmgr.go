@@ -46,11 +46,11 @@ var (
 )
 
 type BlockMgr struct {
-	ChainService    *chainservice.ChainService         `service:"chain"`
-	RpcService      *rpc2.RpcService          `service:"rpc"`
-	P2pServer       p2pService.P2P            `service:"p2p"`
-	DatabaseService *database.DatabaseService `service:"database"`
-	VmService       evm.Vm                    `service:"vm"`
+	ChainService    *chainservice.ChainService      `service:"chain"`
+	RpcService      *rpc2.RpcService          		`service:"rpc"`
+	P2pServer       p2pService.P2P            		`service:"p2p"`
+	DatabaseService *database.DatabaseService 		`service:"database"`
+	VmService       evm.Vm                    		`service:"vm"`
 	transactionPool *txpool.TransactionPool
 	apis            []app.API
 
@@ -169,6 +169,10 @@ func (blockMgr *BlockMgr) Attach() (*rpc.Client, error) {
 	defer blockMgr.lock.RUnlock()
 
 	return rpc.DialInProc(blockMgr.RpcService.IpcHandler), nil
+}
+
+func (blockMgr *BlockMgr) SubscribeSyncBlockEvent(subchan chan event.SyncBlockEvent) event.Subscription {
+	return blockMgr.syncBlockEvent.Subscribe(subchan)
 }
 
 func (blockMgr *BlockMgr) GetTransactionCount(addr *crypto.CommonAddress) uint64 {
