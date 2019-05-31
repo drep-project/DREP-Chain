@@ -139,7 +139,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	consensusService.leader = NewLeader(consensusService.privkey, consensusService.P2pServer)
 	consensusService.member = NewMember(consensusService.privkey, consensusService.P2pServer)
 	consensusService.syncBlockEventChan = make(chan event.SyncBlockEvent)
-	consensusService.syncBlockEventSub = consensusService.ChainService.SubscribeSyncBlockEvent(consensusService.syncBlockEventChan)
+	consensusService.syncBlockEventSub = consensusService.BlockMgr.SubscribeSyncBlockEvent(consensusService.syncBlockEventChan)
 	consensusService.quit = make(chan struct{})
 
 	consensusService.apis = []app.API{
@@ -291,7 +291,7 @@ func (consensusService *ConsensusService) runAsMember() (block *chainTypes.Block
 		multiSig = &val.MultiSignature
 		minorPubkeys := []secp256k1.PublicKey{}
 		for index, producer := range consensusService.ChainService.Config.Producers {
-			if multiSig.Bitmap[index] == 1 {
+			if multiSig.Bitmap[index] == 1 {  //TODO  Exclude leader
 				minorPubkeys = append(minorPubkeys, *producer.Pubkey)
 			}
 		}
@@ -336,7 +336,7 @@ func (consensusService *ConsensusService) runAsLeader() (block *chainTypes.Block
 	consensusService.leader.Reset()
 	minorPubkeys := []secp256k1.PublicKey{}
 	for index, producer := range consensusService.ChainService.Config.Producers {
-		if multiSig.Bitmap[index] == 1 {
+		if multiSig.Bitmap[index] == 1 {  //TODO  Exclude leader
 			minorPubkeys = append(minorPubkeys, *producer.Pubkey)
 		}
 	}

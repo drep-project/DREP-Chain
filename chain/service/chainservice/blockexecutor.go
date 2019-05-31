@@ -3,9 +3,10 @@ package chainservice
 import (
 	"bytes"
 	"fmt"
+	"math/big"
+
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/common"
-	"math/big"
 
 	"github.com/drep-project/drep-chain/chain/params"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
@@ -17,13 +18,13 @@ import (
 
 type ChainBlockValidator struct {
 	txValidator ITransactionValidator
-	chain *ChainService
+	chain       *ChainService
 }
 
 func NewChainBlockValidator(chainService *ChainService) *ChainBlockValidator {
 	return &ChainBlockValidator{
 		txValidator: chainService.TransactionValidator,
-		chain: chainService,
+		chain:       chainService,
 	}
 }
 
@@ -37,7 +38,7 @@ func (chainBlockValidator *ChainBlockValidator) VerifyHeader(header, parent *cha
 		return ErrVersion
 	}
 	//Verify header's previousHash is equal parent hash
-	if header.PreviousHash !=  *parent.Hash() {
+	if header.PreviousHash != *parent.Hash() {
 		return ErrPreHash
 	}
 	// Verify that the block number is parent's +1
@@ -135,8 +136,8 @@ func (chainBlockValidator *ChainBlockValidator) ExecuteBlock(db *database.Databa
 	return totalGasUsed, totalGasFee, nil
 }
 
+//TODO aims to seperate all validator into deferent module
 type IBlockValidator interface {
-
 	VerifyHeader(header, parent *chainTypes.BlockHeader) error
 
 	VerifyBody(block *chainTypes.Block) error

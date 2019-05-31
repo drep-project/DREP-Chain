@@ -19,6 +19,10 @@ type MongogDbStore struct {
 	txCol     *mongo.Collection
 	blockCol *mongo.Collection
 	headerCol *mongo.Collection
+
+	viewTxCol     *mongo.Collection
+	viewBlockCol *mongo.Collection
+	viewHeaderCol *mongo.Collection
 }
 
 // NewMongogDbStore open a new db from url, if db not exist, auto create
@@ -36,6 +40,10 @@ func NewMongogDbStore(url string) *MongogDbStore {
 	store.txCol = store.db.Collection("tx")
 	store.blockCol = store.db.Collection("block")
 	store.headerCol = store.db.Collection("header")
+
+	store.viewTxCol = store.db.Collection("view_tx")
+	store.viewBlockCol = store.db.Collection("view_block")
+	store.viewHeaderCol = store.db.Collection("view_header")
 	return store
 }
 
@@ -48,20 +56,38 @@ func (store *MongogDbStore) InsertRecord(block *chainTypes.Block) {
 	rpcBlock.From(block)
 	store.blockCol.InsertOne(ctx, rpcBlock)
 	store.headerCol.InsertOne(ctx, rpcHeader)
+
+	viewBlock := ViewBlock{}
+	viewBlock.From(block)
+	store.viewBlockCol.InsertOne(ctx, viewBlock)
+
+	viewHeader := ViewBlockHeader{}
+	viewHeader.From(block)
+	store.viewHeaderCol.InsertOne(ctx, viewHeader)
+
+	viewTxs := make([]interface{}, block.Data.TxCount)
 	for index, tx := range block.Data.TxList {
 		rpcTx := &chainTypes.RpcTransaction{}
 		rpcTx.FromTx(tx)
 		rpcTxs[index] = rpcTx
+
+		viewTx := &ViewTransaction{}
+		viewTx.FromTx(tx)
+		viewTxs[index] = viewTx
 	}
 	store.txCol.InsertMany(ctx, rpcTxs, nil)
+	store.viewTxCol.InsertMany(ctx, viewTxs, nil)
 }
 
 func (store *MongogDbStore) DelRecord(block *chainTypes.Block) {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	store.headerCol.DeleteOne(ctx, bson.M{"hash": block.Header.Hash()})
 	store.blockCol.DeleteOne(ctx, bson.M{"hash": block.Header.Hash()})
+	store.viewBlockCol.DeleteOne(ctx, bson.M{"hash": block.Header.Hash().String()})
+	store.viewHeaderCol.DeleteOne(ctx, bson.M{"hash": block.Header.Hash().String()})
 	for _, tx := range block.Data.TxList {
 		store.txCol.DeleteOne(ctx, bson.M{"hash": tx.TxHash()})
+		store.viewTxCol.DeleteOne(ctx, bson.M{"hash": tx.TxHash().String()})
 	}
 }
 
