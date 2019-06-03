@@ -25,13 +25,13 @@ type LevelDbStore struct {
 	db        *leveldb.DB
 }
 
-func NewLevelDbStore(path string) *LevelDbStore{
+func NewLevelDbStore(path string) (*LevelDbStore, error){
 	fileutil.EnsureDir(path)
 	db, err := leveldb.OpenFile(path, nil)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return &LevelDbStore{path,db}
+	return &LevelDbStore{path,db}, nil
 }
 
 // InsertRecord check block ,if tx exist, save to to history and send history , if to is not nil, save tx receive history

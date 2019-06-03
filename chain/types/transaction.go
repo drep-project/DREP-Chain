@@ -199,13 +199,7 @@ func NewTransaction(to crypto.CommonAddress, amount, gasPrice, gasLimit *big.Int
 	return &Transaction{Data: data}
 }
 
-func NewContractTransaction(byteCode []byte, gasPrice, gasLimit *big.Int, nonce uint64, ) *Transaction {
-	if gasPrice == nil {
-		gasPrice = DefaultGasPrice
-	}
-	if gasLimit == nil {
-		gasLimit = CreateContractGas
-	}
+func NewContractTransaction(byteCode []byte, gasPrice, gasLimit *big.Int, nonce uint64) *Transaction {
 	data := TransactionData{
 		Nonce:     nonce,
 		Type:      CreateContractType,
@@ -218,12 +212,6 @@ func NewContractTransaction(byteCode []byte, gasPrice, gasLimit *big.Int, nonce 
 }
 
 func NewCallContractTransaction(to crypto.CommonAddress, input []byte, amount, gasPrice, gasLimit *big.Int, nonce uint64) *Transaction {
-	if gasPrice == nil {
-		gasPrice = DefaultGasPrice
-	}
-	if gasLimit == nil {
-		gasLimit = CallContractGas
-	}
 	data := TransactionData{
 		Nonce:     nonce,
 		Type:      CallContractType,

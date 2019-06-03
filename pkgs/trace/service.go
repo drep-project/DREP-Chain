@@ -87,11 +87,14 @@ func (traceService *TraceService) Init(executeContext *app.ExecuteContext) error
 	traceService.readyToQuit = make(chan struct{})
 
 	if traceService.Config.DbType == "leveldb" {
-		traceService.store = NewLevelDbStore(traceService.Config.HistoryDir)
+		traceService.store, err  = NewLevelDbStore(traceService.Config.HistoryDir)
 	} else if traceService.Config.DbType == "mongo" {
-		traceService.store = NewMongogDbStore(traceService.Config.Url)
+		traceService.store, err  = NewMongogDbStore(traceService.Config.Url)
 	} else {
 		return ErrUnSupportDbType
+	}
+	if err != nil {
+		return err
 	}
 	return nil
 }
