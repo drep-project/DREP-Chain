@@ -292,8 +292,6 @@ func (blockMgr *BlockMgr) fetchBlocks(peer *chainTypes.PeerInfo) error {
 					select {
 					case blocks := <-blockMgr.blocksCh:
 						for _, b := range blocks {
-				fmt.Println("xxxxxxxxxxxxxxxxxxxxxxx")
-
 							if _, ok := blockMgr.pendingSyncTasks[*b.Header.Hash()]; !ok {
 								continue
 							}
@@ -301,9 +299,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer *chainTypes.PeerInfo) error {
 							//删除块高度对应的任务
 							delete(blockMgr.pendingSyncTasks, *b.Header.Hash())
 							deletedHash = true
-							dlog.Debug("xxxx")
 							_, _, err := blockMgr.ChainService.ProcessBlock(b)
-							dlog.Debug("yyy")
 							if err != nil {
 								switch err {
 								case chainservice.ErrBlockExsist, chainservice.ErrOrphanBlockExsist:
