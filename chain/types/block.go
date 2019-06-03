@@ -13,7 +13,6 @@ type BlockHeader struct {
 	ChainId      app.ChainIdType
 	Version      int32
 	PreviousHash crypto.Hash
-	ParentHash   crypto.Hash
 	GasLimit     big.Int
 	GasUsed      big.Int
 	Height       uint64
@@ -22,7 +21,6 @@ type BlockHeader struct {
 	TxRoot       []byte
 	LeaderPubKey secp256k1.PublicKey
 	MinorPubKeys []secp256k1.PublicKey
-	Bloom        Bloom
 
 	blockHash 	*crypto.Hash			`binary:"ignore"`
 }
