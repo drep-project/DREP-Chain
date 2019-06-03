@@ -26,7 +26,6 @@ import (
 	"github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/pkgs/evm/event"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
-	types2 "github.com/drep-project/drep-chain/pkgs/evm/types"
 	"context"
 )
 
@@ -318,11 +317,11 @@ Logs:
 	return ret
 }
 
-func bloomFilter(bloom types2.Bloom, addresses []crypto.CommonAddress, topics [][]crypto.Hash) bool {
+func bloomFilter(bloom types.Bloom, addresses []crypto.CommonAddress, topics [][]crypto.Hash) bool {
 	if len(addresses) > 0 {
 		var included bool
 		for _, addr := range addresses {
-			if types2.BloomLookup(bloom, addr) {
+			if types.BloomLookup(bloom, addr) {
 				included = true
 				break
 			}
@@ -335,7 +334,7 @@ func bloomFilter(bloom types2.Bloom, addresses []crypto.CommonAddress, topics []
 	for _, sub := range topics {
 		included := len(sub) == 0 // empty rule set == wildcard
 		for _, topic := range sub {
-			if types2.BloomLookup(bloom, topic) {
+			if types.BloomLookup(bloom, topic) {
 				included = true
 				break
 			}

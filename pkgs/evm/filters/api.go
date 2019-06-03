@@ -28,7 +28,7 @@ import (
 	"github.com/drep-project/drep-chain/common/hexutil"
 	"github.com/drep-project/drep-chain/rpc"
 	"github.com/drep-project/drep-chain/chain/types"
-	"github.com/drep-project/drep-chain/pkgs/evm/event"
+	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
 )

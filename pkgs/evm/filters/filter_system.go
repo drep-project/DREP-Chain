@@ -381,11 +381,11 @@ func (es *EventSystem) lightFilterNewHead(newHeader *types.BlockHeader, callBack
 	for oldh.Hash() != newh.Hash() {
 		if uint64(oldh.Height) >= uint64(newh.Height) {
 			oldHeaders = append(oldHeaders, oldh)
-			oldh, _, _ = es.backend.ChainDb().GetBlockNode(&oldh.ParentHash, oldh.Height)
+			oldh, _, _ = es.backend.ChainDb().GetBlockNode(&oldh.PreviousHash, oldh.Height)
 		}
 		if uint64(oldh.Height) < uint64(newh.Height) {
 			newHeaders = append(newHeaders, newh)
-			newh, _, _ = es.backend.ChainDb().GetBlockNode(&newh.ParentHash, newh.Height)
+			newh, _, _ = es.backend.ChainDb().GetBlockNode(&newh.PreviousHash, newh.Height)
 			if newh == nil {
 				// happens when CHT syncing, nothing to do
 				newh = oldh

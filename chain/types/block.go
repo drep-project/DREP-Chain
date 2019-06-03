@@ -13,7 +13,6 @@ type BlockHeader struct {
 	ChainId      app.ChainIdType
 	Version      int32
 	PreviousHash crypto.Hash
-	ParentHash   crypto.Hash
 	GasLimit     big.Int
 	GasUsed      big.Int
 	Height       uint64
