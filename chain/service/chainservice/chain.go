@@ -49,8 +49,8 @@ type ChainService struct {
 	prevOrphans  map[crypto.Hash][]*chainTypes.OrphanBlock
 	oldestOrphan *chainTypes.OrphanBlock
 
-	Index         *chainTypes.BlockIndex
-	BestChain     *chainTypes.ChainView
+	Index         *BlockIndex
+	BestChain     *ChainView
 	stateLock     sync.RWMutex
 	StateSnapshot *ChainState
 
@@ -95,8 +95,8 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 	if err != nil {
 		return err
 	}
-	chainService.Index = chainTypes.NewBlockIndex()
-	chainService.BestChain = chainTypes.NewChainView(nil)
+	chainService.Index = NewBlockIndex()
+	chainService.BestChain = NewChainView(nil)
 	chainService.orphans = make(map[crypto.Hash]*chainTypes.OrphanBlock)
 	chainService.prevOrphans = make(map[crypto.Hash][]*chainTypes.OrphanBlock)
 	chainService.stateProcessor = NewStateProcessor(chainService)

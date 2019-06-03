@@ -26,15 +26,19 @@ type MongogDbStore struct {
 }
 
 // NewMongogDbStore open a new db from url, if db not exist, auto create
-func NewMongogDbStore(url string) *MongogDbStore {
+func NewMongogDbStore(url string) (*MongogDbStore, error) {
 	store := &MongogDbStore{
 		url: url,
 	}
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
 	var err error
 	store.client, err = mongo.Connect(ctx, options.Client().ApplyURI(url))
 	if err != nil {
-		panic(err)
+	 	return  nil, err
+	}
+	err = store.client.Ping(ctx, nil)
+	if err != nil {
+		return  nil, err
 	}
 	store.db = store.client.Database("drep")
 	store.txCol = store.db.Collection("tx")
@@ -44,7 +48,7 @@ func NewMongogDbStore(url string) *MongogDbStore {
 	store.viewTxCol = store.db.Collection("view_tx")
 	store.viewBlockCol = store.db.Collection("view_block")
 	store.viewHeaderCol = store.db.Collection("view_header")
-	return store
+	return store, nil
 }
 
 func (store *MongogDbStore) InsertRecord(block *chainTypes.Block) {

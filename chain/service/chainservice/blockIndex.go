@@ -1,7 +1,8 @@
-package types
+package chainservice
 
 import (
 	"github.com/drep-project/drep-chain/crypto"
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"sync"
 )
 
@@ -12,8 +13,8 @@ import (
 // indeed form a chain from the tip all the way back to the genesis block.
 type BlockIndex struct {
 	sync.RWMutex
-	Index map[crypto.Hash]*BlockNode
-	Dirty map[*BlockNode]struct{}
+	Index map[crypto.Hash]*chainTypes.BlockNode
+	Dirty map[*chainTypes.BlockNode]struct{}
 }
 
 // newBlockIndex returns a new empty instance of a block Index.  The Index will
@@ -21,8 +22,8 @@ type BlockIndex struct {
 // manually added.
 func NewBlockIndex() *BlockIndex {
 	return &BlockIndex{
-		Index: make(map[crypto.Hash]*BlockNode),
-		Dirty: make(map[*BlockNode]struct{}),
+		Index: make(map[crypto.Hash]*chainTypes.BlockNode),
+		Dirty: make(map[*chainTypes.BlockNode]struct{}),
 	}
 }
 
@@ -40,7 +41,7 @@ func (bi *BlockIndex) HaveBlock(hash *crypto.Hash) bool {
 // return nil if there is no entry for the hash.
 //
 // This function is safe for concurrent access.
-func (bi *BlockIndex) LookupNode(hash *crypto.Hash) *BlockNode {
+func (bi *BlockIndex) LookupNode(hash *crypto.Hash) *chainTypes.BlockNode {
 	bi.RLock()
 	node := bi.Index[*hash]
 	bi.RUnlock()
@@ -51,7 +52,7 @@ func (bi *BlockIndex) LookupNode(hash *crypto.Hash) *BlockNode {
 // Duplicate entries are not checked so it is up to caller to avoid adding them.
 //
 // This function is safe for concurrent access.
-func (bi *BlockIndex) AddNode(node *BlockNode) {
+func (bi *BlockIndex) AddNode(node *chainTypes.BlockNode) {
 	bi.Lock()
 	bi.addNode(node)
 	bi.Dirty[node] = struct{}{}
@@ -62,14 +63,14 @@ func (bi *BlockIndex) AddNode(node *BlockNode) {
 // Dirty. This can be used while initializing the block Index.
 //
 // This function is NOT safe for concurrent access.
-func (bi *BlockIndex) addNode(node *BlockNode) {
+func (bi *BlockIndex) addNode(node *chainTypes.BlockNode) {
 	bi.Index[*node.Hash] = node
 }
 
 // NodeStatus provides concurrent-safe access to the status field of a node.
 //
 // This function is safe for concurrent access.
-func (bi *BlockIndex) NodeStatus(node *BlockNode) BlockStatus {
+func (bi *BlockIndex) NodeStatus(node *chainTypes.BlockNode) chainTypes.BlockStatus {
 	bi.RLock()
 	status := node.Status
 	bi.RUnlock()
@@ -81,7 +82,7 @@ func (bi *BlockIndex) NodeStatus(node *BlockNode) BlockStatus {
 // flags currently on.
 //
 // This function is safe for concurrent access.
-func (bi *BlockIndex) SetStatusFlags(node *BlockNode, flags BlockStatus) {
+func (bi *BlockIndex) SetStatusFlags(node *chainTypes.BlockNode, flags chainTypes.BlockStatus) {
 	bi.Lock()
 	node.Status |= flags
 	bi.Dirty[node] = struct{}{}
@@ -92,7 +93,7 @@ func (bi *BlockIndex) SetStatusFlags(node *BlockNode, flags BlockStatus) {
 // regardless of whether they were on or off previously.
 //
 // This function is safe for concurrent access.
-func (bi *BlockIndex) UnsetStatusFlags(node *BlockNode, flags BlockStatus) {
+func (bi *BlockIndex) UnsetStatusFlags(node *chainTypes.BlockNode, flags chainTypes.BlockStatus) {
 	bi.Lock()
 	node.Status &^= flags
 	bi.Dirty[node] = struct{}{}
@@ -101,7 +102,7 @@ func (bi *BlockIndex) UnsetStatusFlags(node *BlockNode, flags BlockStatus) {
 
 // FlushToDB writes all dirty block nodes to the database. If all writes
 // succeed, this clears the dirty set.
-func (bi *BlockIndex) FlushToDB(storeBlockNodeFunc func (node *BlockNode) error) error {
+func (bi *BlockIndex) FlushToDB(storeBlockNodeFunc func (node *chainTypes.BlockNode) error) error {
 	bi.Lock()
 	if len(bi.Dirty) == 0 {
 		bi.Unlock()
@@ -117,7 +118,7 @@ func (bi *BlockIndex) FlushToDB(storeBlockNodeFunc func (node *BlockNode) error)
 
 	// If write was successful, clear the dirty set.
 	if err == nil {
-		bi.Dirty = make(map[*BlockNode]struct{})
+		bi.Dirty = make(map[*chainTypes.BlockNode]struct{})
 	}
 
 	bi.Unlock()

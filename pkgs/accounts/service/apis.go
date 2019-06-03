@@ -154,10 +154,6 @@ func (accountapi *AccountApi) Sign(address crypto.CommonAddress, hash []byte) ([
 	return sig, nil
 }
 
-func (accountapi *AccountApi) GasPrice() *big.Int {
-	return chainTypes.DefaultGasPrice
-}
-
 func (accountapi *AccountApi) GetCode(addr crypto.CommonAddress) []byte {
 	return accountapi.databaseService.GetByteCode(&addr)
 }
