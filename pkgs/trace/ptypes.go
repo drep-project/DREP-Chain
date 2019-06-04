@@ -4,46 +4,47 @@ import (
 	"github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
-	"strconv"
+	"math/big"
 )
 
 type ViewTransaction struct {
 	Hash 	  string
 	From 	  string
-	Version   string
-	Nonce     string //交易序列号
-	Type      string
+	Version   int32
+	Nonce     uint64 //交易序列号
+	Type      int
 	To        string
 	ChainId   string
 	Amount    string
-	GasPrice  string
-	GasLimit  string
-	Timestamp int64
+	GasPrice  uint64
+	GasLimit  uint64
+	Timestamp uint64
 	Data      string  //hex
 	Sig  	  string
+	Height    uint64
 }
 
 type ViewBlock struct {
 	Hash         string
 	ChainId      string
-	Version      string
+	Version      int32
 	PreviousHash string
-	GasLimit     string
-	GasUsed      string
-	Height       string
-	Timestamp    string
+	GasLimit     uint64
+	GasUsed      uint64
+	Height       uint64
+	Timestamp    uint64
 	StateRoot    string  //hex
 	TxRoot       string	 //hex
 	LeaderPubKey string
 	MinorPubKeys []string
-	Txs          []*ViewTransaction
+	Txs          []string
 }
 type ViewBlockHeader struct {
 	ChainId      string
-	Version      string
+	Version      int32
 	PreviousHash string
-	GasLimit     string
-	GasUsed      string
+	GasLimit     uint64
+	GasUsed      uint64
 	Height       uint64
 	Timestamp    uint64
 	StateRoot    string
@@ -61,10 +62,10 @@ func (viewBlockHeader *ViewBlockHeader) From(block *types.Block) *ViewBlockHeade
 
 	viewBlockHeader.Hash 			= block.Header.Hash().String()
 	viewBlockHeader.ChainId 		= common.Encode(block.Header.ChainId[:])
-	viewBlockHeader.Version 		= strconv.FormatInt(int64(block.Header.Version), 10)
+	viewBlockHeader.Version 		= block.Header.Version
 	viewBlockHeader.PreviousHash 	= block.Header.PreviousHash.String()
-	viewBlockHeader.GasLimit 		= block.Header.GasLimit.String()
-	viewBlockHeader.GasUsed 		= block.Header.GasUsed.String()
+	viewBlockHeader.GasLimit 		= block.Header.GasLimit.Uint64()
+	viewBlockHeader.GasUsed 		= block.Header.GasUsed.Uint64()
 	viewBlockHeader.Height 			= block.Header.Height
 	viewBlockHeader.Timestamp 		= block.Header.Timestamp
 	viewBlockHeader.StateRoot 		= common.Encode(block.Header.StateRoot)
@@ -81,16 +82,16 @@ func (viewBlockHeader *ViewBlockHeader) From(block *types.Block) *ViewBlockHeade
 func (rpcTransaction *ViewTransaction) FromTx(tx *types.Transaction) *ViewTransaction {
 	from, _ := tx.From()
 	rpcTransaction.Hash 		= tx.TxHash().String()
-	rpcTransaction.Version   	= strconv.FormatInt(int64(tx.Data.Version), 10)
-	rpcTransaction.Nonce     	= strconv.FormatUint(uint64(tx.Data.Nonce), 10)
-	rpcTransaction.Type      	=  strconv.FormatInt(int64(tx.Data.Type), 10)
+	rpcTransaction.Version   	= tx.Data.Version
+	rpcTransaction.Nonce     	= tx.Data.Nonce
+	rpcTransaction.Type      	= int(tx.Data.Type)
 	rpcTransaction.To         	= tx.Data.To.String()
 	rpcTransaction.ChainId     	= common.Encode(tx.Data.ChainId[:])
-	rpcTransaction.Amount      	= tx.Data.Amount.String()
-	rpcTransaction.GasPrice    	= tx.Data.GasPrice.String()
-	rpcTransaction.GasLimit    	= tx.Data.GasLimit.String()
+	rpcTransaction.Amount      	= (*big.Int)(&tx.Data.Amount).String()
+	rpcTransaction.GasPrice    	= (*big.Int)(&tx.Data.GasPrice).Uint64()
+	rpcTransaction.GasLimit    	= (*big.Int)(&tx.Data.GasLimit).Uint64()
 
-	rpcTransaction.Timestamp   	= tx.Data.Timestamp
+	rpcTransaction.Timestamp   	= uint64(tx.Data.Timestamp)
 	if 	 tx.Data.Data != nil {
 		rpcTransaction.Data = common.Encode(tx.Data.Data)
 	}
@@ -107,12 +108,12 @@ func (rpcBlock *ViewBlock) From(block *types.Block) *ViewBlock {
 
 	rpcBlock.Hash 			= block.Header.Hash().String()
 	rpcBlock.ChainId 		= common.Encode(block.Header.ChainId[:])
-	rpcBlock.Version 		= strconv.FormatInt(int64( block.Header.Version), 10)
+	rpcBlock.Version 		= block.Header.Version
 	rpcBlock.PreviousHash 	= block.Header.PreviousHash.String()
-	rpcBlock.GasLimit 		= block.Header.GasLimit.String()
-	rpcBlock.GasUsed 		= block.Header.GasUsed.String()
-	rpcBlock.Height 		= strconv.FormatUint(uint64(block.Header.Height), 10)
-	rpcBlock.Timestamp 		= strconv.FormatUint(uint64(block.Header.Timestamp), 10)
+	rpcBlock.GasLimit 		= block.Header.GasLimit.Uint64()
+	rpcBlock.GasUsed 		= block.Header.GasUsed.Uint64()
+	rpcBlock.Height 		= block.Header.Height
+	rpcBlock.Timestamp 		= uint64(block.Header.Timestamp)
 	rpcBlock.StateRoot 		= common.Encode(block.Header.StateRoot)
 	rpcBlock.TxRoot 		= common.Encode(block.Header.TxRoot)
 	rpcBlock.LeaderPubKey 	= crypto.PubKey2Address(&block.Header.LeaderPubKey).String()
@@ -121,7 +122,10 @@ func (rpcBlock *ViewBlock) From(block *types.Block) *ViewBlock {
 	for _, val := range  block.Header.MinorPubKeys {
 		rpcBlock.MinorPubKeys = append(rpcBlock.MinorPubKeys, crypto.PubKey2Address(&val).String())
 	}
-	rpcBlock.Txs = txs
+	rpcBlock.Txs  = make([]string, len(txs))
+	for index, val := range  txs {
+		rpcBlock.Txs[index] = val.Hash
+	}
 	return rpcBlock
 }
 
