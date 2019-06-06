@@ -18,7 +18,6 @@ package enode
 
 import (
 	"fmt"
-	"github.com/drep-project/drep-chain/crypto"
 	"net"
 	"reflect"
 	"strconv"
@@ -26,7 +25,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	log "github.com/drep-project/dlog"
+	"github.com/drep-project/drep-chain/crypto"
+
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/network/p2p/enr"
 	"github.com/drep-project/drep-chain/network/p2p/netutil"
@@ -239,7 +239,12 @@ func (ln *LocalNode) sign() {
 		panic(fmt.Errorf("enode: can't verify local record: %v", err))
 	}
 	ln.cur.Store(n)
-	log.Info("New local node record", "seq", ln.seq, "id", n.ID(), "ip", n.IP(), "udp", n.UDP(), "tcp", n.TCP())
+	log.WithField("seq", ln.seq).
+		WithField("id", n.ID()).
+		WithField("ip", n.IP()).
+		WithField("udp", n.UDP()).
+		WithField("tcp", n.TCP()).
+		Info("New local node record")
 }
 
 func (ln *LocalNode) bumpSeq() {

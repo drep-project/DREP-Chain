@@ -2,18 +2,18 @@ package blockmgr
 
 import (
 	"fmt"
-	"github.com/drep-project/dlog"
+	"math/big"
+	"time"
+
 	"github.com/drep-project/drep-chain/chain/params"
 	"github.com/drep-project/drep-chain/chain/service/chainservice"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/database"
-	"math/big"
-	"time"
 )
 
-func (blockMgr *BlockMgr) GenerateBlock(db *database.Database,leaderKey *secp256k1.PublicKey) (*chainTypes.Block, *big.Int,error) {
+func (blockMgr *BlockMgr) GenerateBlock(db *database.Database, leaderKey *secp256k1.PublicKey) (*chainTypes.Block, *big.Int, error) {
 	parent, err := blockMgr.ChainService.GetHighestBlock()
 	if err != nil {
 		return nil, nil, err
@@ -25,20 +25,20 @@ func (blockMgr *BlockMgr) GenerateBlock(db *database.Database,leaderKey *secp256
 	timestamp := uint64(time.Now().Unix())
 
 	blockHeader := &chainTypes.BlockHeader{
-		Version:      	common.Version,
-		PreviousHash: 	*previousHash,
-		ChainId:      	blockMgr.ChainService.ChainID(),
-		GasLimit:     	*newGasLimit,
-		Timestamp:    	timestamp,
-		Height:       	height,
-		StateRoot:  	[]byte{},
-		TxRoot: 		[]byte{},
-		LeaderPubKey: 	*leaderKey,
+		Version:      common.Version,
+		PreviousHash: *previousHash,
+		ChainId:      blockMgr.ChainService.ChainID(),
+		GasLimit:     *newGasLimit,
+		Timestamp:    timestamp,
+		Height:       height,
+		StateRoot:    []byte{},
+		TxRoot:       []byte{},
+		LeaderPubKey: *leaderKey,
 	}
 
 	finalTxs := make([]*chainTypes.Transaction, 0, len(txs))
 	gasUsed := new(big.Int)
-	gasFee := new (big.Int)
+	gasFee := new(big.Int)
 	gp := new(chainservice.GasPool).AddGas(blockHeader.GasLimit.Uint64())
 	stopchanel := make(chan struct{})
 	time.AfterFunc(time.Second*5, func() {
@@ -61,11 +61,11 @@ SELECT_TX:
 				gasFee.Add(gasFee, txGasFee)
 				gp = &newGp // use new gp and new state if success
 			} else {
-				db.RevertState(snap)   //revert old state and use old gp if fail
+				db.RevertState(snap) //revert old state and use old gp if fail
 				if err.Error() == ErrReachGasLimit.Error() {
 					break SELECT_TX
 				} else {
-					dlog.Warn("generate block", "exe tx err", err)
+					log.WithField("Reason", err).Warn("generate block fail")
 					continue
 					//  return nil, err
 				}

@@ -4,13 +4,13 @@ import (
 	"bufio"
 	systemBinary "encoding/binary"
 	"errors"
-	"github.com/drep-project/binary"
-	log "github.com/drep-project/dlog"
-	"github.com/drep-project/drep-chain/chain/types"
-	"github.com/drep-project/drep-chain/crypto"
 	"io"
 	"os"
 	"path"
+
+	"github.com/drep-project/binary"
+	"github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/crypto"
 )
 
 // errNoActiveJournal is returned if a transaction is attempted to be inserted
@@ -55,7 +55,7 @@ func (journal *txJournal) load(add func([]types.Transaction) []error) error {
 	loadBatch := func(txs types.Transactions) {
 		for _, err := range add(txs) {
 			if err != nil {
-				log.Debug("Failed to add journaled transaction", "err", err)
+				log.WithField("Reason", err).Debug("Failed to add journaled transaction")
 				dropped++
 			}
 		}
@@ -87,7 +87,7 @@ func (journal *txJournal) load(add func([]types.Transaction) []error) error {
 			batch = batch[:0]
 		}
 	}
-	log.Info("Loaded local transaction journal", "transactions", total, "dropped", dropped)
+	log.WithField("transactions", total).WithField("dropped", dropped).Info("Loaded local transaction journal")
 
 	return failure
 }
@@ -145,7 +145,7 @@ func (journal *txJournal) rotate(all map[crypto.CommonAddress][]*types.Transacti
 		return err
 	}
 	journal.writer = sink
-	log.Debug("Regenerated local transaction journal", "transactions", journaled, "accounts", len(all))
+	log.WithField("transactions", journaled).WithField("accounts", len(all)).Debug("Regenerated local transaction journal")
 
 	return nil
 }
@@ -161,7 +161,7 @@ func (journal *txJournal) close() error {
 	return err
 }
 
-func (journal *txJournal) Encode(w io.WriteCloser, v interface{}) ( error) {
+func (journal *txJournal) Encode(w io.WriteCloser, v interface{}) error {
 	bufTx, _ := binary.Marshal(v)
 	txLen := len(bufTx)
 	buf := make([]byte, txLen, txLen+8)

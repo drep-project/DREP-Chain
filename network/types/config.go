@@ -3,13 +3,13 @@ package types
 import (
 	"crypto/rand"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 
-	"github.com/drep-project/dlog"
+	"github.com/sirupsen/logrus"
+
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/network/p2p"
@@ -113,7 +113,7 @@ type Config struct {
 	EnableMsgEvents bool
 
 	// Logger is a custom logger to use with the p2p.Server.
-	Logger log.Logger `toml:",omitempty"`
+	Logger *logrus.Logger `toml:",omitempty"`
 }
 
 type P2pConfig struct {
@@ -199,7 +199,7 @@ func (c *P2pConfig) GeneratePrivateKey() *secp256k1.PrivateKey {
 	if c.DataDir == "" {
 		key, err := crypto.GenerateKey(nil)
 		if err != nil {
-			dlog.Crit(fmt.Sprintf("Failed to generate ephemeral node key: %v", err))
+			log.Fatal(fmt.Sprintf("Failed to generate ephemeral node key: %v", err))
 		}
 		return key
 	}
@@ -211,16 +211,16 @@ func (c *P2pConfig) GeneratePrivateKey() *secp256k1.PrivateKey {
 	// No persistent key found, generate and store a new one.
 	key, err := crypto.GenerateKey(rand.Reader)
 	if err != nil {
-		dlog.Crit(fmt.Sprintf("Failed to generate node key: %v", err))
+		log.Fatal(fmt.Sprintf("Failed to generate node key: %v", err))
 	}
 	instanceDir := filepath.Join(c.DataDir, c.name())
 	if err := os.MkdirAll(instanceDir, 0700); err != nil {
-		dlog.Error(fmt.Sprintf("Failed to persist node key: %v", err))
+		log.Error(fmt.Sprintf("Failed to persist node key: %v", err))
 		return key
 	}
 	keyfile = filepath.Join(instanceDir, datadirPrivateKey)
 	if err := crypto.SaveECDSA(keyfile, key); err != nil {
-		dlog.Error(fmt.Sprintf("Failed to persist node key: %v", err))
+		log.Error(fmt.Sprintf("Failed to persist node key: %v", err))
 	}
 	return key
 }

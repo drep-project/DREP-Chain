@@ -31,24 +31,25 @@ var (
 type TraceService struct {
 	Config           *HistoryConfig
 	ChainService     *chainService.ChainService `service:"chain"`
+
 	eventNewBlockSub event.Subscription
 	newBlockChan     chan *chainTypes.Block
 
 	detachBlockSub  event.Subscription
 	detachBlockChan chan *chainTypes.Block
-	store           IStore
 
+	store           IStore
 	readyToQuit chan struct{}
 }
 
 func (traceService *TraceService) Name() string {
-	return "trace"
+	return MODULENAME
 }
 
 func (traceService *TraceService) Api() []app.API {
 	return []app.API{
 		app.API{
-			Namespace: "trace",
+			Namespace: MODULENAME,
 			Version:   "1.0",
 			Service: &TraceApi{
 				traceService,
@@ -66,6 +67,7 @@ func (traceService *TraceService) P2pMessages() map[int]interface{} {
 	return map[int]interface{}{}
 }
 
+// Init used to create connection to storage(leveldb and mongo)
 func (traceService *TraceService) Init(executeContext *app.ExecuteContext) error {
 	traceService.Config = DefaultHistoryConfig
 	homeDir := executeContext.CommonConfig.HomeDir
@@ -84,18 +86,20 @@ func (traceService *TraceService) Init(executeContext *app.ExecuteContext) error
 
 	traceService.newBlockChan = make(chan *chainTypes.Block, 1000)
 	traceService.detachBlockChan = make(chan *chainTypes.Block, 1000)
-	traceService.readyToQuit = make(chan struct{})
 
 	if traceService.Config.DbType == "leveldb" {
 		traceService.store, err  = NewLevelDbStore(traceService.Config.HistoryDir)
+		log.WithField("path", traceService.Config.HistoryDir).Error("cannot open db file")
 	} else if traceService.Config.DbType == "mongo" {
 		traceService.store, err  = NewMongogDbStore(traceService.Config.Url)
+		log.WithField("url", traceService.Config.Url).Error("try connect mongo fail")
 	} else {
 		return ErrUnSupportDbType
 	}
 	if err != nil {
 		return err
 	}
+	traceService.readyToQuit = make(chan struct{})
 	return nil
 }
 
@@ -109,6 +113,9 @@ func (traceService *TraceService) Start(executeContext *app.ExecuteContext) erro
 	return nil
 }
 
+// Process used to resolve two types of signals,
+// newBlockChan is the signal that blocks are added to the chain,
+// the other is the detachBlockChan that blocks are withdrawn from the chain.
 func (traceService *TraceService) Process() error {
 	for {
 		select {
@@ -133,11 +140,17 @@ func (traceService *TraceService) Stop(executeContext *app.ExecuteContext) error
 	if traceService.Config == nil || !traceService.Config.Enable {
 		return nil
 	}
-	traceService.eventNewBlockSub.Unsubscribe()
-	traceService.detachBlockSub.Unsubscribe()
-	traceService.readyToQuit <- struct{}{} // tell process to stop in deal all blocks in chanel
-	traceService.readyToQuit <- struct{}{} // wait for process is ok to stop
-	traceService.store.Close()
+	if traceService.eventNewBlockSub != nil {
+		traceService.eventNewBlockSub.Unsubscribe()
+	}
+	if traceService.detachBlockSub != nil{
+		traceService.detachBlockSub.Unsubscribe()
+	}
+	if traceService.readyToQuit != nil {
+		traceService.readyToQuit <- struct{}{} // tell process to stop in deal all blocks in chanel
+		traceService.readyToQuit <- struct{}{} // wait for process is ok to stop
+		traceService.store.Close()
+	}
 	return nil
 }
 

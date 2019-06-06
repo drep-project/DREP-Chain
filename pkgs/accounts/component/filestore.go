@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/drep-project/dlog"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/common/fileutil"
@@ -76,7 +75,7 @@ func (fs FileStore) ExportKey(auth string) ([]*chainTypes.Node, error) {
 	err := fileutil.EachChildFile(fs.keysDirPath, func(path string) (bool, error) {
 		contents, err := ioutil.ReadFile(path)
 		if err != nil {
-			dlog.Error("read key store error ", "Msg", err.Error())
+			log.WithField("Msg", err).Error("read key store error ")
 			return false, err
 		}
 
@@ -86,7 +85,7 @@ func (fs FileStore) ExportKey(auth string) ([]*chainTypes.Node, error) {
 		}
 
 		if err != nil {
-			dlog.Error("read key store error ", "Msg", err.Error())
+			log.WithField("Msg", err).Error("read key store error ", "Msg", err.Error())
 			return false, err
 		}
 		persistedNodes = append(persistedNodes, node)

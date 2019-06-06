@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"github.com/drep-project/drep-chain/crypto"
-	log "github.com/drep-project/dlog"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/syndtr/goleveldb/leveldb/iterator"

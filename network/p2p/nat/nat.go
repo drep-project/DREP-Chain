@@ -25,8 +25,7 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/drep-project/dlog"
-	"github.com/jackpal/go-nat-pmp"
+	natpmp "github.com/jackpal/go-nat-pmp"
 )
 
 // An implementation of nat.Interface can map local ports to ports
@@ -98,7 +97,7 @@ const (
 // Map adds a port mapping on m and keeps it alive until c is closed.
 // This function is typically invoked in its own goroutine.
 func Map(m Interface, c chan struct{}, protocol string, extport, intport int, name string) {
-	log := log.New("proto", protocol, "extport", extport, "intport", intport, "interface", m)
+	log := NewLog().WithField("proto", protocol).WithField("extport", extport).WithField("intport", intport).WithField("interface", m)
 	refresh := time.NewTimer(mapUpdateInterval)
 	defer func() {
 		refresh.Stop()
@@ -106,7 +105,7 @@ func Map(m Interface, c chan struct{}, protocol string, extport, intport int, na
 		m.DeleteMapping(protocol, extport, intport)
 	}()
 	if err := m.AddMapping(protocol, extport, intport, name, mapTimeout); err != nil {
-		log.Debug("Couldn't add port mapping", "err", err)
+		log.WithField("err", err).Debug("Couldn't add port mapping")
 	} else {
 		log.Info("Mapped network port")
 	}
@@ -119,7 +118,7 @@ func Map(m Interface, c chan struct{}, protocol string, extport, intport int, na
 		case <-refresh.C:
 			log.Trace("Refreshing port mapping")
 			if err := m.AddMapping(protocol, extport, intport, name, mapTimeout); err != nil {
-				log.Debug("Couldn't add port mapping", "err", err)
+				log.WithField("err", err).Debug("Couldn't add port mapping")
 			}
 			refresh.Reset(mapUpdateInterval)
 		}

@@ -24,12 +24,11 @@ import (
 	"net"
 	"time"
 
+	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/common/mclock"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/network/p2p/netutil"
 	"golang.org/x/crypto/sha3"
-	log "github.com/drep-project/dlog"
-	"github.com/drep-project/binary"
 )
 
 var (
@@ -57,11 +56,11 @@ type Network struct {
 	conn        transport
 	netrestrict *netutil.Netlist
 
-	closed      chan struct{}           // closed when loop is done
-	closeReq    chan struct{}           // 'request to close'
-	refreshReq  chan []*Node            // lookups ask for refresh on this channel
-	refreshResp chan (<-chan struct{})  // ...and get the channel to block on from this one
-	read             chan ingressPacket // ingress packets arrive here
+	closed           chan struct{}          // closed when loop is done
+	closeReq         chan struct{}          // 'request to close'
+	refreshReq       chan []*Node           // lookups ask for refresh on this channel
+	refreshResp      chan (<-chan struct{}) // ...and get the channel to block on from this one
+	read             chan ingressPacket     // ingress packets arrive here
 	timeout          chan timeoutEvent
 	queryReq         chan *findnodeQuery // lookups submit findnode queries on this channel
 	tableOpReq       chan func()
@@ -144,14 +143,14 @@ func newNetwork(conn transport, ourPubkey ecdsa.PublicKey, dbPath string, netres
 
 	tab := newTable(ourID, conn.localAddr())
 	net := &Network{
-		db:          db,
-		conn:        conn,
-		netrestrict: netrestrict,
-		tab:         tab,
-		topictab:    newTopicTable(db, tab.self),
-		ticketStore: newTicketStore(),
-		refreshReq:  make(chan []*Node),
-		refreshResp: make(chan (<-chan struct{})),
+		db:               db,
+		conn:             conn,
+		netrestrict:      netrestrict,
+		tab:              tab,
+		topictab:         newTopicTable(db, tab.self),
+		ticketStore:      newTicketStore(),
+		refreshReq:       make(chan []*Node),
+		refreshResp:      make(chan (<-chan struct{})),
 		closed:           make(chan struct{}),
 		closeReq:         make(chan struct{}),
 		read:             make(chan ingressPacket, 100),
@@ -427,10 +426,7 @@ loop:
 			if err := net.handle(n, pkt.ev, &pkt); err != nil {
 				status = err.Error()
 			}
-			log.Trace("", "msg", log.Lazy{Fn: func() string {
-				return fmt.Sprintf("<<< (%d) %v from %x@%v: %v -> %v (%v)",
-					net.tab.count, pkt.ev, pkt.remoteID[:8], pkt.remoteAddr, prestate, n.state, status)
-			}})
+			log.Trace("msg ", fmt.Sprintf("<<< (%d) %v from %x@%v: %v -> %v (%v)", net.tab.count, pkt.ev, pkt.remoteID[:8], pkt.remoteAddr, prestate, n.state, status))
 			// TODO: persist state if n.state goes >= known, delete if it goes <= known
 
 		// State transition timeouts.
@@ -446,10 +442,7 @@ loop:
 			if err := net.handle(timeout.node, timeout.ev, nil); err != nil {
 				status = err.Error()
 			}
-			log.Trace("", "msg", log.Lazy{Fn: func() string {
-				return fmt.Sprintf("--- (%d) %v for %x@%v: %v -> %v (%v)",
-					net.tab.count, timeout.ev, timeout.node.ID[:8], timeout.node.addr(), prestate, timeout.node.state, status)
-			}})
+			log.Trace("msg", fmt.Sprintf("--- (%d) %v for %x@%v: %v -> %v (%v)", net.tab.count, timeout.ev, timeout.node.ID[:8], timeout.node.addr(), prestate, timeout.node.state, status))
 
 		// Querying.
 		case q := <-net.queryReq:
@@ -681,15 +674,13 @@ func (net *Network) refresh(done chan<- struct{}) {
 		return
 	}
 	for _, n := range seeds {
-		log.Debug("", "msg", log.Lazy{Fn: func() string {
-			var age string
-			if net.db != nil {
-				age = time.Since(net.db.lastPong(n.ID)).String()
-			} else {
-				age = "unknown"
-			}
-			return fmt.Sprintf("seed node (age %s): %v", age, n)
-		}})
+		var age string
+		if net.db != nil {
+			age = time.Since(net.db.lastPong(n.ID)).String()
+		} else {
+			age = "unknown"
+		}
+		log.Debug(fmt.Sprintf("seed node (age %s): %v", age, n))
 		n = net.internNodeFromDB(n)
 		if n.state == unknown {
 			net.transition(n, verifyinit)
@@ -1107,14 +1098,14 @@ func (net *Network) ping(n *Node, addr *net.UDPAddr) {
 		//fmt.Println(" not sent")
 		return
 	}
-	log.Trace("Pinging remote node", "node", n.ID)
+	log.WithField("node", n.ID).Trace("Pinging remote node")
 	n.pingTopics = net.ticketStore.regTopicSet()
 	n.pingEcho = net.conn.sendPing(n, addr, n.pingTopics)
 	net.timedEvent(respTimeout, n, pongTimeout)
 }
 
 func (net *Network) handlePing(n *Node, pkt *ingressPacket) {
-	log.Trace("Handling remote ping", "node", n.ID)
+	log.WithField("node", n.ID).Trace("Handling remote ping")
 	ping := pkt.data.(*ping)
 	n.TCP = ping.From.TCP
 	t := net.topictab.getTicket(n, ping.Topics)
@@ -1129,7 +1120,7 @@ func (net *Network) handlePing(n *Node, pkt *ingressPacket) {
 }
 
 func (net *Network) handleKnownPong(n *Node, pkt *ingressPacket) error {
-	log.Trace("Handling known pong", "node", n.ID)
+	log.WithField("node", n.ID).Trace("Handling known pong")
 	net.abortTimedEvent(n, pongTimeout)
 	now := mclock.Now()
 	ticket, err := pongToTicket(now, n.pingTopics, n, pkt)
@@ -1137,7 +1128,7 @@ func (net *Network) handleKnownPong(n *Node, pkt *ingressPacket) error {
 		// fmt.Printf("(%x) ticket: %+v\n", net.tab.self.ID[:8], pkt.data)
 		net.ticketStore.addTicket(now, pkt.data.(*pong).ReplyTok, ticket)
 	} else {
-		log.Trace("Failed to convert pong to ticket", "err", err)
+		log.WithField("err", err).Trace("Failed to convert pong to ticket")
 	}
 	n.pingEcho = nil
 	n.pingTopics = nil
@@ -1234,7 +1225,7 @@ func (net *Network) checkTopicRegister(data *topicRegister) (*pong, error) {
 
 func rlpHash(x interface{}) (h crypto.Hash) {
 	hw := sha3.NewLegacyKeccak256()
-	buf,_ := binary.Marshal(x)
+	buf, _ := binary.Marshal(x)
 	hw.Write(buf)
 	//rlp.Encode(hw, x)
 	hw.Sum(h[:0])

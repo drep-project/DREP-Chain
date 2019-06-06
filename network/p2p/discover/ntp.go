@@ -24,8 +24,6 @@ import (
 	"net"
 	"sort"
 	"time"
-
-	log "github.com/drep-project/dlog"
 )
 
 const (
@@ -52,7 +50,7 @@ func checkClockDrift() {
 		log.Warn(fmt.Sprintf("System clock seems off by %v, which can prevent network connectivity", drift))
 		log.Warn("Please enable network time synchronisation in system settings.")
 	} else {
-		log.Debug("NTP sanity check done", "drift", drift)
+		log.WithField("drift", drift).Debug("NTP sanity check done")
 	}
 }
 

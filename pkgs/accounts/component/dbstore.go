@@ -1,16 +1,16 @@
 package component
 
 import (
-	"os"
-	"fmt"
 	"encoding/json"
+	"fmt"
+	"os"
 	"path/filepath"
-	"github.com/drep-project/dlog"
-	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/common/fileutil"
+
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/drep-chain/common/fileutil"
+	"github.com/drep-project/drep-chain/crypto"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 // DbStore use leveldb as the storegae
@@ -84,7 +84,7 @@ func (dbStore *DbStore) ExportKey(auth string) ([]*chainTypes.Node, error) {
 
 		node, err := bytesToCryptoNode(value, auth)
 		if err != nil {
-			dlog.Error("read key store error ", "Msg", err)
+			log.WithField("Msg", err).Error("read key store error ")
 			continue
 		}
 		persistedNodes = append(persistedNodes, node)

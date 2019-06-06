@@ -20,17 +20,17 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/drep-project/drep-chain/crypto/sha3"
 	"net"
 	"time"
 
-	log "github.com/drep-project/dlog"
+	"github.com/drep-project/drep-chain/crypto/sha3"
+
+	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/drep-chain/network/p2p/enr"
 	"github.com/drep-project/drep-chain/network/p2p/nat"
 	"github.com/drep-project/drep-chain/network/p2p/netutil"
-	"github.com/drep-project/drep-chain/network/p2p/enr"
-	"github.com/drep-project/binary"
 )
 
 const Version = 4
@@ -244,7 +244,7 @@ func ListenUDP(priv *secp256k1.PrivateKey, conn conn, nodeDBPath string, netrest
 	if err != nil {
 		return nil, err
 	}
-	log.Info("UDP listener up", "net", net.tab.self)
+	log.WithField("net", net.tab.self).Info("UDP listener up")
 	transport.net = net
 	go transport.readLoop()
 	return net, nil
@@ -351,7 +351,7 @@ func encodePacket(priv *secp256k1.PrivateKey, ptype byte, req interface{}) (p, h
 	b := new(bytes.Buffer)
 	b.Write(headSpace)
 	b.WriteByte(ptype)
-	buf,err := binary.Marshal(req)
+	buf, err := binary.Marshal(req)
 	//if err := rlp.Encode(b, req); err != nil {
 	//	log.Error(fmt.Sprint("error encoding packet:", err))
 	//	return nil, nil, err

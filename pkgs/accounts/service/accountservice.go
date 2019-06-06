@@ -34,8 +34,8 @@ var (
 
 // CliService provides an interactive command line window
 type AccountService struct {
-	DatabaseService *database.DatabaseService  `service:"database"`
-	Blockmgr        *blockmgr.BlockMgr `service:"blockmgr"`
+	DatabaseService *database.DatabaseService `service:"database"`
+	Blockmgr        *blockmgr.BlockMgr        `service:"blockmgr"`
 	CommonConfig    *app.CommonConfig
 	Config          *accountTypes.Config
 	Wallet          *Wallet
@@ -44,7 +44,7 @@ type AccountService struct {
 
 // Name name
 func (accountService *AccountService) Name() string {
-	return "accounts"
+	return MODULENAME
 }
 
 // Api api none

@@ -27,7 +27,7 @@ func (accountapi *AccountApi) ListAddress() ([]*crypto.CommonAddress, error) {
 }
 
 // CreateAccount create a new account and return address
-func (accountapi *AccountApi) CreateAccount() (*crypto.CommonAddress, error) {
+func (accountapi *AccountApi) CreateAccount() (*RpcAccount, error) {
 	if !accountapi.Wallet.IsOpen() {
 		return nil, ErrClosedWallet
 	}
@@ -35,7 +35,9 @@ func (accountapi *AccountApi) CreateAccount() (*crypto.CommonAddress, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newAaccount.Address, nil
+	return &RpcAccount{
+		newAaccount.Address, common.Encode(newAaccount.PrivateKey.PubKey().Serialize()),
+	} , nil
 }
 
 func (accountapi *AccountApi) CreateWallet(password string) error {
@@ -156,4 +158,9 @@ func (accountapi *AccountApi) Sign(address crypto.CommonAddress, hash []byte) ([
 
 func (accountapi *AccountApi) GetCode(addr crypto.CommonAddress) []byte {
 	return accountapi.databaseService.GetByteCode(&addr)
+}
+
+type RpcAccount struct {
+	Addr *crypto.CommonAddress
+	Pubkey  string
 }

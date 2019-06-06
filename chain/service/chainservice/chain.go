@@ -77,7 +77,7 @@ func (chainService *ChainService) ChainID() app.ChainIdType {
 }
 
 func (chainService *ChainService) Name() string {
-	return "chain"
+	return MODULENAME
 }
 
 func (chainService *ChainService) Api() []app.API {
@@ -126,7 +126,7 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 
 	chainService.apis = []app.API{
 		app.API{
-			Namespace: "chain",
+			Namespace: MODULENAME,
 			Version:   "1.0",
 			Service: &ChainApi{
 				chainService: chainService,

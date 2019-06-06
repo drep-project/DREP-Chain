@@ -27,12 +27,12 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/drep-project/dlog"
+	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/common/mclock"
 	"github.com/drep-project/drep-chain/network/p2p/enode"
 	"github.com/drep-project/drep-chain/network/p2p/enr"
-	"github.com/drep-project/binary"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -105,7 +105,7 @@ type PeerEvent struct {
 type Peer struct {
 	rw           *conn
 	runningProto map[string]*protoRW //有效的协议（消息对应的消费者）
-	log          log.Logger
+	log          *logrus.Logger
 	created      mclock.AbsTime
 
 	wg       sync.WaitGroup
@@ -185,6 +185,7 @@ func (p *Peer) Inbound() bool {
 
 func newPeer(conn *conn, protocols []Protocol) *Peer {
 	protomap := matchProtocols(protocols, conn.caps, conn)
+	xx := NewLog().WithField("id", conn.peerNode.ID()).WithField("conn", conn.flags)
 	p := &Peer{
 		rw:           conn,
 		runningProto: protomap,
@@ -192,12 +193,12 @@ func newPeer(conn *conn, protocols []Protocol) *Peer {
 		disc:         make(chan DiscReason),
 		protoErr:     make(chan error, len(protomap)+1), // protocols + pingLoop
 		closed:       make(chan struct{}),
-		log:          log.New("id", conn.peerNode.ID(), "conn", conn.flags),
+		log:          xx.Logger ,
 	}
 	return p
 }
 
-func (p *Peer) Log() log.Logger {
+func (p *Peer) Log() *logrus.Logger {
 	return p.log
 }
 
@@ -297,7 +298,7 @@ func (p *Peer) handle(msg Msg) error {
 		// This is the last message. We don't need to discard or
 		// check errors because, the connection will be closed after it.
 		//rlp.Decode(msg.Payload, &reason)
-		buf,err := ioutil.ReadAll(msg.Payload)
+		buf, err := ioutil.ReadAll(msg.Payload)
 		if err != nil {
 			return fmt.Errorf("read dis connect msg err:%v", err)
 		}
@@ -305,7 +306,7 @@ func (p *Peer) handle(msg Msg) error {
 		if err != nil {
 			return fmt.Errorf("dismsg unmarshal msg err:%v", err)
 		}
-		p.log.Info("dis connect from peer", "peer ip", p.IP())
+		p.log.WithField("peer ip", p.IP()).Info("dis connect from peer")
 		return reason[0]
 	case msg.Code < baseProtocolLength:
 		// ignore other base protocol messages
@@ -335,7 +336,7 @@ func countMatchingProtocols(protocols []Protocol, caps []Cap) int {
 				n++
 			}
 		}
-}
+	}
 	return n
 }
 
@@ -381,7 +382,7 @@ func (p *Peer) startProtocols(writeStart <-chan struct{}, writeErr chan<- error)
 			//本peer发送的消息，通过rw发送出去
 			err := proto.Run(p, rw)
 			if err == nil {
-				p.log.Info(fmt.Sprintf("start Protocols %s/%d returned", proto.Name, proto.Version))
+				p.log.Info(fmt.Sprintf("Protocol %s/%d returned", proto.Name, proto.Version))
 				err = errProtocolReturned
 			} else if err != io.EOF {
 				p.log.Info(fmt.Sprintf("Protocol %s/%d failed", proto.Name, proto.Version), "err", err)
