@@ -335,7 +335,7 @@ func countMatchingProtocols(protocols []Protocol, caps []Cap) int {
 				n++
 			}
 		}
-	}
+}
 	return n
 }
 

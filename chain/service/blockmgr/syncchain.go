@@ -195,7 +195,9 @@ func (blockMgr *BlockMgr) batchReqBlocks(hashs []crypto.Hash, errCh chan error) 
 		}
 	}
 
-	errCh <- fmt.Errorf("p2p no peers")
+	if successNum == 0 {
+		errCh <- fmt.Errorf("p2p no peers")
+	}
 
 	return
 }

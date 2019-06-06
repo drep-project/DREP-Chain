@@ -9,7 +9,7 @@ import (
 )
 
 func (cs *ConsensusService) receiveMsg(peer *consensusTypes.PeerInfo, rw p2p.MsgReadWriter) error {
-	fmt.Println("ConsensusService peeraddr:", peer.IP())
+	dlog.Info("ConsensusService peeraddr:", "perr ip",peer.IP())
 	for {
 		msg, err := rw.ReadMsg()
 		if err != nil {
@@ -18,6 +18,7 @@ func (cs *ConsensusService) receiveMsg(peer *consensusTypes.PeerInfo, rw p2p.Msg
 		}
 
 		if msg.Size > consensusTypes.MaxMsgSize {
+			dlog.Info("consensus receive msg", "msg size", msg.Size)
 			return ErrMsgSize
 		}
 
