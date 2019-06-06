@@ -130,6 +130,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 					defer delete(consensusService.peersInfo, peer.IP())
 					return consensusService.receiveMsg(pi, rw)
 				}
+				dlog.Info("protocol run", "no produce,peer.ip", peer.IP())
 				//非骨干节点，不启动共识相关处理
 				return nil
 			},
@@ -291,7 +292,7 @@ func (consensusService *ConsensusService) runAsMember() (block *chainTypes.Block
 		multiSig = &val.MultiSignature
 		minorPubkeys := []secp256k1.PublicKey{}
 		for index, producer := range consensusService.ChainService.Config.Producers {
-			if multiSig.Bitmap[index] == 1 {  //TODO  Exclude leader
+			if multiSig.Bitmap[index] == 1 { //TODO  Exclude leader
 				minorPubkeys = append(minorPubkeys, *producer.Pubkey)
 			}
 		}
@@ -336,7 +337,7 @@ func (consensusService *ConsensusService) runAsLeader() (block *chainTypes.Block
 	consensusService.leader.Reset()
 	minorPubkeys := []secp256k1.PublicKey{}
 	for index, producer := range consensusService.ChainService.Config.Producers {
-		if multiSig.Bitmap[index] == 1 {  //TODO  Exclude leader
+		if multiSig.Bitmap[index] == 1 { //TODO  Exclude leader
 			minorPubkeys = append(minorPubkeys, *producer.Pubkey)
 		}
 	}
@@ -539,8 +540,6 @@ func (consensusService *ConsensusService) verifyBlockContent(block *chainTypes.B
 		dlog.Debug("multySigVerify", "SkipCheckMutiSig", consensusService.ChainService.Config.SkipCheckMutiSig)
 		return false
 	}
-
-	fmt.Printf("&&&&&&&&&&&&&&&&&:%#v\n", block)
 
 	gp := new(chainService.GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction

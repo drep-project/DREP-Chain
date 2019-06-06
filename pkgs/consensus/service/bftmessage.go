@@ -9,7 +9,7 @@ import (
 )
 
 func (cs *ConsensusService) receiveMsg(peer *consensusTypes.PeerInfo, rw p2p.MsgReadWriter) error {
-	dlog.Info("ConsensusService peeraddr:", "perr ip",peer.IP())
+	dlog.Info("ConsensusService peeraddr:", "perr ip", peer.IP())
 	for {
 		msg, err := rw.ReadMsg()
 		if err != nil {
