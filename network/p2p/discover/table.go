@@ -26,15 +26,14 @@ import (
 	crand "crypto/rand"
 	"encoding/binary"
 	"fmt"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	mrand "math/rand"
 	"net"
 	"sort"
 	"sync"
 	"time"
 
-	log "github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/network/p2p/enode"
 	"github.com/drep-project/drep-chain/network/p2p/netutil"
 )
@@ -315,9 +314,9 @@ func (tab *Table) findnode(n *node, targetKey encPubkey, reply chan<- []*node) {
 	} else if err != nil || len(r) == 0 {
 		fails++
 		tab.db.UpdateFindFails(n.ID(), n.IP(), fails)
-		log.Trace("Findnode failed", "id", n.ID(), "failcount", fails, "err", err)
+		log.WithField( "id", n.ID()).WithField("failcount", fails).WithField("err", err).Trace("Findnode failed")
 		if fails >= maxFindnodeFailures {
-			log.Trace("Too many findnode failures, dropping", "id", n.ID(), "failcount", fails)
+			log.WithField( "id", n.ID()).WithField("failcount", fails).Trace("Too many findnode failures, dropping")
 			tab.delete(n)
 		}
 	} else if fails > 0 {
@@ -440,8 +439,7 @@ func (tab *Table) loadSeedNodes() {
 	seeds = append(seeds, tab.nursery...)
 	for i := range seeds {
 		seed := seeds[i]
-		age := log.Lazy{Fn: func() interface{} { return time.Since(tab.db.LastPongReceived(seed.ID(), seed.IP())) }}
-		log.Trace("Found seed node in database", "id", seed.ID(), "addr", seed.addr(), "age", age)
+		log.Trace("Found seed node in database", "id", seed.ID(), "addr", seed.addr())
 		tab.addSeenNode(seed)
 	}
 }
@@ -466,16 +464,27 @@ func (tab *Table) doRevalidate(done chan<- struct{}) {
 	if err == nil {
 		// The node responded, move it to the front.
 		last.livenessChecks++
-		log.Debug("Revalidated node", "b", bi, "id", last.ID(), "checks", last.livenessChecks)
+		log.WithField( "b", bi).
+			WithField( "id", last.ID()).
+			WithField("checks", last.livenessChecks).
+			Debug("Revalidated node")
 		tab.bumpInBucket(b, last)
 		return
 	}
 	// No reply received, pick a replacement or delete the node if there aren't
 	// any replacements.
 	if r := tab.replace(b, last); r != nil {
-		log.Debug("Replaced dead node", "b", bi, "id", last.ID(), "ip", last.IP(), "checks", last.livenessChecks, "r", r.ID(), "rip", r.IP())
+		log.WithField( "b", bi).
+		WithField( "id", last.ID()).
+		WithField( "checks", last.livenessChecks).
+		WithField( "r", r.ID()).
+		WithField( "rip", r.IP()).
+		Debug("Replaced dead node")
 	} else {
-		log.Debug("Removed dead node", "b", bi, "id", last.ID(), "ip", last.IP(), "checks", last.livenessChecks)
+		log.WithField( "b", bi).
+		WithField( "id", last.ID()).
+		WithField( "checks", last.livenessChecks).
+		Debug("Removed dead node")
 	}
 }
 
@@ -640,11 +649,11 @@ func (tab *Table) addIP(b *bucket, ip net.IP) bool {
 		return true
 	}
 	if !tab.ips.Add(ip) {
-		log.Debug("IP exceeds table limit", "ip", ip)
+		log.WithField("ip", ip).Debug("IP exceeds table limit")
 		return false
 	}
 	if !b.ips.Add(ip) {
-		log.Debug("IP exceeds bucket limit", "ip", ip)
+		log.WithField("ip", ip).Debug("IP exceeds bucket limit")
 		tab.ips.Remove(ip)
 		return false
 	}

@@ -25,8 +25,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-
-	log "github.com/drep-project/dlog"
 )
 
 const (

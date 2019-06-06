@@ -58,6 +58,7 @@ func (viewBlockHeader *ViewBlockHeader) From(block *types.Block) *ViewBlockHeade
 	txs := make([]*ViewTransaction, len(block.Data.TxList))
 	for i, tx := range block.Data.TxList {
 		txs[i] = new (ViewTransaction).FromTx(tx)
+		txs[i].Height = block.Header.Height
 	}
 
 	viewBlockHeader.Hash 			= block.Header.Hash().String()
@@ -104,6 +105,7 @@ func (rpcBlock *ViewBlock) From(block *types.Block) *ViewBlock {
 	txs := make([]*ViewTransaction, len(block.Data.TxList))
 	for i, tx := range block.Data.TxList {
 		txs[i] = new (ViewTransaction).FromTx(tx)
+		txs[i].Height = block.Header.Height
 	}
 
 	rpcBlock.Hash 			= block.Header.Hash().String()

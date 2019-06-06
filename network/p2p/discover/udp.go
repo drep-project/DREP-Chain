@@ -21,13 +21,13 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
-	"github.com/drep-project/drep-chain/crypto/sha3"
 	"net"
 	"sync"
 	"time"
 
+	"github.com/drep-project/drep-chain/crypto/sha3"
+
 	"github.com/drep-project/binary"
-	log "github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/network/p2p/enode"
@@ -104,7 +104,7 @@ type (
 		Nodes      []rpcNode
 		Expiration uint64
 		// Ignore additional fields (for forward compatibility).
-		Rest [] enr.RawValue `rlp:"tail"`
+		Rest []enr.RawValue `rlp:"tail"`
 	}
 
 	rpcNode struct {
@@ -354,7 +354,7 @@ func (t *udp) findnode(toid enode.ID, toaddr *net.UDPAddr, target encPubkey) ([]
 			nreceived++
 			n, err := t.nodeFromRPC(toaddr, rn)
 			if err != nil {
-				log.Trace("Invalid neighbor node received", "ip", rn.IP, "addr", toaddr, "err", err)
+				log.WithField("ip", rn.IP).WithField("addr", toaddr).WithField("err", err).Trace("Invalid neighbor node received")
 				continue
 			}
 			nodes = append(nodes, n)
@@ -509,7 +509,7 @@ func init() {
 	for n := 0; ; n++ {
 		p.Nodes = append(p.Nodes, maxSizeNode)
 		//size, _, err := rlp.EncodeToReader(p)
-		buf,err := binary.Marshal(p)
+		buf, err := binary.Marshal(p)
 		if err != nil {
 			// If this ever happens, it will be caught by the unit tests.
 			panic("cannot encode: " + err.Error())
@@ -532,7 +532,7 @@ func (t *udp) send(toaddr *net.UDPAddr, toid enode.ID, ptype byte, req packet) (
 
 func (t *udp) write(toaddr *net.UDPAddr, toid enode.ID, what string, packet []byte) error {
 	_, err := t.conn.WriteToUDP(packet, toaddr)
-	log.Trace(">> "+what, "id", toid, "addr", toaddr, "err", err)
+	log.WithField("id", toid).WithField("addr", toaddr).WithField("err", err).Trace(">> " + what)
 	return err
 }
 
@@ -540,7 +540,7 @@ func encodePacket(priv *secp256k1.PrivateKey, ptype byte, req interface{}) (pack
 	b := new(bytes.Buffer)
 	b.Write(headSpace)
 	b.WriteByte(ptype)
-	buf ,err := binary.Marshal(req)
+	buf, err := binary.Marshal(req)
 	b.Write(buf)
 	//if err := rlp.Encode(b, req); err != nil {
 	//	log.Error("Can't encode discv4 packet", "err", err)
@@ -549,7 +549,7 @@ func encodePacket(priv *secp256k1.PrivateKey, ptype byte, req interface{}) (pack
 	packet = b.Bytes()
 	sig, err := crypto.Sign(sha3.Keccak256(packet[headSize:]), priv)
 	if err != nil {
-		log.Error("Can't sign discv4 packet", "err", err)
+		log.WithField("err", err).Error("Can't sign discv4 packet")
 		return nil, nil, err
 	}
 	copy(packet[macSize:], sig)
@@ -576,11 +576,11 @@ func (t *udp) readLoop(unhandled chan<- ReadPacket) {
 		nbytes, from, err := t.conn.ReadFromUDP(buf)
 		if netutil.IsTemporaryError(err) {
 			// Ignore temporary read errors.
-			log.Debug("Temporary UDP read error", "err", err)
+			log.WithField("err", err).Debug("Temporary UDP read error")
 			continue
 		} else if err != nil {
 			// Shut down the loop for permament errors.
-			log.Debug("UDP read error", "err", err)
+			log.WithField("err", err).Debug("UDP read error")
 			return
 		}
 		if t.handlePacket(from, buf[:nbytes]) != nil && unhandled != nil {
@@ -595,14 +595,14 @@ func (t *udp) readLoop(unhandled chan<- ReadPacket) {
 func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
 	packet, fromKey, hash, err := decodePacket(buf)
 	if err != nil {
-		log.Debug("Bad discv4 packet", "addr", from, "err", err)
+		log.WithField("err", err).WithField("addr", from).Debug("Bad discv4 packet")
 		return err
 	}
 	fromID := fromKey.id()
 	if err == nil {
 		err = packet.preverify(t, from, fromID, fromKey)
 	}
-	log.Trace("<< "+packet.name(), "id", fromID, "addr", from, "err", err)
+	log.WithField("id", fromID).WithField("addr", from).WithField("err", err).Trace("<< " + packet.name())
 	if err == nil {
 		packet.handle(t, from, fromID, hash)
 	}
@@ -638,7 +638,7 @@ func decodePacket(buf []byte) (packet, encPubkey, []byte, error) {
 	}
 	//s := rlp.NewStream(bytes.NewReader(sigdata[1:]), 0)
 	//err = s.Decode(req)
-	err = binary.Unmarshal(sigdata[1:],req)
+	err = binary.Unmarshal(sigdata[1:], req)
 	return req, fromKey, hash, err
 }
 

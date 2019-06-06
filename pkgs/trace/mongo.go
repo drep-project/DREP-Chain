@@ -77,6 +77,7 @@ func (store *MongogDbStore) InsertRecord(block *chainTypes.Block) {
 
 		viewTx := &ViewTransaction{}
 		viewTx.FromTx(tx)
+		viewTx.Height = block.Header.Height
 		viewTxs[index] = viewTx
 	}
 	store.txCol.InsertMany(ctx, rpcTxs, nil)

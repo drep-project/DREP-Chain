@@ -1,14 +1,14 @@
 package service
 
 import (
-	"github.com/drep-project/dlog"
+	"path"
+
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/network/p2p"
 	"github.com/drep-project/drep-chain/network/p2p/enode"
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
 	"gopkg.in/urfave/cli.v1"
-	"path"
 )
 
 const (
@@ -48,7 +48,7 @@ func (p2pService *P2pService) Init(executeContext *app.ExecuteContext) error {
 	p2pService.Config = p2pTypes.DefaultP2pConfig
 	err := executeContext.UnmashalConfig(p2pService.Name(), p2pService.Config)
 	if err != nil {
-		dlog.Error("p2pService init err", "err", err)
+		log.WithField("err", err).Error("p2pService init err")
 		return err
 	}
 
@@ -67,7 +67,7 @@ func (p2pService *P2pService) Init(executeContext *app.ExecuteContext) error {
 	//	n.serverConfig.TrustedNodes = n.config.TrustedNodes()
 	//}
 	//if p2pService.Config.NodeDatabase == "" {
-	p2pService.Config.NodeDatabase = path.Join(executeContext.CommonConfig.HomeDir, "drepnode","peersnode")
+	p2pService.Config.NodeDatabase = path.Join(executeContext.CommonConfig.HomeDir, "drepnode", "peersnode")
 	//}
 
 	p2pService.server = &p2p.Server{
@@ -129,7 +129,7 @@ func (p2pService *P2pService) sendMessageRoutine() {
 			go func() {
 				err := p2pService.sendMessage(outMsg) //outMsg.execute()
 				if err != nil {
-					dlog.Error("p2p send msg err", "msg", outMsg.msgType, "err", err.Error())
+					log.WithField("msg", outMsg.msgType).WithField("err", err).Error("p2p send msg err")
 				}
 				select {
 				case outMsg.done <- err:
@@ -147,7 +147,7 @@ func (p2pService *P2pService) sendMessage(outMessage *outMessage) error {
 	return p2p.Send(outMessage.w, (uint64)(outMessage.msgType), outMessage.Msg)
 }
 
-func (p2pService *P2pService) Peers() ([]*p2p.Peer) {
+func (p2pService *P2pService) Peers() []*p2p.Peer {
 	peers := p2pService.server.Peers()
 
 	return peers
@@ -160,7 +160,7 @@ func (p2pService *P2pService) AddPeer(nodeUrl string) error {
 	if err == nil {
 		p2pService.server.AddPeer(&n)
 	} else {
-		dlog.Error("add peer", "err", err)
+		log.WithField("err", err).Error("add peer")
 	}
 	return err
 }
@@ -173,6 +173,6 @@ func (p2pService *P2pService) RemovePeer(nodeUrl string) {
 	if err == nil {
 		p2pService.server.RemovePeer(&n)
 	} else {
-		dlog.Error("remove peer", "err", err)
+		log.WithField("err", err).Error("remove peer")
 	}
 }

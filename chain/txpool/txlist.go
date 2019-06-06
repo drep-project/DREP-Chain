@@ -2,11 +2,11 @@ package txpool
 
 import (
 	"container/heap"
-	"github.com/drep-project/dlog"
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	"github.com/drep-project/drep-chain/crypto"
 	"math/big"
 	"sort"
+
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/crypto"
 )
 
 // nonceHeap is a heap.Interface implementation over 64bit unsigned integers for
@@ -161,7 +161,7 @@ func (m *txSortedMap) Ready(start uint64) []*chainTypes.Transaction {
 	// Short circuit if no transactions are available
 	if m.index.Len() == 0 || (*m.index)[0] > start {
 		if m.index.Len() != 0 {
-			dlog.Warn("txSortedMap Ready", "index[0]:", (*m.index)[0], "req start:", start)
+			log.WithField("index[0]", (*m.index)[0]).WithField("req start", start).Warn("txSortedMap Ready")
 		}
 		return nil
 	}
@@ -191,7 +191,7 @@ func (m *txSortedMap) Flatten() []*chainTypes.Transaction {
 		m.cache = make([]*chainTypes.Transaction, 0, len(m.items))
 		for nonce, tx := range m.items {
 			if nonce != tx.Nonce() {
-				dlog.Error("call flatten nonce err", "nonce", nonce, "tx.nonoce", tx.Nonce())
+				log.WithField("nonce", nonce).WithField("tx.nonoce", tx.Nonce()).Error("call flatten nonce err")
 				return nil
 			}
 			m.cache = append(m.cache, tx)

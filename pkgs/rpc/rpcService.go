@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	"gopkg.in/urfave/cli.v1"
-	"github.com/drep-project/dlog"
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/rpc"
@@ -46,7 +45,7 @@ type RpcService struct {
 }
 
 func (rpcService *RpcService) Name() string {
-	return "rpc"
+	return MODULENAME
 }
 
 func (rpcService *RpcService) Api() []app.API {
@@ -149,7 +148,7 @@ func (rpcService *RpcService) StopREST() {
 	if rpcService.RestController != nil {
 		rpcService.RestController.Stop()
 		rpcService.RestController = nil
-		dlog.Info("REST endpoint closed", "url", fmt.Sprintf("http://%s", rpcService.HttpEndpoint))
+		log.WithField("url", fmt.Sprintf("http://%s", rpcService.HttpEndpoint)).Info("REST endpoint closed")
 	}
 }
 
@@ -161,7 +160,7 @@ func (rpcService *RpcService) StartInProc(apis []app.API) error {
 		if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 			return err
 		}
-		dlog.Debug("InProc registered", "namespace", api.Namespace)
+		log.WithField("namespace", api.Namespace).Debug("InProc registered")
 	}
 	rpcService.inprocHandler = handler
 	return nil
@@ -189,7 +188,7 @@ func (rpcService *RpcService) StartIPC(apis []app.API) error {
 	}
 	rpcService.IpcListener = listener
 	rpcService.IpcHandler = handler
-	dlog.Info("IPC endpoint opened", "url", rpcService.IpcEndpoint)
+	log.WithField("url", rpcService.IpcEndpoint).Info("IPC endpoint opened")
 	return nil
 }
 
@@ -199,7 +198,7 @@ func (rpcService *RpcService) StopIPC() {
 		rpcService.IpcListener.Close()
 		rpcService.IpcListener = nil
 
-		dlog.Info("IPC endpoint closed", "endpoint", rpcService.IpcEndpoint)
+		log.WithField("endpoint", rpcService.IpcEndpoint).Info("IPC endpoint closed")
 	}
 	if rpcService.IpcHandler != nil {
 		rpcService.IpcHandler.Stop()
@@ -220,7 +219,7 @@ func (rpcService *RpcService) StartHTTP(endpoint string, apis []app.API, modules
 	if err != nil {
 		return err
 	}
-	dlog.Info("HTTP endpoint opened", "url", fmt.Sprintf("http://%s", endpoint), "cors", strings.Join(cors, ","), "vhosts", strings.Join(vhosts, ","))
+	log.WithField("url", fmt.Sprintf("http://%s", endpoint)).WithField("cors", strings.Join(cors, ",")).WithField("vhosts", strings.Join(vhosts, ",")).Info("HTTP endpoint opened")
 	// All listeners booted successfully
 	rpcService.HttpEndpoint = endpoint
 	rpcService.HttpListener = listener
@@ -234,7 +233,7 @@ func (rpcService *RpcService) StopHTTP() {
 		rpcService.HttpListener.Close()
 		rpcService.HttpListener = nil
 
-		dlog.Info("HTTP endpoint closed", "url", fmt.Sprintf("http://%s", rpcService.HttpEndpoint))
+		log.WithField("url", fmt.Sprintf("http://%s", rpcService.HttpEndpoint)).Info("HTTP endpoint closed")
 	}
 	if rpcService.HttpHandler != nil {
 		rpcService.HttpHandler.Stop()
@@ -255,7 +254,7 @@ func (rpcService *RpcService) StartWS(endpoint string, apis []app.API, modules [
 	if err != nil {
 		return err
 	}
-	dlog.Info("WebSocket endpoint opened", "url", fmt.Sprintf("ws://%s", listener.Addr()))
+	log.WithField("url", fmt.Sprintf("ws://%s", listener.Addr())).Info("WebSocket endpoint opened")
 	// All listeners booted successfully
 	rpcService.WsEndpoint = endpoint
 	rpcService.WsListener = listener
@@ -270,7 +269,7 @@ func (rpcService *RpcService) StopWS() {
 		rpcService.WsListener.Close()
 		rpcService.WsListener = nil
 
-		dlog.Info("WebSocket endpoint closed", "url", fmt.Sprintf("ws://%s", rpcService.WsEndpoint))
+		log.WithField("url", fmt.Sprintf("ws://%s", rpcService.WsEndpoint)).Info("WebSocket endpoint closed")
 	}
 	if rpcService.WsHandler != nil {
 		rpcService.WsHandler.Stop()

@@ -1,7 +1,6 @@
 package blockmgr
 
 import (
-	"github.com/drep-project/dlog"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 )
 
@@ -12,7 +11,7 @@ func (blockMgr *BlockMgr) VerifyTransaction(tx *chainTypes.Transaction) error {
 }
 
 func (blockMgr *BlockMgr) verifyTransaction(tx *chainTypes.Transaction) error {
-	db :=  blockMgr.ChainService.GetCurrentState()
+	db := blockMgr.ChainService.GetCurrentState()
 	from, err := tx.From()
 
 	// Transactions can't be negative. This may never happen using RLP decoded
@@ -41,16 +40,16 @@ func (blockMgr *BlockMgr) verifyTransaction(tx *chainTypes.Transaction) error {
 		return err
 	}
 	if tx.Gas() < gas {
-		dlog.Error("gas exceed tx gaslimit ", "gas", gas, "tx.gas", tx.Gas())
+		log.WithField("gas", gas).WithField("tx.gas", tx.Gas()).Error("gas exceed tx gaslimit ")
 		return ErrReachGasLimit
 	}
 	if tx.Type() == chainTypes.SetAliasType {
-		from, err  := tx.From()
+		from, err := tx.From()
 		if err != nil {
-			return  err
+			return err
 		}
 		alias := blockMgr.ChainService.DatabaseService.GetStorageAlias(from)
-		if alias != ""{
+		if alias != "" {
 			return ErrNotSupportRenameAlias
 		}
 	}

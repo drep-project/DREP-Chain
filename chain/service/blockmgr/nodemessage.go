@@ -2,8 +2,6 @@ package blockmgr
 
 import (
 	"time"
-
-	"github.com/drep-project/dlog"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/network/p2p"
@@ -51,11 +49,11 @@ func (blockMgr *BlockMgr) receiveMsg(peer *chainTypes.PeerInfo, rw p2p.MsgReadWr
 }
 
 func (blockMgr *BlockMgr) dealMsg(peer *chainTypes.PeerInfo, rw p2p.MsgReadWriter) error {
-	dlog.Info("new peer", "peer addr:", peer.GetAddr())
+	log.WithField("peer addr:", peer.GetAddr()).Info("new peer receive")
 	for {
 		msg, err := rw.ReadMsg()
 		if err != nil {
-			dlog.Info("blockMgr receive msg", "err", err)
+			log.WithField("Reason", err).Info("receive blockMgr msg fail")
 			return err
 		}
 
@@ -84,7 +82,7 @@ func (blockMgr *BlockMgr) dealMsg(peer *chainTypes.PeerInfo, rw p2p.MsgReadWrite
 
 			// TODO backup nodes should not add
 			for _, tx := range txs {
-				dlog.Trace("comming transaction", "transaction", tx.Nonce())
+				log.WithField("transaction", tx.Nonce()).Trace("comming transaction")
 				tx := tx
 				peer.MarkTx(tx)
 				blockMgr.SendTransaction(tx, false)
@@ -147,7 +145,7 @@ func (blockMgr *BlockMgr) handleHeaderReq(peer *chainTypes.PeerInfo, req *chainT
 		}
 	}
 
-	dlog.Info("header req len", "total header", len(headers), "from", req.FromHeight, "to", req.ToHeight)
+	log.WithField("total header", len(headers)).WithField("from", req.FromHeight).WithField("to", req.ToHeight).Info("header req len")
 	blockMgr.P2pServer.Send(peer.GetMsgRW(), uint64(chainTypes.MsgTypeHeaderRsp), chainTypes.HeaderRsp{Headers: headers})
 }
 
@@ -160,14 +158,14 @@ func (blockMgr *BlockMgr) handleHeaderRsp(peer *chainTypes.PeerInfo, rsp *chainT
 	//请求的相关协程要关闭。
 	err := blockMgr.checkHeaderChain(rsp.Headers)
 	if err != nil {
-		dlog.Info("handleHeaderRsp", "err", err)
+		log.WithField("Reason", err).Info("checkHeaderChain fail")
 		return
 	}
 
 	if len(headerHashs) >= 1 {
-		dlog.Info("handleHeaderRsp ", "total len:", len(headerHashs), "from height:", headerHashs[0].height, "end height:", headerHashs[len(headerHashs)-1].height)
+		log.WithField("total len:", len(headerHashs)).WithField("from height:", headerHashs[0].height).WithField("end height:", headerHashs[len(headerHashs)-1].height).Info("handleHeaderRsp ")
 	} else {
-		dlog.Error("handleHeaderRsp rsp nil")
+		log.Error("handleHeaderRsp rsp nil")
 		return
 	}
 
@@ -175,13 +173,13 @@ func (blockMgr *BlockMgr) handleHeaderRsp(peer *chainTypes.PeerInfo, rsp *chainT
 }
 
 func (blockMgr *BlockMgr) HandleBlockReqMsg(peer *chainTypes.PeerInfo, req *chainTypes.BlockReq) {
-	dlog.Info("sync req block", "num:", len(req.BlockHashs))
+	log.WithField("num:", len(req.BlockHashs)).Info("sync req block")
 	zero := crypto.Hash{}
 	startHeight := uint64(0)
 	endHeight := blockMgr.ChainService.BestChain.Tip().Height
 
 	if len(req.BlockHashs) == 0 {
-		dlog.Warn("handle block req", "block hash num", len(req.BlockHashs))
+		log.WithField("block hash num", len(req.BlockHashs)).Warn("handle block req")
 		return
 	}
 	startHash := req.BlockHashs[0]
@@ -221,7 +219,7 @@ func (blockMgr *BlockMgr) HandleBlockReqMsg(peer *chainTypes.PeerInfo, req *chai
 		blockMgr.P2pServer.Send(peer.GetMsgRW(), chainTypes.MsgTypeBlockResp, &chainTypes.BlockResp{
 			Blocks: blocks,
 		})
-		dlog.Info("req blocks and rsp:", "num", len(blocks))
+		log.WithField("num", len(blocks)).Info("req blocks and rsp")
 		//blocks = []*chainTypes.Block{}
 	}
 }

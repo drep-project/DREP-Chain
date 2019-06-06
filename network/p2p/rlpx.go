@@ -115,7 +115,6 @@ func (t *rlpx) close(err error) {
 			// a write deadline. Because of this only try to send
 			// the disconnect reason message if there is no error.
 			if err := t.fd.SetWriteDeadline(time.Now().Add(discWriteTimeout)); err == nil {
-				fmt.Println("rlpx close ---------------------")
 				SendItems(t.rw, discMsg, r)
 			}
 		}

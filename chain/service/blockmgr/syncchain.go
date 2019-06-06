@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/drep-project/drep-chain/chain/service/chainservice"
 	"math/big"
 	"time"
 
-	"github.com/drep-project/dlog"
+	"github.com/drep-project/drep-chain/chain/service/chainservice"
+
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
@@ -52,7 +52,7 @@ func (blockMgr *BlockMgr) synchronise() {
 			fmt.Println("************", pi.GetHeight(), ">", currentHeight)
 			err := blockMgr.fetchBlocks(pi)
 			if err != nil {
-				dlog.Warn("sync block from peer", "err:", err)
+				log.WithField("Reason", err).Warn("sync block from peer")
 			}
 		}
 	}
@@ -152,7 +152,7 @@ func (blockMgr *BlockMgr) findAncestor(peer *chainTypes.PeerInfo) (uint64, error
 					tmpEnd = (tmpFrom + tmpEnd) / 2
 				}
 			} else {
-				dlog.Error("peer response head hash len = 0")
+				log.Error("peer response head hash len = 0")
 			}
 
 		case <-timeout:
@@ -188,16 +188,14 @@ func (blockMgr *BlockMgr) batchReqBlocks(hashs []crypto.Hash, errCh chan error) 
 		//blockMgr.P2pServer.SetIdle(bodyReqPeer, true)
 		blockMgr.syncMut.Unlock()
 
-		successNum ++
+		successNum++
 
-		if err == nil && successNum >= 2 {
+		if err == nil && successNum >= 1 {
 			return
 		}
 	}
 
-	if successNum == 0 {
-		errCh <- fmt.Errorf("p2p no peers")
-	}
+	errCh <- fmt.Errorf("p2p no peers")
 
 	return
 }
@@ -249,17 +247,17 @@ func (blockMgr *BlockMgr) fetchBlocks(peer *chainTypes.PeerInfo) error {
 					blockMgr.syncMut.Unlock()
 				}
 				commonAncestor += uint64(len(tasks))
-				dlog.Info("fetchBlocks", "tasks len", blockMgr.allTasks.Len())
+				log.WithField("tasks len", blockMgr.allTasks.Len()).Info("fetchBlocks")
 
 			case <-timer.C:
 				errCh <- ErrGetHeaderHashTimeout
 				return
 			case <-quit:
-				dlog.Info("fetch headers goroutine quit")
+				log.Info("fetch headers goroutine quit")
 				return
 			}
 		}
-		dlog.Info("fetch all headers end ****************************")
+		log.Info("fetch all headers end ****************************")
 		headerRoutineExit = true
 	}()
 
@@ -272,7 +270,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer *chainTypes.PeerInfo) error {
 			if len(hashs) == 0 {
 				if headerRoutineExit {
 					//任务完成，触发退出
-					dlog.Info("all block sync ok", "tasks len", blockMgr.allTasks.Len())
+					log.WithField("tasks len", blockMgr.allTasks.Len()).Info("all block sync ok")
 					close(errCh)
 					return
 				}
@@ -297,7 +295,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer *chainTypes.PeerInfo) error {
 							if _, ok := blockMgr.pendingSyncTasks[*b.Header.Hash()]; !ok {
 								continue
 							}
-							dlog.Info("sync block recv block", "height", b.Header.Height, "blk num", len(blocks))
+							log.WithField("height", b.Header.Height).WithField("blk num", len(blocks)).Info("sync block recv block")
 							//删除块高度对应的任务
 							delete(blockMgr.pendingSyncTasks, *b.Header.Hash())
 							deletedHash = true
@@ -307,7 +305,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer *chainTypes.PeerInfo) error {
 								case chainservice.ErrBlockExsist, chainservice.ErrOrphanBlockExsist:
 									continue
 								default:
-									dlog.Error("deal sync block", "err", err)
+									log.WithField("Reason", err).Error("deal sync block")
 									errCh <- err
 									return
 								}
@@ -327,7 +325,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer *chainTypes.PeerInfo) error {
 						errCh <- ErrGetBlockTimeout
 						return
 					case <-quit:
-						dlog.Info("fetch blocks routine quit")
+						log.Info("fetch blocks routine quit")
 						return
 					}
 				}
@@ -376,8 +374,12 @@ func (blockMgr *BlockMgr) checkHeaderChain(chain []chainTypes.BlockHeader) error
 	for i := 1; i < len(chain); i++ {
 		if chain[i].Height != chain[i-1].Height+1 || !chain[i].PreviousHash.IsEqual(chain[i-1].Hash()) {
 			// Chain broke ancestry, log a message (programming error) and skip insertion
-			dlog.Error("Non contiguous header", "number", chain[i].Height, "hash", hex.EncodeToString(chain[i].Hash().Bytes()),
-				"prevnumber", chain[i-1].Height, "prevhash", hex.EncodeToString(chain[i-1].Hash().Bytes()), "!= parent", hex.EncodeToString(chain[i].PreviousHash.Bytes()))
+			log.WithField("number", chain[i].Height).
+				WithField("hash", hex.EncodeToString(chain[i].Hash().Bytes())).
+				WithField("prevnumber", chain[i-1].Height).
+				WithField("prevhash", hex.EncodeToString(chain[i-1].Hash().Bytes())).
+				WithField("!= parent", hex.EncodeToString(chain[i].PreviousHash.Bytes())).
+				Error("Non contiguous header")
 
 			return ErrNotContinueHeader
 		}

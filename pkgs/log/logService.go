@@ -1,11 +1,18 @@
 package log
 
 import (
+	"errors"
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
+	"github.com/sirupsen/logrus"
+	"gopkg.in/natefinch/lumberjack.v2"
 	"gopkg.in/urfave/cli.v1"
 	"path"
+	"strings"
+)
+
+const (
+	MODULE = "MODULE"
 )
 
 var (
@@ -16,6 +23,7 @@ var (
 
 type LogService struct {
 	Config *LogConfig
+	apis []app.API
 }
 
 func (logService *LogService) Name() string {
@@ -23,18 +31,11 @@ func (logService *LogService) Name() string {
 }
 
 func (logService *LogService) Api() []app.API {
-	return []app.API{
-		app.API{
-			Namespace: "log",
-			Version:   "1.0",
-			Service:   &LogApi{},
-			Public:    true,
-		},
-	}
+	return logService.apis
 }
 
 func (logService *LogService) CommandFlags() ([]cli.Command, []cli.Flag) {
-	return nil, []cli.Flag{LogDirFlag, LogLevelFlag, VmoduleFlag, BacktraceAtFlag}
+	return nil, []cli.Flag{LogDirFlag, LogLevelFlag, VmoduleFlag}
 }
 
 func (logService *LogService) P2pMessages() map[int]interface{} {
@@ -48,7 +49,47 @@ func (logService *LogService) Init(executeContext *app.ExecuteContext) error {
 		return err
 	}
 	logService.setLogConfig(executeContext.Cli, executeContext.CommonConfig.HomeDir)
-	return dlog.SetUp(logService.Config.DataDir, logService.Config.LogLevel, logService.Config.Vmodule, logService.Config.BacktraceAt)
+	baseLogPath := path.Join(logService.Config.DataDir, "log")
+
+	wirter1 := &lumberjack.Logger{
+		Filename:   baseLogPath,
+		MaxSize:    1, // megabytes
+		MaxBackups: 300,
+		MaxAge:     28, //days
+		Compress:   false, // disabled by default
+	}
+	logrus.SetFormatter(&NullFormat{})
+	textFormat := &logrus.TextFormatter{
+		FullTimestamp: true,
+		ForceColors: true,
+	}
+	logrus.SetLevel(logrus.Level(logService.Config.LogLevel))
+	mHook := NewMyHook(wirter1, &logrus.JSONFormatter{}, textFormat)
+	if logService.Config.Vmodule != "" {
+		args := []interface{}{}
+		pairs := strings.Split(logService.Config.Vmodule, ";")
+		for _, pair := range pairs {
+			k_v := strings.Split(pair, "=")
+			if len(k_v) != 2 {
+				return errors.New("not correct module format")
+			}
+			args = append(args, k_v[0])
+			args = append(args, k_v[1])
+		}
+		mHook.SetModulesLevel(args...)
+	}
+	logrus.AddHook(mHook)
+
+	logService.apis = []app.API{
+		app.API{
+			Namespace: "log",
+			Version:   "1.0",
+			Service:   NewLogApi(mHook),
+			Public:    true,
+		},
+	}
+    return nil
+	//return dlog.SetUp(logService.Config.DataDir, logService.Config.LogLevel, logService.Config.Vmodule, logService.Config.BacktraceAt)
 }
 
 func (logService *LogService) Start(executeContext *app.ExecuteContext) error {
@@ -70,11 +111,6 @@ func (logService *LogService) setLogConfig(ctx *cli.Context, homeDir string) {
 	if ctx.GlobalIsSet(VmoduleFlag.Name) {
 		logService.Config.Vmodule = ctx.GlobalString(VmoduleFlag.Name)
 	}
-
-	if ctx.GlobalIsSet(BacktraceAtFlag.Name) {
-		logService.Config.BacktraceAt = ctx.GlobalString(BacktraceAtFlag.Name)
-	}
-
 	//logdir
 	if ctx.GlobalIsSet(LogDirFlag.Name) {
 		logService.Config.DataDir = ctx.GlobalString(LogDirFlag.Name)
@@ -82,3 +118,9 @@ func (logService *LogService) setLogConfig(ctx *cli.Context, homeDir string) {
 		logService.Config.DataDir = path.Join(homeDir, "log")
 	}
 }
+
+
+func NewLogger(moduleName string) *logrus.Entry {
+	return logrus.WithField(MODULE, moduleName)
+}
+

@@ -4,7 +4,6 @@ import (
 	"container/heap"
 	"errors"
 	"fmt"
-	"github.com/drep-project/dlog"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
@@ -97,7 +96,7 @@ func (pool *TransactionPool) journalTx(from crypto.CommonAddress, tx *chainTypes
 	}
 
 	if err := pool.journal.insert(tx); err != nil {
-		dlog.Warn("Failed to journal local transaction", "err", err)
+		log.WithField("Reason", err).Warn("Failed to journal local transaction")
 	}
 }
 
@@ -139,7 +138,7 @@ func (pool *TransactionPool) addTxs(txs []chainTypes.Transaction) []error {
 		}
 		errs[i] = pool.addTx(&tx, true)
 		if errs[i] != nil {
-			dlog.Error("recover tx from journal err", "err", errs[i])
+			log.WithField("Reason", errs[i]).Error("recover tx from journal err")
 		}
 	}
 
@@ -192,7 +191,7 @@ func (pool *TransactionPool) addTx(tx *chainTypes.Transaction, isLocal bool) err
 					return errors.New("can't replace old tx")
 				}
 
-				dlog.Warn("replace", "nonce", tx.Nonce(), "old price", oldTx.GasPrice(), "new pirce", tx.GasPrice(), "pending", i)
+				log.WithField("nonce", tx.Nonce()).WithField("old price", oldTx.GasPrice()).WithField("new pirce", tx.GasPrice()).WithField("pending", i).Warn("replace")
 
 				delete(pool.allTxs, oldTx.TxHash().String())
 				pool.allPricedTxs.Remove(oldTx)
@@ -438,7 +437,7 @@ func (pool *TransactionPool) adjust(block *chainTypes.Block) {
 
 			pool.syncToPending(&addr)
 			pool.mu.Unlock()
-			dlog.Warn("clear txpool", "addr", addr.Hex(), "max tx.nonce:", nonce, "txpool tx count:", len(pool.allTxs))
+			log.WithField("addr", addr.Hex()).WithField("max tx.nonce", nonce).WithField("txpool tx count", len(pool.allTxs)).Warn("clear txpool" )
 		}
 	}
 }

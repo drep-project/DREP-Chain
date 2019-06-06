@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/drep-project/binary"
-	log "github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/common/mclock"
@@ -40,6 +39,7 @@ import (
 	"github.com/drep-project/drep-chain/network/p2p/enr"
 	"github.com/drep-project/drep-chain/network/p2p/nat"
 	"github.com/drep-project/drep-chain/network/p2p/netutil"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -148,7 +148,7 @@ type Config struct {
 	EnableMsgEvents bool `json:"-"`
 
 	// Logger is a custom logger to use with the p2p.Server.
-	Logger log.Logger `json:"-"`
+	Logger *logrus.Entry `json:"-"`
 }
 
 // Server manages all peer connections.
@@ -186,7 +186,7 @@ type Server struct {
 	delpeer       chan peerDrop
 	loopWG        sync.WaitGroup // loop, listenLoop
 	peerFeed      event.Feed
-	log           log.Logger
+	log           *logrus.Entry
 }
 
 type peerOpFunc func(map[enode.ID]*Peer)
@@ -424,7 +424,7 @@ func (srv *Server) Start() (err error) {
 	srv.running = true
 	srv.log = srv.Config.Logger
 	if srv.log == nil {
-		srv.log = log.New()
+		srv.log = NewLog()
 	}
 	if srv.NoDial && srv.ListenAddr == "" {
 		srv.log.Warn("P2P server will be useless, neither dialing nor listening")
@@ -530,7 +530,7 @@ func (srv *Server) setupDiscovery() error {
 		return err
 	}
 	realaddr := conn.LocalAddr().(*net.UDPAddr)
-	srv.log.Debug("UDP listener up", "addr", realaddr)
+	srv.log.WithField("addr", realaddr).Debug("UDP listener up")
 	if srv.NAT != nil {
 		if !realaddr.IP.IsLoopback() {
 			go nat.Map(srv.NAT, srv.quit, "udp", realaddr.Port, realaddr.Port, "ethereum discovery")
@@ -611,7 +611,7 @@ type dialer interface {
 }
 
 func (srv *Server) run(dialstate dialer) {
-	srv.log.Info("Started P2P networking", "self", srv.localnode.Node())
+	srv.log.WithField("self", srv.localnode.Node()).Info("Started P2P networking")
 	defer srv.loopWG.Done()
 	defer srv.nodedb.Close()
 
@@ -644,7 +644,7 @@ func (srv *Server) run(dialstate dialer) {
 		for ; len(runningTasks) < maxActiveDialTasks && i < len(ts); i++ {
 			t := ts[i]
 
-			srv.log.Debug("New dial task", "task", t)
+			srv.log.WithField("task", t).Debug("New dial task")
 			go func() { t.Do(srv); taskdone <- t }()
 			runningTasks = append(runningTasks, t)
 		}
@@ -672,13 +672,13 @@ running:
 			// This channel is used by AddPeer to add to the
 			// ephemeral static peer list. Add it to the dialer,
 			// it will keep the node connected.
-			srv.log.Trace("Adding static node", "node", n)
+			srv.log.WithField("node", n).Trace("Adding static node")
 			dialstate.addStatic(n)
 		case n := <-srv.removestatic:
 			// This channel is used by RemovePeer to send a
 			// disconnect request to a peer and begin the
 			// stop keeping the node connected.
-			srv.log.Trace("Removing static node", "node", n)
+			srv.log.WithField("node", n).Trace("Removing static node")
 			dialstate.removeStatic(n)
 			if p, ok := peers[n.ID()]; ok {
 				p.Disconnect(DiscRequested)
@@ -686,7 +686,7 @@ running:
 		case n := <-srv.addtrusted:
 			// This channel is used by AddTrustedPeer to add an enode
 			// to the trusted node set.
-			srv.log.Trace("Adding trusted node", "node", n)
+			srv.log.WithField("node", n).Trace("Adding trusted node")
 			trusted[n.ID()] = true
 			// Mark any already-connected peer as trusted
 			if p, ok := peers[n.ID()]; ok {
@@ -695,7 +695,7 @@ running:
 		case n := <-srv.removetrusted:
 			// This channel is used by RemoveTrustedPeer to remove an enode
 			// from the trusted node set.
-			srv.log.Trace("Removing trusted node", "node", n)
+			srv.log.WithField("node", n).Trace("Removing trusted node")
 			if _, ok := trusted[n.ID()]; ok {
 				delete(trusted, n.ID())
 			}
@@ -711,7 +711,7 @@ running:
 			// A task got done. Tell dialstate about it so it
 			// can update its state and remove it from the active
 			// tasks list.
-			srv.log.Trace("Dial task done", "task", t)
+			srv.log.WithField("task", t).Trace("Dial task done")
 			dialstate.taskDone(t, time.Now())
 			delTask(t)
 		case c := <-srv.posthandshake:
@@ -740,7 +740,7 @@ running:
 					p.events = &srv.peerFeed
 				}
 				name := truncateName(c.name)
-				srv.log.Info("Adding p2p peer", "name", name, "addr", c.fd.RemoteAddr(), "peers", len(peers)+1)
+				srv.log.WithField( "name", name).WithField("addr", c.fd.RemoteAddr()).WithField("peers", len(peers)+1).Info("Adding p2p peer")
 				go srv.runPeer(p)
 				peers[c.peerNode.ID()] = p
 				if p.Inbound() {
@@ -758,7 +758,12 @@ running:
 		case pd := <-srv.delpeer:
 			// A peer disconnected.
 			d := common.PrettyDuration(mclock.Now() - pd.created)
-			pd.log.Info("Removing p2p peer", "duration", d, "peers", len(peers)-1, "req", pd.requested, "err", pd.err, "ip", pd.Peer.IP())
+			pd.log.WithField("duration", d).
+					WithField("peers", len(peers)-1).
+					WithField( "req", pd.requested).
+					WithField("err", pd.err).
+					WithField("ip", pd.Peer.IP()).
+					Info("Removing p2p peer")
 			delete(peers, pd.ID())
 			if pd.Inbound() {
 				inboundCount--
@@ -784,7 +789,7 @@ running:
 	// is closed.
 	for len(peers) > 0 {
 		p := <-srv.delpeer
-		p.log.Trace("<-delpeer (spindown)", "remainingTasks", len(runningTasks))
+		p.log.WithField("remainingTasks", len(runningTasks)).Trace("<-delpeer (spindown)")
 		delete(peers, p.ID())
 	}
 }
@@ -801,7 +806,7 @@ func (srv *Server) protoHandshakeChecks(peers map[enode.ID]*Peer, inboundCount i
 
 func (srv *Server) encHandshakeChecks(peers map[enode.ID]*Peer, inboundCount int, c *conn) error {
 	switch {
-	case !c.is(trustedConn | staticDialedConn) && len(peers) >= srv.MaxPeers:
+	case !c.is(trustedConn|staticDialedConn) && len(peers) >= srv.MaxPeers:
 		return DiscTooManyPeers
 	case !c.is(trustedConn) && c.is(inboundConn) && inboundCount >= srv.maxInboundConns():
 		return DiscTooManyPeers
@@ -832,7 +837,7 @@ func (srv *Server) maxDialedConns() int {
 // inbound connections.
 func (srv *Server) listenLoop() {
 	defer srv.loopWG.Done()
-	srv.log.Debug("TCP listener up", "addr", srv.listener.Addr())
+	srv.log.WithField("addr", srv.listener.Addr()).Debug("TCP listener up")
 
 	tokens := defaultMaxPendingPeers
 	if srv.MaxPendingPeers > 0 {
@@ -854,10 +859,10 @@ func (srv *Server) listenLoop() {
 		for {
 			fd, err = srv.listener.Accept()
 			if netutil.IsTemporaryError(err) {
-				srv.log.Debug("Temporary read error", "err", err)
+				srv.log.WithField("err", err).Debug("Temporary read error")
 				continue
 			} else if err != nil {
-				srv.log.Debug("Read error", "err", err)
+				srv.log.WithField("err", err).Debug("Read error")
 				return
 			}
 			break
@@ -866,14 +871,14 @@ func (srv *Server) listenLoop() {
 		// Reject connections that do not match NetRestrict.
 		if srv.NetRestrict != nil {
 			if tcp, ok := fd.RemoteAddr().(*net.TCPAddr); ok && !srv.NetRestrict.Contains(tcp.IP) {
-				srv.log.Debug("Rejected conn (not whitelisted in NetRestrict)", "addr", fd.RemoteAddr())
+				srv.log.WithField("addr", fd.RemoteAddr()).Debug("Rejected conn (not whitelisted in NetRestrict)")
 				fd.Close()
 				slots <- struct{}{}
 				continue
 			}
 		}
 
-		srv.log.Trace("Accepted connection", "addr", fd.RemoteAddr())
+		srv.log.WithField("addr", fd.RemoteAddr()).Trace("Accepted connection")
 		go func() {
 			srv.SetupConn(fd, inboundConn, nil)
 			slots <- struct{}{}
@@ -889,7 +894,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *enode.Node) 
 	err := srv.setupConn(c, flags, dialDest)
 	if err != nil {
 		c.close(err)
-		log.Info("Setting up connection failed", "addr", fd.RemoteAddr(), "err", err)
+		log.WithField("addr", fd.RemoteAddr()).WithField( "err", err).Info("Setting up connection failed")
 	}
 
 	return err
@@ -914,7 +919,7 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 	// Run the encryption handshake.
 	remotePubkey, err := c.doEncHandshake(srv.PrivateKey, dialPubkey)
 	if err != nil {
-		srv.log.Trace("Failed RLPx handshake", "addr", c.fd.RemoteAddr(), "conn", c.flags, "err", err)
+		srv.log.WithField("addr", c.fd.RemoteAddr()).WithField("conn", c.flags).WithField("err", err).Trace("Failed RLPx handshake")
 		return err
 	}
 	if dialDest != nil {
@@ -927,31 +932,31 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 		c.peerNode = nodeFromConn(remotePubkey, c.fd)
 	}
 
-	clog := srv.log.New("id", c.peerNode.ID(), "addr", c.fd.RemoteAddr(), "conn", c.flags)
+	clog := srv.log.WithField("id", c.peerNode.ID()).WithField("addr", c.fd.RemoteAddr()).WithField("conn", c.flags)
 	err = srv.checkpoint(c, srv.posthandshake)
 	if err != nil {
-		clog.Trace("Rejected peer before protocol handshake", "err", err)
+		clog.WithField("err", err).Trace("Rejected peer before protocol handshake")
 		return err
 	}
 	// Run the protocol handshake
 	phs, err := c.doProtoHandshake(srv.ourHandshake)
 	if err != nil {
-		clog.Trace("Failed proto handshake", "err", err)
+		clog.WithField("err", err).Trace("Failed proto handshake")
 		return err
 	}
 	if id := c.peerNode.ID(); !bytes.Equal(phs.ID, id[:]) {
-		clog.Trace("Wrong devp2p handshake identity", "phsid", hex.EncodeToString(phs.ID))
+		clog.WithField("phsid", hex.EncodeToString(phs.ID)).Trace("Wrong devp2p handshake identity")
 		return DiscUnexpectedIdentity
 	}
 	c.caps, c.name = phs.Caps, phs.Name
 	err = srv.checkpoint(c, srv.addpeer)
 	if err != nil {
-		clog.Trace("Rejected peer", "err", err)
+		clog.WithField("err", err).Trace("Rejected peer")
 		return err
 	}
 	// If the checks completed successfully, runPeer has now been
 	// launched by run.
-	clog.Info("connection set up", "inbound", dialDest == nil)
+	clog.WithField("inbound", dialDest == nil).Info("connection set up")
 	return nil
 }
 

@@ -9,7 +9,6 @@ import (
 
 	"github.com/drep-project/drep-chain/chain/params"
 
-	"github.com/drep-project/dlog"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
@@ -19,7 +18,6 @@ import (
 func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, bool, error) {
 	chainService.addBlockSync.Lock()
 	defer chainService.addBlockSync.Unlock()
-
 	blockHash := block.Header.Hash()
 	exist := chainService.BlockExists(blockHash)
 	if exist {
@@ -69,7 +67,7 @@ func (chainService *ChainService) processOrphans(hash *crypto.Hash) error {
 		for i := 0; i < len(chainService.prevOrphans[*processHash]); i++ {
 			orphan := chainService.prevOrphans[*processHash][i]
 			if orphan == nil {
-				dlog.Warn(fmt.Sprintf("Found a nil entry at index %d in the orphan dependency list for block %v", i, processHash))
+				log.Warn(fmt.Sprintf("Found a nil entry at index %d in the orphan dependency list for block %v", i, processHash))
 				continue
 			}
 
@@ -129,7 +127,7 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainCh
 	if err != nil {
 		return false, err
 	}
-	dlog.Info("Accepted block", "Height", block.Header.Height, "Hash", hex.EncodeToString(block.Header.Hash().Bytes()), "TxCount", block.Data.TxCount)
+	log.WithField("Height", block.Header.Height).WithField("Hash", hex.EncodeToString(block.Header.Hash().Bytes())).WithField("TxCount", block.Data.TxCount).Info("Accepted block")
 	newNode := chainTypes.NewBlockNode(block.Header, prevNode)
 	newNode.Status = chainTypes.StatusDataStored
 
@@ -148,17 +146,16 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainCh
 		chainService.notifyBlock(block)
 		return true, nil
 	}
-
 	if block.Header.Height <= chainService.BestChain.Tip().Height {
 		// store but but not reorg
-		dlog.Debug("block store and validate true but not reorgnize")
+		log.Debug("block store and validate true but not reorgnize")
 		return false, nil
 	}
 
 	detachNodes, attachNodes := chainService.getReorganizeNodes(newNode)
 
 	// Reorganize the chain.
-	dlog.Info("REORGANIZE: Block is causing a reorganize.", "hash", newNode.Hash)
+	log.WithField("hash", newNode.Hash).Info("REORGANIZE: Block is causing a reorganize.")
 	err = chainService.reorganizeChain(db, detachNodes, attachNodes)
 
 	// Either getReorganizeNodes or reorganizeChain could have made unsaved
@@ -166,7 +163,7 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainCh
 	// error. The index would only be dirty if the block failed to connect, so
 	// we can ignore any errors writing.
 	if writeErr := chainService.Index.FlushToDB(chainService.blockDb.PutBlockNode); writeErr != nil {
-		dlog.Warn("Error flushing block index changes to disk", "Reason", writeErr)
+		log.WithField("Reason", writeErr).Warn("Error flushing block index changes to disk")
 	}
 	return err == nil, err
 }
@@ -190,9 +187,7 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *cha
 	}
 	if block.Header.GasUsed.Cmp(gasUsed) == 0 {
 		stateRoot := db.GetStateRoot()
-		if bytes.Equal(block.Header.StateRoot, stateRoot) {
-			dlog.Debug("matched ", "BlockStateRoot", hex.EncodeToString(block.Header.StateRoot), "CalcStateRoot", hex.EncodeToString(stateRoot))
-		} else {
+		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
 			err = errors.Wrapf(ErrNotMathcedStateRoot, "%s not matched %s", hex.EncodeToString(block.Header.StateRoot), hex.EncodeToString(stateRoot))
 		}
 	} else {
@@ -220,8 +215,7 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *cha
 
 func (chainService *ChainService) flushIndexState() {
 	if writeErr := chainService.Index.FlushToDB(chainService.blockDb.PutBlockNode); writeErr != nil {
-		dlog.Warn("Error flushing block index changes to disk: %v",
-			writeErr)
+		log.WithField("Reason",writeErr).Warn("Error flushing block index changes to disk")
 	}
 }
 
@@ -282,7 +276,7 @@ func (chainService *ChainService) reorganizeChain(db *database.Database, detachN
 		lastBlock := elem.Value.(*chainTypes.BlockNode)
 		height := lastBlock.Height - 1
 		db.Rollback2Block(height)
-		dlog.Info("REORGANIZE:RollBack state root", "Height", height)
+		log.WithField("Height", height).Info("REORGANIZE:RollBack state root")
 		chainService.markState(db, lastBlock.Parent)
 		elem = detachNodes.Front()
 		for elem != nil {
@@ -310,7 +304,7 @@ func (chainService *ChainService) reorganizeChain(db *database.Database, detachN
 			}
 			chainService.markState(db, blockNode)
 			chainService.notifyBlock(block)
-			dlog.Info("REORGANIZE:Append New Block", "Height", blockNode.Height, "Hash", blockNode.Hash)
+			log.WithField( "Height", blockNode.Height).WithField("Hash", blockNode.Hash).Info("REORGANIZE:Append New Block")
 			elem = elem.Next()
 		}
 	}
@@ -355,7 +349,7 @@ func (chainService *ChainService) InitStates() error {
 			node := chainTypes.NewBlockNode(header, nil)
 			chainState = chainTypes.NewBestState(node)
 			chainService.DatabaseService.PutChainState(chainState)
-			dlog.Info("Repair data success")
+			log.Info("Repair data success")
 		} else {
 			panic("never reach here")
 		}
@@ -425,7 +419,7 @@ func (chainService *ChainService) InitStates() error {
 		// we'll mark it as valid now to ensure consistency once
 		// we're up and running.
 		if !iterNode.Status.KnownValid() {
-			dlog.Info("ancestor of chain tip not marked as valid, upgrading to valid for consistency", "Block", iterNode.Hash, "height", iterNode.Height)
+			log.WithField("Block", iterNode.Hash).WithField("height", iterNode.Height).Info("ancestor of chain tip not marked as valid, upgrading to valid for consistency")
 			chainService.Index.SetStatusFlags(iterNode, chainTypes.StatusValid)
 		}
 	}

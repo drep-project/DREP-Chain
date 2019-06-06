@@ -19,7 +19,6 @@ package rpc
 import (
 	"net"
 
-	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/rpc"
 )
@@ -38,7 +37,7 @@ func StartHTTPEndpoint(endpoint string, apis []app.API, modules []string, cors [
 			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 				return nil, nil, err
 			}
-			dlog.Debug("HTTP registered", "namespace", api.Namespace)
+			log.WithField("namespace", api.Namespace).Debug("HTTP registered")
 		}
 	}
 	// All APIs registered, start the HTTP listener
@@ -68,7 +67,7 @@ func StartWSEndpoint(endpoint string, apis []app.API, modules []string, wsOrigin
 			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 				return nil, nil, err
 			}
-			dlog.Debug("WebSocket registered", "service", api.Service, "namespace", api.Namespace)
+			log.WithField("service", api.Service).WithField("namespace", api.Namespace).Debug("WebSocket registered")
 		}
 	}
 	// All APIs registered, start the HTTP listener
@@ -92,7 +91,7 @@ func StartIPCEndpoint(ipcEndpoint string, apis []app.API) (net.Listener, *rpc.Se
 		if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 			return nil, nil, err
 		}
-		dlog.Debug("IPC registered", "namespace", api.Namespace)
+		log.WithField("namespace", api.Namespace).Debug("IPC registered")
 	}
 	// All APIs registered, start the IPC listener.
 	listener, err := rpc.IpcListen(ipcEndpoint)

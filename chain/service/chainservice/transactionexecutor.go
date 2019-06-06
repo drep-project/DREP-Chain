@@ -1,10 +1,10 @@
 package chainservice
 
 import (
-	"github.com/drep-project/dlog"
+	"math/big"
+
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/database"
-	"math/big"
 )
 
 type TransactionValidator struct {
@@ -26,7 +26,7 @@ func (transactionValidator *TransactionValidator) ExecuteTransaction(db *databas
 	gasUsed := new(uint64)
 	_, _, err = transactionValidator.chain.stateProcessor.ApplyTransaction(db, transactionValidator.chain, gp, header, tx, from, gasUsed)
 	if err != nil {
-		dlog.Error("executeTransaction transaction error", "reason", err)
+		log.WithField("reason", err).Error("executeTransaction transaction error")
 		return nil, nil, err
 	}
 	gasFee := new(big.Int).Mul(new(big.Int).SetUint64(*gasUsed), tx.GasPrice())

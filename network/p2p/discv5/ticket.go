@@ -25,7 +25,6 @@ import (
 	"sort"
 	"time"
 
-	log "github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/common/mclock"
 	"github.com/drep-project/drep-chain/crypto"
 )
@@ -175,7 +174,7 @@ func newTicketStore() *ticketStore {
 // addTopic starts tracking a topic. If register is true,
 // the local node will register the topic and tickets will be collected.
 func (s *ticketStore) addTopic(topic Topic, register bool) {
-	log .Trace("Adding discovery topic", "topic", topic, "register", register)
+	log.WithField("topic", topic).WithField("register", register).Trace("Adding discovery topic")
 	if s.radius[topic] == nil {
 		s.radius[topic] = newTopicRadius(topic)
 	}
@@ -199,9 +198,9 @@ func (s *ticketStore) removeSearchTopic(t Topic) {
 
 // removeRegisterTopic deletes all tickets for the given topic.
 func (s *ticketStore) removeRegisterTopic(topic Topic) {
-	log.Trace("Removing discovery topic", "topic", topic)
+	log.WithField("topic", topic).Trace("Removing discovery topic")
 	if s.tickets[topic] == nil {
-		log.Warn("Removing non-existent discovery topic", "topic", topic)
+		log.WithField("topic", topic).Warn("Removing non-existent discovery topic")
 		return
 	}
 	for _, list := range s.tickets[topic].buckets {
@@ -246,13 +245,13 @@ func (s *ticketStore) nextRegisterLookup() (lookupInfo, time.Duration) {
 		// If the topic needs more tickets, return it
 		if s.tickets[topic].nextLookup < mclock.Now() {
 			next, delay := s.radius[topic].nextTarget(false), 100*time.Millisecond
-			log.Trace("Found discovery topic to register", "topic", topic, "target", next.target, "delay", delay)
+			log.WithField("topic", topic).WithField("target", next.target).WithField("delay", delay).Trace("Found discovery topic to register")
 			return next, delay
 		}
 	}
 	// No registration topics found or all exhausted, sleep
 	delay := 40 * time.Second
-	log.Trace("No topic found to register", "delay", delay)
+	log.WithField("delay", delay).Trace("No topic found to register")
 	return lookupInfo{}, delay
 }
 
@@ -271,7 +270,7 @@ func (s *ticketStore) nextSearchLookup(topic Topic) lookupInfo {
 func (s *ticketStore) ticketsInWindow(topic Topic) []ticketRef {
 	// Sanity check that the topic still exists before operating on it
 	if s.tickets[topic] == nil {
-		log.Warn("Listing non-existing discovery tickets", "topic", topic)
+		log.WithField("topic", topic).Warn("Listing non-existing discovery tickets")
 		return nil
 	}
 	// Gather all the tickers in the next time window
@@ -281,7 +280,7 @@ func (s *ticketStore) ticketsInWindow(topic Topic) []ticketRef {
 	for idx := timeBucket(0); idx < timeWindow; idx++ {
 		tickets = append(tickets, buckets[s.lastBucketFetched+idx]...)
 	}
-	log.Trace("Retrieved discovery registration tickets", "topic", topic, "from", s.lastBucketFetched, "tickets", len(tickets))
+	log.WithField("topic", topic).WithField("from", s.lastBucketFetched).WithField("tickets", len(tickets)).Trace("Retrieved discovery registration tickets")
 	return tickets
 }
 
@@ -322,7 +321,7 @@ func (s *ticketStore) addTicketRef(r ticketRef) {
 	topic := r.t.topics[r.idx]
 	tickets := s.tickets[topic]
 	if tickets == nil {
-		log.Warn("Adding ticket to non-existent topic", "topic", topic)
+		log.WithField("topic", topic).Warn("Adding ticket to non-existent topic")
 		return
 	}
 	bucket := timeBucket(r.t.regTime[r.idx] / mclock.AbsTime(ticketTimeBucketLen))
@@ -417,7 +416,7 @@ func (s *ticketStore) nextRegisterableTicket() (*ticketRef, time.Duration) {
 
 // removeTicket removes a ticket from the ticket store
 func (s *ticketStore) removeTicketRef(ref ticketRef) {
-	log.Trace("Removing discovery ticket reference", "node", ref.t.node.ID, "serial", ref.t.serial)
+	log.WithField("node", ref.t.node.ID).WithField("serial", ref.t.serial).Trace("Removing discovery ticket reference")
 
 	// Make nextRegisterableTicket return the next available ticket.
 	s.nextTicketCached = nil
@@ -426,7 +425,7 @@ func (s *ticketStore) removeTicketRef(ref ticketRef) {
 	tickets := s.tickets[topic]
 
 	if tickets == nil {
-		log.Trace("Removing tickets from unknown topic", "topic", topic)
+		log.WithField("topic", topic).Trace("Removing tickets from unknown topic")
 		return
 	}
 	bucket := timeBucket(ref.t.regTime[ref.idx] / mclock.AbsTime(ticketTimeBucketLen))
@@ -522,7 +521,7 @@ func (s *ticketStore) adjustWithTicket(now mclock.AbsTime, targetHash crypto.Has
 }
 
 func (s *ticketStore) addTicket(localTime mclock.AbsTime, pingHash []byte, ticket *ticket) {
-	log.Trace("Adding discovery ticket", "node", ticket.node.ID, "serial", ticket.serial)
+	log.WithField("node", ticket.node.ID).WithField("serial", ticket.serial).Trace("Adding discovery ticket")
 
 	lastReq, ok := s.nodeLastReq[ticket.node]
 	if !(ok && bytes.Equal(pingHash, lastReq.pingHash)) {
@@ -566,9 +565,9 @@ func (s *ticketStore) addTicket(localTime mclock.AbsTime, pingHash []byte, ticke
 
 func (s *ticketStore) getNodeTicket(node *Node) *ticket {
 	if s.nodes[node] == nil {
-		log.Trace("Retrieving node ticket", "node", node.ID, "serial", nil)
+		log.WithField("node", node.ID).WithField("serial", nil).Trace("Retrieving node ticket")
 	} else {
-		log.Trace("Retrieving node ticket", "node", node.ID, "serial", s.nodes[node].serial)
+		log.WithField("node", node.ID).WithField("serial", s.nodes[node].serial).Trace("Retrieving node ticket")
 	}
 	return s.nodes[node]
 }

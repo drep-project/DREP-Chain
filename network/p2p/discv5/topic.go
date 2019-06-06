@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/drep-project/drep-chain/common/mclock"
-	log "github.com/drep-project/dlog"
 )
 
 const (
@@ -236,7 +235,7 @@ func (t *topicTable) deleteEntry(e *topicEntry) {
 
 // It is assumed that topics and waitPeriods have the same length.
 func (t *topicTable) useTicket(node *Node, serialNo uint32, topics []Topic, idx int, issueTime uint64, waitPeriods []uint32) (registered bool) {
-	log.Trace("Using discovery ticket", "serial", serialNo, "topics", topics, "waits", waitPeriods)
+	log.WithField("serial", serialNo).WithField("topics", topics).WithField("waits", waitPeriods).Trace("Using discovery ticket")
 	//fmt.Println("useTicket", serialNo, topics, waitPeriods)
 	t.collectGarbage()
 

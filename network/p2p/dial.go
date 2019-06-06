@@ -23,7 +23,6 @@ import (
 	"net"
 	"time"
 
-	log "github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/network/p2p/enode"
 	"github.com/drep-project/drep-chain/network/p2p/netutil"
 )
@@ -167,7 +166,10 @@ func (s *dialstate) newTasks(nRunning int, peers map[enode.ID]*Peer, now time.Ti
 	var newtasks []task
 	addDial := func(flag connFlag, n *enode.Node) bool {
 		if err := s.checkDial(n, peers); err != nil {
-			log.Trace("Skipping dial candidate", "id", n.ID(), "addr", &net.TCPAddr{IP: n.IP(), Port: n.TCP()}, "err", err)
+			log.WithField("id", n.ID()).
+				WithField("addr", &net.TCPAddr{IP: n.IP(), Port: n.TCP()}).
+				WithField("err", err).
+				Trace("Skipping dial candidate")
 			return false
 		}
 		s.dialing[n.ID()] = flag
@@ -196,7 +198,10 @@ func (s *dialstate) newTasks(nRunning int, peers map[enode.ID]*Peer, now time.Ti
 		err := s.checkDial(t.dest, peers)
 		switch err {
 		case errNotWhitelisted, errSelf:
-			log.Warn("Removing static dial candidate", "id", t.dest.ID, "addr", &net.TCPAddr{IP: t.dest.IP(), Port: t.dest.TCP()}, "err", err)
+			log.WithField("id", t.dest.ID).
+				WithField("addr", &net.TCPAddr{IP: t.dest.IP(), Port: t.dest.TCP()}).
+				WithField("err", err).
+				Warn("Removing static dial candidate")
 			delete(s.static, t.dest.ID())
 		case nil:
 			s.dialing[id] = t.flags
@@ -298,7 +303,7 @@ func (t *dialTask) Do(srv *Server) {
 
 	err := t.dial(srv, t.dest)
 	if err != nil {
-		log.Info("Dial error", "task", t, "err", err)
+		log.WithField("task", t).WithField("err", err).Info("Dial error")
 		// Try resolving the ID of static nodes if dialing failed.
 		if _, ok := err.(*dialError); ok && t.flags&staticDialedConn != 0 {
 			if t.resolve(srv) {
@@ -319,7 +324,7 @@ func (t *dialTask) Do(srv *Server) {
 // The backoff delay resets when the node is found.
 func (t *dialTask) resolve(srv *Server) bool {
 	if srv.ntab == nil {
-		log.Debug("Can't resolve node", "id", t.dest.ID, "err", "discovery is disabled")
+		log.WithField("id", t.dest.ID).WithField("err", "discovery is disabled").Debug("Can't resolve node")
 		return false
 	}
 	if t.resolveDelay == 0 {
@@ -335,13 +340,13 @@ func (t *dialTask) resolve(srv *Server) bool {
 		if t.resolveDelay > maxResolveDelay {
 			t.resolveDelay = maxResolveDelay
 		}
-		log.Debug("Resolving node failed", "id", t.dest.ID, "newdelay", t.resolveDelay)
+		log.WithField("id", t.dest.ID).WithField("newdelay", t.resolveDelay).Debug("Resolving node failed")
 		return false
 	}
 	// The node was found.
 	t.resolveDelay = initialResolveDelay
 	t.dest = resolved
-	log.Debug("Resolved node", "id", t.dest.ID, "addr", &net.TCPAddr{IP: t.dest.IP(), Port: t.dest.TCP()})
+	log.WithField("id", t.dest.ID).WithField("addr", &net.TCPAddr{IP: t.dest.IP(), Port: t.dest.TCP()}).Debug("Resolved node")
 	return true
 }
 

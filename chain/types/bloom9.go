@@ -22,8 +22,7 @@ import (
 
 	"github.com/drep-project/drep-chain/common/hexutil"
 	"github.com/drep-project/drep-chain/crypto/sha3"
-	//"github.com/drep-project/drep-chain/chain/types"
-	//"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
 type bytesBacked interface {
@@ -93,7 +92,7 @@ func (b *Bloom) UnmarshalText(input []byte) error {
 	return hexutil.UnmarshalFixedText("Bloom", input, b[:])
 }
 
-func CreateBloom(receipts []*Receipt) Bloom {
+func CreateBloom(receipts []*types.Receipt) Bloom {
 	bin := new(big.Int)
 	for _, receipt := range receipts {
 		bin.Or(bin, LogsBloom(receipt.Logs))
@@ -102,7 +101,7 @@ func CreateBloom(receipts []*Receipt) Bloom {
 	return BytesToBloom(bin.Bytes())
 }
 
-func LogsBloom(logs []*Log) *big.Int {
+func LogsBloom(logs []*types.Log) *big.Int {
 	bin := new(big.Int)
 	for _, log := range logs {
 		bin.Or(bin, bloom9(log.Address.Bytes()))
