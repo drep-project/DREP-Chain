@@ -382,7 +382,7 @@ func (p *Peer) startProtocols(writeStart <-chan struct{}, writeErr chan<- error)
 			//本peer发送的消息，通过rw发送出去
 			err := proto.Run(p, rw)
 			if err == nil {
-				p.log.Info(fmt.Sprintf("Protocol %s/%d returned", proto.Name, proto.Version))
+				p.log.Info(fmt.Sprintf("may be not support Protocols %s/%d returned", proto.Name, proto.Version))
 				err = errProtocolReturned
 			} else if err != io.EOF {
 				p.log.Info(fmt.Sprintf("Protocol %s/%d failed", proto.Name, proto.Version), "err", err)

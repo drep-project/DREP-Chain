@@ -4,10 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"math"
-	"math/big"
-	"time"
-
 	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/app"
 	blockMgrService "github.com/drep-project/drep-chain/chain/service/blockmgr"
@@ -21,7 +17,11 @@ import (
 	p2pService "github.com/drep-project/drep-chain/network/service"
 	accountService "github.com/drep-project/drep-chain/pkgs/accounts/service"
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
+	"github.com/drep-project/dlog"
 	"gopkg.in/urfave/cli.v1"
+	"math"
+	"math/big"
+	"time"
 )
 
 var (
@@ -70,7 +70,7 @@ type produceInfo struct {
 }
 
 func (consensusService *ConsensusService) Name() string {
-	return MODULENAME
+	return "consensus"
 }
 
 func (consensusService *ConsensusService) Api() []app.API {
@@ -103,6 +103,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	consensusService.pubkey = consensusService.Config.MyPk
 	accountNode, err := consensusService.WalletService.Wallet.GetAccountByPubkey(consensusService.pubkey)
 	if err != nil {
+		dlog.Error("consensusService", "init err", err, "pubkey", string(consensusService.pubkey.Serialize()))
 		return err
 	}
 	consensusService.privkey = accountNode.PrivateKey
@@ -123,15 +124,13 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 			Name:   "consensusService",
 			Length: consensusTypes.NumberOfMsg,
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
-				if consensusService.Config.ConsensusMode == "none"{
-					return nil
-				}
 				if checkProduce(consensusService.producers, peer.IP()) {
 					pi := consensusTypes.NewPeerInfo(peer, rw)
 					consensusService.peersInfo[peer.IP()] = pi
 					defer delete(consensusService.peersInfo, peer.IP())
 					return consensusService.receiveMsg(pi, rw)
 				}
+				dlog.Info("peer not producer", "peer.ip", peer.IP())
 				//非骨干节点，不启动共识相关处理
 				return nil
 			},
@@ -146,7 +145,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 
 	consensusService.apis = []app.API{
 		app.API{
-			Namespace: "consensusService",
+			Namespace: "consensus",
 			Version:   "1.0",
 			Service: &ConsensusApi{
 				consensusService: consensusService,
@@ -166,10 +165,10 @@ func (consensusService *ConsensusService) handlerEvent() {
 		case e := <-consensusService.syncBlockEventChan:
 			if e.EventType == event.StartSyncBlock {
 				consensusService.pauseForSync = true
-				log.Info("Start Sync Blcok")
+				dlog.Info("Start Sync Blcok")
 			} else {
 				consensusService.pauseForSync = false
-				log.Info("Stop Sync Blcok")
+				dlog.Info("Stop Sync Blcok")
 			}
 		case <-consensusService.quit:
 			return
@@ -199,7 +198,7 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 					time.Sleep(time.Millisecond * 500)
 					continue
 				}
-				log.WithField("Height", consensusService.ChainService.BestChain.Height()).Trace("node start")
+				dlog.Trace("node start", "Height", consensusService.ChainService.BestChain.Height())
 				var block *chainTypes.Block
 				var err error
 				var isM bool
@@ -220,7 +219,7 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 							block, err = consensusService.runAsMember()
 						} else {
 							// backup node， return directly
-							log.Debug("Backup Node")
+							dlog.Debug("Backup Node")
 							break
 						}
 					} else {
@@ -231,17 +230,17 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 					break
 				}
 				if err != nil {
-					log.WithField("Reason", err).Debug("Producer Block Fail")
+					dlog.Debug("Producer Block Fail", "Reason", err.Error())
 				} else {
 					_, _, err := consensusService.ChainService.ProcessBlock(block)
 					if err == nil {
 						consensusService.BlockMgr.BroadcastBlock(chainTypes.MsgTypeBlock, block, true)
 					}
-					log.WithField("Height", consensusService.ChainService.BestChain.Height()).WithField("txs:", block.Data.TxCount).Info("Submit Block ")
+					dlog.Info("Submit Block ", "Height", consensusService.ChainService.BestChain.Height(), "txs:", block.Data.TxCount, "err", err)
 				}
 				time.Sleep(time.Duration(500) * time.Millisecond) //delay a little time for block deliver
 				nextBlockTime, waitSpan := consensusService.getWaitTime()
-				log.WithField("nextBlockTime", nextBlockTime).WithField("waitSpan", waitSpan).Debug("Sleep")
+				dlog.Debug("Sleep", "nextBlockTime", nextBlockTime, "waitSpan", waitSpan)
 				time.Sleep(waitSpan)
 			}
 		}
@@ -268,7 +267,7 @@ func (consensusService *ConsensusService) Stop(executeContext *app.ExecuteContex
 
 func (consensusService *ConsensusService) runAsMember() (block *chainTypes.Block, err error) {
 	consensusService.member.Reset()
-	log.Trace("node member is going to process consensus for round 1")
+	dlog.Trace("node member is going to process consensus for round 1")
 	consensusService.member.convertor = func(msg []byte) (consensusTypes.IConsenMsg, error) {
 		return chainTypes.BlockFromMessage(msg)
 	}
@@ -280,9 +279,9 @@ func (consensusService *ConsensusService) runAsMember() (block *chainTypes.Block
 	if err != nil {
 		return nil, err
 	}
-	log.Trace("node member finishes consensus for round 1")
+	dlog.Trace("node member finishes consensus for round 1")
 
-	log.Trace("node member is going to process consensus for round 2")
+	dlog.Trace("node member is going to process consensus for round 2")
 	consensusService.member.Reset()
 	var multiSig *chainTypes.MultiSignature
 	consensusService.member.convertor = func(msg []byte) (consensusTypes.IConsenMsg, error) {
@@ -308,7 +307,7 @@ func (consensusService *ConsensusService) runAsMember() (block *chainTypes.Block
 		return nil, err
 	}
 	consensusService.leader.Reset()
-	log.Trace("node member finishes consensus for round 2")
+	dlog.Trace("node member finishes consensus for round 2")
 	return block, nil
 }
 
@@ -322,14 +321,15 @@ func (consensusService *ConsensusService) runAsLeader() (block *chainTypes.Block
 	var gasFee *big.Int
 	block, gasFee, err = consensusService.BlockMgr.GenerateBlock(db, consensusService.leader.pubkey)
 	if err != nil {
-		log.WithField("Reason", err).Error("generate block fail")
+		dlog.Error("generate block fail", "msg", err)
 		return nil, err
 	}
 
-	log.Trace("node leader is preparing process consensus for round 1")
+	dlog.Trace("node leader is preparing process consensus for round 1", "Block", block)
 	err, sig, bitmap := consensusService.leader.ProcessConsensus(block)
 	if err != nil {
-		log.WithField("Reason", err).Error("Error occurs")
+		var str = err.Error()
+		dlog.Error("Error occurs", "msg", str)
 		return nil, err
 	}
 
@@ -350,14 +350,14 @@ func (consensusService *ConsensusService) runAsLeader() (block *chainTypes.Block
 	}
 	block.Header.StateRoot = db.GetStateRoot()
 	rwMsg := &consensusTypes.ResponseWiteRootMessage{*multiSig, block.Header.StateRoot}
-	log.Trace("node leader is going to process consensus for round 2")
+	dlog.Trace("node leader is going to process consensus for round 2")
 	err, _, _ = consensusService.leader.ProcessConsensus(rwMsg)
 	if err != nil {
 		return nil, err
 	}
-	log.Trace("node leader finishes process consensus for round 2")
+	dlog.Trace("node leader finishes process consensus for round 2")
 	consensusService.leader.Reset()
-	log.Trace("node leader finishes sending block")
+	dlog.Trace("node leader finishes sending block")
 	return block, nil
 }
 
@@ -375,7 +375,7 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 
 	sig, err := consensusService.privkey.Sign(sha3.Keccak256(msg))
 	if err != nil {
-		log.Error("sign block error")
+		dlog.Error("sign block error")
 		return nil, errors.New("sign block error")
 	}
 	multiSig := &chainTypes.MultiSignature{Sig: *sig, Bitmap: []byte{1}}
@@ -485,48 +485,48 @@ func (consensusService *ConsensusService) getWaitTime() (time.Time, time.Duratio
 		return targetTime, targetTime.Sub(now)
 	}
 	/*
-		     window := int64(4320)
-		     endBlock := consensusService.DatabaseService.GetHighestBlock().Header
-		     if endBlock.Height < window {
-				 lastBlockTime := time.Unix(consensusService.DatabaseService.GetHighestBlock().Header.Timestamp, 0)
-				 span := time.Now().Sub(lastBlockTime)
-				 if span > blockInterval {
-					 span = 0
-				 } else {
-					 span = blockInterval - span
-				 }
-				 return span
-			 }else{
-			 	//wait for test
-				 startHeight := endBlock.Height - window
-				 if startHeight <0 {
-					 startHeight = int64(0)
-				 }
-				 startBlock :=consensusService.DatabaseService.GetBlock(startHeight).Header
+     window := int64(4320)
+     endBlock := consensusService.DatabaseService.GetHighestBlock().Header
+     if endBlock.Height < window {
+		 lastBlockTime := time.Unix(consensusService.DatabaseService.GetHighestBlock().Header.Timestamp, 0)
+		 span := time.Now().Sub(lastBlockTime)
+		 if span > blockInterval {
+			 span = 0
+		 } else {
+			 span = blockInterval - span
+		 }
+		 return span
+	 }else{
+	 	//wait for test
+		 startHeight := endBlock.Height - window
+		 if startHeight <0 {
+			 startHeight = int64(0)
+		 }
+		 startBlock :=consensusService.DatabaseService.GetBlock(startHeight).Header
 
-				 xx := window * 10 -(time.Unix(startBlock.Timestamp,0).Sub(time.Unix(endBlock.Timestamp,0))).Seconds()
+		 xx := window * 10 -(time.Unix(startBlock.Timestamp,0).Sub(time.Unix(endBlock.Timestamp,0))).Seconds()
 
-				 span := time.Unix(startBlock.Timestamp,0).Sub(time.Unix(endBlock.Timestamp,0))  //window time
-				 avgSpan := span.Nanoseconds()/window
-				 return time.Duration(avgSpan) * time.Nanosecond
-			 }
+		 span := time.Unix(startBlock.Timestamp,0).Sub(time.Unix(endBlock.Timestamp,0))  //window time
+		 avgSpan := span.Nanoseconds()/window
+		 return time.Duration(avgSpan) * time.Nanosecond
+	 }
 	*/
 }
 
 func (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) bool {
 	preBlockHash, err := consensusService.ChainService.GetBlockHeaderByHash(&block.Header.PreviousHash)
 	if err != nil {
-		log.WithField("Reason", err).Debug("blockVerify GetBlockHeaderByHash")
+		dlog.Debug("blockVerify GetBlockHeaderByHash", "err", err)
 		return false
 	}
 	err = consensusService.ChainService.BlockValidator.VerifyHeader(block.Header, preBlockHash)
 	if err != nil {
-		log.WithField("Reason", err).Debug("blockVerify VerifyHeader")
+		dlog.Debug("blockVerify VerifyHeader", "err", err)
 		return false
 	}
 	err = consensusService.ChainService.BlockValidator.VerifyBody(block)
 	if err != nil {
-		log.WithField("Reason", err).Debug("blockVerify VerifyBody")
+		dlog.Debug("blockVerify VerifyBody", "err", err)
 		return false
 	}
 	//TODO need to verify traansaction , a lot of time
@@ -536,29 +536,31 @@ func (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) b
 func (consensusService *ConsensusService) verifyBlockContent(block *chainTypes.Block) bool {
 	db := consensusService.ChainService.DatabaseService.BeginTransaction()
 	if !consensusService.ChainService.BlockValidator.VerifyMultiSig(block, consensusService.ChainService.Config.SkipCheckMutiSig || false) {
-		log.Debug("verify block multiSig fail")
+		dlog.Debug("bitmap", "bitmap", block.MultiSig.Bitmap)
+		dlog.Debug("multySigVerify", "SkipCheckMutiSig", consensusService.ChainService.Config.SkipCheckMutiSig)
 		return false
 	}
+
 	gp := new(chainService.GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
 	gasUsed, gasFee, err := consensusService.ChainService.BlockValidator.ExecuteBlock(db, block, gp)
 	if err != nil {
-		log.WithField("Reason", err).Debug("execute block fail")
+		dlog.Debug("multySigVerify", "ExecuteBlock", err)
 		return false
 	}
 	err = consensusService.ChainService.AccumulateRewards(db, block, gasFee)
 	if err != nil {
-		log.WithField("Reason", err).Debug("accumulate block rewards fail")
+		dlog.Debug("multySigVerify", "AccumulateRewards", err)
 		return false
 	}
 	if block.Header.GasUsed.Cmp(gasUsed) == 0 {
 		stateRoot := db.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
-			log.WithField("Block stateroot", block.Header.StateRoot).WithField( "local stateroot",stateRoot).Error("state root not matched")
+			dlog.Debug("rootcmd root !====")
 			return false
 		}
 	} else {
-		log.WithField("Block gasUsed", block.Header.GasUsed).WithField( "local gasUsed",gasUsed).Error("gasUsed root not matched")
+		dlog.Debug("multySigVerify", "gasUsed", gasUsed)
 		return false
 	}
 	return true
