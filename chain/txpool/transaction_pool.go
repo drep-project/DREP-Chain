@@ -426,6 +426,11 @@ func (pool *TransactionPool) adjust(block *chainTypes.Block) {
 			//根据nonce是否被处理，删除对应的交易
 			nonce := pool.database.GetNonce(&addr)
 			pool.mu.Lock()
+			//块同步的时候，db中的nonce持续增加，pool.pendingNonce[addr]中的值不能被更新
+			//此处做更新处理
+			if nonce > pool.getTransactionCount(&addr) {
+				pool.pendingNonce[addr] = nonce
+			}
 			list, ok := pool.pending[addr]
 			if ok {
 				txs := list.Forward(nonce)
