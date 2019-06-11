@@ -29,6 +29,7 @@ var (
 	span = uint64(params.MaxGasLimit / 360)
 )
 
+//xxx
 type ChainService struct {
 	RpcService      *rpc2.RpcService          `service:"rpc"`
 	DatabaseService *database.DatabaseService `service:"database"`
