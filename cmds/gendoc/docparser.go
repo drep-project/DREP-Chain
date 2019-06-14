@@ -32,6 +32,7 @@ type StructDoc struct{
 }
 
 type FuncDoc struct {
+	Prefix string
 	Name string
 	Tokens map[string]*Token
 }
@@ -65,7 +66,7 @@ func structParser(source string) *StructDoc {
 	}
 }
 
-func funcParser(source string) *FuncDoc {
+func funcParser(source string, prefix string) *FuncDoc {
 	setToken := []string{ USAGE,PARAMS,NAME,RETURN,EXAMPLE,RESPONSE}
 	idIndex := markTokenPlace(source, setToken)
 
@@ -87,6 +88,7 @@ func funcParser(source string) *FuncDoc {
 
 	return &FuncDoc{
 		Name:name,
+		Prefix:prefix,
 		Tokens:tokens,
 	}
 }

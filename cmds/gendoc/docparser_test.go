@@ -21,7 +21,7 @@ return: 所有账户hash地址的数组
 	"result": ["0x0e4b43c04e4b9a57cf80fd8aad70960fca004af7", "0x76d737c4aac27b7c8a56d8566b28a307d821cd99", "0x8228385f1580551ef5c38fd5e84986f3ef57c196", "0xc4ac59f52b3052e5c14566ed397453ea913c6fbc"]
 }
 `
-	tokens := funcParser(example)
+	tokens := funcParser(example, "")
 	if tokens.Name != "获取地址" {
 		log.Fatal(errors.New("parser func err"))
 	}

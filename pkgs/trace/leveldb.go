@@ -214,9 +214,9 @@ func (store *LevelDbStore) TxReceiveHistoryKey(addr *crypto.CommonAddress, hash 
 }
 
 func (store *LevelDbStore) TxReceiveHistoryPrefixKey(addr *crypto.CommonAddress) []byte {
-	buf := [49]byte{}  //17+32
+	buf := [37]byte{}  //17+32
 	copy(buf[:17],[]byte(TX_RECEIVE_HISTORY_PREFIX)[:17])
-	copy(buf[18:],addr[:])
+	copy(buf[17:],addr[:])
 	return buf[:]
 }
 

@@ -9,6 +9,11 @@ import (
 	"math/big"
 )
 
+/*
+name: 区块
+usage: 用于处理区块链偏上层逻辑
+prefix:blockMgr
+*/
 type BlockMgrApi struct {
 	blockMgr *BlockMgr
 	dbService    *database.DatabaseService

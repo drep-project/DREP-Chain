@@ -67,7 +67,7 @@ func main() {
 				if funcCommentStr == "" {
 					continue
 				}
-				funcCommentDoc := funcParser(funcCommentStr)
+				funcCommentDoc := funcParser(funcCommentStr, rpcDoc.StructDoc.Tokens[PREFIX].Str)
 				rpcDoc.FuncDoc = append(rpcDoc.FuncDoc, funcCommentDoc)
 			}
 
@@ -117,6 +117,9 @@ func init() {
 	}
 	funcs["inc"] = func(i int) int {
 		return i + 1
+	}
+	funcs["trim"] = func(str string) string {
+		return strings.Trim(str,"\n\r ")
 	}
 	structTemplate.Funcs(funcs)
 	methodTemplate.Funcs(funcs)

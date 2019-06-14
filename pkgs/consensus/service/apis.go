@@ -1,14 +1,23 @@
 package service
 
+/*
+name: 共识rpc接口
+usage: 查询共识节点功能
+prefix:consensus
+*/
 type ConsensusApi struct {
 	consensusService *ConsensusService
 }
 
-//TODO mock a rpc to provent rpc error
-func (consensusApi *ConsensusApi) Mock(){
-
-}
-
+/*
+ name: minning
+ usage: 查询是否在出块状态 (需开启共识模块)
+ params:
+ return: true/false
+ example:  curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"consensus_minning, "params":[], "id": 3}' -H "Content-Type:application/json"
+ response:
+  {"jsonrpc":"2.0","id":3,"result":false}
+*/
 func (consensusApi *ConsensusApi) Minning() bool {
 	switch consensusApi.consensusService.Config.ConsensusMode {
 	case "solo":

@@ -175,7 +175,7 @@ func (chain *ChainApi) GetAliasByAddress(addr *crypto.CommonAddress) string {
 }
 
 /*
- name: etAddressByAlias
+ name: getAddressByAlias
  usage: 根据别名获取别名对应的地址
  params:
 	1. 待查询地别名

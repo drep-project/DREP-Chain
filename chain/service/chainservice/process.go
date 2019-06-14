@@ -98,6 +98,7 @@ func (chainService *ChainService) AcceptBlock(block *chainTypes.Block) (inMainCh
 
 }
 
+//TODO cannot find chain tip  对外通知区块失败会产生这个错误  区块未保存 header已经保存
 func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainChain bool, err error) {
 	db := chainService.DatabaseService.BeginTransaction()
 	defer func() {
@@ -143,6 +144,7 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainCh
 			return false, err
 		}
 		chainService.markState(db, newNode)
+		//SetTip has save tip but block not saving
 		chainService.notifyBlock(block)
 		return true, nil
 	}
@@ -331,6 +333,7 @@ func (chainService *ChainService) markState(db *database.Database, blockNode *ch
 	chainService.DatabaseService.PutChainState(state)
 	db.Commit(true)
 	db.RecordBlockJournal(state.Height)
+	chainService.blockDb.Commit(false)
 }
 
 //TODO improves the performan
@@ -349,17 +352,31 @@ func (chainService *ChainService) InitStates() error {
 			node := chainTypes.NewBlockNode(header, nil)
 			chainState = chainTypes.NewBestState(node)
 			chainService.DatabaseService.PutChainState(chainState)
-			log.Info("Repair data success")
+			log.Info("Repair commit fail")
 		} else {
 			panic("never reach here")
 		}
+	}
+	_, err := chainService.blockDb.GetBlock(&chainState.Hash)
+	if err != nil {
+		//block not save but tip save status is ok
+		rollbackHeight :=  chainState.Height - 1
+		chainService.DatabaseService.Rollback2Block(rollbackHeight)
+		header, _, err := chainService.DatabaseService.GetBlockNode(&chainState.PrevHash, rollbackHeight)
+		if err != nil {
+			return err
+		}
+		node := chainTypes.NewBlockNode(header, nil)
+		chainState = chainTypes.NewBestState(node)
+		chainService.DatabaseService.PutChainState(chainState)
+		log.Info("Repair block missing")
 	}
 
 	blockCount := chainService.DatabaseService.BlockNodeCount()
 	blockNodes := make([]chainTypes.BlockNode, blockCount)
 	var i int32
 	var lastNode *chainTypes.BlockNode
-	err := chainService.DatabaseService.BlockNodeIterator(func(header *chainTypes.BlockHeader, status chainTypes.BlockStatus) error {
+	err = chainService.DatabaseService.BlockNodeIterator(func(header *chainTypes.BlockHeader, status chainTypes.BlockStatus) error {
 		// Determine the parent block node. Since we iterate block headers
 		// in order of height, if the blocks are mostly linear there is a
 		// very good chance the previous header processed is the parent.
