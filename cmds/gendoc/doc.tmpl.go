@@ -6,7 +6,7 @@ const doctmpl = `
 {{ .FuncDocStr | html}}{{end}}`
 
 const methodtmpl = `{{range $index2, $method := .}}
-### {{inc $index2}}  . {{$method.Prefix}}_{{$method.Name}}
+### {{inc $index2}}. {{$method.Prefix}}_{{$method.Name}}
 #### 作用：{{ with (index .Tokens "usage:") }}{{ .Str }}{{ end }}
 > 参数：
 {{ with (index $method.Tokens "params:") }}{{range $index, $params := .Params}} {{inc $index}}. {{$params}}

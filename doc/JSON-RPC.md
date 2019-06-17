@@ -3,7 +3,7 @@
 ## p2p网络接口
 设置查询网络状态
 
-### 1  . p2p_getPeers
+### 1. p2p_getPeers
 #### 作用：获取当前连接的节点
 > 参数：
 
@@ -68,7 +68,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_get
 ### 1  . log_setLevel
 #### 作用：设置日志级别
 > 参数：
- 1. 日志级别（&#34;debug&#34;,&#34;0&#34;）
+ 1.  日志级别（&#34;debug&#34;,&#34;0&#34;）
 
 #### 返回值：无
 

@@ -6,7 +6,6 @@ import (
 	"github.com/drep-project/drep-chain/common"
 	"log"
 	"testing"
-	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"

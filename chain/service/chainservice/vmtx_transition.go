@@ -140,9 +140,18 @@ func (st *StateTransition) TransitionTransferDb() (ret []byte, failed bool, err 
 		return nil, false, ErrBalance
 	}
 	addBalance := toBalance.Add(toBalance, st.tx.Amount())
-	st.databaseService.PutBalance(from, leftBalance)
-	st.databaseService.PutBalance(st.tx.To(), addBalance)
-	st.databaseService.PutNonce(from, st.tx.Nonce()+1)
+	err = st.databaseService.PutBalance(from, leftBalance)
+	if err != nil {
+		return nil, false, err
+	}
+	err = st.databaseService.PutBalance(st.tx.To(), addBalance)
+	if err != nil {
+		return nil, false, err
+	}
+	err = st.databaseService.PutNonce(from, st.tx.Nonce()+1)
+	if err != nil {
+		return nil, false, err
+	}
 	return nil, true, nil
 }
 
@@ -157,6 +166,12 @@ func (st *StateTransition) TransitionAliasDb() (ret []byte, failed bool, err err
 	if err != nil {
 		return nil, false, err
 	}
+	/*
+	err = st.databaseService.PutNonce(from, st.tx.Nonce()+1)
+	if err != nil {
+		return nil, false, err
+	}
+	*/
 	return nil, true, err
 }
 

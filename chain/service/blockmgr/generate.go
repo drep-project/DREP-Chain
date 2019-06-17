@@ -61,7 +61,8 @@ SELECT_TX:
 				gasFee.Add(gasFee, txGasFee)
 				gp = &newGp // use new gp and new state if success
 			} else {
-				db.RevertState(snap) //revert old state and use old gp if fail
+				//revert old state and use old gp if fail
+				db.RevertState(snap)
 				if err.Error() == ErrReachGasLimit.Error() {
 					break SELECT_TX
 				} else {
