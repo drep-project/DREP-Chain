@@ -42,14 +42,14 @@ func (blockMgr *BlockMgr) synchronise() {
 	timer := time.NewTicker(time.Second * 10)
 	defer timer.Stop()
 
-	sync := func() {
+	syncBlock := func() {
 		pi := blockMgr.GetBestPeerInfo()
 		if pi == nil {
 			return
 		}
 		currentHeight := blockMgr.ChainService.BestChain.Height()
 		if pi.GetHeight() > currentHeight {
-			fmt.Println("************", pi.GetHeight(), ">", currentHeight)
+			log.Info("need sync  ", pi.GetHeight(), ">", currentHeight)
 			err := blockMgr.fetchBlocks(pi)
 			if err != nil {
 				log.WithField("Reason", err).Warn("sync block from peer")
@@ -69,12 +69,12 @@ func (blockMgr *BlockMgr) synchronise() {
 	for {
 		select {
 		case <-timer.C:
-			sync()
+			syncBlock()
 		case peer := <-blockMgr.newPeerCh:
 			// 同步本地的txpool给对端
 			go syncTx(peer)
 			//先与peer同步状态，然后做总体同步
-			sync()
+			syncBlock()
 		case <-blockMgr.quit:
 			return
 		}
@@ -173,13 +173,22 @@ func (blockMgr *BlockMgr) clearSyncCh() {
 	default:
 	}
 
+	select {
+	case <-blockMgr.syncTimerCh:
+	default:
+	}
+
 	blockMgr.allTasks = newHeightSortedMap()
-	blockMgr.pendingSyncTasks = make(map[crypto.Hash]uint64)
+
+	blockMgr.pendingSyncTasks.Range(func(key, value interface{}) bool {
+		blockMgr.pendingSyncTasks.Delete(key)
+		return true
+	})
 }
+
 
 func (blockMgr *BlockMgr) batchReqBlocks(hashs []crypto.Hash, errCh chan error) {
 	req := &chainTypes.BlockReq{BlockHashs: hashs}
-	successNum := 0
 
 	for _, pi := range blockMgr.peersInfo {
 		blockMgr.syncMut.Lock()
@@ -188,9 +197,7 @@ func (blockMgr *BlockMgr) batchReqBlocks(hashs []crypto.Hash, errCh chan error) 
 		//blockMgr.P2pServer.SetIdle(bodyReqPeer, true)
 		blockMgr.syncMut.Unlock()
 
-		successNum++
-
-		if err == nil && successNum >= 1 {
+		if err == nil {
 			return
 		}
 	}
@@ -223,7 +230,11 @@ func (blockMgr *BlockMgr) fetchBlocks(peer *chainTypes.PeerInfo) error {
 		for height >= commonAncestor {
 			timer.Reset(time.Second * maxNetworkTimeout)
 
-			if blockMgr.allTasks.Len() >= maxHeaderHashCountReq {
+			blockMgr.syncMut.Lock()
+			taskLen := blockMgr.allTasks.Len()
+			blockMgr.syncMut.Unlock()
+
+			if taskLen >= maxHeaderHashCountReq {
 				time.Sleep(time.Millisecond * 100)
 				continue
 			}
@@ -239,12 +250,13 @@ func (blockMgr *BlockMgr) fetchBlocks(peer *chainTypes.PeerInfo) error {
 			}
 
 			select {
-			//每个headhash作为一个任务
+			//每个headerhash作为一个任务
 			case tasks := <-blockMgr.headerHashCh:
 				for _, task := range tasks {
 					blockMgr.syncMut.Lock()
 					blockMgr.allTasks.Put(task)
 					blockMgr.syncMut.Unlock()
+
 				}
 				commonAncestor += uint64(len(tasks))
 				log.WithField("tasks len", blockMgr.allTasks.Len()).Info("fetchBlocks")
@@ -261,16 +273,111 @@ func (blockMgr *BlockMgr) fetchBlocks(peer *chainTypes.PeerInfo) error {
 		headerRoutineExit = true
 	}()
 
+	//请求发出去到时候，设置一个超时定时器
+	//请求超时后，把对应到pendingSyncTasks中到任务放入到allTasks，再次被请求
+	//请求到块都到了，从pendingSyncTasks中删除对应到任务
+
+	//收到block
+	go func() {
+		delHash := func(b *chainTypes.Block) {
+			blockMgr.pendingSyncTasks.Range(func(key, value interface{}) bool {
+				hashs := value.(map[crypto.Hash]uint64)
+				timer := key.(*time.Timer)
+
+				if _, ok := hashs[*b.Header.Hash()]; ok {
+					delete(hashs, *b.Header.Hash())
+					if len(hashs) == 0 {
+						//所有到block都到了，停止超时定时器
+						timer.Stop()
+						blockMgr.syncTimerCh <- timer
+					}
+
+					return false
+				}
+				return true
+			})
+
+		}
+
+		checkExist := func(h crypto.Hash) bool {
+			found := false
+			blockMgr.pendingSyncTasks.Range(func(key, value interface{}) bool {
+				hashs := value.(map[crypto.Hash]uint64)
+				if _, ok := hashs[h]; ok {
+					found = true
+					return false
+				}
+				return true
+			})
+
+			return found
+		}
+
+		for {
+			select {
+			case blocks := <-blockMgr.blocksCh:
+				for _, b := range blocks {
+
+					if !checkExist(*b.Header.Hash()) {
+						continue
+					}
+
+					//log.WithField("height", b.Header.Height).WithField("blk num", len(blocks)).Info("sync block recv block")
+
+					_, _, err := blockMgr.ChainService.ProcessBlock(b)
+					if err != nil {
+						switch err {
+						case chainservice.ErrBlockExsist, chainservice.ErrOrphanBlockExsist:
+							//删除块高度对应的任务
+							delHash(b)
+							continue
+
+						default:
+							log.WithField("Reason", err).Error("deal sync block")
+							errCh <- err
+							return
+						}
+					} else {
+						//删除块高度对应的任务
+						delHash(b)
+					}
+				}
+
+			case <-quit:
+				log.Info("fetch blocks routine quit")
+				return
+			}
+		}
+	}()
+
+	pendingTimerCount := 10
 	//3获取对应的body
 	go func() {
 		for {
+
+			//请求发的太快了，需要等待
+			count := 0
+			blockMgr.pendingSyncTasks.Range(func(key, value interface{}) bool {
+				count++
+				if count >= pendingTimerCount {
+					return false
+				}
+				return true
+			})
+			if count >= pendingTimerCount {
+				log.Info("req body routine wait.......")
+				time.Sleep(time.Millisecond * maxSyncSleepTime)
+				continue
+			}
+
 			blockMgr.syncMut.Lock()
 			hashs, headerHashs := blockMgr.allTasks.GetSortedHashs(maxBlockCountReq)
+			taskLen := blockMgr.allTasks.Len()
 			blockMgr.syncMut.Unlock()
 			if len(hashs) == 0 {
-				if headerRoutineExit {
+				if headerRoutineExit && count == 0 {
 					//任务完成，触发退出
-					log.WithField("tasks len", blockMgr.allTasks.Len()).Info("all block sync ok")
+					log.WithField("tasks len", taskLen).Info("all block sync ok")
 					close(errCh)
 					return
 				}
@@ -278,60 +385,37 @@ func (blockMgr *BlockMgr) fetchBlocks(peer *chainTypes.PeerInfo) error {
 				continue
 			}
 
-			blockMgr.pendingSyncTasks = headerHashs
+			reqTimer := time.NewTimer(time.Second * maxNetworkTimeout)
+			blockMgr.pendingSyncTasks.Store(reqTimer, headerHashs)
 
-			go blockMgr.batchReqBlocks(hashs, errCh)
-
-			//最多等待一分钟
-			timeout := time.After(time.Second * maxNetworkTimeout * 6)
-			validCh := make(chan bool)
-			// 等待，直到有效的块到来后，才进入到下个循环
 			go func() {
-				deletedHash := false
-				for {
-					select {
-					case blocks := <-blockMgr.blocksCh:
-						for _, b := range blocks {
-							if _, ok := blockMgr.pendingSyncTasks[*b.Header.Hash()]; !ok {
-								continue
-							}
-							log.WithField("height", b.Header.Height).WithField("blk num", len(blocks)).Info("sync block recv block")
-							//删除块高度对应的任务
-							delete(blockMgr.pendingSyncTasks, *b.Header.Hash())
-							deletedHash = true
-							_, _, err := blockMgr.ChainService.ProcessBlock(b)
-							if err != nil {
-								switch err {
-								case chainservice.ErrBlockExsist, chainservice.ErrOrphanBlockExsist:
-									continue
-								default:
-									log.WithField("Reason", err).Error("deal sync block")
-									errCh <- err
-									return
-								}
-							}
-						}
-
-						if deletedHash {
-							for k, v := range blockMgr.pendingSyncTasks {
-								blockMgr.syncMut.Lock()
-								blockMgr.allTasks.Put(&syncHeaderHash{headerHash: &k, height: v})
-								blockMgr.syncMut.Unlock()
-							}
-							validCh <- true
-							return
-						}
-					case <-timeout:
-						errCh <- ErrGetBlockTimeout
-						return
-					case <-quit:
-						log.Info("fetch blocks routine quit")
+				fmt.Println("new sync block timer", reqTimer)
+				select {
+				case <-reqTimer.C:
+					fmt.Println("sync timer ,timeout...................")
+					//所有到hash加入到allTasks
+					value, ok := blockMgr.pendingSyncTasks.Load(reqTimer)
+					if !ok {
+						errCh <- fmt.Errorf("timer not in pending task, exception")
 						return
 					}
+					hashs := value.(map[crypto.Hash]uint64)
+					for k, v := range hashs {
+						blockMgr.syncMut.Lock()
+						blockMgr.allTasks.Put(&syncHeaderHash{headerHash: &k, height: v})
+						blockMgr.syncMut.Unlock()
+					}
+
+				case timer := <-blockMgr.syncTimerCh:
+					fmt.Println("stop timer...........", timer)
+					//请求到block都到了，停止此定时器
+					blockMgr.pendingSyncTasks.Delete(timer)
+				case <-quit:
+					return
 				}
 			}()
 
-			<-validCh
+			blockMgr.batchReqBlocks(hashs, errCh)
 		}
 	}()
 
