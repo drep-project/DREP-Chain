@@ -166,12 +166,12 @@ func (st *StateTransition) TransitionAliasDb() (ret []byte, failed bool, err err
 	if err != nil {
 		return nil, false, err
 	}
-	/*
+
 	err = st.databaseService.PutNonce(from, st.tx.Nonce()+1)
 	if err != nil {
 		return nil, false, err
 	}
-	*/
+
 	return nil, true, err
 }
 
