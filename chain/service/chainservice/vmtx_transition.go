@@ -148,13 +148,10 @@ func (st *StateTransition) TransitionTransferDb() (ret []byte, failed bool, err 
 	if err != nil {
 		return nil, false, err
 	}
-	/*  Notice euler_test err, has fixed in master, but keep in euler_test
-
 	err = st.databaseService.PutNonce(from, st.tx.Nonce()+1)
 	if err != nil {
 		return nil, false, err
 	}
-	*/
 	return nil, true, nil
 }
 
@@ -170,10 +167,13 @@ func (st *StateTransition) TransitionAliasDb() (ret []byte, failed bool, err err
 		return nil, false, err
 	}
 
+	/*  Notice euler_test err, has fixed in master, but keep in euler_test
+
 	err = st.databaseService.PutNonce(from, st.tx.Nonce()+1)
 	if err != nil {
 		return nil, false, err
 	}
+	*/
 	return nil, true, err
 }
 
