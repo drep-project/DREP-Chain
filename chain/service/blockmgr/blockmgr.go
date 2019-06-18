@@ -25,8 +25,8 @@ import (
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	p2pService "github.com/drep-project/drep-chain/network/service"
 
-	rpc2 "github.com/drep-project/drep-chain/pkgs/rpc"
 	"github.com/drep-project/drep-chain/common"
+	rpc2 "github.com/drep-project/drep-chain/pkgs/rpc"
 	"time"
 )
 
@@ -46,11 +46,11 @@ var (
 )
 
 type BlockMgr struct {
-	ChainService    *chainservice.ChainService      `service:"chain"`
-	RpcService      *rpc2.RpcService          		`service:"rpc"`
-	P2pServer       p2pService.P2P            		`service:"p2p"`
-	DatabaseService *database.DatabaseService 		`service:"database"`
-	VmService       evm.Vm                    		`service:"vm"`
+	ChainService    *chainservice.ChainService `service:"chain"`
+	RpcService      *rpc2.RpcService           `service:"rpc"`
+	P2pServer       p2pService.P2P             `service:"p2p"`
+	DatabaseService *database.DatabaseService  `service:"database"`
+	VmService       evm.Vm                     `service:"vm"`
 	transactionPool *txpool.TransactionPool
 	apis            []app.API
 
@@ -72,8 +72,9 @@ type BlockMgr struct {
 	allTasks *heightSortedMap
 
 	//正在同步中的任务列表，如果对应的块未到，会重新发布请求的
-	pendingSyncTasks map[crypto.Hash]uint64
+	pendingSyncTasks sync.Map//map[*time.Timer]map[crypto.Hash]uint64
 	taskTxsCh        chan tasksTxsSync
+	syncTimerCh      chan *time.Timer
 
 	//与此模块通信的所有Peer
 	peersInfo map[string]*chainTypes.PeerInfo
@@ -110,10 +111,12 @@ func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 	blockMgr.headerHashCh = make(chan []*syncHeaderHash)
 	blockMgr.blocksCh = make(chan []*chainTypes.Block)
 	blockMgr.allTasks = newHeightSortedMap()
-	blockMgr.pendingSyncTasks = make(map[crypto.Hash]uint64)
+	//blockMgr.pendingSyncTasks = make(map[*time.Timer]map[crypto.Hash]uint64)
+	blockMgr.syncTimerCh = make(chan *time.Timer, 1)
 	blockMgr.peersInfo = make(map[string]*chainTypes.PeerInfo)
 	blockMgr.newPeerCh = make(chan *chainTypes.PeerInfo, maxLivePeer)
 	blockMgr.taskTxsCh = make(chan tasksTxsSync, maxLivePeer)
+
 	blockMgr.gpo = NewOracle(blockMgr.ChainService, blockMgr.Config.GasPrice)
 
 	//TODO use disk db
@@ -245,9 +248,9 @@ func (blockMgr *BlockMgr) GetPoolMiniPendingNonce(addr *crypto.CommonAddress) ui
 	return blockMgr.transactionPool.GetMiniPendingNonce(addr)
 }
 
-func (blockMgr *BlockMgr) GenerateTransferTransaction(to  *crypto.CommonAddress, nonce uint64, amount, price, limit common.Big) chainTypes.Transaction {
+func (blockMgr *BlockMgr) GenerateTransferTransaction(to *crypto.CommonAddress, nonce uint64, amount, price, limit common.Big) chainTypes.Transaction {
 	t := chainTypes.Transaction{
-		Data: chainTypes.TransactionData {
+		Data: chainTypes.TransactionData{
 			Version:   common.Version,
 			Nonce:     nonce,
 			ChainId:   blockMgr.ChainService.ChainID(),

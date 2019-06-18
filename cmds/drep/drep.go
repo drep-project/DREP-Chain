@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
 	blockService "github.com/drep-project/drep-chain/chain/service/blockmgr"
 	chainService "github.com/drep-project/drep-chain/chain/service/chainservice"
@@ -14,6 +15,7 @@ import (
 	"github.com/drep-project/drep-chain/pkgs/log"
 	"github.com/drep-project/drep-chain/pkgs/rpc"
 	"github.com/drep-project/drep-chain/pkgs/trace"
+
 	"os"
 	"os/signal"
 	"runtime/debug"
@@ -22,15 +24,15 @@ import (
 
 func main() {
 	c := make(chan os.Signal)
-	signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGKILL,syscall.SIGSEGV)
+	signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGKILL, syscall.SIGSEGV)
 	go func() {
 		for s := range c {
 			switch s {
-			case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGKILL,syscall.SIGSEGV:
-				fmt.Println("system sig`:", s)
+			case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGKILL, syscall.SIGSEGV:
+				dlog.Error("cache sig ", "sig", s)
 				os.Exit(0)
 			default:
-				fmt.Println("system sig:", s)
+				dlog.Error("cache unknow sig ", "sig", s)
 				os.Exit(0)
 			}
 		}

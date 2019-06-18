@@ -116,8 +116,10 @@ func (st *StateTransition) preCheck() error {
 	// Make sure this transaction's nonce is correct.
 	nonce := st.databaseService.GetNonce(st.from)
 	if nonce < st.tx.Nonce() {
+		log.WithField("db nonce", nonce).WithField("tx nonce", st.tx.Nonce()).Info("state precheck too hight")
 		return ErrNonceTooHigh
 	} else if nonce > st.tx.Nonce() {
+		log.WithField("db nonce", nonce).WithField("tx nonce", st.tx.Nonce()).Info("state precheck too low")
 		return ErrNonceTooLow
 	}
 	return st.buyGas()
