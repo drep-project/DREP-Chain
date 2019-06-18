@@ -161,7 +161,7 @@ func (m *txSortedMap) Ready(start uint64) []*chainTypes.Transaction {
 	// Short circuit if no transactions are available
 	if m.index.Len() == 0 || (*m.index)[0] > start {
 		if m.index.Len() != 0 {
-			log.WithField("index[0]", (*m.index)[0]).WithField("req start", start).Warn("txSortedMap Ready")
+			log.WithField("index[0]", (*m.index)[0]).WithField("req start", start).Debug("txSortedMap Ready")
 		}
 		return nil
 	}

@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/common/fileutil"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -26,7 +25,7 @@ func NewDbStore(dbStoreDir string) DbStore {
 			panic(err)
 		}
 	}
-	db, err := leveldb.OpenFile("account_db", nil)
+	db, err := leveldb.OpenFile(dbStoreDir, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -39,8 +38,11 @@ func NewDbStore(dbStoreDir string) DbStore {
 
 // GetKey read key in db
 func (db *DbStore) GetKey(addr crypto.CommonAddress, auth string) (*chainTypes.Node, error) {
-	bytes := []byte{0}
-	node, err := bytesToCryptoNode(bytes, auth)
+	bytes, err := db.db.Get(addr[:], nil)
+	if err != nil {
+		return nil, err
+	}
+	node, err := BytesToCryptoNode(bytes, auth)
 	if err != nil {
 		return nil, err
 	}
@@ -54,24 +56,27 @@ func (db *DbStore) GetKey(addr crypto.CommonAddress, auth string) (*chainTypes.N
 
 // store the key in db after encrypto
 func (dbStore *DbStore) StoreKey(key *chainTypes.Node, auth string) error {
-	iv, err := common.GenUnique()
-	if err != nil {
-		return err
-	}
 	cryptoNode := &CryptedNode{
-		PrivateKey: key.PrivateKey,
-		ChainId:    key.ChainId,
-		ChainCode:  key.ChainCode,
-		Key:        []byte(auth),
-		Iv:         iv[:16],
+		Version:      0,
+		Data:         key.PrivateKey.Serialize(),
+		ChainId:      key.ChainId,
+		ChainCode:    key.ChainCode,
+		Cipher:       "aes-128-ctr",
+		CipherParams: CipherParams{},
+		KDFParams:ScryptParams{
+			N  	:StandardScryptN,
+			R    :scryptR,
+			P      :StandardScryptP,
+			Dklen   :scryptDKLen,
+		},
 	}
-	cryptoNode.EnCrypt()
+	cryptoNode.EncryptData([]byte(auth))
 	content, err := json.Marshal(cryptoNode)
 	if err != nil {
 		return err
 	}
-	addr := crypto.PubKey2Address(key.PrivateKey.PubKey()).Hex()
-	return dbStore.db.Put([]byte(addr), content, nil)
+	addr := crypto.PubKey2Address(key.PrivateKey.PubKey())
+	return dbStore.db.Put(addr[:], content, nil)
 }
 
 // ExportKey export all key in db by password
@@ -82,7 +87,7 @@ func (dbStore *DbStore) ExportKey(auth string) ([]*chainTypes.Node, error) {
 	for iter.Next() {
 		value := iter.Value()
 
-		node, err := bytesToCryptoNode(value, auth)
+		node, err := BytesToCryptoNode(value, auth)
 		if err != nil {
 			log.WithField("Msg", err).Error("read key store error ")
 			continue
@@ -98,4 +103,8 @@ func (dbStore *DbStore) JoinPath(filename string) string {
 		return filename
 	}
 	return filepath.Join(dbStore.dbDirPath, "db") //dbfile fixed datadir
+}
+
+func (dbStore *DbStore) Close()  {
+	dbStore.db.Close()
 }

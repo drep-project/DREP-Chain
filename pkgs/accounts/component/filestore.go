@@ -8,13 +8,37 @@ import (
 	"path/filepath"
 
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/common/fileutil"
 	"github.com/drep-project/drep-chain/crypto"
 )
 
+const (
+	keyHeaderKDF = "scrypt"
+
+	// StandardScryptN is the N parameter of Scrypt encryption algorithm, using 256MB
+	// memory and taking approximately 1s CPU time on a modern processor.
+	StandardScryptN = 1 << 18
+
+	// StandardScryptP is the P parameter of Scrypt encryption algorithm, using 256MB
+	// memory and taking approximately 1s CPU time on a modern processor.
+	StandardScryptP = 1
+
+	// LightScryptN is the N parameter of Scrypt encryption algorithm, using 4MB
+	// memory and taking approximately 100ms CPU time on a modern processor.
+	LightScryptN = 1 << 12
+
+	// LightScryptP is the P parameter of Scrypt encryption algorithm, using 4MB
+	// memory and taking approximately 100ms CPU time on a modern processor.
+	LightScryptP = 6
+
+	scryptR     = 8
+	scryptDKLen = 32
+)
+
 type FileStore struct {
 	keysDirPath string
+	scryptN     int
+	scryptP     int
 }
 
 func NewFileStore(keyStoreDir string) FileStore {
@@ -36,7 +60,7 @@ func (fs FileStore) GetKey(addr *crypto.CommonAddress, auth string) (*chainTypes
 		return nil, err
 	}
 
-	node, err := bytesToCryptoNode(contents, auth)
+	node, err := BytesToCryptoNode(contents, auth)
 	if err != nil {
 		return nil, err
 	}
@@ -50,18 +74,21 @@ func (fs FileStore) GetKey(addr *crypto.CommonAddress, auth string) (*chainTypes
 
 // store the key in file encrypto
 func (fs FileStore) StoreKey(key *chainTypes.Node, auth string) error {
-	iv, err := common.GenUnique()
-	if err != nil {
-		return err
-	}
 	cryptoNode := &CryptedNode{
-		PrivateKey: key.PrivateKey,
-		ChainId:    key.ChainId,
-		ChainCode:  key.ChainCode,
-		Key:        []byte(auth),
-		Iv:         iv[:16],
+		Version:      0,
+		Data:         key.PrivateKey.Serialize(),
+		ChainId:      key.ChainId,
+		ChainCode:    key.ChainCode,
+		Cipher:       "aes-128-ctr",
+		CipherParams: CipherParams{},
+		KDFParams:ScryptParams{
+			N  	:StandardScryptN,
+			R    :scryptR,
+			P      :StandardScryptP,
+			Dklen   :scryptDKLen,
+		},
 	}
-	cryptoNode.EnCrypt()
+	cryptoNode.EncryptData([]byte(auth))
 	content, err := json.Marshal(cryptoNode)
 	if err != nil {
 		return err
@@ -79,7 +106,7 @@ func (fs FileStore) ExportKey(auth string) ([]*chainTypes.Node, error) {
 			return false, err
 		}
 
-		node, err := bytesToCryptoNode(contents, auth)
+		node, err := BytesToCryptoNode(contents, auth)
 		if err != nil {
 			return false, err
 		}

@@ -8,3 +8,5 @@ data
 drep
 drepClient.exe
 drepClient
+test_filestore*
+test_db*

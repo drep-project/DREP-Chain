@@ -105,7 +105,10 @@ func (accountService *AccountService) Init(executeContext *app.ExecuteContext) e
 		return err
 	}
 	if accountService.Config.Password != "" {
-		accountService.Wallet.Open(accountService.Config.Password)
+		err = accountService.Wallet.Open(accountService.Config.Password)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
