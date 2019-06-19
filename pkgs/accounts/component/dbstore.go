@@ -18,7 +18,7 @@ type DbStore struct {
 	db        *leveldb.DB
 }
 
-func NewDbStore(dbStoreDir string) DbStore {
+func NewDbStore(dbStoreDir string) *DbStore {
 	if !fileutil.IsDirExists(dbStoreDir) {
 		err := os.Mkdir(dbStoreDir, os.ModePerm)
 		if err != nil {
@@ -30,14 +30,14 @@ func NewDbStore(dbStoreDir string) DbStore {
 		panic(err)
 	}
 
-	return DbStore{
+	return &DbStore{
 		dbDirPath: dbStoreDir,
 		db:        db,
 	}
 }
 
 // GetKey read key in db
-func (db *DbStore) GetKey(addr crypto.CommonAddress, auth string) (*chainTypes.Node, error) {
+func (db *DbStore) GetKey(addr *crypto.CommonAddress, auth string) (*chainTypes.Node, error) {
 	bytes, err := db.db.Get(addr[:], nil)
 	if err != nil {
 		return nil, err

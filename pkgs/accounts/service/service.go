@@ -1,10 +1,8 @@
 package service
 
 import (
-	path2 "path"
-
 	"github.com/drep-project/drep-chain/app"
-	blockmgr "github.com/drep-project/drep-chain/chain/service/blockmgr"
+	"github.com/drep-project/drep-chain/chain/service/blockmgr"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/common/fileutil"
@@ -13,6 +11,7 @@ import (
 	accountComponent "github.com/drep-project/drep-chain/pkgs/accounts/component"
 	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
 	"gopkg.in/urfave/cli.v1"
+	"path/filepath"
 )
 
 var (
@@ -30,9 +29,16 @@ var (
 		Name:  "enableWallet",
 		Usage: "is wallet flag",
 	}
+
+	DefaultConfig = &accountTypes.Config{
+		Enable: true,
+		Type:"filestore",
+		KeyStoreDir:"keystore",
+	}
 )
 
-// CliService provides an interactive command line window
+
+// AccountService
 type AccountService struct {
 	DatabaseService *database.DatabaseService `service:"database"`
 	Blockmgr        *blockmgr.BlockMgr        `service:"blockmgr"`
@@ -42,7 +48,7 @@ type AccountService struct {
 	apis            []app.API
 }
 
-// Name name
+// Name service name
 func (accountService *AccountService) Name() string {
 	return MODULENAME
 }
@@ -76,9 +82,8 @@ func (accountService *AccountService) P2pMessages() map[int]interface{} {
 // Init  set console Config
 func (accountService *AccountService) Init(executeContext *app.ExecuteContext) error {
 	accountService.CommonConfig = executeContext.CommonConfig
-	accountService.Config = &accountTypes.Config{
-		KeyStoreDir: path2.Join(executeContext.CommonConfig.HomeDir, "keystore"),
-	}
+	accountService.Config = DefaultConfig
+	accountService.Config.KeyStoreDir = filepath.Join(executeContext.CommonConfig.HomeDir, "keystore")
 	err := executeContext.UnmashalConfig(accountService.Name(), accountService.Config)
 	if err != nil {
 		return err

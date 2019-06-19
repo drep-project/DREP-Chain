@@ -1,7 +1,6 @@
 package component
 
 import (
-	"path/filepath"
 	"sync"
 
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
@@ -12,7 +11,6 @@ import (
 // TODO If the write speed becomes a bottleneck, write caching can be added
 type CacheStore struct {
 	store       KeyStore //  This points to a de facto storage.
-	keyStoreDir string
 	nodes       []*chainTypes.Node
 	rlock       sync.RWMutex
 }
@@ -20,10 +18,9 @@ type CacheStore struct {
 // NewCacheStore receive an path and password as argument
 // path refer to  the file that contain all key
 // password used to decrypto content in key file
-func NewCacheStore(keyStoreDir string, password string) (*CacheStore, error) {
+func NewCacheStore(keyStore KeyStore, password string) (*CacheStore, error) {
 	cacheStore := &CacheStore{
-		keyStoreDir: keyStoreDir,
-		store:       NewFileStore(keyStoreDir),
+		store: keyStore,
 	}
 	persistedNodes, err := cacheStore.store.ExportKey(password)
 	if err != nil {
@@ -93,8 +90,5 @@ func (cacheStore *CacheStore) ClearKeys() {
 
 // JoinPath refer to local file
 func (cacheStore *CacheStore) JoinPath(filename string) string {
-	if filepath.IsAbs(filename) {
-		return filename
-	}
-	return filepath.Join(cacheStore.keyStoreDir, filename)
+	return cacheStore.store.JoinPath(filename)
 }

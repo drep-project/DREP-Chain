@@ -21,7 +21,7 @@ const (
 	LOCKED   = iota //locked
 	UNLOCKED        //unlocked
 )
-
+//Wallet is used to manage private keys, build simple transactions and other functions.
 type Wallet struct {
 	cacheStore *accountsComponent.CacheStore
 
@@ -32,6 +32,7 @@ type Wallet struct {
 	password string
 }
 
+// NewWallet based in config
 func NewWallet(config *accountTypes.Config, chainId app.ChainIdType) (*Wallet, error) {
 	wallet := &Wallet{
 		config:  config,
@@ -40,12 +41,24 @@ func NewWallet(config *accountTypes.Config, chainId app.ChainIdType) (*Wallet, e
 	return wallet, nil
 }
 
+// Open wallet to use wallet
 func (wallet *Wallet) Open(password string) error {
 	if wallet.cacheStore != nil {
 		return ErrClosedWallet
 	}
 	cryptedPassword := wallet.cryptoPassword(password)
-	accountCacheStore, err := accountsComponent.NewCacheStore(wallet.config.KeyStoreDir, cryptedPassword)
+
+	var store accountsComponent.KeyStore
+	if wallet.config.Type == "dbstore" {
+		store = accountsComponent.NewDbStore(wallet.config.KeyStoreDir)
+	} else if wallet.config.Type == "memorystore" {
+		store = accountsComponent.NewMemoryStore()
+	}else{
+		store = accountsComponent.NewFileStore(wallet.config.KeyStoreDir)
+	}
+
+
+	accountCacheStore, err := accountsComponent.NewCacheStore(store, cryptedPassword)
 	if err != nil {
 		return err
 	}
@@ -61,12 +74,14 @@ func (wallet *Wallet) Open(password string) error {
 	return nil
 }
 
+// Close wallet to disable wallet
 func (wallet *Wallet) Close() {
 	wallet.Lock()
 	wallet.cacheStore = nil
 	wallet.password = ""
 }
 
+// NewAccount create new address
 func (wallet *Wallet) NewAccount() (*chainTypes.Node, error) {
 	if err := wallet.checkWallet(WPERMISSION); err != nil {
 		return nil, err
@@ -77,6 +92,7 @@ func (wallet *Wallet) NewAccount() (*chainTypes.Node, error) {
 	return newNode, nil
 }
 
+// GetAccountByAddress query account according to address
 func (wallet *Wallet) GetAccountByAddress(addr *crypto.CommonAddress) (*chainTypes.Node, error) {
 	if err := wallet.checkWallet(RPERMISSION); err != nil {
 		return nil, ErrClosedWallet
@@ -84,6 +100,7 @@ func (wallet *Wallet) GetAccountByAddress(addr *crypto.CommonAddress) (*chainTyp
 	return wallet.cacheStore.GetKey(addr, wallet.password)
 }
 
+// GetAccountByAddress query account according to public key
 func (wallet *Wallet) GetAccountByPubkey(pubkey *secp256k1.PublicKey) (*chainTypes.Node, error) {
 	if err := wallet.checkWallet(RPERMISSION); err != nil {
 		return nil, ErrClosedWallet
@@ -92,6 +109,7 @@ func (wallet *Wallet) GetAccountByPubkey(pubkey *secp256k1.PublicKey) (*chainTyp
 	return wallet.GetAccountByAddress(&addr)
 }
 
+// ListAddress get all address in wallet
 func (wallet *Wallet) ListAddress() ([]*crypto.CommonAddress, error) {
 	if err := wallet.checkWallet(RPERMISSION); err != nil {
 		return nil, ErrClosedWallet
@@ -107,6 +125,7 @@ func (wallet *Wallet) ListAddress() ([]*crypto.CommonAddress, error) {
 	return addreses, nil
 }
 
+// DumpPrivateKey query private key by address
 func (wallet *Wallet) DumpPrivateKey(addr *crypto.CommonAddress) (*secp256k1.PrivateKey, error) {
 	if err := wallet.checkWallet(WPERMISSION); err != nil {
 		return nil, err
@@ -119,6 +138,7 @@ func (wallet *Wallet) DumpPrivateKey(addr *crypto.CommonAddress) (*secp256k1.Pri
 	return node.PrivateKey, nil
 }
 
+// Sign sign a message using key in wallet
 func (wallet *Wallet) Sign(addr *crypto.CommonAddress, msg []byte) ([]byte, error) {
 	if len(msg) != 32 {
 		return nil, ErrNotAHash
@@ -138,20 +158,24 @@ func (wallet *Wallet) Sign(addr *crypto.CommonAddress, msg []byte) ([]byte, erro
 	return sig, nil
 }
 
-// 0 is locked  1 is unlock
+// IsLock query current lock state  0 is locked  1 is unlock
 func (wallet *Wallet) IsLock() bool {
 	return atomic.LoadInt32(&wallet.isLock) == LOCKED
 }
 
+// IsOpen query current wallet open state
 func (wallet *Wallet) IsOpen() bool {
 	return wallet.cacheStore != nil
 }
+
+// Lock wallet to disable private key
 func (wallet *Wallet) Lock() error {
 	atomic.StoreInt32(&wallet.isLock, LOCKED)
 	wallet.cacheStore.ClearKeys()
 	return nil
 }
 
+// UnLock wallet to enable private key
 func (wallet *Wallet) UnLock(password string) error {
 	if wallet.cacheStore == nil {
 		return wallet.Open(password)

@@ -26,7 +26,7 @@ func Test_DBGetKey(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	gotNode, err := fileStore.GetKey(*node.Address, pass)
+	gotNode, err := fileStore.GetKey(node.Address, pass)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +40,7 @@ func Test_DBExportKey(t *testing.T) {
 	fileStore := NewDbStore("test_db2")
 	defer func() {
 		fileStore.Close()
-		clear("test_db1")
+		clear("test_db2")
 	}()
 
 	count := 10

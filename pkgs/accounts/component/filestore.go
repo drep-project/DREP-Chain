@@ -57,7 +57,7 @@ func NewFileStore(keyStoreDir string) FileStore {
 func (fs FileStore) GetKey(addr *crypto.CommonAddress, auth string) (*chainTypes.Node, error) {
 	contents, err := ioutil.ReadFile(fs.JoinPath(addr.Hex()))
 	if err != nil {
-		return nil, err
+		return nil, ErrKeyNotFound
 	}
 
 	node, err := BytesToCryptoNode(contents, auth)
