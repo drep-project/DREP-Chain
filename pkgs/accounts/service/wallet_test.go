@@ -14,7 +14,7 @@ import (
 
 func TestWallet(t *testing.T) {
 	password := string(sha3.Keccak256([]byte("AAAAAAAAAAAAAAAA")))
-	rootChain := app.ChainIdType{}
+	rootChain := 0
 	newNode := accountTypes.NewNode(nil, rootChain)
 	fmt.Println(newNode)
 

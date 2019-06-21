@@ -30,7 +30,7 @@ import (
 
 var (
 	pasword    = "123"
-	parentNode = chainTypes.NewNode(nil, app.ChainIdType{})
+	parentNode = chainTypes.NewNode(nil, 0)
 	pathFlag   = common.DirectoryFlag{
 		Name:  "path",
 		Usage: "keystore save to",
@@ -108,7 +108,7 @@ func gen(ctx *cli.Context) error {
 
 	chainConfig := chainTypes.ChainConfig{}
 	chainConfig.RemotePort = 55556
-	chainConfig.ChainId = app.ChainIdType{}
+	chainConfig.ChainId = 0
 	chainConfig.Producers = produces
 	chainConfig.GenesisPK = "0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26"
 
@@ -173,7 +173,7 @@ func RandomNode(seed []byte) *chainTypes.Node {
 	return &chainTypes.Node{
 		PrivateKey: prvKey,
 		Address:    &addr,
-		ChainId:    app.ChainIdType{},
+		ChainId:    0,
 		ChainCode:  chainCode,
 	}
 }

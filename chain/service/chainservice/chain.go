@@ -23,7 +23,7 @@ var (
 	rootChain           app.ChainIdType
 	DefaultChainConfig = &chainTypes.ChainConfig{
 		RemotePort:  55556,
-		ChainId:     app.ChainIdType{},
+		ChainId:     0,
 		GenesisPK:   "0x0373654ccdb250f2cfcfe64c783a44b9ea85bc47f2f00c480d05082428d277d6d0",
 	}
 	span = uint64(params.MaxGasLimit / 360)
