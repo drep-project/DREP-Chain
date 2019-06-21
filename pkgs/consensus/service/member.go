@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -184,6 +185,7 @@ func (member *Member) OnSetUp(peer *consensusTypes.PeerInfo, setUp *consensusTyp
 		}
 		member.msgHash = sha3.Keccak256(member.msg.AsSignMessage())
 		member.commit()
+		fmt.Println("sent commit message to leader")
 		log.Debug("sent commit message to leader")
 		member.setState(WAIT_CHALLENGE)
 		go member.WaitChallenge()
@@ -238,6 +240,7 @@ func (member *Member) OnChallenge(peer *consensusTypes.PeerInfo, challengeMsg *c
 	log.Debug("recieved challenge message")
 	if member.leader.Peer.IP() == peer.IP() && bytes.Equal(member.msgHash, challengeMsg.R) {
 		member.response(challengeMsg)
+		fmt.Println("response has sent")
 		log.Debug("response has sent")
 		member.setState(COMPLETED)
 		select {
