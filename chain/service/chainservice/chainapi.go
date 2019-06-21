@@ -75,7 +75,7 @@ func (chain *ChainApi) GetBlock(height uint64) (*chainType.RpcBlock, error) {
    {"jsonrpc":"2.0","id":3,"result":193005}
 */
 func (chain *ChainApi) GetMaxHeight() uint64 {
-	return chain.chainService.BestChain.Height()
+	return chain.chainService.BestChain().Height()
 }
 
 /*

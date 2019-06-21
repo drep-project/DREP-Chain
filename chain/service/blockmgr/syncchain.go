@@ -47,7 +47,7 @@ func (blockMgr *BlockMgr) synchronise() {
 		if pi == nil {
 			return
 		}
-		currentHeight := blockMgr.ChainService.BestChain.Height()
+		currentHeight := blockMgr.ChainService.BestChain().Height()
 		if pi.GetHeight() > currentHeight {
 			log.Info("need sync  ", pi.GetHeight(), ">", currentHeight)
 			err := blockMgr.fetchBlocks(pi)
@@ -83,11 +83,11 @@ func (blockMgr *BlockMgr) synchronise() {
 
 //块hash是否在本地主链上
 func (blockMgr *BlockMgr) checkExistHeaderHash(headerHash *crypto.Hash) (bool, uint64) {
-	node := blockMgr.ChainService.Index.LookupNode(headerHash)
+	node := blockMgr.ChainService.Index().LookupNode(headerHash)
 	if node == nil {
 		return false, 0
 	}
-	bestNode := blockMgr.ChainService.BestChain.NodeByHeight(node.Height)
+	bestNode := blockMgr.ChainService.BestChain().NodeByHeight(node.Height)
 	if bestNode == nil {
 		return false, 0
 	}
@@ -97,18 +97,16 @@ func (blockMgr *BlockMgr) checkExistHeaderHash(headerHash *crypto.Hash) (bool, u
 	return false, 0
 }
 
-func (blockMgr *BlockMgr) requestHeaders(peer *chainTypes.PeerInfo, from, count uint64) error {
-	req := chainTypes.HeaderReq{FromHeight: uint64(from), ToHeight: uint64(from + count - 1)}
+func (blockMgr *BlockMgr) requestHeaders(peer chainTypes.PeerInfoInterface, from, count uint64) error {
+	req := chainTypes.HeaderReq{FromHeight: from, ToHeight: from + count - 1}
 	return blockMgr.P2pServer.Send(peer.GetMsgRW(), chainTypes.MsgTypeHeaderReq, &req)
 }
 
 //找到公共祖先
-func (blockMgr *BlockMgr) findAncestor(peer *chainTypes.PeerInfo) (uint64, error) {
-	timeout := time.After(time.Second * maxNetworkTimeout * 4)
+func (blockMgr *BlockMgr) findAncestor(peer chainTypes.PeerInfoInterface) (uint64, error) {
+	timeout := time.After(time.Second * maxNetworkTimeout)
 	remoteHeight := peer.GetHeight()
-
-	//本地高度和远程高度一样的情况下，对应的HASH是否相同
-	fromHeight := blockMgr.ChainService.BestChain.Height()
+	fromHeight := blockMgr.ChainService.BestChain().Height()
 
 	//在发出请求的过程中，其他节点的新的块可能已经同步到本地了,因此可以多获取一些
 	err := blockMgr.requestHeaders(peer, fromHeight, maxHeaderHashCountReq)
@@ -135,7 +133,7 @@ func (blockMgr *BlockMgr) findAncestor(peer *chainTypes.PeerInfo) (uint64, error
 	var tmpFrom uint64 = 0
 	var tmpEnd uint64 = remoteHeight
 	for tmpFrom+1 < tmpEnd {
-		timeout = time.After(time.Second * maxNetworkTimeout)
+		timer := time.NewTimer(time.Second * maxNetworkTimeout)
 		err = blockMgr.requestHeaders(peer, (tmpFrom+tmpEnd)/2, 1)
 		if err != nil {
 			return 0, err
@@ -155,7 +153,8 @@ func (blockMgr *BlockMgr) findAncestor(peer *chainTypes.PeerInfo) (uint64, error
 				log.Error("peer response head hash len = 0")
 			}
 
-		case <-timeout:
+			timer.Stop()
+		case <-timer.C:
 			return 0, ErrFindAncesstorTimeout
 		}
 	}
@@ -186,7 +185,6 @@ func (blockMgr *BlockMgr) clearSyncCh() {
 	})
 }
 
-
 func (blockMgr *BlockMgr) batchReqBlocks(hashs []crypto.Hash, errCh chan error) {
 	req := &chainTypes.BlockReq{BlockHashs: hashs}
 
@@ -207,7 +205,7 @@ func (blockMgr *BlockMgr) batchReqBlocks(hashs []crypto.Hash, errCh chan error) 
 	return
 }
 
-func (blockMgr *BlockMgr) fetchBlocks(peer *chainTypes.PeerInfo) error {
+func (blockMgr *BlockMgr) fetchBlocks(peer chainTypes.PeerInfoInterface) error {
 	blockMgr.syncBlockEvent.Send(event.SyncBlockEvent{EventType: event.StartSyncBlock})
 	defer blockMgr.syncBlockEvent.Send(event.SyncBlockEvent{EventType: event.StopSyncBlock})
 
@@ -220,6 +218,8 @@ func (blockMgr *BlockMgr) fetchBlocks(peer *chainTypes.PeerInfo) error {
 		return err
 	}
 
+	log.Info("commonAncestor=", commonAncestor)
+
 	errCh := make(chan error)
 	quit := make(chan struct{})
 	//2 获取所有需要同步的块的hash;然后通知给获取BODY的协程
@@ -228,45 +228,47 @@ func (blockMgr *BlockMgr) fetchBlocks(peer *chainTypes.PeerInfo) error {
 		timer := time.NewTimer(time.Second * maxNetworkTimeout)
 
 		for height >= commonAncestor {
-			timer.Reset(time.Second * maxNetworkTimeout)
-
-			blockMgr.syncMut.Lock()
-			taskLen := blockMgr.allTasks.Len()
-			blockMgr.syncMut.Unlock()
-
-			if taskLen >= maxHeaderHashCountReq {
-				time.Sleep(time.Millisecond * 100)
-				continue
-			}
-
-			blockMgr.syncMut.Lock()
-			//blockMgr.P2pServer.SetIdle(peer, false)
-			err := blockMgr.requestHeaders(peer, commonAncestor, maxHeaderHashCountReq)
-			//blockMgr.P2pServer.SetIdle(peer, true)
-			blockMgr.syncMut.Unlock()
-			if err != nil {
-				errCh <- err
-				return
-			}
-
 			select {
-			//每个headerhash作为一个任务
-			case tasks := <-blockMgr.headerHashCh:
-				for _, task := range tasks {
-					blockMgr.syncMut.Lock()
-					blockMgr.allTasks.Put(task)
-					blockMgr.syncMut.Unlock()
-
-				}
-				commonAncestor += uint64(len(tasks))
-				log.WithField("tasks len", blockMgr.allTasks.Len()).Info("fetchBlocks")
-
-			case <-timer.C:
-				errCh <- ErrGetHeaderHashTimeout
-				return
 			case <-quit:
 				log.Info("fetch headers goroutine quit")
 				return
+			default:
+				timer.Reset(time.Second * maxNetworkTimeout)
+
+				blockMgr.syncMut.Lock()
+				taskLen := blockMgr.allTasks.Len()
+				blockMgr.syncMut.Unlock()
+				if taskLen >= maxHeaderHashCountReq {
+					time.Sleep(time.Millisecond * 100)
+					continue
+				}
+
+				blockMgr.syncMut.Lock()
+				//blockMgr.P2pServer.SetIdle(peer, false)
+				err := blockMgr.requestHeaders(peer, commonAncestor, maxHeaderHashCountReq)
+				log.WithField("commonAncestor", commonAncestor).Info("req header")
+				//blockMgr.P2pServer.SetIdle(peer, true)
+				blockMgr.syncMut.Unlock()
+				if err != nil {
+					errCh <- err
+					return
+				}
+
+				select {
+				//每个headerhash作为一个任务
+				case tasks := <-blockMgr.headerHashCh:
+					for _, task := range tasks {
+						blockMgr.syncMut.Lock()
+						blockMgr.allTasks.Put(task)
+						blockMgr.syncMut.Unlock()
+					}
+					commonAncestor += uint64(len(tasks))
+					log.WithField("tasks len", blockMgr.allTasks.Len()).WithField("newtasks", len(tasks)).Info("fetchBlocks")
+				case <-timer.C:
+					errCh <- ErrGetHeaderHashTimeout
+					return
+
+				}
 			}
 		}
 		log.Info("fetch all headers end ****************************")
@@ -328,6 +330,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer *chainTypes.PeerInfo) error {
 					if err != nil {
 						switch err {
 						case chainservice.ErrBlockExsist, chainservice.ErrOrphanBlockExsist:
+							fmt.Println("process block err:", err)
 							//删除块高度对应的任务
 							delHash(b)
 							continue
@@ -350,72 +353,75 @@ func (blockMgr *BlockMgr) fetchBlocks(peer *chainTypes.PeerInfo) error {
 		}
 	}()
 
-	pendingTimerCount := 10
 	//3获取对应的body
 	go func() {
 		for {
-
-			//请求发的太快了，需要等待
-			count := 0
-			blockMgr.pendingSyncTasks.Range(func(key, value interface{}) bool {
-				count++
+			select {
+			case <-quit:
+				return
+			default:
+				//请求发的太快了，需要等待
+				count := 0
+				blockMgr.pendingSyncTasks.Range(func(key, value interface{}) bool {
+					count++
+					if count >= pendingTimerCount {
+						return false
+					}
+					return true
+				})
 				if count >= pendingTimerCount {
-					return false
+					log.Info("req body routine wait.......")
+					time.Sleep(time.Millisecond * maxSyncSleepTime)
+					continue
 				}
-				return true
-			})
-			if count >= pendingTimerCount {
-				log.Info("req body routine wait.......")
-				time.Sleep(time.Millisecond * maxSyncSleepTime)
-				continue
-			}
 
-			blockMgr.syncMut.Lock()
-			hashs, headerHashs := blockMgr.allTasks.GetSortedHashs(maxBlockCountReq)
-			taskLen := blockMgr.allTasks.Len()
-			blockMgr.syncMut.Unlock()
-			if len(hashs) == 0 {
-				if headerRoutineExit && count == 0 {
-					//任务完成，触发退出
-					log.WithField("tasks len", taskLen).Info("all block sync ok")
-					close(errCh)
-					return
-				}
-				time.Sleep(time.Millisecond * maxSyncSleepTime)
-				continue
-			}
-
-			reqTimer := time.NewTimer(time.Second * maxNetworkTimeout)
-			blockMgr.pendingSyncTasks.Store(reqTimer, headerHashs)
-
-			go func() {
-				fmt.Println("new sync block timer", reqTimer)
-				select {
-				case <-reqTimer.C:
-					fmt.Println("sync timer ,timeout...................")
-					//所有到hash加入到allTasks
-					value, ok := blockMgr.pendingSyncTasks.Load(reqTimer)
-					if !ok {
-						errCh <- fmt.Errorf("timer not in pending task, exception")
+				blockMgr.syncMut.Lock()
+				hashs, headerHashs := blockMgr.allTasks.GetSortedHashs(maxBlockCountReq)
+				taskLen := blockMgr.allTasks.Len()
+				blockMgr.syncMut.Unlock()
+				if len(hashs) == 0 {
+					if headerRoutineExit && count == 0 {
+						//任务完成，触发退出
+						log.WithField("tasks len", taskLen).Info("all block sync ok")
+						close(errCh)
 						return
 					}
-					hashs := value.(map[crypto.Hash]uint64)
-					for k, v := range hashs {
-						blockMgr.syncMut.Lock()
-						blockMgr.allTasks.Put(&syncHeaderHash{headerHash: &k, height: v})
-						blockMgr.syncMut.Unlock()
-					}
-
-				case timer := <-blockMgr.syncTimerCh:
-					fmt.Println("stop timer...........", timer)
-					//请求到block都到了，停止此定时器
-					blockMgr.pendingSyncTasks.Delete(timer)
-				case <-quit:
-					return
+					time.Sleep(time.Millisecond * maxSyncSleepTime)
+					continue
 				}
-			}()
 
-			blockMgr.batchReqBlocks(hashs, errCh)
+				reqTimer := time.NewTimer(time.Second * maxNetworkTimeout)
+				blockMgr.pendingSyncTasks.Store(reqTimer, headerHashs)
+
+				go func() {
+					fmt.Println("new sync block timer", reqTimer)
+					select {
+					case <-reqTimer.C:
+						fmt.Println("sync timer ,timeout...................")
+						//所有到hash加入到allTasks
+						value, ok := blockMgr.pendingSyncTasks.Load(reqTimer)
+						if !ok {
+							errCh <- fmt.Errorf("timer not in pending task, exception")
+							return
+						}
+						hashs := value.(map[crypto.Hash]uint64)
+						for k, v := range hashs {
+							blockMgr.syncMut.Lock()
+							blockMgr.allTasks.Put(&syncHeaderHash{headerHash: &k, height: v})
+							blockMgr.syncMut.Unlock()
+						}
+
+					case timer := <-blockMgr.syncTimerCh:
+						fmt.Println("stop timer...........", timer)
+						//请求到block都到了，停止此定时器
+						blockMgr.pendingSyncTasks.Delete(timer)
+					case <-quit:
+						return
+					}
+				}()
+
+				blockMgr.batchReqBlocks(hashs, errCh)
+			}
 		}
 	}()
 
@@ -435,7 +441,7 @@ func (blockMgr *BlockMgr) handleReqPeerState(peer *chainTypes.PeerInfo, peerStat
 	peer.SetHeight(uint64(peerState.Height))
 
 	blockMgr.P2pServer.SendAsync(peer.GetMsgRW(), chainTypes.MsgTypePeerState, &chainTypes.PeerState{
-		Height: uint64(blockMgr.ChainService.BestChain.Height()),
+		Height: uint64(blockMgr.ChainService.BestChain().Height()),
 	})
 }
 
@@ -468,7 +474,7 @@ func (blockMgr *BlockMgr) checkHeaderChain(chain []chainTypes.BlockHeader) error
 			return ErrNotContinueHeader
 		}
 
-		err := blockMgr.ChainService.BlockValidator.VerifyHeader(&chain[i], &chain[i-1])
+		err := blockMgr.ChainService.BlockValidator().VerifyHeader(&chain[i], &chain[i-1])
 		if err != nil {
 			return err
 		}

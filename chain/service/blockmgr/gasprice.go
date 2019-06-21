@@ -17,13 +17,14 @@
 package blockmgr
 
 import (
-	"github.com/drep-project/drep-chain/chain/types"
 	xxx "github.com/drep-project/drep-chain/chain/service/chainservice"
+	"github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"math/big"
 	"sort"
 	"sync"
 )
+
 // Oracle recommends gas prices based on the content of recent
 // blocks. Suitable for both light and full clients.
 type Oracle struct {
@@ -34,12 +35,12 @@ type Oracle struct {
 
 	checkBlocks, maxEmpty, maxBlocks int
 	percentile                       int
-	chainService  *xxx.ChainService
-	maxPrice   *big.Int
+	chainService                     xxx.ChainServiceInterface
+	maxPrice                         *big.Int
 }
 
 // NewOracle returns a new oracle.
-func NewOracle(chainService *xxx.ChainService, params types.OracleConfig) *Oracle {
+func NewOracle(chainService xxx.ChainServiceInterface, params types.OracleConfig) *Oracle {
 	blocks := params.Blocks
 	if blocks < 1 {
 		blocks = 1
@@ -52,13 +53,13 @@ func NewOracle(chainService *xxx.ChainService, params types.OracleConfig) *Oracl
 		percent = 100
 	}
 	return &Oracle{
-		lastPrice:   	new (big.Int).SetUint64(params.Default),
-		maxPrice:   	new (big.Int).SetUint64(params.MaxPrice),
-		checkBlocks: 	blocks,
-		maxEmpty:    	blocks / 2,
-		maxBlocks:   	blocks * 5,
-		percentile:  	percent,
-		chainService: 	chainService,
+		lastPrice:    new(big.Int).SetUint64(params.Default),
+		maxPrice:     new(big.Int).SetUint64(params.MaxPrice),
+		checkBlocks:  blocks,
+		maxEmpty:     blocks / 2,
+		maxBlocks:    blocks * 5,
+		percentile:   percent,
+		chainService: chainService,
 	}
 }
 
@@ -69,7 +70,7 @@ func (gpo *Oracle) SuggestPrice() (*big.Int, error) {
 	lastPrice := gpo.lastPrice
 	gpo.cacheLock.RUnlock()
 
-	heighestBlockBode := gpo.chainService.BestChain.Tip()
+	heighestBlockBode := gpo.chainService.BestChain().Tip()
 	header := heighestBlockBode.Header()
 	headHash := header.Hash()
 	if *headHash == lastHead {

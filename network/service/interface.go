@@ -13,5 +13,4 @@ type P2P interface {
 	AddPeer(nodeUrl string) error
 	RemovePeer(url string)
 	AddProtocols(protocols []p2p.Protocol)
-	//GetBackbonesID() map[enode.ID]struct{}
 }

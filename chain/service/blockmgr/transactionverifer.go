@@ -22,7 +22,7 @@ func (blockMgr *BlockMgr) verifyTransaction(tx *chainTypes.Transaction) error {
 
 	// Check the transaction doesn't exceed the current
 	// block limit gas.
-	gasLimit := blockMgr.ChainService.BestChain.Tip().GasLimit
+	gasLimit := blockMgr.ChainService.BestChain().Tip().GasLimit
 	if gasLimit.Uint64() < tx.Gas() {
 		return ErrExceedGasLimit
 	}
@@ -48,7 +48,7 @@ func (blockMgr *BlockMgr) verifyTransaction(tx *chainTypes.Transaction) error {
 		if err != nil {
 			return err
 		}
-		alias := blockMgr.ChainService.DatabaseService.GetStorageAlias(from)
+		alias := blockMgr.ChainService.GetDatabaseService().GetStorageAlias(from)
 		if alias != "" {
 			return ErrNotSupportRenameAlias
 		}

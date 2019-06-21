@@ -109,17 +109,17 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainCh
 		}
 		chainService.blockDb.Commit(false)
 	}()
-	prevNode := chainService.Index.LookupNode(&block.Header.PreviousHash)
+	prevNode := chainService.blockIndex.LookupNode(&block.Header.PreviousHash)
 	preBlock := prevNode.Header()
-	err = chainService.BlockValidator.VerifyHeader(block.Header, &preBlock)
+	err = chainService.BlockValidator().VerifyHeader(block.Header, &preBlock)
 	if err != nil {
 		return false, err
 	}
-	err = chainService.BlockValidator.VerifyBody(block)
+	err = chainService.BlockValidator().VerifyBody(block)
 	if err != nil {
 		return false, err
 	}
-	if !chainService.BlockValidator.VerifyMultiSig(block, chainService.Config.SkipCheckMutiSig || false) {
+	if !chainService.BlockValidator().VerifyMultiSig(block, chainService.Config().SkipCheckMutiSig || false) {
 		return false, ErrInvalidateBlockMultisig
 	}
 
@@ -132,13 +132,13 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainCh
 	newNode := chainTypes.NewBlockNode(block.Header, prevNode)
 	newNode.Status = chainTypes.StatusDataStored
 
-	chainService.Index.AddNode(newNode)
-	err = chainService.Index.FlushToDB(chainService.blockDb.PutBlockNode)
+	chainService.blockIndex.AddNode(newNode)
+	err = chainService.blockIndex.FlushToDB(chainService.blockDb.PutBlockNode)
 	if err != nil {
 		return false, err
 	}
 
-	if block.Header.PreviousHash.IsEqual(chainService.BestChain.Tip().Hash) {
+	if block.Header.PreviousHash.IsEqual(chainService.BestChain().Tip().Hash) {
 		err = chainService.connectBlock(db, block, newNode)
 		if err != nil {
 			return false, err
@@ -148,7 +148,7 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainCh
 		chainService.notifyBlock(block)
 		return true, nil
 	}
-	if block.Header.Height <= chainService.BestChain.Tip().Height {
+	if block.Header.Height <= chainService.BestChain().Tip().Height {
 		// store but but not reorg
 		log.Debug("block store and validate true but not reorgnize")
 		return false, nil
@@ -164,7 +164,7 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainCh
 	// changes to the block index, so flush regardless of whether there was an
 	// error. The index would only be dirty if the block failed to connect, so
 	// we can ignore any errors writing.
-	if writeErr := chainService.Index.FlushToDB(chainService.blockDb.PutBlockNode); writeErr != nil {
+	if writeErr := chainService.blockIndex.FlushToDB(chainService.blockDb.PutBlockNode); writeErr != nil {
 		log.WithField("Reason", writeErr).Warn("Error flushing block index changes to disk")
 	}
 	return err == nil, err
@@ -175,15 +175,15 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *cha
 	//process transaction
 	var gasUsed *big.Int
 	var gasFee *big.Int
-	gasUsed, gasFee, err = chainService.BlockValidator.ExecuteBlock(db, block, gp)
+	gasUsed, gasFee, err = chainService.BlockValidator().ExecuteBlock(db, block, gp)
 	if err != nil {
-		chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValidateFailed)
+		chainService.blockIndex.SetStatusFlags(newNode, chainTypes.StatusValidateFailed)
 		chainService.flushIndexState()
 		return err
 	}
 	err = chainService.AccumulateRewards(db, block, gasFee)
 	if err != nil {
-		chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValidateFailed)
+		chainService.blockIndex.SetStatusFlags(newNode, chainTypes.StatusValidateFailed)
 		chainService.flushIndexState()
 		return err
 	}
@@ -197,10 +197,10 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *cha
 	}
 
 	if err == nil {
-		chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValid)
+		chainService.blockIndex.SetStatusFlags(newNode, chainTypes.StatusValid)
 		chainService.flushIndexState()
 	} else {
-		chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValidateFailed)
+		chainService.blockIndex.SetStatusFlags(newNode, chainTypes.StatusValidateFailed)
 		chainService.flushIndexState()
 		return err
 	}
@@ -208,15 +208,15 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *cha
 	// If this is fast add, or this block node isn't yet marked as
 	// valid, then we'll update its status and flush the state to
 	// disk again.
-	if chainService.Index.NodeStatus(newNode).KnownValid() {
-		chainService.Index.SetStatusFlags(newNode, chainTypes.StatusValid)
+	if chainService.blockIndex.NodeStatus(newNode).KnownValid() {
+		chainService.blockIndex.SetStatusFlags(newNode, chainTypes.StatusValid)
 		chainService.flushIndexState()
 	}
 	return nil
 }
 
 func (chainService *ChainService) flushIndexState() {
-	if writeErr := chainService.Index.FlushToDB(chainService.blockDb.PutBlockNode); writeErr != nil {
+	if writeErr := chainService.blockIndex.FlushToDB(chainService.blockDb.PutBlockNode); writeErr != nil {
 		log.WithField("Reason",writeErr).Warn("Error flushing block index changes to disk")
 	}
 }
@@ -228,8 +228,8 @@ func (chainService *ChainService) getReorganizeNodes(node *chainTypes.BlockNode)
 	// Do not reorganize to a known invalid chain. Ancestors deeper than the
 	// direct parent are checked below but this is a quick check before doing
 	// more unnecessary work.
-	if chainService.Index.NodeStatus(node.Parent).KnownInvalid() {
-		chainService.Index.SetStatusFlags(node, chainTypes.StatusInvalidAncestor)
+	if chainService.blockIndex.NodeStatus(node.Parent).KnownInvalid() {
+		chainService.blockIndex.SetStatusFlags(node, chainTypes.StatusInvalidAncestor)
 		return detachNodes, attachNodes
 	}
 
@@ -237,10 +237,10 @@ func (chainService *ChainService) getReorganizeNodes(node *chainTypes.BlockNode)
 	// to attach to the main tree.  Push them onto the list in reverse order
 	// so they are attached in the appropriate order when iterating the list
 	// later.
-	forkNode := chainService.BestChain.FindFork(node)
+	forkNode := chainService.BestChain().FindFork(node)
 	invalidChain := false
 	for n := node; n != nil && n != forkNode; n = n.Parent {
-		if chainService.Index.NodeStatus(n).KnownInvalid() {
+		if chainService.blockIndex.NodeStatus(n).KnownInvalid() {
 			invalidChain = true
 			break
 		}
@@ -254,7 +254,7 @@ func (chainService *ChainService) getReorganizeNodes(node *chainTypes.BlockNode)
 		for e := attachNodes.Front(); e != nil; e = next {
 			next = e.Next()
 			n := attachNodes.Remove(e).(*chainTypes.BlockNode)
-			chainService.Index.SetStatusFlags(n, chainTypes.StatusInvalidAncestor)
+			chainService.blockIndex.SetStatusFlags(n, chainTypes.StatusInvalidAncestor)
 		}
 		return detachNodes, attachNodes
 	}
@@ -262,7 +262,7 @@ func (chainService *ChainService) getReorganizeNodes(node *chainTypes.BlockNode)
 	// Start from the end of the main chain and work backwards until the
 	// common ancestor adding each block to the list of nodes to detach from
 	// the main chain.
-	for n := chainService.BestChain.Tip(); n != nil && n != forkNode; n = n.Parent {
+	for n := chainService.BestChain().Tip(); n != nil && n != forkNode; n = n.Parent {
 		detachNodes.PushBack(n)
 	}
 
@@ -314,16 +314,16 @@ func (chainService *ChainService) reorganizeChain(db *database.Database, detachN
 }
 
 func (chainService *ChainService) notifyBlock(block *chainTypes.Block) {
-	chainService.NewBlockFeed.Send(block)
+	chainService.NewBlockFeed().Send(block)
 }
 
 func (chainService *ChainService) notifyDetachBlock(block *chainTypes.Block) {
-	chainService.DetachBlockFeed.Send(block)
+	chainService.DetachBlockFeed().Send(block)
 }
 
 func (chainService *ChainService) markState(db *database.Database, blockNode *chainTypes.BlockNode) {
 	state := chainTypes.NewBestState(blockNode)
-	chainService.BestChain.SetTip(blockNode)
+	chainService.BestChain().SetTip(blockNode)
 	chainService.stateLock.Lock()
 	chainService.StateSnapshot = &ChainState{
 		BestState: *state,
@@ -392,7 +392,7 @@ func (chainService *ChainService) InitStates() error {
 			// previous header processed is the parent.
 			parent = lastNode
 		} else {
-			parent = chainService.Index.LookupNode(&header.PreviousHash)
+			parent = chainService.blockIndex.LookupNode(&header.PreviousHash)
 			if parent == nil {
 				return errors.Wrapf(ErrInitStateFail, "Could not find parent for block %s", header.Hash())
 			}
@@ -403,7 +403,7 @@ func (chainService *ChainService) InitStates() error {
 		node := &blockNodes[i]
 		chainTypes.InitBlockNode(node, header, parent)
 		node.Status = status
-		chainService.Index.AddNode(node)
+		chainService.blockIndex.AddNode(node)
 
 		lastNode = node
 		i++
@@ -415,11 +415,11 @@ func (chainService *ChainService) InitStates() error {
 	}
 
 	// Set the best chain view to the stored best state.
-	tip := chainService.Index.LookupNode(&chainState.Hash)
+	tip := chainService.blockIndex.LookupNode(&chainState.Hash)
 	if tip == nil {
 		return errors.Wrapf(ErrInitStateFail, "cannot find chain tip %s in block index", chainState.Hash)
 	}
-	chainService.BestChain.SetTip(tip)
+	chainService.BestChain().SetTip(tip)
 
 	// Load the raw block bytes for the best block.
 	if !chainService.DatabaseService.HasBlock(&chainState.Hash) {
@@ -437,7 +437,7 @@ func (chainService *ChainService) InitStates() error {
 		// we're up and running.
 		if !iterNode.Status.KnownValid() {
 			log.WithField("Block", iterNode.Hash).WithField("height", iterNode.Height).Info("ancestor of chain tip not marked as valid, upgrading to valid for consistency")
-			chainService.Index.SetStatusFlags(iterNode, chainTypes.StatusValid)
+			chainService.blockIndex.SetStatusFlags(iterNode, chainTypes.StatusValid)
 		}
 	}
 	chainService.stateLock.Lock()
@@ -450,7 +450,7 @@ func (chainService *ChainService) InitStates() error {
 	// As we might have updated the index after it was loaded, we'll
 	// attempt to flush the index to the DB. This will only result in a
 	// write if the elements are dirty, so it'll usually be a noop.
-	return chainService.Index.FlushToDB(chainService.DatabaseService.PutBlockNode)
+	return chainService.blockIndex.FlushToDB(chainService.DatabaseService.PutBlockNode)
 }
 
 //180000000/360

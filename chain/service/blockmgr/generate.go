@@ -19,9 +19,9 @@ func (blockMgr *BlockMgr) GenerateBlock(db *database.Database, leaderKey *secp25
 		return nil, nil, err
 	}
 	newGasLimit := blockMgr.ChainService.CalcGasLimit(parent.Header, params.MinGasLimit, params.MaxGasLimit)
-	height := blockMgr.ChainService.BestChain.Height() + 1
+	height := blockMgr.ChainService.BestChain().Height() + 1
 	txs := blockMgr.transactionPool.GetPending(newGasLimit)
-	previousHash := blockMgr.ChainService.BestChain.Tip().Hash
+	previousHash := blockMgr.ChainService.BestChain().Tip().Hash
 	timestamp := uint64(time.Now().Unix())
 
 	blockHeader := &chainTypes.BlockHeader{
@@ -54,7 +54,7 @@ SELECT_TX:
 		case <-stopchanel:
 			break SELECT_TX
 		default:
-			txGasUsed, txGasFee, err := blockMgr.ChainService.TransactionValidator.ExecuteTransaction(db, t, &newGp, blockHeader)
+			txGasUsed, txGasFee, err := blockMgr.ChainService.TransactionValidator().ExecuteTransaction(db, t, &newGp, blockHeader)
 			if err == nil {
 				finalTxs = append(finalTxs, t)
 				gasUsed.Add(gasUsed, txGasUsed)
