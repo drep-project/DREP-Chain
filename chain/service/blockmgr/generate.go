@@ -1,7 +1,6 @@
 package blockmgr
 
 import (
-	"fmt"
 	"math/big"
 	"time"
 
