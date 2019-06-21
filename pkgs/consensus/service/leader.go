@@ -65,7 +65,7 @@ type Leader struct {
 func NewLeader(privkey *secp256k1.PrivateKey, p2pServer p2pService.P2P) *Leader {
 	l := &Leader{}
 	l.waitForSetup = 10 * time.Second
-	l.waitForResponseTime = 5 * time.Second
+	l.waitForResponseTime = 10 * time.Second
 	l.pubkey = privkey.PubKey()
 	l.privakey = privkey
 	l.p2pServer = p2pServer
