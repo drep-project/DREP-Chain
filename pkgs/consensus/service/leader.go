@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -69,7 +70,6 @@ func NewLeader(privkey *secp256k1.PrivateKey, p2pServer p2pService.P2P) *Leader 
 	l.pubkey = privkey.PubKey()
 	l.privakey = privkey
 	l.p2pServer = p2pServer
-
 	l.Reset()
 	return l
 }
@@ -150,6 +150,7 @@ func (leader *Leader) setUp(msg consensusTypes.IConsenMsg) {
 
 	for _, member := range leader.liveMembers {
 		if member.Peer != nil && !member.IsMe {
+			fmt.Println("leader sent setup message IP %s", member.Peer.IP())
 			log.WithField("IP", member.Peer.IP()).WithField("Height", setup.Height).Trace("leader sent setup message")
 			leader.p2pServer.SendAsync(member.Peer.GetMsgRW(), consensusTypes.MsgTypeSetUp, setup)
 		}
@@ -256,6 +257,7 @@ func (leader *Leader) challenge(msg consensusTypes.IConsenMsg) {
 
 		member := leader.getMemberByPk(pk)
 		if member.IsOnline && !member.IsMe {
+			fmt.Println("leader sent challenge message IP %s", member.Peer.IP())
 			log.WithField("IP", member.Peer.IP()).WithField("Height", leader.currentHeight).Debug("leader sent challenge message")
 			leader.p2pServer.SendAsync(member.Peer.GetMsgRW(), consensusTypes.MsgTypeChallenge, challenge)
 		}
