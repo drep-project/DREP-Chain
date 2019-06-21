@@ -89,10 +89,14 @@ func (traceService *TraceService) Init(executeContext *app.ExecuteContext) error
 
 	if traceService.Config.DbType == "leveldb" {
 		traceService.store, err  = NewLevelDbStore(traceService.Config.HistoryDir)
-		log.WithField("path", traceService.Config.HistoryDir).Error("cannot open db file")
+		if err != nil {
+			log.WithField("err", err).WithField("path", traceService.Config.HistoryDir).Error("cannot open db file")
+		}
 	} else if traceService.Config.DbType == "mongo" {
 		traceService.store, err  = NewMongogDbStore(traceService.Config.Url)
-		log.WithField("url", traceService.Config.Url).Error("try connect mongo fail")
+		if err != nil {
+			log.WithField("err", err).WithField("url", traceService.Config.Url).Error("try connect mongo fail")
+		}
 	} else {
 		return ErrUnSupportDbType
 	}

@@ -23,7 +23,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_get
 ````
 
 
-### 2  . p2p_addPeers（未实现）
+### 2. p2p_addPeers（未实现）
 #### 作用：添加节点
 > 参数：
 
@@ -43,7 +43,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_get
 ````
 
 
-### 3  . p2p_removePeers（未实现）
+### 3. p2p_removePeers（未实现）
 #### 作用：移除节点
 > 参数：
 
@@ -65,10 +65,10 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_get
 日志rpc接口
 设置日志级别
 
-### 1  . log_setLevel
+### 1. log_setLevel
 #### 作用：设置日志级别
 > 参数：
- 1.  日志级别（&#34;debug&#34;,&#34;0&#34;）
+ 1. 日志级别（&#34;debug&#34;,&#34;0&#34;）
 
 #### 返回值：无
 
@@ -86,7 +86,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"log_setLe
 ````
 
 
-### 2  . log_setVmodule
+### 2. log_setVmodule
 #### 作用：分模块设置级别
 > 参数：
  1. 模块日志级别(txpool=5)
@@ -109,7 +109,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"log_setVm
 记录接口
 查询交易地址等信息（需要开启记录模块）
 
-### 1  . trace_getRawTransaction
+### 1. trace_getRawTransaction
 #### 作用：根据交易hash查询交易字节
 > 参数：
  1. 交易hash
@@ -134,7 +134,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_get
 ````
 
 
-### 2  . trace_getTransaction
+### 2. trace_getTransaction
 #### 作用：根据交易hash查询交易详细信息
 > 参数：
  1. 交易hash
@@ -173,7 +173,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_get
 ````
 
 
-### 3  . trace_decodeTrasnaction
+### 3. trace_decodeTrasnaction
 #### 作用：把交易字节信息反解析成交易详情
 > 参数：
  1. 交易字节信息
@@ -212,7 +212,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_dec
 ````
 
 
-### 4  . trace_getSendTransactionByAddr
+### 4. trace_getSendTransactionByAddr
 #### 作用：根据地址查询该交易发出的交易，支持分页
 > 参数：
  1. 交易地址
@@ -255,7 +255,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_get
 ````
 
 
-### 5  . trace_getReceiveTransactionByAd
+### 5. trace_getReceiveTransactionByAd
 #### 作用：根据地址查询该交易接受的交易，支持分页
 > 参数：
  1. 交易地址
@@ -302,7 +302,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_get
 链接口
 用于获取区块信息
 
-### 1  . chain_getblock
+### 1. chain_getblock
 #### 作用：用于获取区块信息
 > 参数：
  1. height  usage: 当前区块高度
@@ -348,7 +348,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 2  . chain_getMaxHeight
+### 2. chain_getMaxHeight
 #### 作用：用于获取当前最高区块
 > 参数：
  1. 无
@@ -369,7 +369,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 3  . chain_getBalance
+### 3. chain_getBalance
 #### 作用：查询地址余额
 > 参数：
  1. 待查询地址
@@ -390,7 +390,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 4  . chain_getNonce
+### 4. chain_getNonce
 #### 作用：查询地址在链上的nonce
 > 参数：
  1. 待查询地址
@@ -411,7 +411,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 5  . chain_getNonce
+### 5. chain_getNonce
 #### 作用：查询地址的名誉值
 > 参数：
  1. 待查询地址
@@ -432,7 +432,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 6  . chain_getTransactionByBlockHeightAndIndex
+### 6. chain_getTransactionByBlockHeightAndIndex
 #### 作用：获取区块中特定序列的交易
 > 参数：
  1. 区块高度
@@ -472,7 +472,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 7  . chain_getAliasByAddress
+### 7. chain_getAliasByAddress
 #### 作用：根据地址获取地址对应的别名
 > 参数：
  1. 待查询地址
@@ -493,7 +493,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 8  . chain_getAddressByAlias
+### 8. chain_getAddressByAlias
 #### 作用：根据别名获取别名对应的地址
 > 参数：
  1. 待查询地别名
@@ -516,7 +516,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 账号rpc接口
 地址管理及发起简单交易
 
-### 1  . account_listAddress
+### 1. account_listAddress
 #### 作用：列出所有本地地址
 > 参数：
 
@@ -536,7 +536,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_l
 ````
 
 
-### 2  . account_createAccount
+### 2. account_createAccount
 #### 作用：创建本地账号
 > 参数：
 
@@ -556,7 +556,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_c
 ````
 
 
-### 3  . account_createWallet
+### 3. account_createWallet
 #### 作用：创建本地钱包
 > 参数：
  1. 钱包密码
@@ -577,7 +577,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_c
 ````
 
 
-### 4  . account_lockWallet
+### 4. account_lockWallet
 #### 作用：锁定钱包（无法发起需要私钥的相关工作）
 > 参数：
 
@@ -597,7 +597,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_l
 ````
 
 
-### 5  . account_lockWallet
+### 5. account_lockWallet
 #### 作用：解锁钱包
 > 参数：
  1. 钱包密码
@@ -618,7 +618,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_o
 ````
 
 
-### 6  . account_openWallet
+### 6. account_openWallet
 #### 作用：打开钱包
 > 参数：
  1. 钱包密码
@@ -639,7 +639,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_o
 ````
 
 
-### 7  . account_closeWallet
+### 7. account_closeWallet
 #### 作用：关闭钱包
 > 参数：
 
@@ -659,7 +659,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_c
 ````
 
 
-### 8  . account_transfer
+### 8. account_transfer
 #### 作用：转账
 > 参数：
  1. 发起转账的地址
@@ -685,7 +685,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 9  . account_setAlias
+### 9. account_setAlias
 #### 作用：设置别名
 > 参数：
  1. 带设置别名的地址
@@ -709,7 +709,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 10  . account_call
+### 10. account_call
 #### 作用：调用合约
 > 参数：
  1. 调用者的地址
@@ -735,7 +735,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 11  . account_createCode
+### 11. account_createCode
 #### 作用：部署合约
 > 参数：
  1. 部署合约的地址
@@ -760,7 +760,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 12  . account_dumpPrivkey
+### 12. account_dumpPrivkey
 #### 作用：关闭钱包
 > 参数：
  1. 地址
@@ -781,7 +781,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_d
 ````
 
 
-### 13  . account_sign
+### 13. account_sign
 #### 作用：关闭钱包
 > 参数：
  1. 地址
@@ -805,7 +805,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_s
 共识rpc接口
 查询共识节点功能
 
-### 1  . consensus_minning
+### 1. consensus_minning
 #### 作用：查询是否在出块状态 (需开启共识模块)
 > 参数：
 
