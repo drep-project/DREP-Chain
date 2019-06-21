@@ -19,6 +19,13 @@ var (
 type PeerInfoInterface interface {
 	GetMsgRW() p2p.MsgReadWriter
 	GetHeight() uint64
+	GetAddr() string
+
+	SetHeight(height uint64)
+	KnownTx(tx *Transaction) bool
+	MarkTx(tx *Transaction)
+	KnownBlock(blk *Block) bool
+	MarkBlock(blk *Block)
 }
 
 //业务层peerknown blk height:

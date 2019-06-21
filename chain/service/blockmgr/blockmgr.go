@@ -75,7 +75,7 @@ type BlockMgr struct {
 	syncTimerCh      chan *time.Timer
 
 	//与此模块通信的所有Peer
-	peersInfo map[string]*chainTypes.PeerInfo
+	peersInfo map[string]chainTypes.PeerInfoInterface
 	newPeerCh chan *chainTypes.PeerInfo
 
 	gpo  *Oracle
@@ -110,7 +110,7 @@ func NewBlockMgr(config *chainTypes.BlockMgrConfig,homeDir string, cs chainservi
 	blockMgr.allTasks = newHeightSortedMap()
 	//blockMgr.pendingSyncTasks = make(map[*time.Timer]map[crypto.Hash]uint64)
 	blockMgr.syncTimerCh = make(chan *time.Timer, pendingTimerCount)
-	blockMgr.peersInfo = make(map[string]*chainTypes.PeerInfo)
+	blockMgr.peersInfo = make(map[string]chainTypes.PeerInfoInterface)
 	blockMgr.newPeerCh = make(chan *chainTypes.PeerInfo, maxLivePeer)
 	blockMgr.taskTxsCh = make(chan tasksTxsSync, maxLivePeer)
 
@@ -162,7 +162,7 @@ func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 	blockMgr.allTasks = newHeightSortedMap()
 	//blockMgr.pendingSyncTasks = make(map[*time.Timer]map[crypto.Hash]uint64)
 	blockMgr.syncTimerCh = make(chan *time.Timer, 1)
-	blockMgr.peersInfo = make(map[string]*chainTypes.PeerInfo)
+	blockMgr.peersInfo = make(map[string]chainTypes.PeerInfoInterface)
 	blockMgr.newPeerCh = make(chan *chainTypes.PeerInfo, maxLivePeer)
 	blockMgr.taskTxsCh = make(chan tasksTxsSync, maxLivePeer)
 

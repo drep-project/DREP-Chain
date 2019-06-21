@@ -212,6 +212,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer chainTypes.PeerInfoInterface) error {
 	height := peer.GetHeight()
 	blockMgr.clearSyncCh()
 	headerRoutineExit := false
+
 	//1 获取公共祖先
 	commonAncestor, err := blockMgr.findAncestor(peer)
 	if err != nil {
@@ -298,7 +299,6 @@ func (blockMgr *BlockMgr) fetchBlocks(peer chainTypes.PeerInfoInterface) error {
 				}
 				return true
 			})
-
 		}
 
 		checkExist := func(h crypto.Hash) bool {
@@ -325,7 +325,6 @@ func (blockMgr *BlockMgr) fetchBlocks(peer chainTypes.PeerInfoInterface) error {
 					}
 
 					//log.WithField("height", b.Header.Height).WithField("blk num", len(blocks)).Info("sync block recv block")
-
 					_, _, err := blockMgr.ChainService.ProcessBlock(b)
 					if err != nil {
 						switch err {
@@ -445,8 +444,8 @@ func (blockMgr *BlockMgr) handleReqPeerState(peer *chainTypes.PeerInfo, peerStat
 	})
 }
 
-func (blockMgr *BlockMgr) GetBestPeerInfo() *chainTypes.PeerInfo {
-	var curPeer *chainTypes.PeerInfo
+func (blockMgr *BlockMgr) GetBestPeerInfo() chainTypes.PeerInfoInterface {
+	var curPeer chainTypes.PeerInfoInterface
 	for _, pi := range blockMgr.peersInfo {
 		if curPeer != nil {
 			if curPeer.GetHeight() < pi.GetHeight() {

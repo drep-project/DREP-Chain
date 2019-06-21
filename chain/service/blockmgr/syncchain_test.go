@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"os"
 	"testing"
+	"time"
 )
 
 type p2pServiceMock struct {
@@ -25,7 +26,7 @@ func (ps *p2pServiceMock) Send(w p2p.MsgWriter, msgType uint64, msg interface{})
 	return nil
 }
 func (ps *p2pServiceMock) Peers() []*p2p.Peer {
-	return nil
+	return  nil
 }
 func (ps *p2pServiceMock) AddPeer(nodeUrl string) error {
 	return nil
@@ -54,6 +55,7 @@ func (ps *p2pServiceMock) Stop(executeContext *app.ExecuteContext) error {
 }
 
 type peerInfoMock struct {
+	height uint64
 }
 
 func (p *peerInfoMock) GetMsgRW() p2p.MsgReadWriter {
@@ -61,8 +63,29 @@ func (p *peerInfoMock) GetMsgRW() p2p.MsgReadWriter {
 }
 
 func (p *peerInfoMock) GetHeight() uint64 {
-	return 0
+	return p.height
 }
+
+func (p *peerInfoMock)GetAddr() string{
+	return "127.0.0.1"
+}
+
+func (p *peerInfoMock)SetHeight(height uint64){
+	p.height = height
+}
+func (p *peerInfoMock)KnownTx(tx *chainTypes.Transaction) bool{
+	return true
+}
+func (p *peerInfoMock)MarkTx(tx *chainTypes.Transaction){
+
+}
+func (p *peerInfoMock)KnownBlock(blk *chainTypes.Block) bool{
+	return true
+}
+func (p *peerInfoMock)MarkBlock(blk *chainTypes.Block){}
+
+
+//var pi chainTypes.PeerInfoInterface = &peerInfoMock{}
 
 type chainServiceMock struct {
 }
@@ -164,10 +187,9 @@ func (ps *chainServiceMock) DetachBlockFeed() *event.Feed {
 	return nil
 }
 
-var bm *BlockMgr
+//var bm *BlockMgr
 
-func TestFindAncestor(t *testing.T) {
-
+func prepareBase(t *testing.T) (*BlockMgr,[]*chainTypes.Block){
 	db, err := database.NewDatabase("./test/")
 	if err != nil {
 		t.Fatal(err)
@@ -177,7 +199,14 @@ func TestFindAncestor(t *testing.T) {
 	ds := database.NewDatabaseService(db)
 	cs := chainservice.NewChainService(chainservice.DefaultChainConfig, ds)
 
-	bm = NewBlockMgr(DefaultChainConfig, "./", cs, &p2pServiceMock{})
+	bm := NewBlockMgr(DefaultChainConfig, "./", cs, &p2pServiceMock{})
+
+
+	return bm,blks
+}
+
+func TestFindAncestor(t *testing.T) {
+	bm, blks := prepareBase(t)
 
 	peerInfo := &peerInfoMock{}
 	headerHashs := []*syncHeaderHash{}
@@ -208,15 +237,52 @@ func TestFindAncestor(t *testing.T) {
 	os.RemoveAll("./test")
 }
 
-func testFetchBlocks(t *testing.T) {
-	peer := &peerInfoMock{}
+func TestFetchBlocks(t *testing.T) {
 
+	defer os.RemoveAll("./test")
+
+	peer := &peerInfoMock{}
+	headerHashs1 := []*syncHeaderHash{}
+	headerHashs2 := []*syncHeaderHash{}
+
+	bm, blks := prepareBase(t)
+
+	blks1 := blks[1:2]
+	for _, b := range blks1 {
+		headerHashs1 = append(headerHashs1, &syncHeaderHash{headerHash: b.Header.Hash(), height: b.Header.Height})
+	}
+
+	go func() {
+		time.Sleep(time.Second*4)
+		bm.headerHashCh <- headerHashs1
+	}()
+
+	//fake header hash
+	blks2 := blks[2:4]
+	for _, b := range blks2 {
+		headerHashs2 = append(headerHashs2, &syncHeaderHash{headerHash: b.Header.Hash(), height: b.Header.Height})
+	}
+
+	go func() {
+		time.Sleep(time.Second*8)
+		bm.headerHashCh <- headerHashs2
+	}()
+
+	//fake block body
+
+	go func() {
+		time.Sleep(time.Second*12)
+		bm.blocksCh <- blks[2:4]
+	}()
+
+	peer.height = 4
+	bm.peersInfo["127.0.0.1"] = peer
 	err := bm.fetchBlocks(peer)
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
-func testClearSyncCh() {
+func TestClearSyncCh(t *testing.T) {
 	//clearSyncCh()
 }
