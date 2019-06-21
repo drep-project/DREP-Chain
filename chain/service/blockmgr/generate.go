@@ -48,7 +48,6 @@ func (blockMgr *BlockMgr) GenerateBlock(db *database.Database, leaderKey *secp25
 SELECT_TX:
 	for _, t := range txs {
 		snap := db.CopyState()
-		fmt.Println(gp)
 		newGp := *gp
 		select {
 		case <-stopchanel:
