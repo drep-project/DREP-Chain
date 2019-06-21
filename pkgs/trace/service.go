@@ -29,8 +29,8 @@ var (
 // support get transaction history of sender address
 // support get transaction history of sender receiver
 type TraceService struct {
-	Config           *HistoryConfig
-	ChainService     *chainService.ChainService `service:"chain"`
+	Config       *HistoryConfig
+	ChainService chainService.ChainServiceInterface `service:"chain"`
 
 	eventNewBlockSub event.Subscription
 	newBlockChan     chan *chainTypes.Block
@@ -38,7 +38,7 @@ type TraceService struct {
 	detachBlockSub  event.Subscription
 	detachBlockChan chan *chainTypes.Block
 
-	store           IStore
+	store       IStore
 	readyToQuit chan struct{}
 }
 
@@ -88,10 +88,10 @@ func (traceService *TraceService) Init(executeContext *app.ExecuteContext) error
 	traceService.detachBlockChan = make(chan *chainTypes.Block, 1000)
 
 	if traceService.Config.DbType == "leveldb" {
-		traceService.store, err  = NewLevelDbStore(traceService.Config.HistoryDir)
+		traceService.store, err = NewLevelDbStore(traceService.Config.HistoryDir)
 		log.WithField("path", traceService.Config.HistoryDir).Error("cannot open db file")
 	} else if traceService.Config.DbType == "mongo" {
-		traceService.store, err  = NewMongogDbStore(traceService.Config.Url)
+		traceService.store, err = NewMongogDbStore(traceService.Config.Url)
 		log.WithField("url", traceService.Config.Url).Error("try connect mongo fail")
 	} else {
 		return ErrUnSupportDbType
@@ -107,8 +107,8 @@ func (traceService *TraceService) Start(executeContext *app.ExecuteContext) erro
 	if traceService.Config == nil || !traceService.Config.Enable {
 		return nil
 	}
-	traceService.eventNewBlockSub = traceService.ChainService.NewBlockFeed.Subscribe(traceService.newBlockChan)
-	traceService.detachBlockSub = traceService.ChainService.DetachBlockFeed.Subscribe(traceService.detachBlockChan)
+	traceService.eventNewBlockSub = traceService.ChainService.NewBlockFeed().Subscribe(traceService.newBlockChan)
+	traceService.detachBlockSub = traceService.ChainService.DetachBlockFeed().Subscribe(traceService.detachBlockChan)
 	go traceService.Process()
 	return nil
 }
@@ -143,7 +143,7 @@ func (traceService *TraceService) Stop(executeContext *app.ExecuteContext) error
 	if traceService.eventNewBlockSub != nil {
 		traceService.eventNewBlockSub.Unsubscribe()
 	}
-	if traceService.detachBlockSub != nil{
+	if traceService.detachBlockSub != nil {
 		traceService.detachBlockSub.Unsubscribe()
 	}
 	if traceService.readyToQuit != nil {

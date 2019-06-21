@@ -16,6 +16,11 @@ var (
 	maxCacheTxNum    = 4096
 )
 
+type PeerInfoInterface interface {
+	GetMsgRW() p2p.MsgReadWriter
+	GetHeight() uint64
+}
+
 //业务层peerknown blk height:
 type PeerInfo struct {
 	height      uint64                   //Peer当前块高度

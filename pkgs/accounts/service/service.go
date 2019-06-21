@@ -137,7 +137,7 @@ func (accountService *AccountService) CreateWallet(password string) error {
 
 	store := accountComponent.NewFileStore(accountService.Config.KeyStoreDir)
 	password = string(sha3.Keccak256([]byte(password)))
-	newNode := chainTypes.NewNode(nil, accountService.Blockmgr.ChainService.Config.ChainId)
+	newNode := chainTypes.NewNode(nil, accountService.Blockmgr.ChainService.Config().ChainId)
 	store.StoreKey(newNode, password)
 	return nil
 }

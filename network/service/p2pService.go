@@ -43,6 +43,37 @@ func (p2pService *P2pService) CommandFlags() ([]cli.Command, []cli.Flag) {
 	return nil, []cli.Flag{}
 }
 
+func NewP2pService(config *p2pTypes.P2pConfig, homeDir string) *P2pService {
+	p2pService := &P2pService{}
+	// config
+	p2pService.Config = p2pTypes.DefaultP2pConfig
+
+	p2pService.Config.DataDir = homeDir
+	p2pService.outQuene = make(chan *outMessage, MaxConnections*2)
+
+	if p2pService.Config.PrivateKey == nil {
+		p2pService.Config.PrivateKey = p2pService.Config.GeneratePrivateKey()
+	}
+
+	p2pService.Config.NodeDatabase = path.Join(homeDir, "drepnode", "peersnode")
+
+	p2pService.server = &p2p.Server{
+		Config: p2pService.Config.Config,
+	}
+
+	p2pService.apis = []app.API{
+		app.API{
+			Namespace: "p2p",
+			Version:   "1.0",
+			Service: &P2PApi{
+				p2pService: p2pService,
+			},
+			Public: true,
+		},
+	}
+	return p2pService
+}
+
 func (p2pService *P2pService) Init(executeContext *app.ExecuteContext) error {
 	// config
 	p2pService.Config = p2pTypes.DefaultP2pConfig

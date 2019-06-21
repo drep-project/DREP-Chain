@@ -12,6 +12,7 @@ const (
 	maxLivePeer           = 20
 	broadcastRatio        = 3    //非本地产生的消息，广播的个数是broadcastRatio分之一
 	maxTxsCount           = 1024 //最多一次传输交易的个数
+	pendingTimerCount     = 10   //同步区块时，最多同时并发的获取块请求的协程数目
 
 	MODULENAME = "blockmgr"
 )

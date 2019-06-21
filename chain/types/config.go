@@ -15,7 +15,7 @@ type ChainConfig struct {
 
 }
 
-type BlockMgr struct {
+type BlockMgrConfig struct {
 	GasPrice		 OracleConfig    `json:"gasprice"`
 	JournalFile      string          `json:"journalFile"`
 }

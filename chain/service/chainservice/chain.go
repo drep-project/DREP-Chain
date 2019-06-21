@@ -5,6 +5,7 @@ import (
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/chain/params"
 	"gopkg.in/urfave/cli.v1"
+	"math/big"
 	"sync"
 
 	"github.com/drep-project/binary"
@@ -20,14 +21,47 @@ import (
 )
 
 var (
-	rootChain           app.ChainIdType
+	rootChain          app.ChainIdType
 	DefaultChainConfig = &chainTypes.ChainConfig{
-		RemotePort:  55556,
-		ChainId:     app.ChainIdType{},
-		GenesisPK:   "0x0373654ccdb250f2cfcfe64c783a44b9ea85bc47f2f00c480d05082428d277d6d0",
+		RemotePort:       55556,
+		ChainId:          app.ChainIdType{},
+		GenesisPK:        "0x0373654ccdb250f2cfcfe64c783a44b9ea85bc47f2f00c480d05082428d277d6d0",
+		SkipCheckMutiSig: true,
 	}
 	span = uint64(params.MaxGasLimit / 360)
 )
+
+type ChainServiceInterface interface {
+	app.Service
+	ChainID() app.ChainIdType
+	DeriveMerkleRoot(txs []*chainTypes.Transaction) []byte
+	GetBlockByHash(hash *crypto.Hash) (*chainTypes.Block, error)
+	GetBlockByHeight(number uint64) (*chainTypes.Block, error)
+
+	//DefaultChainConfig
+	GetBlockHeaderByHash(hash *crypto.Hash) (*chainTypes.BlockHeader, error)
+	GetBlockHeaderByHeight(number uint64) (*chainTypes.BlockHeader, error)
+	GetBlocksFrom(start, size uint64) ([]*chainTypes.Block, error)
+
+	GetCurrentState() *database.Database
+	GetHeader(hash crypto.Hash, number uint64) *chainTypes.BlockHeader
+	GetHighestBlock() (*chainTypes.Block, error)
+	RootChain() app.ChainIdType
+	BestChain() *ChainView
+	CalcGasLimit(parent *chainTypes.BlockHeader, gasFloor, gasCeil uint64) *big.Int
+	ProcessBlock(block *chainTypes.Block) (bool, bool, error)
+	NewBlockFeed() *event.Feed
+	BlockExists(blockHash *crypto.Hash) bool
+	TransactionValidator() ITransactionValidator
+	GetDatabaseService() *database.DatabaseService
+	Index() *BlockIndex
+	BlockValidator() IBlockValidator
+	Config() *chainTypes.ChainConfig
+	AccumulateRewards(db *database.Database, b *chainTypes.Block, totalGasBalance *big.Int) error
+	DetachBlockFeed() *event.Feed
+}
+
+var cs ChainServiceInterface = &ChainService{}
 
 //xxx
 type ChainService struct {
@@ -40,8 +74,8 @@ type ChainService struct {
 
 	chainId app.ChainIdType
 
-	lock          sync.RWMutex
-	addBlockSync  sync.Mutex
+	lock         sync.RWMutex
+	addBlockSync sync.Mutex
 
 	// These fields are related to handling of orphan blocks.  They are
 	// protected by a combination of the chain lock and the orphan lock.
@@ -50,27 +84,60 @@ type ChainService struct {
 	prevOrphans  map[crypto.Hash][]*chainTypes.OrphanBlock
 	oldestOrphan *chainTypes.OrphanBlock
 
-	Index         *BlockIndex
-	BestChain     *ChainView
+	blockIndex    *BlockIndex
+	bestChain     *ChainView
 	stateLock     sync.RWMutex
 	StateSnapshot *ChainState
 
-	Config       *chainTypes.ChainConfig
+	config       *chainTypes.ChainConfig
 	genesisBlock *chainTypes.Block
 
 	//提供新块订阅
-	NewBlockFeed    event.Feed
-	DetachBlockFeed event.Feed
+	newBlockFeed    event.Feed
+	detachBlockFeed event.Feed
 
-	BlockValidator IBlockValidator
-	TransactionValidator ITransactionValidator
+	blockValidator       IBlockValidator
+	transactionValidator ITransactionValidator
 
-	blockDb   *database.Database
+	blockDb *database.Database
 }
 
 type ChainState struct {
 	chainTypes.BestState
 	db *database.Database
+}
+
+func (chainService *ChainService) GetDatabaseService() *database.DatabaseService {
+	return chainService.DatabaseService
+}
+
+func (chainService *ChainService) DetachBlockFeed() *event.Feed {
+	return &chainService.detachBlockFeed
+
+}
+
+func (chainService *ChainService) Config() *chainTypes.ChainConfig {
+	return chainService.config
+}
+
+func (chainService *ChainService) BlockValidator() IBlockValidator {
+	return chainService.blockValidator
+}
+
+func (chainService *ChainService) Index() *BlockIndex {
+	return chainService.blockIndex
+}
+
+func (chainService *ChainService) TransactionValidator() ITransactionValidator {
+	return chainService.transactionValidator
+}
+
+func (chainService *ChainService) NewBlockFeed() *event.Feed {
+	return &chainService.newBlockFeed
+}
+
+func (chainService *ChainService) BestChain() *ChainView {
+	return chainService.bestChain
 }
 
 func (chainService *ChainService) ChainID() app.ChainIdType {
@@ -89,31 +156,79 @@ func (chainService *ChainService) CommandFlags() ([]cli.Command, []cli.Flag) {
 	return nil, []cli.Flag{}
 }
 
-func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error {
-	chainService.Config = DefaultChainConfig
-
-	err := executeContext.UnmashalConfig(chainService.Name(), chainService.Config)
-	if err != nil {
-		return err
-	}
-	chainService.Index = NewBlockIndex()
-	chainService.BestChain = NewChainView(nil)
+func NewChainService(config *chainTypes.ChainConfig, ds *database.DatabaseService) *ChainService {
+	chainService := &ChainService{}
+	chainService.config = config
+	var err error
+	chainService.blockIndex = NewBlockIndex()
+	chainService.bestChain = NewChainView(nil)
 	chainService.orphans = make(map[crypto.Hash]*chainTypes.OrphanBlock)
 	chainService.prevOrphans = make(map[crypto.Hash][]*chainTypes.OrphanBlock)
 	chainService.stateProcessor = NewStateProcessor(chainService)
-	chainService.TransactionValidator = NewTransactionValidator(chainService)
-	chainService.BlockValidator = NewChainBlockValidator(chainService)
+	chainService.transactionValidator = NewTransactionValidator(chainService)
+	chainService.blockValidator = NewChainBlockValidator(chainService)
+	chainService.DatabaseService = ds
 	chainService.blockDb = chainService.DatabaseService.BeginTransaction()
-	if chainService.Config.GenesisPK == "" {
-		return ErrGenesisPkNotFound
+	if chainService.config.GenesisPK == "" {
+		return nil
 	}
-	if len(chainService.Config.Producers) == 0  {
-		return ErrBlockProducerNotFound
+	if len(chainService.config.Producers) == 0 {
+		return nil
 	}
-	chainService.genesisBlock = chainService.GetGenisiBlock(chainService.Config.GenesisPK)
+	chainService.genesisBlock = chainService.GetGenisiBlock(chainService.config.GenesisPK)
 	hash := chainService.genesisBlock.Header.Hash()
 	if !chainService.DatabaseService.HasBlock(hash) {
-		chainService.genesisBlock, err = chainService.ProcessGenesisBlock(chainService.Config.GenesisPK)
+		chainService.genesisBlock, err = chainService.ProcessGenesisBlock(chainService.config.GenesisPK)
+		err = chainService.createChainState()
+		if err != nil {
+			return nil
+		}
+	}
+
+	err = chainService.InitStates()
+	if err != nil {
+		return nil
+	}
+
+	chainService.apis = []app.API{
+		app.API{
+			Namespace: MODULENAME,
+			Version:   "1.0",
+			Service: &ChainApi{
+				chainService: chainService,
+				dbService:    chainService.DatabaseService,
+			},
+			Public: true,
+		},
+	}
+	return chainService
+}
+
+func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error {
+	chainService.config = DefaultChainConfig
+
+	err := executeContext.UnmashalConfig(chainService.Name(), chainService.config)
+	if err != nil {
+		return err
+	}
+	chainService.blockIndex = NewBlockIndex()
+	chainService.bestChain = NewChainView(nil)
+	chainService.orphans = make(map[crypto.Hash]*chainTypes.OrphanBlock)
+	chainService.prevOrphans = make(map[crypto.Hash][]*chainTypes.OrphanBlock)
+	chainService.stateProcessor = NewStateProcessor(chainService)
+	chainService.transactionValidator = NewTransactionValidator(chainService)
+	chainService.blockValidator = NewChainBlockValidator(chainService)
+	chainService.blockDb = chainService.DatabaseService.BeginTransaction()
+	if chainService.config.GenesisPK == "" {
+		return ErrGenesisPkNotFound
+	}
+	if len(chainService.config.Producers) == 0 {
+		return ErrBlockProducerNotFound
+	}
+	chainService.genesisBlock = chainService.GetGenisiBlock(chainService.config.GenesisPK)
+	hash := chainService.genesisBlock.Header.Hash()
+	if !chainService.DatabaseService.HasBlock(hash) {
+		chainService.genesisBlock, err = chainService.ProcessGenesisBlock(chainService.config.GenesisPK)
 		err = chainService.createChainState()
 		if err != nil {
 			return err
@@ -148,9 +263,8 @@ func (chainService *ChainService) Stop(executeContext *app.ExecuteContext) error
 }
 
 func (chainService *ChainService) BlockExists(blockHash *crypto.Hash) bool {
-	return chainService.Index.HaveBlock(blockHash)
+	return chainService.blockIndex.HaveBlock(blockHash)
 }
-
 
 func (chainService *ChainService) RootChain() app.ChainIdType {
 	return rootChain
@@ -159,7 +273,7 @@ func (chainService *ChainService) RootChain() app.ChainIdType {
 func (chainService *ChainService) GetBlocksFrom(start, size uint64) ([]*chainTypes.Block, error) {
 	blocks := []*chainTypes.Block{}
 	for i := start; i < start+size; i++ {
-		node := chainService.BestChain.NodeByHeight(i)
+		node := chainService.bestChain.NodeByHeight(i)
 		if node == nil {
 			continue
 		}
@@ -173,7 +287,7 @@ func (chainService *ChainService) GetBlocksFrom(start, size uint64) ([]*chainTyp
 }
 
 func (chainService *ChainService) GetHighestBlock() (*chainTypes.Block, error) {
-	heighestBlockBode := chainService.BestChain.Tip()
+	heighestBlockBode := chainService.bestChain.Tip()
 	if heighestBlockBode == nil {
 		return nil, fmt.Errorf("chain not init")
 	}
@@ -193,7 +307,7 @@ func (chainService *ChainService) GetBlockByHash(hash *crypto.Hash) (*chainTypes
 }
 
 func (chainService *ChainService) GetBlockHeaderByHash(hash *crypto.Hash) (*chainTypes.BlockHeader, error) {
-	blockNode, ok := chainService.Index.Index[*hash]
+	blockNode, ok := chainService.blockIndex.Index[*hash]
 	if !ok {
 		return nil, ErrBlockNotFound
 	}
@@ -207,12 +321,12 @@ func (chainService *ChainService) GetHeader(hash crypto.Hash, number uint64) *ch
 }
 
 func (chainService *ChainService) GetBlockByHeight(number uint64) (*chainTypes.Block, error) {
-	blockNode := chainService.BestChain.NodeByHeight(number)
+	blockNode := chainService.bestChain.NodeByHeight(number)
 	return chainService.GetBlockByHash(blockNode.Hash)
 }
 
 func (chainService *ChainService) GetBlockHeaderByHeight(number uint64) (*chainTypes.BlockHeader, error) {
-	blockNode := chainService.BestChain.NodeByHeight(number)
+	blockNode := chainService.bestChain.NodeByHeight(number)
 	if blockNode == nil {
 		return nil, ErrBlockNotFound
 	}
@@ -244,10 +358,10 @@ func (cs *ChainService) DeriveMerkleRoot(txs []*chainTypes.Transaction) []byte {
 func (chainService *ChainService) createChainState() error {
 	node := chainTypes.NewBlockNode(chainService.genesisBlock.Header, nil)
 	node.Status = chainTypes.StatusDataStored | chainTypes.StatusValid
-	chainService.BestChain.SetTip(node)
+	chainService.bestChain.SetTip(node)
 
 	// Add the new node to the index which is used for faster lookups.
-	chainService.Index.AddNode(node)
+	chainService.blockIndex.AddNode(node)
 
 	// Initialize the state related to the best block.  Since it is the
 	// genesis block, use its timestamp for the median time.
@@ -283,6 +397,6 @@ func (chainService *ChainService) createChainState() error {
 func (chainService *ChainService) GetCurrentState() *database.Database {
 	chainService.stateLock.Lock()
 	defer chainService.stateLock.Unlock()
-	return  chainService.StateSnapshot.db
+	return chainService.StateSnapshot.db
 
 }

@@ -23,7 +23,7 @@ type ChainBlockValidator struct {
 
 func NewChainBlockValidator(chainService *ChainService) *ChainBlockValidator {
 	return &ChainBlockValidator{
-		txValidator: chainService.TransactionValidator,
+		txValidator: chainService.TransactionValidator(),
 		chain:       chainService,
 	}
 }
@@ -82,7 +82,7 @@ func (chainBlockValidator *ChainBlockValidator) VerifyHeader(header, parent *cha
 
 // isInLocalBp check the specific pubket  is a bp node
 func (chainBlockValidator *ChainBlockValidator) isInLocalBp(key *secp256k1.PublicKey) bool {
-	for _, bp := range chainBlockValidator.chain.Config.Producers {
+	for _, bp := range chainBlockValidator.chain.Config().Producers {
 		if bp.Pubkey.IsEqual(key) {
 			return true
 		}
@@ -106,7 +106,7 @@ func (chainBlockValidator *ChainBlockValidator) VerifyMultiSig(b *chainTypes.Blo
 	participators := []*secp256k1.PublicKey{}
 	for index, val := range b.MultiSig.Bitmap {
 		if val == 1 {
-			producer := chainBlockValidator.chain.Config.Producers[index]
+			producer := chainBlockValidator.chain.Config().Producers[index]
 			participators = append(participators, producer.Pubkey)
 		}
 	}

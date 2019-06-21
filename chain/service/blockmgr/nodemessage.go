@@ -14,7 +14,7 @@ func (blockMgr *BlockMgr) receiveMsg(peer *chainTypes.PeerInfo, rw p2p.MsgReadWr
 	errCh := make(chan error)
 	msgCh := make(chan p2p.Msg)
 	go func() {
-		blockMgr.P2pServer.Send(peer.GetMsgRW(), chainTypes.MsgTypePeerStateReq, &chainTypes.PeerState{Height: uint64(blockMgr.ChainService.BestChain.Height())})
+		blockMgr.P2pServer.Send(peer.GetMsgRW(), chainTypes.MsgTypePeerStateReq, &chainTypes.PeerState{Height: uint64(blockMgr.ChainService.BestChain().Height())})
 		msg, err := rw.ReadMsg()
 		if err != nil {
 			errCh <- err
@@ -139,7 +139,7 @@ func (blockMgr *BlockMgr) dealMsg(peer *chainTypes.PeerInfo, rw p2p.MsgReadWrite
 func (blockMgr *BlockMgr) handleHeaderReq(peer *chainTypes.PeerInfo, req *chainTypes.HeaderReq) {
 	headers := make([]chainTypes.BlockHeader, 0, req.ToHeight-req.FromHeight+1)
 	for i := req.FromHeight; i <= req.ToHeight; i++ {
-		node := blockMgr.ChainService.BestChain.NodeByHeight(uint64(i))
+		node := blockMgr.ChainService.BestChain().NodeByHeight(uint64(i))
 		if node != nil {
 			headers = append(headers, node.Header())
 		}
@@ -176,7 +176,7 @@ func (blockMgr *BlockMgr) HandleBlockReqMsg(peer *chainTypes.PeerInfo, req *chai
 	log.WithField("num:", len(req.BlockHashs)).Info("sync req block")
 	zero := crypto.Hash{}
 	startHeight := uint64(0)
-	endHeight := blockMgr.ChainService.BestChain.Tip().Height
+	endHeight := blockMgr.ChainService.BestChain().Tip().Height
 
 	if len(req.BlockHashs) == 0 {
 		log.WithField("block hash num", len(req.BlockHashs)).Warn("handle block req")
@@ -185,7 +185,7 @@ func (blockMgr *BlockMgr) HandleBlockReqMsg(peer *chainTypes.PeerInfo, req *chai
 	startHash := req.BlockHashs[0]
 	endHash := req.BlockHashs[len(req.BlockHashs)-1]
 	if startHash != zero && blockMgr.ChainService.BlockExists(&startHash) {
-		startHeight = blockMgr.ChainService.Index.LookupNode(&startHash).Height
+		startHeight = blockMgr.ChainService.Index().LookupNode(&startHash).Height
 	}
 
 	if endHash != zero {
@@ -207,7 +207,7 @@ func (blockMgr *BlockMgr) HandleBlockReqMsg(peer *chainTypes.PeerInfo, req *chai
 			count = 0
 		}
 
-		node := blockMgr.ChainService.BestChain.NodeByHeight(i)
+		node := blockMgr.ChainService.BestChain().NodeByHeight(i)
 		block, err := blockMgr.DatabaseService.GetBlock(node.Hash)
 		if err != nil {
 			return

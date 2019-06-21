@@ -9,7 +9,6 @@ import (
 
 	"github.com/drep-project/drep-chain/chain/params"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/drep-chain/app"
 	"gopkg.in/urfave/cli.v1"
 
@@ -38,7 +37,7 @@ var (
 		Percentile: 60,
 		MaxPrice:   big.NewInt(500 * params.GWei).Uint64(),
 	}
-	DefaultChainConfig = &chainTypes.BlockMgr{
+	DefaultChainConfig = &chainTypes.BlockMgrConfig{
 		GasPrice:    DefaultOracleConfig,
 		JournalFile: "txpool/txs",
 	}
@@ -46,18 +45,17 @@ var (
 )
 
 type BlockMgr struct {
-	ChainService    *chainservice.ChainService `service:"chain"`
-	RpcService      *rpc2.RpcService           `service:"rpc"`
-	P2pServer       p2pService.P2P             `service:"p2p"`
-	DatabaseService *database.DatabaseService  `service:"database"`
-	VmService       evm.Vm                     `service:"vm"`
+	ChainService    chainservice.ChainServiceInterface `service:"chain"`
+	RpcService      *rpc2.RpcService                   `service:"rpc"`
+	P2pServer       p2pService.P2P                     `service:"p2p"`
+	DatabaseService *database.DatabaseService          `service:"database"`
+	VmService       evm.Vm                             `service:"vm"`
 	transactionPool *txpool.TransactionPool
 	apis            []app.API
 
 	lock sync.RWMutex
+	Config *chainTypes.BlockMgrConfig
 
-	Config *chainTypes.BlockMgr
-	pid    *actor.PID
 	//Events related to sync blocks
 	syncBlockEvent event.Feed
 	syncMut        sync.Mutex
@@ -72,7 +70,7 @@ type BlockMgr struct {
 	allTasks *heightSortedMap
 
 	//正在同步中的任务列表，如果对应的块未到，会重新发布请求的
-	pendingSyncTasks sync.Map//map[*time.Timer]map[crypto.Hash]uint64
+	pendingSyncTasks sync.Map //map[*time.Timer]map[crypto.Hash]uint64
 	taskTxsCh        chan tasksTxsSync
 	syncTimerCh      chan *time.Timer
 
@@ -101,6 +99,57 @@ func (blockMgr *BlockMgr) CommandFlags() ([]cli.Command, []cli.Flag) {
 	return nil, []cli.Flag{}
 }
 
+func NewBlockMgr(config *chainTypes.BlockMgrConfig,homeDir string, cs chainservice.ChainServiceInterface, p2pservice p2pService.P2P) *BlockMgr {
+	blockMgr := &BlockMgr{}
+	blockMgr.Config = config
+	blockMgr.ChainService = cs
+	blockMgr.P2pServer = p2pservice
+
+	blockMgr.headerHashCh = make(chan []*syncHeaderHash)
+	blockMgr.blocksCh = make(chan []*chainTypes.Block)
+	blockMgr.allTasks = newHeightSortedMap()
+	//blockMgr.pendingSyncTasks = make(map[*time.Timer]map[crypto.Hash]uint64)
+	blockMgr.syncTimerCh = make(chan *time.Timer, pendingTimerCount)
+	blockMgr.peersInfo = make(map[string]*chainTypes.PeerInfo)
+	blockMgr.newPeerCh = make(chan *chainTypes.PeerInfo, maxLivePeer)
+	blockMgr.taskTxsCh = make(chan tasksTxsSync, maxLivePeer)
+
+	blockMgr.gpo = NewOracle(blockMgr.ChainService, blockMgr.Config.GasPrice)
+
+	//TODO use disk db
+	blockMgr.transactionPool = txpool.NewTransactionPool(blockMgr.ChainService.GetDatabaseService().Db(), path.Join(homeDir, blockMgr.Config.JournalFile))
+
+	blockMgr.P2pServer.AddProtocols([]p2p.Protocol{
+		p2p.Protocol{
+			Name:   "blockMgr",
+			Length: chainTypes.NumberOfMsg,
+			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
+				if len(blockMgr.peersInfo) >= maxLivePeer {
+					return ErrEnoughPeer
+				}
+				pi := chainTypes.NewPeerInfo(peer, rw)
+				blockMgr.peersInfo[peer.IP()] = pi
+				defer delete(blockMgr.peersInfo, peer.IP())
+				return blockMgr.receiveMsg(pi, rw)
+			},
+		},
+	})
+
+	blockMgr.apis = []app.API{
+		app.API{
+			Namespace: "blockmgr",
+			Version:   "1.0",
+			Service: &BlockMgrApi{
+				blockMgr:  blockMgr,
+				dbService: blockMgr.DatabaseService,
+			},
+			Public: true,
+		},
+	}
+	return blockMgr
+}
+
+
 func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 	blockMgr.Config = DefaultChainConfig
 
@@ -120,7 +169,7 @@ func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 	blockMgr.gpo = NewOracle(blockMgr.ChainService, blockMgr.Config.GasPrice)
 
 	//TODO use disk db
-	blockMgr.transactionPool = txpool.NewTransactionPool(blockMgr.ChainService.DatabaseService.Db(), path.Join(executeContext.CommonConfig.HomeDir, blockMgr.Config.JournalFile))
+	blockMgr.transactionPool = txpool.NewTransactionPool(blockMgr.ChainService.GetDatabaseService().Db(), path.Join(executeContext.CommonConfig.HomeDir, blockMgr.Config.JournalFile))
 
 	blockMgr.P2pServer.AddProtocols([]p2p.Protocol{
 		p2p.Protocol{
@@ -153,7 +202,7 @@ func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 }
 
 func (blockMgr *BlockMgr) Start(executeContext *app.ExecuteContext) error {
-	blockMgr.transactionPool.Start(&blockMgr.ChainService.NewBlockFeed)
+	blockMgr.transactionPool.Start(blockMgr.ChainService.NewBlockFeed())
 	go blockMgr.synchronise()
 	go blockMgr.syncTxs()
 	return nil
