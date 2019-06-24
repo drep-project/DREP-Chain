@@ -362,6 +362,7 @@ func (consensusService *ConsensusService) runAsLeader() (block *chainTypes.Block
 }
 
 func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error) {
+	log.Trace("node leader finishes process consensus")
 	db := consensusService.DatabaseService.BeginTransaction()
 	defer db.Discard()
 	block, gasFee, err := consensusService.BlockMgr.GenerateBlock(db, consensusService.pubkey)
