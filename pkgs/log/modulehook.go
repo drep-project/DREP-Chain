@@ -2,10 +2,10 @@ package log
 
 import (
 	"github.com/pingcap/errors"
-	"strconv"
-	"sync"
 	log "github.com/sirupsen/logrus"
 	"io"
+	"strconv"
+	"sync"
 )
 
 type ModuleHook struct {
@@ -34,7 +34,7 @@ func (hook *ModuleHook) Fire(entry *log.Entry) error {
 				return nil
 			}
 		}else{
-			if log.InfoLevel < entry.Level {
+			if log.GetLevel() < entry.Level {
 				return nil
 			}
 		}
@@ -96,6 +96,10 @@ func (hook *ModuleHook) SetModulesLevel(moduleLevel ...interface{}) error {
 
 		default:
 			return errors.New("unsport lvl type")
+		}
+		mLog, ok := loggers[module]
+		if ok {
+			mLog.Logger.SetLevel(lv)
 		}
 		hook.moduleLevel[module] = lv
 	}
