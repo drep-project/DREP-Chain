@@ -51,11 +51,10 @@ func (hook *ModuleHook) saveLog(entry *log.Entry) {
 
 func (hook *ModuleHook) printLog(entry *log.Entry)  {
 	var msg []byte
-	moduleName, ok := entry.Data[MODULE];
+	_, ok := entry.Data[MODULE];
 	if ok {
 		delete(entry.Data, MODULE)
 		msg, _ = hook.printFormat.Format(entry)
-		msg = append([]byte("[" + moduleName.(string) + "]"), msg...)
 	}else{
 		msg, _ = hook.printFormat.Format(entry)
 	}

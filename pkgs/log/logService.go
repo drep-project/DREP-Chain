@@ -2,11 +2,14 @@ package log
 
 import (
 	"errors"
+	"github.com/shiena/ansicolor"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/drep-chain/app"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"gopkg.in/urfave/cli.v1"
+	"os"
 	"path"
 	"strings"
 )
@@ -60,10 +63,12 @@ func (logService *LogService) Init(executeContext *app.ExecuteContext) error {
 		Compress:   false, // disabled by default
 	}
 	logrus.SetFormatter(&NullFormat{})
-	textFormat := &logrus.TextFormatter{
+	textFormat := &prefixed.TextFormatter{
 		FullTimestamp: true,
 		ForceColors: true,
+		ForceFormatting:true,
 	}
+	logrus.SetOutput(ansicolor.NewAnsiColorWriter(os.Stdout))
 	logrus.SetLevel(logrus.Level(logService.Config.LogLevel))
 	mHook := NewMyHook(wirter1, &logrus.JSONFormatter{}, textFormat)
 	if logService.Config.Vmodule != "" {
@@ -120,9 +125,11 @@ func (logService *LogService) setLogConfig(ctx *cli.Context, homeDir string) {
 	}
 }
 
-
 func NewLogger(moduleName string) *logrus.Entry {
-	log := logrus.WithField(MODULE, moduleName)
+	log := logrus.WithFields(logrus.Fields{
+		"prefix":      moduleName,
+		MODULE: moduleName,
+	})
 	loggers[moduleName] = log
 	return log
 }
