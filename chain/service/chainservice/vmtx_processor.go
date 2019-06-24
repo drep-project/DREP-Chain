@@ -23,6 +23,7 @@ import (
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/pkgs/evm"
+	"fmt"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning
@@ -46,7 +47,8 @@ func NewStateProcessor(chainservice *ChainService) *StateProcessor {
 // indicating the block was invalid.
 func (stateProcessor *StateProcessor) ApplyTransaction(db *database.Database, bc evm.ChainContext, gp *GasPool, header *types.BlockHeader, tx *types.Transaction, from *crypto.CommonAddress, usedGas *uint64) (*types.Receipt, uint64, error) {
 	// Apply the transaction to the current state (included in the env)
-	_, gas, gasFee, failed, err := stateProcessor.ApplyMessage(db, tx, from, header, bc, gp)
+	ret, gas, gasFee, failed, err := stateProcessor.ApplyMessage(db, tx, from, header, bc, gp)
+	fmt.Println("err2: ", err)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -59,12 +61,14 @@ func (stateProcessor *StateProcessor) ApplyTransaction(db *database.Database, bc
 	receipt.TxHash = *tx.TxHash()
 	receipt.GasUsed = gas
 	receipt.GasFee = gasFee
+	receipt.Ret = ret
 	// if the transaction created a contract, store the creation address in the receipt.
 	if tx.To() == nil || tx.To().IsEmpty() {
 		receipt.ContractAddress = crypto.CreateAddress(*from, tx.Nonce())
 	}
 	// Set the receipt logs and create a bloom for filtering
 	receipt.Logs = db.GetLogs(*tx.TxHash())
+
 	return receipt, gas, err
 }
 
@@ -78,16 +82,20 @@ func (stateProcessor *StateProcessor) ApplyTransaction(db *database.Database, bc
 func (stateProcessor *StateProcessor) ApplyMessage(db *database.Database, tx *types.Transaction, from *crypto.CommonAddress, header *types.BlockHeader, bc evm.ChainContext, gp *GasPool) ([]byte, uint64, uint64, bool, error) {
 	stateTransaction := NewStateTransition(db, stateProcessor.chainService.VmService, tx, from, header, bc, gp)
 	if err := stateTransaction.preCheck(); err != nil {
+		fmt.Println("err3: ", err)
 		return nil, 0, 0, false, err
 	}
 
 	// Pay intrinsic gastx
 	gas, err := tx.IntrinsicGas()
+	fmt.Println("err4: ", err)
 	if err != nil {
 		return nil, 0, 0, false, err
 	}
 
 	if err = stateTransaction.useGas(gas); err != nil {
+		fmt.Println("err5: ", err)
+		fmt.Println("gas: ", gas)
 		return nil, 0, 0, false, err
 	}
 
@@ -95,10 +103,13 @@ func (stateProcessor *StateProcessor) ApplyMessage(db *database.Database, tx *ty
 	var fail bool
 	if tx.Type() == types.TransferType {
 		ret, fail, err = stateTransaction.TransitionTransferDb()
+		fmt.Println("err6: ", err)
 	} else if tx.Type() == types.CallContractType || tx.Type() == types.CreateContractType {
 		ret, fail, err = stateTransaction.TransitionVmTxDb()
+		fmt.Println("err7: ", err)
 	} else if tx.Type() == types.SetAliasType {
 		ret, fail, err = stateTransaction.TransitionAliasDb()
+		fmt.Println("err8: ", err)
 	} else {
 		return nil, 0, 0, false, ErrUnsupportTxType
 	}

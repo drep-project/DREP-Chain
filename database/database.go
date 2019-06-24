@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"strconv"
 	"sync"
+	"fmt"
 )
 
 type Database struct {
@@ -433,6 +434,57 @@ func (db *Database) AddLog(log *chainTypes.Log) error {
 	return db.PutLogs(logs, log.TxHash)
 }
 
+func (db *Database) PutReceipt(txHash crypto.Hash, receipt *chainTypes.Receipt) error {
+	key := sha3.Keccak256([]byte("receipt_" + txHash.String()))
+	fmt.Println("tx receipt: ", receipt)
+	value, err := binary.Marshal(receipt)
+	fmt.Println("err11: ", err)
+	if err != nil {
+		return err
+	}
+	return db.Put(key, value)
+}
+
+func (db *Database) GetReceipt(txHash crypto.Hash) *chainTypes.Receipt {
+	key := sha3.Keccak256([]byte("receipt_" + txHash.String()))
+	value, err := db.Get(key)
+	fmt.Println("err12: ", err)
+	fmt.Println("val: ",value)
+	if err != nil {
+		return nil
+	}
+	var receipt *chainTypes.Receipt
+	err = binary.Unmarshal(value, &receipt)
+	fmt.Println("err13: ", err)
+	if err != nil {
+		return nil
+	}
+	return receipt
+}
+
+func (db *Database) PutReceipts(blockHash crypto.Hash, receipts []*chainTypes.Receipt) error {
+	key := sha3.Keccak256([]byte("receipts_" + blockHash.String()))
+	value, err := binary.Marshal(receipts)
+	if err != nil {
+		return err
+	}
+	return db.Put(key, value)
+}
+
+func (db *Database) GetReceipts(blockHash crypto.Hash) []*chainTypes.Receipt {
+	key := sha3.Keccak256([]byte("receipts_" + blockHash.String()))
+	value, err := db.Get(key)
+	if err != nil {
+		return make([]*chainTypes.Receipt, 0)
+	}
+	var receipts []*chainTypes.Receipt
+	err = binary.Unmarshal(value, &receipts)
+	if err != nil {
+		return make([]*chainTypes.Receipt, 0)
+	}
+	return receipts
+}
+
 func (db *Database) Load(x *big.Int) []byte {
 	value, _ := db.Get(x.Bytes())
 	return value
@@ -457,6 +509,7 @@ func (db *Database) SubBalance(addr *crypto.CommonAddress, amount *big.Int) erro
 
 func (db *Database) PutBlock(block *chainTypes.Block) error {
 	hash := block.Header.Hash()
+	fmt.Println("hash: ", hash)
 	key := append(BlockPrefix, hash[:]...)
 	value, err := binary.Marshal(block)
 	if err != nil {

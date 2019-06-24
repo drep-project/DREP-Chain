@@ -11,6 +11,6 @@ type Log struct {
 	TxHash  crypto.Hash
 	Topics  []crypto.Hash
 	Data    []byte
-	Height  int64
+	Height  uint64
 	Removed bool
 }

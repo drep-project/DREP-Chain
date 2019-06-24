@@ -7,6 +7,7 @@ import (
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"math/big"
+	"fmt"
 )
 
 type BlockHeader struct {
@@ -29,6 +30,8 @@ type BlockHeader struct {
 func (blockHeader *BlockHeader) Hash() *crypto.Hash {
 	if blockHeader.blockHash == nil {
 		b, err := binary.Marshal(blockHeader)
+		fmt.Println("header: ", blockHeader)
+		fmt.Println("err: ", err)
 		if err != nil {
 			return nil
 		}

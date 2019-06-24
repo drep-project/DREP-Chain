@@ -26,10 +26,10 @@ import (
 	"time"
 
 	"github.com/drep-project/drep-chain/chain/types"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/pkgs/evm/event"
-	"github.com/drep-project/drep-chain/pkgs/evm/vm"
+	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/rpc"
+	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/pkgs/evm/vm"
 	"github.com/drep-project/drep-chain/pkgs/log"
 )
 
@@ -40,7 +40,7 @@ type Type byte
 const (
 	// UnknownSubscription indicates an unknown subscription type
 	UnknownSubscription Type = iota
-	// LogsSubscription queries for new or removed (chain reorg) logs
+	// LogsSubscription queries for new or removed (BlockChain reorg) logs
 	LogsSubscription
 	// PendingLogsSubscription queries for logs in pending blocks
 	PendingLogsSubscription
@@ -96,16 +96,16 @@ type EventSystem struct {
 	txsSub        event.Subscription         // Subscription for new transaction event
 	logsSub       event.Subscription         // Subscription for new log event
 	rmLogsSub     event.Subscription         // Subscription for removed log event
-	chainSub      event.Subscription         // Subscription for new chain event
+	chainSub      event.Subscription         // Subscription for new BlockChain event
 	pendingLogSub *event.TypeMuxSubscription // Subscription for pending log event
 
 	// Channels
-	install   chan *subscription       // install filter for event notification
-	uninstall chan *subscription       // remove filter for event notification
+	install   chan *subscription         // install filter for event notification
+	uninstall chan *subscription         // remove filter for event notification
 	txsCh     chan vm.NewTxsEvent      // Channel to receive new transactions event
-	logsCh    chan []*types.Log        // Channel to receive new log event
+	logsCh    chan []*types.Log          // Channel to receive new log event
 	rmLogsCh  chan vm.RemovedLogsEvent // Channel to receive removed log event
-	chainCh   chan vm.ChainEvent       // Channel to receive new chain event
+	chainCh   chan vm.ChainEvent       // Channel to receive new BlockChain event
 }
 
 // NewEventSystem creates a new manager that listens for event on the given mux,
@@ -281,7 +281,7 @@ func (es *EventSystem) subscribePendingLogs(crit FilterQuery, logs chan []*types
 }
 
 // SubscribeNewHeads creates a subscription that writes the header of a block that is
-// imported in the chain.
+// imported in the BlockChain.
 func (es *EventSystem) SubscribeNewHeads(headers chan *types.BlockHeader) *Subscription {
 	sub := &subscription{
 		id:        rpc.NewID(),
@@ -379,13 +379,13 @@ func (es *EventSystem) lightFilterNewHead(newHeader *types.BlockHeader, callBack
 	// find common ancestor, create list of rolled back and new block hashes
 	var oldHeaders, newHeaders []*types.BlockHeader
 	for oldh.Hash() != newh.Hash() {
-		if uint64(oldh.Height) >= uint64(newh.Height) {
+		if oldh.Height >= newh.Height {
 			oldHeaders = append(oldHeaders, oldh)
-			oldh, _, _ = es.backend.ChainDb().GetBlockNode(&oldh.PreviousHash, oldh.Height)
+			oldh = es.backend.Chain().GetHeader(oldh.PreviousHash, oldh.Height-1)
 		}
-		if uint64(oldh.Height) < uint64(newh.Height) {
+		if oldh.Height < newh.Height {
 			newHeaders = append(newHeaders, newh)
-			newh, _, _ = es.backend.ChainDb().GetBlockNode(&newh.PreviousHash, newh.Height)
+			newh = es.backend.Chain().GetHeader(newh.PreviousHash, newh.Height - 1)
 			if newh == nil {
 				// happens when CHT syncing, nothing to do
 				newh = oldh

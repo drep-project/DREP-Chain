@@ -17,22 +17,23 @@
 package filters
 
 import (
+	"context"
 	"errors"
 	"math/big"
 
 	"github.com/drep-project/drep-chain/pkgs/evm/bloombits"
-	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/chain/types"
-	"github.com/drep-project/drep-chain/pkgs/evm/event"
+	"github.com/drep-project/drep-chain/rpc"
+	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
-	"context"
+	"github.com/drep-project/drep-chain/chain/service/chainservice"
 )
 
 type Backend interface {
-	ChainDb() database.DatabaseService
+	Chain() chainservice.ChainService
 	EventMux() *event.TypeMux
-	HeaderByNumber(ctx context.Context, blockNr int64) (*types.BlockHeader, error)
+	HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.BlockHeader, error)
 	HeaderByHash(ctx context.Context, blockHash crypto.Hash) (*types.BlockHeader, error)
 	GetReceipts(ctx context.Context, blockHash crypto.Hash) (types.Receipts, error)
 	GetLogs(ctx context.Context, blockHash crypto.Hash) ([][]*types.Log, error)
@@ -50,7 +51,7 @@ type Backend interface {
 type Filter struct {
 	backend Backend
 
-	db        database.DatabaseService
+	chain     chainservice.ChainService
 	addresses []crypto.CommonAddress
 	topics    [][]crypto.Hash
 
@@ -81,12 +82,12 @@ func NewRangeFilter(backend Backend, begin, end int64, addresses []crypto.Common
 		}
 		filters = append(filters, filter)
 	}
-	//size, _ := backend.BloomStatus()
+	size, _ := backend.BloomStatus()
 
 	// Create a generic filter and convert it into a range filter
 	filter := newFilter(backend, addresses, topics)
 
-	//filter.matcher = bloombits.NewMatcher(size, filters)
+	filter.matcher = bloombits.NewMatcher(size, filters)
 	filter.begin = begin
 	filter.end = end
 
@@ -109,7 +110,7 @@ func newFilter(backend Backend, addresses []crypto.CommonAddress, topics [][]cry
 		backend:   backend,
 		addresses: addresses,
 		topics:    topics,
-		db:        backend.ChainDb(),
+		chain:     backend.Chain(),
 	}
 }
 
@@ -128,7 +129,7 @@ func (f *Filter) Logs(ctx context.Context) ([]*types.Log, error) {
 		return f.blockLogs(ctx, header)
 	}
 	// Figure out the limits of the filter range
-	header, _ := f.backend.HeaderByNumber(ctx, -1)
+	header, _ := f.backend.HeaderByNumber(ctx, rpc.LatestBlockNumber)
 	if header == nil {
 		return nil, nil
 	}
@@ -193,7 +194,7 @@ func (f *Filter) indexedLogs(ctx context.Context, end uint64) ([]*types.Log, err
 			f.begin = int64(number) + 1
 
 			// Retrieve the suggested block and pull any truly matching logs
-			header, err := f.backend.HeaderByNumber(ctx, int64(number))
+			header, err := f.backend.HeaderByNumber(ctx, rpc.BlockNumber(number))
 			if header == nil || err != nil {
 				return logs, err
 			}
@@ -215,7 +216,7 @@ func (f *Filter) unindexedLogs(ctx context.Context, end uint64) ([]*types.Log, e
 	var logs []*types.Log
 
 	for ; f.begin <= int64(end); f.begin++ {
-		header, err := f.backend.HeaderByNumber(ctx, f.begin)
+		header, err := f.backend.HeaderByNumber(ctx, rpc.BlockNumber(f.begin))
 		if header == nil || err != nil {
 			return logs, err
 		}
@@ -286,10 +287,10 @@ func filterLogs(logs []*types.Log, fromBlock, toBlock *big.Int, addresses []cryp
 	var ret []*types.Log
 Logs:
 	for _, log := range logs {
-		if fromBlock != nil && fromBlock.Int64() >= 0 && fromBlock.Uint64() > uint64(log.Height) {
+		if fromBlock != nil && fromBlock.Int64() >= 0 && fromBlock.Uint64() > log.Height {
 			continue
 		}
-		if toBlock != nil && toBlock.Int64() >= 0 && toBlock.Uint64() < uint64(log.Height) {
+		if toBlock != nil && toBlock.Int64() >= 0 && toBlock.Uint64() < log.Height {
 			continue
 		}
 

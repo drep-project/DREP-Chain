@@ -31,3 +31,7 @@ type OracleConfig struct {
 	Default    uint64				`json:"default"`
 	MaxPrice   uint64				`json:"maxPrice"`
 }
+
+type BlockChain struct {
+
+}

@@ -43,6 +43,8 @@ type Receipt struct {
 	ContractAddress crypto.CommonAddress
 	GasUsed         uint64
 	GasFee          uint64
+
+	Ret             []byte
 }
 
 // NewReceipt creates a barebone transaction receipt, copying the init fields.

@@ -26,6 +26,7 @@ import (
 	"github.com/drep-project/drep-chain/pkgs/evm"
 
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
+	"fmt"
 )
 
 var ()
@@ -103,6 +104,7 @@ func (st *StateTransition) buyGas() error {
 		return ErrInsufficientBalanceForGas
 	}
 	if err := st.gp.SubGas(st.tx.Gas()); err != nil {
+		fmt.Println("err10: ", err)
 		return err
 	}
 	st.gas += st.tx.Gas()

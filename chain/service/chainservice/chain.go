@@ -17,6 +17,7 @@ import (
 
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	rpc2 "github.com/drep-project/drep-chain/pkgs/rpc"
+	"github.com/drep-project/drep-chain/pkgs/evm/vm"
 )
 
 var (
@@ -65,6 +66,12 @@ type ChainService struct {
 	TransactionValidator ITransactionValidator
 
 	blockDb   *database.Database
+
+	scope event.SubscriptionScope
+
+	chainFeed     event.Feed
+	rmLogsFeed    event.Feed
+	logsFeed      event.Feed
 }
 
 type ChainState struct {
@@ -183,6 +190,22 @@ func (chainService *ChainService) GetHighestBlock() (*chainTypes.Block, error) {
 	return block, nil
 }
 
+func (chainService *ChainService) GetCurrentHeader() (*chainTypes.BlockHeader, error) {
+	currentBlock, err := chainService.GetHighestBlock()
+	if err != nil {
+		return nil, err
+	}
+	return currentBlock.Header, nil
+}
+
+func (chainService *ChainService) GetHeight(hash crypto.Hash) *uint64 {
+	header, err := chainService.GetBlockHeaderByHash(&hash)
+	if err != nil {
+		return nil
+	}
+	return &header.Height
+}
+
 func (chainService *ChainService) GetBlockByHash(hash *crypto.Hash) (*chainTypes.Block, error) {
 	block, err := chainService.DatabaseService.GetBlock(hash)
 	if err != nil {
@@ -284,4 +307,16 @@ func (chainService *ChainService) GetCurrentState() *database.Database {
 	defer chainService.stateLock.Unlock()
 	return  chainService.StateSnapshot.db
 
+}
+
+func (chainService *ChainService) SubscribeChainEvent(ch chan<- vm.ChainEvent) event.Subscription {
+	return chainService.scope.Track(chainService.chainFeed.Subscribe(ch))
+}
+
+func (chainService *ChainService) SubscribeRemovedLogsEvent(ch chan<- vm.RemovedLogsEvent) event.Subscription {
+	return chainService.scope.Track(chainService.rmLogsFeed.Subscribe(ch))
+}
+
+func (chainService *ChainService) SubscribeLogsEvent(ch chan<- []*chainTypes.Log) event.Subscription {
+	return chainService.scope.Track(chainService.logsFeed.Subscribe(ch))
 }

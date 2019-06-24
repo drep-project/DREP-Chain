@@ -26,11 +26,11 @@ import (
 	"time"
 
 	"github.com/drep-project/drep-chain/common/hexutil"
-	"github.com/drep-project/drep-chain/rpc"
 	"github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/database"
+	"github.com/drep-project/drep-chain/rpc"
+	"github.com/drep-project/drep-chain/chain/service/chainservice"
 )
 
 var (
@@ -54,7 +54,7 @@ type PublicFilterAPI struct {
 	backend   Backend
 	mux       *event.TypeMux
 	quit      chan struct{}
-	chainDb   database.DatabaseService
+	chain     chainservice.ChainService
 	events    *EventSystem
 	filtersMu sync.Mutex
 	filters   map[rpc.ID]*filter
@@ -65,7 +65,7 @@ func NewPublicFilterAPI(backend Backend, lightMode bool) *PublicFilterAPI {
 	api := &PublicFilterAPI{
 		backend: backend,
 		mux:     backend.EventMux(),
-		chainDb: backend.ChainDb(),
+		chain:   backend.Chain(),
 		events:  NewEventSystem(backend.EventMux(), backend, lightMode),
 		filters: make(map[rpc.ID]*filter),
 	}
@@ -167,7 +167,7 @@ func (api *PublicFilterAPI) NewPendingTransactions(ctx context.Context) (*rpc.Su
 	return rpcSub, nil
 }
 
-// NewBlockFilter creates a filter that fetches blocks that are imported into the chain.
+// NewBlockFilter creates a filter that fetches blocks that are imported into the BlockChain.
 // It is part of the filter package since polling goes with eth_getFilterChanges.
 //
 // https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_newblockfilter
@@ -202,7 +202,7 @@ func (api *PublicFilterAPI) NewBlockFilter() rpc.ID {
 	return headerSub.ID
 }
 
-// NewHeads send a notification each time a new (header) block is appended to the chain.
+// NewHeads send a notification each time a new (header) block is appended to the BlockChain.
 func (api *PublicFilterAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error) {
 	notifier, supported := rpc.NotifierFromContext(ctx)
 	if !supported {
@@ -281,7 +281,7 @@ type FilterCriteria FilterQuery
 // Default criteria for the from and to block are "latest".
 // Using "latest" as block number will return logs for mined blocks.
 // Using "pending" as block number returns logs for not yet mined (pending) blocks.
-// In case logs are removed (chain reorg) previously returned logs are returned
+// In case logs are removed (BlockChain reorg) previously returned logs are returned
 // again but with the removed property set to true.
 //
 // In case "fromBlock" > "toBlock" an error is returned.
@@ -458,11 +458,11 @@ func returnLogs(logs []*types.Log) []*types.Log {
 // UnmarshalJSON sets *args fields with given data.
 func (args *FilterCriteria) UnmarshalJSON(data []byte) error {
 	type input struct {
-		BlockHash *crypto.Hash     `json:"blockHash"`
+		BlockHash *crypto.Hash      `json:"blockHash"`
 		FromBlock *rpc.BlockNumber `json:"fromBlock"`
 		ToBlock   *rpc.BlockNumber `json:"toBlock"`
-		Addresses interface{}      `json:"address"`
-		Topics    []interface{}    `json:"topics"`
+		Addresses interface{}       `json:"address"`
+		Topics    []interface{}     `json:"topics"`
 	}
 
 	var raw input
