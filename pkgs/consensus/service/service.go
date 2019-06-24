@@ -273,6 +273,7 @@ func (consensusService *ConsensusService) runAsMember() (block *chainTypes.Block
 	}
 	consensusService.member.validator = func(msg consensusTypes.IConsenMsg) bool {
 		block = msg.(*chainTypes.Block)
+
 		return consensusService.blockVerify(block)
 	}
 	_, err = consensusService.member.ProcessConsensus()
@@ -299,6 +300,7 @@ func (consensusService *ConsensusService) runAsMember() (block *chainTypes.Block
 		block.Header.MinorPubKeys = minorPubkeys
 		block.Header.StateRoot = val.StateRoot
 		block.MultiSig = multiSig
+		log.Debug("round 2 Verify Success")
 		return consensusService.verifyBlockContent(block)
 	}
 
@@ -556,7 +558,6 @@ func (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) b
 		log.WithField("err", err).Debug("blockVerify VerifyBody")
 		return false
 	}
-	//TODO need to verify traansaction , a lot of time
 	return err == nil
 }
 

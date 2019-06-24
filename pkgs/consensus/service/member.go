@@ -176,7 +176,6 @@ func (member *Member) OnSetUp(peer *consensusTypes.PeerInfo, setUp *consensusTyp
 		return
 	}
 
-	log.Debug("receive setup message")
 	if member.leader.Peer.IP() == peer.IP() {
 		var err error
 		member.msg, err = member.convertor(setUp.Msg)
@@ -237,7 +236,6 @@ func (member *Member) OnChallenge(peer *consensusTypes.PeerInfo, challengeMsg *c
 		member.pushErrorMsg(ErrStatus)
 		return
 	}
-	log.Debug("recieved challenge message")
 	if member.leader.Peer.IP() == peer.IP() && bytes.Equal(member.msgHash, challengeMsg.R) {
 		member.response(challengeMsg)
 		fmt.Println("response has sent")
