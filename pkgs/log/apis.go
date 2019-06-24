@@ -39,6 +39,9 @@ func (logApi *LogApi) SetLevel(lvl string) error {
 	lv, err := logrus.ParseLevel(lvl)
 	if err == nil {
 		logrus.SetLevel(lv)
+		for _, mLog := range loggers {
+			mLog.Logger.SetLevel(lv)
+		}
 		return nil
 	}
 	return errors.New("not support lvl type ,eg:1, debug")

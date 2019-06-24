@@ -19,6 +19,7 @@ var (
 	DefaultLogConfig = &LogConfig{
 		LogLevel: 3,
 	}
+	loggers = make(map[string]*logrus.Entry)
 )
 
 type LogService struct {
@@ -121,6 +122,8 @@ func (logService *LogService) setLogConfig(ctx *cli.Context, homeDir string) {
 
 
 func NewLogger(moduleName string) *logrus.Entry {
-	return logrus.WithField(MODULE, moduleName)
+	log := logrus.WithField(MODULE, moduleName)
+	loggers[moduleName] = log
+	return log
 }
 
