@@ -437,6 +437,16 @@ func (db *Database) AddLog(log *chainTypes.Log) error {
 func (db *Database) PutReceipt(txHash crypto.Hash, receipt *chainTypes.Receipt) error {
 	key := sha3.Keccak256([]byte("receipt_" + txHash.String()))
 	fmt.Println("tx receipt: ", receipt)
+	fmt.Println("detail:")
+	fmt.Println("PostState: ", receipt.PostState)
+	fmt.Println("Status: ", receipt.Status)
+	fmt.Println("CumulativeGasUsed: ", receipt.CumulativeGasUsed)
+	fmt.Println("Logs: ", receipt.Logs, receipt.Logs == nil)
+	fmt.Println("TxHash: ", receipt.TxHash)
+	fmt.Println("ContratAddress: ", receipt.ContractAddress)
+	fmt.Println("GasUsed: ", receipt.GasUsed)
+	fmt.Println("GasFee: ", receipt.GasUsed)
+	fmt.Println("Ret: ", receipt.Ret, receipt.Ret == nil)
 	value, err := binary.Marshal(receipt)
 	fmt.Println("err11: ", err)
 	if err != nil {
@@ -453,8 +463,8 @@ func (db *Database) GetReceipt(txHash crypto.Hash) *chainTypes.Receipt {
 	if err != nil {
 		return nil
 	}
-	var receipt *chainTypes.Receipt
-	err = binary.Unmarshal(value, &receipt)
+	receipt := &chainTypes.Receipt{}
+	err = binary.Unmarshal(value, receipt)
 	fmt.Println("err13: ", err)
 	if err != nil {
 		return nil

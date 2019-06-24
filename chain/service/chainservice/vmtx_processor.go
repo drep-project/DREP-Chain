@@ -55,6 +55,7 @@ func (stateProcessor *StateProcessor) ApplyTransaction(db *database.Database, bc
 	*usedGas += gas
 
 	root := db.GetStateRoot()
+	fmt.Println("root: ", root)
 	// Create a new receipt for the transaction, storing the intermediate root and gas used by the tx
 	// based on the eip phase, we're passing whether the root touch-delete accounts.
 	receipt := types.NewReceipt(root, failed, *usedGas)
@@ -62,6 +63,9 @@ func (stateProcessor *StateProcessor) ApplyTransaction(db *database.Database, bc
 	receipt.GasUsed = gas
 	receipt.GasFee = gasFee
 	receipt.Ret = ret
+	if ret == nil {
+		receipt.Ret = []byte{}
+	}
 	// if the transaction created a contract, store the creation address in the receipt.
 	if tx.To() == nil || tx.To().IsEmpty() {
 		receipt.ContractAddress = crypto.CreateAddress(*from, tx.Nonce())

@@ -28,7 +28,7 @@ func init() {
     chain = &chainservice.ChainService{DatabaseService: dbService}
 }
 
-func TestPutReceipt(t *testing.T) {
+func TestPutAndGetReceipt(t *testing.T) {
     addr0 := crypto.Bytes2Address([]byte{1, 2, 3, 4})
     addr1 := crypto.Bytes2Address([]byte{5, 6, 7, 8})
     addr2 := crypto.Bytes2Address([]byte{10, 11, 12, 13})
@@ -53,7 +53,7 @@ func TestPutReceipt(t *testing.T) {
     gasLimit.SetMathBig(*new(big.Int).SetInt64(1000000000))
     blocks := make([]*types.Block, end - start)
     for height = start; height < end; height++ {
-        txs := make([]*types.Transaction, 10)
+        txs := make([]*types.Transaction, 2)
         for i = 0; i < 2; i++ {
             fromIndex := (int) (height + i) % 4
             toIndex := (int) (height + i + 1) % 4
@@ -89,7 +89,7 @@ func TestPutReceipt(t *testing.T) {
                 Bloom: types.BytesToBloom([]byte{1}),
             },
             Data: &types.BlockData{
-                TxCount: 10,
+                TxCount: 2,
                 TxList: txs,
             },
         }
@@ -118,17 +118,17 @@ func TestPutReceipt(t *testing.T) {
 }
 
 func TestGetReceiptByBlock(t *testing.T) {
-    var height uint64
-    for height = start; height < end; height++ {
-        header, _ := chain.GetBlockHeaderByHeight(height)
-        hash := header.Hash()
-        receipts := chain.DatabaseService.GetReceipts(*hash)
-        fmt.Println("receipts length: ", len(receipts))
-        for i, r := range receipts {
-            fmt.Println("i: ", i)
-            printInfo(r)
-        }
-    }
+    //var height uint64
+    //for height = start; height < end; height++ {
+    //    header, _ := chain.GetBlockHeaderByHeight(height)
+    //    hash := header.Hash()
+    //    receipts := chain.DatabaseService.GetReceipts(*hash)
+    //    fmt.Println("receipts length: ", len(receipts))
+    //    for i, r := range receipts {
+    //        fmt.Println("i: ", i)
+    //        printInfo(r)
+    //    }
+    //}
 }
 
 func TestGetReceiptByTx(t *testing.T) {
