@@ -1,9 +1,10 @@
 package service
 
 import (
+	"errors"
 	"math/big"
 
-	blockmgr "github.com/drep-project/drep-chain/chain/service/blockmgr"
+	"github.com/drep-project/drep-chain/chain/service/blockmgr"
 
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common"
@@ -20,7 +21,7 @@ prefix:account
 type AccountApi struct {
 	Wallet          *Wallet
 	accountService  *AccountService
-	blockmgr    *blockmgr.BlockMgr
+	blockmgr        *blockmgr.BlockMgr
 	databaseService *database.DatabaseService
 }
 
@@ -55,7 +56,7 @@ func (accountapi *AccountApi) CreateAccount() (*crypto.CommonAddress, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newAaccount.Address , nil
+	return newAaccount.Address, nil
 }
 
 /*
@@ -160,6 +161,40 @@ func (accountapi *AccountApi) CloseWallet() {
 func (accountapi *AccountApi) Transfer(from crypto.CommonAddress, to crypto.CommonAddress, amount, gasprice, gaslimit *common.Big, data common.Bytes) (string, error) {
 	nonce := accountapi.blockmgr.GetTransactionCount(&from)
 	tx := chainTypes.NewTransaction(to, (*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
+	sig, err := accountapi.Wallet.Sign(&from, tx.TxHash().Bytes())
+	if err != nil {
+		return "", err
+	}
+	tx.Sig = sig
+	err = accountapi.blockmgr.SendTransaction(tx, true)
+	if err != nil {
+		return "", err
+	}
+	return tx.TxHash().String(), nil
+}
+
+/*
+ name: ReplaceTx
+ usage: 替换老的交易
+ params:
+	1. 发起转账的地址
+	2. 接受者的地址
+	3. 金额
+	4. gas价格
+	5. gas上线
+	6. 备注
+	7. 被代替交易的nonce
+ return: 新交易地址
+ example:   curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_replaceTx","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000","",1000],"id":1}' http://127.0.0.1:15645
+ response:
+	 {"jsonrpc":"2.0","id":1,"result":"0x3a3b59f90a21c2fd1b690aa3a2bc06dc2d40eb5bdc26fdd7ecb7e1105af2638e"}
+*/
+func (accountapi *AccountApi) ReplaceTx(from crypto.CommonAddress, to crypto.CommonAddress, amount, gasprice, gaslimit *common.Big, data common.Bytes, nonce *uint64) (string, error) {
+	if nonce == nil {
+		return "", errors.New("nonce is nil")
+	}
+
+	tx := chainTypes.NewTransaction(to, (*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), *nonce)
 	sig, err := accountapi.Wallet.Sign(&from, tx.TxHash().Bytes())
 	if err != nil {
 		return "", err
@@ -303,6 +338,6 @@ func (accountapi *AccountApi) Sign(address crypto.CommonAddress, hash common.Byt
 }
 
 type RpcAccount struct {
-	Addr *crypto.CommonAddress
-	Pubkey  string
+	Addr   *crypto.CommonAddress
+	Pubkey string
 }

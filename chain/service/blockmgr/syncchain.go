@@ -415,10 +415,10 @@ func (blockMgr *BlockMgr) fetchBlocks(peer chainTypes.PeerInfoInterface) error {
 						//请求到block都到了，停止此定时器
 						blockMgr.pendingSyncTasks.Delete(timer)
 					case <-quit:
+						log.Info("fetch block timer goroutine quit")
 						return
 					}
 				}()
-
 				blockMgr.batchReqBlocks(hashs, errCh)
 			}
 		}

@@ -269,7 +269,6 @@ func TestFetchBlocks(t *testing.T) {
 	}()
 
 	//fake block body
-
 	go func() {
 		time.Sleep(time.Second*12)
 		bm.blocksCh <- blks[2:4]
@@ -285,4 +284,25 @@ func TestFetchBlocks(t *testing.T) {
 
 func TestClearSyncCh(t *testing.T) {
 	//clearSyncCh()
+	//select {
+	//case <-blockMgr.headerHashCh:
+	//default:
+	//}
+	//
+	//select {
+	//case <-blockMgr.blocksCh:
+	//default:
+	//}
+	//
+	//select {
+	//case <-blockMgr.syncTimerCh:
+	//default:
+	//}
+	//
+	//blockMgr.allTasks = newHeightSortedMap()
+	//
+	//blockMgr.pendingSyncTasks.Range(func(key, value interface{}) bool {
+	//	blockMgr.pendingSyncTasks.Delete(key)
+	//	return true
+	//})
 }

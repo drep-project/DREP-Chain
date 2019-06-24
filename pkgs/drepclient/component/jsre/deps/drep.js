@@ -1613,6 +1613,15 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 inputFormatter: [formatters.inputAddressFormatter, formatters.inputAddressFormatter, utils.fromDecimal, utils.fromDecimal, utils.fromDecimal, null]
             });
 
+
+            var transfer = new Method({
+                name: 'transfer',
+                call: 'account_replaceTx',
+                params: 7,
+                inputFormatter: [formatters.inputAddressFormatter, formatters.inputAddressFormatter, utils.fromDecimal, utils.fromDecimal, utils.fromDecimal, null, utils.fromDecimal]
+            });
+
+
             var unLockWallet = new Method({
                 name: 'unLockWallet',
                 call: 'account_unLockWallet',
