@@ -122,8 +122,9 @@ func (chainBlockValidator *ChainBlockValidator) ExecuteBlock(db *database.Databa
 	if len(block.Data.TxList) < 0 {
 		return totalGasUsed, totalGasFee, nil
 	}
-	for _, t := range block.Data.TxList {
-		gasUsed, gasFee, err := chainBlockValidator.txValidator.ExecuteTransaction(db, t, gp, block.Header)
+	receipts := make([]*chainTypes.Receipt, block.Data.TxCount)
+	for i, t := range block.Data.TxList {
+		receipt, gasUsed, gasFee, err := chainBlockValidator.txValidator.ExecuteTransaction(db, t, gp, block.Header)
 		if err != nil {
 			return nil, nil, err
 			//dlog.Debug("execute transaction fail", "txhash", t.Data, "reason", err.Error())
@@ -132,6 +133,11 @@ func (chainBlockValidator *ChainBlockValidator) ExecuteBlock(db *database.Databa
 			totalGasFee.Add(totalGasFee, gasFee)
 			totalGasUsed.Add(totalGasUsed, gasUsed)
 		}
+		receipts[i] = receipt
+	}
+	db.PutReceipts(*block.Header.Hash(), receipts)
+	for _, receipt := range receipts {
+		db.PutReceipt(receipt.TxHash, receipt)
 	}
 	return totalGasUsed, totalGasFee, nil
 }

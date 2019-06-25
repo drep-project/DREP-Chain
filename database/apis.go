@@ -223,6 +223,22 @@ func (database *DatabaseService) AddLog(log *chainType.Log) error {
 	return database.db.AddLog(log)
 }
 
+func (database *DatabaseService) PutReceipt(txHash crypto.Hash, receipt *chainType.Receipt) error {
+	return database.db.PutReceipt(txHash, receipt)
+}
+
+func (database *DatabaseService) GetReceipt(txHash crypto.Hash) *chainType.Receipt {
+	return database.db.GetReceipt(txHash)
+}
+
+func (database *DatabaseService) PutReceipts(blockHash crypto.Hash, receipts []*chainType.Receipt) error {
+	return database.db.PutReceipts(blockHash, receipts)
+}
+
+func (database *DatabaseService) GetReceipts(blockHash crypto.Hash) []*chainType.Receipt {
+	return database.db.GetReceipts(blockHash)
+}
+
 func (database *DatabaseService) Load(x *big.Int) []byte {
 	return database.db.Load(x)
 }
