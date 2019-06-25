@@ -160,11 +160,11 @@ func (leader *Leader) OnCommit(peer *consensusTypes.PeerInfo, commit *consensusT
 	defer leader.syncLock.Unlock()
 
 	if leader.getState() != WAIT_COMMIT {
-		log.WithField("current status", leader.getState()).WithField("receive message", commit).Debug("wrong cimmit message state")
+		log.WithField("current status", leader.getState()).WithField("receive message", commit).Debug("wrong commit message state")
 		return
 	}
 	if leader.currentHeight != commit.Height {
-		log.WithField("current height", leader.currentHeight ).WithField("receive message", commit).Debug("wrong cimmit message state")
+		log.WithField("current height", leader.currentHeight ).WithField("receive message", commit).Debug("wrong commit message state")
 		return
 	}
 

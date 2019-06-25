@@ -269,16 +269,26 @@ func (consensusService *ConsensusService) runAsMember() (block *chainTypes.Block
 	consensusService.member.Reset()
 	log.Trace("node member is going to process consensus for round 1")
 	consensusService.member.convertor = func(msg []byte) (consensusTypes.IConsenMsg, error) {
-		block,err = chainTypes.BlockFromMessage(msg)
+		block, err = chainTypes.BlockFromMessage(msg)
 		if err != nil {
 			return nil, err
 		}
-		go func() {
-			//faste calc less process time
-			for _, tx := range  block.Data.TxList {
+
+		//faste calc less process time
+		calcHash := func(txs []*chainTypes.Transaction) {
+			for _, tx := range txs {
 				tx.TxHash()
 			}
-		}()
+		}
+		num := 1 + len(block.Data.TxList)/1000
+		for i := 0; i < num; i++ {
+			if i == num-1 {
+				go calcHash(block.Data.TxList[1000*i:])
+			} else {
+				go calcHash(block.Data.TxList[1000*i : 1000*(i+1)])
+			}
+		}
+
 		return block, nil
 	}
 	consensusService.member.validator = func(msg consensusTypes.IConsenMsg) bool {
@@ -605,7 +615,7 @@ func (consensusService *ConsensusService) verifyBlockContent(block *chainTypes.B
 }
 
 func (consensusService *ConsensusService) ChangeWaitTime(waitTime int64) {
-	consensusService.leader.waitTime = time.Duration(int64(time.Millisecond)*waitTime)
-	consensusService.member.waitTime = time.Duration(int64(time.Millisecond)*waitTime)
+	consensusService.leader.waitTime = time.Duration(int64(time.Millisecond) * waitTime)
+	consensusService.member.waitTime = time.Duration(int64(time.Millisecond) * waitTime)
 	fmt.Println(consensusService.leader.waitTime)
 }
