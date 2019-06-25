@@ -1827,7 +1827,13 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 inputFormatter: []
             });
 
-            return [minning,mock]
+            var changeWaitTime = new Method({
+                name: 'changeWaitTime',
+                call: 'consensus_changeWaitTime',
+                params: 1,
+                inputFormatter: [null]
+            });
+            return [minning,mock, changeWaitTime]
         }
 
         module.exports = CONSENSUS;
