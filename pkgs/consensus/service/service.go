@@ -269,7 +269,17 @@ func (consensusService *ConsensusService) runAsMember() (block *chainTypes.Block
 	consensusService.member.Reset()
 	log.Trace("node member is going to process consensus for round 1")
 	consensusService.member.convertor = func(msg []byte) (consensusTypes.IConsenMsg, error) {
-		return chainTypes.BlockFromMessage(msg)
+		block,err = chainTypes.BlockFromMessage(msg)
+		if err != nil {
+			return nil, err
+		}
+		go func() {
+			//faste calc less process time
+			for _, tx := range  block.Data.TxList {
+				tx.TxHash()
+			}
+		}()
+		return block, nil
 	}
 	consensusService.member.validator = func(msg consensusTypes.IConsenMsg) bool {
 		block = msg.(*chainTypes.Block)

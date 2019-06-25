@@ -1,6 +1,8 @@
 package types
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
@@ -12,10 +14,20 @@ type Setup struct {
 	Msg                  []byte
 }
 
+func(setup *Setup) String(){
+	bytes, _ := json.Marshal(setup)
+	fmt.Println(string(bytes))
+}
+
 type Commitment struct {
 	Height uint64
 	BpKey                    *secp256k1.PublicKey
 	Q                    *secp256k1.PublicKey
+}
+
+func(commitment *Commitment) String(){
+	bytes, _ := json.Marshal(commitment)
+	fmt.Println(string(bytes))
 }
 
 type Challenge struct {
@@ -26,16 +38,30 @@ type Challenge struct {
 	R                    []byte
 }
 
+func(Challenge *Challenge) String(){
+	bytes, _ := json.Marshal(Challenge)
+	fmt.Println(string(bytes))
+}
+
 type Response struct {
 	Height uint64
 	BpKey                 *secp256k1.PublicKey
 	S                     []byte
 }
 
+func(response *Response) String(){
+	bytes, _ := json.Marshal(response)
+	fmt.Println(string(bytes))
+}
+
 type Fail struct {
 	Height uint64
 
 	Reason string
+}
+func(fail *Fail) String(){
+	bytes, _ := json.Marshal(fail)
+	fmt.Println(string(bytes))
 }
 
 type IConsenMsg interface {

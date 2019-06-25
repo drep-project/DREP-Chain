@@ -159,9 +159,11 @@ func (leader *Leader) OnCommit(peer *consensusTypes.PeerInfo, commit *consensusT
 	defer leader.syncLock.Unlock()
 
 	if leader.getState() != WAIT_COMMIT {
+		log.WithField("current status", leader.getState()).WithField("receive message", commit).Debug("wrong cimmit message state")
 		return
 	}
 	if leader.currentHeight != commit.Height {
+		log.WithField("current height", leader.currentHeight ).WithField("receive message", commit).Debug("wrong cimmit message state")
 		return
 	}
 
@@ -202,9 +204,11 @@ func (leader *Leader) OnResponse(peer *consensusTypes.PeerInfo, response *consen
 	leader.syncLock.Lock()
 	defer leader.syncLock.Unlock()
 	if leader.getState() != WAIT_RESPONSE {
+		log.WithField("current status", leader.getState()).WithField("receive message", response).Debug("wrong response message state")
 		return
 	}
 	if leader.currentHeight != response.Height {
+		log.WithField("current height", leader.currentHeight).WithField("receive message", response).Debug("wrong response message height")
 		return
 	}
 
