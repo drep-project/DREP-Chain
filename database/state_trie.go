@@ -17,6 +17,28 @@ type State struct {
 	db        *Database `binary:"ignore"`
 }
 
+func (state *State) Copy() *State {
+	newState := &State{
+		Sequence: state.Sequence,
+		db:       state.db,
+		IsLeaf:   state.IsLeaf,
+	}
+
+	if state.Value != nil {
+		newState.Value = make([]byte, len(state.Value))
+		copy(newState.Value, state.Value)
+	}
+
+	newState.ChildKeys = [17][]byte{}
+	for i := 0; i < 17; i++ {
+		if state.ChildKeys[i] != nil {
+			newState.ChildKeys[i] = make([]byte, len(state.ChildKeys[i]))
+			copy(newState.ChildKeys[i], state.ChildKeys[i])
+		}
+	}
+	return newState
+}
+
 func (state *State) resetValue(children [17]*State) {
 	stack := make([]byte, 32*17)
 	for i := 0; i < 17; i++ {

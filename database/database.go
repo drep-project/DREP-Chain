@@ -2,14 +2,15 @@ package database
 
 import (
 	oriBinary "encoding/binary"
+	"fmt"
+	"math/big"
+	"strconv"
+	"sync"
+
 	"github.com/drep-project/binary"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/sha3"
-	"math/big"
-	"strconv"
-	"sync"
-	"fmt"
 )
 
 type Database struct {
@@ -22,10 +23,10 @@ type Database struct {
 
 var (
 	aliasPrefix         = "alias"
-	dbOperaterMaxSeqKey = "operateMaxSeq"       //记录数据库操作的最大序列号
-	maxSeqOfBlockKey    = []byte("seqOfBlockHeight")    //块高度对应的数据库操作最大序列号
-	dbOperaterJournal   = "addrOperatesJournal" //每一次数据读写过程的记录
-	addressStorage      = "addressStorage"      //以地址作为KEY的对象存储
+	dbOperaterMaxSeqKey = "operateMaxSeq"            //记录数据库操作的最大序列号
+	maxSeqOfBlockKey    = []byte("seqOfBlockHeight") //块高度对应的数据库操作最大序列号
+	dbOperaterJournal   = "addrOperatesJournal"      //每一次数据读写过程的记录
+	addressStorage      = "addressStorage"           //以地址作为KEY的对象存储
 	stateRoot           = "state rootState"
 )
 
@@ -459,7 +460,7 @@ func (db *Database) GetReceipt(txHash crypto.Hash) *chainTypes.Receipt {
 	key := sha3.Keccak256([]byte("receipt_" + txHash.String()))
 	value, err := db.Get(key)
 	fmt.Println("err12: ", err)
-	fmt.Println("val: ",value)
+	fmt.Println("val: ", value)
 	if err != nil {
 		return nil
 	}
@@ -529,7 +530,7 @@ func (db *Database) PutBlock(block *chainTypes.Block) error {
 
 func (db *Database) GetBlock(hash *crypto.Hash) (*chainTypes.Block, error) {
 	key := append(BlockPrefix, hash[:]...)
-	val ,err := db.store.Get(key)
+	val, err := db.store.Get(key)
 	if err != nil {
 		return nil, err
 	}
@@ -541,8 +542,7 @@ func (db *Database) GetBlock(hash *crypto.Hash) (*chainTypes.Block, error) {
 	return block, nil
 }
 
-
-func (db *Database) GetBlockNode(hash *crypto.Hash,blockHeight uint64) (*chainTypes.BlockHeader, chainTypes.BlockStatus,error) {
+func (db *Database) GetBlockNode(hash *crypto.Hash, blockHeight uint64) (*chainTypes.BlockHeader, chainTypes.BlockStatus, error) {
 	key := db.blockIndexKey(hash, blockHeight)
 	value, err := db.Get(key)
 	if err != nil {
@@ -550,12 +550,11 @@ func (db *Database) GetBlockNode(hash *crypto.Hash,blockHeight uint64) (*chainTy
 	}
 	blockHeader := &chainTypes.BlockHeader{}
 	binary.Unmarshal(value[0:len(value)-1], blockHeader)
-	status := value[len(value)-1:len(value)][0]
+	status := value[len(value)-1 : len(value)][0]
 	return blockHeader, chainTypes.BlockStatus(status), nil
 }
 
-
-func (db *Database)  PutBlockNode(blockNode *chainTypes.BlockNode) error {
+func (db *Database) PutBlockNode(blockNode *chainTypes.BlockNode) error {
 	header := blockNode.Header()
 	value, err := binary.Marshal(header)
 	if err != nil {
@@ -566,7 +565,7 @@ func (db *Database)  PutBlockNode(blockNode *chainTypes.BlockNode) error {
 	return db.store.Put(key, value)
 }
 
-func (db *Database)  blockIndexKey(blockHash *crypto.Hash, blockHeight uint64) []byte {
+func (db *Database) blockIndexKey(blockHash *crypto.Hash, blockHeight uint64) []byte {
 	indexKey := make([]byte, len(BlockNodePrefix)+crypto.HashLength+8)
 	copy(indexKey[0:len(BlockNodePrefix)], BlockNodePrefix[:])
 	binary.BigEndian.PutUint64(indexKey[len(BlockNodePrefix):len(BlockNodePrefix)+8], uint64(blockHeight))
@@ -577,7 +576,7 @@ func (db *Database)  blockIndexKey(blockHash *crypto.Hash, blockHeight uint64) [
 func (db *Database) BeginTransaction() *Database {
 	return &Database{
 		store:         NewTransactionStore(db.store),
-		states:        new (sync.Map),
+		states:        new(sync.Map),
 		root:          db.root,
 		isTransaction: true,
 	}
@@ -601,23 +600,34 @@ func (db *Database) RevertState(shot *SnapShot) {
 }
 
 func (db *Database) CopyState() *SnapShot {
-	newStoreShot :=db.store.CopyState()
+	newStoreShot := db.store.CopyState()
 	newStateShot := copyMap(db.states)
 	return &SnapShot{newStoreShot, newStateShot}
 }
 
 func copyMap(m *sync.Map) *sync.Map {
-	newMap := new (sync.Map)
+	newMap := new(sync.Map)
 	m.Range(func(key, value interface{}) bool {
-		newMap.Store(key, value)
+		if value == nil {
+			newMap.Store(key, value)
+		} else {
+			switch t := value.(type) {
+			case []byte:
+				newBytes := make([]byte, len(t))
+				copy(newBytes, t)
+				newMap.Store(key, newBytes)
+			case *State:
+				newMap.Store(key, t.Copy())
+			default:
+				panic("never run here")
+			}
+		}
 		return true
 	})
 	return newMap
 }
 
-
 type SnapShot struct {
 	StoreShot *sync.Map
 	StateShot *sync.Map
 }
-
