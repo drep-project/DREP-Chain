@@ -593,3 +593,9 @@ func (consensusService *ConsensusService) verifyBlockContent(block *chainTypes.B
 	}
 	return true
 }
+
+func (consensusService *ConsensusService) ChangeWaitTime(waitTime int64) {
+	consensusService.leader.waitTime = time.Duration(int64(time.Millisecond)*waitTime)
+	consensusService.member.waitTime = time.Duration(int64(time.Millisecond)*waitTime)
+	fmt.Println(consensusService.leader.waitTime)
+}

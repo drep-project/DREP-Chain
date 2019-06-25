@@ -52,8 +52,7 @@ type Leader struct {
 	responseBitmap []byte
 	syncLock       sync.Mutex
 
-	waitForSetup        time.Duration
-	waitForResponseTime time.Duration
+	waitTime        time.Duration
 
 	currentHeight       uint64
 	minMember           int
@@ -65,8 +64,7 @@ type Leader struct {
 
 func NewLeader(privkey *secp256k1.PrivateKey, p2pServer p2pService.P2P) *Leader {
 	l := &Leader{}
-	l.waitForSetup = 10 * time.Second
-	l.waitForResponseTime = 10 * time.Second
+	l.waitTime = 10 * time.Second
 	l.pubkey = privkey.PubKey()
 	l.privakey = privkey
 	l.p2pServer = p2pServer
@@ -187,7 +185,7 @@ func (leader *Leader) waitForCommit() bool {
 	leader.setState(WAIT_COMMIT)
 	for {
 		select {
-		case <-time.After(leader.waitForSetup):
+		case <-time.After(leader.waitTime):
 			commitNum := leader.getCommitNum()
 			log.WithField("commitNum", commitNum).WithField("producers", len(leader.producers)).Debug("waitForCommit  finish")
 			if commitNum >= leader.minMember {
@@ -303,7 +301,7 @@ func (leader *Leader) waitForResponse() bool {
 	leader.setState(WAIT_RESPONSE)
 	for {
 		select {
-		case <-time.After(leader.waitForResponseTime):
+		case <-time.After(leader.waitTime):
 			responseNum := leader.getResponseNum()
 			log.WithField("responseNum", responseNum).WithField("liveMembers", len(leader.liveMembers)).Debug("waitForResponse finish")
 			if responseNum == len(leader.sigmaPubKey) {
