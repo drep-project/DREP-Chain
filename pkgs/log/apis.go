@@ -36,15 +36,14 @@ func (logApi *LogApi) SetLevel(lvl string) error {
 		logrus.SetLevel(logrus.Level(lvInt))
 		return nil
 	}
-	lv, err := logrus.ParseLevel(lvl)
-	if err == nil {
-		logrus.SetLevel(lv)
-		for _, mLog := range loggers {
-			mLog.Logger.SetLevel(lv)
-		}
+	lv, err :=  parserLevel(lvl)
+	if err != nil {
 		return nil
 	}
-	return errors.New("not support lvl type ,eg:1, debug")
+	for key, _ := range logApi.hook.moduleLevel {
+		logApi.hook.moduleLevel[key] = lv
+	}
+	return nil
 }
 
 /*

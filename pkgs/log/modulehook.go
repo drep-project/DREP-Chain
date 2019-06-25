@@ -10,6 +10,7 @@ import (
 
 type ModuleHook struct {
 	writer io.Writer
+	globalLevel log.Level
 	moduleLevel map[string]log.Level
 	saveFormatter log.Formatter
 	printFormat  log.Formatter
@@ -96,13 +97,34 @@ func (hook *ModuleHook) SetModulesLevel(moduleLevel ...interface{}) error {
 		default:
 			return errors.New("unsport lvl type")
 		}
-		mLog, ok := loggers[module]
-		if ok {
-			mLog.Logger.SetLevel(lv)
-		}
 		hook.moduleLevel[module] = lv
 	}
 	return nil
+}
+
+func parserLevel(lvAny interface{}) (log.Level, error){
+	var lv log.Level
+	switch t := lvAny.(type) {
+	case log.Level:
+		lv = t
+	case int:
+		lv = log.Level(t)
+	case string:
+		var err error
+		lvInt, err := strconv.ParseInt(t,10,64);
+		if err != nil {
+			lv, err = log.ParseLevel(t)
+			if err != nil {
+				return 0, err
+			}
+		}else {
+			lv = log.Level(lvInt)
+		}
+
+	default:
+		lv = log.InfoLevel
+	}
+	return lv, nil
 }
 
 
