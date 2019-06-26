@@ -195,6 +195,7 @@ func (mApp DrepApp) before(ctx *cli.Context) error {
 	phaseConfig, err := loadConfigFile(ctx, homeDir)
 
 	if err != nil {
+		fmt.Println("before(),loadConfigFile err:", err)
 		return err
 	}
 	mApp.Context.PhaseConfig = phaseConfig

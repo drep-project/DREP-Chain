@@ -28,8 +28,8 @@ type TransactionPool struct {
 	rlock        sync.RWMutex
 	queue        map[crypto.CommonAddress]*txList
 	pending      map[crypto.CommonAddress]*txList
-	allTxs       map[string]bool //统计信息使用
-	allPricedTxs *txPricedList   //按照价格排序的tx列表
+	allTxs       map[string]*chainTypes.Transaction //统计信息使用
+	allPricedTxs *txPricedList                      //按照价格排序的tx列表
 	mu           sync.Mutex
 	nonceCp      func(a interface{}, b interface{}) int
 	tranCp       func(a interface{}, b interface{}) bool
@@ -77,7 +77,7 @@ func NewTransactionPool(database *database.Database, journalPath string) *Transa
 	pool.newBlockChan = make(chan *chainTypes.Block)
 	pool.pendingNonce = make(map[crypto.CommonAddress]uint64)
 
-	pool.allTxs = make(map[string]bool)
+	pool.allTxs = make(map[string]*chainTypes.Transaction)
 	pool.allPricedTxs = newTxPricedList()
 
 	pool.journal = newTxJournal(journalPath)
@@ -154,11 +154,12 @@ func (pool *TransactionPool) UpdateState(database *database.Database) {
 func (pool *TransactionPool) Contains(id string) bool {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
-	value, exists := pool.allTxs[id]
-	if exists && !value {
-		delete(pool.allTxs, id)
-	}
-	return exists || value
+	_, ok := pool.allTxs[id]
+	//value, exists := pool.allTxs[id]
+	//if exists && !value {
+	//	delete(pool.allTxs, id)
+	//}
+	return ok
 }
 
 func (pool *TransactionPool) AddTransaction(tx *chainTypes.Transaction, isLocal bool) error {
@@ -196,7 +197,7 @@ func (pool *TransactionPool) addTx(tx *chainTypes.Transaction, isLocal bool) err
 				delete(pool.allTxs, oldTx.TxHash().String())
 				pool.allPricedTxs.Remove(oldTx)
 
-				pool.allTxs[id.String()] = true
+				pool.allTxs[id.String()] = tx
 				pool.allPricedTxs.Put(tx)
 				pool.journalTx(*addr, tx)
 				return nil
@@ -272,7 +273,7 @@ func (pool *TransactionPool) addTx(tx *chainTypes.Transaction, isLocal bool) err
 	}
 
 	pool.journalTx(*addr, tx)
-	pool.allTxs[id.String()] = true
+	pool.allTxs[id.String()] = tx
 	pool.allPricedTxs.Put(tx)
 	pool.syncToPending(addr)
 	return nil
@@ -502,4 +503,14 @@ func (pool *TransactionPool) GetMiniPendingNonce(addr *crypto.CommonAddress) uin
 	}
 
 	return 0
+}
+
+func (pool *TransactionPool) GetTxInPool(hash string) (*chainTypes.Transaction, error) {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
+	if tx, ok := pool.allTxs[hash]; ok {
+		return tx, nil
+	}
+	return nil, fmt.Errorf("hash:%s not in txpool")
 }

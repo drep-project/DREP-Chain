@@ -185,7 +185,7 @@ func (accountapi *AccountApi) Transfer(from crypto.CommonAddress, to crypto.Comm
 	6. 备注
 	7. 被代替交易的nonce
  return: 新交易地址
- example:   curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_replaceTx","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000","",1000],"id":1}' http://127.0.0.1:15645
+ example: curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_replaceTx","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000","",1000],"id":1}' http://127.0.0.1:15645
  response:
 	 {"jsonrpc":"2.0","id":1,"result":"0x3a3b59f90a21c2fd1b690aa3a2bc06dc2d40eb5bdc26fdd7ecb7e1105af2638e"}
 */
@@ -206,6 +206,22 @@ func (accountapi *AccountApi) ReplaceTx(from crypto.CommonAddress, to crypto.Com
 	}
 	return tx.TxHash().String(), nil
 }
+
+/*
+ name: GetTxInPool
+ usage: 查询交易是否在交易池，如果在，返回交易
+ params:
+	1. 发起转账的地址
+
+ return: 交易完整信息
+ example: curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_getTxInPool","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5"],"id":1}' http://127.0.0.1:15645
+ response:
+	 {"jsonrpc":"2.0","id":1,"result":transaction}
+*/
+func (accountapi *AccountApi) GetTxInPool(hash string) (*chainTypes.Transaction, error) {
+	return accountapi.blockmgr.GetTxInPool(hash)
+}
+
 
 /*
  name: setAlias

@@ -1621,6 +1621,12 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 inputFormatter: [formatters.inputAddressFormatter, formatters.inputAddressFormatter, utils.fromDecimal, utils.fromDecimal, utils.fromDecimal, null, utils.fromDecimal]
             });
 
+            var transfer = new Method({
+                name: 'getTxInPool',
+                call: 'account_getTxInPool',
+                params: 1,
+                inputFormatter: [null]
+            });
 
             var unLockWallet = new Method({
                 name: 'unLockWallet',
@@ -1827,13 +1833,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 inputFormatter: []
             });
 
-            var changeWaitTime = new Method({
-                name: 'changeWaitTime',
-                call: 'consensus_changeWaitTime',
-                params: 1,
-                inputFormatter: [null]
-            });
-            return [minning,mock, changeWaitTime]
+            return [minning,mock]
         }
 
         module.exports = CONSENSUS;

@@ -314,3 +314,7 @@ func (blockMgr *BlockMgr) GenerateTransferTransaction(to *crypto.CommonAddress, 
 	}
 	return t
 }
+
+func (bm *BlockMgr) GetTxInPool(hash string) (*chainTypes.Transaction, error) {
+	return bm.transactionPool.GetTxInPool(hash)
+}
