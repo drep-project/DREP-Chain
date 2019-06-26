@@ -151,16 +151,16 @@ func (pool *TransactionPool) UpdateState(database *database.Database) {
 	pool.database = database
 }
 
-func (pool *TransactionPool) Contains(id string) bool {
-	pool.mu.Lock()
-	defer pool.mu.Unlock()
-	_, ok := pool.allTxs[id]
-	//value, exists := pool.allTxs[id]
-	//if exists && !value {
-	//	delete(pool.allTxs, id)
-	//}
-	return ok
-}
+//func (pool *TransactionPool) Contains(id string) bool {
+//	pool.mu.Lock()
+//	defer pool.mu.Unlock()
+//	_, ok := pool.allTxs[id]
+//	//value, exists := pool.allTxs[id]
+//	//if exists && !value {
+//	//	delete(pool.allTxs, id)
+//	//}
+//	return ok
+//}
 
 func (pool *TransactionPool) AddTransaction(tx *chainTypes.Transaction, isLocal bool) error {
 	pool.mu.Lock()
@@ -173,9 +173,10 @@ func (pool *TransactionPool) AddTransaction(tx *chainTypes.Transaction, isLocal 
 func (pool *TransactionPool) addTx(tx *chainTypes.Transaction, isLocal bool) error {
 	id := tx.TxHash()
 	if _, ok := pool.allTxs[id.String()]; ok {
-		//dlog.Error("addtx err", "id", id.String(), "nonce", tx.Nonce())
 		return errors.New("konwn tx")
 	}
+
+	fmt.Println("new tx nonce:", tx.Nonce())
 
 	addr, err := tx.From()
 	if err != nil {
@@ -305,21 +306,21 @@ func (pool *TransactionPool) syncToPending(address *crypto.CommonAddress) {
 	}
 }
 
-func (pool *TransactionPool) removeTransaction(tran *chainTypes.Transaction) (bool, bool) {
-	//id, err := tran.TxId()
-	//if err != nil {
-	//	return false, false
-	//}
-	//pool.tranLock.Lock()
-	//defer pool.tranLock.Unlock()
-	//r1 := pool.trans.Remove(tran, pool.tranCp)
-	//delete(pool.allTxs, id)
-	//addr := crypto.PubKey2Address(tran.Data.PubKey)
-	//ts := pool.accountTran[addr]
-	//r2 := ts.Remove(tran, pool.tranCp)
-	//return r1, r2
-	return true, true
-}
+//func (pool *TransactionPool) removeTransaction(tran *chainTypes.Transaction) (bool, bool) {
+//	//id, err := tran.TxId()
+//	//if err != nil {
+//	//	return false, false
+//	//}
+//	//pool.tranLock.Lock()
+//	//defer pool.tranLock.Unlock()
+//	//r1 := pool.trans.Remove(tran, pool.tranCp)
+//	//delete(pool.allTxs, id)
+//	//addr := crypto.PubKey2Address(tran.Data.PubKey)
+//	//ts := pool.accountTran[addr]
+//	//r2 := ts.Remove(tran, pool.tranCp)
+//	//return r1, r2
+//	return true, true
+//}
 
 func (pool *TransactionPool) GetQueue() []*chainTypes.Transaction {
 	var retrunTxs []*chainTypes.Transaction

@@ -15,8 +15,8 @@ usage: 用于处理区块链偏上层逻辑
 prefix:blockMgr
 */
 type BlockMgrApi struct {
-	blockMgr *BlockMgr
-	dbService    *database.DatabaseService
+	blockMgr  *BlockMgr
+	dbService *database.DatabaseService
 }
 
 func (blockMgrApi *BlockMgrApi) SendRawTransaction(txbytes common.Bytes) (string, error) {
@@ -34,19 +34,39 @@ func (blockMgrApi *BlockMgrApi) SendRawTransaction(txbytes common.Bytes) (string
 	return tx.TxHash().String(), err
 }
 
-func (blockMgrApi *BlockMgrApi)  GasPrice() (*big.Int, error) {
+func (blockMgrApi *BlockMgrApi) GasPrice() (*big.Int, error) {
 	return blockMgrApi.blockMgr.gpo.SuggestPrice()
 }
 
-func (blockMgrApi *BlockMgrApi)  GetPoolTransactions(addr *crypto.CommonAddress) []chainTypes.Transactions {
+
+/*
+ name: GetPoolTransactions
+ usage: 获取地址发出来有效的交易个数。此值被作为新交易的nonce.
+ params:
+	1. 待查询地址
+ return: 交易个数
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_getPoolTransactions","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ response:
+*/
+func (blockMgrApi *BlockMgrApi) GetPoolTransactions(addr *crypto.CommonAddress) []chainTypes.Transactions {
 	return blockMgrApi.blockMgr.GetPoolTransactions(addr)
 }
 
-func (blockMgrApi *BlockMgrApi)  GetPoolMiniPendingNonce(addr *crypto.CommonAddress) uint64 {
+/*
+ name: GetPoolMiniPendingNonce
+ usage: 获取pending队列中，最小的Nonce
+ params:
+	1. 待查询地址
+ return: pending 队列中最小的nonce
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_getPoolMiniPendingNonce","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ response:
+
+*/
+
+func (blockMgrApi *BlockMgrApi) GetPoolMiniPendingNonce(addr *crypto.CommonAddress) uint64 {
 	return blockMgrApi.blockMgr.GetPoolMiniPendingNonce(addr)
 }
 
-
-func (blockMgrApi *BlockMgrApi) GenerateTransferTransaction(to  *crypto.CommonAddress, nonce uint64, amount, price, limit common.Big) chainTypes.Transaction {
+func (blockMgrApi *BlockMgrApi) GenerateTransferTransaction(to *crypto.CommonAddress, nonce uint64, amount, price, limit common.Big) chainTypes.Transaction {
 	return blockMgrApi.blockMgr.GenerateTransferTransaction(to, nonce, amount, price, limit)
 }
