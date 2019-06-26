@@ -43,11 +43,11 @@ func addTx(t *testing.T, num uint64) error {
 	pubkey, _ := secp256k1.ParsePubKey(b)
 	addr := crypto.PubKey2Address(pubkey)
 	fmt.Println(string(addr.Hex()))
-	txPool.database.BeginLogTransaction()
+	txPool.database.BeginTransaction()
 
 	var amount uint64 = 0xefffffffffffffff
 	txPool.database.PutBalance(&addr, new(big.Int).SetUint64(amount))
-	txPool.database.Commit()
+	txPool.database.Commit(false)
 
 	nonce := txPool.database.GetNonce(&addr)
 	for i := 0; uint64(i) < num; i++ {
@@ -135,8 +135,8 @@ func TestGetPendingTxs(t *testing.T) {
 					nonce = tx.Nonce()
 				}
 				fmt.Println("recv nonce:", nonce)
-				txPool.database.BeginLogTransaction()
-				txPool.database.Commit()
+				txPool.database.BeginTransaction()
+				txPool.database.Commit(false)
 
 				feed.Send(addrs)
 				time.Sleep(time.Second * 1)
@@ -151,11 +151,11 @@ func TestReplace(t *testing.T) {
 
 	privKey, _ := crypto.GenerateKey(rand.Reader)
 	addr := crypto.PubKey2Address(privKey.PubKey())
-	txPool.database.BeginLogTransaction()
+	txPool.database.BeginTransaction()
 
 	var amount uint64 = 0xefffffffffffffff
 	txPool.database.PutBalance(&addr, new(big.Int).SetUint64(amount))
-	txPool.database.Commit()
+	txPool.database.Commit(false)
 
 	nonce := txPool.database.GetNonce(&addr)
 	for i := 0; uint64(i) < maxTxsOfPending; i++ {
@@ -203,7 +203,6 @@ func TestReplace(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-
 }
 
 //测试pending里面tx被删除；同时删除导致nonce不连续，导致删除了多个tx
@@ -212,11 +211,11 @@ func TestDelTx(t *testing.T) {
 
 	privKey, _ := crypto.GenerateKey(rand.Reader)
 	addr := crypto.PubKey2Address(privKey.PubKey())
-	txPool.database.BeginLogTransaction()
+	txPool.database.BeginTransaction()
 
 	var amount uint64 = 0xefffffffffffffff
 	txPool.database.PutBalance(&addr, new(big.Int).SetUint64(amount))
-	txPool.database.Commit()
+	txPool.database.Commit(false)
 
 	nonce := txPool.getTransactionCount(&addr)
 	for i := 0; uint64(i) < maxTxsOfQueue+maxTxsOfPending; i++ {
