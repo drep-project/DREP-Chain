@@ -41,10 +41,10 @@ func (blockMgrApi *BlockMgrApi) GasPrice() (*big.Int, error) {
 
 /*
  name: GetPoolTransactions
- usage: 获取地址发出来有效的交易个数。此值被作为新交易的nonce.
+ usage: 获取交易池中的交易信息.
  params:
 	1. 待查询地址
- return: 交易个数
+ return: 交易池中所有交易
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_getPoolTransactions","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
 */
@@ -60,7 +60,6 @@ func (blockMgrApi *BlockMgrApi) GetPoolTransactions(addr *crypto.CommonAddress) 
  return: pending 队列中最小的nonce
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_getPoolMiniPendingNonce","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
-
 */
 
 func (blockMgrApi *BlockMgrApi) GetPoolMiniPendingNonce(addr *crypto.CommonAddress) uint64 {
