@@ -176,8 +176,6 @@ func (pool *TransactionPool) addTx(tx *chainTypes.Transaction, isLocal bool) err
 		return errors.New("konwn tx")
 	}
 
-	fmt.Println("new tx nonce:", tx.Nonce())
-
 	addr, err := tx.From()
 	if err != nil {
 		return err
@@ -513,5 +511,5 @@ func (pool *TransactionPool) GetTxInPool(hash string) (*chainTypes.Transaction, 
 	if tx, ok := pool.allTxs[hash]; ok {
 		return tx, nil
 	}
-	return nil, fmt.Errorf("hash:%s not in txpool")
+	return nil, fmt.Errorf("hash:%s not in txpool", hash)
 }

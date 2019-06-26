@@ -3,7 +3,6 @@ package txpool
 import (
 	"crypto/rand"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 
@@ -41,10 +40,8 @@ func loadTx(t *testing.T, maxNonce uint64) {
 var generateMaxNonce uint64 = 10
 
 func generateTxs() []*chainTypes.Transaction {
-	b := common.Bytes("0x0373654ccdb250f2cfcfe64c783a44b9ea85bc47f2f00c480d05082428d277d6d0")
-	b.UnmarshalText(b)
-	pubkey, _ := secp256k1.ParsePubKey(b)
-	addr := crypto.PubKey2Address(pubkey)
+	privKey, _ := crypto.GenerateKey(rand.Reader)
+	addr := crypto.PubKey2Address(privKey.PubKey())
 
 	txs := make([]*chainTypes.Transaction, 0)
 
@@ -52,6 +49,8 @@ func generateTxs() []*chainTypes.Transaction {
 		amount := new(big.Int).SetUint64(100000000)
 		tx := chainTypes.NewTransaction(addr, amount.Mul(amount, new(big.Int).SetUint64(uint64(i+1))), new(big.Int).SetUint64(100000000), new(big.Int).SetUint64(100000000), uint64(i))
 		//fmt.Println(tx.Nonce(),tx.Amount(),tx.Type(),tx.GasPrice())
+		sig, _ := secp256k1.SignCompact(privKey, tx.TxHash().Bytes(), true)
+		tx.Sig = sig
 		txs = append(txs, tx)
 	}
 
@@ -81,13 +80,13 @@ func TestLoadAndRotate(t *testing.T) {
 var insertTxNum uint64 = 10
 
 func insertTx(t *testing.T) {
-	b := common.Bytes("0x0373654ccdb250f2cfcfe64c783a44b9ea85bc47f2f00c480d05082428d277d6d0")
-	b.UnmarshalText(b)
-	pubkey, _ := secp256k1.ParsePubKey(b)
-	addr := crypto.PubKey2Address(pubkey)
+	privKey, _ := crypto.GenerateKey(rand.Reader)
+	addr := crypto.PubKey2Address(privKey.PubKey())
 
 	for i := generateMaxNonce; i <= generateMaxNonce+insertTxNum; i++ {
 		tx := chainTypes.NewTransaction(addr, new(big.Int).SetUint64(100000000), new(big.Int).SetUint64(100000000), new(big.Int).SetUint64(100000000), uint64(i))
+		sig, _ := secp256k1.SignCompact(privKey, tx.TxHash().Bytes(), true)
+		tx.Sig = sig
 		err := j.insert(tx)
 		if err != nil {
 			t.Fatal(err)

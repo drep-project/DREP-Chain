@@ -1,14 +1,16 @@
 package txpool
 
 import (
-	"crypto/rand"
-	"fmt"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/database"
+
+	rand2 "math/rand"
+
+	"crypto/rand"
+	"fmt"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -16,18 +18,18 @@ import (
 	"time"
 )
 
-var txNum1 uint64 = 1000000
-var txNum2 int = 100000
+var txNum1 uint64 = 10000
+var txNum2 int = 1000
 var txPool *TransactionPool
 var feed event.Feed
 
 func TestNewTransactions(t *testing.T) {
-	path := filepath.Join(os.TempDir(), fmt.Sprintf("txpool/data"))
+	path := filepath.Join(os.TempDir(), fmt.Sprintf("./txpool/%d/data", rand2.Int63n(10000000)))
 	diskDb, err := database.NewDatabase(path)
 	if err != nil {
 		t.Error("db init err")
 	}
-	//db := database.NewDatabaseService(diskDb)
+
 	path = filepath.Join(os.TempDir(), fmt.Sprintf("./jounal/txs"))
 	txPool = NewTransactionPool(diskDb, path)
 	if txPool == nil {
@@ -38,10 +40,9 @@ func TestNewTransactions(t *testing.T) {
 }
 
 func addTx(t *testing.T, num uint64) error {
-	b := common.Bytes("0x0373654ccdb250f2cfcfe64c783a44b9ea85bc47f2f00c480d05082428d277d6d0")
-	b.UnmarshalText(b)
-	pubkey, _ := secp256k1.ParsePubKey(b)
-	addr := crypto.PubKey2Address(pubkey)
+	privKey, _ := crypto.GenerateKey(rand.Reader)
+
+	addr := crypto.PubKey2Address(privKey.PubKey())
 	fmt.Println(string(addr.Hex()))
 	txPool.database.BeginTransaction()
 
@@ -52,7 +53,14 @@ func addTx(t *testing.T, num uint64) error {
 	nonce := txPool.database.GetNonce(&addr)
 	for i := 0; uint64(i) < num; i++ {
 		tx := chainTypes.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(100), new(big.Int).SetInt64(100), nonce+uint64(i))
-		err := txPool.AddTransaction(tx, true)
+
+		sig, err := secp256k1.SignCompact(privKey, tx.TxHash().Bytes(), true)
+		if err != nil {
+			return err
+		}
+
+		tx.Sig = sig
+		err = txPool.AddTransaction(tx, true)
 		if err != nil {
 			return err
 		}
@@ -74,10 +82,8 @@ func TestAddTX(t *testing.T) {
 }
 
 func TestAddIntevalTX(t *testing.T) {
-	b := common.Bytes("0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26")
-	b.UnmarshalText(b)
-	pubkey, _ := secp256k1.ParsePubKey(b)
-	addr := crypto.PubKey2Address(pubkey)
+	privKey, _ := crypto.GenerateKey(rand.Reader)
+	addr := crypto.PubKey2Address(privKey.PubKey())
 	for i := 0; i < txNum2; i++ {
 		if i != 0 && i%100 == 0 {
 			continue
@@ -87,10 +93,10 @@ func TestAddIntevalTX(t *testing.T) {
 		txPool.AddTransaction(tx, true)
 	}
 }
-
-func TestSyncTx(t *testing.T) {
-	feed.Send(struct{}{})
-}
+//
+//func TestSyncTx(t *testing.T) {
+//	feed.Send(struct{}{})
+//}
 
 //池子里面的都是未处理的交易
 func TestGetPendingTxs(t *testing.T) {
@@ -102,7 +108,7 @@ func TestGetPendingTxs(t *testing.T) {
 			return
 		}
 
-		time.Sleep(time.Second * 10)
+		time.Sleep(time.Second * 1)
 		ch <- txNum1
 	}()
 
@@ -114,7 +120,7 @@ func TestGetPendingTxs(t *testing.T) {
 				if nonce != num {
 					t.Fatalf("recv nonce:%d sendTxNum:%d", nonce, num)
 				}
-				break
+				return
 			default:
 				gasLimit := new(big.Int).SetInt64(10000000)
 				mapTxs := txPool.GetPending(gasLimit)
