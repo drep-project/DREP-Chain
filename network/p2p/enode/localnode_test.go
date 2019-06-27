@@ -19,7 +19,7 @@ package enode
 import (
 	"testing"
 
-		"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/network/p2p/enr"
 )
 

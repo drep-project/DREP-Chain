@@ -221,7 +221,7 @@ func (p PublicKey) MarshalBSONValue() (bsontype.Type, []byte, error) {
 
 func (p *PublicKey) UnmarshalBSON(data []byte) error {
 	bytes, _, success := bsoncore.ReadArray(data)
-	if !success  {
+	if !success {
 		return errors.New("read bson string error")
 	}
 	pk, err := ParsePubKey(bytes)

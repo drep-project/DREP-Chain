@@ -89,22 +89,22 @@ type Client struct {
 
 	// for dispatch
 	close       chan struct{}
-	closing     chan struct{}                   // closed when client is quitting
-	didClose    chan struct{}                   // closed when client quits
-	reconnected chan net.Conn                   // where write/reconnect sends the new connection
-	readErr     chan error                      // errors from read
-	readResp    chan []*JsonrpcMessage // valid messages from read
-	requestOp   chan *requestOp                 // for registering response IDs
-	sendDone    chan error                      // signals write completion, releases write lock
-	respWait    map[string]*requestOp           // active requests
-	subs        map[string]*ClientSubscription  // active subscriptions
+	closing     chan struct{}                  // closed when client is quitting
+	didClose    chan struct{}                  // closed when client quits
+	reconnected chan net.Conn                  // where write/reconnect sends the new connection
+	readErr     chan error                     // errors from read
+	readResp    chan []*JsonrpcMessage         // valid messages from read
+	requestOp   chan *requestOp                // for registering response IDs
+	sendDone    chan error                     // signals write completion, releases write lock
+	respWait    map[string]*requestOp          // active requests
+	subs        map[string]*ClientSubscription // active subscriptions
 }
 
 type requestOp struct {
 	ids  []json.RawMessage
 	err  error
 	resp chan *JsonrpcMessage // receives up to len(ids) responses
-	sub  *ClientSubscription           // only set for EthSubscribe requests
+	sub  *ClientSubscription  // only set for EthSubscribe requests
 }
 
 func (op *requestOp) wait(ctx context.Context) (*JsonrpcMessage, error) {

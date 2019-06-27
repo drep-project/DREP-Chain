@@ -1,9 +1,10 @@
 package chainservice
 
 import (
-	"sync"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	)
+	"sync"
+)
+
 // approxNodesPerWeek is an approximation of the number of new blocks there are
 // in a week on average.
 const approxNodesPerWeek = 6 * 24 * 7

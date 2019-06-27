@@ -9,15 +9,13 @@ import (
 	"testing"
 )
 
-
 var (
 	testConfig = &accountTypes.Config{
-		Enable: true,
-		Type:"memorystore",
-		KeyStoreDir:"keystore",
+		Enable:      true,
+		Type:        "memorystore",
+		KeyStoreDir: "keystore",
 	}
 )
-
 
 func Test_WalletOpend(t *testing.T) {
 	password := "password"
@@ -112,7 +110,7 @@ func Test_NewAccountAndListAddress(t *testing.T) {
 
 	count := 10
 	nodes := make([]*types.Node, count)
-	for i:=0;i<count;i++{
+	for i := 0; i < count; i++ {
 		node, err := wallet.NewAccount()
 		if err != nil {
 			t.Error(err)
@@ -124,7 +122,7 @@ func Test_NewAccountAndListAddress(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	for _, node := range  nodes {
+	for _, node := range nodes {
 		isFind := false
 		for _, addr := range addresses {
 			if node.Address == addr {
@@ -148,14 +146,14 @@ func Test_NewAccountAndDumpPrivateKey(t *testing.T) {
 
 	count := 10
 	nodes := make([]*types.Node, count)
-	for i:=0;i<count;i++{
+	for i := 0; i < count; i++ {
 		node, err := wallet.NewAccount()
 		if err != nil {
 			t.Error(err)
 		}
 		nodes[i] = node
 	}
-	for _, node := range  nodes {
+	for _, node := range nodes {
 		privkey, err := wallet.DumpPrivateKey(node.Address)
 		if err != nil {
 			t.Error(err)

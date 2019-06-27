@@ -7,11 +7,9 @@ import (
 	"testing"
 )
 
-
-func init(){
+func init() {
 
 }
-
 
 func Test_DBGetKey(t *testing.T) {
 	fileStore := NewDbStore("test_db1")
@@ -44,8 +42,8 @@ func Test_DBExportKey(t *testing.T) {
 	}()
 
 	count := 10
-	nodes:= make([]*types.Node, count)
-	for i:=0;i<count;i++{
+	nodes := make([]*types.Node, count)
+	for i := 0; i < count; i++ {
 		node := types.NewNode(nil, app.ChainIdType{})
 		err := fileStore.StoreKey(node, pass)
 		if err != nil {
@@ -59,7 +57,7 @@ func Test_DBExportKey(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(gotNodes) != count {
-		t.Error("some key missing after export",len(gotNodes), "  ", count )
+		t.Error("some key missing after export", len(gotNodes), "  ", count)
 	}
 
 	for _, gNode := range nodes {
@@ -67,7 +65,7 @@ func Test_DBExportKey(t *testing.T) {
 		for _, gotNode := range gotNodes {
 			if bytes.Equal(gotNode.PrivateKey.Serialize(), gNode.PrivateKey.Serialize()) {
 				isFind = true
-			    break
+				break
 			}
 		}
 		if !isFind {

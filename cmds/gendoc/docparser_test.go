@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestFuncParser(t *testing.T){
+func TestFuncParser(t *testing.T) {
 	example := `
  name:获取地址
  usage:  用于获取区块信息
@@ -28,7 +28,7 @@ return: 所有账户hash地址的数组
 	fmt.Println(tokens)
 }
 
-func TestStructParser(t *testing.T){
+func TestStructParser(t *testing.T) {
 	example := `
 name: 链
  usage:  用于获取区块信息

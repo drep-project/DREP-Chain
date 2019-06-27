@@ -19,9 +19,9 @@ package simulations
 import (
 	"testing"
 
-	"github.com/ethereum/go-ethereum/node"
 	"github.com/drep-project/drep-chain/network/p2p/enode"
 	"github.com/drep-project/drep-chain/network/p2p/simulations/adapters"
+	"github.com/ethereum/go-ethereum/node"
 )
 
 func newTestNetwork(t *testing.T, nodeCount int) (*Network, []enode.ID) {

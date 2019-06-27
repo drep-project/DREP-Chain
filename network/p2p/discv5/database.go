@@ -28,6 +28,7 @@ import (
 	"sync"
 	"time"
 
+	drepBinary "github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
@@ -35,7 +36,6 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/storage"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	drepBinary "github.com/drep-project/binary"
 )
 
 var (

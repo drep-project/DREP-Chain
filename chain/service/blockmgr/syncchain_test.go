@@ -26,7 +26,7 @@ func (ps *p2pServiceMock) Send(w p2p.MsgWriter, msgType uint64, msg interface{})
 	return nil
 }
 func (ps *p2pServiceMock) Peers() []*p2p.Peer {
-	return  nil
+	return nil
 }
 func (ps *p2pServiceMock) AddPeer(nodeUrl string) error {
 	return nil
@@ -66,24 +66,23 @@ func (p *peerInfoMock) GetHeight() uint64 {
 	return p.height
 }
 
-func (p *peerInfoMock)GetAddr() string{
+func (p *peerInfoMock) GetAddr() string {
 	return "127.0.0.1"
 }
 
-func (p *peerInfoMock)SetHeight(height uint64){
+func (p *peerInfoMock) SetHeight(height uint64) {
 	p.height = height
 }
-func (p *peerInfoMock)KnownTx(tx *chainTypes.Transaction) bool{
+func (p *peerInfoMock) KnownTx(tx *chainTypes.Transaction) bool {
 	return true
 }
-func (p *peerInfoMock)MarkTx(tx *chainTypes.Transaction){
+func (p *peerInfoMock) MarkTx(tx *chainTypes.Transaction) {
 
 }
-func (p *peerInfoMock)KnownBlock(blk *chainTypes.Block) bool{
+func (p *peerInfoMock) KnownBlock(blk *chainTypes.Block) bool {
 	return true
 }
-func (p *peerInfoMock)MarkBlock(blk *chainTypes.Block){}
-
+func (p *peerInfoMock) MarkBlock(blk *chainTypes.Block) {}
 
 //var pi chainTypes.PeerInfoInterface = &peerInfoMock{}
 
@@ -189,7 +188,7 @@ func (ps *chainServiceMock) DetachBlockFeed() *event.Feed {
 
 //var bm *BlockMgr
 
-func prepareBase(t *testing.T) (*BlockMgr,[]*chainTypes.Block){
+func prepareBase(t *testing.T) (*BlockMgr, []*chainTypes.Block) {
 	db, err := database.NewDatabase("./test/")
 	if err != nil {
 		t.Fatal(err)
@@ -201,8 +200,7 @@ func prepareBase(t *testing.T) (*BlockMgr,[]*chainTypes.Block){
 
 	bm := NewBlockMgr(DefaultChainConfig, "./", cs, &p2pServiceMock{})
 
-
-	return bm,blks
+	return bm, blks
 }
 
 func TestFindAncestor(t *testing.T) {
@@ -253,7 +251,7 @@ func TestFetchBlocks(t *testing.T) {
 	}
 
 	go func() {
-		time.Sleep(time.Second*4)
+		time.Sleep(time.Second * 4)
 		bm.headerHashCh <- headerHashs1
 	}()
 
@@ -264,13 +262,13 @@ func TestFetchBlocks(t *testing.T) {
 	}
 
 	go func() {
-		time.Sleep(time.Second*8)
+		time.Sleep(time.Second * 8)
 		bm.headerHashCh <- headerHashs2
 	}()
 
 	//fake block body
 	go func() {
-		time.Sleep(time.Second*12)
+		time.Sleep(time.Second * 12)
 		bm.blocksCh <- blks[2:4]
 	}()
 

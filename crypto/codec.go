@@ -6,7 +6,7 @@ import (
 	"reflect"
 )
 
-func init(){
+func init() {
 	binary.ImportCodeC(reflect.TypeOf(secp256k1.PublicKey{}), &secpPubKeyCodeC{})
 }
 
@@ -14,7 +14,7 @@ type secpPubKeyCodeC struct{}
 
 // Encode encodes a value into the encoder.
 func (c *secpPubKeyCodeC) EncodeTo(e *binary.Encoder, rv reflect.Value) error {
-	pk :=  rv.Interface().(secp256k1.PublicKey)
+	pk := rv.Interface().(secp256k1.PublicKey)
 	contents := pk.SerializeCompressed()
 	e.WriteUvarint(uint64(len(contents)))
 	e.Write(contents)

@@ -1,8 +1,8 @@
 package chainservice
 
 import (
-	"github.com/drep-project/drep-chain/crypto"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/crypto"
 	"sync"
 )
 
@@ -102,7 +102,7 @@ func (bi *BlockIndex) UnsetStatusFlags(node *chainTypes.BlockNode, flags chainTy
 
 // FlushToDB writes all dirty block nodes to the database. If all writes
 // succeed, this clears the dirty set.
-func (bi *BlockIndex) FlushToDB(storeBlockNodeFunc func (node *chainTypes.BlockNode) error) error {
+func (bi *BlockIndex) FlushToDB(storeBlockNodeFunc func(node *chainTypes.BlockNode) error) error {
 	bi.Lock()
 	if len(bi.Dirty) == 0 {
 		bi.Unlock()

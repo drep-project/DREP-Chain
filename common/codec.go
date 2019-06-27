@@ -1,16 +1,16 @@
 package common
 
 import (
+	"github.com/drep-project/binary"
 	"math/big"
 	"reflect"
-	"github.com/drep-project/binary"
 )
 
 type commomBigCodeC struct{}
 
 // Encode encodes a value into the encoder.
 func (c *commomBigCodeC) EncodeTo(e *binary.Encoder, rv reflect.Value) error {
-	fff :=  (big.Int)(rv.Interface().(Big))
+	fff := (big.Int)(rv.Interface().(Big))
 	contents := fff.Bytes()
 	e.WriteUvarint(uint64(len(contents)))
 	e.Write(contents)
@@ -29,10 +29,10 @@ func (c *commomBigCodeC) DecodeTo(d *binary.Decoder, rv reflect.Value) (err erro
 		return err
 	}
 
-	rv.Set(reflect.ValueOf((Big)(*new (big.Int).SetBytes(contents))))
+	rv.Set(reflect.ValueOf((Big)(*new(big.Int).SetBytes(contents))))
 	return nil
 }
 
-func init(){
+func init() {
 	binary.ImportCodeC(reflect.TypeOf(Big{}), &commomBigCodeC{})
 }

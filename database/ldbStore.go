@@ -8,7 +8,7 @@ import (
 )
 
 type LdbStore struct {
-	db           *leveldb.DB
+	db *leveldb.DB
 }
 
 func NewLdbStore(dbPath string) (*LdbStore, error) {
@@ -18,7 +18,7 @@ func NewLdbStore(dbPath string) (*LdbStore, error) {
 		return nil, err
 	}
 	db := &LdbStore{
-		db:     ldb,
+		db: ldb,
 	}
 	return db, nil
 }
@@ -27,11 +27,11 @@ func (ldbStorte *LdbStore) Get(key []byte) ([]byte, error) {
 	return ldbStorte.db.Get(key, nil)
 }
 
-func (ldbStorte *LdbStore) Put(key []byte, value  []byte)  error {
+func (ldbStorte *LdbStore) Put(key []byte, value []byte) error {
 	return ldbStorte.db.Put(key, value, nil)
 }
 
-func (ldbStorte *LdbStore) Delete(key []byte)  error {
+func (ldbStorte *LdbStore) Delete(key []byte) error {
 	return ldbStorte.db.Delete(key, nil)
 }
 

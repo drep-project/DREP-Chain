@@ -13,6 +13,7 @@ import (
 var (
 	medianTimeBlocks = 11
 )
+
 // blockStatus is a bit field representing the validation state of the block.
 type BlockStatus byte
 
@@ -66,7 +67,7 @@ type BlockNode struct {
 	// padding adds up.
 
 	// parent is the parent block for this node.
-	Parent *BlockNode							`binary:"ignore"`
+	Parent *BlockNode `binary:"ignore"`
 
 	// hash is the double sha 256 of the block.
 	Hash *crypto.Hash

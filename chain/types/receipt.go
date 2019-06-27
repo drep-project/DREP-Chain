@@ -21,7 +21,6 @@ import (
 	"github.com/drep-project/drep-chain/crypto"
 )
 
-
 const (
 	// ReceiptStatusFailed is the status code of a transaction if execution failed.
 	ReceiptStatusFailed = uint64(0)
@@ -44,7 +43,7 @@ type Receipt struct {
 	GasUsed         uint64
 	GasFee          uint64
 
-	Ret             []byte
+	Ret []byte
 }
 
 // NewReceipt creates a barebone transaction receipt, copying the init fields.

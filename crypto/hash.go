@@ -74,6 +74,7 @@ func (hash *Hash) IsEqual(target *Hash) bool {
 func (hash *Hash) IsEmpty() bool {
 	return *hash == [HashLength]byte{}
 }
+
 // UnmarshalJSON parses a hash in hex syntax.
 func (h *Hash) UnmarshalJSON(input []byte) error {
 	return common.UnmarshalFixedJSON(hashT, input, h[:])

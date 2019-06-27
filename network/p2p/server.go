@@ -740,7 +740,7 @@ running:
 					p.events = &srv.peerFeed
 				}
 				name := truncateName(c.name)
-				srv.log.WithField( "name", name).WithField("addr", c.fd.RemoteAddr()).WithField("peers", len(peers)+1).Info("Adding p2p peer")
+				srv.log.WithField("name", name).WithField("addr", c.fd.RemoteAddr()).WithField("peers", len(peers)+1).Info("Adding p2p peer")
 				go srv.runPeer(p)
 				peers[c.peerNode.ID()] = p
 				if p.Inbound() {
@@ -759,11 +759,11 @@ running:
 			// A peer disconnected.
 			d := common.PrettyDuration(mclock.Now() - pd.created)
 			pd.log.WithField("duration", d).
-					WithField("peers", len(peers)-1).
-					WithField( "req", pd.requested).
-					WithField("err", pd.err).
-					WithField("ip", pd.Peer.IP()).
-					Info("Removing p2p peer")
+				WithField("peers", len(peers)-1).
+				WithField("req", pd.requested).
+				WithField("err", pd.err).
+				WithField("ip", pd.Peer.IP()).
+				Info("Removing p2p peer")
 			delete(peers, pd.ID())
 			if pd.Inbound() {
 				inboundCount--
@@ -894,7 +894,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *enode.Node) 
 	err := srv.setupConn(c, flags, dialDest)
 	if err != nil {
 		c.close(err)
-		log.WithField("addr", fd.RemoteAddr()).WithField( "err", err).Info("Setting up connection failed")
+		log.WithField("addr", fd.RemoteAddr()).WithField("err", err).Info("Setting up connection failed")
 	}
 
 	return err

@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	TX_PREFIX = "TX"
-	TX_SEND_HISTORY_PREFIX    =  "SEND_TXHISTORY"
-	TX_RECEIVE_HISTORY_PREFIX =  "RECEIVE_TXHISTORY"
+	TX_PREFIX                 = "TX"
+	TX_SEND_HISTORY_PREFIX    = "SEND_TXHISTORY"
+	TX_RECEIVE_HISTORY_PREFIX = "RECEIVE_TXHISTORY"
 )
 
 // LevelDbStore used to save data to level db, there are 3 kinds of prefix in db.
@@ -22,20 +22,20 @@ const (
 // "RECEIVE_TXHISTORY" for transaction group by receive addr	format "RECEIVE_TXHISTORY" + addr + hash
 type LevelDbStore struct {
 	path string
-	db        *leveldb.DB
+	db   *leveldb.DB
 }
 
-func NewLevelDbStore(path string) (*LevelDbStore, error){
+func NewLevelDbStore(path string) (*LevelDbStore, error) {
 	fileutil.EnsureDir(path)
 	db, err := leveldb.OpenFile(path, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &LevelDbStore{path,db}, nil
+	return &LevelDbStore{path, db}, nil
 }
 
 // InsertRecord check block ,if tx exist, save to to history and send history , if to is not nil, save tx receive history
-func  (store *LevelDbStore) InsertRecord(block *chainTypes.Block)  {
+func (store *LevelDbStore) InsertRecord(block *chainTypes.Block) {
 	for _, tx := range block.Data.TxList {
 		rawdata := tx.AsPersistentMessage()
 		txHash := tx.TxHash()
@@ -64,7 +64,7 @@ func  (store *LevelDbStore) InsertRecord(block *chainTypes.Block)  {
 	}
 }
 
-func (store *LevelDbStore) DelRecord(block *chainTypes.Block)  {
+func (store *LevelDbStore) DelRecord(block *chainTypes.Block) {
 	for _, tx := range block.Data.TxList {
 		txHash := tx.TxHash()
 		key := store.TxKey(txHash)
@@ -81,23 +81,23 @@ func (store *LevelDbStore) DelRecord(block *chainTypes.Block)  {
 	}
 }
 
-func (store *LevelDbStore) GetRawTransaction(txHash *crypto.Hash) ([]byte, error)  {
+func (store *LevelDbStore) GetRawTransaction(txHash *crypto.Hash) ([]byte, error) {
 	key := store.TxKey(txHash)
-	rawData, err := store.db.Get(key,nil)
-	if err != nil{
+	rawData, err := store.db.Get(key, nil)
+	if err != nil {
 		return nil, err
 	}
 	return rawData, nil
 }
 
-func (store *LevelDbStore) GetTransaction(txHash *crypto.Hash) (*chainTypes.RpcTransaction, error)  {
+func (store *LevelDbStore) GetTransaction(txHash *crypto.Hash) (*chainTypes.RpcTransaction, error) {
 	rawData, err := store.GetRawTransaction(txHash)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	tx := &chainTypes.Transaction{}
 	err = binary.Unmarshal(rawData, tx)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	rpcTx := &chainTypes.RpcTransaction{}
@@ -105,16 +105,16 @@ func (store *LevelDbStore) GetTransaction(txHash *crypto.Hash) (*chainTypes.RpcT
 	return rpcTx, nil
 }
 
-func (store *LevelDbStore) GetSendTransactionsByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*chainTypes.RpcTransaction  {
+func (store *LevelDbStore) GetSendTransactionsByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*chainTypes.RpcTransaction {
 	txs := []*chainTypes.RpcTransaction{}
 	fromIndex := (pageIndex - 1) * pageSize
 	endIndex := fromIndex + pageSize
-	if endIndex  <= 0 {
+	if endIndex <= 0 {
 		return txs
 	}
 	key := store.TxSendHistoryPrefixKey(addr)
 	snapShot, err := store.db.GetSnapshot()
-	if err != nil{
+	if err != nil {
 		return txs
 	}
 
@@ -134,26 +134,26 @@ func (store *LevelDbStore) GetSendTransactionsByAddr(addr *crypto.CommonAddress,
 					break
 				}
 				txs = append(txs, tx)
-			}else{
+			} else {
 				break
 			}
 		}
-		count ++
+		count++
 	}
 
 	return txs
 }
 
-func (store *LevelDbStore) GetReceiveTransactionsByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*chainTypes.RpcTransaction  {
+func (store *LevelDbStore) GetReceiveTransactionsByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*chainTypes.RpcTransaction {
 	txs := []*chainTypes.RpcTransaction{}
 	fromIndex := (pageIndex - 1) * pageSize
 	endIndex := fromIndex + pageSize
-	if endIndex  <= 0 {
+	if endIndex <= 0 {
 		return txs
 	}
 	key := store.TxReceiveHistoryPrefixKey(addr)
 	snapShot, err := store.db.GetSnapshot()
-	if err != nil{
+	if err != nil {
 		return txs
 	}
 
@@ -173,11 +173,11 @@ func (store *LevelDbStore) GetReceiveTransactionsByAddr(addr *crypto.CommonAddre
 					break
 				}
 				txs = append(txs, tx)
-			}else{
+			} else {
 				break
 			}
 		}
-		count ++
+		count++
 	}
 
 	return txs
@@ -185,41 +185,41 @@ func (store *LevelDbStore) GetReceiveTransactionsByAddr(addr *crypto.CommonAddre
 
 func (store *LevelDbStore) TxKey(hash *crypto.Hash) []byte {
 	buf := [34]byte{}
-	copy(buf[:2],[]byte(TX_PREFIX)[:2])
-	copy(buf[2:],hash[:])
+	copy(buf[:2], []byte(TX_PREFIX)[:2])
+	copy(buf[2:], hash[:])
 	return buf[:]
 }
 
 func (store *LevelDbStore) TxSendHistoryKey(addr *crypto.CommonAddress, hash *crypto.Hash) []byte {
 	buf := [66]byte{}
-	copy(buf[:14],[]byte(TX_SEND_HISTORY_PREFIX)[:14])
-	copy(buf[14:34],addr[:])
+	copy(buf[:14], []byte(TX_SEND_HISTORY_PREFIX)[:14])
+	copy(buf[14:34], addr[:])
 	copy(buf[34:], hash[:])
 	return buf[:]
 }
 
 func (store *LevelDbStore) TxSendHistoryPrefixKey(addr *crypto.CommonAddress) []byte {
 	buf := [34]byte{}
-	copy(buf[:14],[]byte(TX_SEND_HISTORY_PREFIX)[:14])
-	copy(buf[14:34],addr[:])
+	copy(buf[:14], []byte(TX_SEND_HISTORY_PREFIX)[:14])
+	copy(buf[14:34], addr[:])
 	return buf[:]
 }
 
 func (store *LevelDbStore) TxReceiveHistoryKey(addr *crypto.CommonAddress, hash *crypto.Hash) []byte {
-	buf := [69]byte{}   //17+20+32 = 37+32 = 69
-	copy(buf[:17],[]byte(TX_RECEIVE_HISTORY_PREFIX)[:17])
-	copy(buf[17:37],addr[:])
+	buf := [69]byte{} //17+20+32 = 37+32 = 69
+	copy(buf[:17], []byte(TX_RECEIVE_HISTORY_PREFIX)[:17])
+	copy(buf[17:37], addr[:])
 	copy(buf[37:], hash[:])
 	return buf[:]
 }
 
 func (store *LevelDbStore) TxReceiveHistoryPrefixKey(addr *crypto.CommonAddress) []byte {
-	buf := [37]byte{}  //17+32
-	copy(buf[:17],[]byte(TX_RECEIVE_HISTORY_PREFIX)[:17])
-	copy(buf[17:],addr[:])
+	buf := [37]byte{} //17+32
+	copy(buf[:17], []byte(TX_RECEIVE_HISTORY_PREFIX)[:17])
+	copy(buf[17:], addr[:])
 	return buf[:]
 }
 
-func (store *LevelDbStore)  Close(){
+func (store *LevelDbStore) Close() {
 	store.db.Close()
 }

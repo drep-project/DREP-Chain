@@ -101,7 +101,7 @@ func gasReturnDataCopy(evm *EVM, contract *Contract, stack *Stack, mem *Memory, 
 func gasSStore(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	var (
 		y, x = stack.Back(1), stack.Back(0)
-		val = evm.State.Load(x)
+		val  = evm.State.Load(x)
 	)
 	// This checks for 3 scenario's and calculates gas accordingly
 	// 1. From a zero-value address to a non-zero value         (NEW VALUE)
@@ -454,4 +454,3 @@ func gasSwap(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize
 func gasDup(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	return GasFastestStep, nil
 }
-

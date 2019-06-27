@@ -6,9 +6,9 @@ import (
 )
 
 type BestState struct {
-	Hash      crypto.Hash
-	PrevHash  crypto.Hash
-	Height    uint64
+	Hash       crypto.Hash
+	PrevHash   crypto.Hash
+	Height     uint64
 	MedianTime time.Time
 }
 
@@ -16,8 +16,8 @@ type BestState struct {
 func NewBestState(node *BlockNode) *BestState {
 
 	return &BestState{
-		Hash:        *node.Hash,
-		Height:      node.Height,
-		PrevHash:    *node.PreviousHash,
+		Hash:     *node.Hash,
+		Height:   node.Height,
+		PrevHash: *node.PreviousHash,
 	}
 }

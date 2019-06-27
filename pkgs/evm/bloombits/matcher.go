@@ -25,8 +25,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/drep-project/drep-chain/common/bitutil"
 	"context"
+	"github.com/drep-project/drep-chain/common/bitutil"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 )
 

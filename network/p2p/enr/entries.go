@@ -37,7 +37,6 @@ type generic struct {
 
 func (g generic) ENRKey() string { return g.key }
 
-
 // WithEntry wraps any value with a key name. It can be used to set and load arbitrary values
 // in a record. The value v must be supported by rlp. To use WithEntry with Load, the value
 // must be a pointer.

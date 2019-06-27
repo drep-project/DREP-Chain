@@ -4,9 +4,10 @@ import (
 	dlog "github.com/drep-project/drep-chain/pkgs/log"
 )
 
-const  (
+const (
 	MODULENAME = "trace"
 )
+
 var (
 	log = dlog.NewLogger(MODULENAME)
 )

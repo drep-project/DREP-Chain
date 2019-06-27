@@ -2,10 +2,10 @@ package evm
 
 import (
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/database"
-	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
 	"gopkg.in/urfave/cli.v1"
 	"math/big"
@@ -15,9 +15,8 @@ var (
 	DefaultEvmConfig = &vm.VMConfig{}
 )
 
-
 type EvmService struct {
-	Config *vm.VMConfig
+	Config          *vm.VMConfig
 	DatabaseService *database.DatabaseService `service:"database"`
 }
 
@@ -26,9 +25,7 @@ func (evmService *EvmService) Name() string {
 }
 
 func (evmService *EvmService) Api() []app.API {
-	return []app.API{
-
-	}
+	return []app.API{}
 }
 
 func (evmService *EvmService) CommandFlags() ([]cli.Command, []cli.Flag) {
@@ -48,22 +45,22 @@ func (evmService *EvmService) Init(executeContext *app.ExecuteContext) error {
 	return nil
 }
 
-func (evmService *EvmService)  Start(executeContext *app.ExecuteContext) error {
+func (evmService *EvmService) Start(executeContext *app.ExecuteContext) error {
 	return nil
 }
 
-func (evmService *EvmService)  Stop(executeContext *app.ExecuteContext) error{
+func (evmService *EvmService) Stop(executeContext *app.ExecuteContext) error {
 	return nil
 }
 
-func (evmService *EvmService)  Receive(context actor.Context) { }
+func (evmService *EvmService) Receive(context actor.Context) {}
 
-func (evmService *EvmService)  Eval(state *vm.State,tx *types.Transaction, header *types.BlockHeader, bc ChainContext, gas uint64, value *big.Int) (ret []byte, gasUsed uint64, failed bool, err error)  {
+func (evmService *EvmService) Eval(state *vm.State, tx *types.Transaction, header *types.BlockHeader, bc ChainContext, gas uint64, value *big.Int) (ret []byte, gasUsed uint64, failed bool, err error) {
 	sender, err := tx.From()
 	if err != nil {
-		return nil, uint64(0),false, err
+		return nil, uint64(0), false, err
 	}
-	contractCreation := tx.To() == nil|| tx.To().IsEmpty()
+	contractCreation := tx.To() == nil || tx.To().IsEmpty()
 
 	// Create a new context to be used in the EVM environment
 	context := NewEVMContext(tx, header, sender, bc)
@@ -89,10 +86,8 @@ func (evmService *EvmService)  Eval(state *vm.State,tx *types.Transaction, heade
 		// sufficient balance to make the transfer happen. The first
 		// balance transfer may never fail.
 		if vmerr == vm.ErrInsufficientBalance {
-			return nil, uint64(0),false, vmerr
+			return nil, uint64(0), false, vmerr
 		}
 	}
 	return ret, gas, vmerr != nil, err
 }
-
-

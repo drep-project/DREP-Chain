@@ -29,8 +29,8 @@ import (
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/pkgs/evm/event"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
-	"github.com/drep-project/drep-chain/rpc"
 	"github.com/drep-project/drep-chain/pkgs/log"
+	"github.com/drep-project/drep-chain/rpc"
 )
 
 // Type determines the kind of filter and is used to put the filter in to

@@ -6,11 +6,11 @@ import (
 
 func (accountService *AccountService) Receive(context actor.Context) {
 	/*
-	routeMsg, ok := context.Message().(*p2pTypes.RouteIn)
-	if !ok {
-		return
-	}
-	switch msg := routeMsg.Detail.(type) {
-	}
+		routeMsg, ok := context.Message().(*p2pTypes.RouteIn)
+		if !ok {
+			return
+		}
+		switch msg := routeMsg.Detail.(type) {
+		}
 	*/
 }

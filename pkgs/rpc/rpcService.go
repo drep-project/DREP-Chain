@@ -9,10 +9,10 @@ import (
 	"strings"
 	"sync"
 
-	"gopkg.in/urfave/cli.v1"
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/rpc"
+	"gopkg.in/urfave/cli.v1"
 )
 
 const (
@@ -24,20 +24,20 @@ type RpcService struct {
 	RestApi       rpc.RestDescription
 	inprocHandler *rpc.Server // In-process RPC request handler to process the API requests
 
-	IpcEndpoint string           // IPC endpoint to listen at (empty = IPC disabled)
-	IpcListener net.Listener     // IPC RPC listener socket to serve API requests
-	IpcHandler  *rpc.Server // IPC RPC request handler to process the API requests
+	IpcEndpoint string       // IPC endpoint to listen at (empty = IPC disabled)
+	IpcListener net.Listener // IPC RPC listener socket to serve API requests
+	IpcHandler  *rpc.Server  // IPC RPC request handler to process the API requests
 
-	HttpEndpoint  string           // HTTP endpoint (interface + port) to listen at (empty = HTTP disabled)
-	HttpWhitelist []string         // HTTP RPC modules to allow through this endpoint
-	HttpListener  net.Listener     // HTTP RPC listener socket to server API requests
-	HttpHandler   *rpc.Server // HTTP RPC request handler to process the API requests
+	HttpEndpoint  string       // HTTP endpoint (interface + port) to listen at (empty = HTTP disabled)
+	HttpWhitelist []string     // HTTP RPC modules to allow through this endpoint
+	HttpListener  net.Listener // HTTP RPC listener socket to server API requests
+	HttpHandler   *rpc.Server  // HTTP RPC request handler to process the API requests
 
-	WsEndpoint string           // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
-	WsListener net.Listener     // Websocket RPC listener socket to server API requests
-	WsHandler  *rpc.Server // Websocket RPC request handler to process the API requests
+	WsEndpoint string       // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
+	WsListener net.Listener // Websocket RPC listener socket to server API requests
+	WsHandler  *rpc.Server  // Websocket RPC request handler to process the API requests
 
-	RestEndpoint   string                       // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
+	RestEndpoint   string              // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
 	RestController *rpc.RestController // Websocket RPC listener socket to server API requests
 
 	lock   sync.RWMutex
@@ -107,7 +107,7 @@ func (rpcService *RpcService) Start(executeContext *app.ExecuteContext) error {
 		return err
 	}
 
-/*
+	/*
 		if err := rpcService.StartRest(rpcService.RestEndpoint,rpcService.RestApi); err != nil {
 			rpcService.StopREST()
 			return err
@@ -127,7 +127,7 @@ func (rpcService *RpcService) Stop(executeContext *app.ExecuteContext) error {
 	return nil
 }
 
-func (rpcService *RpcService) Receive(context actor.Context) { }
+func (rpcService *RpcService) Receive(context actor.Context) {}
 
 //TODO split big rpc to  small controller （HTTP WS IPC REST
 // StartHTTP initializes and starts the HTTP RPC endpoint.
@@ -321,7 +321,7 @@ func (rpcService *RpcService) setHTTP(ctx *cli.Context, homeDir string) {
 
 	if ctx.GlobalIsSet(HTTPPortFlag.Name) {
 		rpcService.Config.HTTPPort = ctx.GlobalInt(HTTPPortFlag.Name)
-	}else{
+	} else {
 		if rpcService.Config.HTTPPort == 0 {
 			rpcService.Config.HTTPPort = rpc.DefaultHTTPPort
 		}

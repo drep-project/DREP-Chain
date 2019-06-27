@@ -25,8 +25,8 @@ import (
 	"testing"
 	"time"
 
-		"github.com/drep-project/drep-chain/crypto"
 	log "github.com/drep-project/dlog"
+	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/network/p2p/enode"
 	"github.com/drep-project/drep-chain/network/p2p/enr"
 	"golang.org/x/crypto/sha3"
@@ -602,7 +602,7 @@ func (c *setupTransport) ReadMsg() (Msg, error) {
 	panic("ReadMsg called on setupTransport")
 }
 
-func newkey() *secp256k1.PrivateKey{
+func newkey() *secp256k1.PrivateKey {
 	key, err := crypto.GenerateKey()
 	if err != nil {
 		panic("couldn't generate key: " + err.Error())

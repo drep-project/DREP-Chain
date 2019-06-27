@@ -1,18 +1,18 @@
 package vm
 
 import (
+	"fmt"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"sync/atomic"
-	"fmt"
 )
 
 type EVMInterpreter struct {
-	IntPool *intPool
-	EVM *EVM
-	JumpTable [256]operation
+	IntPool    *intPool
+	EVM        *EVM
+	JumpTable  [256]operation
 	ReturnData []byte
-	ReadOnly bool
+	ReadOnly   bool
 }
 
 func NewEVMInterpreter(evm *EVM) *EVMInterpreter {
@@ -56,7 +56,6 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 
 	// Reclaim the stack as an int pool when the execution stops
 	defer func() { in.IntPool.put(stack.data...) }()
-
 
 	// The Interpreter main run loop (contextual). This loop runs until either an
 	// explicit STOP, RETURN or SELFDESTRUCT is executed, an error occurred during

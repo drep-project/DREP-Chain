@@ -11,21 +11,21 @@ import (
 type Setup struct {
 	Height uint64
 
-	Msg                  []byte
+	Msg []byte
 }
 
-func(setup *Setup) String(){
+func (setup *Setup) String() {
 	bytes, _ := json.Marshal(setup)
 	fmt.Println(string(bytes))
 }
 
 type Commitment struct {
 	Height uint64
-	BpKey                    *secp256k1.PublicKey
-	Q                    *secp256k1.PublicKey
+	BpKey  *secp256k1.PublicKey
+	Q      *secp256k1.PublicKey
 }
 
-func(commitment *Commitment) String(){
+func (commitment *Commitment) String() {
 	bytes, _ := json.Marshal(commitment)
 	fmt.Println(string(bytes))
 }
@@ -33,23 +33,23 @@ func(commitment *Commitment) String(){
 type Challenge struct {
 	Height uint64
 
-	SigmaPubKey          *secp256k1.PublicKey
-	SigmaQ               *secp256k1.PublicKey
-	R                    []byte
+	SigmaPubKey *secp256k1.PublicKey
+	SigmaQ      *secp256k1.PublicKey
+	R           []byte
 }
 
-func(Challenge *Challenge) String(){
+func (Challenge *Challenge) String() {
 	bytes, _ := json.Marshal(Challenge)
 	fmt.Println(string(bytes))
 }
 
 type Response struct {
 	Height uint64
-	BpKey                 *secp256k1.PublicKey
-	S                     []byte
+	BpKey  *secp256k1.PublicKey
+	S      []byte
 }
 
-func(response *Response) String(){
+func (response *Response) String() {
 	bytes, _ := json.Marshal(response)
 	fmt.Println(string(bytes))
 }
@@ -59,7 +59,8 @@ type Fail struct {
 
 	Reason string
 }
-func(fail *Fail) String(){
+
+func (fail *Fail) String() {
 	bytes, _ := json.Marshal(fail)
 	fmt.Println(string(bytes))
 }
@@ -71,7 +72,7 @@ type IConsenMsg interface {
 
 type ResponseWiteRootMessage struct {
 	types.MultiSignature
-	StateRoot			 []byte  //sencond round  leader should send stateroot, then member verify
+	StateRoot []byte //sencond round  leader should send stateroot, then member verify
 }
 
 func (responseWiteRootMessage *ResponseWiteRootMessage) AsSignMessage() []byte {

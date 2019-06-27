@@ -27,8 +27,8 @@ import (
 	"testing/quick"
 	"time"
 
+	"github.com/drep-project/drep-chain/crypto"
 	"github.com/ethereum/go-ethereum/common"
-		"github.com/drep-project/drep-chain/crypto"
 )
 
 type nullTransport struct{}
@@ -328,7 +328,7 @@ func gen(typ interface{}, rand *rand.Rand) interface{} {
 	return v.Interface()
 }
 
-func newkey() *secp256k1.PrivateKey{
+func newkey() *secp256k1.PrivateKey {
 	key, err := crypto.GenerateKey()
 	if err != nil {
 		panic("couldn't generate key: " + err.Error())

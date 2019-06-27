@@ -1,19 +1,19 @@
 package evm
 
 import (
-	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/pkgs/evm/vm"
-	"github.com/drep-project/drep-chain/pkgs/evm/abi"
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
-	"math/big"
-	"testing"
-	"fmt"
-	"github.com/drep-project/drep-chain/database"
-	"strings"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"github.com/drep-project/drep-chain/app"
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/database"
+	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
+	"github.com/drep-project/drep-chain/pkgs/evm/abi"
+	"github.com/drep-project/drep-chain/pkgs/evm/vm"
+	"math/big"
+	"strings"
+	"testing"
 )
 
 // Execute executes the code using the input as call data during the execution.

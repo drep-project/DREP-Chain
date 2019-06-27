@@ -2,7 +2,7 @@ package console
 
 var Modules = map[string]string{
 	//"account":   Personal_JS,
-	"rpc":        RPC_JS,
+	"rpc": RPC_JS,
 }
 
 const RPC_JS = `

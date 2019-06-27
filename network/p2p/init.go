@@ -13,7 +13,6 @@ var (
 	log = dlog.NewLogger(MODULENAME)
 )
 
-
 func NewLog() *logrus.Entry {
 	return dlog.NewLogger(MODULENAME)
 }

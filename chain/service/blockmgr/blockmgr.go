@@ -53,7 +53,7 @@ type BlockMgr struct {
 	transactionPool *txpool.TransactionPool
 	apis            []app.API
 
-	lock sync.RWMutex
+	lock   sync.RWMutex
 	Config *chainTypes.BlockMgrConfig
 
 	//Events related to sync blocks
@@ -99,7 +99,7 @@ func (blockMgr *BlockMgr) CommandFlags() ([]cli.Command, []cli.Flag) {
 	return nil, []cli.Flag{}
 }
 
-func NewBlockMgr(config *chainTypes.BlockMgrConfig,homeDir string, cs chainservice.ChainServiceInterface, p2pservice p2pService.P2P) *BlockMgr {
+func NewBlockMgr(config *chainTypes.BlockMgrConfig, homeDir string, cs chainservice.ChainServiceInterface, p2pservice p2pService.P2P) *BlockMgr {
 	blockMgr := &BlockMgr{}
 	blockMgr.Config = config
 	blockMgr.ChainService = cs
@@ -148,7 +148,6 @@ func NewBlockMgr(config *chainTypes.BlockMgrConfig,homeDir string, cs chainservi
 	}
 	return blockMgr
 }
-
 
 func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 	blockMgr.Config = DefaultChainConfig
@@ -246,9 +245,10 @@ func (blockMgr *BlockMgr) SendTransaction(tx *chainTypes.Transaction, islocal bo
 	err = blockMgr.transactionPool.AddTransaction(tx, islocal)
 	if err != nil {
 		return err
-	} else {
-		blockMgr.BroadcastTx(chainTypes.MsgTypeTransaction, tx, true)
 	}
+
+	blockMgr.BroadcastTx(chainTypes.MsgTypeTransaction, tx, true)
+
 	return nil
 }
 

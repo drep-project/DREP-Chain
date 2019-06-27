@@ -24,7 +24,7 @@ var (
 )
 
 type LogConfig struct {
-	DataDir     string `json:"-"`
-	LogLevel    int    `json:"logLevel"`
-	Vmodule     string `json:"vmodule,omitempty"`
+	DataDir  string `json:"-"`
+	LogLevel int    `json:"logLevel"`
+	Vmodule  string `json:"vmodule,omitempty"`
 }

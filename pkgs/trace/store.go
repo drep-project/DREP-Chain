@@ -1,13 +1,12 @@
 package trace
 
 import (
-	"github.com/drep-project/drep-chain/crypto"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/crypto"
 )
 
 // IStore determine the interface to be implementation for storage
 type IStore interface {
-
 	InsertRecord(block *chainTypes.Block)
 
 	DelRecord(block *chainTypes.Block)
@@ -18,7 +17,7 @@ type IStore interface {
 
 	GetSendTransactionsByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*chainTypes.RpcTransaction
 
-    GetReceiveTransactionsByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*chainTypes.RpcTransaction
+	GetReceiveTransactionsByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*chainTypes.RpcTransaction
 
 	Close()
 }

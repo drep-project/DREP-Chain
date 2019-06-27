@@ -93,6 +93,7 @@ func TestAddIntevalTX(t *testing.T) {
 		txPool.AddTransaction(tx, true)
 	}
 }
+
 //
 //func TestSyncTx(t *testing.T) {
 //	feed.Send(struct{}{})

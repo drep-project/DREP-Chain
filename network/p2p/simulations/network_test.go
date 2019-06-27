@@ -27,9 +27,9 @@ import (
 	"time"
 
 	log "github.com/drep-project/dlog"
-	"github.com/ethereum/go-ethereum/node"
 	"github.com/drep-project/drep-chain/network/p2p/enode"
 	"github.com/drep-project/drep-chain/network/p2p/simulations/adapters"
+	"github.com/ethereum/go-ethereum/node"
 )
 
 // Tests that a created snapshot with a minimal service only contains the expected connections

@@ -8,9 +8,9 @@ import (
 	"bytes"
 	"crypto/rand"
 	"fmt"
-	"math/big"
-	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/drep-chain/crypto/sha3"
+	"math/big"
 )
 
 // scalarSize is the size of an encoded big endian scalar.

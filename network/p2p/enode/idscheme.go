@@ -87,23 +87,20 @@ func (V4ID) NodeAddr(r *enr.Record) []byte {
 	//math.ReadBits(pubkey.X, buf[:32])
 	//math.ReadBits(pubkey.Y, buf[32:])
 	//return crypto.Keccak256(buf)
-	return  crypto.CompressPubkey(pubkey.secp2561PublicKey())[1:]
+	return crypto.CompressPubkey(pubkey.secp2561PublicKey())[1:]
 }
-
 
 // Secp256k1 is the "secp256k1" key, which holds a public key.
 type Secp256k1 secp256k1.PublicKey
 
-func (v Secp256k1) secp2561PublicKey() *secp256k1.PublicKey{
+func (v Secp256k1) secp2561PublicKey() *secp256k1.PublicKey {
 	pk := (secp256k1.PublicKey)(v)
 	return &pk
 }
 
-
 func (v Secp256k1) ENRKey() string { return "secp256k1" }
 
-
-func init(){
+func init() {
 	binary.ImportCodeC(reflect.TypeOf(Secp256k1{}), &secpPubKeyCodeC{})
 }
 
@@ -111,7 +108,7 @@ type secpPubKeyCodeC struct{}
 
 // Encode encodes a value into the encoder.
 func (c *secpPubKeyCodeC) EncodeTo(e *binary.Encoder, rv reflect.Value) error {
-	pk :=  secp256k1.PublicKey(rv.Interface().(Secp256k1))
+	pk := secp256k1.PublicKey(rv.Interface().(Secp256k1))
 	contents := pk.SerializeCompressed()
 	e.WriteUvarint(uint64(len(contents)))
 	e.Write(contents)
@@ -137,7 +134,6 @@ func (c *secpPubKeyCodeC) DecodeTo(d *binary.Decoder, rv reflect.Value) (err err
 	rv.Set(reflect.ValueOf(val))
 	return nil
 }
-
 
 // EncodeRLP implements rlp.Encoder.
 //func (v Secp256k1) EncodeRLP(w io.Writer) error {

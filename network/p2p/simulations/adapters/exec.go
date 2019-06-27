@@ -37,9 +37,9 @@ import (
 
 	"github.com/docker/docker/pkg/reexec"
 	log "github.com/drep-project/dlog"
-	"github.com/ethereum/go-ethereum/node"
 	"github.com/drep-project/drep-chain/network/p2p"
 	"github.com/drep-project/drep-chain/network/p2p/enode"
+	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/rpc"
 	"golang.org/x/net/websocket"
 )

@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	state                   *State
-	once                    sync.Once
+	state *State
+	once  sync.Once
 )
 
 type State struct {
@@ -24,7 +24,6 @@ func NewState(database *database.Database) *State {
 	}
 }
 
-
 func (s *State) CreateContractAccount(addr crypto.CommonAddress, byteCode []byte) (*chainTypes.Account, error) {
 	account, err := chainTypes.NewContractAccount(addr)
 	if err != nil {
@@ -33,7 +32,6 @@ func (s *State) CreateContractAccount(addr crypto.CommonAddress, byteCode []byte
 	account.Storage.ByteCode = byteCode
 	return account, s.db.PutStorage(account.Address, account.Storage)
 }
-
 
 func (s *State) SubBalance(addr *crypto.CommonAddress, amount *big.Int) error {
 	balance := s.db.GetBalance(addr)
@@ -44,7 +42,7 @@ func (s *State) AddBalance(addr *crypto.CommonAddress, amount *big.Int) error {
 	return s.db.AddBalance(addr, amount)
 }
 
-func (s *State) GetBalance(addr *crypto.CommonAddress,) *big.Int {
+func (s *State) GetBalance(addr *crypto.CommonAddress) *big.Int {
 	return s.db.GetBalance(addr)
 }
 
@@ -56,22 +54,22 @@ func (s *State) GetNonce(addr *crypto.CommonAddress) uint64 {
 	return s.db.GetNonce(addr)
 }
 
-func (s *State) Suicide(addr *crypto.CommonAddress,) error {
+func (s *State) Suicide(addr *crypto.CommonAddress) error {
 	storage := s.db.GetStorage(addr)
 	return s.db.PutStorage(addr, storage)
 }
 
-func (s *State) GetByteCode(addr *crypto.CommonAddress,) crypto.ByteCode {
+func (s *State) GetByteCode(addr *crypto.CommonAddress) crypto.ByteCode {
 	return s.db.GetByteCode(addr)
 }
 
-func (s *State) GetCodeSize(addr crypto.CommonAddress,) int {
+func (s *State) GetCodeSize(addr crypto.CommonAddress) int {
 	byteCode := s.GetByteCode(&addr)
 	return len(byteCode)
 
 }
 
-func (s *State) GetCodeHash(addr crypto.CommonAddress,) crypto.Hash {
+func (s *State) GetCodeHash(addr crypto.CommonAddress) crypto.Hash {
 	return s.db.GetCodeHash(&addr)
 }
 

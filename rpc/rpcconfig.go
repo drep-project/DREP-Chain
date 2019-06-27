@@ -27,47 +27,47 @@ type HTTPTimeouts struct {
 	// decisions on each request body's acceptable deadline or
 	// upload rate, most users will prefer to use
 	// ReadHeaderTimeout. It is valid to use them both.
-	ReadTimeout time.Duration	`json:"readTimeout,omitempty"`
+	ReadTimeout time.Duration `json:"readTimeout,omitempty"`
 
 	// WriteTimeout is the maximum duration before timing out
 	// writes of the response. It is reset whenever a new
 	// request's header is read. Like ReadTimeout, it does not
 	// let Handlers make decisions on a per-request basis.
-	WriteTimeout time.Duration	`json:"writeTimeout,omitempty"`
+	WriteTimeout time.Duration `json:"writeTimeout,omitempty"`
 
 	// IdleTimeout is the maximum amount of time to wait for the
 	// next request when keep-alives are enabled. If IdleTimeout
 	// is zero, the value of ReadTimeout is used. If both are
 	// zero, ReadHeaderTimeout is used.
-	IdleTimeout time.Duration	`json:"idleTimeout,omitempty"`
+	IdleTimeout time.Duration `json:"idleTimeout,omitempty"`
 }
 
 type RpcConfig struct {
 
 	// IPCEnabled
-	IPCEnabled bool 	`json:"ipcEnabled"`
+	IPCEnabled bool `json:"ipcEnabled"`
 
 	// IPCPath is the requested location to place the IPC endpoint. If the path is
 	// a simple file name, it is placed inside the data directory (or on the root
 	// pipe path on Windows), whereas if it's a resolvable path name (absolute or
 	// relative), then that specific path is enforced. An empty path disables IPC.
-	IPCPath string 		`json:"ipcPath,omitempty"`
+	IPCPath string `json:"ipcPath,omitempty"`
 
 	// HTTPEnabled
-	HTTPEnabled bool 	`json:"httpEnabled"`
+	HTTPEnabled bool `json:"httpEnabled"`
 	// HTTPHost is the host interface on which to start the HTTP RPC server. If this
 	// field is empty, no HTTP API endpoint will be started.
-	HTTPHost string 	`json:"httpHost,omitempty"`
+	HTTPHost string `json:"httpHost,omitempty"`
 
 	// HTTPPort is the TCP port number on which to start the HTTP RPC server. The
 	// default zero value is/ valid and will pick a port number randomly (useful
 	// for ephemeral nodes).
-	HTTPPort int 		`json:"httpPort,omitempty"`
+	HTTPPort int `json:"httpPort,omitempty"`
 
 	// HTTPCors is the Cross-Origin Resource Sharing header to send to requesting
 	// clients. Please be aware that CORS is a browser enforced security, it's fully
 	// useless for custom HTTP clients.
-	HTTPCors []string 	`json:"httpCors,omitempty"`
+	HTTPCors []string `json:"httpCors,omitempty"`
 
 	// HTTPVirtualHosts is the list of virtual hostnames which are allowed on incoming requests.
 	// This is by default {'localhost'}. Using this prevents attacks like

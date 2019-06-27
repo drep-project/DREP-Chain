@@ -2,11 +2,11 @@ package log
 
 import (
 	"errors"
-	"github.com/shiena/ansicolor"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/drep-chain/app"
+	"github.com/shiena/ansicolor"
 	"github.com/sirupsen/logrus"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"gopkg.in/urfave/cli.v1"
 	"os"
@@ -27,7 +27,7 @@ var (
 
 type LogService struct {
 	Config *LogConfig
-	apis []app.API
+	apis   []app.API
 }
 
 func (logService *LogService) Name() string {
@@ -59,19 +59,19 @@ func (logService *LogService) Init(executeContext *app.ExecuteContext) error {
 		Filename:   baseLogPath,
 		MaxSize:    1, // megabytes
 		MaxBackups: 300,
-		MaxAge:     28, //days
+		MaxAge:     28,    //days
 		Compress:   false, // disabled by default
 	}
 	logrus.SetFormatter(&NullFormat{})
 	textFormat := &prefixed.TextFormatter{
-		FullTimestamp: true,
-		ForceColors: true,
-		ForceFormatting:true,
+		FullTimestamp:   true,
+		ForceColors:     true,
+		ForceFormatting: true,
 	}
 	logrus.SetOutput(ansicolor.NewAnsiColorWriter(os.Stdout))
 	logrus.SetLevel(logrus.TraceLevel)
 	mHook := NewMyHook(wirter1, &logrus.JSONFormatter{}, textFormat)
-	lv, err :=  parserLevel(logService.Config.LogLevel)
+	lv, err := parserLevel(logService.Config.LogLevel)
 	if err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func (logService *LogService) Init(executeContext *app.ExecuteContext) error {
 			Public:    true,
 		},
 	}
-    return nil
+	return nil
 	//return dlog.SetUp(logService.Config.DataDir, logService.Config.LogLevel, logService.Config.Vmodule, logService.Config.BacktraceAt)
 }
 
@@ -135,10 +135,9 @@ func (logService *LogService) setLogConfig(ctx *cli.Context, homeDir string) {
 
 func NewLogger(moduleName string) *logrus.Entry {
 	log := logrus.WithFields(logrus.Fields{
-		"prefix":      moduleName,
-		MODULE: moduleName,
+		"prefix": moduleName,
+		MODULE:   moduleName,
 	})
 	loggers[moduleName] = log
 	return log
 }
-

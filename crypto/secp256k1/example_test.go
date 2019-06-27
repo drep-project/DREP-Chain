@@ -6,9 +6,9 @@
 package secp256k1_test
 
 import (
-	"github.com/drep-project/drep-chain/crypto/sha3"
 	"encoding/hex"
 	"fmt"
+	"github.com/drep-project/drep-chain/crypto/sha3"
 
 	"github.com/decred/dcrd/dcrec/secp256k1"
 )

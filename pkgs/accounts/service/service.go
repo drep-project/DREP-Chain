@@ -31,12 +31,11 @@ var (
 	}
 
 	DefaultConfig = &accountTypes.Config{
-		Enable: true,
-		Type:"filestore",
-		KeyStoreDir:"keystore",
+		Enable:      true,
+		Type:        "filestore",
+		KeyStoreDir: "keystore",
 	}
 )
-
 
 // AccountService
 type AccountService struct {

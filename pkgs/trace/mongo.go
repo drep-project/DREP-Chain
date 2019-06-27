@@ -17,11 +17,11 @@ type MongogDbStore struct {
 	client    *mongo.Client
 	db        *mongo.Database
 	txCol     *mongo.Collection
-	blockCol *mongo.Collection
+	blockCol  *mongo.Collection
 	headerCol *mongo.Collection
 
 	viewTxCol     *mongo.Collection
-	viewBlockCol *mongo.Collection
+	viewBlockCol  *mongo.Collection
 	viewHeaderCol *mongo.Collection
 }
 
@@ -34,11 +34,11 @@ func NewMongogDbStore(url string) (*MongogDbStore, error) {
 	var err error
 	store.client, err = mongo.Connect(ctx, options.Client().ApplyURI(url))
 	if err != nil {
-	 	return  nil, err
+		return nil, err
 	}
 	err = store.client.Ping(ctx, nil)
 	if err != nil {
-		return  nil, err
+		return nil, err
 	}
 	store.db = store.client.Database("drep")
 	store.txCol = store.db.Collection("tx")

@@ -135,7 +135,7 @@ func UnmarshalFixedUnprefixedText(typname string, input, out []byte) error {
 // marshaled without error.
 type Big mathBig.Int
 
-func (m *Big)SetMathBig(v mathBig.Int){
+func (m *Big) SetMathBig(v mathBig.Int) {
 	*m = Big(v)
 }
 
@@ -145,7 +145,7 @@ func (m Big) MarshalBSONValue() (bsontype.Type, []byte, error) {
 
 func (b *Big) UnmarshalBSON(data []byte) error {
 	str, _, success := bsoncore.ReadString(data)
-	if !success  {
+	if !success {
 		return errors.New("read bson string error")
 	}
 	bigInt := (*mathBig.Int)(b)

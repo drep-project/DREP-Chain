@@ -72,7 +72,7 @@ func recoverNodeKey(hash, sig []byte) (key encPubkey, err error) {
 	tempKey := key[:]
 	copy(tempKey, pubkey)
 	fmt.Println("recoverNodeKey:", key)
-	return  key, nil
+	return key, nil
 }
 
 func wrapNode(n *enode.Node) *node {

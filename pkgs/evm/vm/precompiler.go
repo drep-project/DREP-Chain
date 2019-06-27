@@ -6,8 +6,8 @@ import (
 
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/crypto/bn256"
+	"github.com/drep-project/drep-chain/crypto/sha3"
 )
 
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
@@ -77,7 +77,7 @@ type sha256hash struct{}
 // This method does not require any overflow checking as the input size gas costs
 // required for anything significant is so high it's impossible to pay for.
 func (c *sha256hash) RequiredGas(input []byte) uint64 {
-	return uint64(len(input) + 31) / 32 * Sha256PerWordGas + Sha256BaseGas
+	return uint64(len(input)+31)/32*Sha256PerWordGas + Sha256BaseGas
 }
 func (c *sha256hash) Run(input []byte) ([]byte, error) {
 	h := sha3.Keccak256(input)
@@ -92,7 +92,7 @@ type dataCopy struct{}
 // This method does not require any overflow checking as the input size gas costs
 // required for anything significant is so high it's impossible to pay for.
 func (c *dataCopy) RequiredGas(input []byte) uint64 {
-	return uint64(len(input) + 31) / 32 * IdentityPerWordGas + IdentityBaseGas
+	return uint64(len(input)+31)/32*IdentityPerWordGas + IdentityBaseGas
 }
 func (c *dataCopy) Run(in []byte) ([]byte, error) {
 	return in, nil
@@ -180,7 +180,7 @@ func (c *bigModExp) Run(input []byte) ([]byte, error) {
 	var (
 		base = new(big.Int).SetBytes(common.GetData(input, 0, baseLen))
 		exp  = new(big.Int).SetBytes(common.GetData(input, baseLen, expLen))
-		mod  = new(big.Int).SetBytes(common.GetData(input, baseLen + expLen, modLen))
+		mod  = new(big.Int).SetBytes(common.GetData(input, baseLen+expLen, modLen))
 	)
 	if mod.BitLen() == 0 {
 		// Modulo 0 is undefined, return zero
@@ -265,7 +265,7 @@ type bn256Pairing struct{}
 
 // RequiredGas returns the gas required to execute the pre-compiled contract.
 func (c *bn256Pairing) RequiredGas(input []byte) uint64 {
-	return Bn256PairingBaseGas + uint64(len(input) / 192) * Bn256PairingPerPointGas
+	return Bn256PairingBaseGas + uint64(len(input)/192)*Bn256PairingPerPointGas
 }
 
 func (c *bn256Pairing) Run(input []byte) ([]byte, error) {

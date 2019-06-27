@@ -136,7 +136,7 @@ func TestPubkeyRandom(t *testing.T) {
 		pubkey2, err := DecompressPubkey([]byte(c))
 		//pubkey2, err := DecompressPubkey(CompressPubkey(key.PubKey()))
 		if err != nil {
-			fmt.Println("iteration:", i,j, err)
+			fmt.Println("iteration:", i, j, err)
 			continue
 		}
 		if !reflect.DeepEqual(key.PubKey(), pubkey2) {

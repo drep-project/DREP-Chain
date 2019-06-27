@@ -2,8 +2,8 @@ package vm
 
 import (
 	"fmt"
-	"math/big"
 	"github.com/drep-project/drep-chain/crypto"
+	"math/big"
 )
 
 // destinations stores one map per contract (keyed by hash of code).
@@ -12,7 +12,7 @@ import (
 type destinations map[crypto.Hash]bitvec
 
 func NewDest() destinations {
-	dest := destinations(make(map[crypto.Hash] bitvec))
+	dest := destinations(make(map[crypto.Hash]bitvec))
 	return dest
 }
 
@@ -85,4 +85,3 @@ func codeBitmap(code []byte) bitvec {
 	}
 	return bits
 }
-

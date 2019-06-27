@@ -2,13 +2,13 @@ package main
 
 import (
 	"fmt"
-	chainService "github.com/drep-project/drep-chain/chain/service/chainservice"
 	blockmgr "github.com/drep-project/drep-chain/chain/service/blockmgr"
+	chainService "github.com/drep-project/drep-chain/chain/service/chainservice"
 	p2pService "github.com/drep-project/drep-chain/network/service"
 	accountService "github.com/drep-project/drep-chain/pkgs/accounts/service"
 	consensusService "github.com/drep-project/drep-chain/pkgs/consensus/service"
-	traceService "github.com/drep-project/drep-chain/pkgs/trace"
 	logService "github.com/drep-project/drep-chain/pkgs/log"
+	traceService "github.com/drep-project/drep-chain/pkgs/trace"
 	"io"
 	"os"
 	path2 "path"
@@ -16,8 +16,7 @@ import (
 	"strings"
 )
 
-const codeFile = 
-`
+const codeFile = `
 var Method = require('../method');
 var formatters = require('../formatters');
 var utils = require('../../utils/utils');
@@ -43,76 +42,77 @@ module.exports = %s;
 
 var (
 	inputFormatMap = map[string]string{
-		"common.Big": "utils.fromDecimal",
-		"int64": "utils.fromDecimal",
-		"uint64": "utils.fromDecimal",
-		"crypto.CommonAddress":"formatters.inputAddressFormatter",
+		"common.Big":           "utils.fromDecimal",
+		"int64":                "utils.fromDecimal",
+		"uint64":               "utils.fromDecimal",
+		"crypto.CommonAddress": "formatters.inputAddressFormatter",
 	}
 	formatMap = map[string]string{
 		"big.Int": "formatters.outputBigNumberFormatter",
-		"int64":"utils.toDecimal",
-		"MeInfo":"formatters.meInfoFormatter",
-		"Storage":"formatters.storageFormatter",
+		"int64":   "utils.toDecimal",
+		"MeInfo":  "formatters.meInfoFormatter",
+		"Storage": "formatters.storageFormatter",
 	}
 )
+
 func Capitalize(str string) string {
-    var upperStr string
-    vv := []rune(str)
-    for i := 0; i < len(vv); i++ {
-        if i == 0 {
-            if vv[i] >= 97-32 && vv[i] <= 122-32 {
-                vv[i] += 32
-                upperStr += string(vv[i])
-            } else {
-                fmt.Println("Not begins with lowercase letter,")
-                return str
-            }
-        } else {
-            upperStr += string(vv[i])
-        }
-    }
-    return upperStr
+	var upperStr string
+	vv := []rune(str)
+	for i := 0; i < len(vv); i++ {
+		if i == 0 {
+			if vv[i] >= 97-32 && vv[i] <= 122-32 {
+				vv[i] += 32
+				upperStr += string(vv[i])
+			} else {
+				fmt.Println("Not begins with lowercase letter,")
+				return str
+			}
+		} else {
+			upperStr += string(vv[i])
+		}
+	}
+	return upperStr
 }
 
 func main() {
 
-	output  := "std"
-	if len(os.Args) >0 {
+	output := "std"
+	if len(os.Args) > 0 {
 		output = "file"
 	}
 
-	vType:=reflect.TypeOf(&p2pService.P2PApi{})
-	resolveType(output,"p2p", "P2P", "p2p",vType)
+	vType := reflect.TypeOf(&p2pService.P2PApi{})
+	resolveType(output, "p2p", "P2P", "p2p", vType)
 
-	vType=reflect.TypeOf(&accountService.AccountApi{})
-	resolveType(output,"account", "ACCOUNT", "account",vType)
+	vType = reflect.TypeOf(&accountService.AccountApi{})
+	resolveType(output, "account", "ACCOUNT", "account", vType)
 
-	vType=reflect.TypeOf(&blockmgr.BlockMgrApi{})
-		resolveType(output,"blockmgr", "BLOCKMGR", "blockmgr",vType)
+	vType = reflect.TypeOf(&blockmgr.BlockMgrApi{})
+	resolveType(output, "blockmgr", "BLOCKMGR", "blockmgr", vType)
 
-	vType=reflect.TypeOf(&logService.LogApi{})
-	resolveType(output,"log", "LOG", "log",vType)
+	vType = reflect.TypeOf(&logService.LogApi{})
+	resolveType(output, "log", "LOG", "log", vType)
 
-	vType=reflect.TypeOf(&chainService.ChainApi{})
-	resolveType(output,"chain", "CHAIN", "chain",vType)
+	vType = reflect.TypeOf(&chainService.ChainApi{})
+	resolveType(output, "chain", "CHAIN", "chain", vType)
 
-	vType=reflect.TypeOf(&consensusService.ConsensusApi{})
-	resolveType(output,"consensus", "CONSENSUS", "consensus",vType)
+	vType = reflect.TypeOf(&consensusService.ConsensusApi{})
+	resolveType(output, "consensus", "CONSENSUS", "consensus", vType)
 
-	vType=reflect.TypeOf(&traceService.TraceApi{})
-	resolveType(output,"trace", "TRACE", "trace",vType)
+	vType = reflect.TypeOf(&traceService.TraceApi{})
+	resolveType(output, "trace", "TRACE", "trace", vType)
 }
 
-func resolveType(output string, fileName, className string,prefix string, vType reflect.Type){
-	fmt.Println("**********"+ fileName +"***************")
-	code := generateCode(className, prefix,vType)
+func resolveType(output string, fileName, className string, prefix string, vType reflect.Type) {
+	fmt.Println("**********" + fileName + "***************")
+	code := generateCode(className, prefix, vType)
 	if output == "std" {
 		fmt.Println(code)
-	}else{
-		WriteFile(fileName+".js",code)
+	} else {
+		WriteFile(fileName+".js", code)
 	}
 }
-func generateCode(className string,prefix string, vType reflect.Type) string{
+func generateCode(className string, prefix string, vType reflect.Type) string {
 	methods := vType.NumMethod()
 
 	template := `
@@ -126,9 +126,9 @@ var %s = new Method({
 	code := ""
 	methodNames := ""
 
-	for i:= 0 ;i < methods;i++{
+	for i := 0; i < methods; i++ {
 		m := vType.Method(i)
-		numIn:=m.Func.Type().NumIn()
+		numIn := m.Func.Type().NumIn()
 		oNmae := m.Name
 		methodName := Capitalize(oNmae)
 		name := ""
@@ -137,7 +137,7 @@ var %s = new Method({
 			if resultType.Kind() == reflect.Ptr {
 				resultType = resultType.Elem()
 				name = resultType.Name()
-			}else{
+			} else {
 				name = resultType.Name()
 			}
 		}
@@ -148,46 +148,46 @@ var %s = new Method({
 
 		inputFormat := ""
 		if m.Func.Type().NumIn() > 1 {
-			for j:=1;j <m.Func.Type().NumIn();j++{
+			for j := 1; j < m.Func.Type().NumIn(); j++ {
 				var inputType = m.Func.Type().In(j)
 				inputTypeName := ""
 				if inputType.Kind() == reflect.Ptr {
 					inputType = inputType.Elem()
 					inputTypeName = inputType.String()
-				}else{
+				} else {
 					inputTypeName = inputType.String()
 				}
 				if formater, ok := inputFormatMap[inputTypeName]; ok {
-					inputFormat = inputFormat + formater +", "
-				}else{
-					inputFormat = inputFormat  +"null, "
+					inputFormat = inputFormat + formater + ", "
+				} else {
+					inputFormat = inputFormat + "null, "
 				}
 			}
-			if len(inputFormat) >0 {
+			if len(inputFormat) > 0 {
 				inputFormat = inputFormat[:len(inputFormat)-2]
 			}
 		}
 
-		code += fmt.Sprintf(template,methodName, methodName,prefix, methodName,numIn-1,outputFormater, inputFormat)
-		methodNames += methodName +","
+		code += fmt.Sprintf(template, methodName, methodName, prefix, methodName, numIn-1, outputFormater, inputFormat)
+		methodNames += methodName + ","
 	}
-	methodNames = strings.Trim(methodNames,",")
+	methodNames = strings.Trim(methodNames, ",")
 
 	codestr := fmt.Sprintf(codeFile, className, code, methodNames, className)
 	return codestr
 }
 
-func WriteFile(name,content string) {
+func WriteFile(name, content string) {
 	rootDir := getCurPath()
 	path := path2.Join(rootDir, name)
-    fileObj,err := os.OpenFile(path,os.O_RDWR|os.O_CREATE,0644)
-    if err != nil {
-        fmt.Println("Failed to open the file",err.Error())
-        os.Exit(2)
-    }
-    if  _,err := io.WriteString(fileObj,content);err == nil {
-        fmt.Println("Successful appending to the file with os.OpenFile and io.WriteString.")
-    }
+	fileObj, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		fmt.Println("Failed to open the file", err.Error())
+		os.Exit(2)
+	}
+	if _, err := io.WriteString(fileObj, content); err == nil {
+		fmt.Println("Successful appending to the file with os.OpenFile and io.WriteString.")
+	}
 }
 
 func getCurPath() string {

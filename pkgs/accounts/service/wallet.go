@@ -21,6 +21,7 @@ const (
 	LOCKED   = iota //locked
 	UNLOCKED        //unlocked
 )
+
 //Wallet is used to manage private keys, build simple transactions and other functions.
 type Wallet struct {
 	cacheStore *accountsComponent.CacheStore
@@ -53,10 +54,9 @@ func (wallet *Wallet) Open(password string) error {
 		store = accountsComponent.NewDbStore(wallet.config.KeyStoreDir)
 	} else if wallet.config.Type == "memorystore" {
 		store = accountsComponent.NewMemoryStore()
-	}else{
+	} else {
 		store = accountsComponent.NewFileStore(wallet.config.KeyStoreDir)
 	}
-
 
 	accountCacheStore, err := accountsComponent.NewCacheStore(store, cryptedPassword)
 	if err != nil {

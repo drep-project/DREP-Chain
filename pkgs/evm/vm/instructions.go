@@ -18,13 +18,12 @@ package vm
 
 import (
 	"errors"
+	"fmt"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/sha3"
-	"fmt"
 	"math/big"
 )
-
 
 func opAdd(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	x, y := stack.pop(), stack.peek()
@@ -558,10 +557,10 @@ func opBlockhash(pc *uint64, interpreter *EVMInterpreter, contract *Contract, me
 func opCoinbase(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	return nil, errors.New("coin base not support")
 
-//	x := interpreter.EVM.CoinBase.Big()
+	//	x := interpreter.EVM.CoinBase.Big()
 	//stack.push(interpreter.evm.Coinbase.Big())
-//	stack.push(x)
-//	return nil, nil
+	//	stack.push(x)
+	//	return nil, nil
 }
 
 func opTimestamp(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
@@ -706,7 +705,7 @@ func opCreate(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memor
 		value        = stack.pop()
 		offset, size = stack.pop(), stack.pop()
 		//input        = memory.Get(offset.Int64(), size.Int64())
-		gas          = contract.Gas
+		gas = contract.Gas
 	)
 	//if interpreter.evm.ChainConfig().IsEIP150(interpreter.evm.BlockNumber) {
 	//	gas -= gas / 64
@@ -723,7 +722,7 @@ func opCreate(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memor
 		stack.push(interpreter.IntPool.getZero())
 	} else {
 		//stack.push(addr.Big())
-		x:= addr.Big()
+		x := addr.Big()
 		stack.push(x)
 	}
 	contract.Gas += returnGas

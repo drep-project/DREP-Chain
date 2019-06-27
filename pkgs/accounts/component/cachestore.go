@@ -10,9 +10,9 @@ import (
 // accountCache This is used for buffering real storage and upper applications to speed up reading.
 // TODO If the write speed becomes a bottleneck, write caching can be added
 type CacheStore struct {
-	store       KeyStore //  This points to a de facto storage.
-	nodes       []*chainTypes.Node
-	rlock       sync.RWMutex
+	store KeyStore //  This points to a de facto storage.
+	nodes []*chainTypes.Node
+	rlock sync.RWMutex
 }
 
 // NewCacheStore receive an path and password as argument

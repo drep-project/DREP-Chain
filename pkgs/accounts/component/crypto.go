@@ -2,35 +2,35 @@ package component
 
 import (
 	"bytes"
+	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"github.com/drep-project/drep-chain/app"
-	crypto2 "github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/sha3"
-	"crypto/aes"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	crypto2 "github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/ethereum/go-ethereum/crypto"
 	"golang.org/x/crypto/scrypt"
 	"io"
 )
 
 type CryptedNode struct {
-	Version   			int 				  `json:"version"`
+	Version int `json:"version"`
 
-	Data 				[]byte 				  `json:"-"`
+	Data []byte `json:"-"`
 
-	CipherText 			[]byte          		`json:"cipherText"`
-	ChainId    			app.ChainIdType 		`json:"chainId"`
-	ChainCode  			[]byte          		`json:"chainCode"`
+	CipherText []byte          `json:"cipherText"`
+	ChainId    app.ChainIdType `json:"chainId"`
+	ChainCode  []byte          `json:"chainCode"`
 
-	Cipher 				string				  `json:"cipher"`
-	CipherParams   		CipherParams		  `json:"cipherParams"`
+	Cipher       string       `json:"cipher"`
+	CipherParams CipherParams `json:"cipherParams"`
 
-	KDFParams       	ScryptParams		  `json:"KDFParams"`
-	MAC  				[]byte				  `json:"mac"`
+	KDFParams ScryptParams `json:"KDFParams"`
+	MAC       []byte       `json:"mac"`
 }
 
 type CipherParams struct {
@@ -38,11 +38,11 @@ type CipherParams struct {
 }
 
 type ScryptParams struct {
-    N  		int		`json:"n"`
-	R       int		`json:"r"`
-	P       int		`json:"p"`
-	Dklen   int		`json:"dklen"`
-	Salt 	[]byte 	`json:"salt"`
+	N     int    `json:"n"`
+	R     int    `json:"r"`
+	P     int    `json:"p"`
+	Dklen int    `json:"dklen"`
+	Salt  []byte `json:"salt"`
 }
 
 // Encryptdata encrypts the data given as 'data' with the password 'auth'.
@@ -125,19 +125,19 @@ func BytesToCryptoNode(data []byte, auth string) (node *chainTypes.Node, errRef 
 	}
 
 	/*
-	node2, errRef := EncryptData(data, []byte(auth),StandardScryptN, StandardScryptP)
-	if errRef != nil {
-		return
-	}
+		node2, errRef := EncryptData(data, []byte(auth),StandardScryptN, StandardScryptP)
+		if errRef != nil {
+			return
+		}
 	*/
 	privD, errRef := DecryptData(*cryptoNode, auth)
-	priv,pub := secp256k1.PrivKeyFromScalar(privD)
+	priv, pub := secp256k1.PrivKeyFromScalar(privD)
 	addr := crypto2.PubKey2Address(pub)
-	node =  &chainTypes.Node{
-		Address  : &addr,
-		PrivateKey :priv,
-		ChainId    :cryptoNode.ChainId,
-		ChainCode  :cryptoNode.ChainCode,
+	node = &chainTypes.Node{
+		Address:    &addr,
+		PrivateKey: priv,
+		ChainId:    cryptoNode.ChainId,
+		ChainCode:  cryptoNode.ChainCode,
 	}
 	return
 }

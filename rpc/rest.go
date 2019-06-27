@@ -3,8 +3,8 @@ package rpc
 import (
 	"flag"
 	"fmt"
-	"reflect"
 	"github.com/astaxie/beego"
+	"reflect"
 )
 
 var mappingMethodMap = map[string]string{
@@ -36,7 +36,6 @@ func StartRest(apiDesc RestDescription) *RestController {
 		api: apiDesc.Api,
 	}
 }
-
 
 type RestDescription struct {
 	Api reflect.Value

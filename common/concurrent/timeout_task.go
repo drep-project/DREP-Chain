@@ -1,19 +1,19 @@
 package concurrent
 
 import (
-    "time"
-    "errors"
+	"errors"
+	"time"
 )
 
 func ExecuteTimeoutTask(f func() interface{}, duration time.Duration) (interface{}, error) {
-    ch := make(chan interface{}, 1)
-    go func() {
-        ch <- f()
-    }()
-    select {
-    case m := <- ch:
-        return m,nil
-    case <-time.After(duration):
-        return nil, errors.New("timeout")
-    }
+	ch := make(chan interface{}, 1)
+	go func() {
+		ch <- f()
+	}()
+	select {
+	case m := <-ch:
+		return m, nil
+	case <-time.After(duration):
+		return nil, errors.New("timeout")
+	}
 }

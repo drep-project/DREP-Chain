@@ -163,7 +163,7 @@ func (leader *Leader) OnCommit(peer *consensusTypes.PeerInfo, commit *consensusT
 		return
 	}
 	if leader.currentHeight != commit.Height {
-		log.WithField("current height", leader.currentHeight ).WithField("receive message", commit).Debug("wrong commit message state")
+		log.WithField("current height", leader.currentHeight).WithField("receive message", commit).Debug("wrong commit message state")
 		return
 	}
 

@@ -24,11 +24,11 @@ var (
 
 // CliService provides an interactive command line window
 type CliService struct {
-	config *cliTypes.Config
-	Log *log.LogService `service:"log"`
-	Blockmgr *blockmgr.BlockMgr `service:"blockmgr"`
+	config         *cliTypes.Config
+	Log            *log.LogService                `service:"log"`
+	Blockmgr       *blockmgr.BlockMgr             `service:"blockmgr"`
 	AccountService *accountService.AccountService `service:"accounts"`
-	RpcService *rpc2.RpcService `service:"rpc"`
+	RpcService     *rpc2.RpcService               `service:"rpc"`
 }
 
 // Name name
@@ -84,7 +84,7 @@ func (cliService *CliService) Start(executeContext *app.ExecuteContext) error {
 		return cliService.localConsole(executeContext)
 	} else if executeContext.Cli.Command.Name == "attach" {
 		return cliService.remoteConsole(executeContext)
-	} else{
+	} else {
 		return cliService.drep(executeContext)
 	}
 }
@@ -94,7 +94,7 @@ func (cliService *CliService) Stop(executeContext *app.ExecuteContext) error {
 	return nil
 }
 
-func (cliService *CliService) Receive(context actor.Context) { }
+func (cliService *CliService) Receive(context actor.Context) {}
 
 func (cliService *CliService) localConsole(executeContext *app.ExecuteContext) error {
 	if !cliService.RpcService.Config.IPCEnabled {
@@ -172,6 +172,6 @@ func (cliService *CliService) remoteConsole(executeContext *app.ExecuteContext) 
 // It creates a default node based on the command line arguments and runs it in
 // blocking mode, waiting for it to be shut down.
 func (cliService *CliService) drep(executeContext *app.ExecuteContext) error {
-	<- executeContext.Quit
+	<-executeContext.Quit
 	return nil
 }

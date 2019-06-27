@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func generatorChain(t *testing.T,db *database.Database) []*types.Block {
+func generatorChain(t *testing.T, db *database.Database) []*types.Block {
 
 	privKey, _ := crypto.GenerateKey(rand.Reader)
 	ds := database.NewDatabaseService(db)
@@ -24,7 +24,7 @@ func generatorChain(t *testing.T,db *database.Database) []*types.Block {
 
 	bm := NewBlockMgr(DefaultChainConfig, "./", cs, &p2pServiceMock{})
 
-	blks := make([]*types.Block,0)
+	blks := make([]*types.Block, 0)
 
 	for i := 0; i < 10; i++ {
 		block, _, err := bm.GenerateBlock(db, privKey.PubKey())

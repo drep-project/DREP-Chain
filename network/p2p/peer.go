@@ -193,7 +193,7 @@ func newPeer(conn *conn, protocols []Protocol) *Peer {
 		disc:         make(chan DiscReason),
 		protoErr:     make(chan error, len(protomap)+1), // protocols + pingLoop
 		closed:       make(chan struct{}),
-		log:          xx.Logger ,
+		log:          xx.Logger,
 	}
 	return p
 }

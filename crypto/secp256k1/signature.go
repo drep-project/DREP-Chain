@@ -43,8 +43,8 @@ func NewSignature(r, s *big.Int) *Signature {
 
 // Signature is a type representing an ecdsa signature.
 type Signature struct {
-    R *big.Int
-    S *big.Int
+	R *big.Int
+	S *big.Int
 }
 
 // Serialize returns the ECDSA signature in the more strict DER format.  Note
@@ -424,7 +424,6 @@ func RecoverCompact(signature, hash []byte) (*PublicKey, bool, error) {
 	return key, ((signature[0] - 27) & 4) == 4, nil
 }
 
-
 func RecoverSig(signature []byte) *Signature {
 	bitlen := (S256().BitSize + 7) / 8
 	return &Signature{
@@ -432,6 +431,7 @@ func RecoverSig(signature []byte) *Signature {
 		S: new(big.Int).SetBytes(signature[bitlen+1:]),
 	}
 }
+
 // signRFC6979 generates a deterministic ECDSA signature according to RFC 6979
 // and BIP 62.
 func signRFC6979(privateKey *PrivateKey, hash []byte) (*Signature, error) {

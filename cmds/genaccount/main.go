@@ -74,7 +74,7 @@ func gen(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		instanceDir := filepath.Join(path, nodeItems[i].Name,"drepnode")
+		instanceDir := filepath.Join(path, nodeItems[i].Name, "drepnode")
 		nodePrivateKey := GeneratePrivateKey(instanceDir)
 		node := enode.NewV4(nodePrivateKey.PubKey(), ip, nodeItems[i].Port, nodeItems[i].Port)
 		bootsNodes = append(bootsNodes, node)

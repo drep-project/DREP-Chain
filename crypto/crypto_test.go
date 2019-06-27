@@ -262,7 +262,7 @@ func TestPubkey(t *testing.T) {
 	pk, err := DecompressPubkey(b)
 	//crypto.FromECDSAPub(&key)[1:]
 	c := PubKey2Address(pk)
-	bb,_ := c.MarshalText()
+	bb, _ := c.MarshalText()
 	fmt.Println(string(bb))
 	c2 := &CommonAddress{}
 	err = c2.UnmarshalJSON(bb)

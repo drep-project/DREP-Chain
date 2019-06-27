@@ -18,7 +18,7 @@ func IsDirExists(path string) bool {
 
 	panic("not reached")
 }
-func EnsureFile(filePath string)  {
+func EnsureFile(filePath string) {
 	dir := filepath.Dir(filePath)
 	EnsureDir(dir)
 	if !IsFileExists(filePath) {
@@ -26,7 +26,7 @@ func EnsureFile(filePath string)  {
 	}
 }
 
-func EnsureDir(dir string)  {
+func EnsureDir(dir string) {
 	if !IsDirExists(dir) {
 		os.MkdirAll(dir, os.ModePerm)
 	}

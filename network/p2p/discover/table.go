@@ -314,9 +314,9 @@ func (tab *Table) findnode(n *node, targetKey encPubkey, reply chan<- []*node) {
 	} else if err != nil || len(r) == 0 {
 		fails++
 		tab.db.UpdateFindFails(n.ID(), n.IP(), fails)
-		log.WithField( "id", n.ID()).WithField("failcount", fails).WithField("err", err).Trace("Findnode failed")
+		log.WithField("id", n.ID()).WithField("failcount", fails).WithField("err", err).Trace("Findnode failed")
 		if fails >= maxFindnodeFailures {
-			log.WithField( "id", n.ID()).WithField("failcount", fails).Trace("Too many findnode failures, dropping")
+			log.WithField("id", n.ID()).WithField("failcount", fails).Trace("Too many findnode failures, dropping")
 			tab.delete(n)
 		}
 	} else if fails > 0 {
@@ -464,8 +464,8 @@ func (tab *Table) doRevalidate(done chan<- struct{}) {
 	if err == nil {
 		// The node responded, move it to the front.
 		last.livenessChecks++
-		log.WithField( "b", bi).
-			WithField( "id", last.ID()).
+		log.WithField("b", bi).
+			WithField("id", last.ID()).
 			WithField("checks", last.livenessChecks).
 			Debug("Revalidated node")
 		tab.bumpInBucket(b, last)
@@ -474,17 +474,17 @@ func (tab *Table) doRevalidate(done chan<- struct{}) {
 	// No reply received, pick a replacement or delete the node if there aren't
 	// any replacements.
 	if r := tab.replace(b, last); r != nil {
-		log.WithField( "b", bi).
-		WithField( "id", last.ID()).
-		WithField( "checks", last.livenessChecks).
-		WithField( "r", r.ID()).
-		WithField( "rip", r.IP()).
-		Debug("Replaced dead node")
+		log.WithField("b", bi).
+			WithField("id", last.ID()).
+			WithField("checks", last.livenessChecks).
+			WithField("r", r.ID()).
+			WithField("rip", r.IP()).
+			Debug("Replaced dead node")
 	} else {
-		log.WithField( "b", bi).
-		WithField( "id", last.ID()).
-		WithField( "checks", last.livenessChecks).
-		Debug("Removed dead node")
+		log.WithField("b", bi).
+			WithField("id", last.ID()).
+			WithField("checks", last.livenessChecks).
+			Debug("Removed dead node")
 	}
 }
 

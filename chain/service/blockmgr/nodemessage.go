@@ -1,11 +1,11 @@
 package blockmgr
 
 import (
-	"time"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/network/p2p"
 	"github.com/pkg/errors"
+	"time"
 )
 
 func (blockMgr *BlockMgr) receiveMsg(peer *chainTypes.PeerInfo, rw p2p.MsgReadWriter) error {

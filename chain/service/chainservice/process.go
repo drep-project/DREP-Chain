@@ -217,7 +217,7 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *cha
 
 func (chainService *ChainService) flushIndexState() {
 	if writeErr := chainService.blockIndex.FlushToDB(chainService.blockDb.PutBlockNode); writeErr != nil {
-		log.WithField("Reason",writeErr).Warn("Error flushing block index changes to disk")
+		log.WithField("Reason", writeErr).Warn("Error flushing block index changes to disk")
 	}
 }
 
@@ -306,7 +306,7 @@ func (chainService *ChainService) reorganizeChain(db *database.Database, detachN
 			}
 			chainService.markState(db, blockNode)
 			chainService.notifyBlock(block)
-			log.WithField( "Height", blockNode.Height).WithField("Hash", blockNode.Hash).Info("REORGANIZE:Append New Block")
+			log.WithField("Height", blockNode.Height).WithField("Hash", blockNode.Hash).Info("REORGANIZE:Append New Block")
 			elem = elem.Next()
 		}
 	}
@@ -360,7 +360,7 @@ func (chainService *ChainService) InitStates() error {
 	_, err := chainService.blockDb.GetBlock(&chainState.Hash)
 	if err != nil {
 		//block not save but tip save status is ok
-		rollbackHeight :=  chainState.Height - 1
+		rollbackHeight := chainState.Height - 1
 		chainService.DatabaseService.Rollback2Block(rollbackHeight)
 		header, _, err := chainService.DatabaseService.GetBlockNode(&chainState.PrevHash, rollbackHeight)
 		if err != nil {

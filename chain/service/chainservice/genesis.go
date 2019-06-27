@@ -1,9 +1,9 @@
 package chainservice
 
 import (
+	"github.com/drep-project/drep-chain/chain/params"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/chain/params"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/database"
@@ -31,7 +31,7 @@ func (chainService *ChainService) GetGenisiBlock(biosPubkey string) *chainTypes.
 		Header: &chainTypes.BlockHeader{
 			Version:      common.Version,
 			PreviousHash: crypto.Hash{},
-			GasLimit:     *new (big.Int).SetUint64(params.GenesisGasLimit),
+			GasLimit:     *new(big.Int).SetUint64(params.GenesisGasLimit),
 			GasUsed:      *new(big.Int),
 			Timestamp:    1545282765,
 			StateRoot:    root,
@@ -72,7 +72,7 @@ func (chainService *ChainService) ProcessGenesisBlock(genesisPubkey string) (*ch
 		Header: &chainTypes.BlockHeader{
 			Version:      common.Version,
 			PreviousHash: crypto.Hash{},
-			GasLimit:     *new (big.Int).SetUint64(params.GenesisGasLimit),
+			GasLimit:     *new(big.Int).SetUint64(params.GenesisGasLimit),
 			GasUsed:      *new(big.Int),
 			Timestamp:    1545282765,
 			StateRoot:    root,

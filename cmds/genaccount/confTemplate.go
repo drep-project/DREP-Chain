@@ -1,8 +1,7 @@
 package main
 
 const (
-	ConfTemplate =
-`
+	ConfTemplate = `
 {
 	"log" : {
 	      "logLevel": 3

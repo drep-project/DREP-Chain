@@ -9,20 +9,20 @@ import (
 )
 
 type ModuleHook struct {
-	writer io.Writer
-	globalLevel log.Level
-	moduleLevel map[string]log.Level
+	writer        io.Writer
+	globalLevel   log.Level
+	moduleLevel   map[string]log.Level
 	saveFormatter log.Formatter
-	printFormat  log.Formatter
-	lock sync.RWMutex
+	printFormat   log.Formatter
+	lock          sync.RWMutex
 }
 
 func NewMyHook(writer io.Writer, formatter log.Formatter, printFormat log.Formatter) *ModuleHook {
 	return &ModuleHook{
-		writer:writer,
-		saveFormatter:formatter,
-		printFormat:printFormat,
-		moduleLevel: make(map[string]log.Level),
+		writer:        writer,
+		saveFormatter: formatter,
+		printFormat:   printFormat,
+		moduleLevel:   make(map[string]log.Level),
 	}
 }
 
@@ -34,7 +34,7 @@ func (hook *ModuleHook) Fire(entry *log.Entry) error {
 			if lv < entry.Level {
 				return nil
 			}
-		}else{
+		} else {
 			if log.GetLevel() < entry.Level {
 				return nil
 			}
@@ -50,13 +50,13 @@ func (hook *ModuleHook) saveLog(entry *log.Entry) {
 	hook.writer.Write(msg)
 }
 
-func (hook *ModuleHook) printLog(entry *log.Entry)  {
+func (hook *ModuleHook) printLog(entry *log.Entry) {
 	var msg []byte
-	_, ok := entry.Data[MODULE];
+	_, ok := entry.Data[MODULE]
 	if ok {
 		delete(entry.Data, MODULE)
 		msg, _ = hook.printFormat.Format(entry)
-	}else{
+	} else {
 		msg, _ = hook.printFormat.Format(entry)
 	}
 	entry.Logger.Out.Write(msg)
@@ -72,7 +72,7 @@ func (hook *ModuleHook) SetModulesLevel(moduleLevel ...interface{}) error {
 	if len(moduleLevel)%2 != 0 {
 		return errors.New("err format for SetModulesLevel, eg: key lv")
 	}
-	for i:=0; i< len(moduleLevel);i++ {
+	for i := 0; i < len(moduleLevel); i++ {
 		module := moduleLevel[i].(string)
 		i++
 		var lv log.Level
@@ -83,14 +83,14 @@ func (hook *ModuleHook) SetModulesLevel(moduleLevel ...interface{}) error {
 			lv = log.Level(t)
 		case string:
 			var err error
-			lvInt, err := strconv.ParseInt(t,10,64);
+			lvInt, err := strconv.ParseInt(t, 10, 64)
 			if err != nil {
 				lv, err = log.ParseLevel(t)
 				if err != nil {
 					return err
 				}
 				return err
-			}else {
+			} else {
 				lv = log.Level(lvInt)
 			}
 
@@ -102,7 +102,7 @@ func (hook *ModuleHook) SetModulesLevel(moduleLevel ...interface{}) error {
 	return nil
 }
 
-func parserLevel(lvAny interface{}) (log.Level, error){
+func parserLevel(lvAny interface{}) (log.Level, error) {
 	var lv log.Level
 	switch t := lvAny.(type) {
 	case log.Level:
@@ -111,13 +111,13 @@ func parserLevel(lvAny interface{}) (log.Level, error){
 		lv = log.Level(t)
 	case string:
 		var err error
-		lvInt, err := strconv.ParseInt(t,10,64);
+		lvInt, err := strconv.ParseInt(t, 10, 64)
 		if err != nil {
 			lv, err = log.ParseLevel(t)
 			if err != nil {
 				return 0, err
 			}
-		}else {
+		} else {
 			lv = log.Level(lvInt)
 		}
 
@@ -126,5 +126,3 @@ func parserLevel(lvAny interface{}) (log.Level, error){
 	}
 	return lv, nil
 }
-
-

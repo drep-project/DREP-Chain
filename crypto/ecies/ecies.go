@@ -81,7 +81,7 @@ type PrivateKey struct {
 }
 
 // Export an ECIES private key as an ECDSA private key.
-func (prv *PrivateKey) ExportECDSA() *secp256k1.PrivateKey{
+func (prv *PrivateKey) ExportECDSA() *secp256k1.PrivateKey {
 	pub := &prv.PublicKey
 	pubECDSA := pub.ExportECDSA()
 	return &secp256k1.PrivateKey{PublicKey: *pubECDSA, D: prv.D}

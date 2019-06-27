@@ -26,7 +26,7 @@ func (h *heightHeap) Pop() interface{} {
 //根据hash对应的块高度，对hash排队
 type heightSortedMap struct {
 	items map[uint64]*syncHeaderHash // Hash map storing the syncHeaderHash data
-	index *heightHeap               // Heap of nonces of all the stored syncHeaderHash (non-strict mode)
+	index *heightHeap                // Heap of nonces of all the stored syncHeaderHash (non-strict mode)
 }
 
 // newHeightSortedMap creates a new nonce-sorted syncHeaderHash map.

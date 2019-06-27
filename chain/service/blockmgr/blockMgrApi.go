@@ -38,7 +38,6 @@ func (blockMgrApi *BlockMgrApi) GasPrice() (*big.Int, error) {
 	return blockMgrApi.blockMgr.gpo.SuggestPrice()
 }
 
-
 /*
  name: GetPoolTransactions
  usage: 获取交易池中的交易信息.

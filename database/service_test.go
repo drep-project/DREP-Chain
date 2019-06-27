@@ -74,7 +74,7 @@ func TestRollBack(t *testing.T) {
 	addr := crypto.CommonAddress{}
 	addr.SetBytes([]byte(addrStr))
 	alias := "115108924-test"
-	var i,j uint64
+	var i, j uint64
 
 	idb.RecordBlockJournal(uint64(0))
 	for i = 0; i < 5; i++ {
@@ -89,26 +89,26 @@ func TestRollBack(t *testing.T) {
 			}
 		}
 		idb.Commit()
-		idb.RecordBlockJournal(uint64(i+1))
+		idb.RecordBlockJournal(uint64(i + 1))
 	}
 
 	seqVal, err := db.store.Get([]byte(dbOperaterMaxSeqKey))
 	seq := new(big.Int).SetBytes(seqVal)
 
-	if seq.Uint64() != (i)*(j)*2+1{
+	if seq.Uint64() != (i)*(j)*2+1 {
 		t.Fatal("operate journal count err", seq)
 	}
 
-	err,n := idb.Rollback2Block(5)
-	if err != nil{
+	err, n := idb.Rollback2Block(5)
+	if err != nil {
 		t.Fatal("roolback err", err)
 	}
 	if n != 0 {
 		t.Fatal("2 roolback err", n)
 	}
 
-	err,n = idb.Rollback2Block(0)
-	if err != nil{
+	err, n = idb.Rollback2Block(0)
+	if err != nil {
 		t.Fatal("roolback err", err)
 	}
 

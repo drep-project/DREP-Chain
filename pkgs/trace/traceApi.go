@@ -1,10 +1,10 @@
 package trace
 
 import (
+	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/binary"
 )
 
 /*
@@ -30,10 +30,10 @@ type TraceApi struct {
 	  "result": "0x02a7ae20007923a30bbfbcb998a6534d56b313e68c8e0c594a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002011102011003030000bc9889d00b004120eba14c77eab7a154833ff14832d8769cfc0b30db288445d6a83ef2fe337aa09042f8174a593543c4acabe7fadf1ad5fceea9c835682cb9dbea3f1d8fec181fb9"
 	}
 */
-func (traceApi *TraceApi) GetRawTransaction(txHash *crypto.Hash) (string, error){
+func (traceApi *TraceApi) GetRawTransaction(txHash *crypto.Hash) (string, error) {
 	rawData, err := traceApi.service.store.GetRawTransaction(txHash)
 	if err != nil {
-		return  "", err
+		return "", err
 	}
 	return common.Encode(rawData), nil
 }
@@ -69,7 +69,7 @@ func (traceApi *TraceApi) GetRawTransaction(txHash *crypto.Hash) (string, error)
 func (traceApi *TraceApi) GetTransaction(txHash *crypto.Hash) (*types.RpcTransaction, error) {
 	rpcTx, err := traceApi.service.store.GetTransaction(txHash)
 	if err != nil {
-		return  nil, err
+		return nil, err
 	}
 	return rpcTx, nil
 }
@@ -106,7 +106,7 @@ func (traceApi *TraceApi) DecodeTrasnaction(bytes common.Bytes) (*types.RpcTrans
 	tx := &types.Transaction{}
 	err := binary.Unmarshal(bytes[:], tx)
 	if err != nil {
-		return  nil, err
+		return nil, err
 	}
 	rpcTx := &types.RpcTransaction{}
 	rpcTx.FromTx(tx)

@@ -3,5 +3,5 @@ package types
 import "errors"
 
 var (
-	ErrOutOfGas                 = errors.New("out of gas")
+	ErrOutOfGas = errors.New("out of gas")
 )

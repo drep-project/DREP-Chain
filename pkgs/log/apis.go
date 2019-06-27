@@ -13,7 +13,7 @@ usage: 设置日志级别
 prefix:log
 */
 type LogApi struct {
-  hook *ModuleHook
+	hook *ModuleHook
 }
 
 func NewLogApi(hook *ModuleHook) *LogApi {
@@ -31,12 +31,12 @@ func NewLogApi(hook *ModuleHook) *LogApi {
   {"jsonrpc":"2.0","id":3,"result":null}
 */
 func (logApi *LogApi) SetLevel(lvl string) error {
-	lvInt, err := strconv.ParseInt(lvl,10,64);
+	lvInt, err := strconv.ParseInt(lvl, 10, 64)
 	if err == nil {
 		logrus.SetLevel(logrus.Level(lvInt))
 		return nil
 	}
-	lv, err :=  parserLevel(lvl)
+	lv, err := parserLevel(lvl)
 	if err != nil {
 		return nil
 	}

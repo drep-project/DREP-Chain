@@ -9,7 +9,6 @@ import (
 	"testing"
 )
 
-
 func Test_CacheStoreAndGetKey(t *testing.T) {
 	password := "password"
 	store := NewMemoryStore()
@@ -22,20 +21,20 @@ func Test_CacheStoreAndGetKey(t *testing.T) {
 		WantError  error
 	}
 	tests := make([]*TestData, count)
-	for i:= 0;i < count; i++ {
+	for i := 0; i < count; i++ {
 		node := types.NewNode(nil, app.ChainIdType{})
 		cacheStore.StoreKey(node, password)
-		tests[i]= &TestData{
-			Query: node.Address,
-			WantResult:node,
+		tests[i] = &TestData{
+			Query:      node.Address,
+			WantResult: node,
 		}
 	}
-	for i:= 0;i < count; i++ {
+	for i := 0; i < count; i++ {
 		node := types.NewNode(nil, app.ChainIdType{})
 		tests = append(tests, &TestData{
-			Query: node.Address,
-			WantResult:nil,
-			WantError :ErrKeyNotFound,
+			Query:      node.Address,
+			WantResult: nil,
+			WantError:  ErrKeyNotFound,
 		})
 	}
 
@@ -45,7 +44,7 @@ func Test_CacheStoreAndGetKey(t *testing.T) {
 			if err != tData.WantError {
 				t.Error("key missing in store：", tData.Query)
 			}
-		}else{
+		} else {
 			if !test.DeepEqual(node, tData.WantResult) {
 				t.Errorf("result mismatch for query %v\ngot %v\nwant %v", tData.Query, node, tData.WantResult)
 			}
@@ -66,20 +65,20 @@ func Test_CacheExportKey(t *testing.T) {
 		WantError  error
 	}
 	tests := make([]*TestData, count)
-	for i:= 0;i < count; i++ {
+	for i := 0; i < count; i++ {
 		node := types.NewNode(nil, app.ChainIdType{})
 		cacheStore.StoreKey(node, password)
-		tests[i]= &TestData{
-			Query: node.Address,
-			WantResult:node,
+		tests[i] = &TestData{
+			Query:      node.Address,
+			WantResult: node,
 		}
 	}
-	for i:= 0;i < count; i++ {
+	for i := 0; i < count; i++ {
 		node := types.NewNode(nil, app.ChainIdType{})
 		tests = append(tests, &TestData{
-			Query: node.Address,
-			WantResult:nil,
-			WantError :ErrKeyNotFound,
+			Query:      node.Address,
+			WantResult: nil,
+			WantError:  ErrKeyNotFound,
 		})
 	}
 
@@ -105,7 +104,6 @@ func Test_CacheExportKey(t *testing.T) {
 
 }
 
-
 func Test_CacheClearAndReloadKeys(t *testing.T) {
 	password := "password"
 	store := NewMemoryStore()
@@ -113,16 +111,16 @@ func Test_CacheClearAndReloadKeys(t *testing.T) {
 	count := 10
 
 	type TestData struct {
-		Addr      *crypto.CommonAddress
-		Privkey  []byte
+		Addr    *crypto.CommonAddress
+		Privkey []byte
 	}
 	tests := make([]*TestData, count)
-	for i:= 0;i < count; i++ {
+	for i := 0; i < count; i++ {
 		node := types.NewNode(nil, app.ChainIdType{})
 		cacheStore.StoreKey(node, password)
-		tests[i]= &TestData{
-			Addr: node.Address,
-			Privkey:node.PrivateKey.Serialize(),
+		tests[i] = &TestData{
+			Addr:    node.Address,
+			Privkey: node.PrivateKey.Serialize(),
 		}
 	}
 
@@ -136,7 +134,7 @@ func Test_CacheClearAndReloadKeys(t *testing.T) {
 
 	cacheStore.ReloadKeys(password)
 	keys, _ = cacheStore.ExportKey(password)
-	for _,tData := range tests {
+	for _, tData := range tests {
 		isFind := false
 		var node *types.Node
 		for _, key := range keys {
@@ -151,7 +149,7 @@ func Test_CacheClearAndReloadKeys(t *testing.T) {
 			if !bytes.Equal(tData.Privkey, node.PrivateKey.Serialize()) {
 				t.Error("reload got wrong privatekey expect ", tData.Privkey, " but got ", node.PrivateKey)
 			}
-		}else{
+		} else {
 			t.Error("reload must get privkey but got nothing")
 		}
 	}

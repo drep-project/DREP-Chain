@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"path/filepath"
 	"reflect"
 	"runtime/debug"
 	"strings"
-	_ "net/http/pprof"
 
-	"github.com/drep-project/drep-chain/common/fileutil"
 	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/drep-chain/common/fileutil"
 	"gopkg.in/urfave/cli.v1"
 )
 

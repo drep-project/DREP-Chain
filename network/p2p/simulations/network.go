@@ -27,11 +27,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/event"
 	log "github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/network/p2p"
 	"github.com/drep-project/drep-chain/network/p2p/enode"
 	"github.com/drep-project/drep-chain/network/p2p/simulations/adapters"
+	"github.com/ethereum/go-ethereum/event"
 )
 
 var DialBanTimeout = 200 * time.Millisecond

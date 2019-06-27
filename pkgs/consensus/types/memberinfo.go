@@ -3,9 +3,10 @@ package types
 import "github.com/drep-project/drep-chain/crypto/secp256k1"
 
 const (
-	OnLine = iota
+	OnLine  = iota
 	OffLine = iota
 )
+
 type MemberInfo struct {
 	Peer     *PeerInfo
 	Producer *Producer

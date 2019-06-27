@@ -222,7 +222,6 @@ func (accountapi *AccountApi) GetTxInPool(hash string) (*chainTypes.Transaction,
 	return accountapi.blockmgr.GetTxInPool(hash)
 }
 
-
 /*
  name: setAlias
  usage: 设置别名

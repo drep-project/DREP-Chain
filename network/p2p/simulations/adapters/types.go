@@ -26,10 +26,10 @@ import (
 	"strconv"
 
 	"github.com/docker/docker/pkg/reexec"
-		"github.com/drep-project/drep-chain/crypto"
-	"github.com/ethereum/go-ethereum/node"
+	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/network/p2p"
 	"github.com/drep-project/drep-chain/network/p2p/enode"
+	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/rpc"
 )
 

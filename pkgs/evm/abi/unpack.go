@@ -3,10 +3,10 @@ package abi
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/drep-chain/crypto"
 	"math/big"
 	"reflect"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/common"
 )
 
 var (
@@ -234,4 +234,3 @@ func lengthPrefixPointsTo(index int, output []byte) (start int, length int, err 
 	length = int(lengthBig.Uint64())
 	return
 }
-

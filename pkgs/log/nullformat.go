@@ -3,10 +3,8 @@ package log
 import "github.com/sirupsen/logrus"
 
 type NullFormat struct {
-
-
 }
 
-func (format *NullFormat)Format(*logrus.Entry) ([]byte, error) {
-	return nil,nil
+func (format *NullFormat) Format(*logrus.Entry) ([]byte, error) {
+	return nil, nil
 }

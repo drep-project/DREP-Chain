@@ -1,11 +1,11 @@
 package main
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
-	"errors"
 )
 
 func detectSource() (string, error) {
@@ -39,19 +39,19 @@ func getAllPackage(dir string) []string {
 		newPath := filepath.Join(dir, p)
 		files, _ := ioutil.ReadDir(newPath)
 		fileNodeTemps := wrapfile(files, p)
-		count+= len(fileNodeTemps)
-		fileNodes = append(fileNodes,fileNodeTemps... )
+		count += len(fileNodeTemps)
+		fileNodes = append(fileNodes, fileNodeTemps...)
 	}
 	return packagePaths
 }
 
-func wrapfile(files []os.FileInfo,pPath string) []fileNode {
+func wrapfile(files []os.FileInfo, pPath string) []fileNode {
 	fileNodes := []fileNode{}
 	for _, file := range files {
 		if file.IsDir() && file.Name()[0] != '.' {
 			fileNodes = append(fileNodes, fileNode{
 				file:       file,
-				parentPath: pPath ,
+				parentPath: pPath,
 				isDir:      file.IsDir(),
 				name:       file.Name(),
 			})

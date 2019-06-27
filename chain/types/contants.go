@@ -10,7 +10,7 @@ const (
 	CreateContractType
 	CallContractType
 	CrossChainType
-	SetAliasType  //给地址设置昵称
+	SetAliasType //给地址设置昵称
 )
 
 var (

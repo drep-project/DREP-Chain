@@ -6,10 +6,9 @@ package schnorr
 
 import (
 	"fmt"
-	"math/big"
-	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
-
+	"github.com/drep-project/drep-chain/crypto/sha3"
+	"math/big"
 )
 
 // Sha256VersionStringRFC6979 is the RFC6979 nonce version for a Schnorr signature

@@ -1,13 +1,13 @@
 package bip
 
 import (
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"github.com/FactomProject/basen"
+	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"golang.org/x/crypto/ripemd160"
 	"io"
 	"math/big"

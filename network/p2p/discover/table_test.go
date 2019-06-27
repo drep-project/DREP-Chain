@@ -27,7 +27,7 @@ import (
 	"testing/quick"
 	"time"
 
-		"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/network/p2p/enode"
 	"github.com/drep-project/drep-chain/network/p2p/enr"
 	"github.com/drep-project/drep-chain/network/p2p/netutil"
@@ -681,7 +681,7 @@ func quickcfg() *quick.Config {
 	}
 }
 
-func newkey() *secp256k1.PrivateKey{
+func newkey() *secp256k1.PrivateKey {
 	key, err := crypto.GenerateKey()
 	if err != nil {
 		panic("couldn't generate key: " + err.Error())

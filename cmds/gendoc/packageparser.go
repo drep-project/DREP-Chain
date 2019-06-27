@@ -1,8 +1,8 @@
 package main
 
 import (
-	"go/ast"
 	"fmt"
+	"go/ast"
 	"go/parser"
 	"go/token"
 	"log"
@@ -115,7 +115,7 @@ func (packageParser *PackageParser) parserStuctSpect(genDecl *ast.GenDecl) {
 			packageParser.Defines[spec.Name.Name] = &Define{
 				Spec:    spec,
 				Name:    spec.Name.Name,
-				Comment : genDecl.Doc,
+				Comment: genDecl.Doc,
 				Methods: []*ast.FuncDecl{},
 			}
 		default:
@@ -127,13 +127,13 @@ func (packageParser *PackageParser) parserStuctSpect(genDecl *ast.GenDecl) {
 //
 func ExtractDoc(comments *ast.CommentGroup) string {
 	comment := ""
-	if comments ==nil || comments.List == nil {
+	if comments == nil || comments.List == nil {
 		return ""
 	}
 	for _, doc := range comments.List {
 		if strings.HasPrefix(doc.Text, "//") {
 			comment = comment + " " + strings.TrimLeft(doc.Text, "\\")
-		}else{
+		} else {
 			text := strings.TrimLeft(doc.Text, "/*")
 			text = strings.TrimRight(text, "*/")
 			comment = comment + " " + text

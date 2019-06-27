@@ -17,12 +17,10 @@
 package evm
 
 import (
-	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
 	"math/big"
-
-
 )
 
 // ChainContext supports retrieving headers and consensus parameters from the
@@ -60,9 +58,9 @@ func GetHashFn(ref *types.BlockHeader, chain ChainContext) func(n uint64) crypto
 			return hash
 		}
 		// Not cached, iterate the blocks and cache the hashes
-		for header := chain.GetHeader(ref.PreviousHash, uint64(ref.Height - 1)); header != nil; header = chain.GetHeader(header.PreviousHash, uint64(header.Height - 1)) {
-			cache[uint64(header.Height - 1)] = header.PreviousHash
-			if n == uint64(header.Height - 1) {
+		for header := chain.GetHeader(ref.PreviousHash, uint64(ref.Height-1)); header != nil; header = chain.GetHeader(header.PreviousHash, uint64(header.Height-1)) {
+			cache[uint64(header.Height-1)] = header.PreviousHash
+			if n == uint64(header.Height-1) {
 				return header.PreviousHash
 			}
 		}

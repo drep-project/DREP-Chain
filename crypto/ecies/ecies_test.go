@@ -40,7 +40,7 @@ import (
 	"math/big"
 	"testing"
 
-		"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/crypto"
 )
 
 var dumpEnc bool

@@ -88,7 +88,7 @@ func VerifySignature(pubkey, hash, signature []byte) bool {
 
 // DecompressPubkey parses a public key in the 33-byte compressed format.
 func DecompressPubkey(pubkey []byte) (*secp256k1.PublicKey, error) {
-	if len(pubkey) != 33 && len(pubkey) != 65{
+	if len(pubkey) != 33 && len(pubkey) != 65 {
 		return nil, errors.New("invalid compressed public key length")
 	}
 	key, err := secp256k1.ParsePubKey(pubkey)

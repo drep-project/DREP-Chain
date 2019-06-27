@@ -17,7 +17,7 @@ const (
 var (
 	structTemplate *template.Template
 	methodTemplate *template.Template
-	docTemplate *template.Template
+	docTemplate    *template.Template
 )
 
 func main() {
@@ -39,13 +39,12 @@ func main() {
 		allPackages = append(allPackages, p)
 	}
 
-
 	docs := []*RpcDoc{}
 	for _, packageParser := range allPackages {
 		for _, define := range packageParser.Defines {
 			lowcaseName := strings.ToLower(define.Name)
-			if !strings.HasSuffix(lowcaseName, "api")||len(lowcaseName)<=3 {
-               continue
+			if !strings.HasSuffix(lowcaseName, "api") || len(lowcaseName) <= 3 {
+				continue
 			}
 
 			rpcDoc := NewRpcDoc()
@@ -59,7 +58,7 @@ func main() {
 				if val.Str == "" {
 					continue
 				}
-			}else{
+			} else {
 				continue
 			}
 			for _, funcDeifine := range define.Methods {
@@ -98,8 +97,8 @@ func main() {
 		log.Fatal(err)
 		return
 	}
-	docPath := filepath.Join(drepChainPath, "doc","JSON-RPC.md")
-	err = ioutil.WriteFile(docPath,docBuffer.Bytes(), os.ModePerm)
+	docPath := filepath.Join(drepChainPath, "doc", "JSON-RPC.md")
+	err = ioutil.WriteFile(docPath, docBuffer.Bytes(), os.ModePerm)
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -113,13 +112,13 @@ func init() {
 
 	funcs := map[string]interface{}{}
 	funcs["html"] = func(x string) interface{} {
-	return template.HTML(x)
+		return template.HTML(x)
 	}
 	funcs["inc"] = func(i int) int {
 		return i + 1
 	}
 	funcs["trim"] = func(str string) string {
-		return strings.Trim(str,"\n\r ")
+		return strings.Trim(str, "\n\r ")
 	}
 	structTemplate.Funcs(funcs)
 	methodTemplate.Funcs(funcs)
@@ -143,10 +142,10 @@ func init() {
 
 type RpcDoc struct {
 	StructDoc *StructDoc
-	FuncDoc []*FuncDoc
+	FuncDoc   []*FuncDoc
 
 	StructDocStr string
-	FuncDocStr string
+	FuncDocStr   string
 }
 
 func NewRpcDoc() *RpcDoc {

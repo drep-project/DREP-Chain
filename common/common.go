@@ -49,5 +49,4 @@ func FileExist(filePath string) bool {
 	return true
 }
 
-
 type PrettyDuration time.Duration

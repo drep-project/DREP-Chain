@@ -1,7 +1,7 @@
 package main
 
 const doctmpl = `
-#  `+"`"+`JSON-RPC`+"`"+`接口说明文档
+#  ` + "`" + `JSON-RPC` + "`" + `接口说明文档
 ## {{range .}}{{ .StructDocStr | trim | html}}
 {{ .FuncDocStr | html}}{{end}}`
 
@@ -16,18 +16,17 @@ const methodtmpl = `{{range $index2, $method := .}}
 #### 示例代码
 ##### 请求：
 
-`+"```"+`shell
+` + "```" + `shell
 {{ with (index $method.Tokens "example:") }}{{.Str | html}}{{ end }}
-`+"```"+`
+` + "```" + `
 
 ##### 响应：
 
-`+"```"+`json
+` + "```" + `json
 {{ with (index $method.Tokens "response:") }}{{ .Str | html }}{{ end }}
-`+"````" +`
+` + "````" + `
 
 {{end}}`
-
 
 const structtmpl = `
 {{.Name}}

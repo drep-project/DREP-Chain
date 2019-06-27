@@ -22,7 +22,7 @@ type BlockHeader struct {
 	LeaderPubKey secp256k1.PublicKey
 	MinorPubKeys []secp256k1.PublicKey
 
-	blockHash 	*crypto.Hash			`binary:"ignore"`
+	blockHash *crypto.Hash `binary:"ignore"`
 }
 
 func (blockHeader *BlockHeader) Hash() *crypto.Hash {

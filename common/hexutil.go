@@ -211,7 +211,7 @@ func mapError(err error) error {
 }
 
 func BigIntMustFromString(number string) *big.Int {
-	bigInt := new (big.Int)
+	bigInt := new(big.Int)
 	bigInt, isSuccess := bigInt.SetString(number, 10)
 	if !isSuccess {
 		panic(errors.New("cannt decode input string to big int"))

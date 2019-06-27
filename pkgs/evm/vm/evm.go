@@ -55,17 +55,17 @@ func run(evm *EVM, contract *Contract, input []byte, readOnly bool) ([]byte, err
 	}
 
 	/*
-	if interpreter.CanRun(contract.ByteCode) {
-		if evm.interpreter != interpreter {
-			// Ensure that the interpreter pointer is set back
-			// to its current value upon return.
-			defer func(i Interpreter) {
-				evm.interpreter = i
-			}(evm.interpreter)
-			evm.interpreter = interpreter
+		if interpreter.CanRun(contract.ByteCode) {
+			if evm.interpreter != interpreter {
+				// Ensure that the interpreter pointer is set back
+				// to its current value upon return.
+				defer func(i Interpreter) {
+					evm.interpreter = i
+				}(evm.interpreter)
+				evm.interpreter = interpreter
+			}
+			return interpreter.Run(contract, input, readOnly)
 		}
-		return interpreter.Run(contract, input, readOnly)
-	}
 	*/
 	return nil, ErrNoCompatibleInterpreter
 }
@@ -194,13 +194,13 @@ func (evm *EVM) Call(caller crypto.CommonAddress, addr crypto.CommonAddress, cha
 
 	// Capture the tracer start/end events in debug mode
 	/*
-	if evm.vmConfig.Debug && evm.depth == 0 {
-		evm.vmConfig.Tracer.CaptureStart(caller, addr, false, input, gas, value)
+		if evm.vmConfig.Debug && evm.depth == 0 {
+			evm.vmConfig.Tracer.CaptureStart(caller, addr, false, input, gas, value)
 
-		defer func() { // Lazy evaluation of the parameters
-			evm.vmConfig.Tracer.CaptureEnd(ret, gas-contract.Gas, time.Since(start), err)
-		}()
-	}
+			defer func() { // Lazy evaluation of the parameters
+				evm.vmConfig.Tracer.CaptureEnd(ret, gas-contract.Gas, time.Since(start), err)
+			}()
+		}
 	*/
 	ret, err = run(evm, contract, input, false)
 

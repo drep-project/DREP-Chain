@@ -81,11 +81,11 @@ func (fs FileStore) StoreKey(key *chainTypes.Node, auth string) error {
 		ChainCode:    key.ChainCode,
 		Cipher:       "aes-128-ctr",
 		CipherParams: CipherParams{},
-		KDFParams:ScryptParams{
-			N  	:StandardScryptN,
-			R    :scryptR,
-			P      :StandardScryptP,
-			Dklen   :scryptDKLen,
+		KDFParams: ScryptParams{
+			N:     StandardScryptN,
+			R:     scryptR,
+			P:     StandardScryptP,
+			Dklen: scryptDKLen,
 		},
 	}
 	cryptoNode.EncryptData([]byte(auth))

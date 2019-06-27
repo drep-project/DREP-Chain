@@ -9,7 +9,7 @@ var (
 	ErrSignatureNotValid  = errors.New("signature not valid")
 	ErrSignBlock          = errors.New("sign block error")
 	ErrBFTNotReady        = errors.New("BFT node not ready")
-	ErrValidateMsg 		  = errors.New("validate message error")
+	ErrValidateMsg        = errors.New("validate message error")
 	ErrGenerateNouncePriv = errors.New("Generate nounce fail")
 
 	ErrTimeout       = errors.New("time out")

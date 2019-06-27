@@ -1,23 +1,23 @@
 package pool
 
 import (
-    "github.com/drep-project/drep-chain/common/objectemitter"
-    "time"
-    chainTypes "github.com/drep-project/drep-chain/chain/types"
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/common/objectemitter"
+	"time"
 )
 
 var (
-    txPool *objectemitter.ObjectEmitter
+	txPool *objectemitter.ObjectEmitter
 )
 
 func StartTxPool() {
-    txPool = objectemitter.New(1000, 10 * time.Second, func(txs []interface{}) {
+	txPool = objectemitter.New(1000, 10*time.Second, func(txs []interface{}) {
 
-    })
-    txPool.Start()
+	})
+	txPool.Start()
 }
 func PushTx(txs []*chainTypes.Transaction) {
-    for _, tx := range txs {
-        txPool.Push(tx)
-    }
+	for _, tx := range txs {
+		txPool.Push(tx)
+	}
 }

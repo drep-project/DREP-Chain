@@ -1,8 +1,8 @@
 package vm
 
 import (
-	"math/big"
 	"github.com/drep-project/drep-chain/common"
+	"math/big"
 )
 
 func memorySha3(stack *Stack) *big.Int {

@@ -186,7 +186,7 @@ func (s *resubscribeSub) waitForError(sub Subscription) bool {
 }
 
 func (s *resubscribeSub) backoffWait() bool {
-	if time.Duration(mclock2.Now() - s.lastTry) > s.backoffMax {
+	if time.Duration(mclock2.Now()-s.lastTry) > s.backoffMax {
 		s.waitTime = s.backoffMax / 10
 	} else {
 		s.waitTime *= 2

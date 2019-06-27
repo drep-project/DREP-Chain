@@ -97,7 +97,7 @@ func (database *DatabaseService) GetBlockNode(hash *crypto.Hash, height uint64) 
 	}
 	blockHeader := &chainType.BlockHeader{}
 	binary.Unmarshal(value[0:len(value)-1], blockHeader)
-	status := value[len(value)-1:len(value)][0]
+	status := value[len(value)-1 : len(value)][0]
 	return blockHeader, chainType.BlockStatus(status), nil
 }
 
@@ -122,7 +122,7 @@ func (database *DatabaseService) BlockNodeIterator(handle func(*chainType.BlockH
 		if err != nil {
 			break
 		}
-		err = handle(blockHeader, chainType.BlockStatus(val[len(val)-1:len(val)][0]))
+		err = handle(blockHeader, chainType.BlockStatus(val[len(val)-1 : len(val)][0]))
 		if err != nil {
 			break
 		}
@@ -132,7 +132,6 @@ func (database *DatabaseService) BlockNodeIterator(handle func(*chainType.BlockH
 	}
 	return nil
 }
-
 
 func (database *DatabaseService) PutChainState(chainState *chainType.BestState) error {
 	return database.db.PutChainState(chainState)
@@ -247,16 +246,16 @@ func (database *DatabaseService) Store(x, y *big.Int) error {
 	return database.db.Store(x, y)
 }
 
-func (database *DatabaseService) AddBalance(addr *crypto.CommonAddress, amount *big.Int) error  {
+func (database *DatabaseService) AddBalance(addr *crypto.CommonAddress, amount *big.Int) error {
 	return database.db.AddBalance(addr, amount)
 }
 
-func (database *DatabaseService)  BeginTransaction() *Database {
+func (database *DatabaseService) BeginTransaction() *Database {
 	return database.db.BeginTransaction()
 }
 
 func (database *DatabaseService) Commit(needLog bool) {
-	 database.db.Commit(needLog)
+	database.db.Commit(needLog)
 }
 
 func (database *DatabaseService) Discard() {

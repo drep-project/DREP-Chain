@@ -1,10 +1,10 @@
 package abi
 
 import (
+	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/drep-chain/crypto"
 	"math/big"
 	"reflect"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/common"
 )
 
 var (

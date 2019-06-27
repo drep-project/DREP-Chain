@@ -19,10 +19,10 @@ const (
 	maxTxsOfPending = 1000000 //单个地址对应的有序队列中，最多容纳交易数目
 )
 
+//TransactionPool ...
 //1 池子里的交易按照nonce是否连续，分为乱序的和已经排序的在两个不同的队列中
 //2 已经排序好的可以被打包入块
 //3 池子里面的交易根据块中的各个地址的交易对应的Nonce进行删除
-
 type TransactionPool struct {
 	database     *database.Database
 	rlock        sync.RWMutex
@@ -45,6 +45,7 @@ type TransactionPool struct {
 	locals  map[crypto.CommonAddress]struct{} //本地节点包含的地址
 }
 
+//NewTransactionPool 创建一个交易池
 func NewTransactionPool(database *database.Database, journalPath string) *TransactionPool {
 	pool := &TransactionPool{database: database}
 	pool.nonceCp = func(a interface{}, b interface{}) int {
@@ -145,11 +146,11 @@ func (pool *TransactionPool) addTxs(txs []chainTypes.Transaction) []error {
 	return errs
 }
 
-func (pool *TransactionPool) UpdateState(database *database.Database) {
-	pool.rlock.Lock()
-	defer pool.rlock.Unlock()
-	pool.database = database
-}
+//func (pool *TransactionPool) UpdateState(database *database.Database) {
+//	pool.rlock.Lock()
+//	defer pool.rlock.Unlock()
+//	pool.database = database
+//}
 
 //func (pool *TransactionPool) Contains(id string) bool {
 //	pool.mu.Lock()
@@ -162,6 +163,7 @@ func (pool *TransactionPool) UpdateState(database *database.Database) {
 //	return ok
 //}
 
+//AddTransaction 交易加入到txpool
 func (pool *TransactionPool) AddTransaction(tx *chainTypes.Transaction, isLocal bool) error {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
@@ -320,6 +322,7 @@ func (pool *TransactionPool) syncToPending(address *crypto.CommonAddress) {
 //	return true, true
 //}
 
+//GetQueue 获取交易池中，非严格排序队列中的所有交易
 func (pool *TransactionPool) GetQueue() []*chainTypes.Transaction {
 	var retrunTxs []*chainTypes.Transaction
 	pool.mu.Lock()
@@ -335,7 +338,7 @@ func (pool *TransactionPool) GetQueue() []*chainTypes.Transaction {
 	return retrunTxs
 }
 
-//打包过程获取交易，进行打包处理
+//GetPending 打包过程获取交易，进行打包处理
 func (pool *TransactionPool) GetPending(GasLimit *big.Int) []*chainTypes.Transaction {
 	pool.mu.Lock()
 	gasCount := new(big.Int)
@@ -380,11 +383,13 @@ END:
 	return retrunTxs
 }
 
+//Start 开启交易池
 func (pool *TransactionPool) Start(feed *event.Feed) {
 	go pool.checkUpdate()
 	pool.eventNewBlockSub = feed.Subscribe(pool.newBlockChan)
 }
 
+//Stop 停止交易池
 func (pool *TransactionPool) Stop() {
 	close(pool.quit)
 	pool.eventNewBlockSub.Unsubscribe()
@@ -421,7 +426,7 @@ func (pool *TransactionPool) adjust(block *chainTypes.Block) {
 	}
 
 	if len(addrs) > 0 {
-		for addr, _ := range addrMap {
+		for addr := range addrMap {
 			// 获取数据库里面的nonce
 			//根据nonce是否被处理，删除对应的交易
 			nonce := pool.database.GetNonce(&addr)
@@ -442,12 +447,12 @@ func (pool *TransactionPool) adjust(block *chainTypes.Block) {
 
 			pool.syncToPending(&addr)
 			pool.mu.Unlock()
-			log.WithField("addr", addr.Hex()).WithField("max tx.nonce", nonce).WithField("txpool tx count", len(pool.allTxs)).Warn("clear txpool" )
+			log.WithField("addr", addr.Hex()).WithField("max tx.nonce", nonce).WithField("txpool tx count", len(pool.allTxs)).Warn("clear txpool")
 		}
 	}
 }
 
-//获取总的交易个数，即获取地址对应的nonce
+//GetTransactionCount 获取总的交易个数，即获取地址对应的nonce
 func (pool *TransactionPool) GetTransactionCount(address *crypto.CommonAddress) uint64 {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
@@ -457,13 +462,13 @@ func (pool *TransactionPool) GetTransactionCount(address *crypto.CommonAddress) 
 func (pool *TransactionPool) getTransactionCount(address *crypto.CommonAddress) uint64 {
 	if nonce, ok := pool.pendingNonce[*address]; ok {
 		return nonce
-	} else {
-		nonce := pool.database.GetNonce(address)
-		pool.pendingNonce[*address] = nonce
-		return nonce
 	}
+	nonce := pool.database.GetNonce(address)
+	pool.pendingNonce[*address] = nonce
+	return nonce
 }
 
+//GetTransactions 获取当前池子中所有交易
 func (pool *TransactionPool) GetTransactions(addr *crypto.CommonAddress) []chainTypes.Transactions {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
@@ -490,6 +495,7 @@ func (pool *TransactionPool) GetTransactions(addr *crypto.CommonAddress) []chain
 	return twoQueueTxs
 }
 
+//GetMiniPendingNonce 获取Pending队列中的最小nonce
 func (pool *TransactionPool) GetMiniPendingNonce(addr *crypto.CommonAddress) uint64 {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
@@ -504,6 +510,7 @@ func (pool *TransactionPool) GetMiniPendingNonce(addr *crypto.CommonAddress) uin
 	return 0
 }
 
+//GetTxInPool 获取交易池中的交易
 func (pool *TransactionPool) GetTxInPool(hash string) (*chainTypes.Transaction, error) {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()

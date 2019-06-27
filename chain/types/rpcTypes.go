@@ -9,14 +9,14 @@ import (
 )
 
 type RpcTransaction struct {
-	Hash 				crypto.Hash
-	From 				crypto.CommonAddress
-	TransactionData 	`bson:",inline"`
-	Sig  				common.Bytes
+	Hash            crypto.Hash
+	From            crypto.CommonAddress
+	TransactionData `bson:",inline"`
+	Sig             common.Bytes
 }
 
 type RpcBlock struct {
-	Hash        crypto.Hash
+	Hash         crypto.Hash
 	ChainId      app.ChainIdType
 	Version      int32
 	PreviousHash crypto.Hash
@@ -28,7 +28,7 @@ type RpcBlock struct {
 	TxRoot       common.Bytes
 	LeaderPubKey secp256k1.PublicKey
 	MinorPubKeys []secp256k1.PublicKey
-	Txs         []*RpcTransaction
+	Txs          []*RpcTransaction
 }
 
 func (rpcTransaction *RpcTransaction) FromTx(tx *Transaction) *RpcTransaction {
@@ -40,7 +40,7 @@ func (rpcTransaction *RpcTransaction) FromTx(tx *Transaction) *RpcTransaction {
 	return rpcTransaction
 }
 
-func  (rpcTx *RpcTransaction) ToTx() *Transaction{
+func (rpcTx *RpcTransaction) ToTx() *Transaction {
 	tx := &Transaction{}
 	tx.Data = rpcTx.TransactionData
 	tx.Sig = rpcTx.Sig
@@ -50,7 +50,7 @@ func  (rpcTx *RpcTransaction) ToTx() *Transaction{
 func (rpcBlock *RpcBlock) From(block *Block) *RpcBlock {
 	txs := make([]*RpcTransaction, len(block.Data.TxList))
 	for i, tx := range block.Data.TxList {
-		txs[i] = new (RpcTransaction).FromTx(tx)
+		txs[i] = new(RpcTransaction).FromTx(tx)
 	}
 
 	rpcBlock.Hash = *block.Header.Hash()
@@ -69,7 +69,6 @@ func (rpcBlock *RpcBlock) From(block *Block) *RpcBlock {
 	return rpcBlock
 }
 
-
 type RpcBlockHeader struct {
 	ChainId      app.ChainIdType
 	Version      int32
@@ -83,36 +82,35 @@ type RpcBlockHeader struct {
 	LeaderPubKey secp256k1.PublicKey
 	MinorPubKeys []secp256k1.PublicKey
 
-	Hash 	*crypto.Hash
+	Hash *crypto.Hash
 }
 
-
-func (rpcBlockHeader *RpcBlockHeader)FromBlockHeader(header *BlockHeader){
-	rpcBlockHeader.ChainId 		= header.ChainId
-	rpcBlockHeader.Version 		= header.Version
+func (rpcBlockHeader *RpcBlockHeader) FromBlockHeader(header *BlockHeader) {
+	rpcBlockHeader.ChainId = header.ChainId
+	rpcBlockHeader.Version = header.Version
 	rpcBlockHeader.PreviousHash = header.PreviousHash
-	rpcBlockHeader.GasLimit 	= common.Big(header.GasLimit)
-	rpcBlockHeader.GasUsed 		= common.Big(header.GasUsed)
-	rpcBlockHeader.Height 		= header.Height
-	rpcBlockHeader.Timestamp 	= header.Timestamp
-	rpcBlockHeader.StateRoot 	= header.StateRoot
-	rpcBlockHeader.TxRoot 		= header.TxRoot
+	rpcBlockHeader.GasLimit = common.Big(header.GasLimit)
+	rpcBlockHeader.GasUsed = common.Big(header.GasUsed)
+	rpcBlockHeader.Height = header.Height
+	rpcBlockHeader.Timestamp = header.Timestamp
+	rpcBlockHeader.StateRoot = header.StateRoot
+	rpcBlockHeader.TxRoot = header.TxRoot
 	rpcBlockHeader.LeaderPubKey = header.LeaderPubKey
 	rpcBlockHeader.MinorPubKeys = header.MinorPubKeys
-	rpcBlockHeader.Hash 		= header.Hash()
+	rpcBlockHeader.Hash = header.Hash()
 }
 
-func (rpcBlockHeader *RpcBlockHeader) ToHeader() *BlockHeader{
-	blockHeader:= &BlockHeader{}
-	blockHeader.ChainId 	 = rpcBlockHeader.ChainId
-	blockHeader.Version 	 = rpcBlockHeader.Version
+func (rpcBlockHeader *RpcBlockHeader) ToHeader() *BlockHeader {
+	blockHeader := &BlockHeader{}
+	blockHeader.ChainId = rpcBlockHeader.ChainId
+	blockHeader.Version = rpcBlockHeader.Version
 	blockHeader.PreviousHash = rpcBlockHeader.PreviousHash
-	blockHeader.GasLimit 	 = (big.Int)(rpcBlockHeader.GasLimit)
-	blockHeader.GasUsed 	 = (big.Int)(rpcBlockHeader.GasUsed)
-	blockHeader.Height 		 = rpcBlockHeader.Height
-	blockHeader.Timestamp 	 = rpcBlockHeader.Timestamp
-	blockHeader.StateRoot 	 = rpcBlockHeader.StateRoot
-	blockHeader.TxRoot 		 = rpcBlockHeader.TxRoot
+	blockHeader.GasLimit = (big.Int)(rpcBlockHeader.GasLimit)
+	blockHeader.GasUsed = (big.Int)(rpcBlockHeader.GasUsed)
+	blockHeader.Height = rpcBlockHeader.Height
+	blockHeader.Timestamp = rpcBlockHeader.Timestamp
+	blockHeader.StateRoot = rpcBlockHeader.StateRoot
+	blockHeader.TxRoot = rpcBlockHeader.TxRoot
 	blockHeader.LeaderPubKey = rpcBlockHeader.LeaderPubKey
 	blockHeader.MinorPubKeys = rpcBlockHeader.MinorPubKeys
 	return blockHeader

@@ -19,8 +19,8 @@ type Transaction struct {
 	Sig  []byte
 
 	txHash      atomic.Value `json:"-" binary:"ignore"`
-	signMessage atomic.Value       `json:"-" binary:"ignore" bson:"-"`
-	message     atomic.Value       `json:"-" binary:"ignore" bson:"-"`
+	signMessage atomic.Value `json:"-" binary:"ignore" bson:"-"`
+	message     atomic.Value `json:"-" binary:"ignore" bson:"-"`
 	from        atomic.Value `json:"-" binary:"ignore"`
 }
 

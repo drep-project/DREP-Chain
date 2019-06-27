@@ -5,9 +5,9 @@
 package schnorr
 
 import (
-	"github.com/drep-project/drep-chain/crypto/sha3"
 	"bytes"
 	"encoding/hex"
+	"github.com/drep-project/drep-chain/crypto/sha3"
 	"math/rand"
 	"testing"
 

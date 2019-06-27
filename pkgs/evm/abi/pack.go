@@ -1,9 +1,9 @@
 package abi
 
 import (
+	"github.com/drep-project/drep-chain/common"
 	"math/big"
 	"reflect"
-	"github.com/drep-project/drep-chain/common"
 )
 
 // packBytesSlice packs the given bytes as [L, V] as the canonical representation
@@ -61,4 +61,3 @@ func packNum(value reflect.Value) []byte {
 	}
 
 }
-
