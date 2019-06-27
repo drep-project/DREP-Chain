@@ -23,8 +23,7 @@ import (
 
 	"github.com/drep-project/dlog"
 	"github.com/robertkrimen/otto"
-
-	"github.com/drep-project/drep-chain/rpc"
+	"github.com/drep-project/rpc"
 )
 
 // bridge is a collection of JavaScript utility methods to bride the .js runtime

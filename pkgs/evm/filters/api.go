@@ -25,6 +25,11 @@ import (
 	"sync"
 	"time"
 
+<<<<<<< HEAD
+=======
+	"github.com/drep-project/drep-chain/common/hexutil"
+	"github.com/drep-project/rpc"
+>>>>>>> dfbf5523906fa3553df76d0624e97df47cd077d2
 	"github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common/hexutil"
 	"github.com/drep-project/drep-chain/crypto"

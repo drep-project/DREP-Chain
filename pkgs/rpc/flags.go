@@ -5,7 +5,8 @@ import (
 	"strings"
 
 	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/rpc"
+
+	 "github.com/drep-project/rpc"
 )
 
 var (

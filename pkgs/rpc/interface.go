@@ -2,7 +2,7 @@ package rpc
 
 import (
 	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/rpc"
+	"github.com/drep-project/rpc"
 )
 
 type HTTPControl interface {

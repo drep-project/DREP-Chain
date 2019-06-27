@@ -25,7 +25,7 @@ import (
 	accountComponent "github.com/drep-project/drep-chain/pkgs/accounts/component"
 	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
-	"github.com/drep-project/drep-chain/rpc"
+	"github.com/drep-project/rpc"
 )
 
 var (

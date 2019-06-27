@@ -18,15 +18,16 @@ import (
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/network/p2p"
 	"github.com/drep-project/drep-chain/pkgs/evm"
-	"github.com/drep-project/drep-chain/rpc"
+	"github.com/drep-project/rpc"
 
 	"github.com/drep-project/drep-chain/chain/service/chainservice"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	p2pService "github.com/drep-project/drep-chain/network/service"
 
+	"time"
+
 	"github.com/drep-project/drep-chain/common"
 	rpc2 "github.com/drep-project/drep-chain/pkgs/rpc"
-	"time"
 )
 
 var (
