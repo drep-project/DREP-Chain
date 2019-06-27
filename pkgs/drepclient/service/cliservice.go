@@ -11,7 +11,7 @@ import (
 	cliTypes "github.com/drep-project/drep-chain/pkgs/drepclient/types"
 	"github.com/drep-project/drep-chain/pkgs/log"
 	rpc2 "github.com/drep-project/drep-chain/pkgs/rpc"
-	"github.com/drep-project/drep-chain/rpc"
+	"github.com/drep-project/rpc"
 	"gopkg.in/urfave/cli.v1"
 )
 

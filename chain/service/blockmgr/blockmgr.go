@@ -18,15 +18,16 @@ import (
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/network/p2p"
 	"github.com/drep-project/drep-chain/pkgs/evm"
-	"github.com/drep-project/drep-chain/rpc"
+	"github.com/drep-project/rpc"
 
 	"github.com/drep-project/drep-chain/chain/service/chainservice"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 	p2pService "github.com/drep-project/drep-chain/network/service"
 
+	"time"
+
 	"github.com/drep-project/drep-chain/common"
 	rpc2 "github.com/drep-project/drep-chain/pkgs/rpc"
-	"time"
 )
 
 var (
@@ -53,7 +54,7 @@ type BlockMgr struct {
 	transactionPool *txpool.TransactionPool
 	apis            []app.API
 
-	lock sync.RWMutex
+	lock   sync.RWMutex
 	Config *chainTypes.BlockMgrConfig
 
 	//Events related to sync blocks
@@ -99,7 +100,7 @@ func (blockMgr *BlockMgr) CommandFlags() ([]cli.Command, []cli.Flag) {
 	return nil, []cli.Flag{}
 }
 
-func NewBlockMgr(config *chainTypes.BlockMgrConfig,homeDir string, cs chainservice.ChainServiceInterface, p2pservice p2pService.P2P) *BlockMgr {
+func NewBlockMgr(config *chainTypes.BlockMgrConfig, homeDir string, cs chainservice.ChainServiceInterface, p2pservice p2pService.P2P) *BlockMgr {
 	blockMgr := &BlockMgr{}
 	blockMgr.Config = config
 	blockMgr.ChainService = cs
@@ -148,7 +149,6 @@ func NewBlockMgr(config *chainTypes.BlockMgrConfig,homeDir string, cs chainservi
 	}
 	return blockMgr
 }
-
 
 func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 	blockMgr.Config = DefaultChainConfig

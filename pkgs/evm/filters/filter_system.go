@@ -29,7 +29,7 @@ import (
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/pkgs/evm/event"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
-	"github.com/drep-project/drep-chain/rpc"
+	"github.com/drep-project/rpc"
 	"github.com/drep-project/drep-chain/pkgs/log"
 )
 

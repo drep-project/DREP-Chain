@@ -12,7 +12,7 @@ import (
 	"gopkg.in/urfave/cli.v1"
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/rpc"
+	"github.com/drep-project/rpc"
 )
 
 const (

@@ -20,7 +20,7 @@ import (
 	"net"
 
 	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/rpc"
+	"github.com/drep-project/rpc"
 )
 
 // StartHTTPEndpoint starts the HTTP RPC endpoint, configured with cors/vhosts/modules

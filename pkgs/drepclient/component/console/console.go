@@ -32,7 +32,7 @@ import (
 	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"
 	"github.com/robertkrimen/otto"
-	"github.com/drep-project/drep-chain/rpc"
+	"github.com/drep-project/rpc"
 	"github.com/drep-project/drep-chain/pkgs/drepclient/component/jsre"
 
 )
