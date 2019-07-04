@@ -2,6 +2,9 @@ package service
 
 import (
 	"errors"
+
+	"github.com/drep-project/drep-chain/pkgs/accounts/addrgenerator"
+
 	"math/big"
 
 	"github.com/drep-project/drep-chain/chain/service/blockmgr"
@@ -350,6 +353,47 @@ func (accountapi *AccountApi) Sign(address crypto.CommonAddress, hash common.Byt
 		return nil, err
 	}
 	return sig, nil
+}
+
+/*
+	 name: generateAddresses
+	 usage: 生成其他链的地址
+	 params:
+		1.drep地址
+	 return: {BTCaddress, ethAddress, neoAddress}
+	 example:
+		curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_generateAddresses","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5"], "id": 3}' -H "Content-Type:application/json"
+
+	response:
+		 {"jsonrpc":"2.0","id":3,"result":"0x1f1d16412468dd9b67b568d31839ac608bdfddf2580666db4d364eefbe285fdaed569a3c8fa1decfebbfa0ed18b636059dbbf4c2106c45fc8846909833ef2cb1de"}
+*/
+func (accountapi *AccountApi) GenerateAddresses(address crypto.CommonAddress) (*RpcAddresses, error) {
+	privkey, err := accountapi.Wallet.DumpPrivateKey(&address)
+	if err != nil {
+		return nil, err
+	}
+	generator := &addrgenerator.AddrGenerate{
+		PrivateKey: privkey,
+	}
+	return &RpcAddresses {
+		BtcAddress:generator.ToBtc(),
+		EthAddress:generator.ToEth(),
+		NeoAddress:generator.ToNeo(),
+		RippleAddress:generator.ToRipple(),
+		DashAddress:generator.ToDash(),
+		DogeCoinAddress:generator.ToDogecoin(),
+		LiteCoiAddress:generator.ToLiteCoin(),
+	}, nil
+}
+
+type RpcAddresses struct {
+	BtcAddress string
+	EthAddress string
+	NeoAddress string
+	RippleAddress string
+	DashAddress string
+	DogeCoinAddress string
+	LiteCoiAddress string
 }
 
 type RpcAccount struct {

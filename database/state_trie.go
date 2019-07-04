@@ -156,10 +156,10 @@ func (state *State) insertProceedingOnCurrentBranch(seq string, offset int, key,
 	if err != nil {
 		return nil, err
 	}
-	err = state.db.PutState(key, state)
-	if err != nil {
-		return nil, err
-	}
+	//err = state.db.PutState(key, state)
+	//if err != nil {
+	//	return nil, err
+	//}
 	return state, nil
 }
 

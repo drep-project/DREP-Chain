@@ -1634,8 +1634,18 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 params: 1,
                 inputFormatter: [null]
             });
+<<<<<<< HEAD
 
             return [call,closeWallet,createAccount,createCode,createWallet,dumpPrivkey,gasPrice,getCode,listAddress,lockWallet,openWallet,setAlias,sign,transfer,unLockWallet]
+=======
+            var generateAddresses = new Method({
+                name: 'generateAddresses',
+                call: 'account_generateAddresses',
+                params: 1,
+                inputFormatter: [formatters.inputAddressFormatter]
+            });
+            return [call,closeWallet,createAccount,createCode,createWallet,dumpPrivkey,gasPrice,getCode,listAddress,lockWallet,openWallet,setAlias,sign,transfer,unLockWallet,generateAddresses]
+>>>>>>> 270f4fcd49643bcac7eef872a8a9114f7f776899
         }
 
         module.exports = ACCOUNT;
