@@ -2,9 +2,7 @@ package service
 
 import (
 	"errors"
-
 	"github.com/drep-project/drep-chain/pkgs/accounts/addrgenerator"
-
 	"math/big"
 
 	"github.com/drep-project/drep-chain/chain/service/blockmgr"
@@ -382,7 +380,9 @@ func (accountapi *AccountApi) GenerateAddresses(address crypto.CommonAddress) (*
 		RippleAddress:generator.ToRipple(),
 		DashAddress:generator.ToDash(),
 		DogeCoinAddress:generator.ToDogecoin(),
-		LiteCoiAddress:generator.ToLiteCoin(),
+		LiteCoinAddress:generator.ToLiteCoin(),
+		CosmosAddress:generator.ToAtom(),
+		TronAddress:generator.ToTron(),
 	}, nil
 }
 
@@ -393,7 +393,9 @@ type RpcAddresses struct {
 	RippleAddress string
 	DashAddress string
 	DogeCoinAddress string
-	LiteCoiAddress string
+	LiteCoinAddress string
+	CosmosAddress string
+	TronAddress string
 }
 
 type RpcAccount struct {

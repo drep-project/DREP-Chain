@@ -18,4 +18,6 @@ func Test_Generate(t *testing.T) {
 	fmt.Println("达世：",generator.ToDash())
 	fmt.Println("狗狗币：",generator.ToDogecoin())
 	fmt.Println("莱特币：",generator.ToLiteCoin())
+	fmt.Println("Cosmos：",generator.ToAtom())
+	fmt.Println("Tron：",generator.ToTron())
 }

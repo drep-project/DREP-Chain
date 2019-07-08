@@ -3,13 +3,16 @@ package addrgenerator
 import (
 	"crypto/ecdsa"
 	"crypto/sha256"
-	"github.com/btcsuite/btcutil"
-	"golang.org/x/crypto/ripemd160"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/drep-project/drep-chain/crypto"
+	"github.com/btcsuite/btcutil"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	rippleCrypto "github.com/rubblelabs/ripple/crypto"
+	"github.com/sasaxie/go-client-api/common/base58"
+	"golang.org/x/crypto/ripemd160"
+	"golang.org/x/crypto/sha3"
 	"math/big"
 )
 
@@ -18,7 +21,9 @@ type AddrGenerate struct {
 }
 
 func (addrGenerate *AddrGenerate) ToEth() string{
-	return crypto.PubKey2Address(addrGenerate.PrivateKey.PubKey()).String()
+	pk := addrGenerate.PrivateKey.PubKey()
+	ecdsaPk := (*ecdsa.PublicKey)(pk)
+	return ethcrypto.PubkeyToAddress(*ecdsaPk).String()
 }
 func (addrGenerate *AddrGenerate) ToRipple()string {
 	bytes := rippleCrypto.Sha256RipeMD160(addrGenerate.PrivateKey.PubKey().SerializeCompressed())
@@ -60,6 +65,16 @@ func (addrGenerate *AddrGenerate) ToDogecoin()string {
 func (addrGenerate *AddrGenerate) ToDash()string {
 	coin := getCoin("Dash")
 	return genCoin(addrGenerate.PrivateKey, coin.PubKeyHashAddrID, coin.PrivateKeyID, coin.Name)
+}
+
+func (addrGenerate *AddrGenerate) ToAtom()string {
+	pubKey := addrGenerate.PrivateKey.PubKey()
+	addr := sdk.AccAddress(pubKey.Serialize())
+	return addr.String()
+}
+
+func (addrGenerate *AddrGenerate) ToTron()string {
+	return addressFromKey(addrGenerate.PrivateKey)
 }
 
 
@@ -137,4 +152,31 @@ func genCoin(pk *secp256k1.PrivateKey, PubKeyHashAddrID, PrivateKeyID byte, name
 	wif, _ := btcutil.NewWIF(btcPriv, net, true)
 	addr, _ := btcutil.NewAddressPubKey(wif.PrivKey.PubKey().SerializeCompressed(), net)
 	return addr.EncodeAddress()
+}
+
+func addressFromKey(secpKey *secp256k1.PrivateKey) string {
+	// Build the Private Key and extract the Public Key
+	key := (*ecdsa.PrivateKey)(secpKey)
+	// #1
+	pub := append(key.X.Bytes(), key.Y.Bytes()...)
+
+	// #2
+	hash := sha3.NewLegacyKeccak256()
+	hash.Write(pub)
+	hashed := hash.Sum(nil)
+	last20 := hashed[len(hashed)-20:]
+
+	// #3
+	addr41 := append([]byte{0x41}, last20...)
+
+	// #4
+	hash2561 := sha256.Sum256(addr41)
+	hash2562 := sha256.Sum256(hash2561[:])
+	checksum := hash2562[:4]
+
+	// #5/#6
+	rawAddr := append(addr41, checksum...)
+	tronAddr := base58.Encode(rawAddr)
+
+    return tronAddr
 }
