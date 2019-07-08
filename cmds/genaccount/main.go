@@ -77,7 +77,7 @@ func gen(ctx *cli.Context) error {
 		}
 		instanceDir := filepath.Join(path, nodeItems[i].Name, "drepnode")
 		nodePrivateKey := GeneratePrivateKey(instanceDir)
-		fmt.Println(hex.EncodeToString(nodePrivateKey.Serialize()))
+		fmt.Println( crypto.PubKey2Address(nodePrivateKey.PubKey()).String(), hex.EncodeToString(nodePrivateKey.Serialize()))
 		node := enode.NewV4(nodePrivateKey.PubKey(), ip, nodeItems[i].Port, nodeItems[i].Port)
 		bootsNodes = append(bootsNodes, node)
 

@@ -2,10 +2,14 @@ package service
 
 import (
 	"bytes"
+	"encoding/hex"
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
+	"os"
 	"testing"
 )
 
@@ -181,4 +185,98 @@ func Test_Sign(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+}
+
+func TestWallet_ImportPrivKey(t *testing.T) {
+	testData := map[string]string{
+		"0xc9a53673960f8dea4aecadca77bf363c2b21b4ce": "e2eee3e0791242f1eabeb33e6c2f474a6932b04153ef9f14c0ffad205c88be2e",
+		"0x8faf3fa18d0a53d3ef02d3bdcd35d43c71439aec" :"f8eb7b53e9eb00465cde6309d7aa2942dc528847deab7dc251b1b10d420fa994",
+		"0x2670e46875fab57293aaeb442f3a901be06a5998": "52fc9a3eb26b3b3d4545d8b1e85c166226deaf69664d07b15e3f0254a7723bed",
+	}
+	password := "password"
+	wallet, err := NewWallet(testConfig, app.ChainIdType{})
+	if err != nil {
+		t.Error(err)
+	}
+	wallet.Open(password)
+
+	for _, pri := range testData {
+		privBytes,_ := hex.DecodeString(pri)
+		priv, _ := secp256k1.PrivKeyFromScalar(privBytes)
+		wallet.ImportPrivKey(priv)
+	}
+
+	for addrStr, priStr := range testData {
+		addr := crypto.String2Address(addrStr)
+		pri, err := wallet.DumpPrivateKey(&addr)
+		if err != nil {
+			t.Error(err)
+		}
+		loadPriStr := hex.EncodeToString(pri.Serialize())
+		if loadPriStr != priStr {
+			t.Errorf("privkey is wrong while reload from wallet, savekey:%s, loadkey: %s", priStr, loadPriStr)
+		}
+	}
+}
+
+func Test_ImportKeyStore(t *testing.T) {
+	testData := map[string]string{
+		"0xc9a53673960f8dea4aecadca77bf363c2b21b4ce": "e2eee3e0791242f1eabeb33e6c2f474a6932b04153ef9f14c0ffad205c88be2e",
+		"0x8faf3fa18d0a53d3ef02d3bdcd35d43c71439aec" :"f8eb7b53e9eb00465cde6309d7aa2942dc528847deab7dc251b1b10d420fa994",
+		"0x2670e46875fab57293aaeb442f3a901be06a5998": "52fc9a3eb26b3b3d4545d8b1e85c166226deaf69664d07b15e3f0254a7723bed",
+	}
+	oldWalletPath := "test_import_key_store_oldwallet"
+	newWalletPath := "test_import_key_store_newwallet"
+	oldPassword := "123"
+	newPassword := "ffg"
+	defer func() {
+		os.RemoveAll(oldWalletPath)
+		os.RemoveAll(newWalletPath)
+	}()
+
+
+	makeTestWallet := func() {
+		wallet, err := getWallet(oldWalletPath, oldPassword)
+		if err != nil {
+			t.Error(err)
+		}
+		for _, pri := range testData {
+			privBytes, _ := hex.DecodeString(pri)
+			priv, _ := secp256k1.PrivKeyFromScalar(privBytes)
+			wallet.ImportPrivKey(priv)
+		}
+	}
+
+	makeTestWallet()
+	newWallet, err := getWallet(newWalletPath, newPassword)
+	if err != nil {
+		t.Error(err)
+	}
+	newWallet.ImportKeyStore(oldWalletPath,oldPassword)
+
+	for addrStr, priStr := range testData {
+		addr := crypto.String2Address(addrStr)
+		pri, err := newWallet.DumpPrivateKey(&addr)
+		if err != nil {
+			t.Error(err)
+		}
+		loadPriStr := hex.EncodeToString(pri.Serialize())
+		if loadPriStr != priStr {
+			t.Errorf("privkey is wrong while reload from wallet, savekey:%s, loadkey: %s", priStr, loadPriStr)
+		}
+	}
+}
+
+func getWallet(path, password string) (*Wallet, error) {
+	testConfig := &accountTypes.Config{
+		Enable:      true,
+		Type:        "keystore",
+		KeyStoreDir: path,
+	}
+	wallet, err := NewWallet(testConfig, app.ChainIdType{})
+	if err != nil {
+		return nil, err
+	}
+	wallet.Open(password)
+	return wallet, nil
 }
