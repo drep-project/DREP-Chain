@@ -299,6 +299,27 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_get
 
 区块
 用于处理区块链偏上层逻辑
+
+### 1. blockMgr_GetPoolTransactions
+#### 作用：获取交易池中的交易信息.
+> 参数：
+ 1. 待查询地址
+
+#### 返回值：交易池中所有交易
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_getPoolTransactions","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+
+````
+
 链接口
 用于获取区块信息
 
@@ -685,7 +706,55 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 9. account_setAlias
+### 9. account_ReplaceTx
+#### 作用：替换老的交易
+> 参数：
+ 1. 发起转账的地址
+ 2. 接受者的地址
+ 3. 金额
+ 4. gas价格
+ 5. gas上线
+ 6. 备注
+ 7. 被代替交易的nonce
+
+#### 返回值：新交易地址
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_replaceTx","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000","",1000],"id":1}' http://127.0.0.1:15645
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":1,"result":"0x3a3b59f90a21c2fd1b690aa3a2bc06dc2d40eb5bdc26fdd7ecb7e1105af2638e"}
+````
+
+
+### 10. account_GetTxInPool
+#### 作用：查询交易是否在交易池，如果在，返回交易
+> 参数：
+ 1. 发起转账的地址
+
+#### 返回值：交易完整信息
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_getTxInPool","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5"],"id":1}' http://127.0.0.1:15645
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":1,"result":transaction}
+````
+
+
+### 11. account_setAlias
 #### 作用：设置别名
 > 参数：
  1. 带设置别名的地址
@@ -709,7 +778,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 10. account_call
+### 12. account_call
 #### 作用：调用合约
 > 参数：
  1. 调用者的地址
@@ -735,7 +804,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 11. account_createCode
+### 13. account_createCode
 #### 作用：部署合约
 > 参数：
  1. 部署合约的地址
@@ -760,7 +829,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 12. account_dumpPrivkey
+### 14. account_dumpPrivkey
 #### 作用：关闭钱包
 > 参数：
  1. 地址
@@ -781,7 +850,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_d
 ````
 
 
-### 13. account_sign
+### 15. account_sign
 #### 作用：关闭钱包
 > 参数：
  1. 地址
@@ -800,6 +869,70 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_s
 
 ```json
 {"jsonrpc":"2.0","id":3,"result":"0x1f1d16412468dd9b67b568d31839ac608bdfddf2580666db4d364eefbe285fdaed569a3c8fa1decfebbfa0ed18b636059dbbf4c2106c45fc8846909833ef2cb1de"}
+````
+
+
+### 16. account_generateAddresses
+#### 作用：生成其他链的地址
+> 参数：
+ 1. drep地址
+
+#### 返回值：{BTCaddress, ethAddress, neoAddress}
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_generateAddresses","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5"], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":3,"result":""}
+````
+
+
+### 17. account_importKeyStore
+#### 作用：导入keystore
+> 参数：
+ 1. path
+ 2. password
+
+#### 返回值：address list
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_importKeyStore","params":["path","123"], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":3,"result":["0x4082c96e38def8f3851831940485066234fe07b8"]}
+````
+
+
+### 18. account_importPrivkey
+#### 作用：导入私钥
+> 参数：
+ 1. privkey(compress hex)
+
+#### 返回值：address
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_importPrivkey","params":["0xe5510b32854ca52e7d7d41bb3196fd426d551951e2fd5f6b559a62889d87926c"], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":3,"result":"0x748eb65493a964e568800c3c2885c63a0de9f9ae"}
 ````
 
 共识rpc接口
@@ -822,5 +955,26 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"consensus
 
 ```json
 {"jsonrpc":"2.0","id":3,"result":false}
+````
+
+
+### 2. consensus_changeWaitTime
+#### 作用：修改leader等待时间 (ms)
+> 参数：
+ 1. 等待时间(ms)
+
+#### 返回值：私钥
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"consensus_changeWaitTime","params":[100000], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":3,"result":null}
 ````
 

@@ -1,6 +1,8 @@
 package service
 
 import (
+	"github.com/drep-project/drep-chain/common/fileutil"
+	"github.com/pkg/errors"
 	"sync/atomic"
 
 	"github.com/drep-project/drep-chain/app"
@@ -204,4 +206,62 @@ func (wallet *Wallet) checkWallet(op int) error {
 
 func (wallet *Wallet) cryptoPassword(password string) string {
 	return string(sha3.Keccak256([]byte(password)))
+}
+
+func (wallet *Wallet) ImportPrivKey(key *secp256k1.PrivateKey) (*chainTypes.Node, error) {
+	if err := wallet.checkWallet(WPERMISSION); err != nil {
+		return nil, err
+	}
+	addr := crypto.PubKey2Address(key.PubKey())
+	node := &chainTypes.Node{
+		Address: &addr,
+		PrivateKey:key,
+		ChainId: wallet.chainId,
+	}
+	_, err := wallet.cacheStore.GetKey(&addr, wallet.password)
+	if err == nil {
+		return nil,errors.Wrap(ErrExistKey, addr.String())
+	}
+	err = wallet.cacheStore.StoreKey(node, wallet.password)
+	if err != nil {
+		return nil, err
+	}
+	return node, nil
+}
+
+func (wallet *Wallet) ImportKeyStore(path, password string) ([]*crypto.CommonAddress, error) {
+	if err := wallet.checkWallet(WPERMISSION); err != nil {
+		return nil, err
+	}
+	if !fileutil.IsDirExists(path) {
+		return nil, errors.Wrap(ErrMissingKeystore, path)
+	}
+
+    newWallet, err := NewWallet(&accountTypes.Config{
+		Enable :true,
+		Type    : "keystore",
+		KeyStoreDir :path,
+	},wallet.chainId)
+	if err != nil {
+		return nil, err
+	}
+	err = newWallet.Open(password)
+	if err != nil {
+		return nil, err
+	}
+	nodes, err := newWallet.cacheStore.ExportKey(password)
+	addrs := []*crypto.CommonAddress{}
+	for _, node := range nodes {
+		_, err := wallet.cacheStore.GetKey(node.Address, wallet.password)
+		if err == nil {
+			log.WithField("addr", node.Address.String()).Info("privkey exist")
+			continue
+		}
+		err = wallet.cacheStore.StoreKey(node, wallet.password)
+		if err != nil {
+			return addrs, err
+		}
+		addrs = append(addrs,node.Address)
+	}
+	return addrs, nil
 }

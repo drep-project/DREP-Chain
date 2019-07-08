@@ -363,7 +363,7 @@ func (accountapi *AccountApi) Sign(address crypto.CommonAddress, hash common.Byt
 		curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_generateAddresses","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5"], "id": 3}' -H "Content-Type:application/json"
 
 	response:
-		 {"jsonrpc":"2.0","id":3,"result":"0x1f1d16412468dd9b67b568d31839ac608bdfddf2580666db4d364eefbe285fdaed569a3c8fa1decfebbfa0ed18b636059dbbf4c2106c45fc8846909833ef2cb1de"}
+		 {"jsonrpc":"2.0","id":3,"result":""}
 */
 func (accountapi *AccountApi) GenerateAddresses(address crypto.CommonAddress) (*RpcAddresses, error) {
 	privkey, err := accountapi.Wallet.DumpPrivateKey(&address)
@@ -384,6 +384,42 @@ func (accountapi *AccountApi) GenerateAddresses(address crypto.CommonAddress) (*
 		CosmosAddress:generator.ToAtom(),
 		TronAddress:generator.ToTron(),
 	}, nil
+}
+
+/*
+	 name: importKeyStore
+	 usage: 导入keystore
+	 params:
+		1.path
+		2.password
+	 return: address list
+	 example:
+		 curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_importKeyStore","params":["path","123"], "id": 3}' -H "Content-Type:application/json"
+	response:
+		 {"jsonrpc":"2.0","id":3,"result":["0x4082c96e38def8f3851831940485066234fe07b8"]}
+*/
+func (accountapi *AccountApi) ImportKeyStore(path, password string) ([]*crypto.CommonAddress, error) {
+	return accountapi.Wallet.ImportKeyStore(path, password)
+}
+
+/*
+	 name: importPrivkey
+	 usage: 导入私钥
+	 params:
+		1.privkey(compress hex)
+	 return: address
+	 example:
+		curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_importPrivkey","params":["0xe5510b32854ca52e7d7d41bb3196fd426d551951e2fd5f6b559a62889d87926c"], "id": 3}' -H "Content-Type:application/json"
+	response:
+		 {"jsonrpc":"2.0","id":3,"result":"0x748eb65493a964e568800c3c2885c63a0de9f9ae"}
+*/
+func (accountapi *AccountApi) ImportPrivkey(privBytes common.Bytes) (*crypto.CommonAddress, error) {
+	priv, _ := secp256k1.PrivKeyFromScalar(privBytes)
+	node, err :=  accountapi.Wallet.ImportPrivKey(priv)
+	if err != nil {
+		return nil, err
+	}
+	return node.Address, nil
 }
 
 type RpcAddresses struct {
