@@ -161,3 +161,28 @@ func (traceService *TraceService) Stop(executeContext *app.ExecuteContext) error
 func (traceService *TraceService) Receive(context actor.Context) {
 
 }
+
+func (traceService *TraceService) Rebuild(from, end int) error{
+	 currentHeight := traceService.ChainService.BestChain().Height()
+	 if uint64(from) > currentHeight {
+	 	return nil
+	 }
+	 if uint64(end) < currentHeight {
+		 return nil
+	 }
+	for i:=from; i< end;i++ {
+		block, err := traceService.ChainService.GetBlockByHeight(uint64(from))
+		if err != nil {
+			return ErrBlockNotFound
+		}
+		exist, err := traceService.store.ExistRecord(block)
+		if err != nil {
+			return err
+		}
+		if exist {
+			traceService.store.DelRecord(block)
+		}
+		traceService.store.InsertRecord(block)
+	}
+	return nil
+}

@@ -184,3 +184,33 @@ func (traceApi *TraceApi) GetSendTransactionByAddr(addr *crypto.CommonAddress, p
 func (traceApi *TraceApi) GetReceiveTransactionByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*types.RpcTransaction {
 	return traceApi.service.store.GetReceiveTransactionsByAddr(addr, pageIndex, pageSize)
 }
+
+
+
+/*
+ name: Rebuild
+ usage: 重建trace中的区块记录
+ params:
+	1. 起始块（包含）
+	2. 终止快（不包含）
+ return:
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_rebuild","params":[1,10], "id": 3}' -H "Content-Type:application/json"
+ response:
+   {
+	  "jsonrpc": "2.0",
+	  "id": 3,
+	  "result": null
+	}
+*/
+func (traceApi *TraceApi) Rebuild(from, end int) error {
+	if from <0 {
+		from = 0
+	}
+	if end <0 {
+		end = int(traceApi.service.ChainService.BestChain().Height())
+	}
+	if from > end {
+		return nil
+	}
+	return traceApi.service.Rebuild(from, end)
+}

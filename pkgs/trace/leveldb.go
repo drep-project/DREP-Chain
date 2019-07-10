@@ -34,6 +34,19 @@ func NewLevelDbStore(path string) (*LevelDbStore, error) {
 	return &LevelDbStore{path, db}, nil
 }
 
+func (store *LevelDbStore)  ExistRecord(block *chainTypes.Block)  (bool, error) {
+	for _, tx := range block.Data.TxList {
+		txHash := tx.TxHash()
+		key := store.TxKey(txHash)
+		_, err := store.db.Get(key, nil)
+		if err == leveldb.ErrNotFound {
+			return false, nil
+		}else{
+			return false, err
+		}
+	}
+	return true, nil
+}
 // InsertRecord check block ,if tx exist, save to to history and send history , if to is not nil, save tx receive history
 func (store *LevelDbStore) InsertRecord(block *chainTypes.Block) {
 	for _, tx := range block.Data.TxList {

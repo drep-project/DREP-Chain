@@ -7,6 +7,8 @@ import (
 
 // IStore determine the interface to be implementation for storage
 type IStore interface {
+	ExistRecord(block *chainTypes.Block) (bool, error)
+
 	InsertRecord(block *chainTypes.Block)
 
 	DelRecord(block *chainTypes.Block)

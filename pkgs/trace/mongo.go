@@ -84,6 +84,19 @@ func (store *MongogDbStore) InsertRecord(block *chainTypes.Block) {
 	store.viewTxCol.InsertMany(ctx, viewTxs, nil)
 }
 
+func (store *MongogDbStore)  ExistRecord(block *chainTypes.Block) (bool, error) {
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	curser, err := store.headerCol.Find(ctx, bson.M{"hash": block.Header.Hash()})
+	if err != nil {
+		return false, err
+	}
+	curser.Next(ctx)
+	if curser.Current == nil {
+		return false, nil
+	}
+	return true, nil
+}
+
 func (store *MongogDbStore) DelRecord(block *chainTypes.Block) {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	store.headerCol.DeleteOne(ctx, bson.M{"hash": block.Header.Hash()})
