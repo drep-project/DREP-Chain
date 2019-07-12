@@ -6,7 +6,7 @@ import (
 )
 
 var Preminer = map[crypto.CommonAddress]*big.Int{
-	crypto.String2Address("0xe91f67944ec2f7223bf6d0272557a5b13ecc1f28"): CoinFromNumer(10000000000),
+	crypto.String2Address("0xec61c03f719a5c214f60719c3f36bb362a202125"): CoinFromNumer(10000000000),
 }
 
 func CoinFromNumer(number int64) *big.Int {
