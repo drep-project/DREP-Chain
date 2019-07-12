@@ -2001,8 +2001,12 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 params: 1,
                 inputFormatter: [null]
             });
-
-            return [decodeTrasnaction,getRawTransaction,getReceiveTransactionByAddr,getSendTransactionByAddr,getTransaction]
+            var rebuild = new Method({
+                name: 'rebuild',
+                call: 'trace_rebuild',
+                params: 2
+            });
+            return [decodeTrasnaction,getRawTransaction,getReceiveTransactionByAddr,getSendTransactionByAddr,getTransaction, rebuild]
         }
 
         module.exports = TRACE;

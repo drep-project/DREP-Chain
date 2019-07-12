@@ -40,6 +40,7 @@ type TraceService struct {
 
 	store       IStore
 	readyToQuit chan struct{}
+	apis        []app.API
 }
 
 func (traceService *TraceService) Name() string {
@@ -47,16 +48,7 @@ func (traceService *TraceService) Name() string {
 }
 
 func (traceService *TraceService) Api() []app.API {
-	return []app.API{
-		app.API{
-			Namespace: MODULENAME,
-			Version:   "1.0",
-			Service: &TraceApi{
-				traceService,
-			},
-			Public: true,
-		},
-	}
+	return traceService.apis
 }
 
 func (traceService *TraceService) CommandFlags() ([]cli.Command, []cli.Flag) {
@@ -84,6 +76,9 @@ func (traceService *TraceService) Init(executeContext *app.ExecuteContext) error
 		traceService.Config.HistoryDir = ctx.GlobalString(HistoryDirFlag.Name)
 	}
 
+	if !traceService.Config.Enable {
+		return nil
+	}
 	traceService.newBlockChan = make(chan *chainTypes.Block, 1000)
 	traceService.detachBlockChan = make(chan *chainTypes.Block, 1000)
 
@@ -102,6 +97,16 @@ func (traceService *TraceService) Init(executeContext *app.ExecuteContext) error
 	}
 	if err != nil {
 		return err
+	}
+	traceService.apis = []app.API{
+		app.API{
+			Namespace: MODULENAME,
+			Version:   "1.0",
+			Service: &TraceApi{
+				traceService,
+			},
+			Public: true,
+		},
 	}
 	traceService.readyToQuit = make(chan struct{})
 	return nil
@@ -166,9 +171,6 @@ func (traceService *TraceService) Rebuild(from, end int) error{
 	 currentHeight := traceService.ChainService.BestChain().Height()
 	 if uint64(from) > currentHeight {
 	 	return nil
-	 }
-	 if uint64(end) < currentHeight {
-		 return nil
 	 }
 	for i:=from; i< end;i++ {
 		block, err := traceService.ChainService.GetBlockByHeight(uint64(from))

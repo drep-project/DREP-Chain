@@ -4,7 +4,7 @@ const (
 	ConfTemplate = `
 {
 	"log" : {
-	      "logLevel": 3
+	      "logLevel": 4
 	},
 	"rpc" : {
 	      "IPCEnabled": true,
@@ -33,7 +33,7 @@ const (
 	},
 	"accounts" : {
 	      "enable": true,
-"password": "123"
+          "password": "123"
 	},
 	"trace":{
 		"enable":false,

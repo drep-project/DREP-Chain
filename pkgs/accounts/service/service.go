@@ -118,10 +118,16 @@ func (accountService *AccountService) Init(executeContext *app.ExecuteContext) e
 }
 
 func (accountService *AccountService) Start(executeContext *app.ExecuteContext) error {
+	if accountService.Config.Enable {
+		return nil
+	}
 	return nil
 }
 
 func (accountService *AccountService) Stop(executeContext *app.ExecuteContext) error {
+	if accountService.Config.Enable {
+		return nil
+	}
 	return nil
 }
 

@@ -188,19 +188,15 @@ func (traceApi *TraceApi) GetReceiveTransactionByAddr(addr *crypto.CommonAddress
 
 
 /*
- name: Rebuild
+ name: rebuild
  usage: 重建trace中的区块记录
  params:
 	1. 起始块（包含）
-	2. 终止快（不包含）
+	2. 终止块（不包含）
  return:
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_rebuild","params":[1,10], "id": 3}' -H "Content-Type:application/json"
  response:
-   {
-	  "jsonrpc": "2.0",
-	  "id": 3,
-	  "result": null
-	}
+  	{"jsonrpc":"2.0","id":3,"result":null}
 */
 func (traceApi *TraceApi) Rebuild(from, end int) error {
 	if from <0 {
