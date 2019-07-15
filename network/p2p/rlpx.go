@@ -303,6 +303,8 @@ func initiatorEncHandshake(conn io.ReadWriter, prv *secp256k1.PrivateKey, remote
 		return s, err
 	}
 
+	fmt.Println("initiatorEncHandshake:", authPacket)
+
 	if _, err = conn.Write(authPacket); err != nil {
 		return s, err
 	}
@@ -517,6 +519,9 @@ func readHandshakeMsg(msg plainDecoder, plainSize int, prv *secp256k1.PrivateKey
 	if _, err := io.ReadFull(r, buf); err != nil {
 		return buf, err
 	}
+
+	fmt.Println("readHandshakeMsg:", buf)
+
 	// Attempt decoding pre-EIP-8 "plain" format.
 	key := ecies.ImportECDSA(prv)
 	if dec, err := key.Decrypt(buf, nil, nil); err == nil {
