@@ -306,7 +306,7 @@ func (p *Peer) handle(msg Msg) error {
 		if err != nil {
 			return fmt.Errorf("dismsg unmarshal msg err:%v", err)
 		}
-		p.log.WithField("peer ip", p.IP()).Info("dis connect from peer")
+		p.log.WithField("peer ip", p.IP()).WithField("err", err).Info("dis connect from peer")
 		return reason[0]
 	case msg.Code < baseProtocolLength:
 		// ignore other base protocol messages
