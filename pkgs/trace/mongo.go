@@ -2,6 +2,7 @@ package trace
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
@@ -26,7 +27,7 @@ type MongogDbStore struct {
 }
 
 // NewMongogDbStore open a new db from url, if db not exist, auto create
-func NewMongogDbStore(url string) (*MongogDbStore, error) {
+func NewMongogDbStore(url string, dbName string) (*MongogDbStore, error) {
 	store := &MongogDbStore{
 		url: url,
 	}
@@ -40,7 +41,7 @@ func NewMongogDbStore(url string) (*MongogDbStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	store.db = store.client.Database("drep")
+	store.db = store.client.Database(dbName)
 	store.txCol = store.db.Collection("tx")
 	store.blockCol = store.db.Collection("block")
 	store.headerCol = store.db.Collection("header")
@@ -58,7 +59,10 @@ func (store *MongogDbStore) InsertRecord(block *chainTypes.Block) {
 	rpcHeader.FromBlockHeader(block.Header)
 	rpcBlock := &chainTypes.RpcBlock{}
 	rpcBlock.From(block)
-	store.blockCol.InsertOne(ctx, rpcBlock)
+	_, err := store.blockCol.InsertOne(ctx, rpcBlock)
+	if err != nil {
+		fmt.Println(err)
+	}
 	store.headerCol.InsertOne(ctx, rpcHeader)
 
 	viewBlock := ViewBlock{}

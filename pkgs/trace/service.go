@@ -22,6 +22,7 @@ var (
 		Name:  "enableTrace",
 		Usage: "is  trace enable flag",
 	}
+	DefaultDbName = "drep"
 )
 
 // HistoryService use to record tx data for query
@@ -88,7 +89,7 @@ func (traceService *TraceService) Init(executeContext *app.ExecuteContext) error
 			log.WithField("err", err).WithField("path", traceService.Config.HistoryDir).Error("cannot open db file")
 		}
 	} else if traceService.Config.DbType == "mongo" {
-		traceService.store, err = NewMongogDbStore(traceService.Config.Url)
+		traceService.store, err = NewMongogDbStore(traceService.Config.Url,DefaultDbName)
 		if err != nil {
 			log.WithField("err", err).WithField("url", traceService.Config.Url).Error("try connect mongo fail")
 		}

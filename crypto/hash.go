@@ -3,6 +3,7 @@ package crypto
 import (
 	"github.com/drep-project/drep-chain/common"
 	"math/big"
+	"math/rand"
 )
 
 type Hash [HashLength]byte
@@ -83,4 +84,10 @@ func (h *Hash) UnmarshalJSON(input []byte) error {
 // MarshalText returns the hex representation of h.
 func (h Hash) MarshalText() ([]byte, error) {
 	return common.Bytes(h[:]).MarshalText()
+}
+
+func RandomHash() Hash {
+	key := make([]byte, HashLength)
+    rand.Read(key)
+	return Bytes2Hash(key)
 }
