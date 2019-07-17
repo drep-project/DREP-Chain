@@ -26,7 +26,8 @@ func (database *DatabaseService) PutBlock(block *chainType.Block) error {
 	if err != nil {
 		return err
 	}
-	return database.db.store.Put(key, value)
+
+	return database.db.Put(key, value)
 }
 
 func (database *DatabaseService) GetBlock(hash *crypto.Hash) (*chainType.Block, error) {
@@ -40,6 +41,7 @@ func (database *DatabaseService) GetBlock(hash *crypto.Hash) (*chainType.Block, 
 	if err != nil {
 		return nil, err
 	}
+
 	return block, nil
 }
 
@@ -50,7 +52,7 @@ func (database *DatabaseService) HasBlock(hash *crypto.Hash) bool {
 }
 
 func (database *DatabaseService) BlockIterator(handle func(*chainType.Block) error) error {
-	iter := database.db.store.NewIterator(BlockPrefix)
+	iter := database.db.diskDb.NewIteratorWithPrefix(BlockPrefix)
 	defer iter.Release()
 	var err error
 	for iter.Next() {
@@ -78,7 +80,7 @@ func (database *DatabaseService) PutBlockNode(blockNode *chainType.BlockNode) er
 	}
 	key := database.blockIndexKey(blockNode.Hash, blockNode.Height)
 	value = append(value, byte(blockNode.Status)) //TODO just for now , when change binary serilize, should change a better one
-	return database.db.store.Put(key, value)
+	return database.db.diskDb.Put(key, value)
 }
 
 func (database *DatabaseService) blockIndexKey(blockHash *crypto.Hash, blockHeight uint64) []byte {
@@ -103,7 +105,7 @@ func (database *DatabaseService) GetBlockNode(hash *crypto.Hash, height uint64) 
 
 func (database *DatabaseService) BlockNodeCount() int64 {
 	count := int64(64)
-	iter := database.db.store.NewIterator(BlockNodePrefix)
+	iter := database.db.diskDb.NewIteratorWithPrefix(BlockNodePrefix)
 	defer iter.Release()
 	for iter.Next() {
 		count++
@@ -112,7 +114,7 @@ func (database *DatabaseService) BlockNodeCount() int64 {
 }
 
 func (database *DatabaseService) BlockNodeIterator(handle func(*chainType.BlockHeader, chainType.BlockStatus) error) error {
-	iter := database.db.store.NewIterator(BlockNodePrefix)
+	iter := database.db.diskDb.NewIteratorWithPrefix(BlockNodePrefix)
 	defer iter.Release()
 	var err error
 	for iter.Next() {
@@ -147,7 +149,7 @@ func (database *DatabaseService) Rollback2Block(height uint64) (error, int64) {
 }
 
 func (database *DatabaseService) RecordBlockJournal(height uint64) {
-	database.db.RecordBlockJournal(height)
+	database.db.SetBlockJournal(height)
 }
 
 func (database *DatabaseService) GetBlockJournal() uint64 {

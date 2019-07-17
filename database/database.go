@@ -1,24 +1,26 @@
 package database
 
 import (
+	"github.com/drep-project/binary"
+	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/crypto/sha3"
+	"github.com/drep-project/drep-chain/database/drepdb"
+	"github.com/drep-project/drep-chain/database/drepdb/leveldb"
+	"github.com/drep-project/drep-chain/database/trie"
+
 	oriBinary "encoding/binary"
 	"fmt"
 	"math/big"
 	"strconv"
 	"sync"
-
-	"github.com/drep-project/binary"
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/sha3"
 )
 
 type Database struct {
-	store  IStore
-	states *sync.Map
-	//trie  Trie
-	root          []byte
-	isTransaction bool
+	diskDb drepdb.KeyValueStore //实际磁盘数据库
+	cache  *TransactionStore    //缓存数据库，调用flush才会把数据写入到diskDb中
+	trie   *trie.SecureTrie     //全局状态树
+	trieDb *trie.Database       //状态树存储到磁盘时，使用到的db
 }
 
 var (
@@ -27,31 +29,27 @@ var (
 	maxSeqOfBlockKey    = []byte("seqOfBlockHeight") //块高度对应的数据库操作最大序列号
 	dbOperaterJournal   = "addrOperatesJournal"      //每一次数据读写过程的记录
 	addressStorage      = "addressStorage"           //以地址作为KEY的对象存储
-	stateRoot           = "state rootState"
 )
 
 func NewDatabase(dbPath string) (*Database, error) {
-	ldb, err := NewLdbStore(dbPath)
-	if err != nil {
-		return nil, err
+	diskDb, err := leveldb.New(dbPath, 16, 512, "")
+	db := &Database{
+		diskDb: diskDb,
 	}
 
-	db := &Database{
-		store:  ldb,
-		states: new(sync.Map),
-	}
 	err = db.initState()
 	if err != nil {
 		return nil, err
 	}
+
 	return db, nil
 }
 
-func DatabaseFromStore(store IStore) (*Database, error) {
+func DatabaseFromStore(diskDb drepdb.KeyValueStore) (*Database, error) {
 	db := &Database{
-		store:  store,
-		states: new(sync.Map),
+		diskDb: diskDb,
 	}
+
 	err := db.initState()
 	if err != nil {
 		return nil, err
@@ -60,37 +58,36 @@ func DatabaseFromStore(store IStore) (*Database, error) {
 }
 
 func (db *Database) initState() error {
-	db.root = sha3.Keccak256([]byte(stateRoot))
-	value, _ := db.store.Get(db.root)
-	if value != nil {
-		return nil
+	db.trieDb = trie.NewDatabaseWithCache(db.diskDb, 0)
+
+	var err error
+	value, _ := db.diskDb.Get(trie.EmptyRoot[:])
+	if value == nil {
+		db.diskDb.Put([]byte(dbOperaterMaxSeqKey), new(big.Int).Bytes())
+		db.trie, err = trie.NewSecure(crypto.Hash{}, db.trieDb)
+		db.diskDb.Put(trie.EmptyRoot[:], []byte{0})
+	} else {
+		chainState := db.GetChainState()
+		journalHeight := db.GetBlockJournal()
+		header, _, err := db.GetBlockNode(&chainState.Hash, journalHeight)
+		if err != nil {
+			return err
+		}
+		db.trie, err = trie.NewSecure(crypto.Bytes2Hash(header.StateRoot), db.trieDb)
 	}
 
-	err := db.store.Put([]byte(dbOperaterMaxSeqKey), new(big.Int).Bytes())
-	if err != nil {
-		return err
-	}
-	rootState := &State{
-		Sequence: "",
-		Value:    []byte{0},
-		IsLeaf:   true,
-	}
-	value, err = binary.Marshal(rootState)
-	if err != nil {
-		return err
-	}
-	return db.store.Put(db.root, value)
+	return err
 }
 
 func (db *Database) rollback(maxBlockSeq int64, maxSeqKey, journalKey string) (error, int64) {
-	seqVal, err := db.store.Get([]byte(maxSeqKey))
+	seqVal, err := db.diskDb.Get([]byte(maxSeqKey))
 	if err != nil {
 		return err, 0
 	}
 	var seq = new(big.Int).SetBytes(seqVal).Int64()
 	for i := seq; i > maxBlockSeq; i-- {
 		key := []byte(journalKey + strconv.FormatInt(i, 10))
-		jVal, err := db.store.Get(key)
+		jVal, err := db.diskDb.Get(key)
 		if err != nil {
 			return err, 0
 		}
@@ -101,28 +98,28 @@ func (db *Database) rollback(maxBlockSeq int64, maxSeqKey, journalKey string) (e
 		}
 		if j.Op == "put" {
 			if j.Previous == nil {
-				err = db.store.Delete(j.Key)
+				err = db.diskDb.Delete(j.Key)
 				if err != nil {
 					return err, 0
 				}
 			} else {
-				err = db.store.Put(j.Key, j.Previous)
+				err = db.diskDb.Put(j.Key, j.Previous)
 				if err != nil {
 					return err, 0
 				}
 			}
 		}
 		if j.Op == "del" {
-			err = db.store.Put(j.Key, j.Previous)
+			err = db.diskDb.Put(j.Key, j.Previous)
 			if err != nil {
 				return err, 0
 			}
 		}
-		err = db.store.Delete(key)
+		err = db.diskDb.Delete(key)
 		if err != nil {
 			return err, 0
 		}
-		err = db.store.Put([]byte(maxSeqKey), new(big.Int).SetInt64(maxBlockSeq).Bytes())
+		err = db.diskDb.Put([]byte(maxSeqKey), new(big.Int).SetInt64(maxBlockSeq).Bytes())
 		if err != nil {
 			return err, 0
 		}
@@ -136,6 +133,7 @@ func (db *Database) PutChainState(chainState *chainTypes.BestState) error {
 	if err != nil {
 		return err
 	}
+
 	return db.Put(key, value)
 }
 
@@ -155,7 +153,7 @@ func (db *Database) Rollback2Block(height uint64) (error, int64) {
 	key := make([]byte, keyLen)
 	copy(key, maxSeqOfBlockKey)
 	oriBinary.BigEndian.PutUint64(key[len(maxSeqOfBlockKey):], height)
-	value, err := db.store.Get(key)
+	value, err := db.diskDb.Get(key)
 	if err != nil {
 		return err, 0
 	}
@@ -164,8 +162,8 @@ func (db *Database) Rollback2Block(height uint64) (error, int64) {
 	return db.rollback(maxbockSeq, dbOperaterMaxSeqKey, dbOperaterJournal)
 }
 
-func (db *Database) RecordBlockJournal(height uint64) error {
-	seqVal, err := db.store.Get([]byte(dbOperaterMaxSeqKey))
+func (db *Database) SetBlockJournal(height uint64) error {
+	seqVal, err := db.Get([]byte(dbOperaterMaxSeqKey))
 	if err != nil {
 		return err
 	}
@@ -174,89 +172,38 @@ func (db *Database) RecordBlockJournal(height uint64) error {
 	key := make([]byte, keyLen)
 	copy(key, maxSeqOfBlockKey)
 	oriBinary.BigEndian.PutUint64(key[len(maxSeqOfBlockKey):], height)
-	return db.store.Put(key, new(big.Int).SetInt64(seq).Bytes())
+	return db.Put(key, new(big.Int).SetInt64(seq).Bytes())
 }
 
 func (db *Database) GetBlockJournal() uint64 {
-	ref := db.store.NewIterator([]byte(maxSeqOfBlockKey))
-	ref.Last()
-	heightBytes := ref.Key()[len(maxSeqOfBlockKey):]
+	it := db.diskDb.NewIteratorWithPrefix([]byte(maxSeqOfBlockKey))
+
+	var heightBytes []byte
+	for it.Next() {
+		heightBytes = it.Key()[len(maxSeqOfBlockKey):]
+	}
+
 	height := oriBinary.BigEndian.Uint64(heightBytes)
 	return height
-}
-
-func (db *Database) GetStateRoot() []byte {
-	state, _ := db.GetState(db.root)
-	return state.Value
-}
-
-func (db *Database) GetState(key []byte) (*State, error) {
-	val, ok := db.states.Load(string(key))
-	if ok && val != nil {
-		return val.(*State), nil
-	}
-	b, err := db.store.Get(key)
-	if err != nil {
-		return nil, err
-	}
-	state := &State{}
-	err = binary.Unmarshal(b, state)
-	if err != nil {
-		return nil, err
-	}
-	state.db = db
-	db.states.Store(string(key), state)
-	return state, nil
-}
-
-func (db *Database) PutState(key []byte, state *State) error {
-	b, err := binary.Marshal(state)
-	if err != nil {
-		return err
-	}
-	err = db.store.Put(key, b)
-	if err != nil {
-		return err
-	}
-	state.db = db
-	db.states.Store(string(key), state)
-	return err
-}
-
-func (db *Database) DelState(key []byte) error {
-	err := db.store.Delete(key)
-	if err != nil {
-		return err
-	}
-	db.states.Store(string(key), nil)
-	return nil
 }
 
 func (db *Database) GetStorage(addr *crypto.CommonAddress) *chainTypes.Storage {
 	storage := &chainTypes.Storage{}
 	key := sha3.Keccak256([]byte(addressStorage + addr.Hex()))
-	value, err := db.store.Get(key)
+
+	var value []byte
+	var err error
+	if db.cache != nil {
+		value, err = db.cache.Get(key)
+	} else {
+		value, err = db.trie.TryGet(key)
+	}
 	if err != nil {
-		return storage
+		log.Errorf("get storage err:%v", err)
+		return nil
 	}
 	binary.Unmarshal(value, storage)
 	return storage
-}
-
-func (db *Database) AliasPut(key, value []byte) error {
-	return db.store.Put(key, value)
-}
-
-func (db *Database) Get(key []byte) ([]byte, error) {
-	return db.store.Get(key)
-}
-
-func (db *Database) Put(key []byte, value []byte) error {
-	return db.store.Put(key, value)
-}
-
-func (db *Database) Delete(key []byte) error {
-	return db.store.Delete(key)
 }
 
 func (db *Database) PutStorage(addr *crypto.CommonAddress, storage *chainTypes.Storage) error {
@@ -265,15 +212,28 @@ func (db *Database) PutStorage(addr *crypto.CommonAddress, storage *chainTypes.S
 	if err != nil {
 		return err
 	}
-	err = db.Put(key, value)
-	if err != nil {
-		return err
-	}
 
-	seq := bytes2Hex(key)
-	val := sha3.Keccak256(value)
-	insert(db, seq, db.root, val)
-	return nil
+	if db.cache != nil {
+		return db.cache.Put(key, value)
+	} else {
+		return db.trie.TryUpdate(key, value)
+	}
+}
+
+func (db *Database) AliasPut(key, value []byte) error {
+	return db.diskDb.Put(key, value)
+}
+
+func (db *Database) Get(key []byte) ([]byte, error) {
+	return db.diskDb.Get(key)
+}
+
+func (db *Database) Put(key []byte, value []byte) error {
+	return db.diskDb.Put(key, value)
+}
+
+func (db *Database) Delete(key []byte) error {
+	return db.diskDb.Delete(key)
 }
 
 func (db *Database) GetBalance(addr *crypto.CommonAddress) *big.Int {
@@ -354,8 +314,9 @@ func (db *Database) AliasSet(addr *crypto.CommonAddress, alias string) (err erro
 	return nil
 }
 
+//alias为key的k-v
 func (db *Database) AliasGet(alias string) *crypto.CommonAddress {
-	buf, err := db.store.Get([]byte(aliasPrefix + alias))
+	buf, err := db.diskDb.Get([]byte(aliasPrefix + alias))
 	if err != nil {
 		return nil
 	}
@@ -365,7 +326,7 @@ func (db *Database) AliasGet(alias string) *crypto.CommonAddress {
 }
 
 func (db *Database) AliasExist(alias string) bool {
-	_, err := db.store.Get([]byte(aliasPrefix + alias))
+	_, err := db.diskDb.Get([]byte(aliasPrefix + alias))
 	if err != nil {
 		return false
 	}
@@ -525,12 +486,12 @@ func (db *Database) PutBlock(block *chainTypes.Block) error {
 	if err != nil {
 		return err
 	}
-	return db.store.Put(key, value)
+	return db.Put(key, value)
 }
 
 func (db *Database) GetBlock(hash *crypto.Hash) (*chainTypes.Block, error) {
 	key := append(BlockPrefix, hash[:]...)
-	val, err := db.store.Get(key)
+	val, err := db.Get(key)
 	if err != nil {
 		return nil, err
 	}
@@ -544,13 +505,14 @@ func (db *Database) GetBlock(hash *crypto.Hash) (*chainTypes.Block, error) {
 
 func (db *Database) GetBlockNode(hash *crypto.Hash, blockHeight uint64) (*chainTypes.BlockHeader, chainTypes.BlockStatus, error) {
 	key := db.blockIndexKey(hash, blockHeight)
+
 	value, err := db.Get(key)
 	if err != nil {
 		return nil, 0, err
 	}
 	blockHeader := &chainTypes.BlockHeader{}
 	binary.Unmarshal(value[0:len(value)-1], blockHeader)
-	status := value[len(value)-1 : len(value)][0]
+	status := value[len(value)-1:len(value)][0]
 	return blockHeader, chainTypes.BlockStatus(status), nil
 }
 
@@ -561,8 +523,9 @@ func (db *Database) PutBlockNode(blockNode *chainTypes.BlockNode) error {
 		return err
 	}
 	key := db.blockIndexKey(blockNode.Hash, blockNode.Height)
+
 	value = append(value, byte(blockNode.Status))
-	return db.store.Put(key, value)
+	return db.Put(key, value)
 }
 
 func (db *Database) blockIndexKey(blockHash *crypto.Hash, blockHeight uint64) []byte {
@@ -575,34 +538,35 @@ func (db *Database) blockIndexKey(blockHash *crypto.Hash, blockHeight uint64) []
 
 func (db *Database) BeginTransaction() *Database {
 	return &Database{
-		store:         NewTransactionStore(db.store),
-		states:        new(sync.Map),
-		root:          db.root,
-		isTransaction: true,
+		diskDb: db.diskDb,
+		cache:  NewTransactionStore(db.trie, db.diskDb),
+		trie:   db.trie,
 	}
 }
 
 func (db *Database) Commit(needLog bool) {
-	if db.isTransaction {
-		db.store.(*TransactionStore).Flush(needLog)
+	if db.cache != nil {
+		db.cache.Flush(needLog)
 	}
 }
 
 func (db *Database) Discard() {
-	if db.isTransaction {
-		db.store.(*TransactionStore).Clear()
+	if db.cache != nil {
+		db.cache.Clear()
 	}
 }
 
 func (db *Database) RevertState(shot *SnapShot) {
-	db.states = shot.StateShot
-	db.store.RevertState(shot.StoreShot)
+	db.cache.RevertState(shot.StoreShot)
 }
 
 func (db *Database) CopyState() *SnapShot {
-	newStoreShot := db.store.CopyState()
-	newStateShot := copyMap(db.states)
-	return &SnapShot{newStoreShot, newStateShot}
+	newStoreShot := db.cache.CopyState()
+	return &SnapShot{newStoreShot}
+}
+
+func (db *Database) GetStateRoot() []byte {
+	return db.trie.Hash().Bytes()
 }
 
 func copyMap(m *sync.Map) *sync.Map {
@@ -616,8 +580,6 @@ func copyMap(m *sync.Map) *sync.Map {
 				newBytes := make([]byte, len(t))
 				copy(newBytes, t)
 				newMap.Store(key, newBytes)
-			case *State:
-				newMap.Store(key, t.Copy())
 			default:
 				panic("never run here")
 			}
@@ -629,5 +591,4 @@ func copyMap(m *sync.Map) *sync.Map {
 
 type SnapShot struct {
 	StoreShot *sync.Map
-	StateShot *sync.Map
 }

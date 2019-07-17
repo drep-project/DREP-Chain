@@ -18,10 +18,12 @@ package trie
 
 import (
 	"fmt"
+
 	"io"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common"
+	//"github.com/ethereum/go-ethereum/common"
+	"github.com/drep-project/drep-chain/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -118,6 +120,7 @@ func decodeNode(hash, buf []byte) (node, error) {
 	if len(buf) == 0 {
 		return nil, io.ErrUnexpectedEOF
 	}
+
 	elems, _, err := rlp.SplitList(buf)
 	if err != nil {
 		return nil, fmt.Errorf("decode error: %v", err)
@@ -175,7 +178,7 @@ func decodeFull(hash, elems []byte) (*fullNode, error) {
 	return n, nil
 }
 
-const hashLen = len(common.Hash{})
+const hashLen = len(crypto.Hash{})
 
 func decodeRef(buf []byte) (node, []byte, error) {
 	kind, val, rest, err := rlp.Split(buf)

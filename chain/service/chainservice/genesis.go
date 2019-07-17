@@ -7,12 +7,13 @@ import (
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/database"
+	"github.com/drep-project/drep-chain/database/drepdb/memorydb"
 	"math/big"
 )
 
 func (chainService *ChainService) GetGenisiBlock(biosPubkey string) *chainTypes.Block {
 	var root []byte
-	db, err := database.DatabaseFromStore(database.NewMemoryStore())
+	db, err := database.DatabaseFromStore(memorydb.New())
 	for addr, balance := range params.Preminer {
 		//add preminer addr and balance
 		storage := chainTypes.NewStorage()
@@ -49,6 +50,7 @@ func (chainService *ChainService) GetGenisiBlock(biosPubkey string) *chainTypes.
 func (chainService *ChainService) ProcessGenesisBlock(genesisPubkey string) (*chainTypes.Block, error) {
 	var err error
 	var root []byte
+
 	for addr, balance := range params.Preminer {
 		//add preminer addr and balance
 		storage := chainTypes.NewStorage()
@@ -60,6 +62,10 @@ func (chainService *ChainService) ProcessGenesisBlock(genesisPubkey string) (*ch
 	if err != nil {
 		return nil, err
 	}
+
+	chainService.DatabaseService.Commit(true)
+	triedb := chainService.DatabaseService.GetTriedDB()
+	triedb.Commit(crypto.Bytes2Hash(root), true)
 
 	merkleRoot := chainService.DeriveMerkleRoot(nil)
 	b := common.MustDecode(genesisPubkey)
