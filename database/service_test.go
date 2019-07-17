@@ -64,10 +64,10 @@ func TestGetSetAlias(t *testing.T) {
 		return
 	}
 
-	os.Remove("./test/")
+	os.RemoveAll("./test/")
 }
 
-func TestPutStorage(t *testing.T) {
+func TestPutGetStorage(t *testing.T) {
 	db, err := NewDatabase("./test/")
 	if err != nil {
 		fmt.Println(err)
@@ -79,7 +79,8 @@ func TestPutStorage(t *testing.T) {
 	addr.SetBytes([]byte(addrStr))
 
 	st := chainType.Storage{
-
+		Balance: *new(big.Int).SetInt64(111111),
+		Nonce:   1,
 	}
 
 	err = idb.PutStorage(&addr, &st)
@@ -87,23 +88,12 @@ func TestPutStorage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-}
-
-func TestGetStorage(t *testing.T) {
-	db, err := NewDatabase("./test/")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	idb := NewDatabaseService(db)
-	addrStr := "0xc4ac59f52b3052e5c14566ed397453ea913c6fbc"
-	addr := crypto.CommonAddress{}
-	addr.SetBytes([]byte(addrStr))
-
 	store := idb.GetStorage(&addr)
-	if store == nil {
+	if store == nil || store.Nonce != 1 {
 		t.Fatal("storage not exist")
 	}
+
+	os.RemoveAll("./test/")
 }
 
 func TestRollBack(t *testing.T) {
