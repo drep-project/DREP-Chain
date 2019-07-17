@@ -4,10 +4,13 @@ import (
 	"bytes"
 	"crypto/rand"
 	"fmt"
-	"github.com/drep-project/drep-chain/crypto"
 	"math/big"
+	"os"
 	"strconv"
 	"testing"
+
+	chainType "github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/crypto"
 )
 
 func TestGetSetAlias(t *testing.T) {
@@ -28,14 +31,14 @@ func TestGetSetAlias(t *testing.T) {
 		fmt.Println(err)
 		return
 	}
-	idb.Commit()
+	idb.Commit(false)
 
 	addr1 := idb.AliasGet(alias)
 	if addr1 == nil || !bytes.Equal(addr1.Bytes(), addr.Bytes()) {
 		t.Fatal("alias get set err,", addr1)
 	}
 
-	alias2 := idb.GetStorageAlias(&addr, false)
+	alias2 := idb.GetStorageAlias(&addr)
 	if alias != alias2 {
 		t.Fatal(alias, alias)
 		return
@@ -48,17 +51,58 @@ func TestGetSetAlias(t *testing.T) {
 		fmt.Println(err)
 		return
 	}
-	idb.Commit()
+	idb.Commit(true)
 
 	addr1 = idb.AliasGet(alias)
 	if addr1 != nil {
 		t.Fatal("aliase has deleted")
 	}
 
-	alias2 = idb.GetStorageAlias(&addr, false)
+	alias2 = idb.GetStorageAlias(&addr)
 	if "" != alias2 {
 		t.Fatal(alias2)
 		return
+	}
+
+	os.Remove("./test/")
+}
+
+func TestPutStorage(t *testing.T) {
+	db, err := NewDatabase("./test/")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	idb := NewDatabaseService(db)
+	addrStr := "0xc4ac59f52b3052e5c14566ed397453ea913c6fbc"
+	addr := crypto.CommonAddress{}
+	addr.SetBytes([]byte(addrStr))
+
+	st := chainType.Storage{
+
+	}
+
+	err = idb.PutStorage(&addr, &st)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+}
+
+func TestGetStorage(t *testing.T) {
+	db, err := NewDatabase("./test/")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	idb := NewDatabaseService(db)
+	addrStr := "0xc4ac59f52b3052e5c14566ed397453ea913c6fbc"
+	addr := crypto.CommonAddress{}
+	addr.SetBytes([]byte(addrStr))
+
+	store := idb.GetStorage(&addr)
+	if store == nil {
+		t.Fatal("storage not exist")
 	}
 }
 
@@ -88,11 +132,11 @@ func TestRollBack(t *testing.T) {
 				return
 			}
 		}
-		idb.Commit()
+		idb.Commit(true)
 		idb.RecordBlockJournal(uint64(i + 1))
 	}
 
-	seqVal, err := db.store.Get([]byte(dbOperaterMaxSeqKey))
+	seqVal, err := db.diskDb.Get([]byte(dbOperaterMaxSeqKey))
 	seq := new(big.Int).SetBytes(seqVal)
 
 	if seq.Uint64() != (i)*(j)*2+1 {
