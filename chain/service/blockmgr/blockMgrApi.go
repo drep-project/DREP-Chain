@@ -30,7 +30,6 @@ func (blockMgrApi *BlockMgrApi) SendRawTransaction(txbytes common.Bytes) (string
 		return "", err
 	}
 	blockMgrApi.blockMgr.BroadcastTx(chainTypes.MsgTypeTransaction, tx, true)
-
 	return tx.TxHash().String(), err
 }
 

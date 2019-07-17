@@ -54,7 +54,7 @@ func Test_LeveldbInsertAndDelRecord(t *testing.T) {
 	levelDbStore, testData := makeData(path)
 	defer func() {
 		levelDbStore.Close()
-		clear(path)
+		deleteFolder(path)
 	}()
 
 	for _, data := range testData {
@@ -76,7 +76,7 @@ func Test_LeveldbInsertAndGetRawTransaction(t *testing.T) {
 	levelDbStore, testData := makeData(path)
 	defer func() {
 		levelDbStore.Close()
-		clear(path)
+		deleteFolder(path)
 	}()
 
 	for _, data := range testData {
@@ -97,7 +97,7 @@ func Test_LeveldbInsertAndGetTransaction(t *testing.T) {
 	levelDbStore, testData := makeData(path)
 	defer func() {
 		levelDbStore.Close()
-		clear(path)
+		deleteFolder(path)
 	}()
 
 	for _, data := range testData {
@@ -118,7 +118,7 @@ func Test_LeveldbInsertAndGetSendTransactionsByAddr(t *testing.T) {
 	levelDbStore, testData := makeData(path)
 	defer func() {
 		levelDbStore.Close()
-		clear(path)
+		deleteFolder(path)
 	}()
 
 	allCount := 0
@@ -151,7 +151,7 @@ func Test_LeveldbGetSendTransactionsByAddrAndPagination (t *testing.T) {
 	levelDbStore, testData := makeData(path)
 	defer func() {
 		levelDbStore.Close()
-		clear(path)
+		deleteFolder(path)
 	}()
 
 	allCount := 0
@@ -175,7 +175,7 @@ func Test_LeveldbInsertAndGetReceiveTransactionsByAddr(t *testing.T) {
 	levelDbStore, testData := makeData(path)
 	defer func() {
 		levelDbStore.Close()
-		clear(path)
+		deleteFolder(path)
 	}()
 
 	allCount := 0
@@ -208,7 +208,7 @@ func Test_LeveldbGetReceiveTransactionsByAddrAndPagination (t *testing.T) {
 	levelDbStore, testData := makeData(path)
 	defer func() {
 		levelDbStore.Close()
-		clear(path)
+		deleteFolder(path)
 	}()
 
 	allCount := 0
@@ -227,7 +227,7 @@ func Test_LeveldbGetReceiveTransactionsByAddrAndPagination (t *testing.T) {
 }
 
 
-func clear(ketStore string) {
+func deleteFolder(ketStore string) {
 	fileInfo, _ := ioutil.ReadDir(ketStore)
 	for _, file := range fileInfo {
 		path := filepath.Join(ketStore, file.Name())
@@ -236,6 +236,15 @@ func clear(ketStore string) {
 	os.Remove(ketStore)
 }
 
+func seuqenceBlock(n int) []*types.Block{
+	blocks := make([]*types.Block,n)
+	for i:=0;i<n;i++{
+		block := randomBlock()
+		block.Header.Height = uint64(i)
+		blocks[i] = block
+	}
+	return blocks
+}
 func randomBlock() *types.Block{
 	txData := []*types.Transaction{
 		randTransaction(),randTransaction(),

@@ -88,7 +88,7 @@ func (store *MongogDbStore) InsertRecord(block *chainTypes.Block) {
 	store.viewTxCol.InsertMany(ctx, viewTxs, nil)
 }
 
-func (store *MongogDbStore)  ExistRecord(block *chainTypes.Block) (bool, error) {
+func (store *MongogDbStore) ExistRecord(block *chainTypes.Block) (bool, error) {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	curser, err := store.headerCol.Find(ctx, bson.M{"hash": block.Header.Hash()})
 	if err != nil {

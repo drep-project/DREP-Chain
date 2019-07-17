@@ -13,7 +13,8 @@ usage: 查询交易地址等信息（需要开启记录模块）
 prefix:trace
 */
 type TraceApi struct {
-	service *TraceService
+	blockAnalysis *BlockAnalysis
+	traceService *TraceService
 }
 
 /*
@@ -31,7 +32,7 @@ type TraceApi struct {
 	}
 */
 func (traceApi *TraceApi) GetRawTransaction(txHash *crypto.Hash) (string, error) {
-	rawData, err := traceApi.service.store.GetRawTransaction(txHash)
+	rawData, err := traceApi.blockAnalysis.store.GetRawTransaction(txHash)
 	if err != nil {
 		return "", err
 	}
@@ -67,7 +68,7 @@ func (traceApi *TraceApi) GetRawTransaction(txHash *crypto.Hash) (string, error)
 	}
 */
 func (traceApi *TraceApi) GetTransaction(txHash *crypto.Hash) (*types.RpcTransaction, error) {
-	rpcTx, err := traceApi.service.store.GetTransaction(txHash)
+	rpcTx, err := traceApi.blockAnalysis.store.GetTransaction(txHash)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +147,7 @@ func (traceApi *TraceApi) DecodeTrasnaction(bytes common.Bytes) (*types.RpcTrans
 	}
 */
 func (traceApi *TraceApi) GetSendTransactionByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*types.RpcTransaction {
-	return traceApi.service.store.GetSendTransactionsByAddr(addr, pageIndex, pageSize)
+	return traceApi.blockAnalysis.store.GetSendTransactionsByAddr(addr, pageIndex, pageSize)
 }
 
 /*
@@ -182,7 +183,7 @@ func (traceApi *TraceApi) GetSendTransactionByAddr(addr *crypto.CommonAddress, p
 	}
 */
 func (traceApi *TraceApi) GetReceiveTransactionByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*types.RpcTransaction {
-	return traceApi.service.store.GetReceiveTransactionsByAddr(addr, pageIndex, pageSize)
+	return traceApi.blockAnalysis.store.GetReceiveTransactionsByAddr(addr, pageIndex, pageSize)
 }
 
 
@@ -203,10 +204,10 @@ func (traceApi *TraceApi) Rebuild(from, end int) error {
 		from = 0
 	}
 	if end <0 {
-		end = int(traceApi.service.ChainService.BestChain().Height())
+		end = int(traceApi.traceService.ChainService.BestChain().Height())
 	}
 	if from > end {
 		return nil
 	}
-	return traceApi.service.Rebuild(from, end)
+	return traceApi.blockAnalysis.Rebuild(from, end)
 }
