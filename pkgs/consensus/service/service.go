@@ -408,7 +408,7 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 	block.Header.StateRoot = db.GetStateRoot()
 
 	//verify
-	db = consensusService.ChainService.GetDatabaseService().BeginTransaction()
+	db = consensusService.DatabaseService.BeginTransaction()
 	gp := new(chainService.GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
 	gasUsed, gasFee, err := consensusService.ChainService.BlockValidator().ExecuteBlock(db, block, gp)
@@ -424,8 +424,8 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 	if block.Header.GasUsed.Cmp(gasUsed) == 0 {
 		stateRoot := db.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
-			log.Debug("rootcmd root !====")
-			return nil, err
+			log.Debug("rootcmd root !=")
+			return nil, fmt.Errorf("state root not equal")
 		}
 	} else {
 		log.WithField("gasUsed", gasUsed).Debug("multySigVerify")

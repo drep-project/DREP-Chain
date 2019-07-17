@@ -3,11 +3,19 @@ package database
 import (
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/drep-chain/database/trie"
+	dlog "github.com/drep-project/drep-chain/pkgs/log"
+
 	"gopkg.in/urfave/cli.v1"
 	path2 "path"
 )
 
+
 var (
+	MODULENAME = "database"
+
+	log = dlog.NewLogger(MODULENAME)
+
 	DataDirFlag = common.DirectoryFlag{
 		Name:  "datadir",
 		Usage: "Directory for the database dir (default = inside the homedir)",
@@ -63,4 +71,9 @@ func (database *DatabaseService) Stop(executeContext *app.ExecuteContext) error 
 
 func (database *DatabaseService) Db() *Database {
 	return database.db
+}
+
+
+func (database *DatabaseService) GetTriedDB()*trie.Database {
+	return database.db.trieDb
 }

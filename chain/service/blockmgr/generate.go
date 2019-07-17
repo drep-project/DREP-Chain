@@ -68,7 +68,6 @@ SELECT_TX:
 				} else {
 					log.WithField("Reason", err).Warn("generate block fail")
 					continue
-					//  return nil, err
 				}
 			}
 		}

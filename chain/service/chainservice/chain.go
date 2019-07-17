@@ -99,7 +99,7 @@ type ChainService struct {
 	blockValidator       IBlockValidator
 	transactionValidator ITransactionValidator
 
-	blockDb *database.Database
+	//blockDb *database.Database
 }
 
 type ChainState struct {
@@ -168,7 +168,7 @@ func NewChainService(config *chainTypes.ChainConfig, ds *database.DatabaseServic
 	chainService.transactionValidator = NewTransactionValidator(chainService)
 	chainService.blockValidator = NewChainBlockValidator(chainService)
 	chainService.DatabaseService = ds
-	chainService.blockDb = chainService.DatabaseService.BeginTransaction()
+	//chainService.blockDb = chainService.DatabaseService.BeginTransaction()
 	if chainService.config.GenesisPK == "" {
 		return nil
 	}
@@ -218,7 +218,7 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 	chainService.stateProcessor = NewStateProcessor(chainService)
 	chainService.transactionValidator = NewTransactionValidator(chainService)
 	chainService.blockValidator = NewChainBlockValidator(chainService)
-	chainService.blockDb = chainService.DatabaseService.BeginTransaction()
+
 	if chainService.config.GenesisPK == "" {
 		return ErrGenesisPkNotFound
 	}

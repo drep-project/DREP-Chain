@@ -107,7 +107,7 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainCh
 		} else {
 			db.Discard()
 		}
-		chainService.blockDb.Commit(false)
+		//chainService.blockDb.Commit(false)
 	}()
 	prevNode := chainService.blockIndex.LookupNode(&block.Header.PreviousHash)
 	preBlock := prevNode.Header()
@@ -124,7 +124,8 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainCh
 	}
 
 	//store block
-	err = chainService.blockDb.PutBlock(block)
+	//err = chainService.blockDb.PutBlock(block)
+	err = chainService.DatabaseService.PutBlock(block)
 	if err != nil {
 		return false, err
 	}
@@ -133,7 +134,7 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainCh
 	newNode.Status = chainTypes.StatusDataStored
 
 	chainService.blockIndex.AddNode(newNode)
-	err = chainService.blockIndex.FlushToDB(chainService.blockDb.PutBlockNode)
+	err = chainService.blockIndex.FlushToDB(chainService.DatabaseService.PutBlockNode)
 	if err != nil {
 		return false, err
 	}
@@ -164,7 +165,7 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainCh
 	// changes to the block index, so flush regardless of whether there was an
 	// error. The index would only be dirty if the block failed to connect, so
 	// we can ignore any errors writing.
-	if writeErr := chainService.blockIndex.FlushToDB(chainService.blockDb.PutBlockNode); writeErr != nil {
+	if writeErr := chainService.blockIndex.FlushToDB(chainService.DatabaseService.PutBlockNode); writeErr != nil {
 		log.WithField("Reason", writeErr).Warn("Error flushing block index changes to disk")
 	}
 	return err == nil, err
@@ -188,9 +189,9 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *cha
 		return err
 	}
 	if block.Header.GasUsed.Cmp(gasUsed) == 0 {
-		stateRoot := db.GetStateRoot()
-		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
-			err = errors.Wrapf(ErrNotMathcedStateRoot, "%s not matched %s", hex.EncodeToString(block.Header.StateRoot), hex.EncodeToString(stateRoot))
+		oldStateRoot := db.GetStateRoot()
+		if !bytes.Equal(block.Header.StateRoot, oldStateRoot) {
+			err = errors.Wrapf(ErrNotMathcedStateRoot, "%s not matched %s", hex.EncodeToString(block.Header.StateRoot), hex.EncodeToString(oldStateRoot))
 		}
 	} else {
 		err = errors.Wrapf(ErrGasUsed, "%d not matched %d", block.Header.GasUsed.Uint64(), gasUsed.Uint64())
@@ -216,7 +217,7 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *cha
 }
 
 func (chainService *ChainService) flushIndexState() {
-	if writeErr := chainService.blockIndex.FlushToDB(chainService.blockDb.PutBlockNode); writeErr != nil {
+	if writeErr := chainService.blockIndex.FlushToDB(chainService.DatabaseService.PutBlockNode); writeErr != nil {
 		log.WithField("Reason", writeErr).Warn("Error flushing block index changes to disk")
 	}
 }
@@ -283,7 +284,7 @@ func (chainService *ChainService) reorganizeChain(db *database.Database, detachN
 		elem = detachNodes.Front()
 		for elem != nil {
 			blockNode := elem.Value.(*chainTypes.BlockNode)
-			block, err := chainService.blockDb.GetBlock(blockNode.Hash)
+			block, err := chainService.DatabaseService.GetBlock(blockNode.Hash)
 			if err != nil {
 				return err
 			}
@@ -296,7 +297,7 @@ func (chainService *ChainService) reorganizeChain(db *database.Database, detachN
 		elem := attachNodes.Front()
 		for elem != nil { //
 			blockNode := elem.Value.(*chainTypes.BlockNode)
-			block, err := chainService.blockDb.GetBlock(blockNode.Hash)
+			block, err := chainService.DatabaseService.GetBlock(blockNode.Hash)
 			if err != nil {
 				return err
 			}
@@ -331,9 +332,11 @@ func (chainService *ChainService) markState(db *database.Database, blockNode *ch
 	}
 	chainService.stateLock.Unlock()
 	chainService.DatabaseService.PutChainState(state)
+	db.SetBlockJournal(state.Height)
 	db.Commit(true)
-	db.RecordBlockJournal(state.Height)
-	chainService.blockDb.Commit(false)
+
+	triedb := chainService.DatabaseService.GetTriedDB()
+	triedb.Commit(crypto.Bytes2Hash(blockNode.StateRoot), true)
 }
 
 //TODO improves the performan
@@ -357,13 +360,14 @@ func (chainService *ChainService) InitStates() error {
 			panic("never reach here")
 		}
 	}
-	_, err := chainService.blockDb.GetBlock(&chainState.Hash)
+	_, err := chainService.DatabaseService.GetBlock(&chainState.Hash)
 	if err != nil {
 		//block not save but tip save status is ok
 		rollbackHeight := chainState.Height - 1
 		chainService.DatabaseService.Rollback2Block(rollbackHeight)
 		header, _, err := chainService.DatabaseService.GetBlockNode(&chainState.PrevHash, rollbackHeight)
 		if err != nil {
+			log.Error("err GetBlockNode:", err)
 			return err
 		}
 		node := chainTypes.NewBlockNode(header, nil)

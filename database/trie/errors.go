@@ -19,14 +19,14 @@ package trie
 import (
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/drep-project/drep-chain/crypto"
 )
 
 // MissingNodeError is returned by the trie functions (TryGet, TryUpdate, TryDelete)
 // in the case where a trie node is not present in the local database. It contains
 // information necessary for retrieving the missing node.
 type MissingNodeError struct {
-	NodeHash common.Hash // hash of the missing node
+	NodeHash crypto.Hash // hash of the missing node
 	Path     []byte      // hex-encoded path to the missing node
 }
 
