@@ -168,7 +168,59 @@ func (st *StateTransition) TransitionAliasDb() (ret []byte, failed bool, err err
 	if err != nil {
 		return nil, false, err
 	}
+	// extra price
+	type LenPriceCacler struct {
+		LenMatch func () bool
+		Fee func() *big.Int
+	}
 
+	calcers := []*LenPriceCacler{
+		&LenPriceCacler{
+			LenMatch: func() bool {
+				return len(alias) == 16
+			},
+			Fee: func() *big.Int {
+			 return big.NewInt(0)
+			},
+		},
+		&LenPriceCacler{
+
+			LenMatch: func() bool {
+				return 3 <= len(alias)&&len(alias) <16
+			},
+			Fee: func() *big.Int {
+				//TODO alias price curve
+				return big.NewInt((int64(len(alias)-3)*1))
+			},
+		},
+		&LenPriceCacler{
+			LenMatch: func() bool {
+				return len(alias) <3
+			},
+			Fee: func() *big.Int {
+				//TODO alias price curve
+				return big.NewInt((int64(len(alias)-3)*10))
+			},
+		},
+	}
+	var drepFee *big.Int
+	for _, calcer := range calcers {
+		if calcer.LenMatch() {
+			drepFee = calcer.Fee()
+			break
+		}
+	}
+
+	originBalance := st.databaseService.GetBalance(from)
+	leftBalance := originBalance.Sub(originBalance, drepFee)
+	if leftBalance.Sign() < 0 {
+		return nil, false, ErrBalance
+	}
+	err = st.databaseService.PutBalance(from, leftBalance)
+	if err != nil {
+		return nil, false, err
+	}
+	//TODO who should get the alias fee?
 	err = st.databaseService.PutNonce(from, st.tx.Nonce()+1)
 	if err != nil {
 		return nil, false, err
