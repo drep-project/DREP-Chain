@@ -3,10 +3,17 @@ package database
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/drep-project/drep-chain/app"
 	"math/big"
 	"os"
+	"os/exec"
+	"os/user"
+	"runtime"
 	"strconv"
+	"strings"
 	"testing"
 
 	chainType "github.com/drep-project/drep-chain/chain/types"
@@ -14,6 +21,7 @@ import (
 )
 
 func TestGetSetAlias(t *testing.T) {
+	os.RemoveAll("./test/")
 	db, err := NewDatabase("./test/")
 	if err != nil {
 		fmt.Println(err)
@@ -68,6 +76,8 @@ func TestGetSetAlias(t *testing.T) {
 }
 
 func TestPutGetStorage(t *testing.T) {
+	os.RemoveAll("./test/")
+
 	db, err := NewDatabase("./test/")
 	if err != nil {
 		fmt.Println(err)
@@ -151,4 +161,96 @@ func TestRollBack(t *testing.T) {
 	}
 }
 
-//测试操作日志 && 混合普通交易与alias交易
+func TestDatabaseInit(t *testing.T) {
+	dbs := DatabaseService{}
+	dbs.config = &DatabaseConfig{}
+	executeContext := app.ExecuteContext{}
+
+	err := dbs.Init(&executeContext)
+	if err == nil {
+		t.Fatal("err, init must fail")
+	}
+
+	executeContext.AddService(&dbs)
+	executeContext.CommonConfig = &app.CommonConfig{ConfigFile:"config.json"}
+
+	//common.AppDataDir("testDatebase", false)
+	executeContext.CommonConfig.HomeDir,_ = Home()
+
+	executeContext.CommonConfig.HomeDir += "/testdb/data"
+
+	os.RemoveAll(executeContext.CommonConfig.HomeDir)
+
+	pc := make(map[string]json.RawMessage)
+	dc := DatabaseConfig{}
+	byteDC, _ := json.Marshal(&dc)
+
+	rm := &json.RawMessage{}
+	rm.UnmarshalJSON(byteDC)
+	bc, _ := rm.MarshalJSON()
+	pc["database"] = bc
+	executeContext.PhaseConfig = pc
+
+	err = dbs.Init(&executeContext)
+	if err != nil {
+		t.Fatal("init must fail")
+	}
+
+	os.RemoveAll(executeContext.CommonConfig.HomeDir)
+}
+
+
+// Home returns the home directory for the executing user.
+//
+// This uses an OS-specific method for discovering the home directory.
+// An error is returned if a home directory cannot be detected.
+func Home() (string, error) {
+	user, err := user.Current()
+	if nil == err {
+		return user.HomeDir, nil
+	}
+
+	// cross compile support
+	if "windows" == runtime.GOOS {
+		return homeWindows()
+	}
+
+	// Unix-like system, so just assume Unix
+	return homeUnix()
+}
+
+func homeUnix() (string, error) {
+	// First prefer the HOME environmental variable
+	if home := os.Getenv("HOME"); home != "" {
+		return home, nil
+	}
+
+	// If that fails, try the shell
+	var stdout bytes.Buffer
+	cmd := exec.Command("sh", "-c", "eval echo ~$USER")
+	cmd.Stdout = &stdout
+	if err := cmd.Run(); err != nil {
+		return "", err
+	}
+
+	result := strings.TrimSpace(stdout.String())
+	if result == "" {
+		return "", errors.New("blank output when reading home directory")
+	}
+
+	return result, nil
+}
+
+func homeWindows() (string, error) {
+	drive := os.Getenv("HOMEDRIVE")
+	path := os.Getenv("HOMEPATH")
+	home := drive + path
+	if drive == "" || path == "" {
+		home = os.Getenv("USERPROFILE")
+	}
+	if home == "" {
+		return "", errors.New("HOMEDRIVE, HOMEPATH, and USERPROFILE are blank")
+	}
+
+	return home, nil
+}
