@@ -107,6 +107,7 @@ func TestPutGetStorage(t *testing.T) {
 }
 
 func TestRollBack(t *testing.T) {
+	defer os.RemoveAll("./test/")
 	db, err := NewDatabase("./test/")
 	if err != nil {
 		fmt.Println(err)

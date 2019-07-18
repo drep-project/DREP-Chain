@@ -65,6 +65,9 @@ func TestFlushAndGet(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		key := []byte(strconv.Itoa(i))
 		value := []byte(strconv.Itoa(i) + "-value-test")
+		if i%10 == 0 {
+			value = []byte{}
+		}
 		v, err := cacheStore.Get(key)
 		if err != nil || bytes.Compare(value, v) != 0 {
 			t.Fatal(err)
@@ -74,6 +77,9 @@ func TestFlushAndGet(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		key := []byte(strconv.Itoa(i))
 		value := []byte(strconv.Itoa(i) + "-value-test")
+		if i%10 == 0 {
+			value = []byte{}
+		}
 		v, err := cacheStore.trie.TryGet(key)
 		if err != nil || bytes.Compare(value, v) != 0 {
 			t.Fatal(err)
@@ -118,7 +124,7 @@ func TestCopyState(t *testing.T) {
 
 	m := cacheStore.CopyState()
 	for i := 0; i < 100; i++ {
-		key := []byte(strconv.Itoa(i))
+		key := strconv.Itoa(i)
 		if _, ok := m.Load(key); !ok {
 			t.Fatal("copy err")
 		}
