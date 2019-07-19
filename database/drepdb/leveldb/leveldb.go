@@ -130,14 +130,14 @@ func (db *Database) Close() error {
 	db.quitLock.Lock()
 	defer db.quitLock.Unlock()
 
-	if db.quitChan != nil {
-		errc := make(chan error)
-		db.quitChan <- errc
-		if err := <-errc; err != nil {
-			db.log.Error("Metrics collection failed", "err", err)
-		}
-		db.quitChan = nil
-	}
+	//if db.quitChan != nil {
+	//	errc := make(chan error)
+	//	db.quitChan <- errc
+	//	if err := <-errc; err != nil {
+	//		db.log.Error("Metrics collection failed", "err", err)
+	//	}
+	//	db.quitChan = nil
+	//}
 	return db.db.Close()
 }
 
@@ -231,7 +231,7 @@ func (db *Database) Path() string {
 //
 // This is how the iostats look like (currently):
 // Read(MB):3895.04860 Write(MB):3654.64712
-func (db *Database) meter(refresh time.Duration) {
+func (db *Database) meter1(refresh time.Duration) {
 	// Create the counters to store current and previous compaction values
 	compactions := make([][]float64, 2)
 	for i := 0; i < 2; i++ {

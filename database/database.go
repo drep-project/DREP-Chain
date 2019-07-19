@@ -33,15 +33,11 @@ var (
 
 func NewDatabase(dbPath string) (*Database, error) {
 	diskDb, err := leveldb.New(dbPath, 16, 512, "")
-	db := &Database{
-		diskDb: diskDb,
-	}
-
-	err = db.initState()
 	if err != nil {
 		return nil, err
 	}
 
+	db, err := DatabaseFromStore(diskDb)
 	return db, nil
 }
 
@@ -50,6 +46,8 @@ func DatabaseFromStore(diskDb drepdb.KeyValueStore) (*Database, error) {
 		diskDb: diskDb,
 	}
 
+	db.trieDb = trie.NewDatabaseWithCache(db.diskDb, 0)
+
 	err := db.initState()
 	if err != nil {
 		return nil, err
@@ -57,18 +55,25 @@ func DatabaseFromStore(diskDb drepdb.KeyValueStore) (*Database, error) {
 	return db, nil
 }
 
-func (db *Database) initState() error {
-	db.trieDb = trie.NewDatabaseWithCache(db.diskDb, 0)
+func (db *Database) Close() {
+	db.diskDb.Close()
+}
 
+func (db *Database) initState() error {
 	var err error
 	value, _ := db.diskDb.Get(trie.EmptyRoot[:])
 	if value == nil {
 		db.diskDb.Put([]byte(dbOperaterMaxSeqKey), new(big.Int).Bytes())
 		db.trie, err = trie.NewSecure(crypto.Hash{}, db.trieDb)
 		db.diskDb.Put(trie.EmptyRoot[:], []byte{0})
+		db.SetBlockJournal(0)
+
 	} else {
 		chainState := db.GetChainState()
 		journalHeight := db.GetBlockJournal()
+		if chainState == nil {
+			return fmt.Errorf("old state not exist")
+		}
 		header, _, err := db.GetBlockNode(&chainState.Hash, journalHeight)
 		if err != nil {
 			return err
