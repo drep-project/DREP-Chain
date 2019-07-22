@@ -11,20 +11,28 @@ import (
 
 type TransactionStore struct {
 	diskDB  drepdb.KeyValueStore //本对象内，仅仅作为存储操作日志
-	dirties *sync.Map
+	dirties *dirtiesKV
 	trie    *trie.SecureTrie
+}
+
+type dirtiesKV struct {
+	storageDirties *sync.Map //数据属于storage的缓存
+	otherDirties   *sync.Map //数据与stroage没有关系的，其他kv对的缓存
 }
 
 func NewTransactionStore(trie *trie.SecureTrie, diskDB drepdb.KeyValueStore) *TransactionStore {
 	return &TransactionStore{
-		diskDB:  diskDB,
-		dirties: new(sync.Map),
-		trie:    trie,
+		diskDB: diskDB,
+		dirties: &dirtiesKV{
+			otherDirties:   new(sync.Map),
+			storageDirties: new(sync.Map),
+		},
+		trie: trie,
 	}
 }
 
 func (tDb *TransactionStore) Get(key []byte) ([]byte, error) {
-	if val, ok := tDb.dirties.Load(string(key)); ok {
+	if val, ok := tDb.dirties.storageDirties.Load(string(key)); ok {
 		if val == nil {
 			return nil, nil
 		}
@@ -34,22 +42,22 @@ func (tDb *TransactionStore) Get(key []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	tDb.dirties.Store(string(key), val)
+	tDb.dirties.storageDirties.Store(string(key), val)
 	return val, nil
 }
 
 func (tDb *TransactionStore) Put(key []byte, value []byte) error {
-	tDb.dirties.Store(string(key), value)
+	tDb.dirties.storageDirties.Store(string(key), value)
 	return nil
 }
 
 func (tDb *TransactionStore) Delete(key []byte) error {
-	tDb.dirties.Store(string(key), nil)
+	tDb.dirties.storageDirties.Store(string(key), nil)
 	return nil
 }
 
 func (tDb *TransactionStore) Flush(needLog bool) {
-	tDb.dirties.Range(func(key, value interface{}) bool {
+	tDb.dirties.storageDirties.Range(func(key, value interface{}) bool {
 		bk := []byte(key.(string))
 		if value != nil {
 			val := value.([]byte)
@@ -75,7 +83,15 @@ func (tDb *TransactionStore) Flush(needLog bool) {
 			tDb.trie.Delete(bk)
 			tDb.trie.Commit(nil)
 		}
-		tDb.dirties.Delete(key)
+		tDb.dirties.storageDirties.Delete(key)
+		return true
+	})
+
+
+	tDb.dirties.otherDirties.Range(func(key, value interface{}) bool {
+		bk := []byte(key.(string))
+		val := value.([]byte)
+		tDb.diskDB.Put(bk, val)
 		return true
 	})
 }
@@ -143,13 +159,73 @@ func (tDb *TransactionStore) putDelLog(key []byte) error {
 }
 
 func (tDb *TransactionStore) Clear() {
-	tDb.dirties = new(sync.Map)
+	tDb.dirties.storageDirties = new(sync.Map)
+	tDb.dirties.otherDirties = new(sync.Map)
 }
 
-func (tDb *TransactionStore) RevertState(dirties *sync.Map) {
+func (tDb *TransactionStore) RevertState(dirties *dirtiesKV) {
 	tDb.dirties = dirties
 }
 
-func (tDb *TransactionStore) CopyState() *sync.Map {
-	return copyMap(tDb.dirties)
+func (tDb *TransactionStore) CopyState() *SnapShot {
+	newDirties := dirtiesKV{}
+
+	newMap := new(sync.Map)
+	tDb.dirties.storageDirties.Range(func(key, value interface{}) bool {
+		if value == nil {
+			newMap.Store(key, value)
+		} else {
+			switch t := value.(type) {
+			case []byte:
+				newBytes := make([]byte, len(t))
+				copy(newBytes, t)
+				newMap.Store(key, newBytes)
+			default:
+				panic("never run here")
+			}
+		}
+		return true
+	})
+
+	newDirties.storageDirties = newMap
+
+	newMap = new(sync.Map)
+	tDb.dirties.otherDirties.Range(func(key, value interface{}) bool {
+		if value == nil {
+			newMap.Store(key, value)
+		} else {
+			switch t := value.(type) {
+			case []byte:
+				newBytes := make([]byte, len(t))
+				copy(newBytes, t)
+				newMap.Store(key, newBytes)
+			default:
+				panic("never run here")
+			}
+		}
+		return true
+	})
+
+	newDirties.otherDirties = newMap
+	return (*SnapShot)(&newDirties)
+}
+
+func copyDirMap(m *sync.Map) *sync.Map {
+	newMap := new(sync.Map)
+	m.Range(func(key, value interface{}) bool {
+		if value == nil {
+			newMap.Store(key, value)
+		} else {
+			switch t := value.(type) {
+			case []byte:
+				newBytes := make([]byte, len(t))
+				copy(newBytes, t)
+				newMap.Store(key, newBytes)
+			default:
+				panic("never run here")
+			}
+		}
+		return true
+	})
+	return newMap
 }

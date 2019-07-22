@@ -13,12 +13,11 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
-	"sync"
 )
 
 type Database struct {
 	diskDb drepdb.KeyValueStore //实际磁盘数据库
-	cache  *TransactionStore    //缓存数据库，调用flush才会把数据写入到diskDb中
+	cache  *TransactionStore    //数据属于storage的缓存，调用flush才会把数据写入到diskDb中
 	trie   *trie.SecureTrie     //全局状态树
 	trieDb *trie.Database       //状态树存储到磁盘时，使用到的db
 }
@@ -226,7 +225,8 @@ func (db *Database) PutStorage(addr *crypto.CommonAddress, storage *chainTypes.S
 }
 
 func (db *Database) AliasPut(key, value []byte) error {
-	return db.diskDb.Put(key, value)
+	db.cache.Put(key,value)
+	return nil
 }
 
 func (db *Database) Get(key []byte) ([]byte, error) {
@@ -321,6 +321,7 @@ func (db *Database) AliasSet(addr *crypto.CommonAddress, alias string) (err erro
 
 //alias为key的k-v
 func (db *Database) AliasGet(alias string) *crypto.CommonAddress {
+
 	buf, err := db.diskDb.Get([]byte(aliasPrefix + alias))
 	if err != nil {
 		return nil
@@ -331,6 +332,12 @@ func (db *Database) AliasGet(alias string) *crypto.CommonAddress {
 }
 
 func (db *Database) AliasExist(alias string) bool {
+	if db.cache != nil {
+		_,ok :=db.cache.dirties.otherDirties.Load(alias)
+		if ok {
+			return true
+		}
+	}
 	_, err := db.diskDb.Get([]byte(aliasPrefix + alias))
 	if err != nil {
 		return false
@@ -562,38 +569,15 @@ func (db *Database) Discard() {
 }
 
 func (db *Database) RevertState(shot *SnapShot) {
-	db.cache.RevertState(shot.StoreShot)
+	db.cache.RevertState((*dirtiesKV)(shot))
 }
 
 func (db *Database) CopyState() *SnapShot {
-	newStoreShot := db.cache.CopyState()
-	return &SnapShot{newStoreShot}
+	return db.cache.CopyState()
 }
 
 func (db *Database) GetStateRoot() []byte {
 	return db.trie.Hash().Bytes()
 }
 
-func copyMap(m *sync.Map) *sync.Map {
-	newMap := new(sync.Map)
-	m.Range(func(key, value interface{}) bool {
-		if value == nil {
-			newMap.Store(key, value)
-		} else {
-			switch t := value.(type) {
-			case []byte:
-				newBytes := make([]byte, len(t))
-				copy(newBytes, t)
-				newMap.Store(key, newBytes)
-			default:
-				panic("never run here")
-			}
-		}
-		return true
-	})
-	return newMap
-}
-
-type SnapShot struct {
-	StoreShot *sync.Map
-}
+type SnapShot dirtiesKV
