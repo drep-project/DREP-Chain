@@ -125,7 +125,7 @@ func TestCopyState(t *testing.T) {
 	m := cacheStore.CopyState()
 	for i := 0; i < 100; i++ {
 		key := strconv.Itoa(i)
-		if _, ok := m.Load(key); !ok {
+		if _, ok := m.storageDirties.Load(key); !ok {
 			t.Fatal("copy err")
 		}
 	}
