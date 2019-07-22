@@ -32,4 +32,7 @@ var (
 	ErrGenesisPkNotFound         = errors.New("genesisi pubkey not found")
 	ErrBlockProducerNotFound     = errors.New("block producer not found")
 	ErrNotSupportRenameAlias     = errors.New("not suppport rename alias")
+	ErrTooShortAlias			 = errors.New("alias too short")
+	ErrTooLongAlias			  	 = errors.New("alias too long")
+	ErrUnsupportAliasChar		 = errors.New("alias only support number and letter")
 )

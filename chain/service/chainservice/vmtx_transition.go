@@ -157,9 +157,46 @@ func (st *StateTransition) TransitionTransferDb() (ret []byte, failed bool, err 
 	return nil, true, nil
 }
 
+func CheckAlias(alias []byte) error {
+
+	if len(alias) <5 {
+		return ErrTooShortAlias
+	}
+	if len(alias) >20 {
+		return ErrTooLongAlias
+	}
+
+	runes := []rune(string(alias))
+	for i:=0;i<len(runes);i++ {
+		//number  48-57
+		if 48 <= runes[i] && runes[i]  <= 57 {
+			continue
+		}
+		//upcase
+		if 65 <= runes[i] && runes[i]  <= 90 {
+			continue
+		}
+		//lowcaser
+		if 97 <= runes[i] && runes[i]  <= 122 {
+			continue
+		}
+		return ErrUnsupportAliasChar
+	}
+	return nil
+}
+//5 160000 640
+//6 80000 320
+//7 40000 160
+//8 20000 80
+//9 10000 40
+//10 5000 20
+//11 2500 10
 func (st *StateTransition) TransitionAliasDb() (ret []byte, failed bool, err error) {
 	from := st.from
 	alias := st.tx.GetData()
+	if err := CheckAlias(alias); err != nil {
+		return nil, false, err
+	}
 	err = st.databaseService.AliasSet(from, string(alias))
 	if err != nil {
 		return nil, false, err
@@ -177,29 +214,67 @@ func (st *StateTransition) TransitionAliasDb() (ret []byte, failed bool, err err
 	calcers := []*LenPriceCacler{
 		&LenPriceCacler{
 			LenMatch: func() bool {
-				return len(alias) == 16
+				return len(alias) == 5
 			},
 			Fee: func() *big.Int {
-			 return big.NewInt(0)
+				return params.CoinFromNumer(160000)
 			},
 		},
 		&LenPriceCacler{
+			LenMatch: func() bool {
+				return len(alias) == 6
+			},
+			Fee: func() *big.Int {
+				return params.CoinFromNumer(80000)
+			},
+		},
+		&LenPriceCacler{
+			LenMatch: func() bool {
+				return len(alias) == 7
+			},
+			Fee: func() *big.Int {
+				return params.CoinFromNumer(40000)
+			},
+		},
+		&LenPriceCacler{
+			LenMatch: func() bool {
+				return len(alias) == 8
+			},
+			Fee: func() *big.Int {
+				return params.CoinFromNumer(20000)
+			},
+		},
+		&LenPriceCacler{
+			LenMatch: func() bool {
+				return len(alias) == 9
+			},
+			Fee: func() *big.Int {
+				return params.CoinFromNumer(10000)
+			},
+		},
+		&LenPriceCacler{
+			LenMatch: func() bool {
+				return len(alias) == 10
+			},
+			Fee: func() *big.Int {
+				return params.CoinFromNumer(5000)
+			},
+		},
+		&LenPriceCacler{
+			LenMatch: func() bool {
+				return len(alias) == 11
+			},
+			Fee: func() *big.Int {
+				return params.CoinFromNumer(2500)
 
-			LenMatch: func() bool {
-				return 3 <= len(alias)&&len(alias) <16
-			},
-			Fee: func() *big.Int {
-				//TODO alias price curve
-				return big.NewInt((int64(len(alias)-3)*1))
 			},
 		},
 		&LenPriceCacler{
 			LenMatch: func() bool {
-				return len(alias) <3
+				return len(alias) > 11
 			},
 			Fee: func() *big.Int {
-				//TODO alias price curve
-				return big.NewInt((int64(len(alias)-3)*10))
+				return big.NewInt(0)
 			},
 		},
 	}
@@ -211,6 +286,7 @@ func (st *StateTransition) TransitionAliasDb() (ret []byte, failed bool, err err
 		}
 	}
 
+	//minus alias fee from from account
 	originBalance := st.databaseService.GetBalance(from)
 	leftBalance := originBalance.Sub(originBalance, drepFee)
 	if leftBalance.Sign() < 0 {
@@ -220,7 +296,13 @@ func (st *StateTransition) TransitionAliasDb() (ret []byte, failed bool, err err
 	if err != nil {
 		return nil, false, err
 	}
-	//TODO who should get the alias fee?
+	// put alias fee to hole address
+	zeroAddressBalance := st.databaseService.GetBalance(&params.HoleAddress)
+	zeroAddressBalance = zeroAddressBalance.Add(zeroAddressBalance, drepFee)
+	err = st.databaseService.PutBalance(&params.HoleAddress, zeroAddressBalance)
+	if err != nil {
+		return nil, false, err
+	}
 	err = st.databaseService.PutNonce(from, st.tx.Nonce()+1)
 	if err != nil {
 		return nil, false, err

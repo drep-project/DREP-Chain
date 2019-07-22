@@ -406,7 +406,6 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 		return nil, err
 	}
 	block.Header.StateRoot = db.GetStateRoot()
-
 	//verify
 	db = consensusService.DatabaseService.BeginTransaction()
 	gp := new(chainService.GasPool).AddGas(block.Header.GasLimit.Uint64())
@@ -431,7 +430,6 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 		log.WithField("gasUsed", gasUsed).Debug("multySigVerify")
 		return nil, err
 	}
-
 	return block, nil
 }
 
