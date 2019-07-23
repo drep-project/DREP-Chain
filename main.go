@@ -139,6 +139,12 @@ func (intVal *IntVal) Compair(anotherVal ICompair) bool {
 }
 
 func main() {
+//	bytesss := []byte{1,4,45,5,6,76,8,24,25,7,8,4}
+	runes := []rune("爱神的箭")
+	for _, r := range runes {
+		fmt.Println(r)
+	}
+	/*
   rootNode :=NewNode(NewIntVal(10))
   eight := NewNode(NewIntVal(8))
   rootNode.AddNode(eight)
@@ -148,4 +154,5 @@ func main() {
   rootNode.Print()
 	rootNode.DelNode(eight)
 	rootNode.Print()
+	*/
 }

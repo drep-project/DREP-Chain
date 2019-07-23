@@ -25,27 +25,33 @@ var (
 	loggers = make(map[string]*logrus.Entry)
 )
 
+//LogService provier log config and control
 type LogService struct {
 	Config *LogConfig
 	apis   []app.API
 }
 
+// Name log name
 func (logService *LogService) Name() string {
 	return "log"
 }
 
+// Name log api to control log function
 func (logService *LogService) Api() []app.API {
 	return logService.apis
 }
 
+// CommandFlags export flag to control log while app running
 func (logService *LogService) CommandFlags() ([]cli.Command, []cli.Flag) {
 	return nil, []cli.Flag{LogDirFlag, LogLevelFlag, VmoduleFlag}
 }
 
+// P2pMessages no p2p msg for log
 func (logService *LogService) P2pMessages() map[int]interface{} {
 	return map[int]interface{}{}
 }
 
+//Init init log format and output
 func (logService *LogService) Init(executeContext *app.ExecuteContext) error {
 	logService.Config = DefaultLogConfig
 	err := executeContext.UnmashalConfig(logService.Name(), logService.Config)
@@ -106,14 +112,17 @@ func (logService *LogService) Init(executeContext *app.ExecuteContext) error {
 	//return dlog.SetUp(logService.Config.DataDir, logService.Config.LogLevel, logService.Config.Vmodule, logService.Config.BacktraceAt)
 }
 
+// Start
 func (logService *LogService) Start(executeContext *app.ExecuteContext) error {
 	return nil
 }
 
+// Stop
 func (logService *LogService) Stop(executeContext *app.ExecuteContext) error {
 	return nil
 }
 
+// Receive
 func (logService *LogService) Receive(context actor.Context) {}
 
 // setLogConfig creates an log configuration from the set command line flags,
@@ -133,11 +142,15 @@ func (logService *LogService) setLogConfig(ctx *cli.Context, homeDir string) {
 	}
 }
 
+// NewLogger create logger int other file
 func NewLogger(moduleName string) *logrus.Entry {
-	log := logrus.WithFields(logrus.Fields{
-		"prefix": moduleName,
-		MODULE:   moduleName,
-	})
-	loggers[moduleName] = log
+	log, ok := loggers[moduleName]
+	if !ok {
+		log = logrus.WithFields(logrus.Fields{
+			"prefix": moduleName,
+			MODULE:   moduleName,
+		})
+		loggers[moduleName] = log
+	}
 	return log
 }
