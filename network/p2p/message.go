@@ -28,7 +28,6 @@ import (
 	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/network/p2p/enode"
-	//"github.com/drep-project/drep-chain/rlp"
 )
 
 // Msg defines the structure of a p2p message.
