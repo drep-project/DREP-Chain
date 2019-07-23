@@ -1,6 +1,7 @@
 package blockmgr
 
 import (
+	"github.com/drep-project/drep-chain/chain/service/chainservice"
 	chainTypes "github.com/drep-project/drep-chain/chain/types"
 )
 
@@ -46,6 +47,13 @@ func (blockMgr *BlockMgr) verifyTransaction(tx *chainTypes.Transaction) error {
 	if tx.Type() == chainTypes.SetAliasType {
 		from, err := tx.From()
 		if err != nil {
+			return err
+		}
+		newAlias := tx.GetData()
+		if newAlias == nil {
+			return chainservice.ErrUnsupportAliasChar
+		}
+		if err := chainservice.CheckAlias(newAlias); err != nil {
 			return err
 		}
 		alias := blockMgr.ChainService.GetDatabaseService().GetStorageAlias(from)

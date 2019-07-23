@@ -19,6 +19,16 @@ type BlockMgrApi struct {
 	dbService *database.DatabaseService
 }
 
+/*
+ name: sendRawTransaction
+ usage: 获取交易池中的交易信息.
+ params:
+	1. 待查询地址
+ return: 交易池中所有交易
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_sendRawTransaction","params":["0x40a287b6d30b05313131317a4120dd8c23c40910d038fa43b2f8932d3681cbe5ee3079b6e9de0bea6e8e6b2a867a561aa26e1cd6b62aa0422a043186b593b784bf80845c3fd5a7fbfe62e61d8564"], "id": 3}' -H "Content-Type:application/json"
+ response:
+	{"jsonrpc":"2.0","id":1,"result":"0xf30e858667fa63bc57ae395c3f57ede9bb3ad4969d12f4bce51d900fb5931538"}
+*/
 func (blockMgrApi *BlockMgrApi) SendRawTransaction(txbytes common.Bytes) (string, error) {
 	tx := &chainTypes.Transaction{}
 	err := binary.Unmarshal(txbytes, tx)

@@ -8,6 +8,8 @@ import (
 	"sync"
 )
 
+
+// ModuleHook use custom hooks to redefine log input and output, module control, level control
 type ModuleHook struct {
 	writer        io.Writer
 	globalLevel   log.Level
@@ -45,11 +47,13 @@ func (hook *ModuleHook) Fire(entry *log.Entry) error {
 	return nil
 }
 
+//saveLog use saveformater format save log
 func (hook *ModuleHook) saveLog(entry *log.Entry) {
 	msg, _ := hook.saveFormatter.Format(entry)
 	hook.writer.Write(msg)
 }
 
+//printLog use printFormat format log output
 func (hook *ModuleHook) printLog(entry *log.Entry) {
 	var msg []byte
 	_, ok := entry.Data[MODULE]
@@ -64,6 +68,13 @@ func (hook *ModuleHook) printLog(entry *log.Entry) {
 
 func (hook *ModuleHook) Levels() []log.Level {
 	return log.AllLevels
+}
+
+func (hook *ModuleHook) SetLevel(lvInt log.Level) {
+	log.SetLevel(lvInt)
+	for key, _ := range hook.moduleLevel {
+		hook.moduleLevel[key] = lvInt
+	}
 }
 
 func (hook *ModuleHook) SetModulesLevel(moduleLevel ...interface{}) error {

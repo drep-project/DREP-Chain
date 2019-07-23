@@ -33,16 +33,14 @@ func NewLogApi(hook *ModuleHook) *LogApi {
 func (logApi *LogApi) SetLevel(lvl string) error {
 	lvInt, err := strconv.ParseInt(lvl, 10, 64)
 	if err == nil {
-		logrus.SetLevel(logrus.Level(lvInt))
+		logApi.hook.SetLevel(logrus.Level(lvInt))
 		return nil
 	}
 	lv, err := parserLevel(lvl)
 	if err != nil {
 		return nil
 	}
-	for key, _ := range logApi.hook.moduleLevel {
-		logApi.hook.moduleLevel[key] = lv
-	}
+	logApi.hook.SetLevel(lv)
 	return nil
 }
 

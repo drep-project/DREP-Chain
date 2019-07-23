@@ -2,6 +2,7 @@ package log
 
 import "github.com/sirupsen/logrus"
 
+//NullFormat to disable default output
 type NullFormat struct {
 }
 
