@@ -10,3 +10,6 @@ drepClient.exe
 drepClient
 test_filestore*
 test_db*
+
+# Build
+vendor/
