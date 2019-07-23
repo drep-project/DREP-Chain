@@ -336,7 +336,7 @@ func (consensusService *ConsensusService) runAsMember() (block *chainTypes.Block
 //3 leader搜集到所有的签名或者返回的签名个数大于producer个数的三分之二后，开始验证签名
 //4 leader验证签名通过后，广播此块给所有的Peer
 func (consensusService *ConsensusService) runAsLeader() (block *chainTypes.Block, err error) {
-	db := consensusService.DatabaseService.BeginTransaction()
+	db := consensusService.DatabaseService.BeginTransaction(false)
 	consensusService.leader.Reset()
 	var gasFee *big.Int
 	block, gasFee, err = consensusService.BlockMgr.GenerateBlock(db, consensusService.leader.pubkey)
@@ -383,7 +383,8 @@ func (consensusService *ConsensusService) runAsLeader() (block *chainTypes.Block
 
 func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error) {
 	log.Trace("node leader finishes process consensus")
-	db := consensusService.DatabaseService.BeginTransaction()
+
+	db := consensusService.DatabaseService.BeginTransaction(false)
 	defer db.Discard()
 	block, gasFee, err := consensusService.BlockMgr.GenerateBlock(db, consensusService.pubkey)
 	if err != nil {
@@ -405,10 +406,12 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 	if err != nil {
 		return nil, err
 	}
+
+	db.Commit(false)
 	block.Header.StateRoot = db.GetStateRoot()
 
 	//verify
-	db = consensusService.DatabaseService.BeginTransaction()
+	db = consensusService.DatabaseService.BeginTransaction(false)
 	gp := new(chainService.GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
 	gasUsed, gasFee, err := consensusService.ChainService.BlockValidator().ExecuteBlock(db, block, gp)
@@ -421,6 +424,8 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 		log.WithField("AccumulateRewards", err).Debug("multySigVerify")
 		return nil, err
 	}
+
+	db.Commit(false)
 	if block.Header.GasUsed.Cmp(gasUsed) == 0 {
 		stateRoot := db.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
@@ -581,7 +586,7 @@ func (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) b
 }
 
 func (consensusService *ConsensusService) verifyBlockContent(block *chainTypes.Block) bool {
-	db := consensusService.ChainService.GetDatabaseService().BeginTransaction()
+	db := consensusService.ChainService.GetDatabaseService().BeginTransaction(false)
 	if !consensusService.ChainService.BlockValidator().VerifyMultiSig(block, consensusService.ChainService.Config().SkipCheckMutiSig || false) {
 		log.WithField("bitmap", block.MultiSig.Bitmap).Debug("bitmap")
 		log.WithField("SkipCheckMutiSig", consensusService.ChainService.Config().SkipCheckMutiSig).Debug("multySigVerify")

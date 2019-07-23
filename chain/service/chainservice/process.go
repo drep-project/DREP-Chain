@@ -20,6 +20,7 @@ func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, b
 	defer chainService.addBlockSync.Unlock()
 	blockHash := block.Header.Hash()
 	exist := chainService.BlockExists(blockHash)
+
 	if exist {
 		return false, false, ErrBlockExsist
 	}
@@ -100,7 +101,7 @@ func (chainService *ChainService) AcceptBlock(block *chainTypes.Block) (inMainCh
 
 //TODO cannot find chain tip  对外通知区块失败会产生这个错误  区块未保存 header已经保存
 func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainChain bool, err error) {
-	db := chainService.DatabaseService.BeginTransaction()
+	db := chainService.DatabaseService.BeginTransaction(true)
 	defer func() {
 		if err == nil {
 			db.Commit(true)
@@ -124,7 +125,6 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainCh
 	}
 
 	//store block
-	//err = chainService.blockDb.PutBlock(block)
 	err = chainService.DatabaseService.PutBlock(block)
 	if err != nil {
 		return false, err
@@ -189,6 +189,7 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *cha
 		return err
 	}
 	if block.Header.GasUsed.Cmp(gasUsed) == 0 {
+		db.Commit(true)
 		oldStateRoot := db.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, oldStateRoot) {
 			err = errors.Wrapf(ErrNotMathcedStateRoot, "%s not matched %s", hex.EncodeToString(block.Header.StateRoot), hex.EncodeToString(oldStateRoot))
@@ -333,7 +334,6 @@ func (chainService *ChainService) markState(db *database.Database, blockNode *ch
 	chainService.stateLock.Unlock()
 	chainService.DatabaseService.PutChainState(state)
 	db.SetBlockJournal(state.Height)
-	db.Commit(true)
 
 	triedb := chainService.DatabaseService.GetTriedDB()
 	triedb.Commit(crypto.Bytes2Hash(blockNode.StateRoot), true)
@@ -447,7 +447,7 @@ func (chainService *ChainService) InitStates() error {
 	chainService.stateLock.Lock()
 	chainService.StateSnapshot = &ChainState{
 		BestState: *chainTypes.NewBestState(tip),
-		db:        chainService.DatabaseService.BeginTransaction(),
+		db:        chainService.DatabaseService.BeginTransaction(true),
 	}
 	chainService.stateLock.Unlock()
 

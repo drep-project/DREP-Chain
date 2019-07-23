@@ -33,7 +33,7 @@ func TestGetSetAlias(t *testing.T) {
 	addr.SetBytes([]byte(addrStr))
 	alias := "115108924-test"
 
-	idb.BeginTransaction()
+	idb.BeginTransaction(true)
 	err = idb.AliasSet(&addr, alias)
 	if err != nil {
 		fmt.Println(err)

@@ -368,7 +368,7 @@ func (chainService *ChainService) createChainState() error {
 	chainService.stateLock.Lock()
 	chainService.StateSnapshot = &ChainState{
 		BestState: *chainTypes.NewBestState(node),
-		db:        chainService.DatabaseService.BeginTransaction(),
+		db:        chainService.DatabaseService.BeginTransaction(true),
 	}
 	chainService.stateLock.Unlock()
 

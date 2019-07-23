@@ -252,8 +252,8 @@ func (database *DatabaseService) AddBalance(addr *crypto.CommonAddress, amount *
 	return database.db.AddBalance(addr, amount)
 }
 
-func (database *DatabaseService) BeginTransaction() *Database {
-	return database.db.BeginTransaction()
+func (database *DatabaseService) BeginTransaction(storeToDB bool) *Database {
+	return database.db.BeginTransaction(storeToDB)
 }
 
 func (database *DatabaseService) Commit(needLog bool) {

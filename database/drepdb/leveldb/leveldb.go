@@ -67,7 +67,7 @@ type Database struct {
 	//compWriteMeter   metrics.Meter // Meter for measuring the data written during compaction
 	//writeDelayNMeter metrics.Meter // Meter for measuring the write delay number due to database compaction
 	//writeDelayMeter  metrics.Meter // Meter for measuring the write delay duration due to database compaction
-	//diskSizeGauge    metrics.Gauge // Gauge for tracking the size of all the levels in the database
+	//diskSizeGauge    metrics.Gauge // Gauge for tracking th  e size of all the levels in the database
 	//diskReadMeter    metrics.Meter // Meter for measuring the effective amount of data read
 	//diskWriteMeter   metrics.Meter // Meter for measuring the effective amount of data written
 

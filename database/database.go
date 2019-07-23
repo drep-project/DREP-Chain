@@ -220,12 +220,17 @@ func (db *Database) PutStorage(addr *crypto.CommonAddress, storage *chainTypes.S
 	if db.cache != nil {
 		return db.cache.Put(key, value)
 	} else {
-		return db.trie.TryUpdate(key, value)
+		err = db.trie.TryUpdate(key, value)
+		if err != nil {
+			return err
+		}
+		_, err = db.trie.Commit(nil)
+		return err
 	}
 }
 
 func (db *Database) AliasPut(key, value []byte) error {
-	db.cache.Put(key,value)
+	db.cache.Put(key, value)
 	return nil
 }
 
@@ -333,7 +338,7 @@ func (db *Database) AliasGet(alias string) *crypto.CommonAddress {
 
 func (db *Database) AliasExist(alias string) bool {
 	if db.cache != nil {
-		_,ok :=db.cache.dirties.otherDirties.Load(alias)
+		_, ok := db.cache.dirties.otherDirties.Load(alias)
 		if ok {
 			return true
 		}
@@ -548,11 +553,24 @@ func (db *Database) blockIndexKey(blockHash *crypto.Hash, blockHeight uint64) []
 	return indexKey
 }
 
-func (db *Database) BeginTransaction() *Database {
-	return &Database{
-		diskDb: db.diskDb,
-		cache:  NewTransactionStore(db.trie, db.diskDb),
-		trie:   db.trie,
+// storeToDB 决定数据是否写入到db,如果是true，则返回的对象可以把数据写入到物理磁盘
+func (db *Database) BeginTransaction(storeToDB bool) *Database {
+	if !storeToDB {
+		trie, err := trie.NewSecure(db.trie.Hash(), db.trieDb)
+		if err != nil {
+			return nil
+		}
+		return &Database{
+			diskDb: db.diskDb,
+			cache:  NewTransactionStore(trie, db.diskDb),
+			trie:   trie,
+		}
+	} else {
+		return &Database{
+			diskDb: db.diskDb,
+			cache:  NewTransactionStore(db.trie, db.diskDb),
+			trie:   db.trie,
+		}
 	}
 }
 
