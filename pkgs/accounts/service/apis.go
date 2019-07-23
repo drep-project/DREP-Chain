@@ -1,7 +1,9 @@
 package service
 
 import (
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"github.com/drep-project/drep-chain/pkgs/accounts/addrgenerator"
 	"math/big"
 
@@ -217,10 +219,34 @@ func (accountapi *AccountApi) ReplaceTx(from crypto.CommonAddress, to crypto.Com
  return: 交易完整信息
  example: curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_getTxInPool","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5"],"id":1}' http://127.0.0.1:15645
  response:
-	 {"jsonrpc":"2.0","id":1,"result":transaction}
+   {
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "Hash": "0xfa5c34114ff459b4c97e7cd268c507c0ccfcfc89d3ccdcf71e96402f9899d040",
+    "From": "0x7923a30bbfbcb998a6534d56b313e68c8e0c594a",
+    "Version": 1,
+    "Nonce": 15632,
+    "Type": 0,
+    "To": "0x7923a30bbfbcb998a6534d56b313e68c8e0c594a",
+    "ChainId": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "Amount": "0x111",
+    "GasPrice": "0x110",
+    "GasLimit": "0x30000",
+    "Timestamp": 1559322808,
+    "Data": null,
+    "Sig": "0x20f25b86c4bf73aa4fa0bcb01e2f5731de3a3917c8861d1ce0574a8d8331aedcf001e678000f6afc95d35a53ef623a2055fce687f85c2fd752dc455ab6db802b1f"
+  }
+}
 */
-func (accountapi *AccountApi) GetTxInPool(hash string) (*chainTypes.Transaction, error) {
-	return accountapi.blockmgr.GetTxInPool(hash)
+func (accountapi *AccountApi) GetTxInPool(hash string) (*chainTypes.RpcTransaction, error) {
+	tx, err := accountapi.blockmgr.GetTxInPool(hash)
+	if err !=nil {
+		return nil, err
+	}
+	rpcTx := &chainTypes.RpcTransaction{}
+	rpcTx.FromTx(tx)
+	return rpcTx, nil
 }
 
 /*
@@ -245,6 +271,8 @@ func (accountapi *AccountApi) SetAlias(srcAddr crypto.CommonAddress, alias strin
 		return "", err
 	}
 	t.Sig = sig
+	fmt.Println(hex.EncodeToString(t.AsPersistentMessage()))
+	fmt.Println(t.TxHash().String())
 	err = accountapi.blockmgr.SendTransaction(t, true)
 	if err != nil {
 		return "", err
