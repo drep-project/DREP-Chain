@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	"github.com/drep-project/drep-chain/network/p2p/enr"
-	"github.com/drep-project/drep-chain/rlp"
 	"github.com/stretchr/testify/assert"
 )
 
