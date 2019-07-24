@@ -21,10 +21,10 @@ import (
 )
 
 var (
-	rootChain          app.ChainIdType
+	RootChain          app.ChainIdType
 	DefaultChainConfig = &chainTypes.ChainConfig{
 		RemotePort:       55556,
-		ChainId:          app.ChainIdType{},
+		ChainId:          RootChain,
 		GenesisPK:        "0x0373654ccdb250f2cfcfe64c783a44b9ea85bc47f2f00c480d05082428d277d6d0",
 		SkipCheckMutiSig: true,
 	}
@@ -267,7 +267,7 @@ func (chainService *ChainService) BlockExists(blockHash *crypto.Hash) bool {
 }
 
 func (chainService *ChainService) RootChain() app.ChainIdType {
-	return rootChain
+	return RootChain
 }
 
 func (chainService *ChainService) GetBlocksFrom(start, size uint64) ([]*chainTypes.Block, error) {

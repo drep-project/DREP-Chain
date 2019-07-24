@@ -1,6 +1,7 @@
 package trace
 
 import (
+	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/chain/types"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
@@ -14,7 +15,7 @@ type ViewTransaction struct {
 	Nonce     uint64 //交易序列号
 	Type      int
 	To        string
-	ChainId   string
+	ChainId   app.ChainIdType
 	Amount    string
 	GasPrice  uint64
 	GasLimit  uint64
@@ -26,7 +27,7 @@ type ViewTransaction struct {
 
 type ViewBlock struct {
 	Hash         string
-	ChainId      string
+	ChainId      app.ChainIdType
 	Version      int32
 	PreviousHash string
 	GasLimit     uint64
@@ -40,7 +41,7 @@ type ViewBlock struct {
 	Txs          []string
 }
 type ViewBlockHeader struct {
-	ChainId      string
+	ChainId      app.ChainIdType
 	Version      int32
 	PreviousHash string
 	GasLimit     uint64
@@ -62,7 +63,7 @@ func (viewBlockHeader *ViewBlockHeader) From(block *types.Block) *ViewBlockHeade
 	}
 
 	viewBlockHeader.Hash = block.Header.Hash().String()
-	viewBlockHeader.ChainId = common.Encode(block.Header.ChainId[:])
+	viewBlockHeader.ChainId = block.Header.ChainId
 	viewBlockHeader.Version = block.Header.Version
 	viewBlockHeader.PreviousHash = block.Header.PreviousHash.String()
 	viewBlockHeader.GasLimit = block.Header.GasLimit.Uint64()
@@ -87,7 +88,7 @@ func (rpcTransaction *ViewTransaction) FromTx(tx *types.Transaction) *ViewTransa
 	rpcTransaction.Nonce = tx.Data.Nonce
 	rpcTransaction.Type = int(tx.Data.Type)
 	rpcTransaction.To = tx.Data.To.String()
-	rpcTransaction.ChainId = common.Encode(tx.Data.ChainId[:])
+	rpcTransaction.ChainId = tx.Data.ChainId
 	rpcTransaction.Amount = (*big.Int)(&tx.Data.Amount).String()
 	rpcTransaction.GasPrice = (*big.Int)(&tx.Data.GasPrice).Uint64()
 	rpcTransaction.GasLimit = (*big.Int)(&tx.Data.GasLimit).Uint64()
@@ -109,7 +110,7 @@ func (rpcBlock *ViewBlock) From(block *types.Block) *ViewBlock {
 	}
 
 	rpcBlock.Hash = block.Header.Hash().String()
-	rpcBlock.ChainId = common.Encode(block.Header.ChainId[:])
+	rpcBlock.ChainId = block.Header.ChainId
 	rpcBlock.Version = block.Header.Version
 	rpcBlock.PreviousHash = block.Header.PreviousHash.String()
 	rpcBlock.GasLimit = block.Header.GasLimit.Uint64()
@@ -132,7 +133,7 @@ func (rpcBlock *ViewBlock) From(block *types.Block) *ViewBlock {
 }
 
 type RpcBlockHeader struct {
-	ChainId      string
+	ChainId      app.ChainIdType
 	Version      int32
 	PreviousHash string
 	GasLimit     string
@@ -148,7 +149,7 @@ type RpcBlockHeader struct {
 }
 
 func (rpcBlockHeader *RpcBlockHeader) FromBlockHeader(header *types.BlockHeader) {
-	rpcBlockHeader.ChainId = common.Encode(header.ChainId[:])
+	rpcBlockHeader.ChainId = header.ChainId
 	rpcBlockHeader.Version = header.Version
 	rpcBlockHeader.PreviousHash = header.PreviousHash.String()
 	rpcBlockHeader.GasLimit = header.GasLimit.String()

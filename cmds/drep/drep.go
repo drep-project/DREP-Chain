@@ -43,7 +43,6 @@ func main() {
 	drepApp := app.NewApp()
 	err := drepApp.AddServices(
 		database.DatabaseService{},
-
 		rpc.RpcService{},
 		log.LogService{},
 		p2pService.P2pService{},

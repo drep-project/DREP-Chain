@@ -38,7 +38,7 @@ func NewNode(parent *Node, chainId app.ChainIdType) *Node {
 		chainCode = h[KeyBitSize:]
 	} else {
 		pid := new(big.Int).SetBytes(parent.ChainCode)
-		cid := new(big.Int).SetBytes(chainId[:])
+		cid := new(big.Int).SetBytes(chainId.Bytes())
 		chainCode := new(big.Int).Xor(pid, cid).Bytes()
 
 		h := common.HmAC(chainCode, parent.PrivateKey.Serialize())
