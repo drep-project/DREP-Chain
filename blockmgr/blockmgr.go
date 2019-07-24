@@ -32,13 +32,13 @@ import (
 
 var (
 	rootChain           app.ChainIdType
-	DefaultOracleConfig = chainTypes.OracleConfig{
+	DefaultOracleConfig = OracleConfig{
 		Blocks:     20,
 		Default:    30000,
 		Percentile: 60,
 		MaxPrice:   big.NewInt(500 * params.GWei).Uint64(),
 	}
-	DefaultChainConfig = &chainTypes.BlockMgrConfig{
+	DefaultChainConfig = &BlockMgrConfig{
 		GasPrice:    DefaultOracleConfig,
 		JournalFile: "txpool/txs",
 	}
@@ -55,7 +55,7 @@ type BlockMgr struct {
 	apis            []app.API
 
 	lock   sync.RWMutex
-	Config *chainTypes.BlockMgrConfig
+	Config *BlockMgrConfig
 
 	//Events related to sync blocks
 	syncBlockEvent event.Feed
@@ -100,7 +100,7 @@ func (blockMgr *BlockMgr) CommandFlags() ([]cli.Command, []cli.Flag) {
 	return nil, []cli.Flag{}
 }
 
-func NewBlockMgr(config *chainTypes.BlockMgrConfig, homeDir string, cs chain.ChainServiceInterface, p2pservice p2pService.P2P) *BlockMgr {
+func NewBlockMgr(config *BlockMgrConfig, homeDir string, cs chain.ChainServiceInterface, p2pservice p2pService.P2P) *BlockMgr {
 	blockMgr := &BlockMgr{}
 	blockMgr.Config = config
 	blockMgr.ChainService = cs

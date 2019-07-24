@@ -1,4 +1,4 @@
-package types
+package chain
 
 import (
 	"github.com/drep-project/drep-chain/app"
@@ -14,19 +14,7 @@ type ChainConfig struct {
 	Producers        []Producers     `json:"producers"`
 }
 
-type BlockMgrConfig struct {
-	GasPrice    OracleConfig `json:"gasprice"`
-	JournalFile string       `json:"journalFile"`
-}
-
 type Producers struct {
 	Pubkey *secp256k1.PublicKey `json:"pubkey"`
 	IP     string               `json:"ip"`
-}
-
-type OracleConfig struct {
-	Blocks     int    `json:"blocks"`
-	Percentile int    `json:"percentile"`
-	Default    uint64 `json:"default"`
-	MaxPrice   uint64 `json:"maxPrice"`
 }

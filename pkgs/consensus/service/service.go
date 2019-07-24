@@ -59,7 +59,7 @@ type ConsensusService struct {
 	pauseForSync bool
 	start        bool
 	peersInfo    map[string]*consensusTypes.PeerInfo
-	producers    []chainTypes.Producers
+	producers    []chainService.Producers
 
 	quit chan struct{}
 }
@@ -110,7 +110,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	consensusService.peersInfo = make(map[string]*consensusTypes.PeerInfo)
 
 	//检查是否为系统配置的骨干节点
-	checkProduce := func(pds []chainTypes.Producers, ip string) bool {
+	checkProduce := func(pds []chainService.Producers, ip string) bool {
 		for _, p := range pds {
 			if p.IP == ip {
 				return true

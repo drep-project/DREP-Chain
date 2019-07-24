@@ -22,7 +22,7 @@ import (
 
 var (
 	RootChain          app.ChainIdType
-	DefaultChainConfig = &chainTypes.ChainConfig{
+	DefaultChainConfig = &ChainConfig{
 		RemotePort:       55556,
 		ChainId:          RootChain,
 		GenesisPK:        "0x0373654ccdb250f2cfcfe64c783a44b9ea85bc47f2f00c480d05082428d277d6d0",
@@ -56,7 +56,7 @@ type ChainServiceInterface interface {
 	GetDatabaseService() *database.DatabaseService
 	Index() *BlockIndex
 	BlockValidator() IBlockValidator
-	Config() *chainTypes.ChainConfig
+	Config() *ChainConfig
 	AccumulateRewards(db *database.Database, b *chainTypes.Block, totalGasBalance *big.Int) error
 	DetachBlockFeed() *event.Feed
 }
@@ -89,7 +89,7 @@ type ChainService struct {
 	stateLock     sync.RWMutex
 	StateSnapshot *ChainState
 
-	config       *chainTypes.ChainConfig
+	config       *ChainConfig
 	genesisBlock *chainTypes.Block
 
 	//提供新块订阅
@@ -116,7 +116,7 @@ func (chainService *ChainService) DetachBlockFeed() *event.Feed {
 
 }
 
-func (chainService *ChainService) Config() *chainTypes.ChainConfig {
+func (chainService *ChainService) Config() *ChainConfig {
 	return chainService.config
 }
 
@@ -156,7 +156,7 @@ func (chainService *ChainService) CommandFlags() ([]cli.Command, []cli.Flag) {
 	return nil, []cli.Flag{}
 }
 
-func NewChainService(config *chainTypes.ChainConfig, ds *database.DatabaseService) *ChainService {
+func NewChainService(config *ChainConfig, ds *database.DatabaseService) *ChainService {
 	chainService := &ChainService{}
 	chainService.config = config
 	var err error

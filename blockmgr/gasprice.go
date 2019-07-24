@@ -40,7 +40,7 @@ type Oracle struct {
 }
 
 // NewOracle returns a new oracle.
-func NewOracle(chainService xxx.ChainServiceInterface, params types.OracleConfig) *Oracle {
+func NewOracle(chainService xxx.ChainServiceInterface, params OracleConfig) *Oracle {
 	blocks := params.Blocks
 	if blocks < 1 {
 		blocks = 1
