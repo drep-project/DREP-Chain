@@ -1,5 +1,4 @@
 .DS_Store
-go.sum
 .vscode
 .idea
 tools/gencode/*.js
@@ -13,3 +12,5 @@ test_db*
 
 # Build
 vendor/
+build/
+tools-stamp
