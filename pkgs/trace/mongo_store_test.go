@@ -3,7 +3,7 @@ package trace
 import (
 	"bytes"
 	"fmt"
-	"github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/common/math"
 	"testing"

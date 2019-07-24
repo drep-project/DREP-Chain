@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	blockmgr "github.com/drep-project/drep-chain/chain/service/blockmgr"
-	chainService "github.com/drep-project/drep-chain/chain/service/chainservice"
+	blockmgr "github.com/drep-project/drep-chain/blockmgr"
+	chainService "github.com/drep-project/drep-chain/chain"
 	p2pService "github.com/drep-project/drep-chain/network/service"
 	accountService "github.com/drep-project/drep-chain/pkgs/accounts/service"
 	consensusService "github.com/drep-project/drep-chain/pkgs/consensus/service"

@@ -2,7 +2,7 @@ package database
 
 import (
 	"github.com/drep-project/binary"
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	chainTypes "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/database/drepdb"

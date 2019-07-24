@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	chainTypes "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/rpc"
 	"gopkg.in/urfave/cli.v1"

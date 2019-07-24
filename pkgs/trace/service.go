@@ -5,7 +5,7 @@ import (
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/drep-chain/app"
-	chainService "github.com/drep-project/drep-chain/chain/service/chainservice"
+	chainService "github.com/drep-project/drep-chain/chain"
 	"gopkg.in/urfave/cli.v1"
 )
 

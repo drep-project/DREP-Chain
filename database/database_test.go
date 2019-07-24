@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	chainTypes "github.com/drep-project/drep-chain/types"
 )
 
 func TestNewDatabase(t *testing.T) {

@@ -1,7 +1,7 @@
 package component
 
 import (
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	chainTypes "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 )
 

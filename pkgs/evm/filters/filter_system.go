@@ -25,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/pkgs/evm/event"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"

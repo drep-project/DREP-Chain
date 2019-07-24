@@ -20,7 +20,7 @@ import (
 	path2 "path"
 	"path/filepath"
 
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	chainTypes "github.com/drep-project/drep-chain/types"
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
 	accountComponent "github.com/drep-project/drep-chain/pkgs/accounts/component"
 	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"

@@ -7,9 +7,9 @@ import (
 	"github.com/drep-project/drep-chain/pkgs/accounts/addrgenerator"
 	"math/big"
 
-	"github.com/drep-project/drep-chain/chain/service/blockmgr"
+	"github.com/drep-project/drep-chain/blockmgr"
 
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	chainTypes "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"

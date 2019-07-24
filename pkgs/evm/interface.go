@@ -2,7 +2,7 @@ package evm
 
 import (
 	"github.com/drep-project/drep-chain/app"
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	chainTypes "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
 	"math/big"
 )

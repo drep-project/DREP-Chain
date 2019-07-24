@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/common/math"
 	"github.com/drep-project/drep-chain/crypto"

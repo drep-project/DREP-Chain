@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/drep-chain/app"
-	blockmgr "github.com/drep-project/drep-chain/chain/service/blockmgr"
+	blockmgr "github.com/drep-project/drep-chain/blockmgr"
 	accountService "github.com/drep-project/drep-chain/pkgs/accounts/service"
 	"github.com/drep-project/drep-chain/pkgs/drepclient/component/console"
 	cliTypes "github.com/drep-project/drep-chain/pkgs/drepclient/types"

@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	chainTypes "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/common/fileutil"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/syndtr/goleveldb/leveldb"

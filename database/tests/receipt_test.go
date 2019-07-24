@@ -3,8 +3,8 @@ package tests
 import (
 	"fmt"
 	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/chain/service/chainservice"
-	"github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/chain"
+	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
@@ -17,7 +17,7 @@ import (
 var (
 	db        *database.Database
 	dbService *database.DatabaseService
-	chain     *chainservice.ChainService
+	chain     *chain.ChainService
 	start     uint64 = 0
 	end       uint64 = 2
 )
@@ -25,7 +25,7 @@ var (
 func init() {
 	db, _ = database.NewDatabase("test_db")
 	dbService = database.NewDatabaseService(db)
-	chain = &chainservice.ChainService{DatabaseService: dbService}
+	chain = &chain.ChainService{DatabaseService: dbService}
 }
 
 func TestPutAndGetReceipt(t *testing.T) {
@@ -94,11 +94,11 @@ func TestPutAndGetReceipt(t *testing.T) {
 		}
 		db.PutBlock(blocks[height])
 	}
-	stateProcessor := chainservice.NewStateProcessor(chain)
-	//txValidator := chainservice.NewTransactionValidator(chain)
+	stateProcessor := chain.NewStateProcessor(chain)
+	//txValidator := chain.NewTransactionValidator(chain)
 	for _, block := range blocks {
 		receipts := make([]*types.Receipt, block.Data.TxCount)
-		gp := new(chainservice.GasPool).AddGas(block.Header.GasLimit.Uint64() * 100)
+		gp := new(chain.GasPool).AddGas(block.Header.GasLimit.Uint64() * 100)
 		var usedGas uint64 = 0
 		for i, tx := range block.Data.TxList {
 			//receipt, _, _, _  := txValidator.ExecuteTransaction(db, tx, gp, block.Header)

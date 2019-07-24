@@ -3,7 +3,7 @@ package trace
 import (
 	"bytes"
 	"errors"
-	"github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/syndtr/goleveldb/leveldb"
 	"testing"

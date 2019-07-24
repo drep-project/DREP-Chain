@@ -16,7 +16,7 @@ import (
 	"strings"
 	"testing"
 
-	chainType "github.com/drep-project/drep-chain/chain/types"
+	chainType "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 )
 

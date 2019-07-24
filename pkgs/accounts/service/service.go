@@ -2,8 +2,8 @@ package service
 
 import (
 	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/chain/service/blockmgr"
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/blockmgr"
+	chainTypes "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/common/fileutil"
 	"github.com/drep-project/drep-chain/crypto/sha3"

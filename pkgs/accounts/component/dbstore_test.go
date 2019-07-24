@@ -3,7 +3,7 @@ package component
 import (
 	"bytes"
 	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/types"
 	"testing"
 )
 

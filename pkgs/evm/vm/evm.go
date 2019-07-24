@@ -19,7 +19,7 @@ package vm
 import (
 	"fmt"
 	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/chain/params"
+	"github.com/drep-project/drep-chain/params"
 	"github.com/drep-project/drep-chain/crypto"
 	"math/big"
 	"sync/atomic"

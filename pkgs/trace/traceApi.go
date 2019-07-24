@@ -2,7 +2,7 @@ package trace
 
 import (
 	"github.com/drep-project/binary"
-	"github.com/drep-project/drep-chain/chain/types"
+	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 )

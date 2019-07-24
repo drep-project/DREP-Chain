@@ -10,9 +10,9 @@ import (
 
 	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/app"
-	blockMgrService "github.com/drep-project/drep-chain/chain/service/blockmgr"
-	chainService "github.com/drep-project/drep-chain/chain/service/chainservice"
-	chainTypes "github.com/drep-project/drep-chain/chain/types"
+	blockMgrService "github.com/drep-project/drep-chain/blockmgr"
+	chainService "github.com/drep-project/drep-chain/chain"
+	chainTypes "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
