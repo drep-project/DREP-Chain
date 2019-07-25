@@ -12,7 +12,6 @@ import (
 	"github.com/drep-project/drep-chain/app"
 	blockMgrService "github.com/drep-project/drep-chain/blockmgr"
 	chainService "github.com/drep-project/drep-chain/chain"
-	chainTypes "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
@@ -21,6 +20,7 @@ import (
 	p2pService "github.com/drep-project/drep-chain/network/service"
 	accountService "github.com/drep-project/drep-chain/pkgs/accounts/service"
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
+	chainTypes "github.com/drep-project/drep-chain/types"
 	"gopkg.in/urfave/cli.v1"
 )
 

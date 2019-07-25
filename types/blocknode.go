@@ -91,6 +91,8 @@ type BlockNode struct {
 	Status BlockStatus
 }
 
+
+
 // initBlockNode initializes a block node from the given header and parent node,
 // calculating the height and workSum from the respective fields on the parent.
 // This function is NOT safe for concurrent access.  It must only be called when

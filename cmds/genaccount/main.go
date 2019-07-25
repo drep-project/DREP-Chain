@@ -20,11 +20,12 @@ import (
 	path2 "path"
 	"path/filepath"
 
-	chainTypes "github.com/drep-project/drep-chain/types"
+	chainService "github.com/drep-project/drep-chain/chain"
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
 	accountComponent "github.com/drep-project/drep-chain/pkgs/accounts/component"
 	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
+	chainTypes "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/rpc"
 )
 
@@ -65,7 +66,7 @@ func gen(ctx *cli.Context) error {
 	bootsNodes := []*enode.Node{}
 	standbyKey := []*secp256k1.PrivateKey{}
 	nodes := []*chainTypes.Node{}
-	produces := make([]chainTypes.Producers, 0)
+	produces := make([]chainService.Producers, 0)
 	for i := 0; i < len(nodeItems); i++ {
 		aNode := getAccount(nodeItems[i].Name)
 		nodes = append(nodes, aNode)
@@ -81,7 +82,7 @@ func gen(ctx *cli.Context) error {
 		bootsNodes = append(bootsNodes, node)
 
 		standbyKey = append(standbyKey, aNode.PrivateKey)
-		produces = append(produces, chainTypes.Producers{
+		produces = append(produces, chainService.Producers{
 			IP:     nodeItems[i].Ip,
 			Pubkey: aNode.PrivateKey.PubKey(),
 		})
@@ -107,7 +108,7 @@ func gen(ctx *cli.Context) error {
 	consensusConfig.ConsensusMode = "bft"
 	//consensusConfig.Producers = produces
 
-	chainConfig := chainTypes.ChainConfig{}
+	chainConfig := chainService.ChainConfig{}
 	chainConfig.RemotePort = 55556
 	chainConfig.ChainId = 0
 	chainConfig.Producers = produces
