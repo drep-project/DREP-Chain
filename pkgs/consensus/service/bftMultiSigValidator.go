@@ -2,7 +2,6 @@ package service
 
 import (
 	"github.com/drep-project/drep-chain/chain"
-	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/secp256k1/schnorr"
 	"github.com/drep-project/drep-chain/crypto/sha3"
@@ -11,18 +10,18 @@ import (
 )
 
 type BlockMultiSigValidator struct {
-	Producers []types2.Producer
+	Producers types2.ProducerSet
 }
 
 func (blockMultiSigValidator *BlockMultiSigValidator)VerifyHeader(header, parent *types.BlockHeader) error {
 	// check multisig
 	// leader
-	if !blockMultiSigValidator.isInLocalBp(header.LeaderAddress) {
+	if !blockMultiSigValidator.Producers.IsLocalAddress(header.LeaderAddress) {
 		return ErrBpNotInList
 	}
 	// minor
 	for _, minor := range header.MinorAddresses {
-		if !blockMultiSigValidator.isInLocalBp(minor) {
+		if !blockMultiSigValidator.Producers.IsLocalAddress(minor) {
 			return ErrBpNotInList
 		}
 	}
@@ -44,16 +43,6 @@ func (blockMultiSigValidator *BlockMultiSigValidator)VerifyBody(block *types.Blo
 		return ErrMultiSig
 	}
 	return nil
-}
-
-// isInLocalBp check the specific pubket  is a bp node
-func (blockMultiSigValidator *BlockMultiSigValidator) isInLocalBp(key crypto.CommonAddress) bool {
-	for _, bp := range blockMultiSigValidator.Producers {
-		if crypto.PubKey2Address(bp.Pubkey) == key {
-			return true
-		}
-	}
-	return false
 }
 
 func (blockMultiSigValidator *BlockMultiSigValidator)ExecuteBlock(context *chain.BlockExecuteContext) error{

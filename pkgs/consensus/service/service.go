@@ -99,7 +99,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	}
 	consensusService.privkey = accountNode.PrivateKey
 	consensusService.peersInfo = make(map[string]*consensusTypes.PeerInfo)
-	if !consensusService.isProduce() {
+	if !consensusService.Config.Producers.IsLocalPk(consensusService.privkey.PubKey()) {
 		return ErrBpConfig
 	}
 
@@ -108,7 +108,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 			Name:   "consensusService",
 			Length: consensusTypes.NumberOfMsg,
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
-				if consensusService.isProduceIp(peer.IP()) {
+				if consensusService.Config.Producers.IsLocalIP(peer.IP()) {
 					pi := consensusTypes.NewPeerInfo(peer, rw)
 					consensusService.peersInfo[peer.IP()] = pi
 					defer delete(consensusService.peersInfo, peer.IP())
@@ -428,24 +428,6 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 		return nil, err
 	}
 	return block, nil
-}
-
-func (consensusService *ConsensusService) isProduce() bool {
-	for _, produce := range consensusService.Config.Producers {
-		if produce.Pubkey.IsEqual(consensusService.pubkey) {
-			return true
-		}
-	}
-	return false
-}
-
-func (consensusService *ConsensusService) isProduceIp(ip string) bool {
-	for _, produce := range consensusService.Config.Producers {
-		if produce.IP == ip {
-			return true
-		}
-	}
-	return false
 }
 
 func (consensusService *ConsensusService) collectMemberStatus() []*consensusTypes.MemberInfo {
