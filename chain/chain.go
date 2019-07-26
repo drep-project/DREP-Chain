@@ -16,8 +16,8 @@ import (
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/pkgs/evm"
 
-	chainTypes "github.com/drep-project/drep-chain/types"
 	rpc2 "github.com/drep-project/drep-chain/pkgs/rpc"
+	chainTypes "github.com/drep-project/drep-chain/types"
 )
 
 var (
@@ -43,7 +43,6 @@ type ChainServiceInterface interface {
 	GetBlockHeaderByHeight(number uint64) (*chainTypes.BlockHeader, error)
 	GetBlocksFrom(start, size uint64) ([]*chainTypes.Block, error)
 
-	GetCurrentState() *database.Database
 	GetHeader(hash crypto.Hash, number uint64) *chainTypes.BlockHeader
 	GetHighestBlock() (*chainTypes.Block, error)
 	RootChain() app.ChainIdType
@@ -86,8 +85,6 @@ type ChainService struct {
 
 	blockIndex    *BlockIndex
 	bestChain     *ChainView
-	stateLock     sync.RWMutex
-	StateSnapshot *ChainState
 
 	config       *ChainConfig
 	genesisBlock *chainTypes.Block
@@ -98,8 +95,6 @@ type ChainService struct {
 
 	blockValidator       IBlockValidator
 	transactionValidator ITransactionValidator
-
-	//blockDb *database.Database
 }
 
 type ChainState struct {
@@ -206,9 +201,9 @@ func NewChainService(config *ChainConfig, ds *database.DatabaseService) *ChainSe
 
 func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error {
 	chainService.config = DefaultChainConfig
-
 	err := executeContext.UnmashalConfig(chainService.Name(), chainService.config)
 	if err != nil {
+		log.Error("chain service init err:", err)
 		return err
 	}
 	chainService.blockIndex = NewBlockIndex()
@@ -220,9 +215,11 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 	chainService.blockValidator = NewChainBlockValidator(chainService)
 
 	if chainService.config.GenesisPK == "" {
+		log.WithField("err", ErrGenesisPkNotFound).Error("chain service Init")
 		return ErrGenesisPkNotFound
 	}
 	if len(chainService.config.Producers) == 0 {
+		log.WithField("err", ErrBlockProducerNotFound).Error("chain service Init")
 		return ErrBlockProducerNotFound
 	}
 	chainService.genesisBlock = chainService.GetGenisiBlock(chainService.config.GenesisPK)
@@ -231,12 +228,14 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 		chainService.genesisBlock, err = chainService.ProcessGenesisBlock(chainService.config.GenesisPK)
 		err = chainService.createChainState()
 		if err != nil {
+			log.Error("createChainState err", err)
 			return err
 		}
 	}
 
 	err = chainService.InitStates()
 	if err != nil {
+		log.Error("InitStates err:", err)
 		return err
 	}
 
@@ -363,40 +362,16 @@ func (chainService *ChainService) createChainState() error {
 	// Add the new node to the index which is used for faster lookups.
 	chainService.blockIndex.AddNode(node)
 
-	// Initialize the state related to the best block.  Since it is the
-	// genesis block, use its timestamp for the median time.
-	chainService.stateLock.Lock()
-	chainService.StateSnapshot = &ChainState{
-		BestState: *chainTypes.NewBestState(node),
-		db:        chainService.DatabaseService.BeginTransaction(true),
-	}
-	chainService.stateLock.Unlock()
-
 	// Save the genesis block to the block index database.
 	err := chainService.DatabaseService.PutBlockNode(node)
 	if err != nil {
 		return err
 	}
 
-	// Store the current best chain state into the database.
-	chainService.stateLock.Lock()
-	state := chainService.StateSnapshot.BestState
-	chainService.stateLock.Unlock()
-	err = chainService.DatabaseService.PutChainState(&state)
-	if err != nil {
-		return err
-	}
 	err = chainService.DatabaseService.PutBlock(chainService.genesisBlock)
 	if err != nil {
 		return err
 	} else {
 		return nil
 	}
-}
-
-func (chainService *ChainService) GetCurrentState() *database.Database {
-	chainService.stateLock.Lock()
-	defer chainService.stateLock.Unlock()
-	return chainService.StateSnapshot.db
-
 }

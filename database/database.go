@@ -2,14 +2,13 @@ package database
 
 import (
 	"github.com/drep-project/binary"
-	chainTypes "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/database/drepdb"
 	"github.com/drep-project/drep-chain/database/drepdb/leveldb"
 	"github.com/drep-project/drep-chain/database/trie"
+	chainTypes "github.com/drep-project/drep-chain/types"
 
-	oriBinary "encoding/binary"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -25,7 +24,7 @@ type Database struct {
 var (
 	aliasPrefix         = "alias"
 	dbOperaterMaxSeqKey = "operateMaxSeq"            //记录数据库操作的最大序列号
-	maxSeqOfBlockKey    = []byte("seqOfBlockHeight") //块高度对应的数据库操作最大序列号
+	//maxSeqOfBlockKey    = []byte("seqOfBlockHeight") //块高度对应的数据库操作最大序列号
 	dbOperaterJournal   = "addrOperatesJournal"      //每一次数据读写过程的记录
 	addressStorage      = "addressStorage"           //以地址作为KEY的对象存储
 )
@@ -54,33 +53,34 @@ func DatabaseFromStore(diskDb drepdb.KeyValueStore) (*Database, error) {
 	return db, nil
 }
 
+func (db *Database) RecoverTrie(root []byte) bool {
+	var err error
+	db.trie, err = trie.NewSecure(crypto.Bytes2Hash(root), db.trieDb)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
 func (db *Database) Close() {
 	db.diskDb.Close()
 }
 
 func (db *Database) initState() error {
-	var err error
 	value, _ := db.diskDb.Get(trie.EmptyRoot[:])
 	if value == nil {
 		db.diskDb.Put([]byte(dbOperaterMaxSeqKey), new(big.Int).Bytes())
-		db.trie, err = trie.NewSecure(crypto.Hash{}, db.trieDb)
-		db.diskDb.Put(trie.EmptyRoot[:], []byte{0})
-		db.SetBlockJournal(0)
 
-	} else {
-		chainState := db.GetChainState()
-		journalHeight := db.GetBlockJournal()
-		if chainState == nil {
-			return fmt.Errorf("old state not exist")
-		}
-		header, _, err := db.GetBlockNode(&chainState.Hash, journalHeight)
+		var err error
+		db.trie, err = trie.NewSecure(crypto.Hash{}, db.trieDb)
 		if err != nil {
 			return err
 		}
-		db.trie, err = trie.NewSecure(crypto.Bytes2Hash(header.StateRoot), db.trieDb)
+
+		db.diskDb.Put(trie.EmptyRoot[:], []byte{0})
 	}
 
-	return err
+	return nil
 }
 
 func (db *Database) rollback(maxBlockSeq int64, maxSeqKey, journalKey string) (error, int64) {
@@ -131,64 +131,30 @@ func (db *Database) rollback(maxBlockSeq int64, maxSeqKey, journalKey string) (e
 	return nil, seq - maxBlockSeq
 }
 
-func (db *Database) PutChainState(chainState *chainTypes.BestState) error {
-	key := ChainStatePrefix
-	value, err := binary.Marshal(chainState)
-	if err != nil {
-		return err
-	}
+func (db *Database) Rollback2Block(height uint64, hash *crypto.Hash) (error, int64) {
+	var err error
 
-	return db.Put(key, value)
-}
+	//删除blocknode
+	func() {
+		key := db.blockIndexKey(hash, height)
+		err = db.Delete(key)
+	}()
 
-func (db *Database) GetChainState() *chainTypes.BestState {
-	key := ChainStatePrefix
-	value, err := db.Get(key)
-	if err != nil {
-		return nil
-	}
-	state := &chainTypes.BestState{}
-	binary.Unmarshal(value, state)
-	return state
-}
-
-func (db *Database) Rollback2Block(height uint64) (error, int64) {
-	keyLen := len(maxSeqOfBlockKey) + 64
-	key := make([]byte, keyLen)
-	copy(key, maxSeqOfBlockKey)
-	oriBinary.BigEndian.PutUint64(key[len(maxSeqOfBlockKey):], height)
-	value, err := db.diskDb.Get(key)
 	if err != nil {
 		return err, 0
 	}
-	maxbockSeq := new(big.Int).SetBytes(value).Int64()
 
-	return db.rollback(maxbockSeq, dbOperaterMaxSeqKey, dbOperaterJournal)
-}
+	//删除block
+	func() {
+		key := append(BlockPrefix, hash[:]...)
+		err = db.Delete(key)
+	}()
 
-func (db *Database) SetBlockJournal(height uint64) error {
-	seqVal, err := db.Get([]byte(dbOperaterMaxSeqKey))
 	if err != nil {
-		return err
-	}
-	seq := new(big.Int).SetBytes(seqVal).Int64()
-	keyLen := len(maxSeqOfBlockKey) + 64
-	key := make([]byte, keyLen)
-	copy(key, maxSeqOfBlockKey)
-	oriBinary.BigEndian.PutUint64(key[len(maxSeqOfBlockKey):], height)
-	return db.Put(key, new(big.Int).SetInt64(seq).Bytes())
-}
-
-func (db *Database) GetBlockJournal() uint64 {
-	it := db.diskDb.NewIteratorWithPrefix([]byte(maxSeqOfBlockKey))
-
-	var heightBytes []byte
-	for it.Next() {
-		heightBytes = it.Key()[len(maxSeqOfBlockKey):]
+		return err, 0
 	}
 
-	height := oriBinary.BigEndian.Uint64(heightBytes)
-	return height
+	return nil, 0
 }
 
 func (db *Database) GetStorage(addr *crypto.CommonAddress) *chainTypes.Storage {
@@ -424,8 +390,8 @@ func (db *Database) PutReceipt(txHash crypto.Hash, receipt *chainTypes.Receipt) 
 	fmt.Println("TxHash: ", receipt.TxHash)
 	fmt.Println("ContratAddress: ", receipt.ContractAddress)
 	fmt.Println("GasUsed: ", receipt.GasUsed)
-	fmt.Println("GasFee: ", receipt.GasUsed)
-	fmt.Println("Ret: ", receipt.Ret, receipt.Ret == nil)
+	fmt.Println("BlockNumber: ", receipt.BlockNumber)
+	fmt.Println("BlockHash: ", receipt.BlockHash)
 	value, err := binary.Marshal(receipt)
 	fmt.Println("err11: ", err)
 	if err != nil {

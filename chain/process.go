@@ -9,9 +9,9 @@ import (
 
 	"github.com/drep-project/drep-chain/params"
 
-	chainTypes "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
+	chainTypes "github.com/drep-project/drep-chain/types"
 	"github.com/pkg/errors"
 )
 
@@ -20,7 +20,6 @@ func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, b
 	defer chainService.addBlockSync.Unlock()
 	blockHash := block.Header.Hash()
 	exist := chainService.BlockExists(blockHash)
-
 	if exist {
 		return false, false, ErrBlockExsist
 	}
@@ -279,7 +278,7 @@ func (chainService *ChainService) reorganizeChain(db *database.Database, detachN
 		elem := detachNodes.Back()
 		lastBlock := elem.Value.(*chainTypes.BlockNode)
 		height := lastBlock.Height - 1
-		db.Rollback2Block(height)
+		db.Rollback2Block(height, lastBlock.Hash)
 		log.WithField("Height", height).Info("REORGANIZE:RollBack state root")
 		chainService.markState(db, lastBlock.Parent)
 		elem = detachNodes.Front()
@@ -324,63 +323,18 @@ func (chainService *ChainService) notifyDetachBlock(block *chainTypes.Block) {
 }
 
 func (chainService *ChainService) markState(db *database.Database, blockNode *chainTypes.BlockNode) {
-	state := chainTypes.NewBestState(blockNode)
 	chainService.BestChain().SetTip(blockNode)
-	chainService.stateLock.Lock()
-	chainService.StateSnapshot = &ChainState{
-		BestState: *state,
-		db:        db,
-	}
-	chainService.stateLock.Unlock()
-	chainService.DatabaseService.PutChainState(state)
-	db.SetBlockJournal(state.Height)
-
 	triedb := chainService.DatabaseService.GetTriedDB()
 	triedb.Commit(crypto.Bytes2Hash(blockNode.StateRoot), true)
 }
 
 //TODO improves the performan
 func (chainService *ChainService) InitStates() error {
-	chainState := chainService.DatabaseService.GetChainState()
-	journalHeight := chainService.DatabaseService.GetBlockJournal()
-	if chainState.Height > journalHeight {
-		if chainState.Height-journalHeight == 1 {
-			// commit fail and repaire here
-			//delete dirty data , and rollback state to journalHeight
-			chainService.DatabaseService.Rollback2Block(journalHeight)
-			header, _, err := chainService.DatabaseService.GetBlockNode(&chainState.PrevHash, journalHeight)
-			if err != nil {
-				return err
-			}
-			node := chainTypes.NewBlockNode(header, nil)
-			chainState = chainTypes.NewBestState(node)
-			chainService.DatabaseService.PutChainState(chainState)
-			log.Info("Repair commit fail")
-		} else {
-			panic("never reach here")
-		}
-	}
-	_, err := chainService.DatabaseService.GetBlock(&chainState.Hash)
-	if err != nil {
-		//block not save but tip save status is ok
-		rollbackHeight := chainState.Height - 1
-		chainService.DatabaseService.Rollback2Block(rollbackHeight)
-		header, _, err := chainService.DatabaseService.GetBlockNode(&chainState.PrevHash, rollbackHeight)
-		if err != nil {
-			log.Error("err GetBlockNode:", err)
-			return err
-		}
-		node := chainTypes.NewBlockNode(header, nil)
-		chainState = chainTypes.NewBestState(node)
-		chainService.DatabaseService.PutChainState(chainState)
-		log.Info("Repair block missing")
-	}
-
 	blockCount := chainService.DatabaseService.BlockNodeCount()
 	blockNodes := make([]chainTypes.BlockNode, blockCount)
 	var i int32
 	var lastNode *chainTypes.BlockNode
-	err = chainService.DatabaseService.BlockNodeIterator(func(header *chainTypes.BlockHeader, status chainTypes.BlockStatus) error {
+	err := chainService.DatabaseService.BlockNodeIterator(func(header *chainTypes.BlockHeader, status chainTypes.BlockStatus) error {
 		// Determine the parent block node. Since we iterate block headers
 		// in order of height, if the blocks are mostly linear there is a
 		// very good chance the previous header processed is the parent.
@@ -418,16 +372,45 @@ func (chainService *ChainService) InitStates() error {
 		return err
 	}
 
-	// Set the best chain view to the stored best state.
-	tip := chainService.blockIndex.LookupNode(&chainState.Hash)
-	if tip == nil {
-		return errors.Wrapf(ErrInitStateFail, "cannot find chain tip %s in block index", chainState.Hash)
+	tip := lastNode
+	for {
+		if tip.Height != 0 {
+			if chainService.DatabaseService.RecoverTrie(tip.StateRoot) {
+				break
+			}
+
+			// commit fail and repaire here
+			//delete dirty data , and rollback state to journalHeight
+			//去除磁盘中的nodeblock、block信息；回退区块号及相关的操作日志序列号
+			err, _ := chainService.DatabaseService.Rollback2Block(tip.Height, tip.Hash)
+			if err != nil {
+				log.WithField("height", tip.Height).Error("rollback2block err")
+				return err
+			}
+
+			//去除内存中节点信息
+			chainService.blockIndex.ClearNode(tip)
+		} else {
+			if chainService.DatabaseService.RecoverTrie(tip.StateRoot) {
+				break
+			} else {
+				return fmt.Errorf("recover tire from old data err")
+			}
+		}
+
+		tip = tip.Ancestor(tip.Height - 1)
 	}
+
+	// Set the best chain view to the stored best state.
+	//tip := chainService.blockIndex.LookupNode(node.Hash)
+	/*if tip == nil {
+		return errors.Wrapf(ErrInitStateFail, "cannot find chain tip %s in block index", node.Hash)
+	}*/
 	chainService.BestChain().SetTip(tip)
 
 	// Load the raw block bytes for the best block.
-	if !chainService.DatabaseService.HasBlock(&chainState.Hash) {
-		return errors.Wrapf(ErrBlockNotFound, "cannot find block %s in block index", chainState.Hash)
+	if !chainService.DatabaseService.HasBlock(tip.Hash) {
+		return errors.Wrapf(ErrBlockNotFound, "cannot find block %s in block index", tip.Hash)
 	}
 
 	// As a final consistency check, we'll run through all the
@@ -444,12 +427,6 @@ func (chainService *ChainService) InitStates() error {
 			chainService.blockIndex.SetStatusFlags(iterNode, chainTypes.StatusValid)
 		}
 	}
-	chainService.stateLock.Lock()
-	chainService.StateSnapshot = &ChainState{
-		BestState: *chainTypes.NewBestState(tip),
-		db:        chainService.DatabaseService.BeginTransaction(true),
-	}
-	chainService.stateLock.Unlock()
 
 	// As we might have updated the index after it was loaded, we'll
 	// attempt to flush the index to the DB. This will only result in a

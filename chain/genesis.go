@@ -73,7 +73,7 @@ func (chainService *ChainService) ProcessGenesisBlock(genesisPubkey string) (*ch
 	if err != nil {
 		return nil, err
 	}
-	chainService.DatabaseService.RecordBlockJournal(0)
+	//chainService.DatabaseService.RecordBlockJournal(0)
 	return &chainTypes.Block{
 		Header: &chainTypes.BlockHeader{
 			Version:      common.Version,

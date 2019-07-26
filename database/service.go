@@ -77,3 +77,6 @@ func (database *DatabaseService) Db() *Database {
 func (database *DatabaseService) GetTriedDB()*trie.Database {
 	return database.db.trieDb
 }
+func (database *DatabaseService)RecoverTrie(root []byte)bool{
+	return  database.db.RecoverTrie(root)
+}

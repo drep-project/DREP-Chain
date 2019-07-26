@@ -4,8 +4,8 @@ import (
 	"math/big"
 
 	"github.com/drep-project/binary"
-	chainType "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
+	chainType "github.com/drep-project/drep-chain/types"
 )
 
 var (
@@ -51,26 +51,26 @@ func (database *DatabaseService) HasBlock(hash *crypto.Hash) bool {
 	return err == nil
 }
 
-func (database *DatabaseService) BlockIterator(handle func(*chainType.Block) error) error {
-	iter := database.db.diskDb.NewIteratorWithPrefix(BlockPrefix)
-	defer iter.Release()
-	var err error
-	for iter.Next() {
-		block := &chainType.Block{}
-		err = binary.Unmarshal(iter.Value(), block)
-		if err != nil {
-			break
-		}
-		err = handle(block)
-		if err != nil {
-			break
-		}
-	}
-	if err != nil {
-		return err
-	}
-	return nil
-}
+//func (database *DatabaseService) BlockIterator(handle func(*chainType.Block) error) error {
+//	iter := database.db.diskDb.NewIteratorWithPrefix(BlockPrefix)
+//	defer iter.Release()
+//	var err error
+//	for iter.Next() {
+//		block := &chainType.Block{}
+//		err = binary.Unmarshal(iter.Value(), block)
+//		if err != nil {
+//			break
+//		}
+//		err = handle(block)
+//		if err != nil {
+//			break
+//		}
+//	}
+//	if err != nil {
+//		return err
+//	}
+//	return nil
+//}
 
 func (database *DatabaseService) PutBlockNode(blockNode *chainType.BlockNode) error {
 	header := blockNode.Header()
@@ -99,7 +99,7 @@ func (database *DatabaseService) GetBlockNode(hash *crypto.Hash, height uint64) 
 	}
 	blockHeader := &chainType.BlockHeader{}
 	binary.Unmarshal(value[0:len(value)-1], blockHeader)
-	status := value[len(value)-1 : len(value)][0]
+	status := value[len(value)-1:len(value)][0]
 	return blockHeader, chainType.BlockStatus(status), nil
 }
 
@@ -124,7 +124,7 @@ func (database *DatabaseService) BlockNodeIterator(handle func(*chainType.BlockH
 		if err != nil {
 			break
 		}
-		err = handle(blockHeader, chainType.BlockStatus(val[len(val)-1 : len(val)][0]))
+		err = handle(blockHeader, chainType.BlockStatus(val[len(val)-1:len(val)][0]))
 		if err != nil {
 			break
 		}
@@ -135,25 +135,9 @@ func (database *DatabaseService) BlockNodeIterator(handle func(*chainType.BlockH
 	return nil
 }
 
-func (database *DatabaseService) PutChainState(chainState *chainType.BestState) error {
-	return database.db.PutChainState(chainState)
-}
-
-func (database *DatabaseService) GetChainState() *chainType.BestState {
-	return database.db.GetChainState()
-}
-
 //返回回滚的操作数目
-func (database *DatabaseService) Rollback2Block(height uint64) (error, int64) {
-	return database.db.Rollback2Block(height)
-}
-
-func (database *DatabaseService) RecordBlockJournal(height uint64) {
-	database.db.SetBlockJournal(height)
-}
-
-func (database *DatabaseService) GetBlockJournal() uint64 {
-	return database.db.GetBlockJournal()
+func (database *DatabaseService) Rollback2Block(height uint64, hash *crypto.Hash) (error, int64) {
+	return database.db.Rollback2Block(height, hash)
 }
 
 func (database *DatabaseService) GetStorage(addr *crypto.CommonAddress) *chainType.Storage {

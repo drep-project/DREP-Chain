@@ -12,8 +12,8 @@ func (blockMgr *BlockMgr) VerifyTransaction(tx *chainTypes.Transaction) error {
 }
 
 func (blockMgr *BlockMgr) verifyTransaction(tx *chainTypes.Transaction) error {
-	db := blockMgr.ChainService.GetCurrentState()
-	from, err := tx.From()
+	//db := blockMgr.ChainService.GetCurrentState()
+	//from, err := tx.From()
 
 	// Transactions can't be negative. This may never happen using RLP decoded
 	// transactions but may occur if you create a transaction using the RPC.
@@ -30,10 +30,10 @@ func (blockMgr *BlockMgr) verifyTransaction(tx *chainTypes.Transaction) error {
 
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
-	originBalance := db.GetBalance(from)
-	if originBalance.Cmp(tx.Cost()) < 0 {
-		return ErrBalance
-	}
+	//originBalance := db.GetBalance(from)
+	//if originBalance.Cmp(tx.Cost()) < 0 {
+	//	return ErrBalance
+	//}
 
 	// Should supply enough intrinsic gas
 	gas, err := tx.IntrinsicGas()

@@ -1,8 +1,8 @@
 package chain
 
 import (
-	chainTypes "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
+	chainTypes "github.com/drep-project/drep-chain/types"
 	"sync"
 )
 
@@ -123,4 +123,15 @@ func (bi *BlockIndex) FlushToDB(storeBlockNodeFunc func(node *chainTypes.BlockNo
 
 	bi.Unlock()
 	return err
+}
+
+
+func (bi *BlockIndex)ClearNode(node *chainTypes.BlockNode) {
+	if _,ok := bi.Dirty[node]; ok {
+		delete(bi.Dirty, node)
+	}
+
+	if _,ok := bi.Index[*node.Hash]; ok {
+		delete(bi.Index, *node.Hash)
+	}
 }
