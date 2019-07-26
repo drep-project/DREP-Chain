@@ -22,14 +22,11 @@ import (
 	path2 "path"
 	"path/filepath"
 
-
-	"github.com/drep-project/drep-chain/types"
-	chainService "github.com/drep-project/drep-chain/chain"
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
 	accountComponent "github.com/drep-project/drep-chain/pkgs/accounts/component"
 	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
-	chainTypes "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/rpc"
 )
 
@@ -68,13 +65,8 @@ func gen(ctx *cli.Context) error {
 	}
 	bootsNodes := []*enode.Node{}
 	standbyKey := []*secp256k1.PrivateKey{}
-<<<<<<< HEAD
 	nodes := []*types.Node{}
 	produces := make([]consensusTypes.Producer, 0)
-=======
-	nodes := []*chainTypes.Node{}
-	produces := make([]chainService.Producers, 0)
->>>>>>> 64317370763dee23920de81af7065d0cf5c73f03
 	for i := 0; i < len(nodeItems); i++ {
 		aNode := getAccount(nodeItems[i].Name)
 		nodes = append(nodes, aNode)
@@ -90,11 +82,7 @@ func gen(ctx *cli.Context) error {
 		bootsNodes = append(bootsNodes, node)
 
 		standbyKey = append(standbyKey, aNode.PrivateKey)
-<<<<<<< HEAD
 		produces = append(produces, consensusTypes.Producer{
-=======
-		produces = append(produces, chainService.Producers{
->>>>>>> 64317370763dee23920de81af7065d0cf5c73f03
 			IP:     nodeItems[i].Ip,
 			Pubkey: aNode.PrivateKey.PubKey(),
 		})
@@ -121,11 +109,7 @@ func gen(ctx *cli.Context) error {
 	consensusConfig.Producers = produces
 	//consensusConfig.Producers = produces
 
-<<<<<<< HEAD
 	chainConfig := chain.ChainConfig{}
-=======
-	chainConfig := chainService.ChainConfig{}
->>>>>>> 64317370763dee23920de81af7065d0cf5c73f03
 	chainConfig.RemotePort = 55556
 	chainConfig.ChainId = 0
 	chainConfig.GenesisAddr = params.HoleAddress
