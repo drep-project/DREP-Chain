@@ -46,7 +46,7 @@ func NewStateProcessor(chainservice *ChainService) *StateProcessor {
 // indicating the block was invalid.
 func (stateProcessor *StateProcessor) ApplyTransaction(db *database.Database, bc evm.ChainContext, gp *GasPool, header *types.BlockHeader, tx *types.Transaction, from *crypto.CommonAddress, usedGas *uint64) (*types.Receipt, uint64, error) {
 	// Apply the transaction to the current state (included in the env)
-	ret, gas, gasFee, failed, err := stateProcessor.ApplyMessage(db, tx, from, header, bc, gp)
+	_, gas, _, failed, err := stateProcessor.ApplyMessage(db, tx, from, header, bc, gp)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -58,14 +58,15 @@ func (stateProcessor *StateProcessor) ApplyTransaction(db *database.Database, bc
 	receipt := types.NewReceipt(root, failed, *usedGas)
 	receipt.TxHash = *tx.TxHash()
 	receipt.GasUsed = gas
-	receipt.GasFee = gasFee
-	receipt.Ret = ret
 	// if the transaction created a contract, store the creation address in the receipt.
 	if tx.To() == nil || tx.To().IsEmpty() {
 		receipt.ContractAddress = crypto.CreateAddress(*from, tx.Nonce())
 	}
 	// Set the receipt logs and create a bloom for filtering
 	receipt.Logs = db.GetLogs(*tx.TxHash())
+	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
+	receipt.BlockHash = *header.Hash()
+	receipt.BlockNumber = header.Height
 	return receipt, gas, err
 }
 
