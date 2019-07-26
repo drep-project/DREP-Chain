@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	chainTypes "github.com/drep-project/drep-chain/types"
+	types "github.com/drep-project/drep-chain/types"
 )
 
 func TestNewDatabase(t *testing.T) {
@@ -41,7 +41,7 @@ func TestAddLog(t *testing.T) {
 		pri, _ := crypto.GenerateKey(rand.Reader)
 		addr := crypto.PubKey2Address(pri.PubKey())
 
-		log := chainTypes.Log{
+		log := types.Log{
 			Address: addr,
 			Height:  int64(i),
 			TxHash:  crypto.BytesToHash([]byte(strconv.Itoa(i))),
@@ -71,13 +71,13 @@ func TestBlockNode(t *testing.T) {
 	hash := crypto.BytesToHash([]byte("hash"))
 	pri, _ := crypto.GenerateKey(rand.Reader)
 
-	bn := chainTypes.BlockNode{
+	bn := types.BlockNode{
 		Parent:    nil,
 		Hash:      &hash,
 		StateRoot: []byte{},
 		TimeStamp: uint64(time.Now().Unix()),
 		Height:    0,
-		Status:    chainTypes.StatusInvalidAncestor,
+		Status:    types.StatusInvalidAncestor,
 		LeaderPubKey:secp256k1.PublicKey(pri.PublicKey),
 
 	}
@@ -108,7 +108,7 @@ func TestChainState(t*testing.T){
 		t.Fatal(err)
 	}
 
-	bestState := chainTypes.BestState{
+	bestState := types.BestState{
 		Hash:crypto.Bytes2Hash([]byte("besthash")),
 		PrevHash:crypto.Bytes2Hash([]byte("besthash")),
 		Height:10,

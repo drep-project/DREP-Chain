@@ -2,7 +2,6 @@ package app
 
 import (
 	"encoding/json"
-
 	"github.com/asaskevich/EventBus"
 	"github.com/pkg/errors"
 	"gopkg.in/urfave/cli.v1"

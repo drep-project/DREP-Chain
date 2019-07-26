@@ -13,8 +13,8 @@ func TestBkMarshal(t *testing.T) {
 	pri, _ := secp256k1.GeneratePrivateKey(nil)
 	var tx = BlockHeader{}
 	tx.Version = 1
-	tx.LeaderPubKey = *pri.PubKey()
-	tx.MinorPubKeys = []secp256k1.PublicKey{}
+	tx.LeaderAddress = *pri.PubKey()
+	tx.MinorAddresses = []secp256k1.PublicKey{}
 	bytes1, err := binary.Marshal(tx)
 	if err != nil {
 		log.Fatal(err)

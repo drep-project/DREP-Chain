@@ -1,7 +1,7 @@
 package chain
 
 import (
-	chainTypes "github.com/drep-project/drep-chain/types"
+	types "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"time"
 )
@@ -58,7 +58,7 @@ func (b *ChainService) GetOrphanRoot(hash *crypto.Hash) *crypto.Hash {
 
 // removeOrphanBlock removes the passed orphan block from the orphan pool and
 // previous orphan index.
-func (b *ChainService) removeOrphanBlock(orphan *chainTypes.OrphanBlock) {
+func (b *ChainService) removeOrphanBlock(orphan *types.OrphanBlock) {
 	// Protect concurrent access.
 	b.orphanLock.Lock()
 	defer b.orphanLock.Unlock()
@@ -97,7 +97,7 @@ func (b *ChainService) removeOrphanBlock(orphan *chainTypes.OrphanBlock) {
 // It also imposes a maximum limit on the number of outstanding orphan
 // blocks and will remove the oldest received orphan block if the limit is
 // exceeded.
-func (b *ChainService) addOrphanBlock(block *chainTypes.Block) {
+func (b *ChainService) addOrphanBlock(block *types.Block) {
 	// Remove expired orphan blocks.
 	for _, oBlock := range b.orphans {
 		if time.Now().After(oBlock.Expiration) {
@@ -128,7 +128,7 @@ func (b *ChainService) addOrphanBlock(block *chainTypes.Block) {
 	// Insert the block into the orphan map with an expiration time
 	// 1 hour from now.
 	expiration := time.Now().Add(time.Hour)
-	oBlock := &chainTypes.OrphanBlock{
+	oBlock := &types.OrphanBlock{
 		Block:      block,
 		Expiration: expiration,
 	}

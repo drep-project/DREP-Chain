@@ -3,7 +3,7 @@ package component
 import (
 	"sync"
 
-	chainTypes "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 )
 
@@ -11,7 +11,7 @@ import (
 // TODO If the write speed becomes a bottleneck, write caching can be added
 type CacheStore struct {
 	store KeyStore //  This points to a de facto storage.
-	nodes []*chainTypes.Node
+	nodes []*types.Node
 	rlock sync.RWMutex
 }
 
@@ -32,7 +32,7 @@ func NewCacheStore(keyStore KeyStore, password string) (*CacheStore, error) {
 
 // GetKey Get the private key by address and password
 // Notice if you wallet is locked ,private key cant be found
-func (cacheStore *CacheStore) GetKey(addr *crypto.CommonAddress, auth string) (*chainTypes.Node, error) {
+func (cacheStore *CacheStore) GetKey(addr *crypto.CommonAddress, auth string) (*types.Node, error) {
 	cacheStore.rlock.RLock()
 	defer cacheStore.rlock.RUnlock()
 
@@ -45,12 +45,12 @@ func (cacheStore *CacheStore) GetKey(addr *crypto.CommonAddress, auth string) (*
 }
 
 // ExportKey export all key in cache by password
-func (cacheStore *CacheStore) ExportKey(auth string) ([]*chainTypes.Node, error) {
+func (cacheStore *CacheStore) ExportKey(auth string) ([]*types.Node, error) {
 	return cacheStore.nodes, nil
 }
 
 // StoreKey store key local storage medium
-func (cacheStore *CacheStore) StoreKey(k *chainTypes.Node, auth string) error {
+func (cacheStore *CacheStore) StoreKey(k *types.Node, auth string) error {
 	cacheStore.rlock.Lock()
 	defer cacheStore.rlock.Unlock()
 

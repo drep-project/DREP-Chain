@@ -1,10 +1,8 @@
 package trace
 
 import (
-	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/types"
 	"math/big"
 )
 
@@ -15,7 +13,7 @@ type ViewTransaction struct {
 	Nonce     uint64 //交易序列号
 	Type      int
 	To        string
-	ChainId   app.ChainIdType
+	ChainId   types.ChainIdType
 	Amount    string
 	GasPrice  uint64
 	GasLimit  uint64
@@ -27,7 +25,7 @@ type ViewTransaction struct {
 
 type ViewBlock struct {
 	Hash         string
-	ChainId      app.ChainIdType
+	ChainId      types.ChainIdType
 	Version      int32
 	PreviousHash string
 	GasLimit     uint64
@@ -41,7 +39,7 @@ type ViewBlock struct {
 	Txs          []string
 }
 type ViewBlockHeader struct {
-	ChainId      app.ChainIdType
+	ChainId      types.ChainIdType
 	Version      int32
 	PreviousHash string
 	GasLimit     uint64
@@ -72,11 +70,11 @@ func (viewBlockHeader *ViewBlockHeader) From(block *types.Block) *ViewBlockHeade
 	viewBlockHeader.Timestamp = block.Header.Timestamp
 	viewBlockHeader.StateRoot = common.Encode(block.Header.StateRoot)
 	viewBlockHeader.TxRoot = common.Encode(block.Header.TxRoot)
-	viewBlockHeader.LeaderPubKey = crypto.PubKey2Address(&block.Header.LeaderPubKey).String()
+	viewBlockHeader.LeaderPubKey = block.Header.LeaderAddress.String()
 
 	viewBlockHeader.MinorPubKeys = []string{}
-	for _, val := range block.Header.MinorPubKeys {
-		viewBlockHeader.MinorPubKeys = append(viewBlockHeader.MinorPubKeys, crypto.PubKey2Address(&val).String())
+	for _, val := range block.Header.MinorAddresses {
+		viewBlockHeader.MinorPubKeys = append(viewBlockHeader.MinorPubKeys, val.String())
 	}
 	return viewBlockHeader
 }
@@ -119,11 +117,11 @@ func (rpcBlock *ViewBlock) From(block *types.Block) *ViewBlock {
 	rpcBlock.Timestamp = uint64(block.Header.Timestamp)
 	rpcBlock.StateRoot = common.Encode(block.Header.StateRoot)
 	rpcBlock.TxRoot = common.Encode(block.Header.TxRoot)
-	rpcBlock.LeaderPubKey = crypto.PubKey2Address(&block.Header.LeaderPubKey).String()
+	rpcBlock.LeaderPubKey = block.Header.LeaderAddress.String()
 
 	rpcBlock.MinorPubKeys = []string{}
-	for _, val := range block.Header.MinorPubKeys {
-		rpcBlock.MinorPubKeys = append(rpcBlock.MinorPubKeys, crypto.PubKey2Address(&val).String())
+	for _, val := range block.Header.MinorAddresses {
+		rpcBlock.MinorPubKeys = append(rpcBlock.MinorPubKeys, val.String())
 	}
 	rpcBlock.Txs = make([]string, len(txs))
 	for index, val := range txs {
@@ -133,7 +131,7 @@ func (rpcBlock *ViewBlock) From(block *types.Block) *ViewBlock {
 }
 
 type RpcBlockHeader struct {
-	ChainId      app.ChainIdType
+	ChainId      types.ChainIdType
 	Version      int32
 	PreviousHash string
 	GasLimit     string
@@ -158,10 +156,10 @@ func (rpcBlockHeader *RpcBlockHeader) FromBlockHeader(header *types.BlockHeader)
 	rpcBlockHeader.Timestamp = header.Timestamp
 	rpcBlockHeader.StateRoot = common.Encode(header.StateRoot)
 	rpcBlockHeader.TxRoot = common.Encode(header.TxRoot)
-	rpcBlockHeader.LeaderPubKey = crypto.PubKey2Address(&header.LeaderPubKey).String()
+	rpcBlockHeader.LeaderPubKey = header.LeaderAddress.String()
 	rpcBlockHeader.MinorPubKeys = []string{}
-	for _, val := range header.MinorPubKeys {
-		rpcBlockHeader.MinorPubKeys = append(rpcBlockHeader.MinorPubKeys, crypto.PubKey2Address(&val).String())
+	for _, val := range header.MinorAddresses {
+		rpcBlockHeader.MinorPubKeys = append(rpcBlockHeader.MinorPubKeys, val.String())
 	}
 	rpcBlockHeader.Hash = header.Hash().String()
 }

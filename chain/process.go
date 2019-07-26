@@ -11,11 +11,11 @@ import (
 
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
-	chainTypes "github.com/drep-project/drep-chain/types"
+	types "github.com/drep-project/drep-chain/types"
 	"github.com/pkg/errors"
 )
 
-func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, bool, error) {
+func (chainService *ChainService) ProcessBlock(block *types.Block) (bool, bool, error) {
 	chainService.addBlockSync.Lock()
 	defer chainService.addBlockSync.Unlock()
 	blockHash := block.Header.Hash()
@@ -91,7 +91,7 @@ func (chainService *ChainService) processOrphans(hash *crypto.Hash) error {
 	return nil
 }
 
-func (chainService *ChainService) AcceptBlock(block *chainTypes.Block) (inMainChain bool, err error) {
+func (chainService *ChainService) AcceptBlock(block *types.Block) (inMainChain bool, err error) {
 	chainService.addBlockSync.Lock()
 	defer chainService.addBlockSync.Unlock()
 	return chainService.acceptBlock(block)
@@ -99,7 +99,7 @@ func (chainService *ChainService) AcceptBlock(block *chainTypes.Block) (inMainCh
 }
 
 //TODO cannot find chain tip  对外通知区块失败会产生这个错误  区块未保存 header已经保存
-func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainChain bool, err error) {
+func (chainService *ChainService) acceptBlock(block *types.Block) (inMainChain bool, err error) {
 	db := chainService.DatabaseService.BeginTransaction(true)
 	defer func() {
 		if err == nil {
@@ -111,16 +111,15 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainCh
 	}()
 	prevNode := chainService.blockIndex.LookupNode(&block.Header.PreviousHash)
 	preBlock := prevNode.Header()
-	err = chainService.BlockValidator().VerifyHeader(block.Header, &preBlock)
-	if err != nil {
-		return false, err
-	}
-	err = chainService.BlockValidator().VerifyBody(block)
-	if err != nil {
-		return false, err
-	}
-	if !chainService.BlockValidator().VerifyMultiSig(block, chainService.Config().SkipCheckMutiSig || false) {
-		return false, ErrInvalidateBlockMultisig
+	for _, blockValidator := range chainService.BlockValidator() {
+		err = blockValidator.VerifyHeader(block.Header, &preBlock)
+		if err != nil {
+			return false, err
+		}
+		err = blockValidator.VerifyBody(block)
+		if err != nil {
+			return false, err
+		}
 	}
 
 	//store block
@@ -129,8 +128,8 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainCh
 		return false, err
 	}
 	log.WithField("Height", block.Header.Height).WithField("Hash", hex.EncodeToString(block.Header.Hash().Bytes())).WithField("TxCount", block.Data.TxCount).Info("Accepted block")
-	newNode := chainTypes.NewBlockNode(block.Header, prevNode)
-	newNode.Status = chainTypes.StatusDataStored
+	newNode := types.NewBlockNode(block.Header, prevNode)
+	newNode.Status = types.StatusDataStored
 
 	chainService.blockIndex.AddNode(newNode)
 	err = chainService.blockIndex.FlushToDB(chainService.DatabaseService.PutBlockNode)
@@ -170,38 +169,49 @@ func (chainService *ChainService) acceptBlock(block *chainTypes.Block) (inMainCh
 	return err == nil, err
 }
 
-func (chainService *ChainService) connectBlock(db *database.Database, block *chainTypes.Block, newNode *chainTypes.BlockNode) (err error) {
+func (chainService *ChainService) connectBlock(db *database.Database, block *types.Block, newNode *types.BlockNode) (err error) {
 	gp := new(GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
-	var gasUsed *big.Int
-	var gasFee *big.Int
-	gasUsed, gasFee, err = chainService.BlockValidator().ExecuteBlock(db, block, gp)
+	context := &BlockExecuteContext{
+		Db:      db,
+		Block:   block,
+		Gp:      gp,
+		GasUsed: new(big.Int),
+		GasFee:  new(big.Int),
+	}
+	for _, blockValidator := range chainService.BlockValidator() {
+		err = blockValidator.ExecuteBlock(context)
+		if err != nil {
+			break
+		}
+	}
+
 	if err != nil {
-		chainService.blockIndex.SetStatusFlags(newNode, chainTypes.StatusValidateFailed)
+		chainService.blockIndex.SetStatusFlags(newNode, types.StatusValidateFailed)
 		chainService.flushIndexState()
 		return err
 	}
-	err = chainService.AccumulateRewards(db, block, gasFee)
+	err = chainService.AccumulateRewards(db, block, context.GasFee)
 	if err != nil {
-		chainService.blockIndex.SetStatusFlags(newNode, chainTypes.StatusValidateFailed)
+		chainService.blockIndex.SetStatusFlags(newNode, types.StatusValidateFailed)
 		chainService.flushIndexState()
 		return err
 	}
-	if block.Header.GasUsed.Cmp(gasUsed) == 0 {
+	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
 		db.Commit(true)
 		oldStateRoot := db.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, oldStateRoot) {
 			err = errors.Wrapf(ErrNotMathcedStateRoot, "%s not matched %s", hex.EncodeToString(block.Header.StateRoot), hex.EncodeToString(oldStateRoot))
 		}
 	} else {
-		err = errors.Wrapf(ErrGasUsed, "%d not matched %d", block.Header.GasUsed.Uint64(), gasUsed.Uint64())
+		err = errors.Wrapf(ErrGasUsed, "%d not matched %d", block.Header.GasUsed.Uint64(), context.GasUsed.Uint64())
 	}
 
 	if err == nil {
-		chainService.blockIndex.SetStatusFlags(newNode, chainTypes.StatusValid)
+		chainService.blockIndex.SetStatusFlags(newNode, types.StatusValid)
 		chainService.flushIndexState()
 	} else {
-		chainService.blockIndex.SetStatusFlags(newNode, chainTypes.StatusValidateFailed)
+		chainService.blockIndex.SetStatusFlags(newNode, types.StatusValidateFailed)
 		chainService.flushIndexState()
 		return err
 	}
@@ -210,7 +220,7 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *cha
 	// valid, then we'll update its status and flush the state to
 	// disk again.
 	if chainService.blockIndex.NodeStatus(newNode).KnownValid() {
-		chainService.blockIndex.SetStatusFlags(newNode, chainTypes.StatusValid)
+		chainService.blockIndex.SetStatusFlags(newNode, types.StatusValid)
 		chainService.flushIndexState()
 	}
 	return nil
@@ -222,7 +232,7 @@ func (chainService *ChainService) flushIndexState() {
 	}
 }
 
-func (chainService *ChainService) getReorganizeNodes(node *chainTypes.BlockNode) (*list.List, *list.List) {
+func (chainService *ChainService) getReorganizeNodes(node *types.BlockNode) (*list.List, *list.List) {
 	attachNodes := list.New()
 	detachNodes := list.New()
 
@@ -230,7 +240,7 @@ func (chainService *ChainService) getReorganizeNodes(node *chainTypes.BlockNode)
 	// direct parent are checked below but this is a quick check before doing
 	// more unnecessary work.
 	if chainService.blockIndex.NodeStatus(node.Parent).KnownInvalid() {
-		chainService.blockIndex.SetStatusFlags(node, chainTypes.StatusInvalidAncestor)
+		chainService.blockIndex.SetStatusFlags(node, types.StatusInvalidAncestor)
 		return detachNodes, attachNodes
 	}
 
@@ -254,8 +264,8 @@ func (chainService *ChainService) getReorganizeNodes(node *chainTypes.BlockNode)
 		var next *list.Element
 		for e := attachNodes.Front(); e != nil; e = next {
 			next = e.Next()
-			n := attachNodes.Remove(e).(*chainTypes.BlockNode)
-			chainService.blockIndex.SetStatusFlags(n, chainTypes.StatusInvalidAncestor)
+			n := attachNodes.Remove(e).(*types.BlockNode)
+			chainService.blockIndex.SetStatusFlags(n, types.StatusInvalidAncestor)
 		}
 		return detachNodes, attachNodes
 	}
@@ -276,14 +286,14 @@ func (chainService *ChainService) reorganizeChain(db *database.Database, detachN
 	}
 	if detachNodes.Len() != 0 {
 		elem := detachNodes.Back()
-		lastBlock := elem.Value.(*chainTypes.BlockNode)
+		lastBlock := elem.Value.(*types.BlockNode)
 		height := lastBlock.Height - 1
 		db.Rollback2Block(height, lastBlock.Hash)
 		log.WithField("Height", height).Info("REORGANIZE:RollBack state root")
 		chainService.markState(db, lastBlock.Parent)
 		elem = detachNodes.Front()
 		for elem != nil {
-			blockNode := elem.Value.(*chainTypes.BlockNode)
+			blockNode := elem.Value.(*types.BlockNode)
 			block, err := chainService.DatabaseService.GetBlock(blockNode.Hash)
 			if err != nil {
 				return err
@@ -296,7 +306,7 @@ func (chainService *ChainService) reorganizeChain(db *database.Database, detachN
 	if attachNodes.Len() != 0 && detachNodes.Len() != 0 {
 		elem := attachNodes.Front()
 		for elem != nil { //
-			blockNode := elem.Value.(*chainTypes.BlockNode)
+			blockNode := elem.Value.(*types.BlockNode)
 			block, err := chainService.DatabaseService.GetBlock(blockNode.Hash)
 			if err != nil {
 				return err
@@ -314,15 +324,15 @@ func (chainService *ChainService) reorganizeChain(db *database.Database, detachN
 	return nil
 }
 
-func (chainService *ChainService) notifyBlock(block *chainTypes.Block) {
+func (chainService *ChainService) notifyBlock(block *types.Block) {
 	chainService.NewBlockFeed().Send(block)
 }
 
-func (chainService *ChainService) notifyDetachBlock(block *chainTypes.Block) {
+func (chainService *ChainService) notifyDetachBlock(block *types.Block) {
 	chainService.DetachBlockFeed().Send(block)
 }
 
-func (chainService *ChainService) markState(db *database.Database, blockNode *chainTypes.BlockNode) {
+func (chainService *ChainService) markState(db *database.Database, blockNode *types.BlockNode) {
 	chainService.BestChain().SetTip(blockNode)
 	triedb := chainService.DatabaseService.GetTriedDB()
 	triedb.Commit(crypto.Bytes2Hash(blockNode.StateRoot), true)
@@ -331,14 +341,14 @@ func (chainService *ChainService) markState(db *database.Database, blockNode *ch
 //TODO improves the performan
 func (chainService *ChainService) InitStates() error {
 	blockCount := chainService.DatabaseService.BlockNodeCount()
-	blockNodes := make([]chainTypes.BlockNode, blockCount)
+	blockNodes := make([]types.BlockNode, blockCount)
 	var i int32
-	var lastNode *chainTypes.BlockNode
-	err := chainService.DatabaseService.BlockNodeIterator(func(header *chainTypes.BlockHeader, status chainTypes.BlockStatus) error {
+	var lastNode *types.BlockNode
+	err := chainService.DatabaseService.BlockNodeIterator(func(header *types.BlockHeader, status types.BlockStatus) error {
 		// Determine the parent block node. Since we iterate block headers
 		// in order of height, if the blocks are mostly linear there is a
 		// very good chance the previous header processed is the parent.
-		var parent *chainTypes.BlockNode
+		var parent *types.BlockNode
 		if lastNode == nil {
 			blockHash := header.Hash()
 			if !blockHash.IsEqual(chainService.genesisBlock.Header.Hash()) {
@@ -359,7 +369,7 @@ func (chainService *ChainService) InitStates() error {
 		// Initialize the block node for the block, connect it,
 		// and add it to the block index.
 		node := &blockNodes[i]
-		chainTypes.InitBlockNode(node, header, parent)
+		types.InitBlockNode(node, header, parent)
 		node.Status = status
 		chainService.blockIndex.AddNode(node)
 
@@ -424,7 +434,7 @@ func (chainService *ChainService) InitStates() error {
 		// we're up and running.
 		if !iterNode.Status.KnownValid() {
 			log.WithField("Block", iterNode.Hash).WithField("height", iterNode.Height).Info("ancestor of chain tip not marked as valid, upgrading to valid for consistency")
-			chainService.blockIndex.SetStatusFlags(iterNode, chainTypes.StatusValid)
+			chainService.blockIndex.SetStatusFlags(iterNode, types.StatusValid)
 		}
 	}
 
@@ -435,7 +445,7 @@ func (chainService *ChainService) InitStates() error {
 }
 
 //180000000/360
-func (chainService *ChainService) CalcGasLimit(parent *chainTypes.BlockHeader, gasFloor, gasCeil uint64) *big.Int {
+func (chainService *ChainService) CalcGasLimit(parent *types.BlockHeader, gasFloor, gasCeil uint64) *big.Int {
 	limit := uint64(0)
 	if parent.GasLimit.Uint64()*2/3 > parent.GasUsed.Uint64() {
 		limit = parent.GasLimit.Uint64() - span
@@ -456,21 +466,18 @@ func (chainService *ChainService) CalcGasLimit(parent *chainTypes.BlockHeader, g
 }
 
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
-func (chainService *ChainService) AccumulateRewards(db *database.Database, b *chainTypes.Block, totalGasBalance *big.Int) error {
+func (chainService *ChainService) AccumulateRewards(db *database.Database, b *types.Block, totalGasBalance *big.Int) error {
 	reward := new(big.Int).SetUint64(uint64(params.Rewards))
-	leaderAddr := crypto.PubKey2Address(&b.Header.LeaderPubKey)
-
 	r := new(big.Int)
 	r = r.Div(reward, new(big.Int).SetInt64(2))
 	r.Add(r, totalGasBalance)
-	err := db.AddBalance(&leaderAddr, r)
+	err := db.AddBalance(&b.Header.LeaderAddress, r)
 	if err != nil {
 		return err
 	}
-	num := len(b.Header.MinorPubKeys)
-	for _, memberPK := range b.Header.MinorPubKeys {
-		if !memberPK.IsEqual(&b.Header.LeaderPubKey) {
-			memberAddr := crypto.PubKey2Address(&memberPK)
+	num := len(b.Header.MinorAddresses)
+	for _, memberAddr := range b.Header.MinorAddresses {
+		if memberAddr != b.Header.LeaderAddress {
 			r.Div(reward, new(big.Int).SetInt64(int64(num*2)))
 			err = db.AddBalance(&memberAddr, r)
 			if err != nil {

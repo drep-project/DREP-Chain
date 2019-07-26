@@ -2,8 +2,6 @@ package types
 
 import (
 	"math/big"
-
-	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
@@ -17,11 +15,11 @@ var (
 type Node struct {
 	Address    *crypto.CommonAddress
 	PrivateKey *secp256k1.PrivateKey
-	ChainId    app.ChainIdType
+	ChainId    ChainIdType
 	ChainCode  []byte
 }
 
-func NewNode(parent *Node, chainId app.ChainIdType) *Node {
+func NewNode(parent *Node, chainId ChainIdType) *Node {
 	var (
 		prvKey    *secp256k1.PrivateKey
 		chainCode []byte
@@ -79,7 +77,7 @@ func (account *Account) Sign(hash []byte) ([]byte, error) {
 	return crypto.Sign(hash, account.Node.PrivateKey)
 }
 
-func NewNormalAccount(parent *Node, chainId app.ChainIdType) (*Account, error) {
+func NewNormalAccount(parent *Node, chainId ChainIdType) (*Account, error) {
 	/*IsRoot := chainId == RootChain
 	if !IsRoot && parent == nil {
 		return nil, errors.New("missing parent account")

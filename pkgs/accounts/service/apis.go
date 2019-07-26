@@ -9,7 +9,7 @@ import (
 
 	"github.com/drep-project/drep-chain/blockmgr"
 
-	chainTypes "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
@@ -163,7 +163,7 @@ func (accountapi *AccountApi) CloseWallet() {
 */
 func (accountapi *AccountApi) Transfer(from crypto.CommonAddress, to crypto.CommonAddress, amount, gasprice, gaslimit *common.Big, data common.Bytes) (string, error) {
 	nonce := accountapi.blockmgr.GetTransactionCount(&from)
-	tx := chainTypes.NewTransaction(to, (*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
+	tx := types.NewTransaction(to, (*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
 	sig, err := accountapi.Wallet.Sign(&from, tx.TxHash().Bytes())
 	if err != nil {
 		return "", err
@@ -197,7 +197,7 @@ func (accountapi *AccountApi) ReplaceTx(from crypto.CommonAddress, to crypto.Com
 		return "", errors.New("nonce is nil")
 	}
 
-	tx := chainTypes.NewTransaction(to, (*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), *nonce)
+	tx := types.NewTransaction(to, (*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), *nonce)
 	sig, err := accountapi.Wallet.Sign(&from, tx.TxHash().Bytes())
 	if err != nil {
 		return "", err
@@ -239,12 +239,12 @@ func (accountapi *AccountApi) ReplaceTx(from crypto.CommonAddress, to crypto.Com
   }
 }
 */
-func (accountapi *AccountApi) GetTxInPool(hash string) (*chainTypes.RpcTransaction, error) {
+func (accountapi *AccountApi) GetTxInPool(hash string) (*types.RpcTransaction, error) {
 	tx, err := accountapi.blockmgr.GetTxInPool(hash)
 	if err !=nil {
 		return nil, err
 	}
-	rpcTx := &chainTypes.RpcTransaction{}
+	rpcTx := &types.RpcTransaction{}
 	rpcTx.FromTx(tx)
 	return rpcTx, nil
 }
@@ -265,7 +265,7 @@ response:
 */
 func (accountapi *AccountApi) SetAlias(srcAddr crypto.CommonAddress, alias string, gasprice, gaslimit *common.Big) (string, error) {
 	nonce := accountapi.blockmgr.GetTransactionCount(&srcAddr)
-	t := chainTypes.NewAliasTransaction(alias, (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
+	t := types.NewAliasTransaction(alias, (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
 	sig, err := accountapi.Wallet.Sign(&srcAddr, t.TxHash().Bytes())
 	if err != nil {
 		return "", err
@@ -298,7 +298,7 @@ func (accountapi *AccountApi) SetAlias(srcAddr crypto.CommonAddress, alias strin
 */
 func (accountapi *AccountApi) Call(from crypto.CommonAddress, to crypto.CommonAddress, input common.Bytes, amount, gasprice, gaslimit *common.Big) (string, error) {
 	nonce := accountapi.blockmgr.GetTransactionCount(&from)
-	t := chainTypes.NewCallContractTransaction(to, input, (*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
+	t := types.NewCallContractTransaction(to, input, (*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
 	sig, err := accountapi.Wallet.Sign(&from, t.TxHash().Bytes())
 	if err != nil {
 		return "", err
@@ -325,7 +325,7 @@ func (accountapi *AccountApi) Call(from crypto.CommonAddress, to crypto.CommonAd
 */
 func (accountapi *AccountApi) CreateCode(from crypto.CommonAddress, byteCode common.Bytes, amount, gasprice, gaslimit *common.Big) (string, error) {
 	nonce := accountapi.blockmgr.GetTransactionCount(&from)
-	t := chainTypes.NewContractTransaction(byteCode, (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
+	t := types.NewContractTransaction(byteCode, (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
 	sig, err := accountapi.Wallet.Sign(&from, t.TxHash().Bytes())
 	if err != nil {
 		return "", err

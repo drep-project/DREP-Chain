@@ -40,8 +40,8 @@ type ChainApi struct {
     "Timestamp": 1559272779,
     "StateRoot": "0xd7bd5b3af4f2f1fb3d484743052c2e911f9fb7b04131660912244347508f16a9",
     "TxRoot": "0x",
-    "LeaderPubKey": "0x0374bf9c8ea268b5548686685dda4a74fc95903ca7c440e5b187a718b595c1f374",
-    "MinorPubKeys": [
+    "LeaderAddress": "0x0374bf9c8ea268b5548686685dda4a74fc95903ca7c440e5b187a718b595c1f374",
+    "MinorAddresses": [
       "0x0374bf9c8ea268b5548686685dda4a74fc95903ca7c440e5b187a718b595c1f374",
       "0x02f11cfd138eaaaba5f8c0a7f1f2791bdabd0b0c404734dceac820aa9b683bfb1a",
       "0x03949aad279a32536ce20f0957c9c6ba592532ea70e5f174332bed4c94382354e3",

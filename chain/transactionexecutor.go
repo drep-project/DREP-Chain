@@ -3,7 +3,7 @@ package chain
 import (
 	"math/big"
 
-	chainTypes "github.com/drep-project/drep-chain/types"
+	types "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/database"
 )
 
@@ -17,7 +17,7 @@ func NewTransactionValidator(chain *ChainService) *TransactionValidator {
 	}
 }
 
-func (transactionValidator *TransactionValidator) ExecuteTransaction(db *database.Database, tx *chainTypes.Transaction, gp *GasPool, header *chainTypes.BlockHeader) (*chainTypes.Receipt, *big.Int, *big.Int, error) {
+func (transactionValidator *TransactionValidator) ExecuteTransaction(db *database.Database, tx *types.Transaction, gp *GasPool, header *types.BlockHeader) (*types.Receipt, *big.Int, *big.Int, error) {
 	from, err := tx.From()
 	if err != nil {
 		return nil, nil, nil, err
@@ -31,8 +31,4 @@ func (transactionValidator *TransactionValidator) ExecuteTransaction(db *databas
 	}
 	gasFee := new(big.Int).Mul(new(big.Int).SetUint64(*gasUsed), tx.GasPrice())
 	return receipt, new(big.Int).SetUint64(*gasUsed), gasFee, nil
-}
-
-type ITransactionValidator interface {
-	ExecuteTransaction(db *database.Database, tx *chainTypes.Transaction, gp *GasPool, header *chainTypes.BlockHeader) (*chainTypes.Receipt, *big.Int, *big.Int, error)
 }

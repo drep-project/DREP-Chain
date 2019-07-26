@@ -7,8 +7,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"github.com/drep-project/drep-chain/app"
-	chainTypes "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/drep-chain/types"
 	crypto2 "github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
@@ -23,7 +22,7 @@ type CryptedNode struct {
 	Data []byte `json:"-"`
 
 	CipherText []byte          `json:"cipherText"`
-	ChainId    app.ChainIdType `json:"chainId"`
+	ChainId    types.ChainIdType `json:"chainId"`
 	ChainCode  []byte          `json:"chainCode"`
 
 	Cipher       string       `json:"cipher"`
@@ -113,7 +112,7 @@ func aesCTRXOR(key, inText, iv []byte) ([]byte, error) {
 }
 
 // BytesToCryptoNode cocnvert given bytes and password to a node
-func BytesToCryptoNode(data []byte, auth string) (node *chainTypes.Node, errRef error) {
+func BytesToCryptoNode(data []byte, auth string) (node *types.Node, errRef error) {
 	defer func() {
 		if err := recover(); err != nil {
 			errRef = ErrDecryptFail
@@ -133,7 +132,7 @@ func BytesToCryptoNode(data []byte, auth string) (node *chainTypes.Node, errRef 
 	privD, errRef := DecryptData(*cryptoNode, auth)
 	priv, pub := secp256k1.PrivKeyFromScalar(privD)
 	addr := crypto2.PubKey2Address(pub)
-	node = &chainTypes.Node{
+	node = &types.Node{
 		Address:    &addr,
 		PrivateKey: priv,
 		ChainId:    cryptoNode.ChainId,

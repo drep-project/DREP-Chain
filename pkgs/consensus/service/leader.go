@@ -136,7 +136,7 @@ func (leader *Leader) setUp(msg consensusTypes.IConsenMsg) {
 	leader.sigmaCommitPubkey = []*secp256k1.PublicKey{nouncePk}
 
 	for i, v := range leader.producers {
-		if v.Producer.Public.IsEqual(leader.pubkey) {
+		if v.Producer.Pubkey.IsEqual(leader.pubkey) {
 			leader.commitBitmap[i] = 1
 		}
 	}
@@ -273,7 +273,7 @@ func (leader *Leader) selfSign(msg consensusTypes.IConsenMsg) error {
 	}
 	leader.sigmaS = sig
 	for i, v := range leader.producers {
-		if v.Producer.Public.IsEqual(leader.pubkey) {
+		if v.Producer.Pubkey.IsEqual(leader.pubkey) {
 			leader.responseBitmap[i] = 1
 		}
 	}
@@ -362,7 +362,7 @@ func (leader *Leader) getMemberByIp(ip string) *consensusTypes.MemberInfo {
 
 func (leader *Leader) getMemberByPk(pk *secp256k1.PublicKey) *consensusTypes.MemberInfo {
 	for _, producer := range leader.producers {
-		if producer.Peer != nil && producer.Producer.Public.IsEqual(pk) {
+		if producer.Peer != nil && producer.Producer.Pubkey.IsEqual(pk) {
 			return producer
 		}
 	}
@@ -393,7 +393,7 @@ func (leader *Leader) getCommitPubkey() []*secp256k1.PublicKey {
 	publicKeys := []*secp256k1.PublicKey{}
 	for index, val := range leader.commitBitmap {
 		if val == 1 {
-			publicKeys = append(publicKeys, leader.producers[index].Producer.Public)
+			publicKeys = append(publicKeys, leader.producers[index].Producer.Pubkey)
 		}
 	}
 	return publicKeys
@@ -413,7 +413,7 @@ func (leader *Leader) getResponsePubkey() []*secp256k1.PublicKey {
 	publicKeys := []*secp256k1.PublicKey{}
 	for index, val := range leader.responseBitmap {
 		if val == 1 {
-			publicKeys = append(publicKeys, leader.producers[index].Producer.Public)
+			publicKeys = append(publicKeys, leader.producers[index].Producer.Pubkey)
 		}
 	}
 	return publicKeys

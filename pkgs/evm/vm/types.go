@@ -1,8 +1,8 @@
 package vm
 
 import (
-	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/types"
 	"math/big"
 )
 
@@ -30,8 +30,8 @@ type VMConfig struct {
 type Message struct {
 	From      crypto.CommonAddress
 	To        crypto.CommonAddress
-	ChainId   app.ChainIdType
-	DestChain app.ChainIdType
+	ChainId   types.ChainIdType
+	DestChain types.ChainIdType
 	Gas       uint64
 	Value     *big.Int
 	Nonce     uint64

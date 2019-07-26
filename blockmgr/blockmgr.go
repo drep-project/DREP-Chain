@@ -21,7 +21,7 @@ import (
 	"github.com/drep-project/rpc"
 
 	"github.com/drep-project/drep-chain/chain"
-	chainTypes "github.com/drep-project/drep-chain/types"
+	 "github.com/drep-project/drep-chain/types"
 	p2pService "github.com/drep-project/drep-chain/network/service"
 
 	"time"
@@ -31,7 +31,7 @@ import (
 )
 
 var (
-	rootChain           app.ChainIdType
+	rootChain           types.ChainIdType
 	DefaultOracleConfig = OracleConfig{
 		Blocks:     20,
 		Default:    30000,
@@ -65,7 +65,7 @@ type BlockMgr struct {
 	headerHashCh chan []*syncHeaderHash
 
 	//从远端接收到块
-	blocksCh chan []*chainTypes.Block
+	blocksCh chan []*types.Block
 
 	//所有需要同步的任务列表
 	allTasks *heightSortedMap
@@ -76,8 +76,8 @@ type BlockMgr struct {
 	syncTimerCh      chan *time.Timer
 
 	//与此模块通信的所有Peer
-	peersInfo map[string]chainTypes.PeerInfoInterface
-	newPeerCh chan *chainTypes.PeerInfo
+	peersInfo map[string]types.PeerInfoInterface
+	newPeerCh chan *types.PeerInfo
 
 	gpo  *Oracle
 	quit chan struct{}
@@ -107,12 +107,12 @@ func NewBlockMgr(config *BlockMgrConfig, homeDir string, cs chain.ChainServiceIn
 	blockMgr.P2pServer = p2pservice
 
 	blockMgr.headerHashCh = make(chan []*syncHeaderHash)
-	blockMgr.blocksCh = make(chan []*chainTypes.Block)
+	blockMgr.blocksCh = make(chan []*types.Block)
 	blockMgr.allTasks = newHeightSortedMap()
 	//blockMgr.pendingSyncTasks = make(map[*time.Timer]map[crypto.Hash]uint64)
 	blockMgr.syncTimerCh = make(chan *time.Timer, pendingTimerCount)
-	blockMgr.peersInfo = make(map[string]chainTypes.PeerInfoInterface)
-	blockMgr.newPeerCh = make(chan *chainTypes.PeerInfo, maxLivePeer)
+	blockMgr.peersInfo = make(map[string]types.PeerInfoInterface)
+	blockMgr.newPeerCh = make(chan *types.PeerInfo, maxLivePeer)
 	blockMgr.taskTxsCh = make(chan tasksTxsSync, maxLivePeer)
 
 	blockMgr.gpo = NewOracle(blockMgr.ChainService, blockMgr.Config.GasPrice)
@@ -123,12 +123,12 @@ func NewBlockMgr(config *BlockMgrConfig, homeDir string, cs chain.ChainServiceIn
 	blockMgr.P2pServer.AddProtocols([]p2p.Protocol{
 		p2p.Protocol{
 			Name:   "blockMgr",
-			Length: chainTypes.NumberOfMsg,
+			Length: types.NumberOfMsg,
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
 				if len(blockMgr.peersInfo) >= maxLivePeer {
 					return ErrEnoughPeer
 				}
-				pi := chainTypes.NewPeerInfo(peer, rw)
+				pi := types.NewPeerInfo(peer, rw)
 				blockMgr.peersInfo[peer.IP()] = pi
 				defer delete(blockMgr.peersInfo, peer.IP())
 				return blockMgr.receiveMsg(pi, rw)
@@ -158,12 +158,12 @@ func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 		return err
 	}
 	blockMgr.headerHashCh = make(chan []*syncHeaderHash)
-	blockMgr.blocksCh = make(chan []*chainTypes.Block)
+	blockMgr.blocksCh = make(chan []*types.Block)
 	blockMgr.allTasks = newHeightSortedMap()
 	//blockMgr.pendingSyncTasks = make(map[*time.Timer]map[crypto.Hash]uint64)
 	blockMgr.syncTimerCh = make(chan *time.Timer, 1)
-	blockMgr.peersInfo = make(map[string]chainTypes.PeerInfoInterface)
-	blockMgr.newPeerCh = make(chan *chainTypes.PeerInfo, maxLivePeer)
+	blockMgr.peersInfo = make(map[string]types.PeerInfoInterface)
+	blockMgr.newPeerCh = make(chan *types.PeerInfo, maxLivePeer)
 	blockMgr.taskTxsCh = make(chan tasksTxsSync, maxLivePeer)
 
 	blockMgr.gpo = NewOracle(blockMgr.ChainService, blockMgr.Config.GasPrice)
@@ -174,12 +174,12 @@ func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 	blockMgr.P2pServer.AddProtocols([]p2p.Protocol{
 		p2p.Protocol{
 			Name:   "blockMgr",
-			Length: chainTypes.NumberOfMsg,
+			Length: types.NumberOfMsg,
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
 				if len(blockMgr.peersInfo) >= maxLivePeer {
 					return ErrEnoughPeer
 				}
-				pi := chainTypes.NewPeerInfo(peer, rw)
+				pi := types.NewPeerInfo(peer, rw)
 				blockMgr.peersInfo[peer.IP()] = pi
 				defer delete(blockMgr.peersInfo, peer.IP())
 				return blockMgr.receiveMsg(pi, rw)
@@ -231,7 +231,7 @@ func (blockMgr *BlockMgr) GetTransactionCount(addr *crypto.CommonAddress) uint64
 	return blockMgr.transactionPool.GetTransactionCount(addr)
 }
 
-func (blockMgr *BlockMgr) SendTransaction(tx *chainTypes.Transaction, islocal bool) error {
+func (blockMgr *BlockMgr) SendTransaction(tx *types.Transaction, islocal bool) error {
 	//TODO  use pool nonce
 	from, err := tx.From()
 	nonce := blockMgr.transactionPool.GetTransactionCount(from)
@@ -248,12 +248,12 @@ func (blockMgr *BlockMgr) SendTransaction(tx *chainTypes.Transaction, islocal bo
 		return err
 	}
 
-	blockMgr.BroadcastTx(chainTypes.MsgTypeTransaction, tx, true)
+	blockMgr.BroadcastTx(types.MsgTypeTransaction, tx, true)
 
 	return nil
 }
 
-func (blockMgr *BlockMgr) BroadcastBlock(msgType int32, block *chainTypes.Block, isLocal bool) {
+func (blockMgr *BlockMgr) BroadcastBlock(msgType int32, block *types.Block, isLocal bool) {
 	for _, peer := range blockMgr.peersInfo {
 		b := peer.KnownBlock(block)
 		if !b {
@@ -270,7 +270,7 @@ func (blockMgr *BlockMgr) BroadcastBlock(msgType int32, block *chainTypes.Block,
 	}
 }
 
-func (blockMgr *BlockMgr) BroadcastTx(msgType int32, tx *chainTypes.Transaction, isLocal bool) {
+func (blockMgr *BlockMgr) BroadcastTx(msgType int32, tx *types.Transaction, isLocal bool) {
 	go func() {
 		for _, peer := range blockMgr.peersInfo {
 			b := peer.KnownTx(tx)
@@ -284,13 +284,13 @@ func (blockMgr *BlockMgr) BroadcastTx(msgType int32, tx *chainTypes.Transaction,
 				}
 
 				peer.MarkTx(tx)
-				blockMgr.P2pServer.Send(peer.GetMsgRW(), uint64(msgType), []*chainTypes.Transaction{tx})
+				blockMgr.P2pServer.Send(peer.GetMsgRW(), uint64(msgType), []*types.Transaction{tx})
 			}
 		}
 	}()
 }
 
-func (blockMgr *BlockMgr) GetPoolTransactions(addr *crypto.CommonAddress) []chainTypes.Transactions {
+func (blockMgr *BlockMgr) GetPoolTransactions(addr *crypto.CommonAddress) []types.Transactions {
 	return blockMgr.transactionPool.GetTransactions(addr)
 }
 
@@ -298,13 +298,13 @@ func (blockMgr *BlockMgr) GetPoolMiniPendingNonce(addr *crypto.CommonAddress) ui
 	return blockMgr.transactionPool.GetMiniPendingNonce(addr)
 }
 
-func (blockMgr *BlockMgr) GenerateTransferTransaction(to *crypto.CommonAddress, nonce uint64, amount, price, limit common.Big) chainTypes.Transaction {
-	t := chainTypes.Transaction{
-		Data: chainTypes.TransactionData{
+func (blockMgr *BlockMgr) GenerateTransferTransaction(to *crypto.CommonAddress, nonce uint64, amount, price, limit common.Big) types.Transaction {
+	t := types.Transaction{
+		Data: types.TransactionData{
 			Version:   common.Version,
 			Nonce:     nonce,
 			ChainId:   blockMgr.ChainService.ChainID(),
-			Type:      chainTypes.TxType(chainTypes.TransferType),
+			Type:      types.TxType(types.TransferType),
 			To:        *to,
 			Amount:    amount,
 			GasPrice:  price,
@@ -316,6 +316,6 @@ func (blockMgr *BlockMgr) GenerateTransferTransaction(to *crypto.CommonAddress, 
 	return t
 }
 
-func (bm *BlockMgr) GetTxInPool(hash string) (*chainTypes.Transaction, error) {
+func (bm *BlockMgr) GetTxInPool(hash string) (*types.Transaction, error) {
 	return bm.transactionPool.GetTxInPool(hash)
 }

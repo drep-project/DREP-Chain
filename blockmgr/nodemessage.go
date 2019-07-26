@@ -1,20 +1,21 @@
 package blockmgr
 
 import (
-	chainTypes "github.com/drep-project/drep-chain/types"
+	"time"
+
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/network/p2p"
+	"github.com/drep-project/drep-chain/types"
 	"github.com/pkg/errors"
-	"time"
 )
 
-func (blockMgr *BlockMgr) receiveMsg(peer *chainTypes.PeerInfo, rw p2p.MsgReadWriter) error {
+func (blockMgr *BlockMgr) receiveMsg(peer *types.PeerInfo, rw p2p.MsgReadWriter) error {
 	//1 与peer同步一下状态
 	timeout := time.After(time.Second * maxNetworkTimeout)
 	errCh := make(chan error)
 	msgCh := make(chan p2p.Msg)
 	go func() {
-		blockMgr.P2pServer.Send(peer.GetMsgRW(), chainTypes.MsgTypePeerStateReq, &chainTypes.PeerState{Height: uint64(blockMgr.ChainService.BestChain().Height())})
+		blockMgr.P2pServer.Send(peer.GetMsgRW(), types.MsgTypePeerStateReq, &types.PeerState{Height: uint64(blockMgr.ChainService.BestChain().Height())})
 		msg, err := rw.ReadMsg()
 		if err != nil {
 			errCh <- err
@@ -30,14 +31,14 @@ func (blockMgr *BlockMgr) receiveMsg(peer *chainTypes.PeerInfo, rw p2p.MsgReadWr
 		return ErrReqStateTimeout
 	case msg := <-msgCh:
 		switch msg.Code {
-		case chainTypes.MsgTypePeerStateReq:
-			var req chainTypes.PeerStateReq
+		case types.MsgTypePeerStateReq:
+			var req types.PeerStateReq
 			if err := msg.Decode(&req); err != nil {
 				return errors.Wrapf(ErrDecodeMsg, "PeerStateReq msg:%v err:%v", msg, err)
 			}
 			blockMgr.handleReqPeerState(peer, &req)
 		default:
-			return errors.Wrapf(ErrMsgType, "expected type:%d, receive type:%d", chainTypes.MsgTypePeerStateReq, msg.Code)
+			return errors.Wrapf(ErrMsgType, "expected type:%d, receive type:%d", types.MsgTypePeerStateReq, msg.Code)
 		}
 	}
 
@@ -48,7 +49,7 @@ func (blockMgr *BlockMgr) receiveMsg(peer *chainTypes.PeerInfo, rw p2p.MsgReadWr
 	return blockMgr.dealMsg(peer, rw)
 }
 
-func (blockMgr *BlockMgr) dealMsg(peer *chainTypes.PeerInfo, rw p2p.MsgReadWriter) error {
+func (blockMgr *BlockMgr) dealMsg(peer *types.PeerInfo, rw p2p.MsgReadWriter) error {
 	log.WithField("peer addr:", peer.GetAddr()).Info("new peer receive")
 	for {
 		msg, err := rw.ReadMsg()
@@ -57,25 +58,25 @@ func (blockMgr *BlockMgr) dealMsg(peer *chainTypes.PeerInfo, rw p2p.MsgReadWrite
 			return err
 		}
 
-		if msg.Size > chainTypes.MaxMsgSize {
+		if msg.Size > types.MaxMsgSize {
 			return ErrOverFlowMaxMsgSize
 		}
 
 		switch msg.Code {
-		case chainTypes.MsgTypeBlockReq:
-			var req chainTypes.BlockReq
+		case types.MsgTypeBlockReq:
+			var req types.BlockReq
 			if err := msg.Decode(&req); err != nil {
 				return errors.Wrapf(ErrDecodeMsg, "MsgTypeBlockReq msg:%v err:%v", msg, err)
 			}
 			go blockMgr.HandleBlockReqMsg(peer, &req)
-		case chainTypes.MsgTypeBlockResp:
-			var resp chainTypes.BlockResp
+		case types.MsgTypeBlockResp:
+			var resp types.BlockResp
 			if err := msg.Decode(&resp); err != nil {
 				return errors.Wrapf(ErrDecodeMsg, "BlockResp msg:%v err:%v", msg, err)
 			}
 			go blockMgr.HandleBlockRespMsg(&resp)
-		case chainTypes.MsgTypeTransaction:
-			var txs []*chainTypes.Transaction
+		case types.MsgTypeTransaction:
+			var txs []*types.Transaction
 			if err := msg.Decode(&txs); err != nil {
 				return errors.Wrapf(ErrDecodeMsg, "Transactions msg:%v err:%v", msg, err)
 			}
@@ -88,8 +89,8 @@ func (blockMgr *BlockMgr) dealMsg(peer *chainTypes.PeerInfo, rw p2p.MsgReadWrite
 				blockMgr.SendTransaction(tx, false)
 			}
 
-		case chainTypes.MsgTypeBlock:
-			var newBlock chainTypes.Block
+		case types.MsgTypeBlock:
+			var newBlock types.Block
 			if err := msg.Decode(&newBlock); err != nil {
 				return errors.Wrapf(ErrDecodeMsg, "Block msg:%v err:%v", msg, err)
 			}
@@ -100,32 +101,32 @@ func (blockMgr *BlockMgr) dealMsg(peer *chainTypes.PeerInfo, rw p2p.MsgReadWrite
 			}
 
 			peer.MarkBlock(&newBlock)
-			blockMgr.BroadcastBlock(chainTypes.MsgTypeBlock, &newBlock, false)
+			blockMgr.BroadcastBlock(types.MsgTypeBlock, &newBlock, false)
 
 			if isOrPhan {
 				// todo 触发同步
 				//blockMgr.synchronise()
 			}
-		case chainTypes.MsgTypePeerState:
-			var resp chainTypes.PeerState
+		case types.MsgTypePeerState:
+			var resp types.PeerState
 			if err := msg.Decode(&resp); err != nil {
 				return errors.Wrapf(ErrDecodeMsg, "PeerState msg:%v err:%v", msg, err)
 			}
 			go blockMgr.handlePeerState(peer, &resp)
-		case chainTypes.MsgTypePeerStateReq:
-			var req chainTypes.PeerStateReq
+		case types.MsgTypePeerStateReq:
+			var req types.PeerStateReq
 			if err := msg.Decode(&req); err != nil {
 				return errors.Wrapf(ErrDecodeMsg, "PeerStateReq msg:%v err:%v", msg, err)
 			}
 			go blockMgr.handleReqPeerState(peer, &req)
-		case chainTypes.MsgTypeHeaderReq:
-			var req chainTypes.HeaderReq
+		case types.MsgTypeHeaderReq:
+			var req types.HeaderReq
 			if err := msg.Decode(&req); err != nil {
 				return errors.Wrapf(ErrDecodeMsg, "HeaderReq msg:%v err:%v", msg, err)
 			}
 			go blockMgr.handleHeaderReq(peer, &req)
-		case chainTypes.MsgTypeHeaderRsp:
-			var resp chainTypes.HeaderRsp
+		case types.MsgTypeHeaderRsp:
+			var resp types.HeaderRsp
 			if err := msg.Decode(&resp); err != nil {
 				return errors.Wrapf(ErrDecodeMsg, "HeaderRsp msg:%v err:%v", msg, err)
 			}
@@ -136,8 +137,8 @@ func (blockMgr *BlockMgr) dealMsg(peer *chainTypes.PeerInfo, rw p2p.MsgReadWrite
 	return nil
 }
 
-func (blockMgr *BlockMgr) handleHeaderReq(peer *chainTypes.PeerInfo, req *chainTypes.HeaderReq) {
-	headers := make([]chainTypes.BlockHeader, 0, req.ToHeight-req.FromHeight+1)
+func (blockMgr *BlockMgr) handleHeaderReq(peer *types.PeerInfo, req *types.HeaderReq) {
+	headers := make([]types.BlockHeader, 0, req.ToHeight-req.FromHeight+1)
 	for i := req.FromHeight; i <= req.ToHeight; i++ {
 		node := blockMgr.ChainService.BestChain().NodeByHeight(uint64(i))
 		if node != nil {
@@ -146,10 +147,10 @@ func (blockMgr *BlockMgr) handleHeaderReq(peer *chainTypes.PeerInfo, req *chainT
 	}
 
 	log.WithField("total header", len(headers)).WithField("from", req.FromHeight).WithField("to", req.ToHeight).Info("header req len")
-	blockMgr.P2pServer.Send(peer.GetMsgRW(), uint64(chainTypes.MsgTypeHeaderRsp), chainTypes.HeaderRsp{Headers: headers})
+	blockMgr.P2pServer.Send(peer.GetMsgRW(), uint64(types.MsgTypeHeaderRsp), types.HeaderRsp{Headers: headers})
 }
 
-func (blockMgr *BlockMgr) handleHeaderRsp(peer *chainTypes.PeerInfo, rsp *chainTypes.HeaderRsp) {
+func (blockMgr *BlockMgr) handleHeaderRsp(peer *types.PeerInfo, rsp *types.HeaderRsp) {
 	headerHashs := make([]*syncHeaderHash, 0, len(rsp.Headers))
 	for _, h := range rsp.Headers {
 		headerHashs = append(headerHashs, &syncHeaderHash{headerHash: h.Hash(), height: h.Height})
@@ -172,7 +173,7 @@ func (blockMgr *BlockMgr) handleHeaderRsp(peer *chainTypes.PeerInfo, rsp *chainT
 	blockMgr.headerHashCh <- headerHashs
 }
 
-func (blockMgr *BlockMgr) HandleBlockReqMsg(peer *chainTypes.PeerInfo, req *chainTypes.BlockReq) {
+func (blockMgr *BlockMgr) HandleBlockReqMsg(peer *types.PeerInfo, req *types.BlockReq) {
 	log.WithField("num:", len(req.BlockHashs)).Info("sync req block")
 	zero := crypto.Hash{}
 	startHeight := uint64(0)
@@ -196,14 +197,14 @@ func (blockMgr *BlockMgr) HandleBlockReqMsg(peer *chainTypes.PeerInfo, req *chai
 		endHeight = block.Header.Height
 	}
 
-	blocks := []*chainTypes.Block{}
+	blocks := []*types.Block{}
 	count := 0
 	for i := startHeight; i <= endHeight; i++ {
 		if count%maxBlockCountReq == 0 && len(blocks) > 0 {
-			blockMgr.P2pServer.Send(peer.GetMsgRW(), chainTypes.MsgTypeBlockResp, &chainTypes.BlockResp{
+			blockMgr.P2pServer.Send(peer.GetMsgRW(), types.MsgTypeBlockResp, &types.BlockResp{
 				Blocks: blocks,
 			})
-			blocks = []*chainTypes.Block{}
+			blocks = []*types.Block{}
 			count = 0
 		}
 
@@ -216,14 +217,14 @@ func (blockMgr *BlockMgr) HandleBlockReqMsg(peer *chainTypes.PeerInfo, req *chai
 		blocks = append(blocks, block)
 	}
 	if len(blocks) > 0 {
-		blockMgr.P2pServer.Send(peer.GetMsgRW(), chainTypes.MsgTypeBlockResp, &chainTypes.BlockResp{
+		blockMgr.P2pServer.Send(peer.GetMsgRW(), types.MsgTypeBlockResp, &types.BlockResp{
 			Blocks: blocks,
 		})
 		log.WithField("num", len(blocks)).Info("req blocks and rsp")
-		//blocks = []*chainTypes.Block{}
+		//blocks = []*types.Block{}
 	}
 }
 
-func (blockMgr *BlockMgr) HandleBlockRespMsg(rsp *chainTypes.BlockResp) {
+func (blockMgr *BlockMgr) HandleBlockRespMsg(rsp *types.BlockResp) {
 	blockMgr.blocksCh <- rsp.Blocks
 }

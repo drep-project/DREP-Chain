@@ -23,7 +23,6 @@ var (
 	ErrChainId                   = errors.New("chainId not matched")
 	ErrVersion                   = errors.New("version not matched")
 	ErrPreHash                   = errors.New("previous hash not matched")
-	ErrBpNotInList               = errors.New("bp node not in local list")
 	ErrBlockExsist               = errors.New("already have block")
 	ErrBalance                   = errors.New("not enough balance")
 	ErrGas                       = errors.New("not enough gas")

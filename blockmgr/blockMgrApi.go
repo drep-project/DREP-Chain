@@ -1,12 +1,13 @@
 package blockmgr
 
 import (
+	"math/big"
+
 	"github.com/drep-project/binary"
-	chainTypes "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
-	"math/big"
+	"github.com/drep-project/drep-chain/types"
 )
 
 /*
@@ -30,7 +31,7 @@ type BlockMgrApi struct {
 	{"jsonrpc":"2.0","id":1,"result":"0xf30e858667fa63bc57ae395c3f57ede9bb3ad4969d12f4bce51d900fb5931538"}
 */
 func (blockMgrApi *BlockMgrApi) SendRawTransaction(txbytes common.Bytes) (string, error) {
-	tx := &chainTypes.Transaction{}
+	tx := &types.Transaction{}
 	err := binary.Unmarshal(txbytes, tx)
 	if err != nil {
 		return "", err
@@ -39,7 +40,7 @@ func (blockMgrApi *BlockMgrApi) SendRawTransaction(txbytes common.Bytes) (string
 	if err != nil {
 		return "", err
 	}
-	blockMgrApi.blockMgr.BroadcastTx(chainTypes.MsgTypeTransaction, tx, true)
+	blockMgrApi.blockMgr.BroadcastTx(types.MsgTypeTransaction, tx, true)
 	return tx.TxHash().String(), err
 }
 
@@ -56,7 +57,7 @@ func (blockMgrApi *BlockMgrApi) GasPrice() (*big.Int, error) {
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_getPoolTransactions","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
 */
-func (blockMgrApi *BlockMgrApi) GetPoolTransactions(addr *crypto.CommonAddress) []chainTypes.Transactions {
+func (blockMgrApi *BlockMgrApi) GetPoolTransactions(addr *crypto.CommonAddress) []types.Transactions {
 	return blockMgrApi.blockMgr.GetPoolTransactions(addr)
 }
 
@@ -74,6 +75,6 @@ func (blockMgrApi *BlockMgrApi) GetPoolMiniPendingNonce(addr *crypto.CommonAddre
 	return blockMgrApi.blockMgr.GetPoolMiniPendingNonce(addr)
 }
 
-func (blockMgrApi *BlockMgrApi) GenerateTransferTransaction(to *crypto.CommonAddress, nonce uint64, amount, price, limit common.Big) chainTypes.Transaction {
+func (blockMgrApi *BlockMgrApi) GenerateTransferTransaction(to *crypto.CommonAddress, nonce uint64, amount, price, limit common.Big) types.Transaction {
 	return blockMgrApi.blockMgr.GenerateTransferTransaction(to, nonce, amount, price, limit)
 }

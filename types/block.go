@@ -2,7 +2,6 @@ package types
 
 import (
 	"github.com/drep-project/binary"
-	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
@@ -10,17 +9,17 @@ import (
 )
 
 type BlockHeader struct {
-	ChainId      app.ChainIdType
-	Version      int32
-	PreviousHash crypto.Hash
-	GasLimit     big.Int
-	GasUsed      big.Int
-	Height       uint64
-	Timestamp    uint64
-	StateRoot    []byte
-	TxRoot       []byte
-	LeaderPubKey secp256k1.PublicKey
-	MinorPubKeys []secp256k1.PublicKey
+	ChainId        ChainIdType
+	Version        int32
+	PreviousHash   crypto.Hash
+	GasLimit       big.Int
+	GasUsed        big.Int
+	Height         uint64
+	Timestamp      uint64
+	StateRoot      []byte
+	TxRoot         []byte
+	LeaderAddress  crypto.CommonAddress
+	MinorAddresses []crypto.CommonAddress
 
 	blockHash *crypto.Hash `binary:"ignore"`
 }
@@ -60,15 +59,15 @@ func (block *Block) GasLimit() uint64 {
 func (block *Block) AsSignMessage() []byte {
 	blockTemp := &Block{
 		Header: &BlockHeader{
-			ChainId:      block.Header.ChainId,
-			Version:      block.Header.Version,
-			PreviousHash: block.Header.PreviousHash,
-			GasLimit:     block.Header.GasLimit,
-			GasUsed:      block.Header.GasUsed,
-			Height:       block.Header.Height,
-			Timestamp:    block.Header.Timestamp,
-			TxRoot:       block.Header.TxRoot,
-			LeaderPubKey: block.Header.LeaderPubKey,
+			ChainId:       block.Header.ChainId,
+			Version:       block.Header.Version,
+			PreviousHash:  block.Header.PreviousHash,
+			GasLimit:      block.Header.GasLimit,
+			GasUsed:       block.Header.GasUsed,
+			Height:        block.Header.Height,
+			Timestamp:     block.Header.Timestamp,
+			TxRoot:        block.Header.TxRoot,
+			LeaderAddress: block.Header.LeaderAddress,
 		},
 	}
 	bytes, _ := binary.Marshal(blockTemp)
