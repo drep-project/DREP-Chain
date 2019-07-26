@@ -43,7 +43,6 @@ type ChainServiceInterface interface {
 	GetBlockHeaderByHeight(number uint64) (*chainTypes.BlockHeader, error)
 	GetBlocksFrom(start, size uint64) ([]*chainTypes.Block, error)
 
-	//GetCurrentState() *database.Database
 	GetHeader(hash crypto.Hash, number uint64) *chainTypes.BlockHeader
 	GetHighestBlock() (*chainTypes.Block, error)
 	RootChain() app.ChainIdType
@@ -86,8 +85,6 @@ type ChainService struct {
 
 	blockIndex    *BlockIndex
 	bestChain     *ChainView
-	//stateLock     sync.RWMutex
-	//StateSnapshot *ChainState
 
 	config       *ChainConfig
 	genesisBlock *chainTypes.Block
@@ -98,8 +95,6 @@ type ChainService struct {
 
 	blockValidator       IBlockValidator
 	transactionValidator ITransactionValidator
-
-	//blockDb *database.Database
 }
 
 type ChainState struct {
@@ -367,29 +362,12 @@ func (chainService *ChainService) createChainState() error {
 	// Add the new node to the index which is used for faster lookups.
 	chainService.blockIndex.AddNode(node)
 
-	// Initialize the state related to the best block.  Since it is the
-	// genesis block, use its timestamp for the median time.
-	//chainService.stateLock.Lock()
-	//chainService.StateSnapshot = &ChainState{
-	//	BestState: *chainTypes.NewBestState(node),
-	//	db:        chainService.DatabaseService.BeginTransaction(true),
-	//}
-	//chainService.stateLock.Unlock()
-
 	// Save the genesis block to the block index database.
 	err := chainService.DatabaseService.PutBlockNode(node)
 	if err != nil {
 		return err
 	}
 
-	// Store the current best chain state into the database.
-	//chainService.stateLock.Lock()
-	//state := chainService.StateSnapshot.BestState
-	//chainService.stateLock.Unlock()
-	//err = chainService.DatabaseService.PutChainState(&state)
-	//if err != nil {
-	//	return err
-	//}
 	err = chainService.DatabaseService.PutBlock(chainService.genesisBlock)
 	if err != nil {
 		return err
@@ -397,10 +375,3 @@ func (chainService *ChainService) createChainState() error {
 		return nil
 	}
 }
-
-//func (chainService *ChainService) GetCurrentState() *database.Database {
-//	chainService.stateLock.Lock()
-//	defer chainService.stateLock.Unlock()
-//	return chainService.StateSnapshot.db
-//
-//}

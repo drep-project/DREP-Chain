@@ -154,17 +154,6 @@ func (db *Database) Rollback2Block(height uint64, hash *crypto.Hash) (error, int
 		return err, 0
 	}
 
-	//keyLen := len(maxSeqOfBlockKey) + 64
-	//key := make([]byte, keyLen)
-	//copy(key, maxSeqOfBlockKey)
-	//oriBinary.BigEndian.PutUint64(key[len(maxSeqOfBlockKey):], height)
-	//value, err := db.diskDb.Get(key)
-	//if err != nil {
-	//	return err, 0
-	//}
-	//maxbockSeq := new(big.Int).SetBytes(value).Int64()
-
-	//return db.rollback(maxbockSeq, dbOperaterMaxSeqKey, dbOperaterJournal)
 	return nil, 0
 }
 

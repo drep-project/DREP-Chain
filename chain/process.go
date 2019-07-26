@@ -20,7 +20,6 @@ func (chainService *ChainService) ProcessBlock(block *chainTypes.Block) (bool, b
 	defer chainService.addBlockSync.Unlock()
 	blockHash := block.Header.Hash()
 	exist := chainService.BlockExists(blockHash)
-
 	if exist {
 		return false, false, ErrBlockExsist
 	}
@@ -325,7 +324,6 @@ func (chainService *ChainService) notifyDetachBlock(block *chainTypes.Block) {
 
 func (chainService *ChainService) markState(db *database.Database, blockNode *chainTypes.BlockNode) {
 	chainService.BestChain().SetTip(blockNode)
-
 	triedb := chainService.DatabaseService.GetTriedDB()
 	triedb.Commit(crypto.Bytes2Hash(blockNode.StateRoot), true)
 }
@@ -374,45 +372,45 @@ func (chainService *ChainService) InitStates() error {
 		return err
 	}
 
-	node := lastNode
+	tip := lastNode
 	for {
-		if node.Height != 0 {
-			if chainService.DatabaseService.RecoverTrie(node.StateRoot) {
+		if tip.Height != 0 {
+			if chainService.DatabaseService.RecoverTrie(tip.StateRoot) {
 				break
 			}
 
 			// commit fail and repaire here
 			//delete dirty data , and rollback state to journalHeight
 			//去除磁盘中的nodeblock、block信息；回退区块号及相关的操作日志序列号
-			err, _ := chainService.DatabaseService.Rollback2Block(node.Height, node.Hash)
+			err, _ := chainService.DatabaseService.Rollback2Block(tip.Height, tip.Hash)
 			if err != nil {
-				log.WithField("height", node.Height).Error("rollback2block err")
+				log.WithField("height", tip.Height).Error("rollback2block err")
 				return err
 			}
 
 			//去除内存中节点信息
-			chainService.blockIndex.ClearNode(node)
+			chainService.blockIndex.ClearNode(tip)
 		} else {
-			if chainService.DatabaseService.RecoverTrie(node.StateRoot) {
+			if chainService.DatabaseService.RecoverTrie(tip.StateRoot) {
 				break
 			} else {
 				return fmt.Errorf("recover tire from old data err")
 			}
 		}
 
-		node = node.Ancestor(node.Height - 1)
+		tip = tip.Ancestor(tip.Height - 1)
 	}
 
 	// Set the best chain view to the stored best state.
-	tip := chainService.blockIndex.LookupNode(node.Hash)
-	if tip == nil {
+	//tip := chainService.blockIndex.LookupNode(node.Hash)
+	/*if tip == nil {
 		return errors.Wrapf(ErrInitStateFail, "cannot find chain tip %s in block index", node.Hash)
-	}
+	}*/
 	chainService.BestChain().SetTip(tip)
 
 	// Load the raw block bytes for the best block.
-	if !chainService.DatabaseService.HasBlock(node.Hash) {
-		return errors.Wrapf(ErrBlockNotFound, "cannot find block %s in block index", node.Hash)
+	if !chainService.DatabaseService.HasBlock(tip.Hash) {
+		return errors.Wrapf(ErrBlockNotFound, "cannot find block %s in block index", tip.Hash)
 	}
 
 	// As a final consistency check, we'll run through all the
