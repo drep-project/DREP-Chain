@@ -81,12 +81,13 @@ func (s *State) GetLogs(txHash crypto.Hash) []*chainTypes.Log {
 	return s.db.GetLogs(txHash)
 }
 
-func (s *State) AddLog(contractAddr crypto.CommonAddress, txHash crypto.Hash, data []byte, topics []crypto.Hash) error {
+func (s *State) AddLog(contractAddr crypto.CommonAddress, txHash crypto.Hash, data []byte, topics []crypto.Hash, blockNumber uint64) error {
 	log := &chainTypes.Log{
 		Address: contractAddr,
 		TxHash:  txHash,
 		Data:    data,
 		Topics:  topics,
+		Height:  blockNumber,
 	}
 	return s.db.AddLog(log)
 }

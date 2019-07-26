@@ -17,6 +17,7 @@
 package types
 
 import (
+	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 )
@@ -36,14 +37,17 @@ type Receipt struct {
 	Status            uint64
 	CumulativeGasUsed uint64
 	Logs              []*Log
+	Bloom             Bloom
 
 	// Implementation fields (don't reorder!)
 	TxHash          crypto.Hash
 	ContractAddress crypto.CommonAddress
 	GasUsed         uint64
-	GasFee          uint64
 
-	Ret []byte
+	// Inclusion information: These fields provide information about the inclusion of the
+	// transaction corresponding to this receipt.
+	BlockHash        crypto.Hash
+	BlockNumber      uint64
 }
 
 // NewReceipt creates a barebone transaction receipt, copying the init fields.
@@ -57,8 +61,17 @@ func NewReceipt(root []byte, failed bool, cumulativeGasUsed uint64) *Receipt {
 	return r
 }
 
+func (r *Receipt) MarshalBinary() ([]byte, error) {
+	return binary.Marshal(r)
+}
+
+func (r *Receipt) UnmarshalBinary(data []byte) error {
+	return binary.Unmarshal(data, r)
+}
+
 // Receipts is a wrapper around a Receipt array to implement DerivableList.
 type Receipts []*Receipt
 
 // Len returns the number of receipts in this list.
 func (r Receipts) Len() int { return len(r) }
+
