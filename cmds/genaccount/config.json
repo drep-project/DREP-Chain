@@ -2,7 +2,8 @@
   {
     "name": "dreptest1",
     "ip": "120.27.12.168",
-    "port": 55555
+    "port": 55555,
+    "password": "33333333333333"
   },
   {
     "name": "dreptest2",
