@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	types "github.com/drep-project/drep-chain/types"
+	chainTypes "github.com/drep-project/drep-chain/types"
 )
 
 func TestNewDatabase(t *testing.T) {
@@ -41,9 +41,9 @@ func TestAddLog(t *testing.T) {
 		pri, _ := crypto.GenerateKey(rand.Reader)
 		addr := crypto.PubKey2Address(pri.PubKey())
 
-		log := types.Log{
+		log := chainTypes.Log{
 			Address: addr,
-			Height:  int64(i),
+			Height:  uint64(i),
 			TxHash:  crypto.BytesToHash([]byte(strconv.Itoa(i))),
 		}
 
@@ -55,7 +55,7 @@ func TestAddLog(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		log := db.GetLogs(crypto.BytesToHash([]byte(strconv.Itoa(i))))
-		if log[0].Height != int64(i) {
+		if log[0].Height != uint64(i) {
 			t.Fatal("write log not equal read log")
 		}
 	}
@@ -71,13 +71,13 @@ func TestBlockNode(t *testing.T) {
 	hash := crypto.BytesToHash([]byte("hash"))
 	pri, _ := crypto.GenerateKey(rand.Reader)
 
-	bn := types.BlockNode{
+	bn := chainTypes.BlockNode{
 		Parent:    nil,
 		Hash:      &hash,
 		StateRoot: []byte{},
 		TimeStamp: uint64(time.Now().Unix()),
 		Height:    0,
-		Status:    types.StatusInvalidAncestor,
+		Status:    chainTypes.StatusInvalidAncestor,
 		LeaderPubKey:secp256k1.PublicKey(pri.PublicKey),
 
 	}
@@ -101,27 +101,17 @@ func TestBlockNode(t *testing.T) {
 	}
 }
 
-func TestChainState(t*testing.T){
+func TestNewTransaction(t *testing.T)  {
 	defer os.RemoveAll("./test")
+
 	db, err := NewDatabase("./test")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	bestState := types.BestState{
-		Hash:crypto.Bytes2Hash([]byte("besthash")),
-		PrevHash:crypto.Bytes2Hash([]byte("besthash")),
-		Height:10,
-	}
 
-	db.PutChainState(&bestState)
+	db.BeginTransaction(true)
 
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	bs := db.GetChainState()
-	if bestState.Height != bs.Height{
-		t.Fatal("store state err")
-	}
+	db.BeginTransaction(false)
 }

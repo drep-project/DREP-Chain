@@ -390,10 +390,13 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 		return nil, err
 	}
 
-	db.Commit(false)
+	db.Commit()
 	block.Header.StateRoot = db.GetStateRoot()
+	db.Discard()
+
 	//verify
 	db = consensusService.DatabaseService.BeginTransaction(false)
+	defer db.Discard()
 	gp := new(chainService.GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
 	context := &chainService.BlockExecuteContext{
@@ -416,7 +419,7 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 		return nil, err
 	}
 
-	db.Commit(false)
+	db.Commit()
 	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
 		stateRoot := db.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
@@ -570,6 +573,7 @@ func (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) b
 
 func (consensusService *ConsensusService) verifyBlockContent(block *chainTypes.Block) bool {
 	db := consensusService.ChainService.GetDatabaseService().BeginTransaction(false)
+	defer db.Discard()
 	multiSigValidator := BlockMultiSigValidator{consensusService.Config.Producers}
 	if multiSigValidator.VerifyBody(block) != nil {
 		log.WithField("bitmap", block.MultiSig.Bitmap).Debug("bitmap")

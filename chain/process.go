@@ -103,7 +103,7 @@ func (chainService *ChainService) acceptBlock(block *types.Block) (inMainChain b
 	db := chainService.DatabaseService.BeginTransaction(true)
 	defer func() {
 		if err == nil {
-			db.Commit(true)
+			db.Commit()
 		} else {
 			db.Discard()
 		}
@@ -198,7 +198,7 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *typ
 		return err
 	}
 	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
-		db.Commit(true)
+		db.Commit()
 		oldStateRoot := db.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, oldStateRoot) {
 			err = errors.Wrapf(ErrNotMathcedStateRoot, "%s not matched %s", hex.EncodeToString(block.Header.StateRoot), hex.EncodeToString(oldStateRoot))

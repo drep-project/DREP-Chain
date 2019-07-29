@@ -7,7 +7,7 @@ import (
 	"github.com/drep-project/drep-chain/database/drepdb"
 	"github.com/drep-project/drep-chain/database/drepdb/leveldb"
 	"github.com/drep-project/drep-chain/database/trie"
-	types "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/drep-chain/types"
 
 	"fmt"
 	"math/big"
@@ -23,10 +23,9 @@ type Database struct {
 
 var (
 	aliasPrefix         = "alias"
-	dbOperaterMaxSeqKey = "operateMaxSeq" //记录数据库操作的最大序列号
-	//maxSeqOfBlockKey    = []byte("seqOfBlockHeight") //块高度对应的数据库操作最大序列号
-	dbOperaterJournal = "addrOperatesJournal" //每一次数据读写过程的记录
-	addressStorage    = "addressStorage"      //以地址作为KEY的对象存储
+	dbOperaterMaxSeqKey = "operateMaxSeq"       //记录数据库操作的最大序列号
+	dbOperaterJournal   = "addrOperatesJournal" //每一次数据读写过程的记录
+	addressStorage      = "addressStorage"      //以地址作为KEY的对象存储
 )
 
 func NewDatabase(dbPath string) (*Database, error) {
@@ -495,7 +494,7 @@ func (db *Database) GetBlockNode(hash *crypto.Hash, blockHeight uint64) (*types.
 	}
 	blockHeader := &types.BlockHeader{}
 	binary.Unmarshal(value[0:len(value)-1], blockHeader)
-	status := value[len(value)-1 : len(value)][0]
+	status := value[len(value)-1:len(value)][0]
 	return blockHeader, types.BlockStatus(status), nil
 }
 
@@ -528,21 +527,21 @@ func (db *Database) BeginTransaction(storeToDB bool) *Database {
 		}
 		return &Database{
 			diskDb: db.diskDb,
-			cache:  NewTransactionStore(trie, db.diskDb),
+			cache:  NewTransactionStore(trie, db.diskDb, storeToDB),
 			trie:   trie,
 		}
 	} else {
 		return &Database{
 			diskDb: db.diskDb,
-			cache:  NewTransactionStore(db.trie, db.diskDb),
+			cache:  NewTransactionStore(db.trie, db.diskDb, storeToDB),
 			trie:   db.trie,
 		}
 	}
 }
 
-func (db *Database) Commit(needLog bool) {
+func (db *Database) Commit() {
 	if db.cache != nil {
-		db.cache.Flush(needLog)
+		db.cache.Flush()
 	}
 }
 

@@ -240,8 +240,8 @@ func (database *DatabaseService) BeginTransaction(storeToDB bool) *Database {
 	return database.db.BeginTransaction(storeToDB)
 }
 
-func (database *DatabaseService) Commit(needLog bool) {
-	database.db.Commit(needLog)
+func (database *DatabaseService) Commit() {
+	database.db.Commit()
 }
 
 func (database *DatabaseService) Discard() {
