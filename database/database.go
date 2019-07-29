@@ -545,10 +545,13 @@ func (db *Database) Commit() {
 	}
 }
 
-func (db *Database) Discard() {
+//BeginTransaction() 数据存入磁盘参数设置为true时，则不能丢弃数据
+func (db *Database) Discard() error{
 	if db.cache != nil {
-		db.cache.Clear()
+		return  db.cache.Clear()
 	}
+
+	return nil
 }
 
 func (db *Database) RevertState(shot *SnapShot) {

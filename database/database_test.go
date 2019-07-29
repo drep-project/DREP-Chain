@@ -1,9 +1,11 @@
 package database
 
 import (
+	"bytes"
 	"crypto/rand"
+	"fmt"
 	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"math/big"
 	"os"
 	"strconv"
 	"testing"
@@ -72,14 +74,13 @@ func TestBlockNode(t *testing.T) {
 	pri, _ := crypto.GenerateKey(rand.Reader)
 
 	bn := chainTypes.BlockNode{
-		Parent:    nil,
-		Hash:      &hash,
-		StateRoot: []byte{},
-		TimeStamp: uint64(time.Now().Unix()),
-		Height:    0,
-		Status:    chainTypes.StatusInvalidAncestor,
-		LeaderPubKey:secp256k1.PublicKey(pri.PublicKey),
-
+		Parent:       nil,
+		Hash:         &hash,
+		StateRoot:    []byte{},
+		TimeStamp:    uint64(time.Now().Unix()),
+		Height:       0,
+		Status:       chainTypes.StatusInvalidAncestor,
+		LeaderPubKey: crypto.PubKey2Address(pri.PubKey()),
 	}
 
 	err = db.PutBlockNode(&bn)
@@ -101,7 +102,7 @@ func TestBlockNode(t *testing.T) {
 	}
 }
 
-func TestNewTransaction(t *testing.T)  {
+func TestNewTransaction(t *testing.T) {
 	defer os.RemoveAll("./test")
 
 	db, err := NewDatabase("./test")
@@ -109,9 +110,74 @@ func TestNewTransaction(t *testing.T)  {
 		t.Fatal(err)
 	}
 
+	//数据提交
+	db1 := db.BeginTransaction(true)
+	root := db1.GetStateRoot()
+	fmt.Println("01", db.GetStateRoot())
 
-	db.BeginTransaction(true)
+	pri, _ := crypto.GenerateKey(rand.Reader)
+	addr := crypto.PubKey2Address(pri.PubKey())
+	balance := new(big.Int).SetInt64(10000)
 
+	db1.AddBalance(&addr, balance)
+	db1.Commit()
 
-	db.BeginTransaction(false)
+	root1 := db1.GetStateRoot()
+	if bytes.Equal(root, root1) {
+		t.Fatal("root !=")
+	}
+	err = db1.Discard()
+	if err == nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println("01", db.GetStateRoot())
+}
+
+func TestDiscardCacheData(t *testing.T) {
+	defer os.RemoveAll("./test")
+
+	db, err := NewDatabase("./test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//数据不提交
+	db2 := db.BeginTransaction(false)
+	root := db2.GetStateRoot()
+	fmt.Println("1", db2.GetStateRoot())
+	pri, _ := crypto.GenerateKey(rand.Reader)
+	addr := crypto.PubKey2Address(pri.PubKey())
+	balance := new(big.Int).SetInt64(100001)
+	db2.AddBalance(&addr, balance)
+
+	root1 := db2.GetStateRoot()
+	fmt.Println("2", db2.GetStateRoot())
+	if !bytes.Equal(root, root1) {
+		t.Fatal("root must equal")
+	}
+
+	db2.Commit()
+
+	fmt.Println("2.5", db2.GetStateRoot())
+	err = db2.Discard()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println("3", db2.GetStateRoot())
+
+	err = db.trieDb.Commit(crypto.Bytes2Hash(root1), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println("4", db2.GetStateRoot())
+
+	root2 := db2.GetStateRoot()
+	if !bytes.Equal(root, root2) {
+		t.Fatal("root !=")
+	}
+
+	fmt.Println("5", db.GetStateRoot())
 }

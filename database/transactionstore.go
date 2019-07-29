@@ -1,6 +1,7 @@
 package database
 
 import (
+	"fmt"
 	"github.com/drep-project/drep-chain/database/drepdb"
 	"github.com/drep-project/drep-chain/database/trie"
 	"sync"
@@ -150,7 +151,11 @@ func (tDb *TransactionStore) Flush() {
 //	return nil
 //}
 
-func (tDb *TransactionStore) Clear() {
+func (tDb *TransactionStore) Clear() error{
+	if tDb.storeToDB {
+		return fmt.Errorf("data can not clear")
+	}
+
 	tDb.dirties.storageDirties = new(sync.Map)
 	tDb.dirties.otherDirties = new(sync.Map)
 
@@ -162,6 +167,7 @@ func (tDb *TransactionStore) Clear() {
 		return true
 	})
 
+	return nil
 }
 
 func (tDb *TransactionStore) RevertState(dirties *dirtiesKV) {
