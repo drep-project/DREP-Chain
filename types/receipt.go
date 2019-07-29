@@ -20,6 +20,7 @@ import (
 	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/crypto/sha3"
 )
 
 const (
@@ -67,6 +68,14 @@ func (r *Receipt) MarshalBinary() ([]byte, error) {
 
 func (r *Receipt) UnmarshalBinary(data []byte) error {
 	return binary.Unmarshal(data, r)
+}
+
+func (r *Receipt) ReceiptHash() *crypto.Hash {
+	b, _ := binary.Marshal(r)
+	h := sha3.Keccak256(b)
+	hash := &crypto.Hash{}
+	hash.SetBytes(h)
+	return hash
 }
 
 // Receipts is a wrapper around a Receipt array to implement DerivableList.

@@ -38,6 +38,8 @@ func (blockMgr *BlockMgr) GenerateBlock(db *database.Database, leaderAddr crypto
 	}
 
 	finalTxs := make([]*types.Transaction, 0, len(txs))
+	finalReceipts := make([]*types.Receipt, 0, len(txs))
+
 	gasUsed := new(big.Int)
 	gasFee := new(big.Int)
 	gp := new(chain.GasPool).AddGas(blockHeader.GasLimit.Uint64())
@@ -55,9 +57,10 @@ SELECT_TX:
 		case <-stopchanel:
 			break SELECT_TX
 		default:
-			_, txGasUsed, txGasFee, err := blockMgr.ChainService.TransactionValidator().ExecuteTransaction(db, t, &newGp, blockHeader)
+			receipt, txGasUsed, txGasFee, err := blockMgr.ChainService.TransactionValidator().ExecuteTransaction(db, t, &newGp, blockHeader)
 			if err == nil {
 				finalTxs = append(finalTxs, t)
+				finalReceipts = append(finalReceipts, receipt)
 				gasUsed.Add(gasUsed, txGasUsed)
 				gasFee.Add(gasFee, txGasFee)
 				gp = &newGp // use new gp and new state if success
@@ -76,6 +79,11 @@ SELECT_TX:
 
 	blockHeader.GasUsed = *new(big.Int).SetUint64(gasUsed.Uint64())
 	blockHeader.TxRoot = blockMgr.ChainService.DeriveMerkleRoot(finalTxs)
+	blockHeader.ReceiptRoot = blockMgr.ChainService.DeriveReceiptRoot(finalReceipts)
+
+	if len(finalReceipts) != 0 {
+		blockHeader.Bloom = types.CreateBloom(finalReceipts)
+	}
 
 	block := &types.Block{
 		Header: blockHeader,

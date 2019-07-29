@@ -18,6 +18,8 @@ type BlockHeader struct {
 	Timestamp      uint64
 	StateRoot      []byte
 	TxRoot         []byte
+	ReceiptRoot  crypto.Hash
+	Bloom		 Bloom
 	LeaderAddress  crypto.CommonAddress
 	MinorAddresses []crypto.CommonAddress
 
