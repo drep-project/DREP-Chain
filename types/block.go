@@ -19,6 +19,8 @@ type BlockHeader struct {
 	Timestamp    uint64
 	StateRoot    []byte
 	TxRoot       []byte
+	ReceiptRoot  crypto.Hash
+	Bloom		 Bloom
 	LeaderPubKey secp256k1.PublicKey
 	MinorPubKeys []secp256k1.PublicKey
 

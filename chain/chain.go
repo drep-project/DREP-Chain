@@ -35,6 +35,7 @@ type ChainServiceInterface interface {
 	app.Service
 	ChainID() app.ChainIdType
 	DeriveMerkleRoot(txs []*chainTypes.Transaction) []byte
+	DeriveReceiptRoot(receipts []*chainTypes.Receipt) crypto.Hash
 	GetBlockByHash(hash *crypto.Hash) (*chainTypes.Block, error)
 	GetBlockByHeight(number uint64) (*chainTypes.Block, error)
 
@@ -357,6 +358,21 @@ func (cs *ChainService) DeriveMerkleRoot(txs []*chainTypes.Transaction) []byte {
 	ts, _ := cs.getTxHashes(txs)
 	merkle := common.NewMerkle(ts)
 	return merkle.Root.Hash
+}
+
+func (cs *ChainService) DeriveReceiptRoot(receipts []*chainTypes.Receipt) crypto.Hash {
+	if len(receipts) == 0 {
+		return crypto.Hash{}
+	}
+	receiptsHashes := make([][]byte, len(receipts))
+	for i, receipt := range receipts {
+		b, _ := binary.Marshal(receipt)
+		receiptsHashes[i] = sha3.Keccak256(b)
+	}
+	merkle := common.NewMerkle(receiptsHashes)
+	receiptRoot := crypto.Hash{}
+	receiptRoot.SetBytes(merkle.Root.Hash)
+	return receiptRoot
 }
 
 func (chainService *ChainService) createChainState() error {
