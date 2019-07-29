@@ -2,16 +2,16 @@ package blockmgr
 
 import (
 	"github.com/drep-project/drep-chain/chain"
-	chainTypes "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/drep-chain/types"
 )
 
 // VerifyTransaction use current tip state as environment may not matched read disk state
 // not check tx nonce ; current nonce shoud use pool nonce while receive tx
-func (blockMgr *BlockMgr) VerifyTransaction(tx *chainTypes.Transaction) error {
+func (blockMgr *BlockMgr) VerifyTransaction(tx *types.Transaction) error {
 	return blockMgr.verifyTransaction(tx)
 }
 
-func (blockMgr *BlockMgr) verifyTransaction(tx *chainTypes.Transaction) error {
+func (blockMgr *BlockMgr) verifyTransaction(tx *types.Transaction) error {
 	//db := blockMgr.ChainService.GetCurrentState()
 	//from, err := tx.From()
 
@@ -44,7 +44,7 @@ func (blockMgr *BlockMgr) verifyTransaction(tx *chainTypes.Transaction) error {
 		log.WithField("gas", gas).WithField("tx.gas", tx.Gas()).Error("gas exceed tx gaslimit ")
 		return ErrReachGasLimit
 	}
-	if tx.Type() == chainTypes.SetAliasType {
+	if tx.Type() == types.SetAliasType {
 		from, err := tx.From()
 		if err != nil {
 			return err

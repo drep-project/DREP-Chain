@@ -51,26 +51,26 @@ func (database *DatabaseService) HasBlock(hash *crypto.Hash) bool {
 	return err == nil
 }
 
-func (database *DatabaseService) BlockIterator(handle func(*chainType.Block) error) error {
-	iter := database.db.diskDb.NewIteratorWithPrefix(BlockPrefix)
-	defer iter.Release()
-	var err error
-	for iter.Next() {
-		block := &chainType.Block{}
-		err = binary.Unmarshal(iter.Value(), block)
-		if err != nil {
-			break
-		}
-		err = handle(block)
-		if err != nil {
-			break
-		}
-	}
-	if err != nil {
-		return err
-	}
-	return nil
-}
+//func (database *DatabaseService) BlockIterator(handle func(*chainType.Block) error) error {
+//	iter := database.db.diskDb.NewIteratorWithPrefix(BlockPrefix)
+//	defer iter.Release()
+//	var err error
+//	for iter.Next() {
+//		block := &chainType.Block{}
+//		err = binary.Unmarshal(iter.Value(), block)
+//		if err != nil {
+//			break
+//		}
+//		err = handle(block)
+//		if err != nil {
+//			break
+//		}
+//	}
+//	if err != nil {
+//		return err
+//	}
+//	return nil
+//}
 
 func (database *DatabaseService) PutBlockNode(blockNode *chainType.BlockNode) error {
 	header := blockNode.Header()
@@ -135,26 +135,10 @@ func (database *DatabaseService) BlockNodeIterator(handle func(*chainType.BlockH
 	return nil
 }
 
-//func (database *DatabaseService) PutChainState(chainState *chainType.BestState) error {
-//	return database.db.PutChainState(chainState)
-//}
-
-//func (database *DatabaseService) GetChainState() *chainType.BestState {
-//	return database.db.GetChainState()
-//}
-
 //返回回滚的操作数目
 func (database *DatabaseService) Rollback2Block(height uint64, hash *crypto.Hash) (error, int64) {
 	return database.db.Rollback2Block(height, hash)
 }
-
-//func (database *DatabaseService) RecordBlockJournal(height uint64) {
-//	database.db.SetBlockJournal(height)
-//}
-//
-//func (database *DatabaseService) GetBlockJournal() uint64 {
-//	return database.db.GetBlockJournal()
-//}
 
 func (database *DatabaseService) GetStorage(addr *crypto.CommonAddress) *chainType.Storage {
 	return database.db.GetStorage(addr)

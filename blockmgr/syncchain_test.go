@@ -1,18 +1,19 @@
 package blockmgr
 
 import (
-	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/chain"
-	chainTypes "github.com/drep-project/drep-chain/types"
-	"github.com/drep-project/drep-chain/common/event"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/database"
-	"github.com/drep-project/drep-chain/network/p2p"
-	"gopkg.in/urfave/cli.v1"
 	"math/big"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/drep-project/drep-chain/app"
+	"github.com/drep-project/drep-chain/chain"
+	"github.com/drep-project/drep-chain/common/event"
+	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/database"
+	"github.com/drep-project/drep-chain/network/p2p"
+	"github.com/drep-project/drep-chain/types"
+	"gopkg.in/urfave/cli.v1"
 )
 
 type p2pServiceMock struct {
@@ -73,18 +74,18 @@ func (p *peerInfoMock) GetAddr() string {
 func (p *peerInfoMock) SetHeight(height uint64) {
 	p.height = height
 }
-func (p *peerInfoMock) KnownTx(tx *chainTypes.Transaction) bool {
+func (p *peerInfoMock) KnownTx(tx *types.Transaction) bool {
 	return true
 }
-func (p *peerInfoMock) MarkTx(tx *chainTypes.Transaction) {
+func (p *peerInfoMock) MarkTx(tx *types.Transaction) {
 
 }
-func (p *peerInfoMock) KnownBlock(blk *chainTypes.Block) bool {
+func (p *peerInfoMock) KnownBlock(blk *types.Block) bool {
 	return true
 }
-func (p *peerInfoMock) MarkBlock(blk *chainTypes.Block) {}
+func (p *peerInfoMock) MarkBlock(blk *types.Block) {}
 
-//var pi chainTypes.PeerInfoInterface = &peerInfoMock{}
+//var pi types.PeerInfoInterface = &peerInfoMock{}
 
 type chainServiceMock struct {
 }
@@ -112,34 +113,34 @@ func (ps *chainServiceMock) ChainID() app.ChainIdType {
 	return [64]byte{}
 }
 
-func (ps *chainServiceMock) DeriveMerkleRoot(txs []*chainTypes.Transaction) []byte {
+func (ps *chainServiceMock) DeriveMerkleRoot(txs []*types.Transaction) []byte {
 	return nil
 }
-func (ps *chainServiceMock) GetBlockByHash(hash *crypto.Hash) (*chainTypes.Block, error) {
+func (ps *chainServiceMock) GetBlockByHash(hash *crypto.Hash) (*types.Block, error) {
 	return nil, nil
 }
-func (ps *chainServiceMock) GetBlockByHeight(number uint64) (*chainTypes.Block, error) {
+func (ps *chainServiceMock) GetBlockByHeight(number uint64) (*types.Block, error) {
 	return nil, nil
 }
 
 //DefaultChainConfig
-func (ps *chainServiceMock) GetBlockHeaderByHash(hash *crypto.Hash) (*chainTypes.BlockHeader, error) {
+func (ps *chainServiceMock) GetBlockHeaderByHash(hash *crypto.Hash) (*types.BlockHeader, error) {
 	return nil, nil
 }
-func (ps *chainServiceMock) GetBlockHeaderByHeight(number uint64) (*chainTypes.BlockHeader, error) {
+func (ps *chainServiceMock) GetBlockHeaderByHeight(number uint64) (*types.BlockHeader, error) {
 	return nil, nil
 }
-func (ps *chainServiceMock) GetBlocksFrom(start, size uint64) ([]*chainTypes.Block, error) {
+func (ps *chainServiceMock) GetBlocksFrom(start, size uint64) ([]*types.Block, error) {
 	return nil, nil
 }
 
 func (ps *chainServiceMock) GetCurrentState() *database.Database {
 	return nil
 }
-func (ps *chainServiceMock) GetHeader(hash crypto.Hash, number uint64) *chainTypes.BlockHeader {
+func (ps *chainServiceMock) GetHeader(hash crypto.Hash, number uint64) *types.BlockHeader {
 	return nil
 }
-func (ps *chainServiceMock) GetHighestBlock() (*chainTypes.Block, error) {
+func (ps *chainServiceMock) GetHighestBlock() (*types.Block, error) {
 	return nil, nil
 }
 func (ps *chainServiceMock) RootChain() app.ChainIdType {
@@ -150,11 +151,11 @@ func (ps *chainServiceMock) BestChain() *chain.ChainView {
 	cv := &chain.ChainView{}
 	return cv
 }
-func (ps *chainServiceMock) CalcGasLimit(parent *chainTypes.BlockHeader, gasFloor, gasCeil uint64) *big.Int {
+func (ps *chainServiceMock) CalcGasLimit(parent *types.BlockHeader, gasFloor, gasCeil uint64) *big.Int {
 	return nil
 }
 
-func (ps *chainServiceMock) ProcessBlock(block *chainTypes.Block) (bool, bool, error) {
+func (ps *chainServiceMock) ProcessBlock(block *types.Block) (bool, bool, error) {
 	return true, true, nil
 }
 
@@ -176,10 +177,10 @@ func (ps *chainServiceMock) Index() *chain.BlockIndex {
 func (ps *chainServiceMock) BlockValidator() chain.IBlockValidator {
 	return nil
 }
-func (ps *chainServiceMock) Config() *chainTypes.ChainConfig {
+func (ps *chainServiceMock) Config() *types.ChainConfig {
 	return nil
 }
-func (ps *chainServiceMock) AccumulateRewards(db *database.Database, b *chainTypes.Block, totalGasBalance *big.Int) error {
+func (ps *chainServiceMock) AccumulateRewards(db *database.Database, b *types.Block, totalGasBalance *big.Int) error {
 	return nil
 }
 func (ps *chainServiceMock) DetachBlockFeed() *event.Feed {
@@ -188,7 +189,7 @@ func (ps *chainServiceMock) DetachBlockFeed() *event.Feed {
 
 //var bm *BlockMgr
 
-func prepareBase(t *testing.T) (*BlockMgr, []*chainTypes.Block) {
+func prepareBase(t *testing.T) (*BlockMgr, []*types.Block) {
 	db, err := database.NewDatabase("./test/")
 	if err != nil {
 		t.Fatal(err)

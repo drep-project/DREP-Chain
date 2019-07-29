@@ -1,10 +1,8 @@
 package types
 
 import (
-	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"math/big"
 )
 
@@ -17,7 +15,7 @@ type RpcTransaction struct {
 
 type RpcBlock struct {
 	Hash         crypto.Hash
-	ChainId      app.ChainIdType
+	ChainId      ChainIdType
 	Version      int32
 	PreviousHash crypto.Hash
 	GasLimit     big.Int
@@ -26,8 +24,8 @@ type RpcBlock struct {
 	Timestamp    uint64
 	StateRoot    common.Bytes
 	TxRoot       common.Bytes
-	LeaderPubKey secp256k1.PublicKey
-	MinorPubKeys []secp256k1.PublicKey
+	LeaderPubKey crypto.CommonAddress
+	MinorPubKeys []crypto.CommonAddress
 	Txs          []*RpcTransaction
 }
 
@@ -63,14 +61,14 @@ func (rpcBlock *RpcBlock) From(block *Block) *RpcBlock {
 	rpcBlock.Timestamp = block.Header.Timestamp
 	rpcBlock.StateRoot = block.Header.StateRoot
 	rpcBlock.TxRoot = block.Header.TxRoot
-	rpcBlock.LeaderPubKey = block.Header.LeaderPubKey
-	rpcBlock.MinorPubKeys = block.Header.MinorPubKeys
+	rpcBlock.LeaderPubKey = block.Header.LeaderAddress
+	rpcBlock.MinorPubKeys = block.Header.MinorAddresses
 	rpcBlock.Txs = txs
 	return rpcBlock
 }
 
 type RpcBlockHeader struct {
-	ChainId      app.ChainIdType
+	ChainId      ChainIdType
 	Version      int32
 	PreviousHash crypto.Hash
 	GasLimit     common.Big
@@ -79,8 +77,8 @@ type RpcBlockHeader struct {
 	Timestamp    uint64
 	StateRoot    []byte
 	TxRoot       []byte
-	LeaderPubKey secp256k1.PublicKey
-	MinorPubKeys []secp256k1.PublicKey
+	LeaderPubKey crypto.CommonAddress
+	MinorPubKeys []crypto.CommonAddress
 
 	Hash *crypto.Hash
 }
@@ -95,8 +93,8 @@ func (rpcBlockHeader *RpcBlockHeader) FromBlockHeader(header *BlockHeader) {
 	rpcBlockHeader.Timestamp = header.Timestamp
 	rpcBlockHeader.StateRoot = header.StateRoot
 	rpcBlockHeader.TxRoot = header.TxRoot
-	rpcBlockHeader.LeaderPubKey = header.LeaderPubKey
-	rpcBlockHeader.MinorPubKeys = header.MinorPubKeys
+	rpcBlockHeader.LeaderPubKey = header.LeaderAddress
+	rpcBlockHeader.MinorPubKeys = header.MinorAddresses
 	rpcBlockHeader.Hash = header.Hash()
 }
 
@@ -111,7 +109,7 @@ func (rpcBlockHeader *RpcBlockHeader) ToHeader() *BlockHeader {
 	blockHeader.Timestamp = rpcBlockHeader.Timestamp
 	blockHeader.StateRoot = rpcBlockHeader.StateRoot
 	blockHeader.TxRoot = rpcBlockHeader.TxRoot
-	blockHeader.LeaderPubKey = rpcBlockHeader.LeaderPubKey
-	blockHeader.MinorPubKeys = rpcBlockHeader.MinorPubKeys
+	blockHeader.LeaderAddress = rpcBlockHeader.LeaderPubKey
+	blockHeader.MinorAddresses = rpcBlockHeader.MinorPubKeys
 	return blockHeader
 }

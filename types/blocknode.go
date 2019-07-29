@@ -1,10 +1,7 @@
 package types
 
 import (
-	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
-
 	"math/big"
 	"sort"
 	"time"
@@ -78,15 +75,15 @@ type BlockNode struct {
 	// heigh is the position in the block chain.
 	Height uint64
 
-	ChainId      app.ChainIdType
+	ChainId      ChainIdType
 	Version      int32
 	PreviousHash *crypto.Hash
 	GasLimit     big.Int
 	GasUsed      big.Int
 	MerkleRoot   []byte
 
-	LeaderPubKey secp256k1.PublicKey
-	MinorPubKeys []secp256k1.PublicKey
+	LeaderPubKey crypto.CommonAddress
+	MinorPubKeys []crypto.CommonAddress
 
 	Status BlockStatus
 }
@@ -109,8 +106,8 @@ func InitBlockNode(node *BlockNode, blockHeader *BlockHeader, parent *BlockNode)
 		GasLimit:     blockHeader.GasLimit,
 		GasUsed:      blockHeader.GasUsed,
 		MerkleRoot:   blockHeader.TxRoot,
-		LeaderPubKey: blockHeader.LeaderPubKey,
-		MinorPubKeys: blockHeader.MinorPubKeys,
+		LeaderPubKey: blockHeader.LeaderAddress,
+		MinorPubKeys: blockHeader.MinorAddresses,
 	}
 	if parent != nil {
 		node.Parent = parent
@@ -136,17 +133,17 @@ func (node *BlockNode) Header() BlockHeader {
 		prevHash = node.Parent.Hash
 	}
 	return BlockHeader{
-		Height:       node.Height,
-		StateRoot:    node.StateRoot,
-		Timestamp:    node.TimeStamp,
-		ChainId:      node.ChainId,
-		Version:      node.Version,
-		PreviousHash: *prevHash,
-		GasLimit:     node.GasLimit,
-		GasUsed:      node.GasUsed,
-		TxRoot:       node.MerkleRoot,
-		LeaderPubKey: node.LeaderPubKey,
-		MinorPubKeys: node.MinorPubKeys,
+		Height:         node.Height,
+		StateRoot:      node.StateRoot,
+		Timestamp:      node.TimeStamp,
+		ChainId:        node.ChainId,
+		Version:        node.Version,
+		PreviousHash:   *prevHash,
+		GasLimit:       node.GasLimit,
+		GasUsed:        node.GasUsed,
+		TxRoot:         node.MerkleRoot,
+		LeaderAddress:  node.LeaderPubKey,
+		MinorAddresses: node.MinorPubKeys,
 	}
 }
 

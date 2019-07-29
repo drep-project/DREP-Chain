@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/drep-project/drep-chain/crypto"
 	"math"
 	"math/big"
 	"time"
 
-	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/app"
 	blockMgrService "github.com/drep-project/drep-chain/blockmgr"
 	chainService "github.com/drep-project/drep-chain/chain"
@@ -59,14 +59,7 @@ type ConsensusService struct {
 	pauseForSync bool
 	start        bool
 	peersInfo    map[string]*consensusTypes.PeerInfo
-	producers    []chainService.Producers
-
 	quit chan struct{}
-}
-
-type produceInfo struct {
-	PK *secp256k1.PublicKey
-	IP string
 }
 
 func (consensusService *ConsensusService) Name() string {
@@ -85,8 +78,6 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	if consensusService.ChainService == nil {
 		return fmt.Errorf("chainService not init")
 	}
-	consensusService.producers = consensusService.ChainService.Config().Producers
-
 	consensusService.Config = &consensusTypes.ConsensusConfig{}
 	err := executeContext.UnmashalConfig(consensusService.Name(), consensusService.Config)
 	if err != nil {
@@ -108,15 +99,8 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	}
 	consensusService.privkey = accountNode.PrivateKey
 	consensusService.peersInfo = make(map[string]*consensusTypes.PeerInfo)
-
-	//检查是否为系统配置的骨干节点
-	checkProduce := func(pds []chainService.Producers, ip string) bool {
-		for _, p := range pds {
-			if p.IP == ip {
-				return true
-			}
-		}
-		return false
+	if !consensusService.Config.Producers.IsLocalPk(consensusService.privkey.PubKey()) {
+		return ErrBpConfig
 	}
 
 	consensusService.P2pServer.AddProtocols([]p2p.Protocol{
@@ -124,7 +108,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 			Name:   "consensusService",
 			Length: consensusTypes.NumberOfMsg,
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
-				if checkProduce(consensusService.producers, peer.IP()) {
+				if consensusService.Config.Producers.IsLocalIP(peer.IP()) {
 					pi := consensusTypes.NewPeerInfo(peer, rw)
 					consensusService.peersInfo[peer.IP()] = pi
 					defer delete(consensusService.peersInfo, peer.IP())
@@ -136,6 +120,14 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 			},
 		},
 	})
+
+	if consensusService.Config.ConsensusMode == "bft" {
+		consensusService.ChainService.AddBlockValidator(&BlockMultiSigValidator{consensusService.Config.Producers})
+	} else if consensusService.Config.ConsensusMode == "solo" {
+		consensusService.ChainService.AddBlockValidator(&SoloValidator{consensusService.pubkey, consensusService.Config.Producers})
+	}else{
+		return nil
+	}
 
 	consensusService.leader = NewLeader(consensusService.privkey, consensusService.P2pServer)
 	consensusService.member = NewMember(consensusService.privkey, consensusService.P2pServer)
@@ -180,14 +172,11 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 	if !consensusService.Config.Enable {
 		return nil
 	}
-	if !consensusService.isProduce() {
-		return nil
-	}
 
 	consensusService.start = true
 
 	go func() {
-		minMember := int(math.Ceil(float64(len(consensusService.producers)) * 2 / 3))
+		minMember := int(math.Ceil(float64(len(consensusService.Config.Producers)) * 2 / 3))
 
 		select {
 		case <-consensusService.quit:
@@ -227,7 +216,7 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 						time.Sleep(time.Second * 10)
 					}
 				} else {
-					break
+					return
 				}
 				if err != nil {
 					log.WithField("Reason", err.Error()).Debug("Producer Block Fail")
@@ -238,7 +227,6 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 					}
 					log.WithField("Height", consensusService.ChainService.BestChain().Height()).WithField("txs:", block.Data.TxCount).WithField("err", err).Info("Submit Block ")
 				}
-				time.Sleep(time.Duration(500) * time.Millisecond) //delay a little time for block deliver
 				nextBlockTime, waitSpan := consensusService.getWaitTime()
 				log.WithField("nextBlockTime", nextBlockTime).WithField("waitSpan", waitSpan).Debug("Sleep")
 				time.Sleep(waitSpan)
@@ -310,13 +298,13 @@ func (consensusService *ConsensusService) runAsMember() (block *chainTypes.Block
 	consensusService.member.validator = func(msg consensusTypes.IConsenMsg) bool {
 		val := msg.(*consensusTypes.ResponseWiteRootMessage)
 		multiSig = &val.MultiSignature
-		minorPubkeys := []secp256k1.PublicKey{}
-		for index, producer := range consensusService.ChainService.Config().Producers {
+		minorAddrs := []crypto.CommonAddress{}
+		for index, producer := range consensusService.Config.Producers {
 			if multiSig.Bitmap[index] == 1 { //TODO  Exclude leader
-				minorPubkeys = append(minorPubkeys, *producer.Pubkey)
+				minorAddrs = append(minorAddrs, crypto.PubKey2Address(producer.Pubkey))
 			}
 		}
-		block.Header.MinorPubKeys = minorPubkeys
+		block.Header.MinorAddresses = minorAddrs
 		block.Header.StateRoot = val.StateRoot
 		block.MultiSig = multiSig
 		return consensusService.verifyBlockContent(block)
@@ -339,7 +327,7 @@ func (consensusService *ConsensusService) runAsLeader() (block *chainTypes.Block
 	db := consensusService.DatabaseService.BeginTransaction(false)
 	consensusService.leader.Reset()
 	var gasFee *big.Int
-	block, gasFee, err = consensusService.BlockMgr.GenerateBlock(db, consensusService.leader.pubkey)
+	block, gasFee, err = consensusService.BlockMgr.GenerateBlock(db, crypto.PubKey2Address(consensusService.leader.pubkey))
 	if err != nil {
 		log.WithField("msg", err).Error("generate block fail")
 		return nil, err
@@ -355,13 +343,13 @@ func (consensusService *ConsensusService) runAsLeader() (block *chainTypes.Block
 
 	multiSig := &chainTypes.MultiSignature{Sig: *sig, Bitmap: bitmap}
 	consensusService.leader.Reset()
-	minorPubkeys := []secp256k1.PublicKey{}
-	for index, producer := range consensusService.ChainService.Config().Producers {
+	minorAddrs := []crypto.CommonAddress{}
+	for index, producer := range consensusService.Config.Producers {
 		if multiSig.Bitmap[index] == 1 { //TODO  Exclude leader
-			minorPubkeys = append(minorPubkeys, *producer.Pubkey)
+			minorAddrs = append(minorAddrs, crypto.PubKey2Address(producer.Pubkey))
 		}
 	}
-	block.Header.MinorPubKeys = minorPubkeys
+	block.Header.MinorAddresses = minorAddrs
 	block.MultiSig = multiSig
 	//Determine reward points
 	err = consensusService.ChainService.AccumulateRewards(db, block, gasFee)
@@ -386,16 +374,11 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 
 	db := consensusService.DatabaseService.BeginTransaction(false)
 	defer db.Discard()
-	block, gasFee, err := consensusService.BlockMgr.GenerateBlock(db, consensusService.pubkey)
+	block, gasFee, err := consensusService.BlockMgr.GenerateBlock(db, crypto.PubKey2Address(consensusService.pubkey))
 	if err != nil {
 		return nil, err
 	}
-	msg, err := binary.Marshal(block)
-	if err != nil {
-		return block, nil
-	}
-
-	sig, err := consensusService.privkey.Sign(sha3.Keccak256(msg))
+	sig, err := consensusService.privkey.Sign(sha3.Keccak256(block.AsSignMessage()))
 	if err != nil {
 		log.Error("sign block error")
 		return nil, errors.New("sign block error")
@@ -413,10 +396,19 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 	db = consensusService.DatabaseService.BeginTransaction(false)
 	gp := new(chainService.GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
-	gasUsed, gasFee, err := consensusService.ChainService.BlockValidator().ExecuteBlock(db, block, gp)
-	if err != nil {
-		log.WithField("ExecuteBlock", err).Debug("multySigVerify")
-		return nil, err
+	context := &chainService.BlockExecuteContext{
+		Db:db,
+		Block :block,
+		Gp :gp,
+		GasUsed :new (big.Int),
+		GasFee:new (big.Int),
+	}
+	for _, validator := range   consensusService.ChainService.BlockValidator() {
+		err := validator.ExecuteBlock(context)
+		if err != nil {
+			log.WithField("ExecuteBlock", err).Debug("multySigVerify")
+			return nil, err
+		}
 	}
 	err = consensusService.ChainService.AccumulateRewards(db, block, gasFee)
 	if err != nil {
@@ -425,31 +417,22 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 	}
 
 	db.Commit(false)
-	if block.Header.GasUsed.Cmp(gasUsed) == 0 {
+	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
 		stateRoot := db.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
 			log.Debug("rootcmd root !=")
 			return nil, fmt.Errorf("state root not equal")
 		}
 	} else {
-		log.WithField("gasUsed", gasUsed).Debug("multySigVerify")
+		log.WithField("gasUsed", context.GasUsed).Debug("multySigVerify")
 		return nil, err
 	}
 	return block, nil
 }
 
-func (consensusService *ConsensusService) isProduce() bool {
-	for _, produce := range consensusService.producers {
-		if produce.Pubkey.IsEqual(consensusService.pubkey) {
-			return true
-		}
-	}
-	return false
-}
-
 func (consensusService *ConsensusService) collectMemberStatus() []*consensusTypes.MemberInfo {
-	produceInfos := make([]*consensusTypes.MemberInfo, 0, len(consensusService.producers))
-	for _, produce := range consensusService.producers {
+	produceInfos := make([]*consensusTypes.MemberInfo, 0, len(consensusService.Config.Producers))
+	for _, produce := range consensusService.Config.Producers {
 		var (
 			IsOnline, ok bool
 			pi           *consensusTypes.PeerInfo
@@ -466,7 +449,7 @@ func (consensusService *ConsensusService) collectMemberStatus() []*consensusType
 		}
 
 		produceInfos = append(produceInfos, &consensusTypes.MemberInfo{
-			Producer: &consensusTypes.Producer{Public: produce.Pubkey, Ip: produce.IP},
+			Producer: &consensusTypes.Producer{Pubkey: produce.Pubkey, IP: produce.IP},
 			Peer:     pi,
 			IsMe:     isMe,
 			IsOnline: IsOnline,
@@ -496,7 +479,7 @@ func (consensusService *ConsensusService) moveToNextMiner(produceInfos []*consen
 
 	for index, produce := range produceInfos {
 		if produce.IsOnline {
-			if produce.Producer.Public.IsEqual(curMiner.Producer.Public) {
+			if produce.Producer.Pubkey.IsEqual(curMiner.Producer.Pubkey) {
 				produce.IsLeader = true
 				consensusService.curMiner = index
 			} else {
@@ -569,15 +552,17 @@ func (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) b
 		log.WithField("err", err).Debug("blockVerify GetBlockHeaderByHash")
 		return false
 	}
-	err = consensusService.ChainService.BlockValidator().VerifyHeader(block.Header, preBlockHash)
-	if err != nil {
-		log.WithField("err", err).Debug("blockVerify VerifyHeader")
-		return false
-	}
-	err = consensusService.ChainService.BlockValidator().VerifyBody(block)
-	if err != nil {
-		log.WithField("err", err).Debug("blockVerify VerifyBody")
-		return false
+	for _, validator := range   consensusService.ChainService.BlockValidator() {
+		err = validator.VerifyHeader(block.Header, preBlockHash)
+		if err != nil {
+			log.WithField("err", err).Debug("blockVerify VerifyHeader")
+			return false
+		}
+		err = validator.VerifyBody(block)
+		if err != nil {
+			log.WithField("err", err).Debug("blockVerify VerifyBody")
+			return false
+		}
 	}
 	//TODO need to verify traansaction , a lot of time
 	return err == nil
@@ -585,32 +570,41 @@ func (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) b
 
 func (consensusService *ConsensusService) verifyBlockContent(block *chainTypes.Block) bool {
 	db := consensusService.ChainService.GetDatabaseService().BeginTransaction(false)
-	if !consensusService.ChainService.BlockValidator().VerifyMultiSig(block, consensusService.ChainService.Config().SkipCheckMutiSig || false) {
+	multiSigValidator := BlockMultiSigValidator{consensusService.Config.Producers}
+	if multiSigValidator.VerifyBody(block) != nil {
 		log.WithField("bitmap", block.MultiSig.Bitmap).Debug("bitmap")
-		log.WithField("SkipCheckMutiSig", consensusService.ChainService.Config().SkipCheckMutiSig).Debug("multySigVerify")
 		return false
 	}
 
 	gp := new(chainService.GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
-	gasUsed, gasFee, err := consensusService.ChainService.BlockValidator().ExecuteBlock(db, block, gp)
-	if err != nil {
-		log.WithField("ExecuteBlock", err).Debug("multySigVerify")
-		return false
+	context := &chainService.BlockExecuteContext{
+		Db:db,
+		Block :block,
+		Gp :gp,
+		GasUsed :new (big.Int),
+		GasFee:new (big.Int),
 	}
-	err = consensusService.ChainService.AccumulateRewards(db, block, gasFee)
+	for _, validator := range   consensusService.ChainService.BlockValidator() {
+		err := validator.ExecuteBlock(context)
+		if err != nil {
+			log.WithField("ExecuteBlock", err).Debug("multySigVerify")
+			return false
+		}
+	}
+	err := consensusService.ChainService.AccumulateRewards(db, block, context.GasFee)
 	if err != nil {
 		log.WithField("AccumulateRewards", err).Debug("multySigVerify")
 		return false
 	}
-	if block.Header.GasUsed.Cmp(gasUsed) == 0 {
+	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
 		stateRoot := db.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
 			log.Debug("rootcmd root !====")
 			return false
 		}
 	} else {
-		log.WithField("gasUsed", gasUsed).Debug("multySigVerify")
+		log.WithField("gasUsed", context.GasUsed).Debug("multySigVerify")
 		return false
 	}
 	return true

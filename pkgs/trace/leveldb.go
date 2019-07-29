@@ -3,7 +3,7 @@ package trace
 import (
 	"fmt"
 	"github.com/drep-project/binary"
-	chainTypes "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/common/fileutil"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -34,7 +34,7 @@ func NewLevelDbStore(path string) (*LevelDbStore, error) {
 	return &LevelDbStore{path, db}, nil
 }
 
-func (store *LevelDbStore)  ExistRecord(block *chainTypes.Block)  (bool, error) {
+func (store *LevelDbStore)  ExistRecord(block *types.Block)  (bool, error) {
 	for _, tx := range block.Data.TxList {
 		txHash := tx.TxHash()
 		key := store.txKey(txHash)
@@ -50,7 +50,7 @@ func (store *LevelDbStore)  ExistRecord(block *chainTypes.Block)  (bool, error) 
 	return true, nil
 }
 // InsertRecord check block ,if tx exist, save to to history and send history , if to is not nil, save tx receive history
-func (store *LevelDbStore) InsertRecord(block *chainTypes.Block) {
+func (store *LevelDbStore) InsertRecord(block *types.Block) {
 	for _, tx := range block.Data.TxList {
 		rawdata := tx.AsPersistentMessage()
 		txHash := tx.TxHash()
@@ -79,7 +79,7 @@ func (store *LevelDbStore) InsertRecord(block *chainTypes.Block) {
 	}
 }
 
-func (store *LevelDbStore) DelRecord(block *chainTypes.Block) {
+func (store *LevelDbStore) DelRecord(block *types.Block) {
 	for _, tx := range block.Data.TxList {
 		txHash := tx.TxHash()
 		key := store.txKey(txHash)
@@ -105,23 +105,23 @@ func (store *LevelDbStore) GetRawTransaction(txHash *crypto.Hash) ([]byte, error
 	return rawData, nil
 }
 
-func (store *LevelDbStore) GetTransaction(txHash *crypto.Hash) (*chainTypes.RpcTransaction, error) {
+func (store *LevelDbStore) GetTransaction(txHash *crypto.Hash) (*types.RpcTransaction, error) {
 	rawData, err := store.GetRawTransaction(txHash)
 	if err != nil {
 		return nil, err
 	}
-	tx := &chainTypes.Transaction{}
+	tx := &types.Transaction{}
 	err = binary.Unmarshal(rawData, tx)
 	if err != nil {
 		return nil, err
 	}
-	rpcTx := &chainTypes.RpcTransaction{}
+	rpcTx := &types.RpcTransaction{}
 	rpcTx.FromTx(tx)
 	return rpcTx, nil
 }
 
-func (store *LevelDbStore) GetSendTransactionsByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*chainTypes.RpcTransaction {
-	txs := []*chainTypes.RpcTransaction{}
+func (store *LevelDbStore) GetSendTransactionsByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*types.RpcTransaction {
+	txs := []*types.RpcTransaction{}
 	fromIndex := (pageIndex - 1) * pageSize
 	endIndex := fromIndex + pageSize
 	if endIndex <= 0 {
@@ -159,8 +159,8 @@ func (store *LevelDbStore) GetSendTransactionsByAddr(addr *crypto.CommonAddress,
 	return txs
 }
 
-func (store *LevelDbStore) GetReceiveTransactionsByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*chainTypes.RpcTransaction {
-	txs := []*chainTypes.RpcTransaction{}
+func (store *LevelDbStore) GetReceiveTransactionsByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*types.RpcTransaction {
+	txs := []*types.RpcTransaction{}
 	fromIndex := (pageIndex - 1) * pageSize
 	endIndex := fromIndex + pageSize
 	if endIndex <= 0 {

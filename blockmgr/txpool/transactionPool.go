@@ -4,13 +4,14 @@ import (
 	"container/heap"
 	"errors"
 	"fmt"
-	chainTypes "github.com/drep-project/drep-chain/types"
-	"github.com/drep-project/drep-chain/common/event"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/database"
 	"math/big"
 	"sync"
 	"time"
+
+	"github.com/drep-project/drep-chain/common/event"
+	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/database"
+	"github.com/drep-project/drep-chain/types"
 )
 
 const (
@@ -28,8 +29,8 @@ type TransactionPool struct {
 	rlock        sync.RWMutex
 	queue        map[crypto.CommonAddress]*txList
 	pending      map[crypto.CommonAddress]*txList
-	allTxs       map[string]*chainTypes.Transaction //统计信息使用
-	allPricedTxs *txPricedList                      //按照价格排序的tx列表
+	allTxs       map[string]*types.Transaction //统计信息使用
+	allPricedTxs *txPricedList                 //按照价格排序的tx列表
 	mu           sync.Mutex
 	nonceCp      func(a interface{}, b interface{}) int
 	tranCp       func(a interface{}, b interface{}) bool
@@ -37,7 +38,7 @@ type TransactionPool struct {
 	//当前有序的最大的nonce大小,此值应该被存储到DB中（后续考虑txpool的DB存储，一起考虑）
 	pendingNonce     map[crypto.CommonAddress]uint64
 	eventNewBlockSub event.Subscription
-	newBlockChan     chan *chainTypes.Block
+	newBlockChan     chan *types.Block
 	quit             chan struct{}
 
 	//日志
@@ -49,8 +50,8 @@ type TransactionPool struct {
 func NewTransactionPool(database *database.Database, journalPath string) *TransactionPool {
 	pool := &TransactionPool{database: database}
 	pool.nonceCp = func(a interface{}, b interface{}) int {
-		ta, oka := a.(*chainTypes.Transaction)
-		tb, okb := b.(*chainTypes.Transaction)
+		ta, oka := a.(*types.Transaction)
+		tb, okb := b.(*types.Transaction)
 		if oka && okb {
 			nonceA := ta.Nonce()
 			nonceB := tb.Nonce()
@@ -66,8 +67,8 @@ func NewTransactionPool(database *database.Database, journalPath string) *Transa
 		}
 	}
 	pool.tranCp = func(a interface{}, b interface{}) bool {
-		ta, oka := a.(*chainTypes.Transaction)
-		tb, okb := b.(*chainTypes.Transaction)
+		ta, oka := a.(*types.Transaction)
+		tb, okb := b.(*types.Transaction)
 		sa := ta.TxHash()
 		sb := tb.TxHash()
 		return oka && okb && sa == sb
@@ -75,10 +76,10 @@ func NewTransactionPool(database *database.Database, journalPath string) *Transa
 
 	pool.queue = make(map[crypto.CommonAddress]*txList)
 	pool.pending = make(map[crypto.CommonAddress]*txList)
-	pool.newBlockChan = make(chan *chainTypes.Block)
+	pool.newBlockChan = make(chan *types.Block)
 	pool.pendingNonce = make(map[crypto.CommonAddress]uint64)
 
-	pool.allTxs = make(map[string]*chainTypes.Transaction)
+	pool.allTxs = make(map[string]*types.Transaction)
 	pool.allPricedTxs = newTxPricedList()
 
 	pool.journal = newTxJournal(journalPath)
@@ -90,7 +91,7 @@ func NewTransactionPool(database *database.Database, journalPath string) *Transa
 	return pool
 }
 
-func (pool *TransactionPool) journalTx(from crypto.CommonAddress, tx *chainTypes.Transaction) {
+func (pool *TransactionPool) journalTx(from crypto.CommonAddress, tx *types.Transaction) {
 	// Only journal if it's enabled and the transaction is local
 	if _, ok := pool.locals[from]; !ok || pool.journal == nil {
 		return
@@ -101,13 +102,13 @@ func (pool *TransactionPool) journalTx(from crypto.CommonAddress, tx *chainTypes
 	}
 }
 
-func (pool *TransactionPool) local() map[crypto.CommonAddress][]*chainTypes.Transaction {
+func (pool *TransactionPool) local() map[crypto.CommonAddress][]*types.Transaction {
 	isLocalAddr := func(addr crypto.CommonAddress) bool {
 		_, ok := pool.locals[addr]
 		return ok
 	}
 
-	all := make(map[crypto.CommonAddress][]*chainTypes.Transaction)
+	all := make(map[crypto.CommonAddress][]*types.Transaction)
 	for addr, list := range pool.queue {
 		if !list.Empty() && isLocalAddr(addr) {
 			txs := list.Flatten()
@@ -129,7 +130,7 @@ func (pool *TransactionPool) local() map[crypto.CommonAddress][]*chainTypes.Tran
 	return all
 }
 
-func (pool *TransactionPool) addTxs(txs []chainTypes.Transaction) []error {
+func (pool *TransactionPool) addTxs(txs []types.Transaction) []error {
 	errs := make([]error, len(txs))
 	for i, tx := range txs {
 		tx := tx
@@ -164,7 +165,7 @@ func (pool *TransactionPool) addTxs(txs []chainTypes.Transaction) []error {
 //}
 
 //AddTransaction 交易加入到txpool
-func (pool *TransactionPool) AddTransaction(tx *chainTypes.Transaction, isLocal bool) error {
+func (pool *TransactionPool) AddTransaction(tx *types.Transaction, isLocal bool) error {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
@@ -172,7 +173,7 @@ func (pool *TransactionPool) AddTransaction(tx *chainTypes.Transaction, isLocal 
 }
 
 //func AddTransaction(id string, transaction *common.transaction) {
-func (pool *TransactionPool) addTx(tx *chainTypes.Transaction, isLocal bool) error {
+func (pool *TransactionPool) addTx(tx *types.Transaction, isLocal bool) error {
 	id := tx.TxHash()
 	if _, ok := pool.allTxs[id.String()]; ok {
 		return errors.New("konwn tx")
@@ -306,7 +307,7 @@ func (pool *TransactionPool) syncToPending(address *crypto.CommonAddress) {
 	}
 }
 
-//func (pool *TransactionPool) removeTransaction(tran *chainTypes.Transaction) (bool, bool) {
+//func (pool *TransactionPool) removeTransaction(tran *types.Transaction) (bool, bool) {
 //	//id, err := tran.TxId()
 //	//if err != nil {
 //	//	return false, false
@@ -323,8 +324,8 @@ func (pool *TransactionPool) syncToPending(address *crypto.CommonAddress) {
 //}
 
 //GetQueue 获取交易池中，非严格排序队列中的所有交易
-func (pool *TransactionPool) GetQueue() []*chainTypes.Transaction {
-	var retrunTxs []*chainTypes.Transaction
+func (pool *TransactionPool) GetQueue() []*types.Transaction {
+	var retrunTxs []*types.Transaction
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
@@ -339,7 +340,7 @@ func (pool *TransactionPool) GetQueue() []*chainTypes.Transaction {
 }
 
 //GetPending 打包过程获取交易，进行打包处理
-func (pool *TransactionPool) GetPending(GasLimit *big.Int) []*chainTypes.Transaction {
+func (pool *TransactionPool) GetPending(GasLimit *big.Int) []*types.Transaction {
 	pool.mu.Lock()
 	gasCount := new(big.Int)
 
@@ -359,10 +360,10 @@ func (pool *TransactionPool) GetPending(GasLimit *big.Int) []*chainTypes.Transac
 	}()
 	pool.mu.Unlock()
 
-	var retrunTxs []*chainTypes.Transaction
+	var retrunTxs []*types.Transaction
 	for {
 		for addr, list := range hbn {
-			tx := heap.Pop(list).(*chainTypes.Transaction)
+			tx := heap.Pop(list).(*types.Transaction)
 			if GasLimit.Cmp(new(big.Int).Add(tx.GasLimit(), gasCount)) >= 0 {
 				retrunTxs = append(retrunTxs, tx)
 			} else {
@@ -414,7 +415,7 @@ func (pool *TransactionPool) checkUpdate() {
 }
 
 //已经被处理过NONCE都被清理出去
-func (pool *TransactionPool) adjust(block *chainTypes.Block) {
+func (pool *TransactionPool) adjust(block *types.Block) {
 	addrMap := make(map[crypto.CommonAddress]struct{})
 	var addrs []*crypto.CommonAddress
 	for _, tx := range block.Data.TxList {
@@ -469,13 +470,13 @@ func (pool *TransactionPool) getTransactionCount(address *crypto.CommonAddress) 
 }
 
 //GetTransactions 获取当前池子中所有交易
-func (pool *TransactionPool) GetTransactions(addr *crypto.CommonAddress) []chainTypes.Transactions {
+func (pool *TransactionPool) GetTransactions(addr *crypto.CommonAddress) []types.Transactions {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
-	twoQueueTxs := make([]chainTypes.Transactions, 0, 2)
+	twoQueueTxs := make([]types.Transactions, 0, 2)
 	if queueList, ok := pool.queue[*addr]; ok {
-		queueTxs := make([]chainTypes.Transaction, 0, queueList.Len())
+		queueTxs := make([]types.Transaction, 0, queueList.Len())
 		txs := queueList.Flatten()
 		for _, tx := range txs {
 			queueTxs = append(queueTxs, *tx)
@@ -484,7 +485,7 @@ func (pool *TransactionPool) GetTransactions(addr *crypto.CommonAddress) []chain
 	}
 
 	if pendingList, ok := pool.pending[*addr]; ok {
-		pendingTxs := make([]chainTypes.Transaction, 0, pendingList.Len())
+		pendingTxs := make([]types.Transaction, 0, pendingList.Len())
 		txs := pendingList.Flatten()
 		for _, tx := range txs {
 			pendingTxs = append(pendingTxs, *tx)
@@ -511,7 +512,7 @@ func (pool *TransactionPool) GetMiniPendingNonce(addr *crypto.CommonAddress) uin
 }
 
 //GetTxInPool 获取交易池中的交易
-func (pool *TransactionPool) GetTxInPool(hash string) (*chainTypes.Transaction, error) {
+func (pool *TransactionPool) GetTxInPool(hash string) (*types.Transaction, error) {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 

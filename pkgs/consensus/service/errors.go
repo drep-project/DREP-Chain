@@ -18,4 +18,7 @@ var (
 	ErrStatus        = errors.New("error status")
 	ErrLeaderMistake = errors.New("setUp: mistake leader")
 	ErrChallenge     = errors.New("challenge error")
+	ErrBpNotInList               = errors.New("bp node not in local list")
+	ErrBpConfig              = errors.New("the pubkey config not in bp nodes")
+	ErrMultiSig               = errors.New("ErrMultiSig")
 )

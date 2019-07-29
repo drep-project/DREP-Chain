@@ -3,7 +3,7 @@ package listenpool
 import (
 	"github.com/drep-project/binary"
 	"github.com/drep-project/dlog"
-	chainTypes "github.com/drep-project/drep-chain/types"
+	types "github.com/drep-project/drep-chain/types"
 	"sync"
 )
 
@@ -15,7 +15,7 @@ import (
 type ListenPool struct {
 	lock         sync.Mutex
 	cond         *sync.Cond
-	Transactions []chainTypes.Transaction
+	Transactions []types.Transaction
 	Size         int
 	ChanListen   chan int
 }
@@ -23,14 +23,14 @@ type ListenPool struct {
 func NewListenPool() *ListenPool {
 	p := &ListenPool{}
 	p.cond = sync.NewCond(&p.lock)
-	p.Transactions = make([]chainTypes.Transaction, 0)
+	p.Transactions = make([]types.Transaction, 0)
 	p.Size = 0
 	p.ChanListen = make(chan int)
 	return p
 }
 
-func (p *ListenPool) Obtain(cp func(interface{}) bool, tranSizeLimit int) []chainTypes.Transaction {
-	res := make([]chainTypes.Transaction, 0)
+func (p *ListenPool) Obtain(cp func(interface{}) bool, tranSizeLimit int) []types.Transaction {
+	res := make([]types.Transaction, 0)
 	if tranSizeLimit >= p.Size {
 		res = p.Transactions[:]
 		return res
@@ -49,7 +49,7 @@ func (p *ListenPool) Obtain(cp func(interface{}) bool, tranSizeLimit int) []chai
 	return res
 }
 
-func (p *ListenPool) Push(tran chainTypes.Transaction) {
+func (p *ListenPool) Push(tran types.Transaction) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	p.Transactions = append(p.Transactions, tran)
@@ -62,7 +62,7 @@ func (p *ListenPool) Push(tran chainTypes.Transaction) {
 	p.cond.Broadcast()
 }
 
-func (p *ListenPool) PackageTransaction(transactions []chainTypes.Transaction) {
+func (p *ListenPool) PackageTransaction(transactions []types.Transaction) {
 	if _, err := binary.Marshal(transactions); err != nil {
 		dlog.Error("Error, can not json.Marsha(transactions)")
 	} else {

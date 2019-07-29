@@ -1,7 +1,6 @@
 package types
 
 import (
-	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/crypto"
 )
 
@@ -10,16 +9,16 @@ type Log struct {
 	// address of the contract that generated the event
 	Address crypto.CommonAddress
 	// list of topics provided by the contract.
-	Topics  []crypto.Hash
+	Topics []crypto.Hash
 	// supplied by the contract, usually ABI-encoded
-	Data    []byte
+	Data []byte
 
 	// Derived fields. These fields are filled in by the node but not secured by consensus.
-	ChainId app.ChainIdType
+	ChainId ChainIdType
 	// hash of the transaction
-	TxHash  crypto.Hash
+	TxHash crypto.Hash
 	// block in which the transaction was included
-	Height  uint64
+	Height uint64
 	// index of the transaction in the block
 	TxIndex uint
 

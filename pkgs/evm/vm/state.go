@@ -1,11 +1,12 @@
 package vm
 
 import (
-	chainTypes "github.com/drep-project/drep-chain/types"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/database"
 	"math/big"
 	"sync"
+
+	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/database"
+	"github.com/drep-project/drep-chain/types"
 )
 
 var (
@@ -24,8 +25,8 @@ func NewState(database *database.Database) *State {
 	}
 }
 
-func (s *State) CreateContractAccount(addr crypto.CommonAddress, byteCode []byte) (*chainTypes.Account, error) {
-	account, err := chainTypes.NewContractAccount(addr)
+func (s *State) CreateContractAccount(addr crypto.CommonAddress, byteCode []byte) (*types.Account, error) {
+	account, err := types.NewContractAccount(addr)
 	if err != nil {
 		return nil, err
 	}
@@ -77,12 +78,12 @@ func (s *State) SetByteCode(addr *crypto.CommonAddress, byteCode crypto.ByteCode
 	return s.db.PutByteCode(addr, byteCode)
 }
 
-func (s *State) GetLogs(txHash crypto.Hash) []*chainTypes.Log {
+func (s *State) GetLogs(txHash crypto.Hash) []*types.Log {
 	return s.db.GetLogs(txHash)
 }
 
 func (s *State) AddLog(contractAddr crypto.CommonAddress, txHash crypto.Hash, data []byte, topics []crypto.Hash, blockNumber uint64) error {
-	log := &chainTypes.Log{
+	log := &types.Log{
 		Address: contractAddr,
 		TxHash:  txHash,
 		Data:    data,

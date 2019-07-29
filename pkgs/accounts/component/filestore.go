@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	chainTypes "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/common/fileutil"
 	"github.com/drep-project/drep-chain/crypto"
 )
@@ -54,7 +54,7 @@ func NewFileStore(keyStoreDir string) FileStore {
 }
 
 // GetKey read key in file
-func (fs FileStore) GetKey(addr *crypto.CommonAddress, auth string) (*chainTypes.Node, error) {
+func (fs FileStore) GetKey(addr *crypto.CommonAddress, auth string) (*types.Node, error) {
 	contents, err := ioutil.ReadFile(fs.JoinPath(addr.Hex()))
 	if err != nil {
 		return nil, ErrKeyNotFound
@@ -73,7 +73,7 @@ func (fs FileStore) GetKey(addr *crypto.CommonAddress, auth string) (*chainTypes
 }
 
 // store the key in file encrypto
-func (fs FileStore) StoreKey(key *chainTypes.Node, auth string) error {
+func (fs FileStore) StoreKey(key *types.Node, auth string) error {
 	cryptoNode := &CryptedNode{
 		Version:      0,
 		Data:         key.PrivateKey.Serialize(),
@@ -97,8 +97,8 @@ func (fs FileStore) StoreKey(key *chainTypes.Node, auth string) error {
 }
 
 // ExportKey export all key in file by password
-func (fs FileStore) ExportKey(auth string) ([]*chainTypes.Node, error) {
-	persistedNodes := []*chainTypes.Node{}
+func (fs FileStore) ExportKey(auth string) ([]*types.Node, error) {
+	persistedNodes := []*types.Node{}
 	err := fileutil.EachChildFile(fs.keysDirPath, func(path string) (bool, error) {
 		contents, err := ioutil.ReadFile(path)
 		if err != nil {

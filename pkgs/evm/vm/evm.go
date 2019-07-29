@@ -18,9 +18,9 @@ package vm
 
 import (
 	"fmt"
-	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/params"
 	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/params"
+	"github.com/drep-project/drep-chain/types"
 	"math/big"
 	"sync/atomic"
 )
@@ -122,7 +122,7 @@ type EVM struct {
 	// applied in opCall*.
 	CallGasTemp uint64
 
-	ChainId app.ChainIdType
+	ChainId types.ChainIdType
 	Abort   int32
 }
 
@@ -155,7 +155,7 @@ func (evm *EVM) Interpreter() *EVMInterpreter {
 // parameters. It also handles any necessary value transfer required and takes
 // the necessary steps to create accounts and reverses the state in case of an
 // execution error or failed value transfer.
-func (evm *EVM) Call(caller crypto.CommonAddress, addr crypto.CommonAddress, chainId app.ChainIdType, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
+func (evm *EVM) Call(caller crypto.CommonAddress, addr crypto.CommonAddress, chainId types.ChainIdType, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
 		return nil, gas, nil
 	}

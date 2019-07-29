@@ -1,19 +1,49 @@
 package types
 
 import (
+	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 )
 
 type ConsensusConfig struct {
-	ConsensusMode string `json:"consensusMode"`
-	//Producers       Producers            `json:"producers"` // key对应的是ip，value 对应的secp256k1.PublicKey
-	MyPk   *secp256k1.PublicKey `json:"mypk"`
-	Enable bool                 `json:"enable"`
+	ConsensusMode string               `json:"consensusMode"`
+	MyPk          *secp256k1.PublicKey `json:"mypk"`
+	Enable        bool                 `json:"enable"`
+	Producers     ProducerSet          `json:"producers"`
 }
 
-//TODO how to identify a mine pk or pr&addr
-//type Producers map[string]*secp256k1.PublicKey
-//
-//func  NewProducers()Producers{
-//	return make(Producers)
-//}
+type Producer struct {
+	Pubkey *secp256k1.PublicKey `json:"pubkey"`
+	IP     string               `json:"ip"`
+}
+
+type ProducerSet []Producer
+
+func (produceSet *ProducerSet)IsLocalIP(ip string) bool {
+	for _, bp := range  *produceSet {
+		if bp.IP == ip {
+			return true
+		}
+	}
+	return false
+}
+
+func (produceSet *ProducerSet)IsLocalPk(pk *secp256k1.PublicKey) bool {
+	for _, bp := range  *produceSet {
+		if bp.Pubkey.IsEqual(pk)  {
+			return true
+		}
+	}
+	return false
+}
+
+func (produceSet *ProducerSet)IsLocalAddress(addr crypto.CommonAddress) bool {
+	for _, bp := range  *produceSet {
+		if crypto.PubKey2Address(bp.Pubkey) == addr  {
+			return true
+		}
+	}
+	return false
+}
+
+

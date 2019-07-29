@@ -7,11 +7,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/drep-project/drep-chain/chain"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/network/p2p/enode"
+	"github.com/drep-project/drep-chain/params"
 	"github.com/drep-project/drep-chain/pkgs/log"
 	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
@@ -20,18 +22,16 @@ import (
 	path2 "path"
 	"path/filepath"
 
-	chainService "github.com/drep-project/drep-chain/chain"
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
 	accountComponent "github.com/drep-project/drep-chain/pkgs/accounts/component"
 	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
-	chainTypes "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/rpc"
 )
 
 var (
-	pasword    = "123"
-	parentNode = chainTypes.NewNode(nil,0)
+	parentNode = types.NewNode(nil,0)
 	pathFlag   = common.DirectoryFlag{
 		Name:  "path",
 		Usage: "keystore save to",
@@ -65,8 +65,8 @@ func gen(ctx *cli.Context) error {
 	}
 	bootsNodes := []*enode.Node{}
 	standbyKey := []*secp256k1.PrivateKey{}
-	nodes := []*chainTypes.Node{}
-	produces := make([]chainService.Producers, 0)
+	nodes := []*types.Node{}
+	produces := make([]consensusTypes.Producer, 0)
 	for i := 0; i < len(nodeItems); i++ {
 		aNode := getAccount(nodeItems[i].Name)
 		nodes = append(nodes, aNode)
@@ -82,14 +82,14 @@ func gen(ctx *cli.Context) error {
 		bootsNodes = append(bootsNodes, node)
 
 		standbyKey = append(standbyKey, aNode.PrivateKey)
-		produces = append(produces, chainService.Producers{
+		produces = append(produces, consensusTypes.Producer{
 			IP:     nodeItems[i].Ip,
 			Pubkey: aNode.PrivateKey.PubKey(),
 		})
 	}
 
 	logConfig := log.LogConfig{}
-	logConfig.LogLevel = 3
+	logConfig.LogLevel = 4
 
 	rpcConfig := rpc.RpcConfig{}
 	rpcConfig.IPCEnabled = true
@@ -106,26 +106,32 @@ func gen(ctx *cli.Context) error {
 	consensusConfig := consensusTypes.ConsensusConfig{}
 	consensusConfig.Enable = true
 	consensusConfig.ConsensusMode = "bft"
+	consensusConfig.Producers = produces
 	//consensusConfig.Producers = produces
 
-	chainConfig := chainService.ChainConfig{}
+	chainConfig := chain.ChainConfig{}
 	chainConfig.RemotePort = 55556
 	chainConfig.ChainId = 0
-	chainConfig.Producers = produces
-	chainConfig.GenesisPK = "0x03177b8e4ef31f4f801ce00260db1b04cc501287e828692a404fdbc46c7ad6ff26"
+	chainConfig.GenesisAddr = params.HoleAddress
 
-	walletConfig := accountTypes.Config{}
-	walletConfig.Enable = true
-	walletConfig.Password = pasword
+
 	for i := 0; i < len(nodeItems); i++ {
 		consensusConfig.MyPk = (*secp256k1.PublicKey)(&standbyKey[i].PublicKey)
 		userDir := path2.Join(path, nodeItems[i].Name)
 		os.MkdirAll(userDir, os.ModeDir|os.ModePerm)
 		keyStorePath := path2.Join(userDir, "keystore")
+		password := "123"
+		if nodeItems[i].Password != "" {
+			password = nodeItems[i].Password
+		}
 
 		store := accountComponent.NewFileStore(keyStorePath)
-		password := string(sha3.Keccak256([]byte(pasword)))
-		store.StoreKey(nodes[i], password)
+		cryptoPassowrd := string(sha3.Keccak256([]byte(password)))
+		store.StoreKey(nodes[i], cryptoPassowrd)
+
+		walletConfig := accountTypes.Config{}
+		walletConfig.Enable = true
+		walletConfig.Password = password
 
 		cfgPath := path2.Join(userDir, "config.json")
 		fs, _ := os.Create(cfgPath)
@@ -157,22 +163,22 @@ func writePhase(fs *os.File, name string, config interface{}, offset int64) int6
 	return offset
 }
 
-func getAccount(name string) *chainTypes.Node {
+func getAccount(name string) *types.Node {
 	node := RandomNode([]byte(name))
 	return node
 }
 
-func RandomNode(seed []byte) *chainTypes.Node {
+func RandomNode(seed []byte) *types.Node {
 	var (
 		prvKey    *secp256k1.PrivateKey
 		chainCode []byte
 	)
 
-	h := hmAC(seed, chainTypes.DrepMark)
-	prvKey, _ = secp256k1.PrivKeyFromBytes(h[:chainTypes.KeyBitSize])
-	chainCode = h[chainTypes.KeyBitSize:]
+	h := hmAC(seed, types.DrepMark)
+	prvKey, _ = secp256k1.PrivKeyFromBytes(h[:types.KeyBitSize])
+	chainCode = h[types.KeyBitSize:]
 	addr := crypto.PubKey2Address(prvKey.PubKey())
-	return &chainTypes.Node{
+	return &types.Node{
 		PrivateKey: prvKey,
 		Address:    &addr,
 		ChainId:    0,
@@ -208,6 +214,7 @@ type NodeItem struct {
 	Name string
 	Ip   string
 	Port int
+	Password string
 }
 
 func GeneratePrivateKey(instanceDir string) *secp256k1.PrivateKey {

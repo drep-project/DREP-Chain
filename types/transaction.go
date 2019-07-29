@@ -2,12 +2,11 @@ package types
 
 import (
 	"github.com/drep-project/binary"
-	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/params"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
+	"github.com/drep-project/drep-chain/params"
 	"math"
 	"math/big"
 	"sync/atomic"
@@ -29,7 +28,7 @@ type TransactionData struct {
 	Nonce     uint64 //交易序列号
 	Type      TxType
 	To        crypto.CommonAddress
-	ChainId   app.ChainIdType
+	ChainId   ChainIdType
 	Amount    common.Big
 	GasPrice  common.Big
 	GasLimit  common.Big
@@ -64,7 +63,7 @@ func (tx *Transaction) From() (*crypto.CommonAddress, error) {
 }
 
 type CrossChainTransaction struct {
-	ChainId   app.ChainIdType
+	ChainId   ChainIdType
 	StateRoot []byte
 	Trans     []*Transaction
 }
@@ -83,7 +82,7 @@ func (tx *Transaction) To() *crypto.CommonAddress {
 	return &tx.Data.To
 }
 
-func (tx *Transaction) ChainId() app.ChainIdType {
+func (tx *Transaction) ChainId() ChainIdType {
 	return tx.Data.ChainId
 }
 

@@ -4,9 +4,7 @@ import (
 	"github.com/drep-project/drep-chain/common/fileutil"
 	"github.com/pkg/errors"
 	"sync/atomic"
-
-	"github.com/drep-project/drep-chain/app"
-	chainTypes "github.com/drep-project/drep-chain/types"
+	 "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
@@ -28,7 +26,7 @@ const (
 type Wallet struct {
 	cacheStore *accountsComponent.CacheStore
 
-	chainId app.ChainIdType
+	chainId types.ChainIdType
 	config  *accountTypes.Config
 
 	isLock   int32
@@ -36,7 +34,7 @@ type Wallet struct {
 }
 
 // NewWallet based in config
-func NewWallet(config *accountTypes.Config, chainId app.ChainIdType) (*Wallet, error) {
+func NewWallet(config *accountTypes.Config, chainId types.ChainIdType) (*Wallet, error) {
 	wallet := &Wallet{
 		config:  config,
 		chainId: chainId,
@@ -84,18 +82,18 @@ func (wallet *Wallet) Close() {
 }
 
 // NewAccount create new address
-func (wallet *Wallet) NewAccount() (*chainTypes.Node, error) {
+func (wallet *Wallet) NewAccount() (*types.Node, error) {
 	if err := wallet.checkWallet(WPERMISSION); err != nil {
 		return nil, err
 	}
 
-	newNode := chainTypes.NewNode(nil, wallet.chainId)
+	newNode := types.NewNode(nil, wallet.chainId)
 	wallet.cacheStore.StoreKey(newNode, wallet.password)
 	return newNode, nil
 }
 
 // GetAccountByAddress query account according to address
-func (wallet *Wallet) GetAccountByAddress(addr *crypto.CommonAddress) (*chainTypes.Node, error) {
+func (wallet *Wallet) GetAccountByAddress(addr *crypto.CommonAddress) (*types.Node, error) {
 	if err := wallet.checkWallet(RPERMISSION); err != nil {
 		return nil, ErrClosedWallet
 	}
@@ -103,7 +101,7 @@ func (wallet *Wallet) GetAccountByAddress(addr *crypto.CommonAddress) (*chainTyp
 }
 
 // GetAccountByAddress query account according to public key
-func (wallet *Wallet) GetAccountByPubkey(pubkey *secp256k1.PublicKey) (*chainTypes.Node, error) {
+func (wallet *Wallet) GetAccountByPubkey(pubkey *secp256k1.PublicKey) (*types.Node, error) {
 	if err := wallet.checkWallet(RPERMISSION); err != nil {
 		return nil, ErrClosedWallet
 	}
@@ -208,12 +206,12 @@ func (wallet *Wallet) cryptoPassword(password string) string {
 	return string(sha3.Keccak256([]byte(password)))
 }
 
-func (wallet *Wallet) ImportPrivKey(key *secp256k1.PrivateKey) (*chainTypes.Node, error) {
+func (wallet *Wallet) ImportPrivKey(key *secp256k1.PrivateKey) (*types.Node, error) {
 	if err := wallet.checkWallet(WPERMISSION); err != nil {
 		return nil, err
 	}
 	addr := crypto.PubKey2Address(key.PubKey())
-	node := &chainTypes.Node{
+	node := &types.Node{
 		Address: &addr,
 		PrivateKey:key,
 		ChainId: wallet.chainId,

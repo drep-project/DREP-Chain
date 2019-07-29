@@ -1,29 +1,29 @@
 package trace
 
 import (
-	chainTypes "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/common/event"
 
 )
 
 type BlockAnalysis struct {
 	Config HistoryConfig
-	getBlock func (uint64) (*chainTypes.Block, error)
+	getBlock func (uint64) (*types.Block, error)
 	eventNewBlockSub event.Subscription
-	newBlockChan     chan *chainTypes.Block
+	newBlockChan     chan *types.Block
 
 	detachBlockSub  event.Subscription
-	detachBlockChan chan *chainTypes.Block
+	detachBlockChan chan *types.Block
 	store       IStore
 	readyToQuit chan struct{}
 }
 
-func NewBlockAnalysis(config HistoryConfig, getBlock func (uint64) (*chainTypes.Block, error)) *BlockAnalysis{
+func NewBlockAnalysis(config HistoryConfig, getBlock func (uint64) (*types.Block, error)) *BlockAnalysis{
 	blockAnalysis := &BlockAnalysis{}
 	blockAnalysis.Config = config
 	blockAnalysis.getBlock = getBlock
-	blockAnalysis.newBlockChan = make(chan *chainTypes.Block, 1000)
-	blockAnalysis.detachBlockChan = make(chan *chainTypes.Block, 1000)
+	blockAnalysis.newBlockChan = make(chan *types.Block, 1000)
+	blockAnalysis.detachBlockChan = make(chan *types.Block, 1000)
 	blockAnalysis.readyToQuit = make(chan struct{})
 	return blockAnalysis
 }

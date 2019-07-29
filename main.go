@@ -1,158 +1,83 @@
 package main
 
-import "fmt"
+import (
+	"bytes"
+	"fmt"
+)
 
-type ICompair interface {
-	 Compair(ICompair) bool
-}
+const (
+	Common = iota
+	MayBeComment
+	MayBeCommentOver
+	Comment
+)
 
-type Node struct {
-	Val ICompair
-	Left *Node
-	Right *Node
-	Parent *Node
-}
-
-func NewNode(val ICompair) *Node {
-	return &Node{
-		Val:val,
-	}
-}
-
-func (node *Node)HasLeft() bool {
-	return node.Left != nil
-}
-
-func (node *Node)HasRight() bool {
-	return node.Right != nil
-}
-
-func (node *Node) IsLeft() bool {
-	return node.Parent.Left == node
-}
-
-func (node *Node) IsRight() bool {
-	return node.Parent.Right == node
-}
-
-func (node *Node) AddNode(newNode *Node) {
-	if newNode.Val.Compair(node.Val){
-		if node.HasRight() {
-			node.Right.AddNode(newNode)
-		}else{
-			node.Right = newNode
-			newNode.Parent = node
+func removeComments(sources []string) []string {
+	state := Common
+	newSource := []string{}
+	lineSource := bytes.NewBuffer([]byte{})
+	for _, source := range sources {
+		if state != Comment {
+			if lineSource.Len() >0 {
+				newSource = append(newSource, lineSource.String())
+				lineSource.Reset()
+			}
 		}
-	}else {
-		if node.HasLeft() {
-			node.Left.AddNode(newNode)
-		}else{
-			node.Left = newNode
-			newNode.Parent = node
-		}
-	}
-}
 
-func (node *Node) DelNode(delNode *Node) {
-	if delNode == node {
-		if node.HasLeft(){
-			if node.HasRight() {
-				right := node.Right
-				if node.IsLeft() {
-					node.Parent.Left = right
-				}else{
-					node.Parent.Right = right
+		for i:=0;i< len(source);i++ {
+			if source[i] == '/' {  //may be comment start may be comment  / /*  */
+				switch state {
+				case Common:
+					state = MayBeComment   //Common - > MayBeComment
+					lineSource.WriteByte(source[i])
+				case MayBeComment:
+					lineSource.Truncate(lineSource.Len()-1)
+					state = Common // MayBeComment -> Comment - > Common
+					goto NEWLINE   // skip line
+				case Comment:
+					continue
+				case MayBeCommentOver:
+					state = Common // MayBeComment -> Comment - > Common
+					continue       //skip char
 				}
-				right.AddNode(node.Left)
-				return
-			}else{
-				if node.IsLeft() {
-					node.Parent.Left = node.Left
-				}else{
-					node.Parent.Right = node.Left
+			} else if source[i] == '*' {   /*  */
+				switch state {
+				case Common:
+					lineSource.WriteByte(source[i])
+				case MayBeComment:
+					lineSource.Truncate(lineSource.Len()-1)
+					state = Comment
+					continue //skip char
+				case Comment:
+					state = MayBeCommentOver
+					continue //skip char
+				case MayBeCommentOver:
+					state = MayBeCommentOver
 				}
-				return
-			}
-		}else{
-			if node.IsLeft() {
-				node.Parent.Left = node.Right
-			}else{
-				node.Parent.Right = node.Right
-			}
-			return
-		}
-	}
-	if delNode.Val.Compair(node.Val) {
-      node.Right.DelNode(delNode)
-	}else{
-		node.Left.DelNode(delNode)
-	}
-}
-
-func printAndGetChild(nodes []*Node){
-
-	netChildren := []*Node{}
-	for i:= 0;i<len(nodes);i++ {
-		val := nodes[i].Val.(*IntVal)
-		fmt.Print(*val)
-		fmt.Print("|")
-		if nodes[i].HasLeft() {
-			netChildren = append(netChildren, nodes[i].Left)
-		}
-		if nodes[i].HasRight() {
-			netChildren = append(netChildren, nodes[i].Right)
-		}
-	}
-	fmt.Println("")
-	if len(nodes) >0  {
-		printAndGetChild(netChildren)
-	}
-}
-func (node *Node) Print() {
-	printAndGetChild([]*Node{node})
-}
-
-func ShellSort(data []int) {
-	if len(data) < 2 {
-		return
-	}
-	key := len(data)/2
-
-	for key > 0 {
-		for i := key;i < len(data);i++ {
-			j := i
-			for j>=key&&data[j]<data[j-key] {
-				data[j],data[j-key] = data[j-key],data[j]
-				j = j-key
+			} else{
+				switch state {
+				case Common:
+					lineSource.WriteByte(source[i])
+				case MayBeComment:
+					lineSource.WriteByte(source[i])
+					state = Common
+					continue //skip char
+				case Comment:
+					continue //skip char
+				case MayBeCommentOver:
+					state = Comment
+				}
 			}
 		}
-		key = key/2
+		NEWLINE:
 	}
-}
-
-type IntVal int
-func NewIntVal(val int) *IntVal {
-	return (*IntVal)(&val)
-}
-func (intVal *IntVal) Compair(anotherVal ICompair) bool {
-	return *intVal > *anotherVal.(*IntVal)
+	if lineSource.Len() >0 {
+		newSource = append(newSource, lineSource.String())
+	}
+	return newSource
 }
 
 func main() {
-//	bytesss := []byte{1,4,45,5,6,76,8,24,25,7,8,4}
-	runes := []rune("爱神的箭")
-	for _, r := range runes {
-		fmt.Println(r)
-	}
-	/*
-  rootNode :=NewNode(NewIntVal(10))
-  eight := NewNode(NewIntVal(8))
-  rootNode.AddNode(eight)
-  rootNode.AddNode(NewNode(NewIntVal(9)))
-  rootNode.AddNode(NewNode(NewIntVal(7)))
-  rootNode.AddNode(NewNode(NewIntVal(11)))
-  rootNode.Print()
-	rootNode.DelNode(eight)
-	rootNode.Print()
-	*/
+	source := []string{"void func(int k) {", "// this function does nothing /*", "   k = k*2/4;", "   k = k/2;*/", "}"}
+	fmt.Println(removeComments(source))
 }

@@ -6,7 +6,6 @@ import (
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/secp256k1/schnorr"
 	"github.com/drep-project/drep-chain/crypto/sha3"
-	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
 	"log"
 	"testing"
 	"time"

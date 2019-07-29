@@ -7,7 +7,7 @@ import (
 	"github.com/drep-project/drep-chain/database/drepdb"
 	"github.com/drep-project/drep-chain/database/drepdb/leveldb"
 	"github.com/drep-project/drep-chain/database/trie"
-	chainTypes "github.com/drep-project/drep-chain/types"
+	types "github.com/drep-project/drep-chain/types"
 
 	"fmt"
 	"math/big"
@@ -23,10 +23,10 @@ type Database struct {
 
 var (
 	aliasPrefix         = "alias"
-	dbOperaterMaxSeqKey = "operateMaxSeq"            //记录数据库操作的最大序列号
+	dbOperaterMaxSeqKey = "operateMaxSeq" //记录数据库操作的最大序列号
 	//maxSeqOfBlockKey    = []byte("seqOfBlockHeight") //块高度对应的数据库操作最大序列号
-	dbOperaterJournal   = "addrOperatesJournal"      //每一次数据读写过程的记录
-	addressStorage      = "addressStorage"           //以地址作为KEY的对象存储
+	dbOperaterJournal = "addrOperatesJournal" //每一次数据读写过程的记录
+	addressStorage    = "addressStorage"      //以地址作为KEY的对象存储
 )
 
 func NewDatabase(dbPath string) (*Database, error) {
@@ -154,22 +154,11 @@ func (db *Database) Rollback2Block(height uint64, hash *crypto.Hash) (error, int
 		return err, 0
 	}
 
-	//keyLen := len(maxSeqOfBlockKey) + 64
-	//key := make([]byte, keyLen)
-	//copy(key, maxSeqOfBlockKey)
-	//oriBinary.BigEndian.PutUint64(key[len(maxSeqOfBlockKey):], height)
-	//value, err := db.diskDb.Get(key)
-	//if err != nil {
-	//	return err, 0
-	//}
-	//maxbockSeq := new(big.Int).SetBytes(value).Int64()
-
-	//return db.rollback(maxbockSeq, dbOperaterMaxSeqKey, dbOperaterJournal)
 	return nil, 0
 }
 
-func (db *Database) GetStorage(addr *crypto.CommonAddress) *chainTypes.Storage {
-	storage := &chainTypes.Storage{}
+func (db *Database) GetStorage(addr *crypto.CommonAddress) *types.Storage {
+	storage := &types.Storage{}
 	key := sha3.Keccak256([]byte(addressStorage + addr.Hex()))
 
 	var value []byte
@@ -187,7 +176,7 @@ func (db *Database) GetStorage(addr *crypto.CommonAddress) *chainTypes.Storage {
 	return storage
 }
 
-func (db *Database) PutStorage(addr *crypto.CommonAddress, storage *chainTypes.Storage) error {
+func (db *Database) PutStorage(addr *crypto.CommonAddress, storage *types.Storage) error {
 	key := sha3.Keccak256([]byte(addressStorage + addr.Hex()))
 	value, err := binary.Marshal(storage)
 	if err != nil {
@@ -361,21 +350,21 @@ func (db *Database) GetReputation(addr *crypto.CommonAddress) *big.Int {
 	return storage.Reputation
 }
 
-func (db *Database) GetLogs(txHash crypto.Hash) []*chainTypes.Log {
+func (db *Database) GetLogs(txHash crypto.Hash) []*types.Log {
 	key := sha3.Keccak256([]byte("logs_" + txHash.String()))
 	value, err := db.Get(key)
 	if err != nil {
-		return make([]*chainTypes.Log, 0)
+		return make([]*types.Log, 0)
 	}
-	var logs []*chainTypes.Log
+	var logs []*types.Log
 	err = binary.Unmarshal(value, &logs)
 	if err != nil {
-		return make([]*chainTypes.Log, 0)
+		return make([]*types.Log, 0)
 	}
 	return logs
 }
 
-func (db *Database) PutLogs(logs []*chainTypes.Log, txHash crypto.Hash) error {
+func (db *Database) PutLogs(logs []*types.Log, txHash crypto.Hash) error {
 	key := sha3.Keccak256([]byte("logs_" + txHash.String()))
 	value, err := binary.Marshal(logs)
 	if err != nil {
@@ -384,13 +373,13 @@ func (db *Database) PutLogs(logs []*chainTypes.Log, txHash crypto.Hash) error {
 	return db.Put(key, value)
 }
 
-func (db *Database) AddLog(log *chainTypes.Log) error {
+func (db *Database) AddLog(log *types.Log) error {
 	logs := db.GetLogs(log.TxHash)
 	logs = append(logs, log)
 	return db.PutLogs(logs, log.TxHash)
 }
 
-func (db *Database) PutReceipt(txHash crypto.Hash, receipt *chainTypes.Receipt) error {
+func (db *Database) PutReceipt(txHash crypto.Hash, receipt *types.Receipt) error {
 	key := sha3.Keccak256([]byte("receipt_" + txHash.String()))
 	fmt.Println("tx receipt: ", receipt)
 	fmt.Println("detail:")
@@ -411,7 +400,7 @@ func (db *Database) PutReceipt(txHash crypto.Hash, receipt *chainTypes.Receipt) 
 	return db.Put(key, value)
 }
 
-func (db *Database) GetReceipt(txHash crypto.Hash) *chainTypes.Receipt {
+func (db *Database) GetReceipt(txHash crypto.Hash) *types.Receipt {
 	key := sha3.Keccak256([]byte("receipt_" + txHash.String()))
 	value, err := db.Get(key)
 	fmt.Println("err12: ", err)
@@ -419,7 +408,7 @@ func (db *Database) GetReceipt(txHash crypto.Hash) *chainTypes.Receipt {
 	if err != nil {
 		return nil
 	}
-	receipt := &chainTypes.Receipt{}
+	receipt := &types.Receipt{}
 	err = binary.Unmarshal(value, receipt)
 	fmt.Println("err13: ", err)
 	if err != nil {
@@ -428,7 +417,7 @@ func (db *Database) GetReceipt(txHash crypto.Hash) *chainTypes.Receipt {
 	return receipt
 }
 
-func (db *Database) PutReceipts(blockHash crypto.Hash, receipts []*chainTypes.Receipt) error {
+func (db *Database) PutReceipts(blockHash crypto.Hash, receipts []*types.Receipt) error {
 	key := sha3.Keccak256([]byte("receipts_" + blockHash.String()))
 	value, err := binary.Marshal(receipts)
 	if err != nil {
@@ -437,16 +426,16 @@ func (db *Database) PutReceipts(blockHash crypto.Hash, receipts []*chainTypes.Re
 	return db.Put(key, value)
 }
 
-func (db *Database) GetReceipts(blockHash crypto.Hash) []*chainTypes.Receipt {
+func (db *Database) GetReceipts(blockHash crypto.Hash) []*types.Receipt {
 	key := sha3.Keccak256([]byte("receipts_" + blockHash.String()))
 	value, err := db.Get(key)
 	if err != nil {
-		return make([]*chainTypes.Receipt, 0)
+		return make([]*types.Receipt, 0)
 	}
-	var receipts []*chainTypes.Receipt
+	var receipts []*types.Receipt
 	err = binary.Unmarshal(value, &receipts)
 	if err != nil {
-		return make([]*chainTypes.Receipt, 0)
+		return make([]*types.Receipt, 0)
 	}
 	return receipts
 }
@@ -473,7 +462,7 @@ func (db *Database) SubBalance(addr *crypto.CommonAddress, amount *big.Int) erro
 	return db.PutBalance(addr, new(big.Int).Sub(balance, amount))
 }
 
-func (db *Database) PutBlock(block *chainTypes.Block) error {
+func (db *Database) PutBlock(block *types.Block) error {
 	hash := block.Header.Hash()
 	key := append(BlockPrefix, hash[:]...)
 	value, err := binary.Marshal(block)
@@ -483,13 +472,13 @@ func (db *Database) PutBlock(block *chainTypes.Block) error {
 	return db.Put(key, value)
 }
 
-func (db *Database) GetBlock(hash *crypto.Hash) (*chainTypes.Block, error) {
+func (db *Database) GetBlock(hash *crypto.Hash) (*types.Block, error) {
 	key := append(BlockPrefix, hash[:]...)
 	val, err := db.Get(key)
 	if err != nil {
 		return nil, err
 	}
-	block := &chainTypes.Block{}
+	block := &types.Block{}
 	err = binary.Unmarshal(val, block)
 	if err != nil {
 		return nil, err
@@ -497,20 +486,20 @@ func (db *Database) GetBlock(hash *crypto.Hash) (*chainTypes.Block, error) {
 	return block, nil
 }
 
-func (db *Database) GetBlockNode(hash *crypto.Hash, blockHeight uint64) (*chainTypes.BlockHeader, chainTypes.BlockStatus, error) {
+func (db *Database) GetBlockNode(hash *crypto.Hash, blockHeight uint64) (*types.BlockHeader, types.BlockStatus, error) {
 	key := db.blockIndexKey(hash, blockHeight)
 
 	value, err := db.Get(key)
 	if err != nil {
 		return nil, 0, err
 	}
-	blockHeader := &chainTypes.BlockHeader{}
+	blockHeader := &types.BlockHeader{}
 	binary.Unmarshal(value[0:len(value)-1], blockHeader)
-	status := value[len(value)-1:len(value)][0]
-	return blockHeader, chainTypes.BlockStatus(status), nil
+	status := value[len(value)-1 : len(value)][0]
+	return blockHeader, types.BlockStatus(status), nil
 }
 
-func (db *Database) PutBlockNode(blockNode *chainTypes.BlockNode) error {
+func (db *Database) PutBlockNode(blockNode *types.BlockNode) error {
 	header := blockNode.Header()
 	value, err := binary.Marshal(header)
 	if err != nil {

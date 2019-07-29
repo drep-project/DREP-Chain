@@ -75,17 +75,17 @@ func TestPutAndGetReceipt(t *testing.T) {
 		}
 		blocks[height] = &types.Block{
 			Header: &types.BlockHeader{
-				ChainId:      app.ChainIdType{},
-				Version:      common.Version,
-				PreviousHash: crypto.Hash{},
-				GasLimit:     *gasLimit.ToInt(),
-				GasUsed:      *gasLimit.ToInt(),
-				Height:       height,
-				Timestamp:    uint64(time.Now().Unix()),
-				StateRoot:    []byte{0},
-				TxRoot:       []byte{0},
-				LeaderPubKey: *secp256k1.NewPublicKey(new(big.Int).SetInt64(1), new(big.Int).SetInt64(2)),
-				MinorPubKeys: []secp256k1.PublicKey{},
+				ChainId:        app.ChainIdType{},
+				Version:        common.Version,
+				PreviousHash:   crypto.Hash{},
+				GasLimit:       *gasLimit.ToInt(),
+				GasUsed:        *gasLimit.ToInt(),
+				Height:         height,
+				Timestamp:      uint64(time.Now().Unix()),
+				StateRoot:      []byte{0},
+				TxRoot:         []byte{0},
+				LeaderAddress:  *secp256k1.NewPublicKey(new(big.Int).SetInt64(1), new(big.Int).SetInt64(2)),
+				MinorAddresses: []secp256k1.PublicKey{},
 			},
 			Data: &types.BlockData{
 				TxCount: 2,

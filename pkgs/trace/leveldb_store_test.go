@@ -253,17 +253,17 @@ func randomBlock() *types.Block{
 	priv,_ := secp256k1.PrivKeyFromScalar(priBytes)
 	block := &types.Block{
 		Header:&types.BlockHeader{
-			ChainId      : app.ChainIdType{},
-			Version      : rand.Int31(),
-			PreviousHash : crypto.RandomHash(),
-			GasLimit     : *big.NewInt(rand.Int63()),
-			GasUsed      : *big.NewInt(rand.Int63()),
-			Height       : uint64(rand.Int63()),
-			Timestamp    : uint64(time.Now().Nanosecond()),
-			StateRoot    : crypto.RandomHash().Bytes(),
-			TxRoot       : crypto.RandomHash().Bytes(),
-			LeaderPubKey : *priv.PubKey(),
-			MinorPubKeys : []secp256k1.PublicKey{},
+			ChainId      :  app.ChainIdType{},
+			Version      :  rand.Int31(),
+			PreviousHash :  crypto.RandomHash(),
+			GasLimit     :  *big.NewInt(rand.Int63()),
+			GasUsed      :  *big.NewInt(rand.Int63()),
+			Height       :  uint64(rand.Int63()),
+			Timestamp    :  uint64(time.Now().Nanosecond()),
+			StateRoot    :  crypto.RandomHash().Bytes(),
+			TxRoot       :  crypto.RandomHash().Bytes(),
+			LeaderAddress:  *priv.PubKey(),
+			MinorAddresses: []secp256k1.PublicKey{},
 		},
 		Data: &types.BlockData{
 			TxList:txData,

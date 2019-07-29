@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	chainTypes "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/common/fileutil"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -37,7 +37,7 @@ func NewDbStore(dbStoreDir string) *DbStore {
 }
 
 // GetKey read key in db
-func (db *DbStore) GetKey(addr *crypto.CommonAddress, auth string) (*chainTypes.Node, error) {
+func (db *DbStore) GetKey(addr *crypto.CommonAddress, auth string) (*types.Node, error) {
 	bytes, err := db.db.Get(addr[:], nil)
 	if err != nil {
 		return nil, err
@@ -55,7 +55,7 @@ func (db *DbStore) GetKey(addr *crypto.CommonAddress, auth string) (*chainTypes.
 }
 
 // store the key in db after encrypto
-func (dbStore *DbStore) StoreKey(key *chainTypes.Node, auth string) error {
+func (dbStore *DbStore) StoreKey(key *types.Node, auth string) error {
 	cryptoNode := &CryptedNode{
 		Version:      0,
 		Data:         key.PrivateKey.Serialize(),
@@ -80,10 +80,10 @@ func (dbStore *DbStore) StoreKey(key *chainTypes.Node, auth string) error {
 }
 
 // ExportKey export all key in db by password
-func (dbStore *DbStore) ExportKey(auth string) ([]*chainTypes.Node, error) {
+func (dbStore *DbStore) ExportKey(auth string) ([]*types.Node, error) {
 	dbStore.db.NewIterator(nil, nil)
 	iter := dbStore.db.NewIterator(nil, nil)
-	persistedNodes := []*chainTypes.Node{}
+	persistedNodes := []*types.Node{}
 	for iter.Next() {
 		value := iter.Value()
 

@@ -2,7 +2,7 @@ package component
 
 import (
 	"encoding/json"
-	chainTypes "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"sync"
 )
@@ -15,26 +15,26 @@ func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{new(sync.Map)}
 }
 
-func (mstore *MemoryStore) GetKey(addr *crypto.CommonAddress, auth string) (*chainTypes.Node, error) {
+func (mstore *MemoryStore) GetKey(addr *crypto.CommonAddress, auth string) (*types.Node, error) {
 	node, ok := mstore.keys.Load(addr.String())
 	if ok {
-		return copy(node.(*chainTypes.Node)), nil
+		return copy(node.(*types.Node)), nil
 	} else {
 		return nil, ErrKeyNotFound
 	}
 
 }
 
-func (mstore *MemoryStore) StoreKey(k *chainTypes.Node, auth string) error {
+func (mstore *MemoryStore) StoreKey(k *types.Node, auth string) error {
 	k = copy(k)
 	mstore.keys.Store(k.Address.String(), k)
 	return nil
 }
 
-func (mstore *MemoryStore) ExportKey(auth string) ([]*chainTypes.Node, error) {
-	nodes := []*chainTypes.Node{}
+func (mstore *MemoryStore) ExportKey(auth string) ([]*types.Node, error) {
+	nodes := []*types.Node{}
 	mstore.keys.Range(func(key, value interface{}) bool {
-		nodes = append(nodes, copy(value.(*chainTypes.Node)))
+		nodes = append(nodes, copy(value.(*types.Node)))
 		return true
 	})
 	return nodes, nil
@@ -44,9 +44,9 @@ func (mstore *MemoryStore) JoinPath(filename string) string {
 	return ""
 }
 
-func copy(node *chainTypes.Node) *chainTypes.Node {
+func copy(node *types.Node) *types.Node {
 	bytes, _ := json.Marshal(node)
-	newNode := &chainTypes.Node{}
+	newNode := &types.Node{}
 	json.Unmarshal(bytes, newNode)
 	return newNode
 }

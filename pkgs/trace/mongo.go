@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	chainTypes "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -52,12 +52,12 @@ func NewMongogDbStore(url string, dbName string) (*MongogDbStore, error) {
 	return store, nil
 }
 
-func (store *MongogDbStore) InsertRecord(block *chainTypes.Block) {
+func (store *MongogDbStore) InsertRecord(block *types.Block) {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	rpcTxs := make([]interface{}, block.Data.TxCount)
-	rpcHeader := chainTypes.RpcBlockHeader{}
+	rpcHeader := types.RpcBlockHeader{}
 	rpcHeader.FromBlockHeader(block.Header)
-	rpcBlock := &chainTypes.RpcBlock{}
+	rpcBlock := &types.RpcBlock{}
 	rpcBlock.From(block)
 	_, err := store.blockCol.InsertOne(ctx, rpcBlock)
 	if err != nil {
@@ -75,7 +75,7 @@ func (store *MongogDbStore) InsertRecord(block *chainTypes.Block) {
 
 	viewTxs := make([]interface{}, block.Data.TxCount)
 	for index, tx := range block.Data.TxList {
-		rpcTx := &chainTypes.RpcTransaction{}
+		rpcTx := &types.RpcTransaction{}
 		rpcTx.FromTx(tx)
 		rpcTxs[index] = rpcTx
 
@@ -88,7 +88,7 @@ func (store *MongogDbStore) InsertRecord(block *chainTypes.Block) {
 	store.viewTxCol.InsertMany(ctx, viewTxs, nil)
 }
 
-func (store *MongogDbStore) ExistRecord(block *chainTypes.Block) (bool, error) {
+func (store *MongogDbStore) ExistRecord(block *types.Block) (bool, error) {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	curser, err := store.headerCol.Find(ctx, bson.M{"hash": block.Header.Hash()})
 	if err != nil {
@@ -101,7 +101,7 @@ func (store *MongogDbStore) ExistRecord(block *chainTypes.Block) (bool, error) {
 	return true, nil
 }
 
-func (store *MongogDbStore) DelRecord(block *chainTypes.Block) {
+func (store *MongogDbStore) DelRecord(block *types.Block) {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	store.headerCol.DeleteOne(ctx, bson.M{"hash": block.Header.Hash()})
 	store.blockCol.DeleteOne(ctx, bson.M{"hash": block.Header.Hash()})
@@ -123,7 +123,7 @@ func (store *MongogDbStore) GetRawTransaction(txHash *crypto.Hash) ([]byte, erro
 	if curser.Current == nil {
 		return nil, ErrTxNotFound
 	}
-	rpcTx := &chainTypes.RpcTransaction{}
+	rpcTx := &types.RpcTransaction{}
 	err = curser.Decode(rpcTx)
 	if err != nil {
 		return nil, err
@@ -132,7 +132,7 @@ func (store *MongogDbStore) GetRawTransaction(txHash *crypto.Hash) ([]byte, erro
 	return tx.AsPersistentMessage(), nil
 }
 
-func (store *MongogDbStore) GetTransaction(txHash *crypto.Hash) (*chainTypes.RpcTransaction, error) {
+func (store *MongogDbStore) GetTransaction(txHash *crypto.Hash) (*types.RpcTransaction, error) {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	curser, err := store.txCol.Find(ctx, bson.M{"hash": txHash})
 	if err != nil {
@@ -142,7 +142,7 @@ func (store *MongogDbStore) GetTransaction(txHash *crypto.Hash) (*chainTypes.Rpc
 	if curser.Current == nil {
 		return nil, ErrTxNotFound
 	}
-	rpcTx := &chainTypes.RpcTransaction{}
+	rpcTx := &types.RpcTransaction{}
 	err = curser.Decode(rpcTx)
 	if err != nil {
 		return nil, err
@@ -150,8 +150,8 @@ func (store *MongogDbStore) GetTransaction(txHash *crypto.Hash) (*chainTypes.Rpc
 	return rpcTx, nil
 }
 
-func (store *MongogDbStore) GetSendTransactionsByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*chainTypes.RpcTransaction {
-	rpcTx := []*chainTypes.RpcTransaction{}
+func (store *MongogDbStore) GetSendTransactionsByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*types.RpcTransaction {
+	rpcTx := []*types.RpcTransaction{}
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	option := &options.FindOptions{}
 	option.SetSkip(int64((pageIndex - 1) * pageSize))
@@ -171,8 +171,8 @@ func (store *MongogDbStore) GetSendTransactionsByAddr(addr *crypto.CommonAddress
 	return rpcTx
 }
 
-func (store *MongogDbStore) GetReceiveTransactionsByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*chainTypes.RpcTransaction {
-	rpcTx := []*chainTypes.RpcTransaction{}
+func (store *MongogDbStore) GetReceiveTransactionsByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*types.RpcTransaction {
+	rpcTx := []*types.RpcTransaction{}
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	option := &options.FindOptions{}
 	option.SetSkip(int64((pageIndex - 1) * pageSize))

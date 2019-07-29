@@ -8,15 +8,15 @@ import (
 	"time"
 
 	"github.com/drep-project/drep-chain/chain"
+	"github.com/drep-project/drep-chain/types"
 
-	chainTypes "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
 )
 
 type tasksTxsSync struct {
-	txs  []*chainTypes.Transaction
-	peer *chainTypes.PeerInfo
+	txs  []*types.Transaction
+	peer *types.PeerInfo
 }
 
 //同步缓存池中的交易
@@ -27,11 +27,11 @@ func (blockMgr *BlockMgr) syncTxs() {
 			count := len(task.txs) / maxTxsCount
 			var i int
 			for i = 0; i < count; i++ {
-				blockMgr.P2pServer.Send(task.peer.GetMsgRW(), chainTypes.MsgTypeTransaction, task.txs[i*maxTxsCount:(i+1)*maxTxsCount])
+				blockMgr.P2pServer.Send(task.peer.GetMsgRW(), types.MsgTypeTransaction, task.txs[i*maxTxsCount:(i+1)*maxTxsCount])
 				time.Sleep(time.Millisecond * maxSyncSleepTime)
 			}
 
-			blockMgr.P2pServer.Send(task.peer.GetMsgRW(), chainTypes.MsgTypeTransaction, task.txs[count*maxTxsCount:])
+			blockMgr.P2pServer.Send(task.peer.GetMsgRW(), types.MsgTypeTransaction, task.txs[count*maxTxsCount:])
 		case <-blockMgr.quit:
 			return
 		}
@@ -57,7 +57,7 @@ func (blockMgr *BlockMgr) synchronise() {
 		}
 	}
 
-	syncTx := func(peer *chainTypes.PeerInfo) {
+	syncTx := func(peer *types.PeerInfo) {
 		//保证能把pending里面的所有tx全部取出来
 		txs := blockMgr.transactionPool.GetPending(new(big.Int).SetUint64(0xffffffffffffffff))
 		txs2 := blockMgr.transactionPool.GetQueue()
@@ -97,13 +97,13 @@ func (blockMgr *BlockMgr) checkExistHeaderHash(headerHash *crypto.Hash) (bool, u
 	return false, 0
 }
 
-func (blockMgr *BlockMgr) requestHeaders(peer chainTypes.PeerInfoInterface, from, count uint64) error {
-	req := chainTypes.HeaderReq{FromHeight: from, ToHeight: from + count - 1}
-	return blockMgr.P2pServer.Send(peer.GetMsgRW(), chainTypes.MsgTypeHeaderReq, &req)
+func (blockMgr *BlockMgr) requestHeaders(peer types.PeerInfoInterface, from, count uint64) error {
+	req := types.HeaderReq{FromHeight: from, ToHeight: from + count - 1}
+	return blockMgr.P2pServer.Send(peer.GetMsgRW(), types.MsgTypeHeaderReq, &req)
 }
 
 //找到公共祖先
-func (blockMgr *BlockMgr) findAncestor(peer chainTypes.PeerInfoInterface) (uint64, error) {
+func (blockMgr *BlockMgr) findAncestor(peer types.PeerInfoInterface) (uint64, error) {
 	timeout := time.After(time.Second * maxNetworkTimeout)
 	remoteHeight := peer.GetHeight()
 	fromHeight := blockMgr.ChainService.BestChain().Height()
@@ -186,12 +186,12 @@ func (blockMgr *BlockMgr) clearSyncCh() {
 }
 
 func (blockMgr *BlockMgr) batchReqBlocks(hashs []crypto.Hash, errCh chan error) {
-	req := &chainTypes.BlockReq{BlockHashs: hashs}
+	req := &types.BlockReq{BlockHashs: hashs}
 
 	for _, pi := range blockMgr.peersInfo {
 		blockMgr.syncMut.Lock()
 		//blockMgr.P2pServer.SetIdle(bodyReqPeer.GetMsgRW(), false)
-		err := blockMgr.P2pServer.Send(pi.GetMsgRW(), chainTypes.MsgTypeBlockReq, req)
+		err := blockMgr.P2pServer.Send(pi.GetMsgRW(), types.MsgTypeBlockReq, req)
 		//blockMgr.P2pServer.SetIdle(bodyReqPeer, true)
 		blockMgr.syncMut.Unlock()
 
@@ -205,7 +205,7 @@ func (blockMgr *BlockMgr) batchReqBlocks(hashs []crypto.Hash, errCh chan error) 
 	return
 }
 
-func (blockMgr *BlockMgr) fetchBlocks(peer chainTypes.PeerInfoInterface) error {
+func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 	blockMgr.syncBlockEvent.Send(event.SyncBlockEvent{EventType: event.StartSyncBlock})
 	defer blockMgr.syncBlockEvent.Send(event.SyncBlockEvent{EventType: event.StopSyncBlock})
 
@@ -282,7 +282,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer chainTypes.PeerInfoInterface) error {
 
 	//收到block
 	go func() {
-		delHash := func(b *chainTypes.Block) {
+		delHash := func(b *types.Block) {
 			blockMgr.pendingSyncTasks.Range(func(key, value interface{}) bool {
 				hashs := value.(map[crypto.Hash]uint64)
 				timer := key.(*time.Timer)
@@ -431,21 +431,21 @@ func (blockMgr *BlockMgr) fetchBlocks(peer chainTypes.PeerInfoInterface) error {
 	}
 }
 
-func (blockMgr *BlockMgr) handlePeerState(peer *chainTypes.PeerInfo, peerState *chainTypes.PeerState) {
+func (blockMgr *BlockMgr) handlePeerState(peer *types.PeerInfo, peerState *types.PeerState) {
 	peer.SetHeight(uint64(peerState.Height))
 }
 
 //自己的高度通知出去，对端收到请求后，把自己本地的高度返回
-func (blockMgr *BlockMgr) handleReqPeerState(peer *chainTypes.PeerInfo, peerState *chainTypes.PeerStateReq) {
+func (blockMgr *BlockMgr) handleReqPeerState(peer *types.PeerInfo, peerState *types.PeerStateReq) {
 	peer.SetHeight(uint64(peerState.Height))
 
-	blockMgr.P2pServer.SendAsync(peer.GetMsgRW(), chainTypes.MsgTypePeerState, &chainTypes.PeerState{
+	blockMgr.P2pServer.SendAsync(peer.GetMsgRW(), types.MsgTypePeerState, &types.PeerState{
 		Height: uint64(blockMgr.ChainService.BestChain().Height()),
 	})
 }
 
-func (blockMgr *BlockMgr) GetBestPeerInfo() chainTypes.PeerInfoInterface {
-	var curPeer chainTypes.PeerInfoInterface
+func (blockMgr *BlockMgr) GetBestPeerInfo() types.PeerInfoInterface {
+	var curPeer types.PeerInfoInterface
 	for _, pi := range blockMgr.peersInfo {
 		if curPeer != nil {
 			if curPeer.GetHeight() < pi.GetHeight() {
@@ -458,7 +458,7 @@ func (blockMgr *BlockMgr) GetBestPeerInfo() chainTypes.PeerInfoInterface {
 	return curPeer
 }
 
-func (blockMgr *BlockMgr) checkHeaderChain(chain []chainTypes.BlockHeader) error {
+func (blockMgr *BlockMgr) checkHeaderChain(chain []types.BlockHeader) error {
 	// Do a sanity check that the provided chain is actually ordered and linked
 	for i := 1; i < len(chain); i++ {
 		if chain[i].Height != chain[i-1].Height+1 || !chain[i].PreviousHash.IsEqual(chain[i-1].Hash()) {
@@ -473,10 +473,13 @@ func (blockMgr *BlockMgr) checkHeaderChain(chain []chainTypes.BlockHeader) error
 			return ErrNotContinueHeader
 		}
 
-		err := blockMgr.ChainService.BlockValidator().VerifyHeader(&chain[i], &chain[i-1])
-		if err != nil {
-			return err
+		for _, blockValidator := range blockMgr.ChainService.BlockValidator() {
+			err := blockValidator.VerifyHeader(&chain[i], &chain[i-1])
+			if err != nil {
+				return err
+			}
 		}
+
 	}
 	return nil
 }

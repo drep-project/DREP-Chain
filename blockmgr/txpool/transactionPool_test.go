@@ -1,11 +1,11 @@
 package txpool
 
 import (
-	chainTypes "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/database"
+	"github.com/drep-project/drep-chain/types"
 
 	rand2 "math/rand"
 
@@ -52,7 +52,7 @@ func addTx(t *testing.T, num uint64) error {
 
 	nonce := txPool.database.GetNonce(&addr)
 	for i := 0; uint64(i) < num; i++ {
-		tx := chainTypes.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(100), new(big.Int).SetInt64(100), nonce+uint64(i))
+		tx := types.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(100), new(big.Int).SetInt64(100), nonce+uint64(i))
 
 		sig, err := secp256k1.SignCompact(privKey, tx.TxHash().Bytes(), true)
 		if err != nil {
@@ -89,7 +89,7 @@ func TestAddIntevalTX(t *testing.T) {
 			continue
 		}
 
-		tx := chainTypes.NewTransaction(addr, new(big.Int).SetUint64(100000000), new(big.Int).SetUint64(100000000), new(big.Int).SetUint64(100000000), uint64(i))
+		tx := types.NewTransaction(addr, new(big.Int).SetUint64(100000000), new(big.Int).SetUint64(100000000), new(big.Int).SetUint64(100000000), uint64(i))
 		txPool.AddTransaction(tx, true)
 	}
 }
@@ -166,7 +166,7 @@ func TestReplace(t *testing.T) {
 
 	nonce := txPool.database.GetNonce(&addr)
 	for i := 0; uint64(i) < maxTxsOfPending; i++ {
-		tx := chainTypes.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(int64(100+i)), new(big.Int).SetInt64(100), nonce+uint64(i))
+		tx := types.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(int64(100+i)), new(big.Int).SetInt64(100), nonce+uint64(i))
 		sig, err := secp256k1.SignCompact(privKey, tx.TxHash().Bytes(), true)
 		tx.Sig = sig
 		err = txPool.AddTransaction(tx, true)
@@ -178,7 +178,7 @@ func TestReplace(t *testing.T) {
 	nonce += maxTxsOfPending
 	//20个到queue
 	for i := 0; uint64(i) < maxTxsOfQueue; i++ {
-		tx := chainTypes.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(int64(100+i+maxTxsOfPending)), new(big.Int).SetInt64(100), nonce+uint64(i))
+		tx := types.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(int64(100+i+maxTxsOfPending)), new(big.Int).SetInt64(100), nonce+uint64(i))
 		sig, err := secp256k1.SignCompact(privKey, tx.TxHash().Bytes(), true)
 		tx.Sig = sig
 		err = txPool.AddTransaction(tx, true)
@@ -190,7 +190,7 @@ func TestReplace(t *testing.T) {
 	nonce1 := nonce - 1
 	//替换发生在pending
 	for i := 0; uint64(i) < 1; i++ {
-		tx := chainTypes.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(int64(100*4)), new(big.Int).SetInt64(100), nonce1+uint64(i))
+		tx := types.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(int64(100*4)), new(big.Int).SetInt64(100), nonce1+uint64(i))
 		sig, err := secp256k1.SignCompact(privKey, tx.TxHash().Bytes(), true)
 		tx.Sig = sig
 		err = txPool.AddTransaction(tx, true)
@@ -202,7 +202,7 @@ func TestReplace(t *testing.T) {
 	nonce1 = nonce + 1
 	//替换发生在queue
 	for i := 0; uint64(i) < 1; i++ {
-		tx := chainTypes.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(int64(100*4)), new(big.Int).SetInt64(100), nonce1+uint64(i))
+		tx := types.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(int64(100*4)), new(big.Int).SetInt64(100), nonce1+uint64(i))
 		sig, err := secp256k1.SignCompact(privKey, tx.TxHash().Bytes(), true)
 		tx.Sig = sig
 		err = txPool.AddTransaction(tx, true)
@@ -226,7 +226,7 @@ func TestDelTx(t *testing.T) {
 
 	nonce := txPool.getTransactionCount(&addr)
 	for i := 0; uint64(i) < maxTxsOfQueue+maxTxsOfPending; i++ {
-		tx := chainTypes.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(int64(100+i)), new(big.Int).SetInt64(100), nonce+uint64(i))
+		tx := types.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(int64(100+i)), new(big.Int).SetInt64(100), nonce+uint64(i))
 		sig, err := secp256k1.SignCompact(privKey, tx.TxHash().Bytes(), true)
 		tx.Sig = sig
 		err = txPool.AddTransaction(tx, false)
@@ -238,7 +238,7 @@ func TestDelTx(t *testing.T) {
 	nonce += maxTxsOfQueue + maxTxsOfPending
 	//删除发生在pending
 	for i := 0; uint64(i) < 20; i++ {
-		tx := chainTypes.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(int64(100*5)), new(big.Int).SetInt64(100), nonce+uint64(i))
+		tx := types.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(int64(100*5)), new(big.Int).SetInt64(100), nonce+uint64(i))
 		sig, err := secp256k1.SignCompact(privKey, tx.TxHash().Bytes(), true)
 		tx.Sig = sig
 		err = txPool.AddTransaction(tx, false)
