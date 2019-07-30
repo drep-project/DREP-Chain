@@ -52,13 +52,35 @@ type LeafCallback func(leaf []byte, parent crypto.Hash) error
 //
 // Trie is not safe for concurrent use.
 type Trie struct {
-	db   *Database
-	root node
+	db      *Database
+	dbWrite *Database
+	root    node
 }
 
 // newFlag returns the cache flag value for a newly created node.
 func (t *Trie) newFlag() nodeFlag {
 	return nodeFlag{dirty: true}
+}
+
+//数据恢复从oldDB中读取数据，数据存储使用writeDB
+func NewWithRWDB(root crypto.Hash, readDB *Database, writeDB *Database) (*Trie, error) {
+	if readDB == nil {
+		panic("trie.New called without a database")
+	}
+	trie := &Trie{
+		db: readDB,
+		dbWrite:writeDB,
+	}
+
+	if root != (crypto.Hash{}) && root != EmptyRoot {
+		rootnode, err := trie.resolveHash(root[:], nil)
+		if err != nil {
+			return nil, err
+		}
+		trie.root = rootnode
+	}
+
+	return trie, nil
 }
 
 // New creates a trie with an existing root node from db.
@@ -420,10 +442,17 @@ func (t *Trie) Hash() crypto.Hash {
 // Commit writes all nodes to the trie's memory database, tracking the internal
 // and external (for account tries) references.
 func (t *Trie) Commit(onleaf LeafCallback) (root crypto.Hash, err error) {
-	if t.db == nil {
+	var db * Database
+	if t.dbWrite != nil {
+		db = t.dbWrite
+	} else {
+		db = t.db
+	}
+
+	if db == nil {
 		panic("commit called on trie with nil database")
 	}
-	hash, cached, err := t.hashRoot(t.db, onleaf)
+	hash, cached, err := t.hashRoot(db, onleaf)
 	if err != nil {
 		return crypto.Hash{}, err
 	}

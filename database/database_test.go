@@ -126,12 +126,23 @@ func TestNewTransaction(t *testing.T) {
 	if bytes.Equal(root, root1) {
 		t.Fatal("root !=")
 	}
-	err = db1.Discard()
-	if err == nil {
+
+	err = db.trieDb.Commit(crypto.Bytes2Hash(root1), false)
+	if err != nil {
 		t.Fatal(err)
 	}
 
-	fmt.Println("01", db.GetStateRoot())
+	balance = db1.GetBalance(&addr)
+
+	fmt.Println(balance)
+
+	db2 := db.BeginTransaction(true)
+	root2 := db2.GetStateRoot()
+	if !bytes.Equal(root1, root2) {
+		t.Fatal("root !=")
+	}
+
+	fmt.Println("02", db2.GetStateRoot())
 }
 
 func TestDiscardCacheData(t *testing.T) {
@@ -145,7 +156,7 @@ func TestDiscardCacheData(t *testing.T) {
 	//数据不提交
 	db2 := db.BeginTransaction(false)
 	root := db2.GetStateRoot()
-	fmt.Println("1", db2.GetStateRoot())
+
 	pri, _ := crypto.GenerateKey(rand.Reader)
 	addr := crypto.PubKey2Address(pri.PubKey())
 	balance := new(big.Int).SetInt64(100001)
@@ -158,13 +169,6 @@ func TestDiscardCacheData(t *testing.T) {
 	}
 
 	db2.Commit()
-
-	fmt.Println("2.5", db2.GetStateRoot())
-	err = db2.Discard()
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	fmt.Println("3", db2.GetStateRoot())
 
 	err = db.trieDb.Commit(crypto.Bytes2Hash(root1), false)
@@ -174,7 +178,8 @@ func TestDiscardCacheData(t *testing.T) {
 
 	fmt.Println("4", db2.GetStateRoot())
 
-	root2 := db2.GetStateRoot()
+	db3 := db.BeginTransaction(false)
+	root2 := db3.GetStateRoot()
 	if !bytes.Equal(root, root2) {
 		t.Fatal("root !=")
 	}

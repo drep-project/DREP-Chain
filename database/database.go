@@ -6,6 +6,7 @@ import (
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/database/drepdb"
 	"github.com/drep-project/drep-chain/database/drepdb/leveldb"
+	"github.com/drep-project/drep-chain/database/drepdb/memorydb"
 	"github.com/drep-project/drep-chain/database/trie"
 	"github.com/drep-project/drep-chain/types"
 
@@ -521,19 +522,21 @@ func (db *Database) blockIndexKey(blockHash *crypto.Hash, blockHeight uint64) []
 // storeToDB 决定数据是否写入到db,如果是true，则返回的对象可以把数据写入到物理磁盘
 func (db *Database) BeginTransaction(storeToDB bool) *Database {
 	if !storeToDB {
-		trie, err := trie.NewSecure(db.trie.Hash(), db.trieDb)
+		writeTrieDB := trie.NewDatabase(memorydb.New())
+		newTrie, err := trie.NewSecureNewWithRWDB(db.trie.Hash(), db.trieDb, writeTrieDB)
 		if err != nil {
+			log.WithField("err", err).Error("NewSecure2")
 			return nil
 		}
 		return &Database{
 			diskDb: db.diskDb,
-			cache:  NewTransactionStore(trie, db.diskDb, storeToDB),
-			trie:   trie,
+			cache:  NewTransactionStore(newTrie, db.diskDb),
+			trie:   newTrie,
 		}
 	} else {
 		return &Database{
 			diskDb: db.diskDb,
-			cache:  NewTransactionStore(db.trie, db.diskDb, storeToDB),
+			cache:  NewTransactionStore(db.trie, db.diskDb),
 			trie:   db.trie,
 		}
 	}
@@ -543,15 +546,6 @@ func (db *Database) Commit() {
 	if db.cache != nil {
 		db.cache.Flush()
 	}
-}
-
-//BeginTransaction() 数据存入磁盘参数设置为true时，则不能丢弃数据
-func (db *Database) Discard() error{
-	if db.cache != nil {
-		return  db.cache.Clear()
-	}
-
-	return nil
 }
 
 func (db *Database) RevertState(shot *SnapShot) {

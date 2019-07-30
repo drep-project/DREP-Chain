@@ -62,6 +62,18 @@ func NewSecure(root crypto.Hash, db *Database) (*SecureTrie, error) {
 	return &SecureTrie{trie: *trie}, nil
 }
 
+//读数据从oldDB中，数据写入，写到newDB中
+func NewSecureNewWithRWDB(root crypto.Hash, readDB *Database, writeDB *Database) (*SecureTrie, error) {
+	if readDB == nil {
+		panic("trie.NewSecure called without a database")
+	}
+	trie, err := NewWithRWDB(root, readDB, writeDB)
+	if err != nil {
+		return nil, err
+	}
+	return &SecureTrie{trie: *trie}, nil
+}
+
 // Get returns the value for key stored in the trie.
 // The value bytes must not be modified by the caller.
 func (t *SecureTrie) Get(key []byte) []byte {

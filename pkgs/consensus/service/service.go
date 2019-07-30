@@ -59,7 +59,7 @@ type ConsensusService struct {
 	pauseForSync bool
 	start        bool
 	peersInfo    map[string]*consensusTypes.PeerInfo
-	quit chan struct{}
+	quit         chan struct{}
 }
 
 func (consensusService *ConsensusService) Name() string {
@@ -125,7 +125,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 		consensusService.ChainService.AddBlockValidator(&BlockMultiSigValidator{consensusService.Config.Producers})
 	} else if consensusService.Config.ConsensusMode == "solo" {
 		consensusService.ChainService.AddBlockValidator(&SoloValidator{consensusService.pubkey, consensusService.Config.Producers})
-	}else{
+	} else {
 		return nil
 	}
 
@@ -373,7 +373,6 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 	log.Trace("node leader finishes process consensus")
 
 	db := consensusService.DatabaseService.BeginTransaction(false)
-	defer db.Discard()
 	block, gasFee, err := consensusService.BlockMgr.GenerateBlock(db, crypto.PubKey2Address(consensusService.pubkey))
 	if err != nil {
 		return nil, err
@@ -392,21 +391,19 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 
 	db.Commit()
 	block.Header.StateRoot = db.GetStateRoot()
-	db.Discard()
 
 	//verify
 	db = consensusService.DatabaseService.BeginTransaction(false)
-	defer db.Discard()
 	gp := new(chainService.GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
 	context := &chainService.BlockExecuteContext{
-		Db:db,
-		Block :block,
-		Gp :gp,
-		GasUsed :new (big.Int),
-		GasFee:new (big.Int),
+		Db:      db,
+		Block:   block,
+		Gp:      gp,
+		GasUsed: new(big.Int),
+		GasFee:  new(big.Int),
 	}
-	for _, validator := range   consensusService.ChainService.BlockValidator() {
+	for _, validator := range consensusService.ChainService.BlockValidator() {
 		err := validator.ExecuteBlock(context)
 		if err != nil {
 			log.WithField("ExecuteBlock", err).Debug("multySigVerify")
@@ -420,8 +417,8 @@ func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error)
 	}
 
 	db.Commit()
+	stateRoot := db.GetStateRoot()
 	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
-		stateRoot := db.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
 			log.Debug("rootcmd root !=")
 			return nil, fmt.Errorf("state root not equal")
@@ -555,7 +552,7 @@ func (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) b
 		log.WithField("err", err).Debug("blockVerify GetBlockHeaderByHash")
 		return false
 	}
-	for _, validator := range   consensusService.ChainService.BlockValidator() {
+	for _, validator := range consensusService.ChainService.BlockValidator() {
 		err = validator.VerifyHeader(block.Header, preBlockHash)
 		if err != nil {
 			log.WithField("err", err).Debug("blockVerify VerifyHeader")
@@ -573,7 +570,7 @@ func (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) b
 
 func (consensusService *ConsensusService) verifyBlockContent(block *chainTypes.Block) bool {
 	db := consensusService.ChainService.GetDatabaseService().BeginTransaction(false)
-	defer db.Discard()
+	//defer db.Discard()
 	multiSigValidator := BlockMultiSigValidator{consensusService.Config.Producers}
 	if multiSigValidator.VerifyBody(block) != nil {
 		log.WithField("bitmap", block.MultiSig.Bitmap).Debug("bitmap")
@@ -583,13 +580,13 @@ func (consensusService *ConsensusService) verifyBlockContent(block *chainTypes.B
 	gp := new(chainService.GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
 	context := &chainService.BlockExecuteContext{
-		Db:db,
-		Block :block,
-		Gp :gp,
-		GasUsed :new (big.Int),
-		GasFee:new (big.Int),
+		Db:      db,
+		Block:   block,
+		Gp:      gp,
+		GasUsed: new(big.Int),
+		GasFee:  new(big.Int),
 	}
-	for _, validator := range   consensusService.ChainService.BlockValidator() {
+	for _, validator := range consensusService.ChainService.BlockValidator() {
 		err := validator.ExecuteBlock(context)
 		if err != nil {
 			log.WithField("ExecuteBlock", err).Debug("multySigVerify")

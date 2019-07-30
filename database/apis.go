@@ -244,6 +244,6 @@ func (database *DatabaseService) Commit() {
 	database.db.Commit()
 }
 
-func (database *DatabaseService) Discard() {
-	database.db.Discard()
-}
+//func (database *DatabaseService) Discard() {
+//	database.db.Discard()
+//}

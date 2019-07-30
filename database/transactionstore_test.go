@@ -14,7 +14,7 @@ func TestGetAndSet(t *testing.T) {
 	diskDB := memorydb.New()
 	trieDB := trie.NewDatabase(diskDB)
 	tree, _ := trie.NewSecure(crypto.Hash{}, trieDB)
-	cacheStore := NewTransactionStore(tree, diskDB, true)
+	cacheStore := NewTransactionStore(tree, diskDB)
 
 	key := []byte("1011")
 	value := []byte("value-test")
@@ -34,7 +34,7 @@ func TestFlushAndGet(t *testing.T) {
 	diskDB := memorydb.New()
 	trieDB := trie.NewDatabase(diskDB)
 	tree, _ := trie.NewSecure(crypto.Hash{}, trieDB)
-	cacheStore := NewTransactionStore(tree, diskDB, true)
+	cacheStore := NewTransactionStore(tree, diskDB)
 
 	for i := 0; i < 100; i++ {
 		value := []byte(strconv.Itoa(i) + "-value-test")
@@ -91,7 +91,7 @@ func TestDelete(t *testing.T) {
 	diskDB := memorydb.New()
 	trieDB := trie.NewDatabase(diskDB)
 	tree, _ := trie.NewSecure(crypto.Hash{}, trieDB)
-	cacheStore := NewTransactionStore(tree, diskDB, true)
+	cacheStore := NewTransactionStore(tree, diskDB)
 
 	for i := 0; i < 100; i++ {
 		key := []byte(strconv.Itoa(i))
@@ -101,17 +101,16 @@ func TestDelete(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-
-	key := []byte(strconv.Itoa(1))
-	cacheStore.Delete(key)
+	//
+	//key := []byte(strconv.Itoa(1))
+	//cacheStore.Delete(key)
 }
 
 func TestCopyState(t *testing.T) {
-
 	diskDB := memorydb.New()
 	trieDB := trie.NewDatabase(diskDB)
 	tree, _ := trie.NewSecure(crypto.Hash{}, trieDB)
-	cacheStore := NewTransactionStore(tree, diskDB, true)
+	cacheStore := NewTransactionStore(tree, diskDB)
 
 	for i := 0; i < 100; i++ {
 		key := []byte(strconv.Itoa(i))
@@ -129,5 +128,4 @@ func TestCopyState(t *testing.T) {
 			t.Fatal("copy err")
 		}
 	}
-
 }
