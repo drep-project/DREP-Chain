@@ -244,6 +244,15 @@ func (database *DatabaseService) Commit() {
 	database.db.Commit()
 }
 
+// getters and setters for ChainIndexer
+func (database *DatabaseService) GetStoredSections() uint64 {
+	return database.db.GetStoredSections()
+}
+
+func (database *DatabaseService) SetStoredSections(storedSections uint64) error {
+	return database.db.SetStoredSections(storedSections)
+}
+
 //func (database *DatabaseService) Discard() {
 //	database.db.Discard()
 //}

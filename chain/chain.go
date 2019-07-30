@@ -45,6 +45,7 @@ type ChainServiceInterface interface {
 	GetBlocksFrom(start, size uint64) ([]*types.Block, error)
 
 	GetHeader(hash crypto.Hash, number uint64) *types.BlockHeader
+	GetCurrentHeader() *types.BlockHeader
 	GetHighestBlock() (*types.Block, error)
 	RootChain() types.ChainIdType
 	BestChain() *ChainView
@@ -275,6 +276,18 @@ func (chainService *ChainService) GetBlocksFrom(start, size uint64) ([]*types.Bl
 		blocks = append(blocks, block)
 	}
 	return blocks, nil
+}
+
+func (chainService *ChainService) GetCurrentHeader() *types.BlockHeader {
+	heighestBlockBode := chainService.bestChain.Tip()
+	if heighestBlockBode == nil {
+		return nil
+	}
+	block, err := chainService.DatabaseService.GetBlock(heighestBlockBode.Hash)
+	if err != nil {
+		return nil
+	}
+	return block.Header
 }
 
 func (chainService *ChainService) GetHighestBlock() (*types.Block, error) {
