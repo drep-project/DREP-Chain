@@ -247,3 +247,12 @@ func (database *DatabaseService) Commit(needLog bool) {
 func (database *DatabaseService) Discard() {
 	database.db.Discard()
 }
+
+// getters and setters for ChainIndexer
+func (database *DatabaseService) GetStoredSections() uint64 {
+	return database.db.GetStoredSections()
+}
+
+func (database *DatabaseService) SetStoredSections(storedSections uint64) error {
+	return database.db.SetStoredSections(storedSections)
+}
