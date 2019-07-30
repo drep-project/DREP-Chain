@@ -11,7 +11,7 @@ import (
 
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
-	types "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/drep-chain/types"
 	"github.com/pkg/errors"
 )
 
@@ -101,14 +101,12 @@ func (chainService *ChainService) AcceptBlock(block *types.Block) (inMainChain b
 //TODO cannot find chain tip  对外通知区块失败会产生这个错误  区块未保存 header已经保存
 func (chainService *ChainService) acceptBlock(block *types.Block) (inMainChain bool, err error) {
 	db := chainService.DatabaseService.BeginTransaction(true)
-	defer func() {
-		if err == nil {
-			db.Commit(true)
-		} else {
-			db.Discard()
-		}
-		//chainService.blockDb.Commit(false)
-	}()
+	//defer func() {
+	//	if err != nil {
+	//		db.Discard()
+	//	}
+	//	//chainService.blockDb.Commit(false)
+	//}()
 	prevNode := chainService.blockIndex.LookupNode(&block.Header.PreviousHash)
 	preBlock := prevNode.Header()
 	for _, blockValidator := range chainService.BlockValidator() {
@@ -142,7 +140,10 @@ func (chainService *ChainService) acceptBlock(block *types.Block) (inMainChain b
 		if err != nil {
 			return false, err
 		}
-		chainService.markState(db, newNode)
+
+		fmt.Println("acceptBlock:", db.GetStateRoot())
+
+		chainService.markState(newNode)
 		//SetTip has save tip but block not saving
 		chainService.notifyBlock(block)
 		return true, nil
@@ -198,7 +199,7 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *typ
 		return err
 	}
 	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
-		db.Commit(true)
+		db.Commit()
 		oldStateRoot := db.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, oldStateRoot) {
 			err = errors.Wrapf(ErrNotMathcedStateRoot, "%s not matched %s", hex.EncodeToString(block.Header.StateRoot), hex.EncodeToString(oldStateRoot))
@@ -290,7 +291,7 @@ func (chainService *ChainService) reorganizeChain(db *database.Database, detachN
 		height := lastBlock.Height - 1
 		db.Rollback2Block(height, lastBlock.Hash)
 		log.WithField("Height", height).Info("REORGANIZE:RollBack state root")
-		chainService.markState(db, lastBlock.Parent)
+		chainService.markState(lastBlock.Parent)
 		elem = detachNodes.Front()
 		for elem != nil {
 			blockNode := elem.Value.(*types.BlockNode)
@@ -315,7 +316,7 @@ func (chainService *ChainService) reorganizeChain(db *database.Database, detachN
 			if err != nil {
 				return err
 			}
-			chainService.markState(db, blockNode)
+			chainService.markState(blockNode)
 			chainService.notifyBlock(block)
 			log.WithField("Height", blockNode.Height).WithField("Hash", blockNode.Hash).Info("REORGANIZE:Append New Block")
 			elem = elem.Next()
@@ -332,7 +333,7 @@ func (chainService *ChainService) notifyDetachBlock(block *types.Block) {
 	chainService.DetachBlockFeed().Send(block)
 }
 
-func (chainService *ChainService) markState(db *database.Database, blockNode *types.BlockNode) {
+func (chainService *ChainService) markState(blockNode *types.BlockNode) {
 	chainService.BestChain().SetTip(blockNode)
 	triedb := chainService.DatabaseService.GetTriedDB()
 	triedb.Commit(crypto.Bytes2Hash(blockNode.StateRoot), true)

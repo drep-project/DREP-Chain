@@ -20,17 +20,17 @@ type AddrGenerate struct {
 	PrivateKey *secp256k1.PrivateKey
 }
 
-func (addrGenerate *AddrGenerate) ToEth() string{
+func (addrGenerate *AddrGenerate) ToEth() string {
 	pk := addrGenerate.PrivateKey.PubKey()
 	ecdsaPk := (*ecdsa.PublicKey)(pk)
 	return ethcrypto.PubkeyToAddress(*ecdsaPk).String()
 }
-func (addrGenerate *AddrGenerate) ToRipple()string {
+func (addrGenerate *AddrGenerate) ToRipple() string {
 	bytes := rippleCrypto.Sha256RipeMD160(addrGenerate.PrivateKey.PubKey().SerializeCompressed())
-	hash, _:= rippleCrypto.NewAccountId(bytes)
+	hash, _ := rippleCrypto.NewAccountId(bytes)
 	return hash.String()
 }
-func (addrGenerate *AddrGenerate) ToNeo() string{
+func (addrGenerate *AddrGenerate) ToNeo() string {
 	pub_bytes := addrGenerate.PrivateKey.PubKey().Serialize()
 
 	pub_bytes = append([]byte{0x21}, pub_bytes...)
@@ -52,38 +52,37 @@ func (addrGenerate *AddrGenerate) ToNeo() string{
 	return addrGenerate.b58checkencodeNEO(0x17, program_hash)
 }
 
-func (addrGenerate *AddrGenerate) ToLiteCoin() string{
+func (addrGenerate *AddrGenerate) ToLiteCoin() string {
 	coin := getCoin("Litecoin")
 	return genCoin(addrGenerate.PrivateKey, coin.PubKeyHashAddrID, coin.PrivateKeyID, coin.Name)
 }
 
-func (addrGenerate *AddrGenerate) ToDogecoin()string {
+func (addrGenerate *AddrGenerate) ToDogecoin() string {
 	coin := getCoin("Dogecoin")
 	return genCoin(addrGenerate.PrivateKey, coin.PubKeyHashAddrID, coin.PrivateKeyID, coin.Name)
 }
 
-func (addrGenerate *AddrGenerate) ToDash()string {
+func (addrGenerate *AddrGenerate) ToDash() string {
 	coin := getCoin("Dash")
 	return genCoin(addrGenerate.PrivateKey, coin.PubKeyHashAddrID, coin.PrivateKeyID, coin.Name)
 }
 
-func (addrGenerate *AddrGenerate) ToAtom()string {
+func (addrGenerate *AddrGenerate) ToAtom() string {
 	pubKey := addrGenerate.PrivateKey.PubKey()
 	addr := sdk.AccAddress(pubKey.Serialize())
 	return addr.String()
 }
 
-func (addrGenerate *AddrGenerate) ToTron()string {
+func (addrGenerate *AddrGenerate) ToTron() string {
 	return addressFromKey(addrGenerate.PrivateKey)
 }
 
-
-func (addrGenerate *AddrGenerate) ToBtc()string {
+func (addrGenerate *AddrGenerate) ToBtc() string {
 	coin := getCoin("Bitcoin")
 	return genCoin(addrGenerate.PrivateKey, coin.PubKeyHashAddrID, coin.PrivateKeyID, coin.Name)
 }
 
-func (addrGenerate *AddrGenerate)  b58checkencodeNEO(ver uint8, b []byte) (s string) {
+func (addrGenerate *AddrGenerate) b58checkencodeNEO(ver uint8, b []byte) (s string) {
 	/* Prepend version */
 	bcpy := append([]byte{ver}, b...)
 
@@ -148,7 +147,7 @@ func genCoin(pk *secp256k1.PrivateKey, PubKeyHashAddrID, PrivateKeyID byte, name
 	net.PubKeyHashAddrID = PubKeyHashAddrID
 	net.PrivateKeyID = PrivateKeyID
 	edsaPriv := (*ecdsa.PrivateKey)(pk)
-	btcPriv :=  (*btcec.PrivateKey)(edsaPriv)
+	btcPriv := (*btcec.PrivateKey)(edsaPriv)
 	wif, _ := btcutil.NewWIF(btcPriv, net, true)
 	addr, _ := btcutil.NewAddressPubKey(wif.PrivKey.PubKey().SerializeCompressed(), net)
 	return addr.EncodeAddress()
@@ -178,5 +177,5 @@ func addressFromKey(secpKey *secp256k1.PrivateKey) string {
 	rawAddr := append(addr41, checksum...)
 	tronAddr := base58.Encode(rawAddr)
 
-    return tronAddr
+	return tronAddr
 }

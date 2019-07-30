@@ -1,4 +1,4 @@
-package service
+package bft
 
 import (
 	"bytes"
@@ -32,8 +32,8 @@ const (
 )
 
 type Leader struct {
-	producers   []*consensusTypes.MemberInfo
-	liveMembers []*consensusTypes.MemberInfo
+	producers   []*MemberInfo
+	liveMembers []*MemberInfo
 
 	pubkey         *secp256k1.PublicKey
 	privakey       *secp256k1.PrivateKey
@@ -51,7 +51,9 @@ type Leader struct {
 	responseBitmap []byte
 	syncLock       sync.Mutex
 
-	waitTime time.Duration
+	msgPool    chan *MsgWrap
+	cancelPool chan struct{}
+	waitTime   time.Duration
 
 	currentHeight       uint64
 	minMember           int
@@ -61,23 +63,23 @@ type Leader struct {
 	cancelWaitChallenge chan struct{}
 }
 
-func NewLeader(privkey *secp256k1.PrivateKey, p2pServer p2pService.P2P) *Leader {
+func NewLeader(privkey *secp256k1.PrivateKey, p2pServer p2pService.P2P, waitTime time.Duration, msgPool chan *MsgWrap) *Leader {
 	l := &Leader{}
-	l.waitTime = 10 * time.Second
 	l.pubkey = privkey.PubKey()
 	l.privakey = privkey
+	l.waitTime = waitTime
 	l.p2pServer = p2pServer
-
+	l.msgPool = msgPool
 	l.Reset()
 	return l
 }
 
-func (leader *Leader) UpdateStatus(producers []*consensusTypes.MemberInfo, minMember int, curHeight uint64) {
+func (leader *Leader) UpdateStatus(producers []*MemberInfo, minMember int, curHeight uint64) {
 	leader.producers = producers
 	leader.minMember = minMember
 	leader.currentHeight = curHeight
 
-	leader.liveMembers = []*consensusTypes.MemberInfo{}
+	leader.liveMembers = []*MemberInfo{}
 	for _, producer := range producers {
 		if producer.IsOnline && !producer.IsLeader {
 			leader.liveMembers = append(leader.liveMembers, producer)
@@ -99,7 +101,10 @@ func (leader *Leader) Reset() {
 	leader.cancelWaitChallenge = make(chan struct{}, 1)
 }
 
-func (leader *Leader) ProcessConsensus(msg consensusTypes.IConsenMsg) (error, *secp256k1.Signature, []byte) {
+func (leader *Leader) ProcessConsensus(msg IConsenMsg) (error, *secp256k1.Signature, []byte) {
+	defer func() {
+		leader.cancelPool <- struct{}{}
+	}()
 	leader.setState(INIT)
 	leader.setUp(msg)
 
@@ -125,8 +130,34 @@ func (leader *Leader) ProcessConsensus(msg consensusTypes.IConsenMsg) (error, *s
 	return nil, &secp256k1.Signature{R: leader.sigmaS.R, S: leader.sigmaS.S}, leader.responseBitmap
 }
 
-func (leader *Leader) setUp(msg consensusTypes.IConsenMsg) {
-	setup := &consensusTypes.Setup{Msg: msg.AsMessage()}
+func (leader *Leader) processP2pMessage() {
+	for {
+		select {
+		case msg := <-leader.msgPool:
+			switch msg.Msg.Code {
+			case MsgTypeCommitment:
+				var req Commitment
+				if err := msg.Msg.Decode(&req); err != nil {
+					log.Debugf("commit msg:%v err:%v", msg, err)
+					continue
+				}
+				leader.OnCommit(msg.Peer, &req)
+			case MsgTypeResponse:
+				var req Response
+				if err := msg.Msg.Decode(&req); err != nil {
+					log.Debugf("response msg:%v err:%v", msg, err)
+					continue
+				}
+				leader.OnResponse(msg.Peer, &req)
+			}
+		case <-leader.cancelPool:
+			return
+		}
+	}
+}
+
+func (leader *Leader) setUp(msg IConsenMsg) {
+	setup := &Setup{Msg: msg.AsMessage()}
 	setup.Height = leader.currentHeight
 	leader.msgHash = sha3.Keccak256(msg.AsSignMessage())
 	var err error
@@ -149,12 +180,12 @@ func (leader *Leader) setUp(msg consensusTypes.IConsenMsg) {
 	for _, member := range leader.liveMembers {
 		if member.Peer != nil && !member.IsMe {
 			log.WithField("IP", member.Peer.IP()).WithField("Height", setup.Height).Trace("leader sent setup message")
-			leader.p2pServer.SendAsync(member.Peer.GetMsgRW(), consensusTypes.MsgTypeSetUp, setup)
+			leader.p2pServer.SendAsync(member.Peer.GetMsgRW(), MsgTypeSetUp, setup)
 		}
 	}
 }
 
-func (leader *Leader) OnCommit(peer *consensusTypes.PeerInfo, commit *consensusTypes.Commitment) {
+func (leader *Leader) OnCommit(peer *consensusTypes.PeerInfo, commit *Commitment) {
 	leader.syncLock.Lock()
 	defer leader.syncLock.Unlock()
 
@@ -200,7 +231,7 @@ func (leader *Leader) waitForCommit() bool {
 	}
 }
 
-func (leader *Leader) OnResponse(peer *consensusTypes.PeerInfo, response *consensusTypes.Response) {
+func (leader *Leader) OnResponse(peer *consensusTypes.PeerInfo, response *Response) {
 	leader.syncLock.Lock()
 	defer leader.syncLock.Unlock()
 	if leader.getState() != WAIT_RESPONSE {
@@ -238,7 +269,7 @@ func (leader *Leader) OnResponse(peer *consensusTypes.PeerInfo, response *consen
 	}
 }
 
-func (leader *Leader) challenge(msg consensusTypes.IConsenMsg) {
+func (leader *Leader) challenge(msg IConsenMsg) {
 	leader.selfSign(msg)
 	for index, pk := range leader.sigmaPubKey {
 		if index == 0 {
@@ -250,7 +281,7 @@ func (leader *Leader) challenge(msg consensusTypes.IConsenMsg) {
 		particateCommitPubkeys = append(particateCommitPubkeys, leader.sigmaCommitPubkey[index+1:]...)
 
 		commitPubkey := schnorr.CombinePubkeys(particateCommitPubkeys)
-		challenge := &consensusTypes.Challenge{
+		challenge := &Challenge{
 			Height: leader.currentHeight,
 			SigmaQ: commitPubkey,
 			R:      leader.msgHash,
@@ -259,12 +290,12 @@ func (leader *Leader) challenge(msg consensusTypes.IConsenMsg) {
 		member := leader.getMemberByPk(pk)
 		if member.IsOnline && !member.IsMe {
 			log.WithField("IP", member.Peer.IP()).WithField("Height", leader.currentHeight).Debug("leader sent challenge message")
-			leader.p2pServer.SendAsync(member.Peer.GetMsgRW(), consensusTypes.MsgTypeChallenge, challenge)
+			leader.p2pServer.SendAsync(member.Peer.GetMsgRW(), MsgTypeChallenge, challenge)
 		}
 	}
 }
 
-func (leader *Leader) selfSign(msg consensusTypes.IConsenMsg) error {
+func (leader *Leader) selfSign(msg IConsenMsg) error {
 	// pk1 | pk2 | pk3 | pk4
 	commitPubkey := schnorr.CombinePubkeys(leader.sigmaCommitPubkey[1:])
 	sig, err := schnorr.PartialSign(secp256k1.S256(), leader.msgHash, leader.privakey, leader.randomPrivakey, commitPubkey)
@@ -290,11 +321,11 @@ CANCEL:
 			break CANCEL
 		}
 	}
-	failMsg := &consensusTypes.Fail{Reason: msg}
+	failMsg := &Fail{Reason: msg}
 	failMsg.Height = leader.currentHeight
 	for _, member := range leader.liveMembers {
 		if member.Peer != nil && !member.IsMe {
-			leader.p2pServer.SendAsync(member.Peer.GetMsgRW(), consensusTypes.MsgTypeFail, failMsg)
+			leader.p2pServer.SendAsync(member.Peer.GetMsgRW(), MsgTypeFail, failMsg)
 		}
 	}
 }
@@ -318,7 +349,7 @@ func (leader *Leader) waitForResponse() bool {
 	}
 }
 
-func (leader *Leader) Validate(msg consensusTypes.IConsenMsg, r *big.Int, s *big.Int) bool {
+func (leader *Leader) Validate(msg IConsenMsg, r *big.Int, s *big.Int) bool {
 	log.WithField("responseBitmap", leader.responseBitmap).WithField("commitBitmap", leader.commitBitmap).Debug("Validate signature")
 	if len(leader.responseBitmap) < len(leader.commitBitmap) {
 		log.WithField("responseBitmap", len(leader.responseBitmap)).WithField("commitBitmap", len(leader.commitBitmap)).Debug("peer in responseBitmap and commitBitmap was not correct")
@@ -351,7 +382,7 @@ func (leader *Leader) markCommit(peer *consensusTypes.PeerInfo) {
 	leader.commitBitmap[index] = 1
 }
 
-func (leader *Leader) getMemberByIp(ip string) *consensusTypes.MemberInfo {
+func (leader *Leader) getMemberByIp(ip string) *MemberInfo {
 	for _, producer := range leader.producers {
 		if producer.Peer != nil && producer.Peer.IP() == ip {
 			return producer
@@ -360,7 +391,7 @@ func (leader *Leader) getMemberByIp(ip string) *consensusTypes.MemberInfo {
 	return nil
 }
 
-func (leader *Leader) getMemberByPk(pk *secp256k1.PublicKey) *consensusTypes.MemberInfo {
+func (leader *Leader) getMemberByPk(pk *secp256k1.PublicKey) *MemberInfo {
 	for _, producer := range leader.producers {
 		if producer.Peer != nil && producer.Producer.Pubkey.IsEqual(pk) {
 			return producer

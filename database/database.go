@@ -6,8 +6,9 @@ import (
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/database/drepdb"
 	"github.com/drep-project/drep-chain/database/drepdb/leveldb"
+	"github.com/drep-project/drep-chain/database/drepdb/memorydb"
 	"github.com/drep-project/drep-chain/database/trie"
-	types "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/drep-chain/types"
 
 	"fmt"
 	"math/big"
@@ -23,10 +24,9 @@ type Database struct {
 
 var (
 	aliasPrefix         = "alias"
-	dbOperaterMaxSeqKey = "operateMaxSeq" //记录数据库操作的最大序列号
-	//maxSeqOfBlockKey    = []byte("seqOfBlockHeight") //块高度对应的数据库操作最大序列号
-	dbOperaterJournal = "addrOperatesJournal" //每一次数据读写过程的记录
-	addressStorage    = "addressStorage"      //以地址作为KEY的对象存储
+	dbOperaterMaxSeqKey = "operateMaxSeq"       //记录数据库操作的最大序列号
+	dbOperaterJournal   = "addrOperatesJournal" //每一次数据读写过程的记录
+	addressStorage      = "addressStorage"      //以地址作为KEY的对象存储
 )
 
 func NewDatabase(dbPath string) (*Database, error) {
@@ -495,7 +495,7 @@ func (db *Database) GetBlockNode(hash *crypto.Hash, blockHeight uint64) (*types.
 	}
 	blockHeader := &types.BlockHeader{}
 	binary.Unmarshal(value[0:len(value)-1], blockHeader)
-	status := value[len(value)-1 : len(value)][0]
+	status := value[len(value)-1:len(value)][0]
 	return blockHeader, types.BlockStatus(status), nil
 }
 
@@ -522,14 +522,16 @@ func (db *Database) blockIndexKey(blockHash *crypto.Hash, blockHeight uint64) []
 // storeToDB 决定数据是否写入到db,如果是true，则返回的对象可以把数据写入到物理磁盘
 func (db *Database) BeginTransaction(storeToDB bool) *Database {
 	if !storeToDB {
-		trie, err := trie.NewSecure(db.trie.Hash(), db.trieDb)
+		writeTrieDB := trie.NewDatabase(memorydb.New())
+		newTrie, err := trie.NewSecureNewWithRWDB(db.trie.Hash(), db.trieDb, writeTrieDB)
 		if err != nil {
+			log.WithField("err", err).Error("NewSecure2")
 			return nil
 		}
 		return &Database{
 			diskDb: db.diskDb,
-			cache:  NewTransactionStore(trie, db.diskDb),
-			trie:   trie,
+			cache:  NewTransactionStore(newTrie, db.diskDb),
+			trie:   newTrie,
 		}
 	} else {
 		return &Database{
@@ -540,15 +542,9 @@ func (db *Database) BeginTransaction(storeToDB bool) *Database {
 	}
 }
 
-func (db *Database) Commit(needLog bool) {
+func (db *Database) Commit() {
 	if db.cache != nil {
-		db.cache.Flush(needLog)
-	}
-}
-
-func (db *Database) Discard() {
-	if db.cache != nil {
-		db.cache.Clear()
+		db.cache.Flush()
 	}
 }
 

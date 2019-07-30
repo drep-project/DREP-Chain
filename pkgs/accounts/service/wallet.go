@@ -2,14 +2,14 @@ package service
 
 import (
 	"github.com/drep-project/drep-chain/common/fileutil"
-	"github.com/pkg/errors"
-	"sync/atomic"
-	 "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	accountsComponent "github.com/drep-project/drep-chain/pkgs/accounts/component"
 	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
+	"github.com/drep-project/drep-chain/types"
+	"github.com/pkg/errors"
+	"sync/atomic"
 )
 
 const (
@@ -212,13 +212,13 @@ func (wallet *Wallet) ImportPrivKey(key *secp256k1.PrivateKey) (*types.Node, err
 	}
 	addr := crypto.PubKey2Address(key.PubKey())
 	node := &types.Node{
-		Address: &addr,
-		PrivateKey:key,
-		ChainId: wallet.chainId,
+		Address:    &addr,
+		PrivateKey: key,
+		ChainId:    wallet.chainId,
 	}
 	_, err := wallet.cacheStore.GetKey(&addr, wallet.password)
 	if err == nil {
-		return nil,errors.Wrap(ErrExistKey, addr.String())
+		return nil, errors.Wrap(ErrExistKey, addr.String())
 	}
 	err = wallet.cacheStore.StoreKey(node, wallet.password)
 	if err != nil {
@@ -235,11 +235,11 @@ func (wallet *Wallet) ImportKeyStore(path, password string) ([]*crypto.CommonAdd
 		return nil, errors.Wrap(ErrMissingKeystore, path)
 	}
 
-    newWallet, err := NewWallet(&accountTypes.Config{
-		Enable :true,
-		Type    : "keystore",
-		KeyStoreDir :path,
-	},wallet.chainId)
+	newWallet, err := NewWallet(&accountTypes.Config{
+		Enable:      true,
+		Type:        "keystore",
+		KeyStoreDir: path,
+	}, wallet.chainId)
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +259,7 @@ func (wallet *Wallet) ImportKeyStore(path, password string) ([]*crypto.CommonAdd
 		if err != nil {
 			return addrs, err
 		}
-		addrs = append(addrs,node.Address)
+		addrs = append(addrs, node.Address)
 	}
 	return addrs, nil
 }

@@ -21,13 +21,13 @@ import (
 	"math/big"
 
 	"context"
-	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/pkgs/evm/bloombits"
 	"github.com/drep-project/drep-chain/pkgs/evm/event"
 	types2 "github.com/drep-project/drep-chain/pkgs/evm/types"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
+	"github.com/drep-project/drep-chain/types"
 )
 
 type Backend interface {

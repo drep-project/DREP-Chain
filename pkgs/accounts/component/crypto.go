@@ -7,10 +7,10 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"github.com/drep-project/drep-chain/types"
 	crypto2 "github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
+	"github.com/drep-project/drep-chain/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"golang.org/x/crypto/scrypt"
 	"io"
@@ -21,9 +21,9 @@ type CryptedNode struct {
 
 	Data []byte `json:"-"`
 
-	CipherText []byte          `json:"cipherText"`
+	CipherText []byte            `json:"cipherText"`
 	ChainId    types.ChainIdType `json:"chainId"`
-	ChainCode  []byte          `json:"chainCode"`
+	ChainCode  []byte            `json:"chainCode"`
 
 	Cipher       string       `json:"cipher"`
 	CipherParams CipherParams `json:"cipherParams"`

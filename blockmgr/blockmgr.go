@@ -21,8 +21,8 @@ import (
 	"github.com/drep-project/rpc"
 
 	"github.com/drep-project/drep-chain/chain"
-	 "github.com/drep-project/drep-chain/types"
 	p2pService "github.com/drep-project/drep-chain/network/service"
+	"github.com/drep-project/drep-chain/types"
 
 	"time"
 

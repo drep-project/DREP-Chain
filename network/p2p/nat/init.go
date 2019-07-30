@@ -10,9 +10,9 @@ const (
 )
 
 var (
-	log = dlog.NewLogger(MODULENAME)
+	log = dlog.EnsureLogger(MODULENAME)
 )
 
 func NewLog() *logrus.Entry {
-	return dlog.NewLogger(MODULENAME)
+	return dlog.EnsureLogger(MODULENAME)
 }

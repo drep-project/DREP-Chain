@@ -142,8 +142,8 @@ func (logService *LogService) setLogConfig(ctx *cli.Context, homeDir string) {
 	}
 }
 
-// NewLogger create logger int other file
-func NewLogger(moduleName string) *logrus.Entry {
+// EnsureLogger create logger int other file
+func EnsureLogger(moduleName string) *logrus.Entry {
 	log, ok := loggers[moduleName]
 	if !ok {
 		log = logrus.WithFields(logrus.Fields{

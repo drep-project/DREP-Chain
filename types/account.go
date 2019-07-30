@@ -1,10 +1,10 @@
 package types
 
 import (
-	"math/big"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"math/big"
 )
 
 var (

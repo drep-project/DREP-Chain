@@ -25,12 +25,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/pkgs/evm/event"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
-	"github.com/drep-project/rpc"
 	"github.com/drep-project/drep-chain/pkgs/log"
+	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/rpc"
 )
 
 // Type determines the kind of filter and is used to put the filter in to

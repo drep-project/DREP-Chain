@@ -3,9 +3,9 @@ package trace
 import (
 	"fmt"
 	"github.com/drep-project/binary"
-	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/common/fileutil"
 	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/types"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
 )
@@ -34,7 +34,7 @@ func NewLevelDbStore(path string) (*LevelDbStore, error) {
 	return &LevelDbStore{path, db}, nil
 }
 
-func (store *LevelDbStore)  ExistRecord(block *types.Block)  (bool, error) {
+func (store *LevelDbStore) ExistRecord(block *types.Block) (bool, error) {
 	for _, tx := range block.Data.TxList {
 		txHash := tx.TxHash()
 		key := store.txKey(txHash)
@@ -42,13 +42,14 @@ func (store *LevelDbStore)  ExistRecord(block *types.Block)  (bool, error) {
 		if err != nil {
 			if err == leveldb.ErrNotFound {
 				return false, nil
-			}else{
+			} else {
 				return false, err
 			}
 		}
 	}
 	return true, nil
 }
+
 // InsertRecord check block ,if tx exist, save to to history and send history , if to is not nil, save tx receive history
 func (store *LevelDbStore) InsertRecord(block *types.Block) {
 	for _, tx := range block.Data.TxList {
@@ -198,7 +199,6 @@ func (store *LevelDbStore) GetReceiveTransactionsByAddr(addr *crypto.CommonAddre
 	return txs
 }
 
-
 func (store *LevelDbStore) txKey(hash *crypto.Hash) []byte {
 	buf := [34]byte{}
 	copy(buf[:2], []byte(TX_PREFIX)[:2])
@@ -235,7 +235,6 @@ func (store *LevelDbStore) txReceiveHistoryPrefixKey(addr *crypto.CommonAddress)
 	copy(buf[17:], addr[:])
 	return buf[:]
 }
-
 
 func (store *LevelDbStore) Close() {
 	store.db.Close()

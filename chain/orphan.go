@@ -1,8 +1,8 @@
 package chain
 
 import (
-	types "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
+	types "github.com/drep-project/drep-chain/types"
 	"time"
 )
 

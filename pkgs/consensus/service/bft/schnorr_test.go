@@ -1,4 +1,4 @@
-package service
+package bft
 
 import (
 	"encoding/hex"
@@ -6,7 +6,6 @@ import (
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/secp256k1/schnorr"
 	"github.com/drep-project/drep-chain/crypto/sha3"
-	"log"
 	"testing"
 	"time"
 )
@@ -140,7 +139,7 @@ func TestAddAffine2(t *testing.T) {
 		}
 	}
 	commitPubkey2 := schnorr.CombinePubkeys(commitPubkeys)
-	challengeMsg := &consensusTypes.Challenge{SigmaPubKey: sigmaPubKeyss2, SigmaQ: commitPubkey2}
+	challengeMsg := &Challenge{SigmaPubKey: sigmaPubKeyss2, SigmaQ: commitPubkey2}
 	//onchallenge
 	sig2, _ := schnorr.PartialSign(secp256k1.S256(), msg, pk2, randomPrivakey2, challengeMsg.SigmaQ)
 
@@ -162,7 +161,7 @@ func TestAddAffine2(t *testing.T) {
 		}
 	}
 	commitPubkey3 := schnorr.CombinePubkeys(commitPubkeys)
-	challengeMsg = &consensusTypes.Challenge{SigmaPubKey: sigmaPubKeyss3, SigmaQ: commitPubkey3}
+	challengeMsg = &Challenge{SigmaPubKey: sigmaPubKeyss3, SigmaQ: commitPubkey3}
 	//onchallenge
 	sig3, _ := schnorr.PartialSign(secp256k1.S256(), msg, pk3, randomPrivakey3, challengeMsg.SigmaQ)
 

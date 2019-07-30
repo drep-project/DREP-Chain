@@ -1,6 +1,5 @@
 package blockmgr
 
-
 type BlockMgrConfig struct {
 	GasPrice    OracleConfig `json:"gasprice"`
 	JournalFile string       `json:"journalFile"`

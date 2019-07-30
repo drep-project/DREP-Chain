@@ -1,15 +1,18 @@
 package database
 
 import (
+	"bytes"
 	"crypto/rand"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"fmt"
+	"math/big"
 	"os"
 	"strconv"
 	"testing"
 	"time"
 
-	types "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/drep-chain/crypto"
+
+	chainTypes "github.com/drep-project/drep-chain/types"
 )
 
 func TestNewDatabase(t *testing.T) {
@@ -41,9 +44,9 @@ func TestAddLog(t *testing.T) {
 		pri, _ := crypto.GenerateKey(rand.Reader)
 		addr := crypto.PubKey2Address(pri.PubKey())
 
-		log := types.Log{
+		log := chainTypes.Log{
 			Address: addr,
-			Height:  int64(i),
+			Height:  uint64(i),
 			TxHash:  crypto.BytesToHash([]byte(strconv.Itoa(i))),
 		}
 
@@ -55,7 +58,7 @@ func TestAddLog(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		log := db.GetLogs(crypto.BytesToHash([]byte(strconv.Itoa(i))))
-		if log[0].Height != int64(i) {
+		if log[0].Height != uint64(i) {
 			t.Fatal("write log not equal read log")
 		}
 	}
@@ -71,15 +74,14 @@ func TestBlockNode(t *testing.T) {
 	hash := crypto.BytesToHash([]byte("hash"))
 	pri, _ := crypto.GenerateKey(rand.Reader)
 
-	bn := types.BlockNode{
-		Parent:    nil,
-		Hash:      &hash,
-		StateRoot: []byte{},
-		TimeStamp: uint64(time.Now().Unix()),
-		Height:    0,
-		Status:    types.StatusInvalidAncestor,
-		LeaderPubKey:secp256k1.PublicKey(pri.PublicKey),
-
+	bn := chainTypes.BlockNode{
+		Parent:       nil,
+		Hash:         &hash,
+		StateRoot:    []byte{},
+		TimeStamp:    uint64(time.Now().Unix()),
+		Height:       0,
+		Status:       chainTypes.StatusInvalidAncestor,
+		LeaderPubKey: crypto.PubKey2Address(pri.PubKey()),
 	}
 
 	err = db.PutBlockNode(&bn)
@@ -101,27 +103,87 @@ func TestBlockNode(t *testing.T) {
 	}
 }
 
-func TestChainState(t*testing.T){
+func TestNewTransaction(t *testing.T) {
 	defer os.RemoveAll("./test")
+
 	db, err := NewDatabase("./test")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	bestState := types.BestState{
-		Hash:crypto.Bytes2Hash([]byte("besthash")),
-		PrevHash:crypto.Bytes2Hash([]byte("besthash")),
-		Height:10,
+	//数据提交
+	db1 := db.BeginTransaction(true)
+	root := db1.GetStateRoot()
+	fmt.Println("01", db.GetStateRoot())
+
+	pri, _ := crypto.GenerateKey(rand.Reader)
+	addr := crypto.PubKey2Address(pri.PubKey())
+	balance := new(big.Int).SetInt64(10000)
+
+	db1.AddBalance(&addr, balance)
+	db1.Commit()
+
+	root1 := db1.GetStateRoot()
+	if bytes.Equal(root, root1) {
+		t.Fatal("root !=")
 	}
 
-	db.PutChainState(&bestState)
-
+	err = db.trieDb.Commit(crypto.Bytes2Hash(root1), false)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	bs := db.GetChainState()
-	if bestState.Height != bs.Height{
-		t.Fatal("store state err")
+	balance = db1.GetBalance(&addr)
+
+	fmt.Println(balance)
+
+	db2 := db.BeginTransaction(true)
+	root2 := db2.GetStateRoot()
+	if !bytes.Equal(root1, root2) {
+		t.Fatal("root !=")
 	}
+
+	fmt.Println("02", db2.GetStateRoot())
+}
+
+func TestDiscardCacheData(t *testing.T) {
+	defer os.RemoveAll("./test")
+
+	db, err := NewDatabase("./test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//数据不提交
+	db2 := db.BeginTransaction(false)
+	root := db2.GetStateRoot()
+
+	pri, _ := crypto.GenerateKey(rand.Reader)
+	addr := crypto.PubKey2Address(pri.PubKey())
+	balance := new(big.Int).SetInt64(100001)
+	db2.AddBalance(&addr, balance)
+
+	root1 := db2.GetStateRoot()
+	fmt.Println("2", db2.GetStateRoot())
+	if !bytes.Equal(root, root1) {
+		t.Fatal("root must equal")
+	}
+
+	db2.Commit()
+	fmt.Println("3", db2.GetStateRoot())
+
+	err = db.trieDb.Commit(crypto.Bytes2Hash(root1), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println("4", db2.GetStateRoot())
+
+	db3 := db.BeginTransaction(false)
+	root2 := db3.GetStateRoot()
+	if !bytes.Equal(root, root2) {
+		t.Fatal("root !=")
+	}
+
+	fmt.Println("5", db.GetStateRoot())
 }

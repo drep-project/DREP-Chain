@@ -1,4 +1,4 @@
-package service
+package bft
 
 import (
 	"bytes"
@@ -15,13 +15,13 @@ import (
 )
 
 type Member struct {
-	leader      *consensusTypes.MemberInfo
-	producers   []*consensusTypes.MemberInfo
-	liveMembers []*consensusTypes.MemberInfo
+	leader      *MemberInfo
+	producers   []*MemberInfo
+	liveMembers []*MemberInfo
 	prvKey      *secp256k1.PrivateKey
 	p2pServer   p2pService.P2P
 
-	msg     consensusTypes.IConsenMsg
+	msg     IConsenMsg
 	msgHash []byte
 
 	randomPrivakey *secp256k1.PrivateKey
@@ -38,31 +38,30 @@ type Member struct {
 	currentHeight       uint64
 	stateLock           sync.RWMutex
 
-	msgPool     chan *consensusTypes.RouteMsgWrap
-	isConsensus bool // time split 2, in consensus \ wait
-
-	validator func(msg consensusTypes.IConsenMsg) bool
-	convertor func(msg []byte) (consensusTypes.IConsenMsg, error)
+	msgPool    chan *MsgWrap
+	cancelPool chan struct{}
+	validator  func(msg IConsenMsg) bool
+	convertor  func(msg []byte) (IConsenMsg, error)
 }
 
-func NewMember(prvKey *secp256k1.PrivateKey, p2pServer p2pService.P2P) *Member {
+func NewMember(prvKey *secp256k1.PrivateKey, p2pServer p2pService.P2P, waitTime time.Duration, msgPool chan *MsgWrap) *Member {
 	member := &Member{}
 
 	member.prvKey = prvKey
-	member.waitTime = 10 * time.Second
+	member.waitTime = waitTime
 
 	member.p2pServer = p2pServer
-	member.msgPool = make(chan *consensusTypes.RouteMsgWrap, 1000)
 
 	member.Reset()
+	member.msgPool = msgPool
 	return member
 }
 
-func (member *Member) UpdateStatus(producers []*consensusTypes.MemberInfo, minMember int, curHeight uint64) {
+func (member *Member) UpdateStatus(producers []*MemberInfo, minMember int, curHeight uint64) {
 	member.producers = producers
 	member.currentHeight = curHeight
 
-	member.liveMembers = []*consensusTypes.MemberInfo{}
+	member.liveMembers = []*MemberInfo{}
 	for _, producer := range producers {
 		if producer.IsLeader {
 			member.leader = producer
@@ -91,25 +90,14 @@ func (member *Member) Reset() {
 	member.setState(INIT)
 }
 
-func (member *Member) ProcessConsensus() (consensusTypes.IConsenMsg, error) {
+func (member *Member) ProcessConsensus() (IConsenMsg, error) {
+	defer func() {
+		member.cancelPool <- struct{}{}
+	}()
 	log.WithField("IP", member.leader.Peer.IP()).Debug("wait for leader's setup message")
 	member.setState(WAIT_SETUP)
-	member.isConsensus = true
-	defer func() {
-		member.isConsensus = false
-	}()
 	go member.WaitSetUp()
-
-PRE_SETUPMSG: //process msg receive in the span of two consensus
-	for {
-		select {
-		case msg := <-member.msgPool:
-			member.OnSetUp(msg.Peer, msg.SetUpMsg)
-		default:
-			break PRE_SETUPMSG
-		}
-	}
-
+	go member.processP2pMessage()
 	for {
 		select {
 		case err := <-member.errorChanel:
@@ -123,8 +111,40 @@ PRE_SETUPMSG: //process msg receive in the span of two consensus
 			return member.msg, nil
 		}
 	}
-}
 
+}
+func (member *Member) processP2pMessage() {
+	for {
+		select {
+		case msg := <-member.msgPool:
+			switch msg.Msg.Code {
+			case MsgTypeSetUp:
+				var req Setup
+				if err := msg.Msg.Decode(&req); err != nil {
+					log.Debugf("setup msg:%v err:%v", msg, err)
+					continue
+				}
+				member.OnSetUp(msg.Peer, &req)
+			case MsgTypeChallenge:
+				var req Challenge
+				if err := msg.Msg.Decode(&req); err != nil {
+					log.Debugf("challenge msg:%v err:%v", msg, err)
+					continue
+				}
+				member.OnChallenge(msg.Peer, &req)
+			case MsgTypeFail:
+				var req Fail
+				if err := msg.Msg.Decode(&req); err != nil {
+					log.Debugf("challenge msg:%v err:%v", msg, err)
+					continue
+				}
+				member.OnFail(msg.Peer, &req)
+			}
+		case <-member.cancelPool:
+			return
+		}
+	}
+}
 func (member *Member) WaitSetUp() {
 	select {
 	case <-time.After(member.waitTime):
@@ -140,16 +160,7 @@ func (member *Member) WaitSetUp() {
 	}
 }
 
-func (member *Member) OnSetUp(peer *consensusTypes.PeerInfo, setUp *consensusTypes.Setup) {
-	if !member.isConsensus {
-		member.msgPool <- &consensusTypes.RouteMsgWrap{
-			Peer:     peer,
-			SetUpMsg: setUp,
-		}
-		log.Debug("restore setup message")
-		return
-	}
-
+func (member *Member) OnSetUp(peer *consensusTypes.PeerInfo, setUp *Setup) {
 	if member.currentHeight < setUp.Height {
 		log.WithField("Receive Height", setUp.Height).
 			WithField("Current Height", member.currentHeight).
@@ -211,7 +222,7 @@ func (member *Member) WaitChallenge() {
 	}
 }
 
-func (member *Member) OnChallenge(peer *consensusTypes.PeerInfo, challengeMsg *consensusTypes.Challenge) {
+func (member *Member) OnChallenge(peer *consensusTypes.PeerInfo, challengeMsg *Challenge) {
 	if member.currentHeight < challengeMsg.Height {
 		log.WithField("Receive Height", challengeMsg.Height).
 			WithField("Current Height", member.currentHeight).
@@ -251,7 +262,7 @@ func (member *Member) OnChallenge(peer *consensusTypes.PeerInfo, challengeMsg *c
 	//check fail not response and start new round
 }
 
-func (member *Member) OnFail(peer *consensusTypes.PeerInfo, failMsg *consensusTypes.Fail) {
+func (member *Member) OnFail(peer *consensusTypes.PeerInfo, failMsg *Fail) {
 	if member.currentHeight < failMsg.Height || member.getState() == COMPLETED || member.getState() == ERROR {
 		return
 	}
@@ -275,25 +286,25 @@ func (member *Member) commit() {
 		member.pushErrorMsg(ErrGenerateNouncePriv)
 		return
 	}
-	commitment := &consensusTypes.Commitment{
+	commitment := &Commitment{
 		BpKey: member.prvKey.PubKey(),
 		Q:     (*secp256k1.PublicKey)(nouncePk),
 	}
 	commitment.Height = member.currentHeight
-	member.p2pServer.SendAsync(member.leader.Peer.GetMsgRW(), consensusTypes.MsgTypeCommitment, commitment)
+	member.p2pServer.SendAsync(member.leader.Peer.GetMsgRW(), MsgTypeCommitment, commitment)
 }
 
-func (member *Member) response(challengeMsg *consensusTypes.Challenge) {
+func (member *Member) response(challengeMsg *Challenge) {
 	if bytes.Equal(member.msgHash, challengeMsg.R) {
 		sig, err := schnorr.PartialSign(secp256k1.S256(), member.msgHash, member.prvKey, member.randomPrivakey, challengeMsg.SigmaQ)
 		if err != nil {
 			log.WithField("msg", err).Error("sign chanllenge error ")
 			return
 		}
-		response := &consensusTypes.Response{S: sig.Serialize()}
+		response := &Response{S: sig.Serialize()}
 		response.BpKey = member.prvKey.PubKey()
 		response.Height = member.currentHeight
-		member.p2pServer.SendAsync(member.leader.Peer.GetMsgRW(), consensusTypes.MsgTypeResponse, response)
+		member.p2pServer.SendAsync(member.leader.Peer.GetMsgRW(), MsgTypeResponse, response)
 	} else {
 		log.Error("commit messsage and chanllenge message not matched")
 	}

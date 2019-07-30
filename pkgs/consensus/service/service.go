@@ -1,20 +1,16 @@
 package service
 
 import (
-	"bytes"
-	"errors"
-	"fmt"
-	"github.com/drep-project/drep-chain/crypto"
-	"math"
-	"math/big"
 	"time"
+
+	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/pkgs/consensus/service/bft"
+	"github.com/drep-project/drep-chain/pkgs/consensus/service/solo"
 
 	"github.com/drep-project/drep-chain/app"
 	blockMgrService "github.com/drep-project/drep-chain/blockmgr"
 	chainService "github.com/drep-project/drep-chain/chain"
 	"github.com/drep-project/drep-chain/common/event"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/network/p2p"
 	p2pService "github.com/drep-project/drep-chain/network/service"
@@ -33,33 +29,26 @@ var (
 
 const (
 	blockInterval = time.Second * 5
-	minWaitTime   = time.Millisecond * 500
 )
 
 type ConsensusService struct {
-	P2pServer    p2pService.P2P                     `service:"p2p"`
-	ChainService chainService.ChainServiceInterface `service:"chain"`
-	BlockMgr     *blockMgrService.BlockMgr          `service:"blockmgr"`
-
-	DatabaseService *database.DatabaseService      `service:"database"`
-	WalletService   *accountService.AccountService `service:"accounts"`
+	P2pServer       p2pService.P2P                     `service:"p2p"`
+	ChainService    chainService.ChainServiceInterface `service:"chain"`
+	BlockMgr        *blockMgrService.BlockMgr          `service:"blockmgr"`
+	DatabaseService *database.DatabaseService          `service:"database"`
+	WalletService   *accountService.AccountService     `service:"accounts"`
 
 	apis   []app.API
 	Config *consensusTypes.ConsensusConfig
 
-	pubkey             *secp256k1.PublicKey
-	privkey            *secp256k1.PrivateKey
-	curMiner           int
-	leader             *Leader
-	member             *Member
 	syncBlockEventSub  event.Subscription
 	syncBlockEventChan chan event.SyncBlockEvent
-
+	ConsensusEngine    consensusTypes.IConsensusEngin
 	//During the process of synchronizing blocks, the miner stopped mining
 	pauseForSync bool
 	start        bool
 	peersInfo    map[string]*consensusTypes.PeerInfo
-	quit chan struct{}
+	quit         chan struct{}
 }
 
 func (consensusService *ConsensusService) Name() string {
@@ -75,9 +64,6 @@ func (consensusService *ConsensusService) CommandFlags() ([]cli.Command, []cli.F
 }
 
 func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContext) error {
-	if consensusService.ChainService == nil {
-		return fmt.Errorf("chainService not init")
-	}
 	consensusService.Config = &consensusTypes.ConsensusConfig{}
 	err := executeContext.UnmashalConfig(consensusService.Name(), consensusService.Config)
 	if err != nil {
@@ -87,32 +73,29 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	if executeContext.Cli.GlobalIsSet(EnableConsensusFlag.Name) {
 		consensusService.Config.Enable = executeContext.Cli.GlobalBool(EnableConsensusFlag.Name)
 	}
+
 	if !consensusService.Config.Enable {
 		return nil
 	}
 
-	consensusService.pubkey = consensusService.Config.MyPk
-	accountNode, err := consensusService.WalletService.Wallet.GetAccountByPubkey(consensusService.pubkey)
+	//consult privkey in wallet
+	accountNode, err := consensusService.WalletService.Wallet.GetAccountByPubkey(consensusService.Config.MyPk)
 	if err != nil {
-		log.WithField("init err", err).WithField("pubkey", string(consensusService.pubkey.Serialize())).Error("consensusService")
+		log.WithField("init err", err).WithField("addr", crypto.PubKey2Address(consensusService.Config.MyPk)).Error("privkey of MyPk in Config is not in local wallet")
 		return err
 	}
-	consensusService.privkey = accountNode.PrivateKey
-	consensusService.peersInfo = make(map[string]*consensusTypes.PeerInfo)
-	if !consensusService.Config.Producers.IsLocalPk(consensusService.privkey.PubKey()) {
-		return ErrBpConfig
-	}
 
+	peersInfo := make(map[string]*consensusTypes.PeerInfo)
 	consensusService.P2pServer.AddProtocols([]p2p.Protocol{
 		p2p.Protocol{
 			Name:   "consensusService",
-			Length: consensusTypes.NumberOfMsg,
+			Length: bft.NumberOfMsg,
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
 				if consensusService.Config.Producers.IsLocalIP(peer.IP()) {
 					pi := consensusTypes.NewPeerInfo(peer, rw)
-					consensusService.peersInfo[peer.IP()] = pi
-					defer delete(consensusService.peersInfo, peer.IP())
-					return consensusService.receiveMsg(pi, rw)
+					peersInfo[peer.IP()] = pi
+					defer delete(peersInfo, peer.IP())
+					return consensusService.ConsensusEngine.ReceiveMsg(pi, rw)
 				}
 				log.WithField("peer.ip", peer.IP()).Info("peer not producer")
 				//非骨干节点，不启动共识相关处理
@@ -122,19 +105,31 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	})
 
 	if consensusService.Config.ConsensusMode == "bft" {
-		consensusService.ChainService.AddBlockValidator(&BlockMultiSigValidator{consensusService.Config.Producers})
+		consensusService.ConsensusEngine = bft.NewBftConsensus(
+			consensusService.ChainService,
+			consensusService.BlockMgr,
+			consensusService.DatabaseService,
+			accountNode.PrivateKey,
+			consensusService.Config.Producers,
+			consensusService.P2pServer,
+			peersInfo,
+		)
+		consensusService.ChainService.AddBlockValidator(&bft.BlockMultiSigValidator{consensusService.Config.Producers})
 	} else if consensusService.Config.ConsensusMode == "solo" {
-		consensusService.ChainService.AddBlockValidator(&SoloValidator{consensusService.pubkey, consensusService.Config.Producers})
-	}else{
+		consensusService.ConsensusEngine = solo.NewSoloConsensus(
+			consensusService.ChainService,
+			consensusService.BlockMgr,
+			consensusService.DatabaseService,
+			accountNode.PrivateKey)
+		consensusService.ChainService.AddBlockValidator(solo.NewSoloValidator(consensusService.Config.MyPk))
+	} else {
 		return nil
 	}
 
-	consensusService.leader = NewLeader(consensusService.privkey, consensusService.P2pServer)
-	consensusService.member = NewMember(consensusService.privkey, consensusService.P2pServer)
+	consensusService.peersInfo = peersInfo
 	consensusService.syncBlockEventChan = make(chan event.SyncBlockEvent)
 	consensusService.syncBlockEventSub = consensusService.BlockMgr.SubscribeSyncBlockEvent(consensusService.syncBlockEventChan)
 	consensusService.quit = make(chan struct{})
-
 	consensusService.apis = []app.API{
 		app.API{
 			Namespace: "consensus",
@@ -172,12 +167,8 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 	if !consensusService.Config.Enable {
 		return nil
 	}
-
 	consensusService.start = true
-
 	go func() {
-		minMember := int(math.Ceil(float64(len(consensusService.Config.Producers)) * 2 / 3))
-
 		select {
 		case <-consensusService.quit:
 			return
@@ -188,36 +179,7 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 					continue
 				}
 				log.WithField("Height", consensusService.ChainService.BestChain().Height()).Trace("node start")
-				var block *chainTypes.Block
-				var err error
-				var isM bool
-				var isL bool
-				if consensusService.Config.ConsensusMode == "solo" {
-					block, err = consensusService.runAsSolo()
-					isL = true
-				} else if consensusService.Config.ConsensusMode == "bft" {
-					//TODO a more elegant implementation is needed: select live peer ,and Determine who is the leader
-					miners := consensusService.collectMemberStatus()
-					if len(miners) > 1 {
-						isM, isL = consensusService.moveToNextMiner(miners)
-						if isL {
-							consensusService.leader.UpdateStatus(miners, minMember, consensusService.ChainService.BestChain().Height())
-							block, err = consensusService.runAsLeader()
-						} else if isM {
-							consensusService.member.UpdateStatus(miners, minMember, consensusService.ChainService.BestChain().Height())
-							block, err = consensusService.runAsMember()
-						} else {
-							// backup node， return directly
-							log.Debug("Backup Node")
-							break
-						}
-					} else {
-						err = ErrBFTNotReady
-						time.Sleep(time.Second * 10)
-					}
-				} else {
-					return
-				}
+				block, err := consensusService.ConsensusEngine.Run()
 				if err != nil {
 					log.WithField("Reason", err.Error()).Debug("Producer Block Fail")
 				} else {
@@ -251,248 +213,6 @@ func (consensusService *ConsensusService) Stop(executeContext *app.ExecuteContex
 	}
 
 	return nil
-}
-
-func (consensusService *ConsensusService) runAsMember() (block *chainTypes.Block, err error) {
-	consensusService.member.Reset()
-	log.Trace("node member is going to process consensus for round 1")
-	consensusService.member.convertor = func(msg []byte) (consensusTypes.IConsenMsg, error) {
-		block, err = chainTypes.BlockFromMessage(msg)
-		if err != nil {
-			return nil, err
-		}
-
-		//faste calc less process time
-		calcHash := func(txs []*chainTypes.Transaction) {
-			for _, tx := range txs {
-				tx.TxHash()
-			}
-		}
-		num := 1 + len(block.Data.TxList)/1000
-		for i := 0; i < num; i++ {
-			if i == num-1 {
-				go calcHash(block.Data.TxList[1000*i:])
-			} else {
-				go calcHash(block.Data.TxList[1000*i : 1000*(i+1)])
-			}
-		}
-
-		return block, nil
-	}
-	consensusService.member.validator = func(msg consensusTypes.IConsenMsg) bool {
-		block = msg.(*chainTypes.Block)
-		return consensusService.blockVerify(block)
-	}
-	_, err = consensusService.member.ProcessConsensus()
-	if err != nil {
-		return nil, err
-	}
-	log.Trace("node member finishes consensus for round 1")
-
-	log.Trace("node member is going to process consensus for round 2")
-	consensusService.member.Reset()
-	var multiSig *chainTypes.MultiSignature
-	consensusService.member.convertor = func(msg []byte) (consensusTypes.IConsenMsg, error) {
-		return consensusTypes.ResponseWiteRootFromMessage(msg)
-	}
-	consensusService.member.validator = func(msg consensusTypes.IConsenMsg) bool {
-		val := msg.(*consensusTypes.ResponseWiteRootMessage)
-		multiSig = &val.MultiSignature
-		minorAddrs := []crypto.CommonAddress{}
-		for index, producer := range consensusService.Config.Producers {
-			if multiSig.Bitmap[index] == 1 { //TODO  Exclude leader
-				minorAddrs = append(minorAddrs, crypto.PubKey2Address(producer.Pubkey))
-			}
-		}
-		block.Header.MinorAddresses = minorAddrs
-		block.Header.StateRoot = val.StateRoot
-		block.MultiSig = multiSig
-		return consensusService.verifyBlockContent(block)
-	}
-
-	_, err = consensusService.member.ProcessConsensus()
-	if err != nil {
-		return nil, err
-	}
-	consensusService.leader.Reset()
-	log.Trace("node member finishes consensus for round 2")
-	return block, nil
-}
-
-//1 leader出块，然后签名并且广播给其他producer,
-//2 其他producer收到后，签自己的构建数字签名;然后把签名后的块返回给leader
-//3 leader搜集到所有的签名或者返回的签名个数大于producer个数的三分之二后，开始验证签名
-//4 leader验证签名通过后，广播此块给所有的Peer
-func (consensusService *ConsensusService) runAsLeader() (block *chainTypes.Block, err error) {
-	db := consensusService.DatabaseService.BeginTransaction(false)
-	consensusService.leader.Reset()
-	var gasFee *big.Int
-	block, gasFee, err = consensusService.BlockMgr.GenerateBlock(db, crypto.PubKey2Address(consensusService.leader.pubkey))
-	if err != nil {
-		log.WithField("msg", err).Error("generate block fail")
-		return nil, err
-	}
-
-	log.WithField("Block", block).Trace("node leader is preparing process consensus for round 1")
-	err, sig, bitmap := consensusService.leader.ProcessConsensus(block)
-	if err != nil {
-		var str = err.Error()
-		log.WithField("msg", str).Error("Error occurs")
-		return nil, err
-	}
-
-	multiSig := &chainTypes.MultiSignature{Sig: *sig, Bitmap: bitmap}
-	consensusService.leader.Reset()
-	minorAddrs := []crypto.CommonAddress{}
-	for index, producer := range consensusService.Config.Producers {
-		if multiSig.Bitmap[index] == 1 { //TODO  Exclude leader
-			minorAddrs = append(minorAddrs, crypto.PubKey2Address(producer.Pubkey))
-		}
-	}
-	block.Header.MinorAddresses = minorAddrs
-	block.MultiSig = multiSig
-	//Determine reward points
-	err = consensusService.ChainService.AccumulateRewards(db, block, gasFee)
-	if err != nil {
-		return nil, err
-	}
-	block.Header.StateRoot = db.GetStateRoot()
-	rwMsg := &consensusTypes.ResponseWiteRootMessage{*multiSig, block.Header.StateRoot}
-	log.Trace("node leader is going to process consensus for round 2")
-	err, _, _ = consensusService.leader.ProcessConsensus(rwMsg)
-	if err != nil {
-		return nil, err
-	}
-	log.Trace("node leader finishes process consensus for round 2")
-	consensusService.leader.Reset()
-	log.Trace("node leader finishes sending block")
-	return block, nil
-}
-
-func (consensusService *ConsensusService) runAsSolo() (*chainTypes.Block, error) {
-	log.Trace("node leader finishes process consensus")
-
-	db := consensusService.DatabaseService.BeginTransaction(false)
-	defer db.Discard()
-	block, gasFee, err := consensusService.BlockMgr.GenerateBlock(db, crypto.PubKey2Address(consensusService.pubkey))
-	if err != nil {
-		return nil, err
-	}
-	sig, err := consensusService.privkey.Sign(sha3.Keccak256(block.AsSignMessage()))
-	if err != nil {
-		log.Error("sign block error")
-		return nil, errors.New("sign block error")
-	}
-	multiSig := &chainTypes.MultiSignature{Sig: *sig, Bitmap: []byte{1}}
-	block.MultiSig = multiSig
-	err = consensusService.ChainService.AccumulateRewards(db, block, gasFee)
-	if err != nil {
-		return nil, err
-	}
-
-	db.Commit(false)
-	block.Header.StateRoot = db.GetStateRoot()
-	//verify
-	db = consensusService.DatabaseService.BeginTransaction(false)
-	gp := new(chainService.GasPool).AddGas(block.Header.GasLimit.Uint64())
-	//process transaction
-	context := &chainService.BlockExecuteContext{
-		Db:db,
-		Block :block,
-		Gp :gp,
-		GasUsed :new (big.Int),
-		GasFee:new (big.Int),
-	}
-	for _, validator := range   consensusService.ChainService.BlockValidator() {
-		err := validator.ExecuteBlock(context)
-		if err != nil {
-			log.WithField("ExecuteBlock", err).Debug("multySigVerify")
-			return nil, err
-		}
-	}
-	err = consensusService.ChainService.AccumulateRewards(db, block, gasFee)
-	if err != nil {
-		log.WithField("AccumulateRewards", err).Debug("multySigVerify")
-		return nil, err
-	}
-
-	db.Commit(false)
-	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
-		stateRoot := db.GetStateRoot()
-		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
-			log.Debug("rootcmd root !=")
-			return nil, fmt.Errorf("state root not equal")
-		}
-	} else {
-		log.WithField("gasUsed", context.GasUsed).Debug("multySigVerify")
-		return nil, err
-	}
-	return block, nil
-}
-
-func (consensusService *ConsensusService) collectMemberStatus() []*consensusTypes.MemberInfo {
-	produceInfos := make([]*consensusTypes.MemberInfo, 0, len(consensusService.Config.Producers))
-	for _, produce := range consensusService.Config.Producers {
-		var (
-			IsOnline, ok bool
-			pi           *consensusTypes.PeerInfo
-		)
-
-		isMe := consensusService.pubkey.IsEqual(produce.Pubkey)
-		if isMe {
-			IsOnline = true
-		} else {
-			//todo  peer获取到的IP地址和配置的ip地址是否相等（nat后是否相等,从tcp原理来看是相等的）
-			if pi, ok = consensusService.peersInfo[produce.IP]; ok {
-				IsOnline = true
-			}
-		}
-
-		produceInfos = append(produceInfos, &consensusTypes.MemberInfo{
-			Producer: &consensusTypes.Producer{Pubkey: produce.Pubkey, IP: produce.IP},
-			Peer:     pi,
-			IsMe:     isMe,
-			IsOnline: IsOnline,
-		})
-	}
-
-	//字符串排序
-	//sort.Slice(produceInfos, func(i, j int) bool {
-	//	return bytes.Compare(produceInfos[i].Producer.Public.Serialize(), produceInfos[j].Producer.Public.Serialize()) < 0
-	//})
-
-	return produceInfos
-}
-
-func (consensusService *ConsensusService) moveToNextMiner(produceInfos []*consensusTypes.MemberInfo) (bool, bool) {
-	liveMembers := []*consensusTypes.MemberInfo{}
-
-	for _, produce := range produceInfos {
-		if produce.IsOnline {
-			liveMembers = append(liveMembers, produce)
-		}
-	}
-	curentHeight := consensusService.ChainService.BestChain().Height()
-
-	liveMinerIndex := int(curentHeight % uint64(len(liveMembers)))
-	curMiner := liveMembers[liveMinerIndex]
-
-	for index, produce := range produceInfos {
-		if produce.IsOnline {
-			if produce.Producer.Pubkey.IsEqual(curMiner.Producer.Pubkey) {
-				produce.IsLeader = true
-				consensusService.curMiner = index
-			} else {
-				produce.IsLeader = false
-			}
-		}
-	}
-
-	if curMiner.Peer == nil {
-		return false, true
-	} else {
-		return true, false
-	}
 }
 
 //本函数只能广播本模块定义的消息
@@ -544,73 +264,4 @@ func (consensusService *ConsensusService) getWaitTime() (time.Time, time.Duratio
 				 return time.Duration(avgSpan) * time.Nanosecond
 			 }
 	*/
-}
-
-func (consensusService *ConsensusService) blockVerify(block *chainTypes.Block) bool {
-	preBlockHash, err := consensusService.ChainService.GetBlockHeaderByHash(&block.Header.PreviousHash)
-	if err != nil {
-		log.WithField("err", err).Debug("blockVerify GetBlockHeaderByHash")
-		return false
-	}
-	for _, validator := range   consensusService.ChainService.BlockValidator() {
-		err = validator.VerifyHeader(block.Header, preBlockHash)
-		if err != nil {
-			log.WithField("err", err).Debug("blockVerify VerifyHeader")
-			return false
-		}
-		err = validator.VerifyBody(block)
-		if err != nil {
-			log.WithField("err", err).Debug("blockVerify VerifyBody")
-			return false
-		}
-	}
-	//TODO need to verify traansaction , a lot of time
-	return err == nil
-}
-
-func (consensusService *ConsensusService) verifyBlockContent(block *chainTypes.Block) bool {
-	db := consensusService.ChainService.GetDatabaseService().BeginTransaction(false)
-	multiSigValidator := BlockMultiSigValidator{consensusService.Config.Producers}
-	if multiSigValidator.VerifyBody(block) != nil {
-		log.WithField("bitmap", block.MultiSig.Bitmap).Debug("bitmap")
-		return false
-	}
-
-	gp := new(chainService.GasPool).AddGas(block.Header.GasLimit.Uint64())
-	//process transaction
-	context := &chainService.BlockExecuteContext{
-		Db:db,
-		Block :block,
-		Gp :gp,
-		GasUsed :new (big.Int),
-		GasFee:new (big.Int),
-	}
-	for _, validator := range   consensusService.ChainService.BlockValidator() {
-		err := validator.ExecuteBlock(context)
-		if err != nil {
-			log.WithField("ExecuteBlock", err).Debug("multySigVerify")
-			return false
-		}
-	}
-	err := consensusService.ChainService.AccumulateRewards(db, block, context.GasFee)
-	if err != nil {
-		log.WithField("AccumulateRewards", err).Debug("multySigVerify")
-		return false
-	}
-	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
-		stateRoot := db.GetStateRoot()
-		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
-			log.Debug("rootcmd root !====")
-			return false
-		}
-	} else {
-		log.WithField("gasUsed", context.GasUsed).Debug("multySigVerify")
-		return false
-	}
-	return true
-}
-
-func (consensusService *ConsensusService) ChangeWaitTime(waitTime int64) {
-	consensusService.leader.waitTime = time.Duration(int64(time.Millisecond) * waitTime)
-	consensusService.member.waitTime = time.Duration(int64(time.Millisecond) * waitTime)
 }

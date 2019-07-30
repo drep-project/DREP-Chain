@@ -47,8 +47,8 @@ type Receipt struct {
 
 	// Inclusion information: These fields provide information about the inclusion of the
 	// transaction corresponding to this receipt.
-	BlockHash        crypto.Hash
-	BlockNumber      uint64
+	BlockHash   crypto.Hash
+	BlockNumber uint64
 }
 
 // NewReceipt creates a barebone transaction receipt, copying the init fields.
@@ -83,4 +83,3 @@ type Receipts []*Receipt
 
 // Len returns the number of receipts in this list.
 func (r Receipts) Len() int { return len(r) }
-

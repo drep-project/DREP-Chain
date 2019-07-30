@@ -5,8 +5,8 @@ import (
 	"math/big"
 	"sort"
 
-	types "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
+	types "github.com/drep-project/drep-chain/types"
 )
 
 // nonceHeap is a heap.Interface implementation over 64bit unsigned integers for
@@ -33,7 +33,7 @@ func (h *nonceHeap) Pop() interface{} {
 // iterating over the contents in a nonce-incrementing way.
 type txSortedMap struct {
 	items map[uint64]*types.Transaction // Hash map storing the transaction data
-	index *nonceHeap                         // Heap of nonces of all the stored transactions (non-strict mode)
+	index *nonceHeap                    // Heap of nonces of all the stored transactions (non-strict mode)
 	cache []*types.Transaction          // Cache of the transactions already sorted
 }
 

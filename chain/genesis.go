@@ -58,7 +58,7 @@ func (chainService *ChainService) ProcessGenesisBlock(biosAddr crypto.CommonAddr
 		return nil, err
 	}
 
-	chainService.DatabaseService.Commit(true)
+	chainService.DatabaseService.Commit()
 	triedb := chainService.DatabaseService.GetTriedDB()
 	triedb.Commit(crypto.Bytes2Hash(root), true)
 

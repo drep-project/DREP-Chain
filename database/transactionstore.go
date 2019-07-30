@@ -1,12 +1,10 @@
 package database
 
 import (
-	"github.com/drep-project/binary"
+	"sync"
+
 	"github.com/drep-project/drep-chain/database/drepdb"
 	"github.com/drep-project/drep-chain/database/trie"
-	"math/big"
-	"strconv"
-	"sync"
 )
 
 type TransactionStore struct {
@@ -51,35 +49,22 @@ func (tDb *TransactionStore) Put(key []byte, value []byte) error {
 	return nil
 }
 
-func (tDb *TransactionStore) Delete(key []byte) error {
-	tDb.dirties.storageDirties.Store(string(key), nil)
-	return nil
-}
+//func (tDb *TransactionStore) Delete(key []byte) error {
+//	tDb.dirties.storageDirties.Store(string(key), nil)
+//	return nil
+//}
 
-func (tDb *TransactionStore) Flush(needLog bool) {
+func (tDb *TransactionStore) Flush() {
 	tDb.dirties.storageDirties.Range(func(key, value interface{}) bool {
 		bk := []byte(key.(string))
 		if value != nil {
 			val := value.([]byte)
-			if needLog {
-				err := tDb.putOpLog(bk, val)
-				if err != nil {
-					return false
-				}
-			}
 			err := tDb.trie.TryUpdate(bk, val)
 			if err != nil {
 				return false
 			}
 			tDb.trie.Commit(nil)
 		} else {
-			if needLog {
-				err := tDb.putDelLog(bk)
-				if err != nil {
-					return false
-				}
-			}
-
 			tDb.trie.Delete(bk)
 			tDb.trie.Commit(nil)
 		}
@@ -87,80 +72,13 @@ func (tDb *TransactionStore) Flush(needLog bool) {
 		return true
 	})
 
-
+	// todo 把otherDirties的内容合并到 storageDirties中，便于回滚的状态一致性
 	tDb.dirties.otherDirties.Range(func(key, value interface{}) bool {
 		bk := []byte(key.(string))
 		val := value.([]byte)
 		tDb.diskDB.Put(bk, val)
 		return true
 	})
-}
-
-func (tDb *TransactionStore) putOpLog(key, value []byte) error {
-	seqVal, err := tDb.diskDB.Get([]byte(dbOperaterMaxSeqKey))
-	if err != nil {
-		return err
-	}
-
-	var seq = new(big.Int).SetBytes(seqVal).Int64() + 1
-	previous, _ := tDb.diskDB.Get(key)
-	j := &journal{
-		Op:       "put",
-		Key:      key,
-		Value:    value,
-		Previous: previous,
-	}
-	err = tDb.diskDB.Put(key, value)
-	if err != nil {
-		return err
-	}
-	jVal, err := binary.Marshal(j)
-	if err != nil {
-		return err
-	}
-	//存储seq-operater kv对
-	err = tDb.diskDB.Put([]byte(dbOperaterJournal+strconv.FormatInt(seq, 10)), jVal)
-	if err != nil {
-		return err
-	}
-	//记录当前最高的seq
-	return tDb.diskDB.Put([]byte(dbOperaterMaxSeqKey), new(big.Int).SetInt64(seq).Bytes())
-}
-
-func (tDb *TransactionStore) putDelLog(key []byte) error {
-	seqVal, err := tDb.diskDB.Get([]byte(dbOperaterMaxSeqKey))
-	if err != nil {
-		return err
-	}
-	var seq = new(big.Int).SetBytes(seqVal).Int64() + 1
-	previous, _ := tDb.diskDB.Get(key)
-	j := &journal{
-		Op:       "del",
-		Key:      key,
-		Previous: previous,
-	}
-	tDb.Delete(key)
-
-	jVal, err := binary.Marshal(j)
-	if err != nil {
-		return err
-	}
-	err = tDb.diskDB.Put([]byte(dbOperaterJournal+strconv.FormatInt(seq, 10)), jVal)
-	if err != nil {
-		return err
-	}
-	err = tDb.diskDB.Put([]byte(dbOperaterMaxSeqKey), new(big.Int).SetInt64(seq).Bytes())
-	if err != nil {
-		return err
-	}
-
-	tDb.diskDB.Delete(key)
-	return nil
-}
-
-func (tDb *TransactionStore) Clear() {
-	tDb.dirties.storageDirties = new(sync.Map)
-	tDb.dirties.otherDirties = new(sync.Map)
 }
 
 func (tDb *TransactionStore) RevertState(dirties *dirtiesKV) {
@@ -210,22 +128,22 @@ func (tDb *TransactionStore) CopyState() *SnapShot {
 	return (*SnapShot)(&newDirties)
 }
 
-func copyDirMap(m *sync.Map) *sync.Map {
-	newMap := new(sync.Map)
-	m.Range(func(key, value interface{}) bool {
-		if value == nil {
-			newMap.Store(key, value)
-		} else {
-			switch t := value.(type) {
-			case []byte:
-				newBytes := make([]byte, len(t))
-				copy(newBytes, t)
-				newMap.Store(key, newBytes)
-			default:
-				panic("never run here")
-			}
-		}
-		return true
-	})
-	return newMap
-}
+//func copyDirMap(m *sync.Map) *sync.Map {
+//	newMap := new(sync.Map)
+//	m.Range(func(key, value interface{}) bool {
+//		if value == nil {
+//			newMap.Store(key, value)
+//		} else {
+//			switch t := value.(type) {
+//			case []byte:
+//				newBytes := make([]byte, len(t))
+//				copy(newBytes, t)
+//				newMap.Store(key, newBytes)
+//			default:
+//				panic("never run here")
+//			}
+//		}
+//		return true
+//	})
+//	return newMap
+//}

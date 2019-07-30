@@ -3,8 +3,8 @@ package component
 import (
 	"sync"
 
-	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/types"
 )
 
 // accountCache This is used for buffering real storage and upper applications to speed up reading.

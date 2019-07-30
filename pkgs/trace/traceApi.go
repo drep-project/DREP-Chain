@@ -2,9 +2,9 @@ package trace
 
 import (
 	"github.com/drep-project/binary"
-	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/types"
 )
 
 /*
@@ -14,7 +14,7 @@ prefix:trace
 */
 type TraceApi struct {
 	blockAnalysis *BlockAnalysis
-	traceService *TraceService
+	traceService  *TraceService
 }
 
 /*
@@ -186,8 +186,6 @@ func (traceApi *TraceApi) GetReceiveTransactionByAddr(addr *crypto.CommonAddress
 	return traceApi.blockAnalysis.store.GetReceiveTransactionsByAddr(addr, pageIndex, pageSize)
 }
 
-
-
 /*
  name: rebuild
  usage: 重建trace中的区块记录
@@ -200,10 +198,10 @@ func (traceApi *TraceApi) GetReceiveTransactionByAddr(addr *crypto.CommonAddress
   	{"jsonrpc":"2.0","id":3,"result":null}
 */
 func (traceApi *TraceApi) Rebuild(from, end int) error {
-	if from <0 {
+	if from < 0 {
 		from = 0
 	}
-	if end <0 {
+	if end < 0 {
 		end = int(traceApi.traceService.ChainService.BestChain().Height())
 	}
 	if from > end {

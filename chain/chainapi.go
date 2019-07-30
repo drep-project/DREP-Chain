@@ -1,9 +1,9 @@
 package chain
 
 import (
-	chainType "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
+	chainType "github.com/drep-project/drep-chain/types"
 	"math/big"
 )
 

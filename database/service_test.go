@@ -16,8 +16,8 @@ import (
 	"strings"
 	"testing"
 
-	chainType "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
+	chainType "github.com/drep-project/drep-chain/types"
 )
 
 func TestGetSetAlias(t *testing.T) {
@@ -39,7 +39,7 @@ func TestGetSetAlias(t *testing.T) {
 		fmt.Println(err)
 		return
 	}
-	idb.Commit(false)
+	idb.Commit()
 
 	addr1 := idb.AliasGet(alias)
 	if addr1 == nil || !bytes.Equal(addr1.Bytes(), addr.Bytes()) {
@@ -53,13 +53,13 @@ func TestGetSetAlias(t *testing.T) {
 	}
 
 	//测试2
-	idb.BeginTransaction()
+	idb.BeginTransaction(true)
 	err = idb.AliasSet(&addr, "")
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	idb.Commit(true)
+	idb.Commit()
 
 	addr1 = idb.AliasGet(alias)
 	if addr1 != nil {
@@ -121,9 +121,9 @@ func TestRollBack(t *testing.T) {
 	alias := "115108924-test"
 	var i, j uint64
 
-	idb.RecordBlockJournal(uint64(0))
+	//idb.RecordBlockJournal(uint64(0))
 	for i = 0; i < 5; i++ {
-		idb.BeginTransaction()
+		idb.BeginTransaction(true)
 		for j = 0; j < 10; j++ {
 			pk, err := crypto.GenerateKey(rand.Reader)
 			addr = crypto.Bytes2Address(pk.PubKey().Serialize())
@@ -133,8 +133,8 @@ func TestRollBack(t *testing.T) {
 				return
 			}
 		}
-		idb.Commit(true)
-		idb.RecordBlockJournal(uint64(i + 1))
+		idb.Commit()
+		//idb.RecordBlockJournal(uint64(i + 1))
 	}
 
 	seqVal, err := db.diskDb.Get([]byte(dbOperaterMaxSeqKey))
@@ -144,7 +144,7 @@ func TestRollBack(t *testing.T) {
 		t.Fatal("operate journal count err", seq)
 	}
 
-	err, n := idb.Rollback2Block(5)
+	err, n := idb.Rollback2Block(uint64(5), &crypto.Hash{})
 	if err != nil {
 		t.Fatal("roolback err", err)
 	}
@@ -152,7 +152,7 @@ func TestRollBack(t *testing.T) {
 		t.Fatal("2 roolback err", n)
 	}
 
-	err, n = idb.Rollback2Block(0)
+	err, n = idb.Rollback2Block(0, &crypto.Hash{})
 	if err != nil {
 		t.Fatal("roolback err", err)
 	}
@@ -173,10 +173,10 @@ func TestDatabaseInit(t *testing.T) {
 	}
 
 	executeContext.AddService(&dbs)
-	executeContext.CommonConfig = &app.CommonConfig{ConfigFile:"config.json"}
+	executeContext.CommonConfig = &app.CommonConfig{ConfigFile: "config.json"}
 
 	//common.AppDataDir("testDatebase", false)
-	executeContext.CommonConfig.HomeDir,_ = Home()
+	executeContext.CommonConfig.HomeDir, _ = Home()
 
 	executeContext.CommonConfig.HomeDir += "/testdb/data"
 
@@ -199,7 +199,6 @@ func TestDatabaseInit(t *testing.T) {
 
 	os.RemoveAll(executeContext.CommonConfig.HomeDir)
 }
-
 
 // Home returns the home directory for the executing user.
 //

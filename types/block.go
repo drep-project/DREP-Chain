@@ -3,7 +3,6 @@ package types
 import (
 	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"math/big"
 )
@@ -22,8 +21,7 @@ type BlockHeader struct {
 	Bloom		 Bloom
 	LeaderAddress  crypto.CommonAddress
 	MinorAddresses []crypto.CommonAddress
-
-	blockHash *crypto.Hash `binary:"ignore"`
+	blockHash      *crypto.Hash `binary:"ignore"`
 }
 
 func (blockHeader *BlockHeader) Hash() *crypto.Hash {
@@ -45,9 +43,9 @@ type BlockData struct {
 }
 
 type Block struct {
-	Header   *BlockHeader
-	Data     *BlockData
-	MultiSig *MultiSignature
+	Header *BlockHeader
+	Data   *BlockData
+	Proof  []byte
 }
 
 func (block *Block) GasUsed() uint64 {
@@ -88,27 +86,4 @@ func BlockFromMessage(bytes []byte) (*Block, error) {
 		return nil, err
 	}
 	return block, nil
-}
-
-type MultiSignature struct {
-	Sig    secp256k1.Signature
-	Bitmap []byte
-}
-
-func (multiSignature *MultiSignature) AsSignMessage() []byte {
-	bytes, _ := binary.Marshal(multiSignature)
-	return bytes
-}
-
-func (multiSignature *MultiSignature) AsMessage() []byte {
-	return multiSignature.AsSignMessage()
-}
-
-func MultiSignatureFromMessage(bytes []byte) (*MultiSignature, error) {
-	multySig := &MultiSignature{}
-	err := binary.Unmarshal(bytes, multySig)
-	if err != nil {
-		return nil, err
-	}
-	return multySig, nil
 }

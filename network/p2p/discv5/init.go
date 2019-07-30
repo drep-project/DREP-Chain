@@ -9,5 +9,5 @@ const (
 )
 
 var (
-	log = dlog.NewLogger(MODULENAME)
+	log = dlog.EnsureLogger(MODULENAME)
 )

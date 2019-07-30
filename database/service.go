@@ -10,11 +10,10 @@ import (
 	path2 "path"
 )
 
-
 var (
 	MODULENAME = "database"
 
-	log = dlog.NewLogger(MODULENAME)
+	log = dlog.EnsureLogger(MODULENAME)
 
 	DataDirFlag = common.DirectoryFlag{
 		Name:  "datadir",
@@ -73,10 +72,9 @@ func (database *DatabaseService) Db() *Database {
 	return database.db
 }
 
-
-func (database *DatabaseService) GetTriedDB()*trie.Database {
+func (database *DatabaseService) GetTriedDB() *trie.Database {
 	return database.db.trieDb
 }
-func (database *DatabaseService)RecoverTrie(root []byte)bool{
-	return  database.db.RecoverTrie(root)
+func (database *DatabaseService) RecoverTrie(root []byte) bool {
+	return database.db.RecoverTrie(root)
 }

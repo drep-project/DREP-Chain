@@ -8,7 +8,6 @@ import (
 	"sync"
 )
 
-
 // ModuleHook use custom hooks to redefine log input and output, module control, level control
 type ModuleHook struct {
 	writer        io.Writer

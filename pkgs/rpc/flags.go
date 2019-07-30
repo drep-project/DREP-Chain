@@ -6,7 +6,7 @@ import (
 
 	"github.com/drep-project/drep-chain/common"
 
-	 "github.com/drep-project/rpc"
+	"github.com/drep-project/rpc"
 )
 
 var (
