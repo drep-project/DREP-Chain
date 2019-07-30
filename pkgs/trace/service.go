@@ -70,14 +70,14 @@ func (traceService *TraceService) Init(executeContext *app.ExecuteContext) error
 	if !traceService.Config.Enable {
 		return nil
 	}
-	traceService.blockAnalysis = NewBlockAnalysis(*traceService.Config,traceService.ChainService.GetBlockByHeight)
+	traceService.blockAnalysis = NewBlockAnalysis(*traceService.Config, traceService.ChainService.GetBlockByHeight)
 
 	traceService.apis = []app.API{
 		app.API{
 			Namespace: MODULENAME,
 			Version:   "1.0",
 			Service: &TraceApi{
-				traceService.blockAnalysis,traceService,
+				traceService.blockAnalysis, traceService,
 			},
 			Public: true,
 		},

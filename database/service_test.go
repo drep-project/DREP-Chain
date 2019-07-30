@@ -16,8 +16,8 @@ import (
 	"strings"
 	"testing"
 
-	chainType "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
+	chainType "github.com/drep-project/drep-chain/types"
 )
 
 func TestGetSetAlias(t *testing.T) {
@@ -173,10 +173,10 @@ func TestDatabaseInit(t *testing.T) {
 	}
 
 	executeContext.AddService(&dbs)
-	executeContext.CommonConfig = &app.CommonConfig{ConfigFile:"config.json"}
+	executeContext.CommonConfig = &app.CommonConfig{ConfigFile: "config.json"}
 
 	//common.AppDataDir("testDatebase", false)
-	executeContext.CommonConfig.HomeDir,_ = Home()
+	executeContext.CommonConfig.HomeDir, _ = Home()
 
 	executeContext.CommonConfig.HomeDir += "/testdb/data"
 
@@ -199,7 +199,6 @@ func TestDatabaseInit(t *testing.T) {
 
 	os.RemoveAll(executeContext.CommonConfig.HomeDir)
 }
-
 
 // Home returns the home directory for the executing user.
 //

@@ -48,7 +48,6 @@ func GetDataBig(data []byte, start *big.Int, size *big.Int) []byte {
 	return RightPadBytes(data[s.Uint64():e.Uint64()], int(size.Uint64()))
 }
 
-
 // StorageSize is a wrapper around a float value that supports user friendly
 // formatting.
 type StorageSize float64

@@ -29,7 +29,7 @@ import (
 var (
 	MODULENAME = "trie"
 
-	log = dlog.NewLogger(MODULENAME)
+	log = dlog.EnsureLogger(MODULENAME)
 
 	stateRoot = "state rootState"
 

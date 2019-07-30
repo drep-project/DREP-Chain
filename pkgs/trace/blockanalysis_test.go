@@ -3,34 +3,30 @@ package trace
 import (
 	"bytes"
 	"errors"
-	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/common/event"
+	"github.com/drep-project/drep-chain/types"
 	"github.com/syndtr/goleveldb/leveldb"
 	"testing"
 	"time"
 )
 
-var (
+var ()
 
-)
-
-func makeBlockPools() map[uint64]*types.Block{
+func makeBlockPools() map[uint64]*types.Block {
 	blockPool := make(map[uint64]*types.Block)
-	n:=20
+	n := 20
 	blocks := seuqenceBlock(n)
-	for i:=0;i<n;i++ {
+	for i := 0; i < n; i++ {
 		blockPool[uint64(i)] = blocks[i]
 	}
 	return blockPool
 }
 
-
-
 func Test_Atach_Block_Process(t *testing.T) {
 	path := "./test_process_db1"
-	config := HistoryConfig{path,"",  "leveldb",  true }
+	config := HistoryConfig{path, "", "leveldb", true}
 	blockPool := makeBlockPools()
-	analysis := NewBlockAnalysis(config,  func (height uint64) (*types.Block, error) {return nil,nil})
+	analysis := NewBlockAnalysis(config, func(height uint64) (*types.Block, error) { return nil, nil })
 	defer func() {
 		analysis.Close()
 		deleteFolder(path)
@@ -38,7 +34,6 @@ func Test_Atach_Block_Process(t *testing.T) {
 	var newBlockFeed event.Feed
 	var detachBlockFeed event.Feed
 	analysis.Start(&newBlockFeed, &detachBlockFeed)
-
 
 	for _, block := range blockPool {
 		newBlockFeed.Send(block)
@@ -58,12 +53,11 @@ func Test_Atach_Block_Process(t *testing.T) {
 	}
 }
 
-
 func Test_Detach_Block_Process(t *testing.T) {
 	path := "./test_process_db2"
-	config := HistoryConfig{path,"",  "leveldb",  true }
+	config := HistoryConfig{path, "", "leveldb", true}
 	blockPool := makeBlockPools()
-	analysis := NewBlockAnalysis(config,  func (height uint64) (*types.Block, error) {return nil,nil})
+	analysis := NewBlockAnalysis(config, func(height uint64) (*types.Block, error) { return nil, nil })
 	defer func() {
 		analysis.Close()
 		deleteFolder(path)
@@ -95,13 +89,13 @@ func Test_Detach_Block_Process(t *testing.T) {
 
 func Test_Rebuild(t *testing.T) {
 	path := "./test_process_db3"
-	config := HistoryConfig{path,"",  "leveldb",  true }
+	config := HistoryConfig{path, "", "leveldb", true}
 	blockPool := makeBlockPools()
-	analysis := NewBlockAnalysis(config,  func (height uint64) (*types.Block, error) {
+	analysis := NewBlockAnalysis(config, func(height uint64) (*types.Block, error) {
 		block, ok := blockPool[height]
 		if ok {
 			return block, nil
-		}else{
+		} else {
 			return nil, errors.New("block not found")
 		}
 	})
@@ -113,14 +107,14 @@ func Test_Rebuild(t *testing.T) {
 	var detachBlockFeed event.Feed
 	analysis.Start(&newBlockFeed, &detachBlockFeed)
 
-	removeArr := []int{3,6,7,8,12,19}
+	removeArr := []int{3, 6, 7, 8, 12, 19}
 	for index, block := range blockPool {
 		if !contain(removeArr, int(index)) {
 			newBlockFeed.Send(block)
 		}
 	}
 	time.Sleep(time.Second)
-	analysis.Rebuild(0,20)
+	analysis.Rebuild(0, 20)
 	for _, block := range blockPool {
 		for _, tx := range block.Data.TxList {
 			txBytes, err := analysis.store.GetRawTransaction(tx.TxHash())
@@ -138,8 +132,8 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-func contain(arr []int,val int) bool {
-	for i:= 0;i<len(arr);i++{
+func contain(arr []int, val int) bool {
+	for i := 0; i < len(arr); i++ {
 		if arr[i] == val {
 			return true
 		}

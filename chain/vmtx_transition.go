@@ -20,10 +20,10 @@ import (
 
 	"github.com/drep-project/drep-chain/params"
 
-	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/pkgs/evm"
+	"github.com/drep-project/drep-chain/types"
 
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
 )
@@ -159,31 +159,32 @@ func (st *StateTransition) TransitionTransferDb() (ret []byte, failed bool, err 
 
 func CheckAlias(alias []byte) error {
 
-	if len(alias) <5 {
+	if len(alias) < 5 {
 		return ErrTooShortAlias
 	}
-	if len(alias) >20 {
+	if len(alias) > 20 {
 		return ErrTooLongAlias
 	}
 
 	runes := []rune(string(alias))
-	for i:=0;i<len(runes);i++ {
+	for i := 0; i < len(runes); i++ {
 		//number  48-57
-		if 48 <= runes[i] && runes[i]  <= 57 {
+		if 48 <= runes[i] && runes[i] <= 57 {
 			continue
 		}
 		//upcase
-		if 65 <= runes[i] && runes[i]  <= 90 {
+		if 65 <= runes[i] && runes[i] <= 90 {
 			continue
 		}
 		//lowcaser
-		if 97 <= runes[i] && runes[i]  <= 122 {
+		if 97 <= runes[i] && runes[i] <= 122 {
 			continue
 		}
 		return ErrUnsupportAliasChar
 	}
 	return nil
 }
+
 //5 160000 640
 //6 80000 320
 //7 40000 160
@@ -207,8 +208,8 @@ func (st *StateTransition) TransitionAliasDb() (ret []byte, failed bool, err err
 	}
 	// extra price
 	type LenPriceCacler struct {
-		LenMatch func () bool
-		Fee func() *big.Int
+		LenMatch func() bool
+		Fee      func() *big.Int
 	}
 
 	calcers := []*LenPriceCacler{

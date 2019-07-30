@@ -31,7 +31,7 @@ import (
 )
 
 var (
-	parentNode = types.NewNode(nil,0)
+	parentNode = types.NewNode(nil, 0)
 	pathFlag   = common.DirectoryFlag{
 		Name:  "path",
 		Usage: "keystore save to",
@@ -77,7 +77,7 @@ func gen(ctx *cli.Context) error {
 		}
 		instanceDir := filepath.Join(path, nodeItems[i].Name, "drepnode")
 		nodePrivateKey := GeneratePrivateKey(instanceDir)
-		fmt.Println( crypto.PubKey2Address(nodePrivateKey.PubKey()).String(), hex.EncodeToString(nodePrivateKey.Serialize()))
+		fmt.Println(crypto.PubKey2Address(nodePrivateKey.PubKey()).String(), hex.EncodeToString(nodePrivateKey.Serialize()))
 		node := enode.NewV4(nodePrivateKey.PubKey(), ip, nodeItems[i].Port, nodeItems[i].Port)
 		bootsNodes = append(bootsNodes, node)
 
@@ -113,7 +113,6 @@ func gen(ctx *cli.Context) error {
 	chainConfig.RemotePort = 55556
 	chainConfig.ChainId = 0
 	chainConfig.GenesisAddr = params.HoleAddress
-
 
 	for i := 0; i < len(nodeItems); i++ {
 		consensusConfig.MyPk = (*secp256k1.PublicKey)(&standbyKey[i].PublicKey)
@@ -211,9 +210,9 @@ func parserConfig(cfgPath string) ([]*NodeItem, error) {
 }
 
 type NodeItem struct {
-	Name string
-	Ip   string
-	Port int
+	Name     string
+	Ip       string
+	Port     int
 	Password string
 }
 

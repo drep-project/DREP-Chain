@@ -29,13 +29,11 @@ import (
 	"syscall"
 	"time"
 
-
+	"github.com/drep-project/drep-chain/pkgs/drepclient/component/jsre"
+	"github.com/drep-project/rpc"
 	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"
 	"github.com/robertkrimen/otto"
-	"github.com/drep-project/rpc"
-	"github.com/drep-project/drep-chain/pkgs/drepclient/component/jsre"
-
 )
 
 var (

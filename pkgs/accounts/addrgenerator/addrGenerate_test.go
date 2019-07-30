@@ -12,12 +12,12 @@ func Test_Generate(t *testing.T) {
 		PrivateKey: pri,
 	}
 	fmt.Println("瑞波：", generator.ToRipple())
-	fmt.Println("比特币：",generator.ToBtc())
-	fmt.Println("以太坊：",generator.ToEth())
-	fmt.Println("小蚁：",generator.ToNeo())
-	fmt.Println("达世：",generator.ToDash())
-	fmt.Println("狗狗币：",generator.ToDogecoin())
-	fmt.Println("莱特币：",generator.ToLiteCoin())
-	fmt.Println("Cosmos：",generator.ToAtom())
-	fmt.Println("Tron：",generator.ToTron())
+	fmt.Println("比特币：", generator.ToBtc())
+	fmt.Println("以太坊：", generator.ToEth())
+	fmt.Println("小蚁：", generator.ToNeo())
+	fmt.Println("达世：", generator.ToDash())
+	fmt.Println("狗狗币：", generator.ToDogecoin())
+	fmt.Println("莱特币：", generator.ToLiteCoin())
+	fmt.Println("Cosmos：", generator.ToAtom())
+	fmt.Println("Tron：", generator.ToTron())
 }

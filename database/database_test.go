@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"crypto/rand"
 	"fmt"
-	"github.com/drep-project/drep-chain/crypto"
 	"math/big"
 	"os"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/drep-project/drep-chain/crypto"
 
 	chainTypes "github.com/drep-project/drep-chain/types"
 )

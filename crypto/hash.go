@@ -88,6 +88,6 @@ func (h Hash) MarshalText() ([]byte, error) {
 
 func RandomHash() Hash {
 	key := make([]byte, HashLength)
-    rand.Read(key)
+	rand.Read(key)
 	return Bytes2Hash(key)
 }

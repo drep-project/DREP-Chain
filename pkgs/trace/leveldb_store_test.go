@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding/hex"
 	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/common/math"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/drep-chain/types"
 	"io/ioutil"
 	"math/big"
 	"math/rand"
@@ -17,17 +17,18 @@ import (
 	"testing"
 	"time"
 )
+
 var (
 	fromAddr = "0x33e846059ebe404c4000902c864190456b642e9b"
- 	fromPriv = "cb5441fac80cf4e5438c6f873ecd5f3d0fa67d597f6c68bbc1106e8563e7f419"
- 	toAddr = "0x2967f0629a5b84c981279ffbe330fe6154be7ad5"
- 	toPriv = "987c5c49033044141f7a20fe411f27df041e326762d8f251c0323649d9006466"
+	fromPriv = "cb5441fac80cf4e5438c6f873ecd5f3d0fa67d597f6c68bbc1106e8563e7f419"
+	toAddr   = "0x2967f0629a5b84c981279ffbe330fe6154be7ad5"
+	toPriv   = "987c5c49033044141f7a20fe411f27df041e326762d8f251c0323649d9006466"
 )
 
-func makeData(path string) (*LevelDbStore,[]*types.Block) {
+func makeData(path string) (*LevelDbStore, []*types.Block) {
 	levelDbStore, _ := NewLevelDbStore(path)
 	testData := []*types.Block{}
-	for i:=1;i<10;i++ {
+	for i := 1; i < 10; i++ {
 		block := randomBlock()
 		testData = append(testData, block)
 		levelDbStore.InsertRecord(block)
@@ -126,7 +127,7 @@ func Test_LeveldbInsertAndGetSendTransactionsByAddr(t *testing.T) {
 		allCount = allCount + int(data.Data.TxCount)
 	}
 	fromAddr := crypto.String2Address(fromAddr)
-	all := levelDbStore.GetSendTransactionsByAddr(&fromAddr,1 ,math.MaxInt32)
+	all := levelDbStore.GetSendTransactionsByAddr(&fromAddr, 1, math.MaxInt32)
 	if len(all) != allCount {
 		t.Errorf("The total number of transactions does not match, real count %d but got %d", allCount, len(all))
 	}
@@ -146,7 +147,7 @@ func Test_LeveldbInsertAndGetSendTransactionsByAddr(t *testing.T) {
 	}
 }
 
-func Test_LeveldbGetSendTransactionsByAddrAndPagination (t *testing.T) {
+func Test_LeveldbGetSendTransactionsByAddrAndPagination(t *testing.T) {
 	path := "test_db6"
 	levelDbStore, testData := makeData(path)
 	defer func() {
@@ -159,16 +160,15 @@ func Test_LeveldbGetSendTransactionsByAddrAndPagination (t *testing.T) {
 		allCount = allCount + int(data.Data.TxCount)
 	}
 	fromAddr := crypto.String2Address(fromAddr)
-	all := levelDbStore.GetSendTransactionsByAddr(&fromAddr,1 ,3)
+	all := levelDbStore.GetSendTransactionsByAddr(&fromAddr, 1, 3)
 	if len(all) != 3 {
 		t.Error("paging failure")
 	}
-	all = levelDbStore.GetSendTransactionsByAddr(&fromAddr,2 ,3)
+	all = levelDbStore.GetSendTransactionsByAddr(&fromAddr, 2, 3)
 	if len(all) != 3 {
 		t.Error("paging failure")
 	}
 }
-
 
 func Test_LeveldbInsertAndGetReceiveTransactionsByAddr(t *testing.T) {
 	path := "test_db7"
@@ -183,7 +183,7 @@ func Test_LeveldbInsertAndGetReceiveTransactionsByAddr(t *testing.T) {
 		allCount = allCount + int(data.Data.TxCount)
 	}
 	toAddr := crypto.String2Address(toAddr)
-	all := levelDbStore.GetReceiveTransactionsByAddr(&toAddr,1 ,math.MaxInt32)
+	all := levelDbStore.GetReceiveTransactionsByAddr(&toAddr, 1, math.MaxInt32)
 	if len(all) != allCount {
 		t.Errorf("The total number of receive transactions does not match, real count %d but got %d", allCount, len(all))
 	}
@@ -203,7 +203,7 @@ func Test_LeveldbInsertAndGetReceiveTransactionsByAddr(t *testing.T) {
 	}
 }
 
-func Test_LeveldbGetReceiveTransactionsByAddrAndPagination (t *testing.T) {
+func Test_LeveldbGetReceiveTransactionsByAddrAndPagination(t *testing.T) {
 	path := "test_db8"
 	levelDbStore, testData := makeData(path)
 	defer func() {
@@ -216,16 +216,15 @@ func Test_LeveldbGetReceiveTransactionsByAddrAndPagination (t *testing.T) {
 		allCount = allCount + int(data.Data.TxCount)
 	}
 	toAddr := crypto.String2Address(toAddr)
-	all := levelDbStore.GetReceiveTransactionsByAddr(&toAddr,1 ,3)
+	all := levelDbStore.GetReceiveTransactionsByAddr(&toAddr, 1, 3)
 	if len(all) != 3 {
 		t.Error("receive paging failure")
 	}
-	all = levelDbStore.GetReceiveTransactionsByAddr(&toAddr,2 ,3)
+	all = levelDbStore.GetReceiveTransactionsByAddr(&toAddr, 2, 3)
 	if len(all) != 3 {
 		t.Error("receive paging failure")
 	}
 }
-
 
 func deleteFolder(ketStore string) {
 	fileInfo, _ := ioutil.ReadDir(ketStore)
@@ -236,76 +235,63 @@ func deleteFolder(ketStore string) {
 	os.Remove(ketStore)
 }
 
-func seuqenceBlock(n int) []*types.Block{
-	blocks := make([]*types.Block,n)
-	for i:=0;i<n;i++{
+func seuqenceBlock(n int) []*types.Block {
+	blocks := make([]*types.Block, n)
+	for i := 0; i < n; i++ {
 		block := randomBlock()
 		block.Header.Height = uint64(i)
 		blocks[i] = block
 	}
 	return blocks
 }
-func randomBlock() *types.Block{
+func randomBlock() *types.Block {
 	txData := []*types.Transaction{
-		randTransaction(),randTransaction(),
+		randTransaction(), randTransaction(),
 	}
-	priBytes,_ := hex.DecodeString(fromPriv)
-	priv,_ := secp256k1.PrivKeyFromScalar(priBytes)
+	priBytes, _ := hex.DecodeString(fromPriv)
+	priv, _ := secp256k1.PrivKeyFromScalar(priBytes)
 	block := &types.Block{
-		Header:&types.BlockHeader{
-			ChainId      :  app.ChainIdType{},
-			Version      :  rand.Int31(),
-			PreviousHash :  crypto.RandomHash(),
-			GasLimit     :  *big.NewInt(rand.Int63()),
-			GasUsed      :  *big.NewInt(rand.Int63()),
-			Height       :  uint64(rand.Int63()),
-			Timestamp    :  uint64(time.Now().Nanosecond()),
-			StateRoot    :  crypto.RandomHash().Bytes(),
-			TxRoot       :  crypto.RandomHash().Bytes(),
+		Header: &types.BlockHeader{
+			ChainId:        app.ChainIdType{},
+			Version:        rand.Int31(),
+			PreviousHash:   crypto.RandomHash(),
+			GasLimit:       *big.NewInt(rand.Int63()),
+			GasUsed:        *big.NewInt(rand.Int63()),
+			Height:         uint64(rand.Int63()),
+			Timestamp:      uint64(time.Now().Nanosecond()),
+			StateRoot:      crypto.RandomHash().Bytes(),
+			TxRoot:         crypto.RandomHash().Bytes(),
 			LeaderAddress:  *priv.PubKey(),
 			MinorAddresses: []secp256k1.PublicKey{},
 		},
 		Data: &types.BlockData{
-			TxList:txData,
+			TxList:  txData,
 			TxCount: uint64(len(txData)),
 		},
 	}
 	return block
 }
 
-func randTransaction() *types.Transaction{
+func randTransaction() *types.Transaction {
 	buf := make([]byte, 20)
 	rand.Read(buf)
-	priBytes,_ := hex.DecodeString(fromPriv)
-	priv,_ := secp256k1.PrivKeyFromScalar(priBytes)
+	priBytes, _ := hex.DecodeString(fromPriv)
+	priv, _ := secp256k1.PrivKeyFromScalar(priBytes)
 	transaction := types.Transaction{
-			Data:types.TransactionData{
-				Version   : rand.Int31(),
-				Nonce     : uint64(rand.Int31()),
-				Type      : types.TxType(0),
-				To 		  : crypto.String2Address(toAddr),
-				ChainId   : app.ChainIdType{},
-				Amount    : common.Big(*big.NewInt(rand.Int63())),
-				GasPrice  : common.Big(*big.NewInt(rand.Int63())),
-				GasLimit  : common.Big(*big.NewInt(rand.Int63())),
-				Timestamp : rand.Int63(),
-				Data    : buf,
-			},
+		Data: types.TransactionData{
+			Version:   rand.Int31(),
+			Nonce:     uint64(rand.Int31()),
+			Type:      types.TxType(0),
+			To:        crypto.String2Address(toAddr),
+			ChainId:   app.ChainIdType{},
+			Amount:    common.Big(*big.NewInt(rand.Int63())),
+			GasPrice:  common.Big(*big.NewInt(rand.Int63())),
+			GasLimit:  common.Big(*big.NewInt(rand.Int63())),
+			Timestamp: rand.Int63(),
+			Data:      buf,
+		},
 	}
 	sig, _ := secp256k1.SignCompact(priv, transaction.TxHash().Bytes(), true)
 	transaction.Sig = sig
 	return &transaction
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

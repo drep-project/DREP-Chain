@@ -1,15 +1,16 @@
 package database
 
 import (
+	"sync"
+
 	"github.com/drep-project/drep-chain/database/drepdb"
 	"github.com/drep-project/drep-chain/database/trie"
-	"sync"
 )
 
 type TransactionStore struct {
-	diskDB    drepdb.KeyValueStore //本对象内，仅仅作为存储操作日志
-	dirties   *dirtiesKV
-	trie      *trie.SecureTrie
+	diskDB  drepdb.KeyValueStore //本对象内，仅仅作为存储操作日志
+	dirties *dirtiesKV
+	trie    *trie.SecureTrie
 }
 
 type dirtiesKV struct {
@@ -24,7 +25,7 @@ func NewTransactionStore(trie *trie.SecureTrie, diskDB drepdb.KeyValueStore) *Tr
 			otherDirties:   new(sync.Map),
 			storageDirties: new(sync.Map),
 		},
-		trie:      trie,
+		trie: trie,
 	}
 }
 

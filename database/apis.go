@@ -99,7 +99,7 @@ func (database *DatabaseService) GetBlockNode(hash *crypto.Hash, height uint64) 
 	}
 	blockHeader := &chainType.BlockHeader{}
 	binary.Unmarshal(value[0:len(value)-1], blockHeader)
-	status := value[len(value)-1:len(value)][0]
+	status := value[len(value)-1 : len(value)][0]
 	return blockHeader, chainType.BlockStatus(status), nil
 }
 
@@ -124,7 +124,7 @@ func (database *DatabaseService) BlockNodeIterator(handle func(*chainType.BlockH
 		if err != nil {
 			break
 		}
-		err = handle(blockHeader, chainType.BlockStatus(val[len(val)-1:len(val)][0]))
+		err = handle(blockHeader, chainType.BlockStatus(val[len(val)-1 : len(val)][0]))
 		if err != nil {
 			break
 		}

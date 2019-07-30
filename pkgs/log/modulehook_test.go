@@ -12,9 +12,9 @@ import (
 
 func TestLogSaveFormater(t *testing.T) {
 	tests := map[string]string{
-		"MODULE":"TEST1",
-		"level":"info",
-		"msg":"xxx",
+		"MODULE": "TEST1",
+		"level":  "info",
+		"msg":    "xxx",
 		"prefix": "TEST1",
 	}
 	textFormat := &prefixed.TextFormatter{
@@ -22,7 +22,7 @@ func TestLogSaveFormater(t *testing.T) {
 		ForceColors:     true,
 		ForceFormatting: true,
 	}
-	logger := NewLogger("TEST1")
+	logger := EnsureLogger("TEST1")
 	buf := bytes.NewBuffer([]byte{})
 	mHook := NewMyHook(buf, &logrus.JSONFormatter{}, textFormat)
 	logrus.AddHook(mHook)
@@ -45,9 +45,9 @@ func TestLogSaveFormater(t *testing.T) {
 
 func TestLogPrintFormater(t *testing.T) {
 	tests := map[string]string{
-		"MODULE":"TEST1",
-		"level":"INFO",
-		"msg":"xxx",
+		"MODULE": "TEST1",
+		"level":  "INFO",
+		"msg":    "xxx",
 		"prefix": "TEST1",
 	}
 	buf := bytes.NewBuffer([]byte{})
@@ -58,7 +58,7 @@ func TestLogPrintFormater(t *testing.T) {
 	}
 	logrus.SetFormatter(&NullFormat{})
 	logrus.SetOutput(buf)
-	logger := NewLogger("TEST1")
+	logger := EnsureLogger("TEST1")
 	mHook := NewMyHook(bytes.NewBuffer([]byte{}), &logrus.JSONFormatter{}, textFormat)
 	logrus.AddHook(mHook)
 	for key, _ := range loggers {
@@ -66,8 +66,8 @@ func TestLogPrintFormater(t *testing.T) {
 	}
 
 	logger.Info(tests["msg"])
-    outString := buf.String()
-    fmt.Println(outString)
+	outString := buf.String()
+	fmt.Println(outString)
 	for key, value := range tests {
 		if !strings.Contains(outString, tests[key]) {
 			t.Errorf("expected %s", value)
@@ -84,7 +84,7 @@ func TestLogLevel(t *testing.T) {
 	}
 	logrus.SetFormatter(&NullFormat{})
 	logrus.SetOutput(buf)
-	logger := NewLogger("TEST1")
+	logger := EnsureLogger("TEST1")
 	mHook := NewMyHook(bytes.NewBuffer([]byte{}), &logrus.JSONFormatter{}, textFormat)
 	logrus.AddHook(mHook)
 	for key, _ := range loggers {
@@ -111,8 +111,8 @@ func TestLogModuleLevel(t *testing.T) {
 	}
 	logrus.SetFormatter(&NullFormat{})
 	logrus.SetOutput(buf)
-	logger := NewLogger("TEST1")
-	logger2 := NewLogger("TEST2")
+	logger := EnsureLogger("TEST1")
+	logger2 := EnsureLogger("TEST2")
 	mHook := NewMyHook(bytes.NewBuffer([]byte{}), &logrus.JSONFormatter{}, textFormat)
 	logrus.AddHook(mHook)
 	for key, _ := range loggers {

@@ -7,11 +7,11 @@ import (
 )
 
 type BlockExecuteContext struct {
-	Db *database.Database
-	Block *types.Block
-	Gp *GasPool
+	Db      *database.Database
+	Block   *types.Block
+	Gp      *GasPool
 	GasUsed *big.Int
-	GasFee *big.Int
+	GasFee  *big.Int
 }
 
 type IBlockValidator interface {

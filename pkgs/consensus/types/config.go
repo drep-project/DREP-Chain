@@ -19,8 +19,8 @@ type Producer struct {
 
 type ProducerSet []Producer
 
-func (produceSet *ProducerSet)IsLocalIP(ip string) bool {
-	for _, bp := range  *produceSet {
+func (produceSet *ProducerSet) IsLocalIP(ip string) bool {
+	for _, bp := range *produceSet {
 		if bp.IP == ip {
 			return true
 		}
@@ -28,22 +28,20 @@ func (produceSet *ProducerSet)IsLocalIP(ip string) bool {
 	return false
 }
 
-func (produceSet *ProducerSet)IsLocalPk(pk *secp256k1.PublicKey) bool {
-	for _, bp := range  *produceSet {
-		if bp.Pubkey.IsEqual(pk)  {
+func (produceSet *ProducerSet) IsLocalPk(pk *secp256k1.PublicKey) bool {
+	for _, bp := range *produceSet {
+		if bp.Pubkey.IsEqual(pk) {
 			return true
 		}
 	}
 	return false
 }
 
-func (produceSet *ProducerSet)IsLocalAddress(addr crypto.CommonAddress) bool {
-	for _, bp := range  *produceSet {
-		if crypto.PubKey2Address(bp.Pubkey) == addr  {
+func (produceSet *ProducerSet) IsLocalAddress(addr crypto.CommonAddress) bool {
+	for _, bp := range *produceSet {
+		if crypto.PubKey2Address(bp.Pubkey) == addr {
 			return true
 		}
 	}
 	return false
 }
-
-

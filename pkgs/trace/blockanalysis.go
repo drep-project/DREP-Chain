@@ -1,24 +1,23 @@
 package trace
 
 import (
-	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/common/event"
-
+	"github.com/drep-project/drep-chain/types"
 )
 
 type BlockAnalysis struct {
-	Config HistoryConfig
-	getBlock func (uint64) (*types.Block, error)
+	Config           HistoryConfig
+	getBlock         func(uint64) (*types.Block, error)
 	eventNewBlockSub event.Subscription
 	newBlockChan     chan *types.Block
 
 	detachBlockSub  event.Subscription
 	detachBlockChan chan *types.Block
-	store       IStore
-	readyToQuit chan struct{}
+	store           IStore
+	readyToQuit     chan struct{}
 }
 
-func NewBlockAnalysis(config HistoryConfig, getBlock func (uint64) (*types.Block, error)) *BlockAnalysis{
+func NewBlockAnalysis(config HistoryConfig, getBlock func(uint64) (*types.Block, error)) *BlockAnalysis {
 	blockAnalysis := &BlockAnalysis{}
 	blockAnalysis.Config = config
 	blockAnalysis.getBlock = getBlock
@@ -28,7 +27,7 @@ func NewBlockAnalysis(config HistoryConfig, getBlock func (uint64) (*types.Block
 	return blockAnalysis
 }
 
-func (blockAnalysis *BlockAnalysis) Start(newBlock, detachBlock *event.Feed ) error {
+func (blockAnalysis *BlockAnalysis) Start(newBlock, detachBlock *event.Feed) error {
 	blockAnalysis.eventNewBlockSub = newBlock.Subscribe(blockAnalysis.newBlockChan)
 	blockAnalysis.detachBlockSub = detachBlock.Subscribe(blockAnalysis.detachBlockChan)
 	var err error
@@ -38,7 +37,7 @@ func (blockAnalysis *BlockAnalysis) Start(newBlock, detachBlock *event.Feed ) er
 			log.WithField("err", err).WithField("path", blockAnalysis.Config.HistoryDir).Error("cannot open db file")
 		}
 	} else if blockAnalysis.Config.DbType == "mongo" {
-		blockAnalysis.store, err = NewMongogDbStore(blockAnalysis.Config.Url,DefaultDbName)
+		blockAnalysis.store, err = NewMongogDbStore(blockAnalysis.Config.Url, DefaultDbName)
 		if err != nil {
 			log.WithField("err", err).WithField("url", blockAnalysis.Config.Url).Error("try connect mongo fail")
 		}
@@ -91,13 +90,13 @@ func (blockAnalysis *BlockAnalysis) Close() error {
 	return nil
 }
 
-func (blockAnalysis *BlockAnalysis) Rebuild(from, end int) error{
+func (blockAnalysis *BlockAnalysis) Rebuild(from, end int) error {
 	/*currentHeight := blockAnalysis.ChainService.BestChain().Height()
 	if uint64(from) > currentHeight {
 		return nil
 	}
 	*/
-	for i:=from; i< end;i++ {
+	for i := from; i < end; i++ {
 		block, err := blockAnalysis.getBlock(uint64(i))
 		if err != nil {
 			return ErrBlockNotFound

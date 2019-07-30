@@ -9,11 +9,11 @@ import (
 
 	"github.com/drep-project/drep-chain/blockmgr"
 
-	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/database"
+	"github.com/drep-project/drep-chain/types"
 )
 
 /*
@@ -241,7 +241,7 @@ func (accountapi *AccountApi) ReplaceTx(from crypto.CommonAddress, to crypto.Com
 */
 func (accountapi *AccountApi) GetTxInPool(hash string) (*types.RpcTransaction, error) {
 	tx, err := accountapi.blockmgr.GetTxInPool(hash)
-	if err !=nil {
+	if err != nil {
 		return nil, err
 	}
 	rpcTx := &types.RpcTransaction{}
@@ -401,16 +401,16 @@ func (accountapi *AccountApi) GenerateAddresses(address crypto.CommonAddress) (*
 	generator := &addrgenerator.AddrGenerate{
 		PrivateKey: privkey,
 	}
-	return &RpcAddresses {
-		BtcAddress:generator.ToBtc(),
-		EthAddress:generator.ToEth(),
-		NeoAddress:generator.ToNeo(),
-		RippleAddress:generator.ToRipple(),
-		DashAddress:generator.ToDash(),
-		DogeCoinAddress:generator.ToDogecoin(),
-		LiteCoinAddress:generator.ToLiteCoin(),
-		CosmosAddress:generator.ToAtom(),
-		TronAddress:generator.ToTron(),
+	return &RpcAddresses{
+		BtcAddress:      generator.ToBtc(),
+		EthAddress:      generator.ToEth(),
+		NeoAddress:      generator.ToNeo(),
+		RippleAddress:   generator.ToRipple(),
+		DashAddress:     generator.ToDash(),
+		DogeCoinAddress: generator.ToDogecoin(),
+		LiteCoinAddress: generator.ToLiteCoin(),
+		CosmosAddress:   generator.ToAtom(),
+		TronAddress:     generator.ToTron(),
 	}, nil
 }
 
@@ -443,7 +443,7 @@ func (accountapi *AccountApi) ImportKeyStore(path, password string) ([]*crypto.C
 */
 func (accountapi *AccountApi) ImportPrivkey(privBytes common.Bytes) (*crypto.CommonAddress, error) {
 	priv, _ := secp256k1.PrivKeyFromScalar(privBytes)
-	node, err :=  accountapi.Wallet.ImportPrivKey(priv)
+	node, err := accountapi.Wallet.ImportPrivKey(priv)
 	if err != nil {
 		return nil, err
 	}
@@ -451,15 +451,15 @@ func (accountapi *AccountApi) ImportPrivkey(privBytes common.Bytes) (*crypto.Com
 }
 
 type RpcAddresses struct {
-	BtcAddress string
-	EthAddress string
-	NeoAddress string
-	RippleAddress string
-	DashAddress string
+	BtcAddress      string
+	EthAddress      string
+	NeoAddress      string
+	RippleAddress   string
+	DashAddress     string
 	DogeCoinAddress string
 	LiteCoinAddress string
-	CosmosAddress string
-	TronAddress string
+	CosmosAddress   string
+	TronAddress     string
 }
 
 type RpcAccount struct {

@@ -1,5 +1,10 @@
 package service
 
+import (
+	"github.com/drep-project/drep-chain/pkgs/consensus/service/bft"
+	"time"
+)
+
 /*
 name: 共识rpc接口
 usage: 查询共识节点功能
@@ -42,5 +47,9 @@ func (consensusApi *ConsensusApi) Minning() bool {
 		 {"jsonrpc":"2.0","id":3,"result":null}
 */
 func (consensusApi *ConsensusApi) ChangeWaitTime(waitTime int) {
-	consensusApi.consensusService.ChangeWaitTime(int64(waitTime))
+	if consensusApi.consensusService.Config.ConsensusMode == "bft" {
+
+	} else {
+		consensusApi.consensusService.ConsensusEngine.(*bft.BftConsensus).ChangeTime(time.Duration(int64(time.Millisecond) * int64(waitTime)))
+	}
 }

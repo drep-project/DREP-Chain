@@ -4,10 +4,10 @@ import (
 	"crypto/rand"
 	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/chain"
-	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/database"
+	"github.com/drep-project/drep-chain/types"
 	"testing"
 	"time"
 )

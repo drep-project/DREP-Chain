@@ -100,8 +100,8 @@ var altcoins = []Altcoin{
 	{"Zetacoin", 0x50, 0xE0, -1},
 }
 
-func getCoin(name string ) Altcoin {
-	for _, coin :=range  altcoins {
+func getCoin(name string) Altcoin {
+	for _, coin := range altcoins {
 		if coin.Name == name {
 			return coin
 		}

@@ -3,8 +3,8 @@ package chain
 import (
 	"math/big"
 
-	types "github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/database"
+	types "github.com/drep-project/drep-chain/types"
 )
 
 type TransactionValidator struct {

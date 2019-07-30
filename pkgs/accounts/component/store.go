@@ -1,8 +1,8 @@
 package component
 
 import (
-	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/types"
 )
 
 type KeyStore interface {
