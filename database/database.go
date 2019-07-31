@@ -303,7 +303,7 @@ func (db *Database) AliasGet(alias string) *crypto.CommonAddress {
 
 func (db *Database) AliasExist(alias string) bool {
 	if db.cache != nil {
-		_, ok := db.cache.dirties.storageDirties.Load(alias)
+		_, ok := db.cache.dirties.Load(alias)
 		if ok {
 			return true
 		}
@@ -552,7 +552,7 @@ func (db *Database) Commit() {
 }
 
 func (db *Database) RevertState(shot *SnapShot) {
-	db.cache.RevertState((*dirtiesKV)(shot))
+	db.cache.RevertState(shot.storageDirties)
 }
 
 func (db *Database) CopyState() *SnapShot {

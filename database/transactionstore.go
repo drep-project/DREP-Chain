@@ -9,7 +9,7 @@ import (
 
 type TransactionStore struct {
 	diskDB  drepdb.KeyValueStore //本对象内，仅仅作为存储操作日志
-	dirties *dirtiesKV
+	dirties *sync.Map //数据属于storage的缓存
 	trie    *trie.SecureTrie
 }
 
@@ -21,16 +21,13 @@ type dirtiesKV struct {
 func NewTransactionStore(trie *trie.SecureTrie, diskDB drepdb.KeyValueStore) *TransactionStore {
 	return &TransactionStore{
 		diskDB: diskDB,
-		dirties: &dirtiesKV{
-			//otherDirties:   new(sync.Map),
-			storageDirties: new(sync.Map),
-		},
+		dirties: new(sync.Map),
 		trie: trie,
 	}
 }
 
 func (tDb *TransactionStore) Get(key []byte) ([]byte, error) {
-	if val, ok := tDb.dirties.storageDirties.Load(string(key)); ok {
+	if val, ok := tDb.dirties.Load(string(key)); ok {
 		if val == nil {
 			return nil, nil
 		}
@@ -40,12 +37,12 @@ func (tDb *TransactionStore) Get(key []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	tDb.dirties.storageDirties.Store(string(key), val)
+	tDb.dirties.Store(string(key), val)
 	return val, nil
 }
 
 func (tDb *TransactionStore) Put(key []byte, value []byte) error {
-	tDb.dirties.storageDirties.Store(string(key), value)
+	tDb.dirties.Store(string(key), value)
 	return nil
 }
 
@@ -55,7 +52,7 @@ func (tDb *TransactionStore) Put(key []byte, value []byte) error {
 //}
 
 func (tDb *TransactionStore) Flush() {
-	tDb.dirties.storageDirties.Range(func(key, value interface{}) bool {
+	tDb.dirties.Range(func(key, value interface{}) bool {
 		bk := []byte(key.(string))
 		if value != nil {
 			val := value.([]byte)
@@ -68,12 +65,12 @@ func (tDb *TransactionStore) Flush() {
 			tDb.trie.Delete(bk)
 			tDb.trie.Commit(nil)
 		}
-		tDb.dirties.storageDirties.Delete(key)
+		tDb.dirties.Delete(key)
 		return true
 	})
 }
 
-func (tDb *TransactionStore) RevertState(dirties *dirtiesKV) {
+func (tDb *TransactionStore) RevertState(dirties *sync.Map) {
 	tDb.dirties = dirties
 }
 
@@ -81,7 +78,7 @@ func (tDb *TransactionStore) CopyState() *SnapShot {
 	newDirties := dirtiesKV{}
 
 	newMap := new(sync.Map)
-	tDb.dirties.storageDirties.Range(func(key, value interface{}) bool {
+	tDb.dirties.Range(func(key, value interface{}) bool {
 		if value == nil {
 			newMap.Store(key, value)
 		} else {
