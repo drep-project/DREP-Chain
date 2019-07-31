@@ -542,6 +542,10 @@ func (db *Database) BeginTransaction(storeToDB bool) *Database {
 	}
 }
 
+func (db *Database) NewBatch() drepdb.Batch {
+	return db.diskDb.NewBatch()
+}
+
 func (db *Database) Commit() {
 	if db.cache != nil {
 		db.cache.Flush()

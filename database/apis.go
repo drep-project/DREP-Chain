@@ -5,6 +5,7 @@ import (
 
 	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/database/drepdb"
 	chainType "github.com/drep-project/drep-chain/types"
 )
 
@@ -256,6 +257,10 @@ func (database *DatabaseService) Put(key []byte, value []byte) error {
 
 func (database *DatabaseService) Delete(key []byte) error {
 	return database.db.diskDb.Delete(key)
+}
+
+func (database *DatabaseService) NewBatch() drepdb.Batch {
+	return database.db.diskDb.NewBatch()
 }
 
 //func (database *DatabaseService) Discard() {

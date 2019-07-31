@@ -10,6 +10,8 @@ import (
 
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/chain"
+	"github.com/drep-project/drep-chain/common/bitutil"
+	"github.com/drep-project/drep-chain/common/bloombits"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/types"
@@ -52,6 +54,12 @@ type ChainIndexerService struct {
 	ctxCancel func()
 
 	lock sync.RWMutex
+
+	// bloomIndexer
+	size    uint64		// section size to generate bloombits for
+	gen     *bloombits.Generator // generator to rotate the bloom bits crating the bloom index
+	section uint64               // Section is the section number being processed currently
+	head    crypto.Hash          // Head is the hash of the last header processed
 }
 
 func (chainIndexer *ChainIndexerService) Name() string {
@@ -92,7 +100,7 @@ func (chainIndexer *ChainIndexerService) Init(executeContext *app.ExecuteContext
 	chainIndexer.update = make(chan struct{}, 1)
 	chainIndexer.quit = make(chan chan error)
 	chainIndexer.ctx, chainIndexer.ctxCancel = context.WithCancel(context.Background())
-	chainIndexer.storedSections = chainIndexer.GetStoredSections()
+	chainIndexer.storedSections = chainIndexer.getStoredSections()
 
 	go chainIndexer.updateLoop()
 
@@ -141,7 +149,7 @@ func (chainIndexer *ChainIndexerService) updateLoop() {
 				section := chainIndexer.storedSections
 				var oldHead crypto.Hash
 				if section > 0 {
-					oldHead = chainIndexer.SectionHead(section - 1)
+					oldHead = chainIndexer.getSectionHead(section - 1)
 				}
 				// Process the newly defined section in the background
 				chainIndexer.lock.Unlock()
@@ -158,9 +166,9 @@ func (chainIndexer *ChainIndexerService) updateLoop() {
 				chainIndexer.lock.Lock()
 
 				// If processing succeeded and no reorgs occurred, mark the section completed
-				if err == nil && (section == 0 || oldHead == chainIndexer.SectionHead(section-1)) {
+				if err == nil && (section == 0 || oldHead == chainIndexer.getSectionHead(section-1)) {
 					chainIndexer.setSectionHead(section, newHead)
-					chainIndexer.setValidSections(section + 1)
+					chainIndexer.setValidStoredSections(section + 1)
 					if chainIndexer.storedSections == chainIndexer.knownSections && updating {
 						updating = false
 						log.Info("Finished upgrading chain index")
@@ -199,33 +207,11 @@ func (chainIndexer *ChainIndexerService) verifyLastHead() {
 			hash = *blockHeader.Hash()
 		}
 
-		if chainIndexer.SectionHead(chainIndexer.storedSections-1) == hash {
+		if chainIndexer.getSectionHead(chainIndexer.storedSections-1) == hash {
 			return
 		}
-		chainIndexer.setValidSections(chainIndexer.storedSections - 1)
+		chainIndexer.setValidStoredSections(chainIndexer.storedSections - 1)
 	}
-}
-
-// SectionHead 从数据库中获取已处理section的最后一个块哈希。
-func (chainIndexer *ChainIndexerService) SectionHead(section uint64) crypto.Hash {
-	//var data [8]byte
-	//binary.BigEndian.PutUint64(data[:], section)
-	//
-	//hash, _ := chainIndexer.indexDb.Get(append([]byte("shead"), data[:]...))
-	//if len(hash) == len(crypto.Hash{}) {
-	//	return crypto.BytesToHash(hash)
-	//}
-	return crypto.Hash{}
-}
-
-//setSectionHead 将已处理section的最后一个块哈希写入数据库。
-func (chainIndexer *ChainIndexerService) setSectionHead(section uint64, hash crypto.Hash) {
-	//var data [8]byte
-	//binary.BigEndian.PutUint64(data[:], section)
-	//
-	//chainIndexer.indexDb.Put(append([]byte("shead"), data[:]...), hash.Bytes())
-
-	return
 }
 
 // processSection processes an entire section by calling backend functions while
@@ -233,10 +219,80 @@ func (chainIndexer *ChainIndexerService) setSectionHead(section uint64, hash cry
 // held while processing, the continuity can be broken by a long reorg, in which
 // case the function returns with an error.
 func (chainIndexer *ChainIndexerService) processSection(section uint64, lastHead crypto.Hash) (crypto.Hash, error) {
-	return crypto.Hash{}, nil
+	log.WithField("section", section).Trace("Processing new chain section")
+	// Reset and partial processing
+
+	if err := chainIndexer.reset(chainIndexer.ctx, section, lastHead); err != nil {
+		chainIndexer.setValidStoredSections(0)
+		return crypto.Hash{}, err
+	}
+
+	for number := section * chainIndexer.Config.SectionSize; number < (section+1)*chainIndexer.Config.SectionSize; number++ {
+		hash := crypto.Hash{}
+		blockHeader, err := chainIndexer.ChainService.GetBlockHeaderByHeight(number)
+		if err == nil {
+			hash = *blockHeader.Hash()
+		}
+
+		if hash == (crypto.Hash{}) {
+			return crypto.Hash{}, fmt.Errorf("canonical block #%d unknown", number)
+		}
+
+		if blockHeader == nil {
+			return crypto.Hash{}, fmt.Errorf("block #%d [%x…] not found", number, hash[:4])
+		} else if blockHeader.PreviousHash != lastHead {
+			return crypto.Hash{}, fmt.Errorf("chain reorged during section processing")
+		}
+		if err := chainIndexer.process(chainIndexer.ctx, blockHeader); err != nil {
+			return crypto.Hash{}, err
+		}
+		lastHead = *blockHeader.Hash()
+	}
+	if err := chainIndexer.commit(); err != nil {
+		return crypto.Hash{}, err
+	}
+	return lastHead, nil
 }
 
+
 // setValidSections writes the number of valid sections to the index database
-func (chainIndexer *ChainIndexerService) setValidSections(sections uint64) {
-	return
+func (chainIndexer *ChainIndexerService) setValidStoredSections(sections uint64) {
+	// Set the current number of valid sections in the database
+	chainIndexer.setStoredSections(sections)
+
+	// Remove any reorged sections, caching the valids in the mean time
+	for chainIndexer.storedSections > sections {
+		chainIndexer.storedSections--
+		chainIndexer.deleteSectionHead(chainIndexer.storedSections)
+	}
+	chainIndexer.storedSections = sections // needed if new > old
+}
+
+// 启动新的bloombits索引部分。
+func (chainIndexer *ChainIndexerService) reset(ctx context.Context, section uint64, lastSectionHead crypto.Hash) error {
+	gen, err := bloombits.NewGenerator(uint(chainIndexer.size))
+	chainIndexer.gen, chainIndexer.section, chainIndexer.head = gen, section, crypto.Hash{}
+	return err
+}
+
+// 将新区块头的bloom添加到索引。
+func (chainIndexer *ChainIndexerService) process(ctx context.Context, header *types.BlockHeader) error {
+	chainIndexer.gen.AddBloom(uint(header.Height - chainIndexer.section * chainIndexer.size), header.Bloom)
+	chainIndexer.head = *header.Hash()
+	return nil
+}
+
+// 完成bloom部分和把它写进数据库。
+func (chainIndexer *ChainIndexerService) commit() error {
+	batch := chainIndexer.DatabaseService.NewBatch()
+	for i := 0; i < types.BloomBitLength; i++ {
+		bits, err := chainIndexer.gen.Bitset(uint(i))
+		if err != nil {
+			return err
+		}
+		if err := batch.Put(bloomBitsKey(uint(i), chainIndexer.section, chainIndexer.head), bitutil.CompressBytes(bits)) ; err != nil {
+			log.WithField("err", err).Fatal("Failed to store bloom bits")
+		}
+	}
+	return batch.Write()
 }
