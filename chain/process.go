@@ -101,12 +101,6 @@ func (chainService *ChainService) AcceptBlock(block *types.Block) (inMainChain b
 //TODO cannot find chain tip  对外通知区块失败会产生这个错误  区块未保存 header已经保存
 func (chainService *ChainService) acceptBlock(block *types.Block) (inMainChain bool, err error) {
 	db := chainService.DatabaseService.BeginTransaction(true)
-	//defer func() {
-	//	if err != nil {
-	//		db.Discard()
-	//	}
-	//	//chainService.blockDb.Commit(false)
-	//}()
 	prevNode := chainService.blockIndex.LookupNode(&block.Header.PreviousHash)
 	preBlock := prevNode.Header()
 	for _, blockValidator := range chainService.BlockValidator() {
@@ -140,8 +134,6 @@ func (chainService *ChainService) acceptBlock(block *types.Block) (inMainChain b
 		if err != nil {
 			return false, err
 		}
-
-		fmt.Println("acceptBlock:", db.GetStateRoot())
 
 		chainService.markState(newNode)
 		//SetTip has save tip but block not saving

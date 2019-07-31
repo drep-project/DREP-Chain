@@ -68,6 +68,8 @@ func (block *Block) AsSignMessage() []byte {
 			Timestamp:     block.Header.Timestamp,
 			TxRoot:        block.Header.TxRoot,
 			LeaderAddress: block.Header.LeaderAddress,
+			ReceiptRoot  : block.Header.ReceiptRoot,
+			Bloom		 : block.Header.Bloom,
 		},
 	}
 	bytes, _ := binary.Marshal(blockTemp)

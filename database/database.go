@@ -274,12 +274,11 @@ func (db *Database) AliasSet(addr *crypto.CommonAddress, alias string) (err erro
 
 		//2 存入以alias为key的k-v对
 		err = db.AliasPut([]byte(aliasPrefix+alias), addr.Bytes())
+		if err != nil {
+			return err
+		}
 	} else {
 		return ErrInvalidateAlias
-	}
-
-	if err != nil {
-		return err
 	}
 
 	//put to stroage
@@ -304,7 +303,7 @@ func (db *Database) AliasGet(alias string) *crypto.CommonAddress {
 
 func (db *Database) AliasExist(alias string) bool {
 	if db.cache != nil {
-		_, ok := db.cache.dirties.otherDirties.Load(alias)
+		_, ok := db.cache.dirties.storageDirties.Load(alias)
 		if ok {
 			return true
 		}

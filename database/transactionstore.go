@@ -15,14 +15,14 @@ type TransactionStore struct {
 
 type dirtiesKV struct {
 	storageDirties *sync.Map //数据属于storage的缓存
-	otherDirties   *sync.Map //数据与stroage没有关系的，其他kv对的缓存
+	//otherDirties   *sync.Map //数据与stroage没有关系的，其他kv对的缓存
 }
 
 func NewTransactionStore(trie *trie.SecureTrie, diskDB drepdb.KeyValueStore) *TransactionStore {
 	return &TransactionStore{
 		diskDB: diskDB,
 		dirties: &dirtiesKV{
-			otherDirties:   new(sync.Map),
+			//otherDirties:   new(sync.Map),
 			storageDirties: new(sync.Map),
 		},
 		trie: trie,
@@ -71,14 +71,6 @@ func (tDb *TransactionStore) Flush() {
 		tDb.dirties.storageDirties.Delete(key)
 		return true
 	})
-
-	// todo 把otherDirties的内容合并到 storageDirties中，便于回滚的状态一致性
-	tDb.dirties.otherDirties.Range(func(key, value interface{}) bool {
-		bk := []byte(key.(string))
-		val := value.([]byte)
-		tDb.diskDB.Put(bk, val)
-		return true
-	})
 }
 
 func (tDb *TransactionStore) RevertState(dirties *dirtiesKV) {
@@ -106,25 +98,6 @@ func (tDb *TransactionStore) CopyState() *SnapShot {
 	})
 
 	newDirties.storageDirties = newMap
-
-	newMap = new(sync.Map)
-	tDb.dirties.otherDirties.Range(func(key, value interface{}) bool {
-		if value == nil {
-			newMap.Store(key, value)
-		} else {
-			switch t := value.(type) {
-			case []byte:
-				newBytes := make([]byte, len(t))
-				copy(newBytes, t)
-				newMap.Store(key, newBytes)
-			default:
-				panic("never run here")
-			}
-		}
-		return true
-	})
-
-	newDirties.otherDirties = newMap
 	return (*SnapShot)(&newDirties)
 }
 

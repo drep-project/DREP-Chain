@@ -62,13 +62,13 @@ func NewReceipt(root []byte, failed bool, cumulativeGasUsed uint64) *Receipt {
 	return r
 }
 
-func (r *Receipt) MarshalBinary() ([]byte, error) {
-	return binary.Marshal(r)
-}
-
-func (r *Receipt) UnmarshalBinary(data []byte) error {
-	return binary.Unmarshal(data, r)
-}
+//func (r *Receipt) MarshalBinary() ([]byte, error) {
+//	return binary.Marshal(r)
+//}
+//
+//func (r *Receipt) UnmarshalBinary(data []byte) error {
+//	return binary.Unmarshal(data, r)
+//}
 
 func (r *Receipt) ReceiptHash() *crypto.Hash {
 	b, _ := binary.Marshal(r)
