@@ -485,6 +485,46 @@ func (db *Database) GetBlock(hash *crypto.Hash) (*types.Block, error) {
 	return block, nil
 }
 
+func (db *Database) GetBlockHeader(hash *crypto.Hash) (*types.BlockHeader, error) {
+	key := append(BlockPrefix, hash[:]...)
+	val, err := db.Get(key)
+	if err != nil {
+		return nil, err
+	}
+	block := &types.Block{}
+	err = binary.Unmarshal(val, block)
+	if err != nil {
+		return nil, err
+	}
+	return block.Header, nil
+}
+
+func (db *Database) FindCommonAncestor(a, b *types.BlockHeader) *types.BlockHeader {
+	for bn := b.Height; a.Height > bn; {
+		a, _ := db.GetBlockHeader(&a.PreviousHash)
+		if a == nil {
+			return nil
+		}
+	}
+	for an := a.Height; an < b.Height; {
+		b, _ := db.GetBlockHeader(&b.PreviousHash)
+		if b == nil {
+			return nil
+		}
+	}
+	for a.Hash() != b.Hash() {
+		a, _ := db.GetBlockHeader(&a.PreviousHash)
+		if a == nil {
+			return nil
+		}
+		b, _ := db.GetBlockHeader(&b.PreviousHash)
+		if b == nil {
+			return nil
+		}
+	}
+	return a
+}
+
 func (db *Database) GetBlockNode(hash *crypto.Hash, blockHeight uint64) (*types.BlockHeader, types.BlockStatus, error) {
 	key := db.blockIndexKey(hash, blockHeight)
 

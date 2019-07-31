@@ -5,6 +5,7 @@ import (
 	"context"
 	"time"
 	"sync"
+	"sync/atomic"
 
 	"gopkg.in/urfave/cli.v1"
 
@@ -108,11 +109,42 @@ func (chainIndexer *ChainIndexerService) Init(executeContext *app.ExecuteContext
 }
 
 func (chainIndexer *ChainIndexerService) Start(executeContext *app.ExecuteContext) error {
+	events := make(chan *types.Block, 10)
+	sub := chainIndexer.ChainService.NewBlockFeed().Subscribe(events)
+
+	go chainIndexer.eventLoop(chainIndexer.ChainService.GetCurrentHeader(), events, sub)
 
 	return nil
 }
 
 func (chainIndexer *ChainIndexerService) Stop(executeContext *app.ExecuteContext) error {
+	var errs []error
+	chainIndexer.ctxCancel()
+
+	// Tear down the primary update loop
+	errc := make(chan error)
+	chainIndexer.quit <- errc
+	if err := <-errc; err != nil {
+		errs = append(errs, err)
+	}
+	// If needed, tear down the secondary event loop
+	if atomic.LoadUint32(&chainIndexer.active) != 0 {
+		chainIndexer.quit <- errc
+		if err := <-errc; err != nil {
+			errs = append(errs, err)
+		}
+	}
+	// Return any failures
+	switch {
+	case len(errs) == 0:
+		return nil
+
+	case len(errs) == 1:
+		return errs[0]
+
+	default:
+		return fmt.Errorf("%v", errs)
+	}
 
 	return nil
 }
@@ -195,6 +227,122 @@ func (chainIndexer *ChainIndexerService) updateLoop() {
 	}
 }
 
+// eventLoop is a secondary - optional - event loop of the indexer which is only
+// started for the outermost indexer to push chain head events into a processing
+// queue.
+func (chainIndexer *ChainIndexerService) eventLoop(currentHeader *types.BlockHeader, events chan *types.Block, sub event.Subscription) {
+	// Mark the chain indexer as active, requiring an additional teardown
+	atomic.StoreUint32(&chainIndexer.active, 1)
+
+	defer sub.Unsubscribe()
+
+	// Fire the initial new head event to start any outstanding processing
+	chainIndexer.newHead(currentHeader.Height, false)
+
+	var (
+		prevHeader = currentHeader
+		prevHash   = *currentHeader.Hash()
+	)
+	for {
+		select {
+		case errc := <-chainIndexer.quit:
+			// Chain indexer terminating, report no failure and abort
+			errc <- nil
+			return
+
+		case block, ok := <-events:
+			// Received a new event, ensure it's not nil (closing) and update
+			if !ok {
+				errc := <-chainIndexer.quit
+				errc <- nil
+				return
+			}
+			header := block.Header
+			if header.PreviousHash != prevHash {
+				// Reorg to the common ancestor if needed (might not exist in light sync mode, skip reorg then)
+				// TODO(karalabe, zsfelfoldi): This seems a bit brittle, can we detect this case explicitly?
+
+				hash := crypto.Hash{}
+				blockHeader, err := chainIndexer.ChainService.GetBlockHeaderByHeight(prevHeader.Height)
+				if err == nil {
+					hash = *blockHeader.Hash()
+				}
+
+				if hash != prevHash {
+					if h := chainIndexer.DatabaseService.FindCommonAncestor(prevHeader, header); h != nil {
+						chainIndexer.newHead(h.Height, true)
+					}
+				}
+			}
+			chainIndexer.newHead(header.Height, false)
+
+			prevHeader, prevHash = header, *header.Hash()
+		}
+	}
+}
+
+// newHead notifies the indexer about new chain heads and/or reorgs.
+func (chainIndexer *ChainIndexerService) newHead(head uint64, reorg bool) {
+	chainIndexer.lock.Lock()
+	defer chainIndexer.lock.Unlock()
+
+	// If a reorg happened, invalidate all sections until that point
+	if reorg {
+		// Revert the known section number to the reorg point
+		known := (head + 1) / chainIndexer.Config.SectionSize
+		stored := known
+		if known < chainIndexer.checkpointSections {
+			known = 0
+		}
+		if stored < chainIndexer.checkpointSections {
+			stored = chainIndexer.checkpointSections
+		}
+		if known < chainIndexer.knownSections {
+			chainIndexer.knownSections = known
+		}
+		// Revert the stored sections from the database to the reorg point
+		if stored < chainIndexer.storedSections {
+			chainIndexer.setValidStoredSections(stored)
+		}
+		// Update the new head number to the finalized section end and notify children
+		head = known * chainIndexer.Config.SectionSize
+
+		return
+	}
+	// No reorg, calculate the number of newly known sections and update if high enough
+	var sections uint64
+	if head >= chainIndexer.Config.ConfirmsReq {
+		sections = (head + 1 - chainIndexer.Config.ConfirmsReq) / chainIndexer.Config.SectionSize
+		if sections < chainIndexer.checkpointSections {
+			sections = 0
+		}
+		if sections > chainIndexer.knownSections {
+			if chainIndexer.knownSections < chainIndexer.checkpointSections {
+				// syncing reached the checkpoint, verify section head
+				syncedHead := crypto.Hash{}
+				blockHeader, err := chainIndexer.ChainService.GetBlockHeaderByHeight(chainIndexer.checkpointSections * chainIndexer.Config.SectionSize - 1)
+				if err == nil {
+					syncedHead = *blockHeader.Hash()
+				}
+
+				if syncedHead != chainIndexer.checkpointHead {
+					log.WithField("number", chainIndexer.checkpointSections * chainIndexer.Config.SectionSize-1).
+						WithField("expected", chainIndexer.checkpointHead).
+						WithField("synced", syncedHead).
+						Error("Synced chain does not match checkpoint")
+					return
+				}
+			}
+			chainIndexer.knownSections = sections
+
+			select {
+			case chainIndexer.update <- struct{}{}:
+			default:
+			}
+		}
+	}
+}
+
 // verifyLastHead compares last stored section head with the corresponding block hash in the
 // actual canonical chain and rolls back reorged sections if necessary to ensure that stored
 // sections are all valid
@@ -255,7 +403,7 @@ func (chainIndexer *ChainIndexerService) processSection(section uint64, lastHead
 }
 
 
-// setValidSections writes the number of valid sections to the index database
+// setValidStoredSections writes the number of valid sections to the index database
 func (chainIndexer *ChainIndexerService) setValidStoredSections(sections uint64) {
 	// Set the current number of valid sections in the database
 	chainIndexer.setStoredSections(sections)
