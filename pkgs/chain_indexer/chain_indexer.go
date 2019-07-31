@@ -92,7 +92,7 @@ func (chainIndexer *ChainIndexerService) Init(executeContext *app.ExecuteContext
 	chainIndexer.update = make(chan struct{}, 1)
 	chainIndexer.quit = make(chan chan error)
 	chainIndexer.ctx, chainIndexer.ctxCancel = context.WithCancel(context.Background())
-	chainIndexer.storedSections = chainIndexer.DatabaseService.GetStoredSections()
+	chainIndexer.storedSections = chainIndexer.GetStoredSections()
 
 	go chainIndexer.updateLoop()
 

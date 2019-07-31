@@ -244,13 +244,18 @@ func (database *DatabaseService) Commit() {
 	database.db.Commit()
 }
 
-// getters and setters for ChainIndexer
-func (database *DatabaseService) GetStoredSections() uint64 {
-	return database.db.GetStoredSections()
+// explore the interface to other service
+// read/write the key/value pairs directly
+func (database *DatabaseService) Get(key []byte) ([]byte, error) {
+	return database.db.diskDb.Get(key)
 }
 
-func (database *DatabaseService) SetStoredSections(storedSections uint64) error {
-	return database.db.SetStoredSections(storedSections)
+func (database *DatabaseService) Put(key []byte, value []byte) error {
+	return database.db.diskDb.Put(key, value)
+}
+
+func (database *DatabaseService) Delete(key []byte) error {
+	return database.db.diskDb.Delete(key)
 }
 
 //func (database *DatabaseService) Discard() {
