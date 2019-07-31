@@ -542,6 +542,10 @@ func (db *Database) BeginTransaction(storeToDB bool) *Database {
 	}
 }
 
+func (db *Database) NewBatch() drepdb.Batch {
+	return db.diskDb.NewBatch()
+}
+
 func (db *Database) Commit() {
 	if db.cache != nil {
 		db.cache.Flush()
@@ -561,30 +565,3 @@ func (db *Database) GetStateRoot() []byte {
 }
 
 type SnapShot dirtiesKV
-
-
-// getters and setters for ChainIndexer
-func (db *Database) GetStoredSections() uint64 {
-	var storedSections uint64
-
-	key := sha3.Keccak256([]byte("bl_storedsections"))
-	value, err := db.Get(key)
-	if err != nil {
-		return storedSections
-	}
-
-	err = binary.Unmarshal(value, &storedSections)
-	if err != nil {
-		return storedSections
-	}
-	return storedSections
-}
-
-func (db *Database) SetStoredSections(storedSections uint64) error {
-	key := sha3.Keccak256([]byte("bl_storedsections"))
-	value, err := binary.Marshal(storedSections)
-	if err != nil {
-		return err
-	}
-	return db.Put(key, value)
-}
