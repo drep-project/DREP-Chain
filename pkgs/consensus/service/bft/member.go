@@ -44,23 +44,14 @@ type Member struct {
 	convertor  func(msg []byte) (IConsenMsg, error)
 }
 
-func NewMember(prvKey *secp256k1.PrivateKey, p2pServer p2pService.P2P, waitTime time.Duration, msgPool chan *MsgWrap) *Member {
+func NewMember(prvKey *secp256k1.PrivateKey, p2pServer p2pService.P2P, waitTime time.Duration, producers []*MemberInfo, minMember int, curHeight uint64, msgPool chan *MsgWrap) *Member {
 	member := &Member{}
-
 	member.prvKey = prvKey
 	member.waitTime = waitTime
-
 	member.p2pServer = p2pServer
-
-	member.Reset()
 	member.msgPool = msgPool
-	return member
-}
-
-func (member *Member) UpdateStatus(producers []*MemberInfo, minMember int, curHeight uint64) {
 	member.producers = producers
 	member.currentHeight = curHeight
-
 	member.liveMembers = []*MemberInfo{}
 	for _, producer := range producers {
 		if producer.IsLeader {
@@ -76,12 +67,15 @@ func (member *Member) UpdateStatus(producers []*MemberInfo, minMember int, curHe
 			}
 		}
 	}
+	member.Reset()
+	return member
 }
 
 func (member *Member) Reset() {
 	member.msg = nil
 	member.msgHash = nil
 	member.randomPrivakey = nil
+	member.cancelPool = make(chan struct{}, 1)
 	member.errorChanel = make(chan error, 1)
 	member.completed = make(chan struct{}, 1)
 	member.cancelWaitSetUp = make(chan struct{}, 1)
@@ -92,7 +86,10 @@ func (member *Member) Reset() {
 
 func (member *Member) ProcessConsensus() (IConsenMsg, error) {
 	defer func() {
-		member.cancelPool <- struct{}{}
+		select {
+		case member.cancelPool <- struct{}{}:
+		default:
+		}
 	}()
 	log.WithField("IP", member.leader.Peer.IP()).Debug("wait for leader's setup message")
 	member.setState(WAIT_SETUP)
@@ -124,21 +121,21 @@ func (member *Member) processP2pMessage() {
 					log.Debugf("setup msg:%v err:%v", msg, err)
 					continue
 				}
-				member.OnSetUp(msg.Peer, &req)
+				go member.OnSetUp(msg.Peer, &req)
 			case MsgTypeChallenge:
 				var req Challenge
 				if err := msg.Msg.Decode(&req); err != nil {
 					log.Debugf("challenge msg:%v err:%v", msg, err)
 					continue
 				}
-				member.OnChallenge(msg.Peer, &req)
+				go member.OnChallenge(msg.Peer, &req)
 			case MsgTypeFail:
 				var req Fail
 				if err := msg.Msg.Decode(&req); err != nil {
 					log.Debugf("challenge msg:%v err:%v", msg, err)
 					continue
 				}
-				member.OnFail(msg.Peer, &req)
+				go member.OnFail(msg.Peer, &req)
 			}
 		case <-member.cancelPool:
 			return
@@ -166,14 +163,12 @@ func (member *Member) OnSetUp(peer *consensusTypes.PeerInfo, setUp *Setup) {
 			WithField("Current Height", member.currentHeight).
 			WithField("Status", member.getState()).
 			Debug("setup low height")
-		member.pushErrorMsg(ErrHighHeight)
 		return
 	} else if member.currentHeight > setUp.Height {
 		log.WithField("Receive Height", setUp.Height).
 			WithField("Current Height", member.currentHeight).
 			WithField("Status", member.getState()).
 			Debug("setup high height")
-		member.pushErrorMsg(ErrLowHeight)
 		return
 	}
 
@@ -182,7 +177,6 @@ func (member *Member) OnSetUp(peer *consensusTypes.PeerInfo, setUp *Setup) {
 			WithField("Current Height", member.currentHeight).
 			WithField("Status", member.getState()).
 			Debug("setup error status")
-		member.pushErrorMsg(ErrStatus)
 		return
 	}
 
@@ -228,14 +222,12 @@ func (member *Member) OnChallenge(peer *consensusTypes.PeerInfo, challengeMsg *C
 			WithField("Current Height", member.currentHeight).
 			WithField("Status", member.getState()).
 			Debug("challenge high height")
-		member.pushErrorMsg(ErrHighHeight)
 		return
 	} else if member.currentHeight > challengeMsg.Height {
 		log.WithField("Receive Height", challengeMsg.Height).
 			WithField("Current Height", member.currentHeight).
 			WithField("Status", member.getState()).
 			Debug("challenge high height")
-		member.pushErrorMsg(ErrLowHeight)
 		return
 	}
 	if member.getState() != WAIT_CHALLENGE {
@@ -243,7 +235,6 @@ func (member *Member) OnChallenge(peer *consensusTypes.PeerInfo, challengeMsg *C
 			WithField("Current Height", member.currentHeight).
 			WithField("Status", member.getState()).
 			Debug("challenge error status")
-		member.pushErrorMsg(ErrStatus)
 		return
 	}
 	log.Debug("recieved challenge message")

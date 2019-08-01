@@ -274,12 +274,11 @@ func (db *Database) AliasSet(addr *crypto.CommonAddress, alias string) (err erro
 
 		//2 存入以alias为key的k-v对
 		err = db.AliasPut([]byte(aliasPrefix+alias), addr.Bytes())
+		if err != nil {
+			return err
+		}
 	} else {
 		return ErrInvalidateAlias
-	}
-
-	if err != nil {
-		return err
 	}
 
 	//put to stroage
@@ -304,7 +303,7 @@ func (db *Database) AliasGet(alias string) *crypto.CommonAddress {
 
 func (db *Database) AliasExist(alias string) bool {
 	if db.cache != nil {
-		_, ok := db.cache.dirties.otherDirties.Load(alias)
+		_, ok := db.cache.dirties.Load(alias)
 		if ok {
 			return true
 		}
@@ -535,7 +534,7 @@ func (db *Database) GetBlockNode(hash *crypto.Hash, blockHeight uint64) (*types.
 	}
 	blockHeader := &types.BlockHeader{}
 	binary.Unmarshal(value[0:len(value)-1], blockHeader)
-	status := value[len(value)-1:len(value)][0]
+	status := value[len(value)-1 : len(value)][0]
 	return blockHeader, types.BlockStatus(status), nil
 }
 
@@ -593,7 +592,7 @@ func (db *Database) Commit() {
 }
 
 func (db *Database) RevertState(shot *SnapShot) {
-	db.cache.RevertState((*dirtiesKV)(shot))
+	db.cache.RevertState(shot.storageDirties)
 }
 
 func (db *Database) CopyState() *SnapShot {

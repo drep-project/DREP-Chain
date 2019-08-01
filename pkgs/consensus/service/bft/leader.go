@@ -63,28 +63,25 @@ type Leader struct {
 	cancelWaitChallenge chan struct{}
 }
 
-func NewLeader(privkey *secp256k1.PrivateKey, p2pServer p2pService.P2P, waitTime time.Duration, msgPool chan *MsgWrap) *Leader {
+func NewLeader(privkey *secp256k1.PrivateKey, p2pServer p2pService.P2P, waitTime time.Duration, producers []*MemberInfo, minMember int, curHeight uint64, msgPool chan *MsgWrap) *Leader {
 	l := &Leader{}
 	l.pubkey = privkey.PubKey()
 	l.privakey = privkey
 	l.waitTime = waitTime
 	l.p2pServer = p2pServer
 	l.msgPool = msgPool
-	l.Reset()
-	return l
-}
+	l.producers = producers
+	l.minMember = minMember
+	l.currentHeight = curHeight
 
-func (leader *Leader) UpdateStatus(producers []*MemberInfo, minMember int, curHeight uint64) {
-	leader.producers = producers
-	leader.minMember = minMember
-	leader.currentHeight = curHeight
-
-	leader.liveMembers = []*MemberInfo{}
+	l.liveMembers = []*MemberInfo{}
 	for _, producer := range producers {
 		if producer.IsOnline && !producer.IsLeader {
-			leader.liveMembers = append(leader.liveMembers, producer)
+			l.liveMembers = append(l.liveMembers, producer)
 		}
 	}
+	l.Reset()
+	return l
 }
 
 func (leader *Leader) Reset() {
@@ -97,17 +94,21 @@ func (leader *Leader) Reset() {
 	leader.commitBitmap = make([]byte, length)
 	leader.responseBitmap = make([]byte, length)
 
+	leader.cancelPool = make(chan struct{}, 1)
 	leader.cancelWaitCommit = make(chan struct{}, 1)
 	leader.cancelWaitChallenge = make(chan struct{}, 1)
 }
 
 func (leader *Leader) ProcessConsensus(msg IConsenMsg) (error, *secp256k1.Signature, []byte) {
 	defer func() {
-		leader.cancelPool <- struct{}{}
+		select {
+		case leader.cancelPool <- struct{}{}:
+		default:
+		}
 	}()
 	leader.setState(INIT)
+	go leader.processP2pMessage()
 	leader.setUp(msg)
-
 	if !leader.waitForCommit() {
 		//send reason and reset
 		leader.fail(ErrWaitCommit.Error())
@@ -141,14 +142,14 @@ func (leader *Leader) processP2pMessage() {
 					log.Debugf("commit msg:%v err:%v", msg, err)
 					continue
 				}
-				leader.OnCommit(msg.Peer, &req)
+				go leader.OnCommit(msg.Peer, &req)
 			case MsgTypeResponse:
 				var req Response
 				if err := msg.Msg.Decode(&req); err != nil {
 					log.Debugf("response msg:%v err:%v", msg, err)
 					continue
 				}
-				leader.OnResponse(msg.Peer, &req)
+				go leader.OnResponse(msg.Peer, &req)
 			}
 		case <-leader.cancelPool:
 			return

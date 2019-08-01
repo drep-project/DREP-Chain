@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"math/big"
-
 	"github.com/drep-project/drep-chain/blockmgr"
 	"github.com/drep-project/drep-chain/chain"
 	"github.com/drep-project/drep-chain/crypto"
@@ -15,6 +13,7 @@ import (
 	"github.com/drep-project/drep-chain/network/p2p"
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
 	"github.com/drep-project/drep-chain/types"
+	"math/big"
 )
 
 type SoloConsensus struct {

@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	indexerPrefix	= "ci_"
-	bloomPrefix		= []byte("B")
+	indexerPrefix = "ci_"
+	bloomPrefix   = []byte("B")
 )
 
 func (chainIndexer *ChainIndexerService) getStoredSections() uint64 {
@@ -27,14 +27,14 @@ func (chainIndexer *ChainIndexerService) setStoredSections(storedSections uint64
 	if err != nil {
 		return err
 	}
-	return chainIndexer.DatabaseService.Put([]byte(indexerPrefix + "count"), value)
+	return chainIndexer.DatabaseService.Put([]byte(indexerPrefix+"count"), value)
 }
 
 // GetSectionHead 从数据库中获取已处理section的最后一个块哈希
 func (chainIndexer *ChainIndexerService) getSectionHead(section uint64) crypto.Hash {
 	var data [8]byte
 	bin.BigEndian.PutUint64(data[:], section)
-	key := append([]byte(indexerPrefix + "shead"), data[:]...)
+	key := append([]byte(indexerPrefix+"shead"), data[:]...)
 
 	var sectionHead crypto.Hash
 	value, _ := chainIndexer.DatabaseService.Get(key)
@@ -46,12 +46,11 @@ func (chainIndexer *ChainIndexerService) getSectionHead(section uint64) crypto.H
 	return sectionHead
 }
 
-
 // SetSectionHead 将已处理section的最后一个块哈希写入数据库
 func (chainIndexer *ChainIndexerService) setSectionHead(section uint64, hash crypto.Hash) error {
 	var data [8]byte
 	bin.BigEndian.PutUint64(data[:], section)
-	key := append([]byte(indexerPrefix + "shead"), data[:]...)
+	key := append([]byte(indexerPrefix+"shead"), data[:]...)
 
 	value, err := binary.Marshal(hash)
 	if err != nil {
@@ -70,7 +69,7 @@ func (chainIndexer *ChainIndexerService) setSectionHead(section uint64, hash cry
 func (chainIndexer *ChainIndexerService) deleteSectionHead(section uint64) error {
 	var data [8]byte
 	binary.BigEndian.PutUint64(data[:], section)
-	key := append([]byte(indexerPrefix + "shead"), data[:]...)
+	key := append([]byte(indexerPrefix+"shead"), data[:]...)
 
 	return chainIndexer.DatabaseService.Delete(key)
 }

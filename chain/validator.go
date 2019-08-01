@@ -14,6 +14,14 @@ type BlockExecuteContext struct {
 	GasFee  *big.Int
 }
 
+func (blockExecuteContext *BlockExecuteContext) AddGasUsed(gas *big.Int) {
+	blockExecuteContext.GasUsed = blockExecuteContext.GasUsed.Add(blockExecuteContext.GasUsed, gas)
+}
+
+func (blockExecuteContext *BlockExecuteContext) AddGasFee(fee *big.Int) {
+	blockExecuteContext.GasFee = blockExecuteContext.GasFee.Add(blockExecuteContext.GasFee, fee)
+}
+
 type IBlockValidator interface {
 	VerifyHeader(header, parent *types.BlockHeader) error
 

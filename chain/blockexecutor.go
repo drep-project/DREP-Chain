@@ -9,7 +9,7 @@ import (
 	"github.com/drep-project/drep-chain/common"
 
 	"github.com/drep-project/drep-chain/params"
-	types "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/drep-chain/types"
 )
 
 type ChainBlockValidator struct {
@@ -102,12 +102,4 @@ func (chainBlockValidator *ChainBlockValidator) ExecuteBlock(context *BlockExecu
 	context.AddGasUsed(totalGasUsed)
 	context.AddGasFee(totalGasFee)
 	return nil
-}
-
-func (blockExecuteContext *BlockExecuteContext) AddGasUsed(gas *big.Int) {
-	blockExecuteContext.GasUsed = blockExecuteContext.GasUsed.Add(blockExecuteContext.GasUsed, gas)
-}
-
-func (blockExecuteContext *BlockExecuteContext) AddGasFee(fee *big.Int) {
-	blockExecuteContext.GasFee = blockExecuteContext.GasUsed.Add(blockExecuteContext.GasFee, fee)
 }

@@ -164,26 +164,20 @@ func TestDiscardCacheData(t *testing.T) {
 	db2.AddBalance(&addr, balance)
 
 	root1 := db2.GetStateRoot()
-	fmt.Println("2", db2.GetStateRoot())
 	if !bytes.Equal(root, root1) {
 		t.Fatal("root must equal")
 	}
 
 	db2.Commit()
-	fmt.Println("3", db2.GetStateRoot())
 
 	err = db.trieDb.Commit(crypto.Bytes2Hash(root1), false)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	fmt.Println("4", db2.GetStateRoot())
-
 	db3 := db.BeginTransaction(false)
 	root2 := db3.GetStateRoot()
 	if !bytes.Equal(root, root2) {
 		t.Fatal("root !=")
 	}
-
-	fmt.Println("5", db.GetStateRoot())
 }

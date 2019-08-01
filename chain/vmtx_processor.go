@@ -65,7 +65,7 @@ func (stateProcessor *StateProcessor) ApplyTransaction(db *database.Database, bc
 	// Set the receipt logs and create a bloom for filtering
 	receipt.Logs = db.GetLogs(*tx.TxHash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
-	receipt.BlockHash = *header.Hash()
+	//receipt.BlockHash = *header.Hash()
 	receipt.BlockNumber = header.Height
 	return receipt, gas, err
 }

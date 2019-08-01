@@ -2,7 +2,6 @@ package bft
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/network/p2p"
@@ -34,9 +33,9 @@ type Setup struct {
 	Msg []byte
 }
 
-func (setup *Setup) String() {
+func (setup *Setup) String() string {
 	bytes, _ := json.Marshal(setup)
-	fmt.Println(string(bytes))
+	return string(bytes)
 }
 
 type Commitment struct {
@@ -45,9 +44,9 @@ type Commitment struct {
 	Q      *secp256k1.PublicKey
 }
 
-func (commitment *Commitment) String() {
+func (commitment *Commitment) String() string {
 	bytes, _ := json.Marshal(commitment)
-	fmt.Println(string(bytes))
+	return string(bytes)
 }
 
 type Challenge struct {
@@ -58,9 +57,9 @@ type Challenge struct {
 	R           []byte
 }
 
-func (Challenge *Challenge) String() {
+func (Challenge *Challenge) String() string {
 	bytes, _ := json.Marshal(Challenge)
-	fmt.Println(string(bytes))
+	return string(bytes)
 }
 
 type Response struct {
@@ -69,9 +68,9 @@ type Response struct {
 	S      []byte
 }
 
-func (response *Response) String() {
+func (response *Response) String() string {
 	bytes, _ := json.Marshal(response)
-	fmt.Println(string(bytes))
+	return string(bytes)
 }
 
 type Fail struct {
@@ -80,9 +79,9 @@ type Fail struct {
 	Reason string
 }
 
-func (fail *Fail) String() {
+func (fail *Fail) String() string {
 	bytes, _ := json.Marshal(fail)
-	fmt.Println(string(bytes))
+	return string(bytes)
 }
 
 type IConsenMsg interface {

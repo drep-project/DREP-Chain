@@ -1,11 +1,11 @@
 package chain_indexer
 
 import (
-	"fmt"
 	"context"
-	"time"
+	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"gopkg.in/urfave/cli.v1"
 
@@ -15,8 +15,8 @@ import (
 	"github.com/drep-project/drep-chain/common/bloombits"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/drep-chain/database"
+	"github.com/drep-project/drep-chain/types"
 )
 
 // ChainIndexerChain interface is used for connecting the indexer to a blockchain
@@ -35,9 +35,9 @@ type ChainIndexerServiceInterface interface {
 var _ ChainIndexerServiceInterface = &ChainIndexerService{}
 
 type ChainIndexerService struct {
-	DatabaseService *database.DatabaseService		`service:"database"`
-	ChainService	chain.ChainServiceInterface		`service:"chain"`
-	chainId types.ChainIdType
+	DatabaseService *database.DatabaseService   `service:"database"`
+	ChainService    chain.ChainServiceInterface `service:"chain"`
+	chainId         types.ChainIdType
 
 	Config *ChainIndexerConfig
 
@@ -57,7 +57,7 @@ type ChainIndexerService struct {
 	lock sync.RWMutex
 
 	// bloomIndexer
-	size    uint64		// section size to generate bloombits for
+	size    uint64               // section size to generate bloombits for
 	gen     *bloombits.Generator // generator to rotate the bloom bits crating the bloom index
 	section uint64               // Section is the section number being processed currently
 	head    crypto.Hash          // Head is the hash of the last header processed
@@ -172,7 +172,7 @@ func (chainIndexer *ChainIndexerService) updateLoop() {
 				if time.Since(updated) > 8*time.Second {
 					if chainIndexer.knownSections > chainIndexer.storedSections+1 {
 						updating = true
-						log.WithField("percentage", chainIndexer.storedSections * 100 / chainIndexer.knownSections).Info("Upgrading chain index")
+						log.WithField("percentage", chainIndexer.storedSections*100/chainIndexer.knownSections).Info("Upgrading chain index")
 					}
 					updated = time.Now()
 				}
@@ -320,13 +320,13 @@ func (chainIndexer *ChainIndexerService) newHead(head uint64, reorg bool) {
 			if chainIndexer.knownSections < chainIndexer.checkpointSections {
 				// syncing reached the checkpoint, verify section head
 				syncedHead := crypto.Hash{}
-				blockHeader, err := chainIndexer.ChainService.GetBlockHeaderByHeight(chainIndexer.checkpointSections * chainIndexer.Config.SectionSize - 1)
+				blockHeader, err := chainIndexer.ChainService.GetBlockHeaderByHeight(chainIndexer.checkpointSections*chainIndexer.Config.SectionSize - 1)
 				if err == nil {
 					syncedHead = *blockHeader.Hash()
 				}
 
 				if syncedHead != chainIndexer.checkpointHead {
-					log.WithField("number", chainIndexer.checkpointSections * chainIndexer.Config.SectionSize-1).
+					log.WithField("number", chainIndexer.checkpointSections*chainIndexer.Config.SectionSize-1).
 						WithField("expected", chainIndexer.checkpointHead).
 						WithField("synced", syncedHead).
 						Error("Synced chain does not match checkpoint")
@@ -350,7 +350,7 @@ func (chainIndexer *ChainIndexerService) verifyLastHead() {
 	for chainIndexer.storedSections > 0 && chainIndexer.storedSections > chainIndexer.checkpointSections {
 
 		hash := crypto.Hash{}
-		blockHeader, err := chainIndexer.ChainService.GetBlockHeaderByHeight(chainIndexer.storedSections * chainIndexer.Config.SectionSize - 1)
+		blockHeader, err := chainIndexer.ChainService.GetBlockHeaderByHeight(chainIndexer.storedSections*chainIndexer.Config.SectionSize - 1)
 		if err == nil {
 			hash = *blockHeader.Hash()
 		}
@@ -402,7 +402,6 @@ func (chainIndexer *ChainIndexerService) processSection(section uint64, lastHead
 	return lastHead, nil
 }
 
-
 // setValidStoredSections writes the number of valid sections to the index database
 func (chainIndexer *ChainIndexerService) setValidStoredSections(sections uint64) {
 	// Set the current number of valid sections in the database
@@ -425,7 +424,7 @@ func (chainIndexer *ChainIndexerService) reset(ctx context.Context, section uint
 
 // 将新区块头的bloom添加到索引。
 func (chainIndexer *ChainIndexerService) process(ctx context.Context, header *types.BlockHeader) error {
-	chainIndexer.gen.AddBloom(uint(header.Height - chainIndexer.section * chainIndexer.size), header.Bloom)
+	chainIndexer.gen.AddBloom(uint(header.Height-chainIndexer.section*chainIndexer.size), header.Bloom)
 	chainIndexer.head = *header.Hash()
 	return nil
 }
@@ -438,7 +437,7 @@ func (chainIndexer *ChainIndexerService) commit() error {
 		if err != nil {
 			return err
 		}
-		if err := batch.Put(bloomBitsKey(uint(i), chainIndexer.section, chainIndexer.head), bitutil.CompressBytes(bits)) ; err != nil {
+		if err := batch.Put(bloomBitsKey(uint(i), chainIndexer.section, chainIndexer.head), bitutil.CompressBytes(bits)); err != nil {
 			log.WithField("err", err).Fatal("Failed to store bloom bits")
 		}
 	}
