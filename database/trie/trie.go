@@ -68,8 +68,8 @@ func NewWithRWDB(root crypto.Hash, readDB *Database, writeDB *Database) (*Trie, 
 		panic("trie.New called without a database")
 	}
 	trie := &Trie{
-		db: readDB,
-		dbWrite:writeDB,
+		db:      readDB,
+		dbWrite: writeDB,
 	}
 
 	if root != (crypto.Hash{}) && root != EmptyRoot {
@@ -442,7 +442,7 @@ func (t *Trie) Hash() crypto.Hash {
 // Commit writes all nodes to the trie's memory database, tracking the internal
 // and external (for account tries) references.
 func (t *Trie) Commit(onleaf LeafCallback) (root crypto.Hash, err error) {
-	var db * Database
+	var db *Database
 	if t.dbWrite != nil {
 		db = t.dbWrite
 	} else {

@@ -82,7 +82,7 @@ type BlockNode struct {
 	GasUsed      big.Int
 	MerkleRoot   []byte
 	ReceiptRoot  crypto.Hash
-	Bloom		 Bloom
+	Bloom        Bloom
 	LeaderPubKey crypto.CommonAddress
 	MinorPubKeys []crypto.CommonAddress
 
@@ -105,8 +105,8 @@ func InitBlockNode(node *BlockNode, blockHeader *BlockHeader, parent *BlockNode)
 		GasLimit:     blockHeader.GasLimit,
 		GasUsed:      blockHeader.GasUsed,
 		MerkleRoot:   blockHeader.TxRoot,
-		ReceiptRoot  :  blockHeader.ReceiptRoot,
-		Bloom		 :  blockHeader.Bloom,
+		ReceiptRoot:  blockHeader.ReceiptRoot,
+		Bloom:        blockHeader.Bloom,
 		LeaderPubKey: blockHeader.LeaderAddress,
 		MinorPubKeys: blockHeader.MinorAddresses,
 	}
@@ -143,8 +143,8 @@ func (node *BlockNode) Header() BlockHeader {
 		GasLimit:       node.GasLimit,
 		GasUsed:        node.GasUsed,
 		TxRoot:         node.MerkleRoot,
-		ReceiptRoot  :  node.ReceiptRoot,
-		Bloom		 :  node.Bloom,
+		ReceiptRoot:    node.ReceiptRoot,
+		Bloom:          node.Bloom,
 		LeaderAddress:  node.LeaderPubKey,
 		MinorAddresses: node.MinorPubKeys,
 	}

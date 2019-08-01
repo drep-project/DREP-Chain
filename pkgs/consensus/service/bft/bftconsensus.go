@@ -2,8 +2,8 @@ package bft
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
+	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/blockmgr"
 	"github.com/drep-project/drep-chain/chain"
 	"github.com/drep-project/drep-chain/crypto"
@@ -15,6 +15,7 @@ import (
 	"github.com/drep-project/drep-chain/types"
 	"math"
 	"math/big"
+	"reflect"
 	"time"
 )
 
@@ -144,8 +145,7 @@ func (bftConsensus *BftConsensus) collectMemberStatus() []*MemberInfo {
 }
 
 func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo) (block *types.Block, err error) {
-	member := NewMember(bftConsensus.PrivKey, bftConsensus.P2pServer, bftConsensus.WaitTime, bftConsensus.memberMsgPool)
-	member.UpdateStatus(miners, bftConsensus.minMiners, bftConsensus.ChainService.BestChain().Height())
+	member := NewMember(bftConsensus.PrivKey, bftConsensus.P2pServer, bftConsensus.WaitTime, miners, bftConsensus.minMiners, bftConsensus.ChainService.BestChain().Height(), bftConsensus.memberMsgPool)
 	log.Trace("node member is going to process consensus for round 1")
 	member.convertor = func(msg []byte) (IConsenMsg, error) {
 		block, err = types.BlockFromMessage(msg)
@@ -192,13 +192,13 @@ func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo) (block *type
 		minorAddrs := []crypto.CommonAddress{}
 		for index, producer := range bftConsensus.Producers {
 			addr := crypto.PubKey2Address(producer.Pubkey)
-			if multiSig.Bitmap[index] == 1 && block.Header.LeaderAddress != addr{
+			if multiSig.Bitmap[index] == 1 && block.Header.LeaderAddress != addr {
 				minorAddrs = append(minorAddrs, addr)
 			}
 		}
 		block.Header.MinorAddresses = minorAddrs
 		block.Header.StateRoot = val.StateRoot
-		proof, err := json.Marshal(multiSig)
+		proof, err := binary.Marshal(multiSig)
 		if err != nil {
 			log.Debugf("fial to marshal MultiSig")
 			return false
@@ -220,9 +220,7 @@ func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo) (block *type
 //3 leader搜集到所有的签名或者返回的签名个数大于producer个数的三分之二后，开始验证签名
 //4 leader验证签名通过后，广播此块给所有的Peer
 func (bftConsensus *BftConsensus) runAsLeader(miners []*MemberInfo) (block *types.Block, err error) {
-	leader := NewLeader(bftConsensus.PrivKey, bftConsensus.P2pServer, bftConsensus.WaitTime, bftConsensus.leaderMsgPool)
-	leader.UpdateStatus(miners, bftConsensus.minMiners, bftConsensus.ChainService.BestChain().Height())
-
+	leader := NewLeader(bftConsensus.PrivKey, bftConsensus.P2pServer, bftConsensus.WaitTime, miners, bftConsensus.minMiners, bftConsensus.ChainService.BestChain().Height(), bftConsensus.leaderMsgPool)
 	db := bftConsensus.DbService.BeginTransaction(false)
 	var gasFee *big.Int
 	block, gasFee, err = bftConsensus.BlockMgr.GenerateBlock(db, bftConsensus.CoinBase)
@@ -243,12 +241,13 @@ func (bftConsensus *BftConsensus) runAsLeader(miners []*MemberInfo) (block *type
 	leader.Reset()
 	minorAddrs := []crypto.CommonAddress{}
 	for index, producer := range bftConsensus.Producers {
-		if multiSig.Bitmap[index] == 1 { //TODO  Exclude leader
+		addr := crypto.PubKey2Address(producer.Pubkey)
+		if multiSig.Bitmap[index] == 1 && block.Header.LeaderAddress != addr {
 			minorAddrs = append(minorAddrs, crypto.PubKey2Address(producer.Pubkey))
 		}
 	}
 	block.Header.MinorAddresses = minorAddrs
-	proof, err := json.Marshal(multiSig)
+	proof, err := binary.Marshal(multiSig)
 	if err != nil {
 		log.Debugf("fial to marshal MultiSig")
 		return nil, err
@@ -259,6 +258,7 @@ func (bftConsensus *BftConsensus) runAsLeader(miners []*MemberInfo) (block *type
 	if err != nil {
 		return nil, err
 	}
+	db.Commit()
 	block.Header.StateRoot = db.GetStateRoot()
 	rwMsg := &ResponseWiteRootMessage{*multiSig, block.Header.StateRoot}
 
@@ -280,15 +280,17 @@ func (bftConsensus *BftConsensus) blockVerify(block *types.Block) bool {
 		return false
 	}
 	for _, validator := range bftConsensus.ChainService.BlockValidator() {
-		err = validator.VerifyHeader(block.Header, preBlockHash)
-		if err != nil {
-			log.WithField("err", err).Debug("blockVerify VerifyHeader")
-			return false
-		}
-		err = validator.VerifyBody(block)
-		if err != nil {
-			log.WithField("err", err).Debug("blockVerify VerifyBody")
-			return false
+		if reflect.TypeOf(validator).Elem() != reflect.TypeOf(BlockMultiSigValidator{}) {
+			err = validator.VerifyHeader(block.Header, preBlockHash)
+			if err != nil {
+				log.WithField("err", err).Debug("blockVerify VerifyHeader")
+				return false
+			}
+			err = validator.VerifyBody(block)
+			if err != nil {
+				log.WithField("err", err).Debug("blockVerify VerifyBody")
+				return false
+			}
 		}
 	}
 	//TODO need to verify traansaction , a lot of time
@@ -323,6 +325,7 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) bool {
 		log.WithField("AccumulateRewards", err).Debug("multySigVerify")
 		return false
 	}
+	db.Commit()
 	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
 		stateRoot := db.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
@@ -337,7 +340,6 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) bool {
 }
 
 func (bftConsensus *BftConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, rw p2p.MsgReadWriter) error {
-	fmt.Println("ConsensusService peeraddr:", peer.IP())
 	for {
 		msg, err := rw.ReadMsg()
 		if err != nil {
@@ -352,10 +354,13 @@ func (bftConsensus *BftConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, rw p
 		log.WithField("addr", peer.IP()).WithField("code", msg.Code).Debug("Receive setup msg")
 		switch msg.Code {
 		case MsgTypeSetUp:
+			fallthrough
 		case MsgTypeChallenge:
+			fallthrough
 		case MsgTypeFail:
 			bftConsensus.memberMsgPool <- &MsgWrap{peer, &msg}
 		case MsgTypeCommitment:
+			fallthrough
 		case MsgTypeResponse:
 			bftConsensus.leaderMsgPool <- &MsgWrap{peer, &msg}
 		default:

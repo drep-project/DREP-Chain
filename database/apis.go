@@ -263,7 +263,6 @@ func (database *DatabaseService) NewBatch() drepdb.Batch {
 	return database.db.diskDb.NewBatch()
 }
 
-
 func (database *DatabaseService) FindCommonAncestor(a, b *chainType.BlockHeader) *chainType.BlockHeader {
 	return database.db.FindCommonAncestor(a, b)
 }

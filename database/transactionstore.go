@@ -9,7 +9,7 @@ import (
 
 type TransactionStore struct {
 	diskDB  drepdb.KeyValueStore //本对象内，仅仅作为存储操作日志
-	dirties *sync.Map //数据属于storage的缓存
+	dirties *sync.Map            //数据属于storage的缓存
 	trie    *trie.SecureTrie
 }
 
@@ -20,9 +20,9 @@ type dirtiesKV struct {
 
 func NewTransactionStore(trie *trie.SecureTrie, diskDB drepdb.KeyValueStore) *TransactionStore {
 	return &TransactionStore{
-		diskDB: diskDB,
+		diskDB:  diskDB,
 		dirties: new(sync.Map),
-		trie: trie,
+		trie:    trie,
 	}
 }
 
