@@ -46,7 +46,7 @@ type DrepApp struct {
 func NewApp() *DrepApp {
 	return &DrepApp{
 		Context: &ExecuteContext{
-			Quit: make(chan struct{}),
+			QuitExeCtx: make(chan struct{}),
 		},
 		App: cli.NewApp(),
 	}
@@ -160,7 +160,7 @@ func (mApp DrepApp) action(ctx *cli.Context) error {
 			}
 		}
 	}()
-	mApp.Context.Cli = ctx //NOTE this set is for different commmands
+	mApp.Context.Cli = ctx //NOTE this set is for different commmands-
 	for _, service := range mApp.Context.Services {
 		err := service.Init(mApp.Context)
 		if err != nil {

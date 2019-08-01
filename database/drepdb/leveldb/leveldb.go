@@ -62,15 +62,6 @@ type Database struct {
 	fn string      // filename for reporting
 	db *leveldb.DB // LevelDB instance
 
-	//compTimeMeter    metrics.Meter // Meter for measuring the total time spent in database compaction
-	//compReadMeter    metrics.Meter // Meter for measuring the data read during compaction
-	//compWriteMeter   metrics.Meter // Meter for measuring the data written during compaction
-	//writeDelayNMeter metrics.Meter // Meter for measuring the write delay number due to database compaction
-	//writeDelayMeter  metrics.Meter // Meter for measuring the write delay duration due to database compaction
-	//diskSizeGauge    metrics.Gauge // Gauge for tracking th  e size of all the levels in the database
-	//diskReadMeter    metrics.Meter // Meter for measuring the effective amount of data read
-	//diskWriteMeter   metrics.Meter // Meter for measuring the effective amount of data written
-
 	quitLock sync.Mutex      // Mutex protecting the quit channel access
 	quitChan chan chan error // Quit channel to stop the metrics collection before closing the database
 
@@ -110,17 +101,8 @@ func New(file string, cache int, handles int, namespace string) (*Database, erro
 		log:      logger,
 		quitChan: make(chan chan error),
 	}
-	//ldb.compTimeMeter = metrics.NewRegisteredMeter(namespace+"compact/time", nil)
-	//ldb.compReadMeter = metrics.NewRegisteredMeter(namespace+"compact/input", nil)
-	//ldb.compWriteMeter = metrics.NewRegisteredMeter(namespace+"compact/output", nil)
-	//ldb.diskSizeGauge = metrics.NewRegisteredGauge(namespace+"disk/size", nil)
-	//ldb.diskReadMeter = metrics.NewRegisteredMeter(namespace+"disk/read", nil)
-	//ldb.diskWriteMeter = metrics.NewRegisteredMeter(namespace+"disk/write", nil)
-	//ldb.writeDelayMeter = metrics.NewRegisteredMeter(namespace+"compact/writedelay/duration", nil)
-	//ldb.writeDelayNMeter = metrics.NewRegisteredMeter(namespace+"compact/writedelay/counter", nil)
 
 	// Start up the metrics gathering and return
-	//go ldb.meter(metricsGatheringInterval)
 	return ldb, nil
 }
 
@@ -130,14 +112,6 @@ func (db *Database) Close() error {
 	db.quitLock.Lock()
 	defer db.quitLock.Unlock()
 
-	//if db.quitChan != nil {
-	//	errc := make(chan error)
-	//	db.quitChan <- errc
-	//	if err := <-errc; err != nil {
-	//		db.log.Error("Metrics collection failed", "err", err)
-	//	}
-	//	db.quitChan = nil
-	//}
 	return db.db.Close()
 }
 
@@ -291,19 +265,7 @@ func (db *Database) meter1(refresh time.Duration) {
 				compactions[i%2][idx] += value
 			}
 		}
-		// Update all the requested meters
-		//if db.diskSizeGauge != nil {
-		//	db.diskSizeGauge.Update(int64(compactions[i%2][0] * 1024 * 1024))
-		//}
-		//if db.compTimeMeter != nil {
-		//	db.compTimeMeter.Mark(int64((compactions[i%2][1] - compactions[(i-1)%2][1]) * 1000 * 1000 * 1000))
-		//}
-		//if db.compReadMeter != nil {
-		//	db.compReadMeter.Mark(int64((compactions[i%2][2] - compactions[(i-1)%2][2]) * 1024 * 1024))
-		//}
-		//if db.compWriteMeter != nil {
-		//	db.compWriteMeter.Mark(int64((compactions[i%2][3] - compactions[(i-1)%2][3]) * 1024 * 1024))
-		//}
+
 		// Retrieve the write delay statistic
 		writedelay, err := db.db.GetProperty("leveldb.writedelay")
 		if err != nil {
@@ -328,12 +290,7 @@ func (db *Database) meter1(refresh time.Duration) {
 			merr = err
 			continue
 		}
-		//if db.writeDelayNMeter != nil {
-		//	db.writeDelayNMeter.Mark(delayN - delaystats[0])
-		//}
-		//if db.writeDelayMeter != nil {
-		//	db.writeDelayMeter.Mark(duration.Nanoseconds() - delaystats[1])
-		//}
+
 		// If a warning that db is performing compaction has been displayed, any subsequent
 		// warnings will be withheld for one minute not to overwhelm the user.
 		if paused && delayN-delaystats[0] == 0 && duration.Nanoseconds()-delaystats[1] == 0 &&
@@ -367,12 +324,7 @@ func (db *Database) meter1(refresh time.Duration) {
 			merr = err
 			continue
 		}
-		//if db.diskReadMeter != nil {
-		//	db.diskReadMeter.Mark(int64((nRead - iostats[0]) * 1024 * 1024))
-		//}
-		//if db.diskWriteMeter != nil {
-		//	db.diskWriteMeter.Mark(int64((nWrite - iostats[1]) * 1024 * 1024))
-		//}
+
 		iostats[0], iostats[1] = nRead, nWrite
 
 		// Sleep a bit, then repeat the stats collection
