@@ -206,7 +206,7 @@ func (f *Filter) blockLogs(ctx context.Context, header *types.BlockHeader) (logs
 // match the filter criteria. This function is called when the bloom filter signals a potential match.
 func (f *Filter) checkMatches(ctx context.Context, header *types.BlockHeader) (logs []*types.Log, err error) {
 	// Get the logs of the block
-	logsList, err := f.backend.GetLogs(ctx, *header.Hash())
+	logsList, err := f.backend.GetLogsByHash(ctx, *header.Hash())
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +244,7 @@ func includes(addresses []crypto.CommonAddress, a crypto.CommonAddress) bool {
 }
 
 // filterLogs creates a slice of logs matching the given criteria.
-func filterLogs(logs []*types.Log, fromBlock, toBlock *big.Int, addresses []crypto.CommonAddress, topics [][]common.Hash) []*types.Log {
+func filterLogs(logs []*types.Log, fromBlock, toBlock *big.Int, addresses []crypto.CommonAddress, topics [][]crypto.Hash) []*types.Log {
 	var ret []*types.Log
 Logs:
 	for _, log := range logs {
