@@ -181,3 +181,34 @@ func TestDiscardCacheData(t *testing.T) {
 		t.Fatal("root !=")
 	}
 }
+
+func TestRecoverTrie(t *testing.T){
+	defer os.RemoveAll("./test")
+
+	db, err := NewDatabase("./test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pri, _ := crypto.GenerateKey(rand.Reader)
+	addr := crypto.PubKey2Address(pri.PubKey())
+	balance := new(big.Int).SetInt64(100001)
+	db2 := db.BeginTransaction(true)
+	db2.AddBalance(&addr, balance)
+	db2.Commit()
+
+	root1 := db2.GetStateRoot()
+
+	db2.AddBalance(&addr, balance)
+	db2.Commit()
+
+	root2 := db2.GetStateRoot()
+
+
+	db.trieDb.Commit(crypto.Bytes2Hash(root2), false)
+
+	b := db.RecoverTrie(root1)
+	if !b {
+		t.Fatal("recover trie err")
+	}
+}

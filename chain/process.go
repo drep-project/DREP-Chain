@@ -405,10 +405,6 @@ func (chainService *ChainService) InitStates() error {
 	}
 
 	// Set the best chain view to the stored best state.
-	//tip := chainService.blockIndex.LookupNode(node.Hash)
-	/*if tip == nil {
-		return errors.Wrapf(ErrInitStateFail, "cannot find chain tip %s in block index", node.Hash)
-	}*/
 	chainService.BestChain().SetTip(tip)
 
 	// Load the raw block bytes for the best block.

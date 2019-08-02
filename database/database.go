@@ -195,11 +195,6 @@ func (db *Database) PutStorage(addr *crypto.CommonAddress, storage *types.Storag
 	}
 }
 
-func (db *Database) AliasPut(key, value []byte) error {
-	db.cache.Put(key, value)
-	return nil
-}
-
 func (db *Database) Get(key []byte) ([]byte, error) {
 	return db.diskDb.Get(key)
 }
@@ -273,7 +268,7 @@ func (db *Database) AliasSet(addr *crypto.CommonAddress, alias string) (err erro
 		}
 
 		//2 存入以alias为key的k-v对
-		err = db.AliasPut([]byte(aliasPrefix+alias), addr.Bytes())
+		err = db.AliasPut(alias, addr.Bytes())
 		if err != nil {
 			return err
 		}
@@ -289,10 +284,14 @@ func (db *Database) AliasSet(addr *crypto.CommonAddress, alias string) (err erro
 	return nil
 }
 
+func (db *Database) AliasPut(alias string, value []byte) error {
+	db.cache.Put([]byte(aliasPrefix+alias), value)
+	return nil
+}
+
 //alias为key的k-v
 func (db *Database) AliasGet(alias string) *crypto.CommonAddress {
-
-	buf, err := db.diskDb.Get([]byte(aliasPrefix + alias))
+	buf, err := db.trie.TryGet([]byte(aliasPrefix + alias))
 	if err != nil {
 		return nil
 	}
@@ -534,7 +533,7 @@ func (db *Database) GetBlockNode(hash *crypto.Hash, blockHeight uint64) (*types.
 	}
 	blockHeader := &types.BlockHeader{}
 	binary.Unmarshal(value[0:len(value)-1], blockHeader)
-	status := value[len(value)-1 : len(value)][0]
+	status := value[len(value)-1:len(value)][0]
 	return blockHeader, types.BlockStatus(status), nil
 }
 
@@ -571,12 +570,14 @@ func (db *Database) BeginTransaction(storeToDB bool) *Database {
 			diskDb: db.diskDb,
 			cache:  NewTransactionStore(newTrie, db.diskDb),
 			trie:   newTrie,
+			trieDb: db.trieDb,
 		}
 	} else {
 		return &Database{
 			diskDb: db.diskDb,
 			cache:  NewTransactionStore(db.trie, db.diskDb),
 			trie:   db.trie,
+			trieDb: db.trieDb,
 		}
 	}
 }

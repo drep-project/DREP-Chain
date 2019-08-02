@@ -60,6 +60,7 @@ func (tDb *TransactionStore) Flush() {
 			if err != nil {
 				return false
 			}
+
 			tDb.trie.Commit(nil)
 		} else {
 			tDb.trie.Delete(bk)
