@@ -54,11 +54,16 @@ func NewNode(parent *Node, chainId ChainIdType) *Node {
 
 type Storage struct {
 	Balance    big.Int
-	Nonce      uint64
-	ByteCode   crypto.ByteCode
-	CodeHash   crypto.Hash
-	Reputation *big.Int
-	Alias      string
+	Reputation big.Int
+
+	Nonce uint64
+	//contract
+	ByteCode crypto.ByteCode
+	CodeHash crypto.Hash
+
+	Alias string
+
+	BalanceMap map[string]big.Int
 }
 
 func NewStorage() *Storage {

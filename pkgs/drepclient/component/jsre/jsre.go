@@ -215,7 +215,6 @@ loop:
 			}
 		}
 	}
-
 	for _, timer := range registry {
 		timer.timer.Stop()
 		delete(registry, timer)

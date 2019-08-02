@@ -75,7 +75,7 @@ type ExecuteContext struct {
 
 	GitCommit  string
 	Usage      string
-	QuitExeCtx chan struct{}
+	Quit chan struct{}
 }
 
 // AddService add a service to context, The application then initializes and starts the service.

@@ -346,7 +346,7 @@ func (db *Database) GetReputation(addr *crypto.CommonAddress) *big.Int {
 	if storage == nil {
 		return big.NewInt(0)
 	}
-	return storage.Reputation
+	return &storage.Reputation
 }
 
 func (db *Database) GetLogs(txHash crypto.Hash) []*types.Log {

@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/drep-chain/app"
 	blockmgr "github.com/drep-project/drep-chain/blockmgr"
@@ -29,6 +30,8 @@ type CliService struct {
 	Blockmgr       *blockmgr.BlockMgr             `service:"blockmgr"`
 	AccountService *accountService.AccountService `service:"accounts"`
 	RpcService     *rpc2.RpcService               `service:"rpc"`
+
+	console *console.Console
 }
 
 // Name name
@@ -90,6 +93,9 @@ func (cliService *CliService) Start(executeContext *app.ExecuteContext) error {
 }
 
 func (cliService *CliService) Stop(executeContext *app.ExecuteContext) error {
+	if cliService.console != nil {
+		cliService.console.Stop(false)
+	}
 	console.Stdin.Close()
 	return nil
 }
@@ -112,20 +118,18 @@ func (cliService *CliService) localConsole(executeContext *app.ExecuteContext) e
 		Preload: cliTypes.MakeConsolePreloads(executeContext.Cli),
 	}
 
-	console, err := console.New(config)
+	cliService.console, err = console.New(config)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Failed to start the JavaScript console: %v", err))
 	}
-	defer console.Stop(false)
-
 	// If only a short execution was requested, evaluate and return
 	if script := executeContext.Cli.GlobalString(cliTypes.ExecFlag.Name); script != "" {
-		console.Evaluate(script)
+		cliService.console.Evaluate(script)
 		return nil
 	}
 	// Otherwise print the welcome screen and enter interactive mode
-	console.Welcome()
-	console.Interactive()
+	cliService.console.Welcome()
+	cliService.console.Interactive(executeContext.Quit)
 	return nil
 }
 
@@ -150,20 +154,20 @@ func (cliService *CliService) remoteConsole(executeContext *app.ExecuteContext) 
 		Preload: cliTypes.MakeConsolePreloads(executeContext.Cli),
 	}
 
-	console, err := console.New(cliService.config.Config)
+	cliService.console, err = console.New(cliService.config.Config)
 	if err != nil {
 		return fmt.Errorf("Failed to start the JavaScript console: %v", err)
 	}
-	defer console.Stop(false)
+	defer cliService.console.Stop(false)
 
 	if script := executeContext.Cli.GlobalString(cliTypes.ExecFlag.Name); script != "" {
-		console.Evaluate(script)
+		cliService.console.Evaluate(script)
 		return nil
 	}
 
 	// Otherwise print the welcome screen and enter interactive mode
-	console.Welcome()
-	console.Interactive()
+	cliService.console.Welcome()
+	cliService.console.Interactive(executeContext.Quit)
 
 	return nil
 }
@@ -172,6 +176,5 @@ func (cliService *CliService) remoteConsole(executeContext *app.ExecuteContext) 
 // It creates a default node based on the command line arguments and runs it in
 // blocking mode, waiting for it to be shut down.
 func (cliService *CliService) drep(executeContext *app.ExecuteContext) error {
-	<-executeContext.QuitExeCtx
 	return nil
 }

@@ -21,12 +21,10 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/drep-project/drep-chain/pkgs/drepclient/component/jsre"
@@ -323,7 +321,7 @@ func (c *Console) Evaluate(statement string) error {
 
 // Interactive starts an interactive user session, where input is propted from
 // the configured user prompter.
-func (c *Console) Interactive() {
+func (c *Console) Interactive(exitCh chan struct{}) {
 	var (
 		prompt    = c.prompt          // Current prompt line (used for multi-line inputs)
 		indents   = 0                 // Current number of input indents (used for multi-line inputs)
@@ -338,9 +336,8 @@ func (c *Console) Interactive() {
 			if err != nil {
 				// In case of an error, either clear the prompt or fail
 				if err == liner.ErrPromptAborted { // ctrl-C
-					prompt, indents, input = c.prompt, 0, ""
-					scheduler <- ""
-					continue
+					exitCh <- struct{}{}
+					return
 				}
 				close(scheduler)
 				return
@@ -349,52 +346,46 @@ func (c *Console) Interactive() {
 			scheduler <- line
 		}
 	}()
-	// Monitor Ctrl-C too in case the input is empty and we need to bail
-	abort := make(chan os.Signal, 1)
-	signal.Notify(abort, syscall.SIGINT, syscall.SIGTERM)
-
 	// Start sending prompts to the user and reading back inputs
-	for {
-		// Send the next prompt, triggering an input read and process the result
-		scheduler <- prompt
-		select {
-		case <-abort:
-			// User forcefully quite the console
-			fmt.Fprintln(c.printer, "caught interrupt, exiting")
-			return
+	go func() {
+		for {
+			// Send the next prompt, triggering an input read and process the result
+			scheduler <- prompt
+			select {
+			case line, ok := <-scheduler:
+				// User input was returned by the prompter, handle special cases
+				if !ok || (indents <= 0 && exit.MatchString(line)) {
+					exitCh <- struct{}{}
+					continue
+				}
+				if onlyWhitespace.MatchString(line) {
+					continue
+				}
+				// Append the line to the input and check for multi-line interpretation
+				input += line + "\n"
 
-		case line, ok := <-scheduler:
-			// User input was returned by the prompter, handle special cases
-			if !ok || (indents <= 0 && exit.MatchString(line)) {
-				return
-			}
-			if onlyWhitespace.MatchString(line) {
-				continue
-			}
-			// Append the line to the input and check for multi-line interpretation
-			input += line + "\n"
-
-			indents = countIndents(input)
-			if indents <= 0 {
-				prompt = c.prompt
-			} else {
-				prompt = strings.Repeat(".", indents*3) + " "
-			}
-			// If all the needed lines are present, save the command and run
-			if indents <= 0 {
-				if len(input) > 0 && input[0] != ' ' && !passwordRegexp.MatchString(input) {
-					if command := strings.TrimSpace(input); len(c.history) == 0 || command != c.history[len(c.history)-1] {
-						c.history = append(c.history, command)
-						if c.prompter != nil {
-							c.prompter.AppendHistory(command)
+				indents = countIndents(input)
+				if indents <= 0 {
+					prompt = c.prompt
+				} else {
+					prompt = strings.Repeat(".", indents*3) + " "
+				}
+				// If all the needed lines are present, save the command and run
+				if indents <= 0 {
+					if len(input) > 0 && input[0] != ' ' && !passwordRegexp.MatchString(input) {
+						if command := strings.TrimSpace(input); len(c.history) == 0 || command != c.history[len(c.history)-1] {
+							c.history = append(c.history, command)
+							if c.prompter != nil {
+								c.prompter.AppendHistory(command)
+							}
 						}
 					}
+					c.Evaluate(input)
+					input = ""
 				}
-				c.Evaluate(input)
-				input = ""
 			}
 		}
-	}
+	}()
 }
 
 // countIndents returns the number of identations for the given input.

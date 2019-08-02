@@ -35,20 +35,25 @@ var (
 	}
 )
 
+type Option func()
+
 // DrepApp based on the cli.App, the module service operation is encapsulated.
 // The purpose is to achieve the independence of each module and reduce dependencies as far as possible.
 type DrepApp struct {
 	Context *ExecuteContext
 	*cli.App
+	options []Option
 }
+
 
 // NewApp create a new app
 func NewApp() *DrepApp {
 	return &DrepApp{
 		Context: &ExecuteContext{
-			QuitExeCtx: make(chan struct{}),
+			Quit: make(chan struct{}),
 		},
 		App: cli.NewApp(),
+		options: []Option{},
 	}
 }
 
@@ -121,11 +126,19 @@ func GetServiceTag(field reflect.StructField) string {
 	}
 }
 
+// Init do something before app run
+func (mApp DrepApp) Option(option func()) {
+	mApp.options = append(mApp.options, option)
+}
+
 //TODO need a more graceful  command supporter
-//TODO how to get password from terminal in wallet
 //Run read the global configuration, parse the global command parameters,
 // initialize the main process one by one, and execute the service before the main process starts.
 func (mApp DrepApp) Run() error {
+	for _, op := range mApp.options {
+		op()
+	}
+
 	mApp.Before = mApp.before
 	mApp.Flags = append(mApp.Flags, ConfigFileFlag)
 	mApp.Flags = append(mApp.Flags, HomeDirFlag)
@@ -173,6 +186,12 @@ func (mApp DrepApp) action(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
+	}
+	exit := make(chan struct{})
+	exitSignal(exit)
+	select {
+		case <- exit:
+		case <-mApp.Context.Quit:
 	}
 	return nil
 }
