@@ -30,6 +30,22 @@ func (chainIndexer *ChainIndexerService) setStoredSections(storedSections uint64
 	return chainIndexer.DatabaseService.Put([]byte(indexerPrefix+"count"), value)
 }
 
+// Sections returns the number of processed sections maintained by the indexer
+// and also the information about the last header indexed for potential canonical
+// verifications.
+func (chainIndexer *ChainIndexerService) Sections() (uint64, uint64, crypto.Hash) {
+	chainIndexer.lock.Lock()
+	defer chainIndexer.lock.Unlock()
+
+	chainIndexer.verifyLastHead()
+	return chainIndexer.storedSections, chainIndexer.storedSections*chainIndexer.Config.SectionSize - 1, chainIndexer.getSectionHead(chainIndexer.storedSections - 1)
+}
+
+func (chainIndexer *ChainIndexerService) BloomStatus() (uint64, uint64) {
+	sections, _, _ := chainIndexer.Sections()
+	return chainIndexer.Config.SectionSize, sections
+}
+
 // GetSectionHead 从数据库中获取已处理section的最后一个块哈希
 func (chainIndexer *ChainIndexerService) getSectionHead(section uint64) crypto.Hash {
 	var data [8]byte
@@ -82,4 +98,10 @@ func bloomBitsKey(bit uint, section uint64, hash crypto.Hash) []byte {
 	binary.BigEndian.PutUint64(key[3:], section)
 
 	return key
+}
+
+// ReadBloomBits retrieves the compressed bloom bit vector belonging to the given
+// section and bit index from the.
+func (chainIndexer *ChainIndexerService) ReadBloomBits(bit uint, section uint64, head crypto.Hash) ([]byte, error) {
+	return chainIndexer.DatabaseService.Get(bloomBitsKey(bit, section, head))
 }

@@ -13,7 +13,6 @@ import (
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/common/hexutil"
 	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/pkgs/evm/vm"
 	"github.com/drep-project/drep-chain/types"
 )
 
@@ -221,10 +220,10 @@ type EventSystem struct {
 	// Channels
 	install   chan *subscription         // install filter for event notification
 	uninstall chan *subscription         // remove filter for event notification
-	txsCh     chan vm.NewTxsEvent      // Channel to receive new transactions event
+	txsCh     chan common.NewTxsEvent      // Channel to receive new transactions event
 	logsCh    chan []*types.Log          // Channel to receive new log event
-	rmLogsCh  chan vm.RemovedLogsEvent // Channel to receive removed log event
-	chainCh   chan vm.ChainEvent       // Channel to receive new chain event
+	rmLogsCh  chan common.RemovedLogsEvent // Channel to receive removed log event
+	chainCh   chan common.ChainEvent       // Channel to receive new chain event
 }
 
 // NewEventSystem creates a new manager that listens for event on the given mux,
@@ -240,10 +239,10 @@ func NewEventSystem(mux *event.TypeMux, backend Backend, lightMode bool) *EventS
 		lightMode: lightMode,
 		install:   make(chan *subscription),
 		uninstall: make(chan *subscription),
-		txsCh:     make(chan vm.NewTxsEvent, txChanSize),
+		txsCh:     make(chan common.NewTxsEvent, txChanSize),
 		logsCh:    make(chan []*types.Log, logsChanSize),
-		rmLogsCh:  make(chan vm.RemovedLogsEvent, rmLogsChanSize),
-		chainCh:   make(chan vm.ChainEvent, chainEvChanSize),
+		rmLogsCh:  make(chan common.RemovedLogsEvent, rmLogsChanSize),
+		chainCh:   make(chan common.ChainEvent, chainEvChanSize),
 	}
 
 	// Subscribe events
@@ -252,7 +251,7 @@ func NewEventSystem(mux *event.TypeMux, backend Backend, lightMode bool) *EventS
 	m.rmLogsSub = m.backend.SubscribeRemovedLogsEvent(m.rmLogsCh)
 	m.chainSub = m.backend.SubscribeChainEvent(m.chainCh)
 	// TODO(rjl493456442): use feed to subscribe pending log event
-	m.pendingLogSub = m.mux.Subscribe(vm.PendingLogsEvent{})
+	m.pendingLogSub = m.mux.Subscribe(common.PendingLogsEvent{})
 
 	// Make sure none of the subscriptions are empty
 	if m.txsSub == nil || m.logsSub == nil || m.rmLogsSub == nil || m.chainSub == nil ||
@@ -448,14 +447,14 @@ func (es *EventSystem) broadcast(filters filterIndex, ev interface{}) {
 				}
 			}
 		}
-	case vm.RemovedLogsEvent:
+	case common.RemovedLogsEvent:
 		for _, f := range filters[LogsSubscription] {
 			if matchedLogs := filterLogs(e.Logs, f.logsCrit.FromBlock, f.logsCrit.ToBlock, f.logsCrit.Addresses, f.logsCrit.Topics); len(matchedLogs) > 0 {
 				f.logs <- matchedLogs
 			}
 		}
 	case *event.TypeMuxEvent:
-		if muxe, ok := e.Data.(vm.PendingLogsEvent); ok {
+		if muxe, ok := e.Data.(common.PendingLogsEvent); ok {
 			for _, f := range filters[PendingLogsSubscription] {
 				if e.Time.After(f.created) {
 					if matchedLogs := filterLogs(muxe.Logs, nil, f.logsCrit.ToBlock, f.logsCrit.Addresses, f.logsCrit.Topics); len(matchedLogs) > 0 {
@@ -464,7 +463,7 @@ func (es *EventSystem) broadcast(filters filterIndex, ev interface{}) {
 				}
 			}
 		}
-	case vm.NewTxsEvent:
+	case common.NewTxsEvent:
 		hashes := make([]crypto.Hash, 0, len(e.Txs))
 		for _, tx := range e.Txs {
 			hashes = append(hashes, *tx.TxHash())
@@ -472,7 +471,7 @@ func (es *EventSystem) broadcast(filters filterIndex, ev interface{}) {
 		for _, f := range filters[PendingTransactionsSubscription] {
 			f.hashes <- hashes
 		}
-	case vm.ChainEvent:
+	case common.ChainEvent:
 		for _, f := range filters[BlocksSubscription] {
 			f.headers <- e.Block.Header
 		}
@@ -527,7 +526,7 @@ func (es *EventSystem) lightFilterLogs(header *types.BlockHeader, addresses []cr
 		// Get the logs of the block
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		defer cancel()
-		logsList, err := es.backend.GetLogs(ctx, *header.Hash())
+		logsList, err := es.backend.GetLogsByHash(ctx, *header.Hash())
 		if err != nil {
 			return nil
 		}
