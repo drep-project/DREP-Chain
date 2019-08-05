@@ -30,6 +30,9 @@ type ChainIndexerChain interface {
 
 type ChainIndexerServiceInterface interface {
 	app.Service
+	BloomStatus() (uint64, uint64)
+	ReadBloomBits(bit uint, section uint64, head crypto.Hash) ([]byte, error)
+	GetConfig() *ChainIndexerConfig
 }
 
 var _ ChainIndexerServiceInterface = &ChainIndexerService{}
@@ -442,4 +445,8 @@ func (chainIndexer *ChainIndexerService) commit() error {
 		}
 	}
 	return batch.Write()
+}
+
+func (chainIndexer *ChainIndexerService) GetConfig() *ChainIndexerConfig {
+	return chainIndexer.Config
 }

@@ -9,18 +9,36 @@ import (
 	"gopkg.in/urfave/cli.v1"
 
 	"github.com/drep-project/drep-chain/app"
+	"github.com/drep-project/drep-chain/blockmgr"
 	"github.com/drep-project/drep-chain/chain"
 	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/drep-chain/common/bitutil"
 	"github.com/drep-project/drep-chain/common/bloombits"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
-	"github.com/drep-project/drep-chain/pkgs/evm/vm"
+	"github.com/drep-project/drep-chain/pkgs/chain_indexer"
 	"github.com/drep-project/drep-chain/types"
 )
 
 var (
 	deadline = 5 * time.Minute // consider a filter inactive if it has not been polled for within deadline
+
+	// bloomServiceThreads is the number of goroutines used globally by an Ethereum
+	// instance to service bloombits lookups for all running filters.
+	bloomServiceThreads = 16
+
+	// bloomFilterThreads is the number of goroutines used locally per filter to
+	// multiplex requests onto the global servicing goroutines.
+	bloomFilterThreads = 3
+
+	// bloomRetrievalBatch is the maximum number of bloom bit retrievals to service
+	// in a single batch.
+	bloomRetrievalBatch = 16
+
+	// bloomRetrievalWait is the maximum time to wait for enough bloom bit requests
+	// to accumulate request an entire batch (avoiding hysteresis).
+	bloomRetrievalWait = time.Duration(0)
 )
 
 // filter is a helper struct that holds meta information over the filter type
@@ -46,9 +64,9 @@ type Backend interface {
 	GetReceipts(ctx context.Context, blockHash crypto.Hash) (types.Receipts, error)
 	GetLogsByHash(ctx context.Context, blockHash crypto.Hash) ([][]*types.Log, error)
 
-	SubscribeNewTxsEvent(chan<- vm.NewTxsEvent) event.Subscription
-	SubscribeChainEvent(ch chan<- vm.ChainEvent) event.Subscription
-	SubscribeRemovedLogsEvent(ch chan<- vm.RemovedLogsEvent) event.Subscription
+	SubscribeNewTxsEvent(chan<- common.NewTxsEvent) event.Subscription
+	SubscribeChainEvent(ch chan<- common.ChainEvent) event.Subscription
+	SubscribeRemovedLogsEvent(ch chan<- common.RemovedLogsEvent) event.Subscription
 	SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription
 
 	BloomStatus() (uint64, uint64)
@@ -63,17 +81,20 @@ type FilterServiceInterface interface {
 var _ FilterServiceInterface = &FilterService{}
 
 type FilterService struct {
-	DatabaseService *database.DatabaseService		`service:"database"`
-	ChainService    chain.ChainServiceInterface		`service:"chain"`
-	apis            []app.API
-	chainId			types.ChainIdType
-	Config			*FilterConfig
+	DatabaseService 		*database.DatabaseService		`service:"database"`
+	Blockmgr        		*blockmgr.BlockMgr        		`service:"blockmgr"`
+	ChainService    		chain.ChainServiceInterface		`service:"chain"`
+	ChainIndexerService		chain_indexer.ChainIndexerServiceInterface `service:"chain_indexer"`
+	apis            		[]app.API
+	chainId					types.ChainIdType
+	Config					*FilterConfig
 
-	mux       *event.TypeMux
-	quit      chan struct{}
-	events    *EventSystem
-	filtersMu sync.Mutex
-	filters   map[ID]*filter
+	bloomRequests			chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
+	mux       				*event.TypeMux
+	quit      				chan struct{}
+	events    				*EventSystem
+	filtersMu 				sync.Mutex
+	filters   				map[ID]*filter
 }
 
 
@@ -93,6 +114,9 @@ func (service *FilterService) CommandFlags() ([]cli.Command, []cli.Flag) {
 func (service *FilterService) Init(executeContext *app.ExecuteContext) error {
 	// check service dependencies
 	if service.DatabaseService == nil {
+		return fmt.Errorf("batabaseService not init")
+	}
+	if service.Blockmgr == nil {
 		return fmt.Errorf("batabaseService not init")
 	}
 	if service.ChainService == nil {
@@ -116,6 +140,7 @@ func (service *FilterService) Init(executeContext *app.ExecuteContext) error {
 	service.mux = new(event.TypeMux)
 	service.events = NewEventSystem(service.mux, service, false)
 	service.filters = make(map[ID]*filter)
+	service.bloomRequests = make(chan chan *bloombits.Retrieval)
 
 	go service.timeoutLoop()
 
@@ -123,6 +148,7 @@ func (service *FilterService) Init(executeContext *app.ExecuteContext) error {
 }
 
 func (service *FilterService) Start(executeContext *app.ExecuteContext) error {
+	service.startBloomHandlers(service.ChainIndexerService.GetConfig().SectionSize)
 
 	return nil
 }
@@ -134,6 +160,39 @@ func (service *FilterService) Stop(executeContext *app.ExecuteContext) error {
 
 // ------------------------------------
 // implement service logic
+
+// startBloomHandlers starts a batch of goroutines to accept bloom bit database
+// retrievals from possibly a range of filters and serving the data to satisfy.
+func (service *FilterService) startBloomHandlers(sectionSize uint64) {
+	for i := 0; i < bloomServiceThreads; i++ {
+		go func() {
+			for {
+				request := <- service.bloomRequests
+				task := <-request
+				task.Bitsets = make([][]byte, len(task.Sections))
+				for i, section := range task.Sections {
+
+					head := crypto.Hash{}
+					blockHeader, err := service.ChainService.GetBlockHeaderByHeight((section+1)*sectionSize-1)
+					if err == nil {
+						head = *blockHeader.Hash()
+					}
+
+					if compVector, err := service.ChainIndexerService.ReadBloomBits(task.Bit, section, head); err == nil {
+						if blob, err := bitutil.DecompressBytes(compVector, int(sectionSize/8)); err == nil {
+							task.Bitsets[i] = blob
+						} else {
+							task.Error = err
+						}
+					} else {
+						task.Error = err
+					}
+				}
+				request <- task
+			}
+		}()
+	}
+}
 
 // timeoutLoop runs every 5 minutes and deletes filters that have not been recently used.
 // Tt is started when the api is created.
@@ -169,7 +228,7 @@ func (service *FilterService) NewPendingTransactionFilter() ID {
 	)
 
 	service.filtersMu.Lock()
-	service.filters[pendingTxSub.ID] = &filter{typ: PendingTransactionsSubscription, deadline: time.NewTimer(deadline), hashes: make([]common.Hash, 0), s: pendingTxSub}
+	service.filters[pendingTxSub.ID] = &filter{typ: PendingTransactionsSubscription, deadline: time.NewTimer(deadline), hashes: make([]crypto.Hash, 0), s: pendingTxSub}
 	service.filtersMu.Unlock()
 
 	go func() {
@@ -438,5 +497,52 @@ func (service *FilterService) GetLogsByHash(ctx context.Context, blockHash crypt
 		logs[i] = receipt.Logs
 	}
 	return logs, nil
+}
+
+func (service *FilterService) SubscribeNewTxsEvent(chan<- common.NewTxsEvent) event.Subscription {
+	// service.Blockmgr
+
+	// blockmgr.transactionPool addTx 成功时
+
+	// blockmgr.transactionPool.txFeed
+	return nil
+}
+
+func (service *FilterService) SubscribeChainEvent(ch chan<- common.ChainEvent) event.Subscription {
+	// service.ChainService
+
+	// insert a block to blockchain (sync or miner)
+
+	// chainService.chainFeed
+	return nil
+}
+
+func (service *FilterService) SubscribeRemovedLogsEvent(ch chan<- common.RemovedLogsEvent) event.Subscription {
+	// service.ChainService
+
+	// reorganize blockchain
+
+	// chainService.rmLogsFeed
+
+	return nil
+}
+
+func (service *FilterService) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription {
+	// service.ChainService
+
+	// insert a block to blockchain (sync or miner) and reorganize blockchain
+
+	// chainService.logsFeed
+	return nil
+}
+
+func (service *FilterService) BloomStatus() (uint64, uint64) {
+	return service.ChainIndexerService.BloomStatus()
+}
+
+func (service *FilterService) ServiceFilter(ctx context.Context, session *bloombits.MatcherSession) {
+	for i := 0; i < bloomFilterThreads; i++ {
+		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, service.bloomRequests)
+	}
 }
 
