@@ -64,9 +64,9 @@ type Backend interface {
 	GetReceipts(ctx context.Context, blockHash crypto.Hash) (types.Receipts, error)
 	GetLogsByHash(ctx context.Context, blockHash crypto.Hash) ([][]*types.Log, error)
 
-	SubscribeNewTxsEvent(chan<- common.NewTxsEvent) event.Subscription
-	SubscribeChainEvent(ch chan<- common.ChainEvent) event.Subscription
-	SubscribeRemovedLogsEvent(ch chan<- common.RemovedLogsEvent) event.Subscription
+	SubscribeNewTxsEvent(chan<- types.NewTxsEvent) event.Subscription
+	SubscribeChainEvent(ch chan<- types.ChainEvent) event.Subscription
+	SubscribeRemovedLogsEvent(ch chan<- types.RemovedLogsEvent) event.Subscription
 	SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription
 
 	BloomStatus() (uint64, uint64)
@@ -141,6 +141,17 @@ func (service *FilterService) Init(executeContext *app.ExecuteContext) error {
 	service.events = NewEventSystem(service.mux, service, false)
 	service.filters = make(map[ID]*filter)
 	service.bloomRequests = make(chan chan *bloombits.Retrieval)
+
+	service.apis = []app.API{
+		app.API{
+			Namespace: MODULENAME,
+			Version:   "1.0",
+			Service: &FilterApi{
+				filterService: service,
+			},
+			Public: true,
+		},
+	}
 
 	go service.timeoutLoop()
 
@@ -499,7 +510,7 @@ func (service *FilterService) GetLogsByHash(ctx context.Context, blockHash crypt
 	return logs, nil
 }
 
-func (service *FilterService) SubscribeNewTxsEvent(chan<- common.NewTxsEvent) event.Subscription {
+func (service *FilterService) SubscribeNewTxsEvent(chan<- types.NewTxsEvent) event.Subscription {
 	// service.Blockmgr
 
 	// blockmgr.transactionPool addTx 成功时
@@ -508,16 +519,16 @@ func (service *FilterService) SubscribeNewTxsEvent(chan<- common.NewTxsEvent) ev
 	return nil
 }
 
-func (service *FilterService) SubscribeChainEvent(ch chan<- common.ChainEvent) event.Subscription {
+func (service *FilterService) SubscribeChainEvent(ch chan<- types.ChainEvent) event.Subscription {
 	// service.ChainService
 
-	// insert a block to blockchain (sync or miner)
+	// insert a block to blockchain
 
 	// chainService.chainFeed
 	return nil
 }
 
-func (service *FilterService) SubscribeRemovedLogsEvent(ch chan<- common.RemovedLogsEvent) event.Subscription {
+func (service *FilterService) SubscribeRemovedLogsEvent(ch chan<- types.RemovedLogsEvent) event.Subscription {
 	// service.ChainService
 
 	// reorganize blockchain
@@ -530,7 +541,7 @@ func (service *FilterService) SubscribeRemovedLogsEvent(ch chan<- common.Removed
 func (service *FilterService) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription {
 	// service.ChainService
 
-	// insert a block to blockchain (sync or miner) and reorganize blockchain
+	// insert a block to blockchain and reorganize blockchain
 
 	// chainService.logsFeed
 	return nil
@@ -545,4 +556,3 @@ func (service *FilterService) ServiceFilter(ctx context.Context, session *bloomb
 		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, service.bloomRequests)
 	}
 }
-
