@@ -37,10 +37,9 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"math/big"
 	"testing"
-
-	"github.com/drep-project/drep-chain/crypto"
 )
 
 var dumpEnc bool
@@ -234,7 +233,7 @@ func BenchmarkGenSharedKeyP256(b *testing.B) {
 
 // Benchmark the generation of S256 shared keys.
 func BenchmarkGenSharedKeyS256(b *testing.B) {
-	prv, err := GenerateKey(rand.Reader, crypto.S256(), nil)
+	prv, err := GenerateKey(rand.Reader, secp256k1.S256(), nil)
 	if err != nil {
 		fmt.Println(err.Error())
 		b.FailNow()
@@ -485,7 +484,11 @@ func TestSharedKeyStatic(t *testing.T) {
 }
 
 func hexKey(prv string) *PrivateKey {
-	key, err := crypto.HexToECDSA(prv)
+	privBytes, err := hex.DecodeString(prv)
+	if err != nil {
+		panic(err)
+	}
+	key, _ := secp256k1.PrivKeyFromScalar(privBytes)
 	if err != nil {
 		panic(err)
 	}

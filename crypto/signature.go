@@ -24,12 +24,17 @@ import (
 )
 
 // Ecrecover returns the uncompressed public key that created the given signature.
-func Ecrecover(hash, sig []byte) ([]byte, error) {
+func Ecrecover(hash, sig []byte, compress bool) ([]byte, error) {
 	pub, err := SigToPub(hash, sig)
 	if err != nil {
 		return nil, err
 	}
-	bytes := (*secp256k1.PublicKey)(pub).SerializeCompressed()
+	var bytes []byte
+	if compress {
+		bytes = (*secp256k1.PublicKey)(pub).SerializeCompressed()
+	}else{
+		bytes = (*secp256k1.PublicKey)(pub).SerializeUncompressed()
+	}
 	return bytes, err
 }
 

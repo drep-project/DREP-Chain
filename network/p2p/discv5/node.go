@@ -337,7 +337,7 @@ func (id NodeID) mustPubkey() secp256k1.PublicKey {
 // recoverNodeID computes the public key used to sign the
 // given hash from the signature.
 func recoverNodeID(hash, sig []byte) (id NodeID, err error) {
-	pubkey, err := crypto.Ecrecover(hash, sig)
+	pubkey, err := crypto.Ecrecover(hash, sig,true)
 	if err != nil {
 		return id, err
 	}

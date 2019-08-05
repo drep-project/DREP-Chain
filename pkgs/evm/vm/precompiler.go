@@ -2,12 +2,14 @@ package vm
 
 import (
 	"errors"
+	"github.com/drep-project/drep-chain/params"
 	"math/big"
 
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/bn256"
 	"github.com/drep-project/drep-chain/crypto/sha3"
+	"golang.org/x/crypto/ripemd160"
 )
 
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
@@ -21,6 +23,7 @@ type PrecompiledContract interface {
 var PrecompiledContracts = map[crypto.CommonAddress]PrecompiledContract{
 	crypto.Bytes2Address([]byte{1}): &ecrecover{},
 	crypto.Bytes2Address([]byte{2}): &sha256hash{},
+	crypto.Bytes2Address([]byte{3}): &ripemd160hash{},
 	crypto.Bytes2Address([]byte{4}): &dataCopy{},
 	crypto.Bytes2Address([]byte{5}): &bigModExp{},
 	crypto.Bytes2Address([]byte{6}): &bn256Add{},
@@ -59,7 +62,7 @@ func (c *ecrecover) Run(input []byte) ([]byte, error) {
 		return nil, nil
 	}
 	// v needs to be at the end for libsecp256k1
-	pubKey, err := crypto.Ecrecover(input[:32], append(input[64:128], v))
+	pubKey, err := crypto.Ecrecover(input[:32], append(input[64:128], v),false)
 	// make sure the public key is a valid one
 	if err != nil {
 		return nil, nil
@@ -80,8 +83,24 @@ func (c *sha256hash) RequiredGas(input []byte) uint64 {
 	return uint64(len(input)+31)/32*Sha256PerWordGas + Sha256BaseGas
 }
 func (c *sha256hash) Run(input []byte) ([]byte, error) {
-	h := sha3.Keccak256(input)
+	h := sha3.Hash256(input)
 	return h[:], nil
+}
+
+// RIPEMD160 implemented as a native contract.
+type ripemd160hash struct{}
+
+// RequiredGas returns the gas required to execute the pre-compiled contract.
+//
+// This method does not require any overflow checking as the input size gas costs
+// required for anything significant is so high it's impossible to pay for.
+func (c *ripemd160hash) RequiredGas(input []byte) uint64 {
+	return uint64(len(input)+31)/32*params.Ripemd160PerWordGas + params.Ripemd160BaseGas
+}
+func (c *ripemd160hash) Run(input []byte) ([]byte, error) {
+	ripemd := ripemd160.New()
+	ripemd.Write(input)
+	return common.LeftPadBytes(ripemd.Sum(nil), 32), nil
 }
 
 // data copy implemented as a native contract.

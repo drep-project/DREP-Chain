@@ -64,7 +64,7 @@ func (e encPubkey) id() enode.ID {
 // recoverNodeKey computes the public key used to sign the
 // given hash from the signature.
 func recoverNodeKey(hash, sig []byte) (key encPubkey, err error) {
-	pubkey, err := crypto.Ecrecover(hash, sig)
+	pubkey, err := crypto.Ecrecover(hash, sig,true)
 	if err != nil {
 		return key, err
 	}

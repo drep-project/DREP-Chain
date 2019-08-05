@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"github.com/drep-project/drep-chain/common/hexutil"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/drep-chain/crypto/sha3"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -33,7 +34,7 @@ import (
 	"github.com/drep-project/drep-chain/common"
 )
 
-var testAddrHex = "970e8128ab834e8eac17ab8e3812f010678cf791"
+var testAddrHex = "0b105f01e19fa1683f40ff86f8c9d4381fdc9631"
 var testPrivHex = "0x289c2857d4598e37fb9647507e47a309d6133539bf21a8b9cb6df88fd5232032"
 
 // These tests are sanity checks.
@@ -57,7 +58,7 @@ func TestToECDSAErrors(t *testing.T) {
 func BenchmarkSha3(b *testing.B) {
 	a := []byte("hello world")
 	for i := 0; i < b.N; i++ {
-		Keccak256(a)
+		sha3.Keccak256(a)
 	}
 }
 
@@ -84,14 +85,14 @@ func TestUnmarshalPubkey(t *testing.T) {
 func TestSign(t *testing.T) {
 
 	key, _ := FromPrivString(testPrivHex)
-	addr := Hex2Address(testAddrHex)
+	addr := String2Address(testAddrHex)
 
-	msg := Keccak256([]byte("foo"))
+	msg := sha3.Keccak256([]byte("foo"))
 	sig, err := Sign(msg, key)
 	if err != nil {
 		t.Errorf("Sign error: %s", err)
 	}
-	recoveredPub, err := Ecrecover(msg, sig)
+	recoveredPub, err := Ecrecover(msg, sig, false)
 	if err != nil {
 		t.Errorf("ECRecover error: %s", err)
 	}
@@ -124,7 +125,7 @@ func TestInvalidSign(t *testing.T) {
 
 func TestNewContractAddress(t *testing.T) {
 	key, _ := FromPrivString(testPrivHex)
-	addr := Hex2Address(testAddrHex)
+	addr := String2Address(testAddrHex)
 	genAddr := PubKey2Address(key.PubKey())
 	// sanity check before using addr to create contract address
 	checkAddr(t, genAddr, addr)
@@ -237,7 +238,7 @@ func TestPythonIntegration(t *testing.T) {
 	kh := "289c2857d4598e37fb9647507e47a309d6133539bf21a8b9cb6df88fd5232032"
 	k0, _ := FromPrivString(kh)
 
-	msg0 := Keccak256([]byte("foo"))
+	msg0 := sha3.Keccak256([]byte("foo"))
 	sig0, _ := Sign(msg0, k0)
 
 	msg1, _ := hex.DecodeString("00000000000000000000000000000000")

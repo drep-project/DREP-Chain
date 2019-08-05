@@ -4,6 +4,8 @@
 
 package sha3
 
+import "crypto/sha256"
+
 // spongeDirection indicates the direction bytes are flowing through the sponge.
 type spongeDirection int
 
@@ -193,27 +195,23 @@ func (d *state) Sum(in []byte) []byte {
 }
 
 func Hash256(data []byte) []byte {
-	//h := sha256.New()
-	//h.Write(data)
-	//ret := h.Sum(nil)
-	//hash := make([]byte, ByteLen)
-	//copy(hash[ByteLen-len(ret):], ret)
-	d := &state{rate: 136, outputLen: 32, dsbyte: 0x01}
-	d.Write(data)
-	return d.Sum(nil)
+	h := sha256.New()
+	h.Write(data)
+	ret := h.Sum(nil)
+	hash := make([]byte, ByteLen)
+	copy(hash[ByteLen-len(ret):], ret)
+	return hash
 }
 
 func HashS256(data ...[]byte) []byte {
-	//h := sha256.New()
-	//h.Write(text)
-	//ret := h.Sum(nil)
-	//hash := make([]byte, ByteLen)
-	//copy(hash[ByteLen - len(ret):], ret)
-	d := &state{rate: 136, outputLen: 32, dsbyte: 0x01}
+	h := sha256.New()
 	for _, b := range data {
-		d.Write(b)
+		h.Write(b)
 	}
-	return d.Sum(nil)
+	ret := h.Sum(nil)
+	hash := make([]byte, ByteLen)
+	copy(hash[ByteLen - len(ret):], ret)
+	return hash
 }
 
 // Keccak256 calculates and returns the Keccak256 hash of the input data.
