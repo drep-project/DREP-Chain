@@ -30,6 +30,19 @@ func (chainIndexer *ChainIndexerService) setStoredSections(storedSections uint64
 	return chainIndexer.DatabaseService.Put([]byte(indexerPrefix+"count"), value)
 }
 
+// setValidStoredSections writes the number of valid sections to the index database
+func (chainIndexer *ChainIndexerService) setValidStoredSections(sections uint64) {
+	// Set the current number of valid sections in the database
+	chainIndexer.setStoredSections(sections)
+
+	// Remove any reorged sections, caching the valids in the mean time
+	for chainIndexer.storedSections > sections {
+		chainIndexer.storedSections--
+		chainIndexer.deleteSectionHead(chainIndexer.storedSections)
+	}
+	chainIndexer.storedSections = sections // needed if new > old
+}
+
 // Sections returns the number of processed sections maintained by the indexer
 // and also the information about the last header indexed for potential canonical
 // verifications.

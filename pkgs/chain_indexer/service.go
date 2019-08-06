@@ -40,13 +40,10 @@ var _ ChainIndexerServiceInterface = &ChainIndexerService{}
 type ChainIndexerService struct {
 	DatabaseService *database.DatabaseService   `service:"database"`
 	ChainService    chain.ChainServiceInterface `service:"chain"`
-	chainId         types.ChainIdType
-
 	Config *ChainIndexerConfig
 
 	storedSections uint64 // Number of sections successfully indexed into the database
 	knownSections  uint64 // Number of sections known to be complete (block wise)
-	cascadedHead   uint64 // Block number of the last completed section cascaded to subindexers
 
 	checkpointSections uint64      // Number of sections covered by the checkpoint
 	checkpointHead     crypto.Hash // Section head belonging to the checkpoint
@@ -60,7 +57,6 @@ type ChainIndexerService struct {
 	lock sync.RWMutex
 
 	// bloomIndexer
-	size    uint64               // section size to generate bloombits for
 	gen     *bloombits.Generator // generator to rotate the bloom bits crating the bloom index
 	section uint64               // Section is the section number being processed currently
 	head    crypto.Hash          // Head is the hash of the last header processed
@@ -405,29 +401,16 @@ func (chainIndexer *ChainIndexerService) processSection(section uint64, lastHead
 	return lastHead, nil
 }
 
-// setValidStoredSections writes the number of valid sections to the index database
-func (chainIndexer *ChainIndexerService) setValidStoredSections(sections uint64) {
-	// Set the current number of valid sections in the database
-	chainIndexer.setStoredSections(sections)
-
-	// Remove any reorged sections, caching the valids in the mean time
-	for chainIndexer.storedSections > sections {
-		chainIndexer.storedSections--
-		chainIndexer.deleteSectionHead(chainIndexer.storedSections)
-	}
-	chainIndexer.storedSections = sections // needed if new > old
-}
-
 // 启动新的bloombits索引部分。
 func (chainIndexer *ChainIndexerService) reset(ctx context.Context, section uint64, lastSectionHead crypto.Hash) error {
-	gen, err := bloombits.NewGenerator(uint(chainIndexer.size))
+	gen, err := bloombits.NewGenerator(uint(chainIndexer.Config.SectionSize))
 	chainIndexer.gen, chainIndexer.section, chainIndexer.head = gen, section, crypto.Hash{}
 	return err
 }
 
 // 将新区块头的bloom添加到索引。
 func (chainIndexer *ChainIndexerService) process(ctx context.Context, header *types.BlockHeader) error {
-	chainIndexer.gen.AddBloom(uint(header.Height-chainIndexer.section*chainIndexer.size), header.Bloom)
+	chainIndexer.gen.AddBloom(uint(header.Height-chainIndexer.section*chainIndexer.Config.SectionSize), header.Bloom)
 	chainIndexer.head = *header.Hash()
 	return nil
 }
@@ -449,4 +432,25 @@ func (chainIndexer *ChainIndexerService) commit() error {
 
 func (chainIndexer *ChainIndexerService) GetConfig() *ChainIndexerConfig {
 	return chainIndexer.Config
+}
+
+// AddCheckpoint adds a checkpoint. Sections are never processed and the chain
+// is not expected to be available before this point. The indexer assumes that
+// the backend has sufficient information available to process subsequent sections.
+//
+// Note: knownSections == 0 and storedSections == checkpointSections until
+// syncing reaches the checkpoint
+func (chainIndexer *ChainIndexerService) AddCheckpoint(section uint64, shead crypto.Hash) {
+	chainIndexer.lock.Lock()
+	defer chainIndexer.lock.Unlock()
+
+	// Short circuit if the given checkpoint is below than local's.
+	if chainIndexer.checkpointSections >= section+1 || section < chainIndexer.storedSections {
+		return
+	}
+	chainIndexer.checkpointSections = section + 1
+	chainIndexer.checkpointHead = shead
+
+	chainIndexer.setSectionHead(section, shead)
+	chainIndexer.setValidStoredSections(section + 1)
 }
