@@ -1,0 +1,1 @@
+{"version":0,"cipherText":"ckbZo+U6LSg/rUdGMZfCIBAdq7o2n2KZA8zr3ttVFxw=","chainId":0,"chainCode":"d42FxIgPHSQLFShoIkB2tVZ4R7KSjLGjxoaAHBpog0s=","cipher":"aes-128-ctr","cipherParams":{"iv":"7RVWESqKAK81qKQLXCAFaw=="},"KDFParams":{"n":262144,"r":8,"p":1,"dklen":32,"salt":"TQmmLR0pNF665YRUjA0+a0hHuSNk28q6rMWya69ITCA="},"mac":"8lqhH/kGymzMnijEL9h7+Pog67it3/7MwAYBtpuL0fE="}

@@ -19,6 +19,7 @@ package vm
 import (
 	"errors"
 	"fmt"
+	"github.com/drep-project/drep-chain/common/math"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/sha3"
@@ -112,10 +113,22 @@ func opSmod(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 
 func opExp(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	base, exponent := stack.pop(), stack.pop()
-	stack.push(common.Exp(base, exponent))
-
-	interpreter.IntPool.put(base, exponent)
-
+	// some shortcuts
+	cmpToOne := exponent.Cmp(big1)
+	if cmpToOne < 0 { // Exponent is zero
+		// x ^ 0 == 1
+		stack.push(base.SetUint64(1))
+	} else if base.Sign() == 0 {
+		// 0 ^ y, if y != 0, == 0
+		stack.push(base.SetUint64(0))
+	} else if cmpToOne == 0 { // Exponent is one
+		// x ^ 1 == x
+		stack.push(base)
+	} else {
+		stack.push(math.Exp(base, exponent))
+		interpreter.IntPool.put(base)
+	}
+	interpreter.IntPool.put(exponent)
 	return nil, nil
 }
 
@@ -378,8 +391,7 @@ func opSha3(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 
 func opAddress(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	x := contract.ContractAddr.Big()
-	//stack.push(contract.GetAddress().Big())
-	stack.push(x)
+	stack.push(interpreter.IntPool.get().SetBytes(x.Bytes()))
 	return nil, nil
 }
 
@@ -396,14 +408,14 @@ func opBalance(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memo
 func opOrigin(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	//stack.push(interpreter.evm.Origin.Big())
 	x := interpreter.EVM.Origin.Big()
-	stack.push(x)
+	stack.push(interpreter.IntPool.get().SetBytes(x.Bytes()))
 	return nil, nil
 }
 
 func opCaller(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	//stack.push(contract.Caller().Big())
 	x := contract.CallerAddr.Big()
-	stack.push(x)
+	stack.push(interpreter.IntPool.get().SetBytes(x.Bytes()))
 	return nil, nil
 }
 
@@ -495,7 +507,6 @@ func opExtCodeCopy(pc *uint64, interpreter *EVMInterpreter, contract *Contract, 
 	)
 	byteCode := interpreter.EVM.State.GetByteCode(&addr)
 	codeCopy := common.GetDataBig(byteCode, codeOffset, length)
-	//codeCopy := getDataBig(interpreter.evm.StateDB.GetCode(addr), codeOffset, length)
 	memory.Set(memOffset.Uint64(), length.Uint64(), codeCopy)
 
 	interpreter.IntPool.put(memOffset, codeOffset, length)
@@ -532,7 +543,6 @@ func opExtCodeHash(pc *uint64, interpreter *EVMInterpreter, contract *Contract, 
 	slot := stack.peek()
 	hash := interpreter.EVM.State.GetCodeHash(crypto.Big2Address(slot)).Bytes()
 	slot.SetBytes(hash)
-	//slot.SetBytes(interpreter.evm.StateDB.GetCodeHash(BigToAddress(slot)).Bytes())
 	return nil, nil
 }
 
@@ -542,6 +552,8 @@ func opGasprice(pc *uint64, interpreter *EVMInterpreter, contract *Contract, mem
 }
 
 func opBlockhash(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
+	//TODO get block hash
+	//TODO block hash not complete when execute here
 	fmt.Println("doing blockhash")
 	//num := stack.pop()
 	//n := interpreter.IntPool.get().Sub(interpreter.evm.BlockNumber, Big257)
@@ -569,11 +581,13 @@ func opTimestamp(pc *uint64, interpreter *EVMInterpreter, contract *Contract, me
 }
 
 func opNumber(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
+	//TODO block number
 	//stack.push(U256(interpreter.IntPool.get().Set(interpreter.evm.BlockNumber)))
 	return nil, nil
 }
 
 func opDifficulty(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
+	return nil, errors.New("difficulty not support")
 	//stack.push(U256(interpreter.IntPool.get().Set(interpreter.evm.Difficulty)))
 	return nil, nil
 }

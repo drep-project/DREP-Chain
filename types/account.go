@@ -32,7 +32,7 @@ func NewNode(parent *Node, chainId ChainIdType) *Node {
 			return nil
 		}
 		h := common.HmAC(uni, DrepMark)
-		prvKey, _ = secp256k1.PrivKeyFromBytes(h[:KeyBitSize])
+		prvKey, _ = crypto.ToPrivateKey(h[:KeyBitSize])
 		chainCode = h[KeyBitSize:]
 	} else {
 		pid := new(big.Int).SetBytes(parent.ChainCode)
@@ -40,7 +40,7 @@ func NewNode(parent *Node, chainId ChainIdType) *Node {
 		chainCode := new(big.Int).Xor(pid, cid).Bytes()
 
 		h := common.HmAC(chainCode, parent.PrivateKey.Serialize())
-		prvKey, _ = secp256k1.PrivKeyFromBytes(h[:KeyBitSize])
+		prvKey, _ = crypto.ToPrivateKey(h[:KeyBitSize])
 		chainCode = h[KeyBitSize:]
 	}
 	address := crypto.PubKey2Address(prvKey.PubKey())

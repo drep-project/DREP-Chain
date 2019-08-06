@@ -174,7 +174,7 @@ func RandomNode(seed []byte) *types.Node {
 	)
 
 	h := hmAC(seed, types.DrepMark)
-	prvKey, _ = secp256k1.PrivKeyFromBytes(h[:types.KeyBitSize])
+	prvKey, _ = crypto.ToPrivateKey(h[:types.KeyBitSize])
 	chainCode = h[types.KeyBitSize:]
 	addr := crypto.PubKey2Address(prvKey.PubKey())
 	return &types.Node{

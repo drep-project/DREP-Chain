@@ -18,23 +18,18 @@ package crypto
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"github.com/drep-project/drep-chain/common/hexutil"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
-	"io/ioutil"
 	"math/big"
-	"os"
-	"reflect"
 	"testing"
 
 	"github.com/drep-project/drep-chain/common"
 )
 
-var testAddrHex = "0b105f01e19fa1683f40ff86f8c9d4381fdc9631"
+var testAddrHex = "0x0b105f01e19fa1683f40ff86f8c9d4381fdc9631"
 var testPrivHex = "0x289c2857d4598e37fb9647507e47a309d6133539bf21a8b9cb6df88fd5232032"
 
 // These tests are sanity checks.
@@ -59,26 +54,6 @@ func BenchmarkSha3(b *testing.B) {
 	a := []byte("hello world")
 	for i := 0; i < b.N; i++ {
 		sha3.Keccak256(a)
-	}
-}
-
-func TestUnmarshalPubkey(t *testing.T) {
-
-	var (
-		hexPrivStr, _ = hex.DecodeString("0x04760c4460e5336ac9bbd87952a3c7ec4363fc0a97bd31c86430806e287b437fd1b01abc6e1db640cf3106b520344af1d58b00b57823db3e1407cbc433e1b6d04d")
-		dec           = &ecdsa.PublicKey{
-			Curve: secp256k1.S256(),
-			X:     common.MustDecodeBig("0x760c4460e5336ac9bbd87952a3c7ec4363fc0a97bd31c86430806e287b437fd1"),
-			Y:     common.MustDecodeBig("0xb01abc6e1db640cf3106b520344af1d58b00b57823db3e1407cbc433e1b6d04d"),
-		}
-	)
-	key := &secp256k1.PrivateKey{}
-	err := json.Unmarshal([]byte(hexPrivStr), key)
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	if !reflect.DeepEqual(key, dec) {
-		t.Fatal("wrong result")
 	}
 }
 
@@ -133,45 +108,12 @@ func TestNewContractAddress(t *testing.T) {
 	caddr0 := CreateAddress(addr, 0)
 	caddr1 := CreateAddress(addr, 1)
 	caddr2 := CreateAddress(addr, 2)
-	checkAddr(t, Hex2Address("333c3310824b7c685133f2bedb2ca4b8b4df633d"), caddr0)
-	checkAddr(t, Hex2Address("8bda78331c916a08481428e4b07c96d3e916d165"), caddr1)
-	checkAddr(t, Hex2Address("c9ddedf451bc62ce88bf9292afb13df35b670699"), caddr2)
+
+	checkAddr(t, Hex2Address("38bd4b79a96b5ddc536639cc0cc927c7ee5511bc"), caddr0)
+	checkAddr(t, Hex2Address("7e11723d6f9a0601f0343f96cdbd01e303b8ee9a"), caddr1)
+	checkAddr(t, Hex2Address("39b35935d5417dad741f45d9f39e20596bada9d3"), caddr2)
 }
 
-func TestLoadECDSAFile(t *testing.T) {
-	keyBytes, _ := hex.DecodeString(testPrivHex)
-	fileName0 := "test_key0"
-	fileName1 := "test_key1"
-	checkKey := func(k *secp256k1.PrivateKey) {
-		checkAddr(t, PubKey2Address(k.PubKey()), Hex2Address(testAddrHex))
-		loadedKeyBytes := k.Serialize()
-		if !bytes.Equal(loadedKeyBytes, keyBytes) {
-			t.Fatalf("private key mismatch: want: %x have: %x", keyBytes, loadedKeyBytes)
-		}
-	}
-
-	ioutil.WriteFile(fileName0, []byte(testPrivHex), 0600)
-	defer os.Remove(fileName0)
-
-	key0, err := LoadECDSA(fileName0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	checkKey(key0)
-
-	// again, this time with SaveECDSA instead of manual save:
-	err = SaveECDSA(fileName1, key0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(fileName1)
-
-	key1, err := LoadECDSA(fileName1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	checkKey(key1)
-}
 
 func TestValidateSignatureValues(t *testing.T) {
 	check := func(expected bool, v byte, r, s *big.Int) {
@@ -232,28 +174,13 @@ func checkAddr(t *testing.T, addr0, addr1 CommonAddress) {
 	}
 }
 
-// test to help Python team with integration of libsecp256k1
-// skip but keep it after they are done
-func TestPythonIntegration(t *testing.T) {
-	kh := "289c2857d4598e37fb9647507e47a309d6133539bf21a8b9cb6df88fd5232032"
-	k0, _ := FromPrivString(kh)
-
-	msg0 := sha3.Keccak256([]byte("foo"))
-	sig0, _ := Sign(msg0, k0)
-
-	msg1, _ := hex.DecodeString("00000000000000000000000000000000")
-	sig1, _ := Sign(msg0, k0)
-
-	t.Logf("msg: %x, privkey: %s sig: %x\n", msg0, kh, sig0)
-	t.Logf("msg: %x, privkey: %s sig: %x\n", msg1, kh, sig1)
-}
 
 func FromPrivString(str string) (*secp256k1.PrivateKey, error) {
-	bytes, err := common.Decode(testPrivHex)
+	bytes, err := common.Decode(str)
 	if err != nil {
 		return nil, err
 	}
-	prikey, _ := secp256k1.PrivKeyFromBytes(bytes)
+	prikey, _ := ToPrivateKey(bytes)
 	return prikey, nil
 }
 

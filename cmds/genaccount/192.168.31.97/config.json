@@ -1,0 +1,63 @@
+{
+	"log" : {
+	      "logLevel": 4
+	},
+	"rpc" : {
+	      "ipcEnabled": true,
+	      "httpEnabled": true,
+	      "wsEnabled": false,
+	      "wsExposeall": false,
+	      "restEnabled": false
+	},
+	"consensus" : {
+	      "consensusMode": "bft",
+	      "mypk": "0x038016b811e95b6d82dfc591e2e6c75ec956aa2d7226073149d89d5b3ad2785fe0",
+	      "enable": true,
+	      "producers": [
+	            {
+	                  "pubkey": "0x02218eb8c7b3697200309bf62bbf7f065fa9a2cc64fb63d4c43ec362238362a355",
+	                  "ip": "192.168.31.112"
+	            },
+	            {
+	                  "pubkey": "0x031b4ebc73e9ea7b7a90f46e91612642cb06b21ed83ed7ad085b596195b4b69298",
+	                  "ip": "192.168.31.254"
+	            },
+	            {
+	                  "pubkey": "0x038016b811e95b6d82dfc591e2e6c75ec956aa2d7226073149d89d5b3ad2785fe0",
+	                  "ip": "192.168.31.97"
+	            },
+	            {
+	                  "pubkey": "0x03c08293902ec9c1b170c1b45fb25ef4288ae65faf161096e17c6335dc79826310",
+	                  "ip": "192.168.31.150"
+	            }
+	      ]
+	},
+	"p2p" : {
+	      "MaxPeers": 20,
+	      "NoDiscovery": false,
+	      "DiscoveryV5": true,
+	      "Name": "drepnode",
+	      "BootstrapNodes": null,
+	      "StaticNodes": [
+	            "enode://09d536eb34ba7d4f1e623bb3f6a96d5804a747e5db14920386bfaacdd0b3820b@192.168.31.112:55555",
+	            "enode://574d6f95c60831854a379273b41c24810e4eb7df4a157112394750a1b5370b9a@192.168.31.254:55555",
+	            "enode://0eb4dcc4c7f91ba75b8b864dfffa015f2177c2b0fa22bb0195f2035c32cf2af5@192.168.31.97:55555",
+	            "enode://4dfcd79f799c549c9cb326bf49df1a632070a27d0040dd55754ec00e4a9b22aa@192.168.31.150:55555"
+	      ],
+	      "ProduceNodes": [
+	            "enode://09d536eb34ba7d4f1e623bb3f6a96d5804a747e5db14920386bfaacdd0b3820b@192.168.31.112:55555",
+	            "enode://574d6f95c60831854a379273b41c24810e4eb7df4a157112394750a1b5370b9a@192.168.31.254:55555",
+	            "enode://0eb4dcc4c7f91ba75b8b864dfffa015f2177c2b0fa22bb0195f2035c32cf2af5@192.168.31.97:55555",
+	            "enode://4dfcd79f799c549c9cb326bf49df1a632070a27d0040dd55754ec00e4a9b22aa@192.168.31.150:55555"
+	      ],
+	      "ListenAddr": "0.0.0.0:55555"
+	},
+	"chain" : {
+	      "remoteport": 55556,
+	      "genesisaddr": "0x0000000000000000000000000000000000000000"
+	},
+	"accounts" : {
+	      "enable": true,
+	      "password": "123"
+	}
+}
