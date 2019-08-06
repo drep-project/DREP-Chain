@@ -38,8 +38,11 @@ type TransactionPool struct {
 	//当前有序的最大的nonce大小,此值应该被存储到DB中（后续考虑txpool的DB存储，一起考虑）
 	pendingNonce     map[crypto.CommonAddress]uint64
 	eventNewBlockSub event.Subscription
-	newBlockChan     chan *types.Block
+	newBlockChan     chan *types.ChainEvent
 	quit             chan struct{}
+
+	// 提供pending交易订阅
+	txFeed		 event.Feed
 
 	//日志
 	journal *txJournal
@@ -76,7 +79,7 @@ func NewTransactionPool(database *database.Database, journalPath string) *Transa
 
 	pool.queue = make(map[crypto.CommonAddress]*txList)
 	pool.pending = make(map[crypto.CommonAddress]*txList)
-	pool.newBlockChan = make(chan *types.Block)
+	pool.newBlockChan = make(chan *types.ChainEvent)
 	pool.pendingNonce = make(map[crypto.CommonAddress]uint64)
 
 	pool.allTxs = make(map[string]*types.Transaction)
@@ -184,28 +187,50 @@ func (pool *TransactionPool) addTx(tx *types.Transaction, isLocal bool) error {
 		return err
 	}
 
-	//交易替换
-	for i, maplist := range []map[crypto.CommonAddress]*txList{pool.pending, pool.queue} {
-		if list, ok := maplist[*addr]; ok {
-			if list.Overlaps(tx) {
-				//替换
-				ok, oldTx := list.ReplaceOldTx(tx)
-				if !ok {
-					return errors.New("can't replace old tx")
-				}
-
-				log.WithField("nonce", tx.Nonce()).WithField("old price", oldTx.GasPrice()).WithField("new pirce", tx.GasPrice()).WithField("pending", i).Warn("replace")
-
-				delete(pool.allTxs, oldTx.TxHash().String())
-				pool.allPricedTxs.Remove(oldTx)
-
-				pool.allTxs[id.String()] = tx
-				pool.allPricedTxs.Put(tx)
-				pool.journalTx(*addr, tx)
-				return nil
+	// pending队列交易替换
+	if list, ok := pool.pending[*addr]; ok {
+		if list.Overlaps(tx) {
+			//替换
+			ok, oldTx := list.ReplaceOldTx(tx)
+			if !ok {
+				return errors.New("can't replace old tx")
 			}
+
+			pool.txFeed.Send(types.NewTxsEvent{Txs: []*types.Transaction{tx}})
+
+			log.WithField("nonce", tx.Nonce()).WithField("old price", oldTx.GasPrice()).WithField("new pirce", tx.GasPrice()).Warn("replace")
+
+			delete(pool.allTxs, oldTx.TxHash().String())
+			pool.allPricedTxs.Remove(oldTx)
+
+			pool.allTxs[id.String()] = tx
+			pool.allPricedTxs.Put(tx)
+			pool.journalTx(*addr, tx)
+			return nil
 		}
 	}
+
+	// queue队列交易替换
+	if list, ok := pool.queue[*addr]; ok {
+		if list.Overlaps(tx) {
+			//替换
+			ok, oldTx := list.ReplaceOldTx(tx)
+			if !ok {
+				return errors.New("can't replace old tx")
+			}
+
+			log.WithField("nonce", tx.Nonce()).WithField("old price", oldTx.GasPrice()).WithField("new pirce", tx.GasPrice()).Warn("replace")
+
+			delete(pool.allTxs, oldTx.TxHash().String())
+			pool.allPricedTxs.Remove(oldTx)
+
+			pool.allTxs[id.String()] = tx
+			pool.allPricedTxs.Put(tx)
+			pool.journalTx(*addr, tx)
+			return nil
+		}
+	}
+
 
 	//新的一个交易到来，先看看pool是否满；满的话，删除一些价格较低的tx
 	miniPrice := new(big.Int)
@@ -272,6 +297,7 @@ func (pool *TransactionPool) addTx(tx *types.Transaction, isLocal bool) error {
 	} else {
 		pool.queue[*addr] = newTxList(false)
 		pool.queue[*addr].Add(tx)
+		pool.txFeed.Send(types.NewTxsEvent{Txs: []*types.Transaction{tx}})
 	}
 
 	pool.journalTx(*addr, tx)
@@ -304,6 +330,8 @@ func (pool *TransactionPool) syncToPending(address *crypto.CommonAddress) {
 		}
 
 		pool.pendingNonce[*address] = nonce
+
+		pool.txFeed.Send(types.NewTxsEvent{Txs: list})
 	}
 }
 
@@ -407,7 +435,7 @@ func (pool *TransactionPool) checkUpdate() {
 			pool.journal.rotate(all)
 			pool.mu.Unlock()
 		case block := <-pool.newBlockChan:
-			pool.adjust(block)
+			pool.adjust(block.Block)
 		case <-pool.quit:
 			return
 		}
@@ -520,4 +548,8 @@ func (pool *TransactionPool) GetTxInPool(hash string) (*types.Transaction, error
 		return tx, nil
 	}
 	return nil, fmt.Errorf("hash:%s not in txpool", hash)
+}
+
+func (pool *TransactionPool) NewTxFeed() *event.Feed {
+	return &pool.txFeed
 }

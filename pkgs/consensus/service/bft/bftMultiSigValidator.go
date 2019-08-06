@@ -51,6 +51,6 @@ func (blockMultiSigValidator *BlockMultiSigValidator) VerifyBody(block *types.Bl
 	return nil
 }
 
-func (blockMultiSigValidator *BlockMultiSigValidator) ExecuteBlock(context *chain.BlockExecuteContext) error {
-	return nil
+func (blockMultiSigValidator *BlockMultiSigValidator) ExecuteBlock(context *chain.BlockExecuteContext) (types.Receipts, []*types.Log, uint64, error) {
+	return nil, nil, 0, nil
 }

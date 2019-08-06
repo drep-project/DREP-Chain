@@ -314,7 +314,7 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) bool {
 		GasFee:  new(big.Int),
 	}
 	for _, validator := range bftConsensus.ChainService.BlockValidator() {
-		err := validator.ExecuteBlock(context)
+		_, _, _, err := validator.ExecuteBlock(context)
 		if err != nil {
 			log.WithField("ExecuteBlock", err).Debug("multySigVerify")
 			return false

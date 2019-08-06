@@ -27,7 +27,7 @@ type IBlockValidator interface {
 
 	VerifyBody(block *types.Block) error
 
-	ExecuteBlock(context *BlockExecuteContext) error
+	ExecuteBlock(context *BlockExecuteContext) (types.Receipts, []*types.Log, uint64, error)
 }
 
 type ITransactionValidator interface {
