@@ -41,17 +41,6 @@ var (
 	bloomRetrievalWait = time.Duration(0)
 )
 
-// filter is a helper struct that holds meta information over the filter type
-// and associated subscription in the event system.
-type filter struct {
-	typ      Type
-	deadline *time.Timer // filter is inactiv when deadline triggers
-	hashes   []crypto.Hash
-	crit     FilterQuery
-	logs     []*types.Log
-	s        *Subscription // associated subscription in event system
-}
-
 type ServiceDatabase interface {
 	Get(key []byte) ([]byte, error)
 	Put(key []byte, value []byte) error
@@ -85,18 +74,27 @@ type FilterService struct {
 	Blockmgr        		*blockmgr.BlockMgr        		`service:"blockmgr"`
 	ChainService    		chain.ChainServiceInterface		`service:"chain"`
 	ChainIndexerService		chain_indexer.ChainIndexerServiceInterface `service:"chain_indexer"`
-	apis            		[]app.API
-	chainId					types.ChainIdType
 	Config					*FilterConfig
+
+	apis            		[]app.API
 
 	bloomRequests			chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
 	mux       				*event.TypeMux
-	quit      				chan struct{}
 	events    				*EventSystem
 	filtersMu 				sync.Mutex
 	filters   				map[ID]*filter
 }
 
+// filter is a helper struct that holds meta information over the filter type
+// and associated subscription in the event system.
+type filter struct {
+	typ      Type
+	deadline *time.Timer // filter is inactiv when deadline triggers
+	hashes   []crypto.Hash
+	crit     FilterQuery
+	logs     []*types.Log
+	s        *Subscription // associated subscription in event system
+}
 
 // implement Service interface
 func (service *FilterService) Name() string {
@@ -121,6 +119,9 @@ func (service *FilterService) Init(executeContext *app.ExecuteContext) error {
 	}
 	if service.ChainService == nil {
 		return fmt.Errorf("chainService not init")
+	}
+	if service.ChainIndexerService == nil {
+		return fmt.Errorf("chainIndexerService not init")
 	}
 
 	// initialize module config
@@ -165,7 +166,6 @@ func (service *FilterService) Start(executeContext *app.ExecuteContext) error {
 }
 
 func (service *FilterService) Stop(executeContext *app.ExecuteContext) error {
-
 	return nil
 }
 
