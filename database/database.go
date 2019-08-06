@@ -439,6 +439,11 @@ func (db *Database) GetReceipts(blockHash crypto.Hash) []*types.Receipt {
 	return receipts
 }
 
+func (db *Database) DeleteReceipts(blockHash crypto.Hash) error {
+	key := sha3.Keccak256([]byte("receipts_" + blockHash.String()))
+	return db.Delete(key)
+}
+
 func (db *Database) Load(x *big.Int) []byte {
 	value, _ := db.Get(x.Bytes())
 	return value

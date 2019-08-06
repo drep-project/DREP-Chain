@@ -74,19 +74,22 @@ func (chainBlockValidator *ChainBlockValidator) VerifyBody(block *types.Block) e
 	return nil
 }
 
-func (chainBlockValidator *ChainBlockValidator) ExecuteBlock(context *BlockExecuteContext) error {
+func (chainBlockValidator *ChainBlockValidator) ExecuteBlock(context *BlockExecuteContext) (types.Receipts, []*types.Log, uint64, error) {
 	totalGasFee := big.NewInt(0)
 	totalGasUsed := big.NewInt(0)
+	receipts := make([]*types.Receipt, context.Block.Data.TxCount)
+	allLogs := make([]*types.Log, 0)
+
 	if len(context.Block.Data.TxList) < 0 {
 		context.AddGasUsed(totalGasUsed)
 		context.AddGasFee(totalGasFee)
-		return nil
+		return nil, nil, 0, nil
 	}
-	receipts := make([]*types.Receipt, context.Block.Data.TxCount)
+
 	for i, t := range context.Block.Data.TxList {
 		receipt, gasUsed, gasFee, err := chainBlockValidator.txValidator.ExecuteTransaction(context.Db, t, context.Gp, context.Block.Header)
 		if err != nil {
-			return err
+			return nil, nil, 0, err
 			//dlog.Debug("execute transaction fail", "txhash", t.Data, "reason", err.Error())
 		}
 		if gasFee != nil {
@@ -94,6 +97,7 @@ func (chainBlockValidator *ChainBlockValidator) ExecuteBlock(context *BlockExecu
 			totalGasUsed.Add(totalGasUsed, gasUsed)
 		}
 		receipts[i] = receipt
+		allLogs = append(allLogs, receipt.Logs...)
 	}
 	context.Db.PutReceipts(*context.Block.Header.Hash(), receipts)
 	for _, receipt := range receipts {
@@ -101,5 +105,5 @@ func (chainBlockValidator *ChainBlockValidator) ExecuteBlock(context *BlockExecu
 	}
 	context.AddGasUsed(totalGasUsed)
 	context.AddGasFee(totalGasFee)
-	return nil
+	return receipts, allLogs, totalGasUsed.Uint64(), nil
 }

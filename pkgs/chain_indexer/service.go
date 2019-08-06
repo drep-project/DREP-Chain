@@ -112,7 +112,7 @@ func (chainIndexer *ChainIndexerService) Init(executeContext *app.ExecuteContext
 }
 
 func (chainIndexer *ChainIndexerService) Start(executeContext *app.ExecuteContext) error {
-	events := make(chan *types.Block, 10)
+	events := make(chan *types.ChainEvent, 10)
 	sub := chainIndexer.ChainService.NewBlockFeed().Subscribe(events)
 
 	go chainIndexer.eventLoop(chainIndexer.ChainService.GetCurrentHeader(), events, sub)
@@ -233,7 +233,7 @@ func (chainIndexer *ChainIndexerService) updateLoop() {
 // eventLoop is a secondary - optional - event loop of the indexer which is only
 // started for the outermost indexer to push chain head events into a processing
 // queue.
-func (chainIndexer *ChainIndexerService) eventLoop(currentHeader *types.BlockHeader, events chan *types.Block, sub event.Subscription) {
+func (chainIndexer *ChainIndexerService) eventLoop(currentHeader *types.BlockHeader, events chan *types.ChainEvent, sub event.Subscription) {
 	// Mark the chain indexer as active, requiring an additional teardown
 	atomic.StoreUint32(&chainIndexer.active, 1)
 
@@ -260,7 +260,7 @@ func (chainIndexer *ChainIndexerService) eventLoop(currentHeader *types.BlockHea
 				errc <- nil
 				return
 			}
-			header := block.Header
+			header := block.Block.Header
 			if header.PreviousHash != prevHash {
 				// Reorg to the common ancestor if needed (might not exist in light sync mode, skip reorg then)
 				// TODO(karalabe, zsfelfoldi): This seems a bit brittle, can we detect this case explicitly?

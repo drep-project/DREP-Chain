@@ -510,41 +510,20 @@ func (service *FilterService) GetLogsByHash(ctx context.Context, blockHash crypt
 	return logs, nil
 }
 
-func (service *FilterService) SubscribeNewTxsEvent(chan<- types.NewTxsEvent) event.Subscription {
-	// service.Blockmgr
-
-	// blockmgr.transactionPool addTx 成功时
-
-	// blockmgr.transactionPool.txFeed
-	return nil
+func (service *FilterService) SubscribeNewTxsEvent(ch chan<- types.NewTxsEvent) event.Subscription {
+	return service.Blockmgr.NewTxFeed().Subscribe(ch)
 }
 
 func (service *FilterService) SubscribeChainEvent(ch chan<- types.ChainEvent) event.Subscription {
-	// service.ChainService
-
-	// insert a block to blockchain
-
-	// chainService.chainFeed
-	return nil
+	return service.ChainService.NewBlockFeed().Subscribe(ch)
 }
 
 func (service *FilterService) SubscribeRemovedLogsEvent(ch chan<- types.RemovedLogsEvent) event.Subscription {
-	// service.ChainService
-
-	// reorganize blockchain
-
-	// chainService.rmLogsFeed
-
-	return nil
+	return service.ChainService.GetRMLogsFeed().Subscribe(ch)
 }
 
 func (service *FilterService) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription {
-	// service.ChainService
-
-	// insert a block to blockchain and reorganize blockchain
-
-	// chainService.logsFeed
-	return nil
+	return service.ChainService.GetLogsFeed().Subscribe(ch)
 }
 
 func (service *FilterService) BloomStatus() (uint64, uint64) {

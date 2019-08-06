@@ -319,3 +319,7 @@ func (blockMgr *BlockMgr) GenerateTransferTransaction(to *crypto.CommonAddress, 
 func (bm *BlockMgr) GetTxInPool(hash string) (*types.Transaction, error) {
 	return bm.transactionPool.GetTxInPool(hash)
 }
+
+func (blockMgr *BlockMgr) NewTxFeed() *event.Feed {
+	return blockMgr.transactionPool.NewTxFeed()
+}

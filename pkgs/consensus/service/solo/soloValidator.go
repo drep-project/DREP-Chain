@@ -33,6 +33,6 @@ func (soloValidator *SoloValidator) VerifyBody(block *types.Block) error {
 	}
 }
 
-func (soloValidator *SoloValidator) ExecuteBlock(context *chain.BlockExecuteContext) error {
-	return nil
+func (soloValidator *SoloValidator) ExecuteBlock(context *chain.BlockExecuteContext) (types.Receipts, []*types.Log, uint64, error) {
+	return nil, nil, 0, nil
 }

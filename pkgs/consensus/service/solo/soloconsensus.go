@@ -69,7 +69,7 @@ func (soloConsensus *SoloConsensus) Run() (*types.Block, error) {
 		GasFee:  new(big.Int),
 	}
 	for _, validator := range soloConsensus.ChainService.BlockValidator() {
-		err := validator.ExecuteBlock(context)
+		_, _, _, err := validator.ExecuteBlock(context)
 		if err != nil {
 			log.WithField("ExecuteBlock", err).Debug("multySigVerify")
 			return nil, err

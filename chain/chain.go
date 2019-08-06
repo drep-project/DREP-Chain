@@ -52,6 +52,8 @@ type ChainServiceInterface interface {
 	CalcGasLimit(parent *types.BlockHeader, gasFloor, gasCeil uint64) *big.Int
 	ProcessBlock(block *types.Block) (bool, bool, error)
 	NewBlockFeed() *event.Feed
+	GetLogsFeed() *event.Feed
+	GetRMLogsFeed() *event.Feed
 	BlockExists(blockHash *crypto.Hash) bool
 	TransactionValidator() ITransactionValidator
 	GetDatabaseService() *database.DatabaseService
@@ -95,6 +97,8 @@ type ChainService struct {
 	//提供新块订阅
 	newBlockFeed    event.Feed
 	detachBlockFeed event.Feed
+	logsFeed		event.Feed
+	rmLogsFeed		event.Feed
 
 	blockValidator       []IBlockValidator
 	transactionValidator ITransactionValidator
@@ -136,6 +140,14 @@ func (chainService *ChainService) TransactionValidator() ITransactionValidator {
 
 func (chainService *ChainService) NewBlockFeed() *event.Feed {
 	return &chainService.newBlockFeed
+}
+
+func (chainService *ChainService) GetLogsFeed() *event.Feed {
+	return &chainService.logsFeed
+}
+
+func (chainService *ChainService) GetRMLogsFeed() *event.Feed {
+	return &chainService.rmLogsFeed
 }
 
 func (chainService *ChainService) BestChain() *ChainView {

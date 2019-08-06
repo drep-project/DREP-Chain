@@ -130,14 +130,14 @@ func (chainService *ChainService) acceptBlock(block *types.Block) (inMainChain b
 	}
 
 	if block.Header.PreviousHash.IsEqual(chainService.BestChain().Tip().Hash) {
-		err = chainService.connectBlock(db, block, newNode)
+		logs, err := chainService.connectBlock(db, block, newNode)
 		if err != nil {
 			return false, err
 		}
 
 		chainService.markState(newNode)
 		//SetTip has save tip but block not saving
-		chainService.notifyBlock(block)
+		chainService.notifyBlock(block, logs)
 		return true, nil
 	}
 	if block.Header.Height <= chainService.BestChain().Tip().Height {
@@ -162,7 +162,7 @@ func (chainService *ChainService) acceptBlock(block *types.Block) (inMainChain b
 	return err == nil, err
 }
 
-func (chainService *ChainService) connectBlock(db *database.Database, block *types.Block, newNode *types.BlockNode) (err error) {
+func (chainService *ChainService) connectBlock(db *database.Database, block *types.Block, newNode *types.BlockNode) (logs []*types.Log, err error) {
 	gp := new(GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
 	context := &BlockExecuteContext{
@@ -173,22 +173,23 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *typ
 		GasFee:  new(big.Int),
 	}
 	for _, blockValidator := range chainService.BlockValidator() {
-		err = blockValidator.ExecuteBlock(context)
+		_, allLogs, _, err := blockValidator.ExecuteBlock(context)
 		if err != nil {
 			break
 		}
+		logs = allLogs
 	}
 
 	if err != nil {
 		chainService.blockIndex.SetStatusFlags(newNode, types.StatusValidateFailed)
 		chainService.flushIndexState()
-		return err
+		return nil, err
 	}
 	err = chainService.AccumulateRewards(db, block, context.GasFee)
 	if err != nil {
 		chainService.blockIndex.SetStatusFlags(newNode, types.StatusValidateFailed)
 		chainService.flushIndexState()
-		return err
+		return nil, err
 	}
 	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
 		db.Commit()
@@ -206,7 +207,7 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *typ
 	} else {
 		chainService.blockIndex.SetStatusFlags(newNode, types.StatusValidateFailed)
 		chainService.flushIndexState()
-		return err
+		return nil, err
 	}
 
 	// If this is fast add, or this block node isn't yet marked as
@@ -216,7 +217,7 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *typ
 		chainService.blockIndex.SetStatusFlags(newNode, types.StatusValid)
 		chainService.flushIndexState()
 	}
-	return nil
+	return logs, nil
 }
 
 func (chainService *ChainService) flushIndexState() {
@@ -304,12 +305,12 @@ func (chainService *ChainService) reorganizeChain(db *database.Database, detachN
 			if err != nil {
 				return err
 			}
-			err = chainService.connectBlock(db, block, blockNode)
+			logs, err := chainService.connectBlock(db, block, blockNode)
 			if err != nil {
 				return err
 			}
 			chainService.markState(blockNode)
-			chainService.notifyBlock(block)
+			chainService.notifyBlock(block, logs)
 			log.WithField("Height", blockNode.Height).WithField("Hash", blockNode.Hash).Info("REORGANIZE:Append New Block")
 			elem = elem.Next()
 		}
@@ -317,12 +318,29 @@ func (chainService *ChainService) reorganizeChain(db *database.Database, detachN
 	return nil
 }
 
-func (chainService *ChainService) notifyBlock(block *types.Block) {
-	chainService.NewBlockFeed().Send(block)
+func (chainService *ChainService) notifyBlock(block *types.Block, logs []*types.Log) {
+	chainEvent := types.ChainEvent{
+		Block: block,
+		Hash: *block.Header.Hash(),
+		Logs: logs,
+	}
+	chainService.NewBlockFeed().Send(chainEvent)
+	chainService.logsFeed.Send(logs)
 }
 
 func (chainService *ChainService) notifyDetachBlock(block *types.Block) {
 	chainService.DetachBlockFeed().Send(block)
+
+	rmLogs := make([]*types.Log, 0)
+	receipts := chainService.DatabaseService.GetReceipts(*block.Header.Hash())
+	for _, receipt := range receipts {
+		for _, log := range receipt.Logs {
+			l := *log
+			l.Removed = true
+			rmLogs = append(rmLogs, &l)
+		}
+	}
+	chainService.rmLogsFeed.Send(types.RemovedLogsEvent{Logs: rmLogs})
 }
 
 func (chainService *ChainService) markState(blockNode *types.BlockNode) {
