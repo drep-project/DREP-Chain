@@ -9,9 +9,11 @@ import (
 	"github.com/drep-project/drep-chain/database"
 	p2pService "github.com/drep-project/drep-chain/network/service"
 	accountService "github.com/drep-project/drep-chain/pkgs/accounts/service"
+	chainIndexerService "github.com/drep-project/drep-chain/pkgs/chain_indexer"
 	consensusService "github.com/drep-project/drep-chain/pkgs/consensus/service"
 	cliService "github.com/drep-project/drep-chain/pkgs/drepclient/service"
 	evmService "github.com/drep-project/drep-chain/pkgs/evm"
+	filterService "github.com/drep-project/drep-chain/pkgs/filter"
 	logServer "github.com/drep-project/drep-chain/pkgs/log"
 	"github.com/drep-project/drep-chain/pkgs/rpc"
 	"github.com/drep-project/drep-chain/pkgs/trace"
@@ -32,6 +34,8 @@ func main() {
 		evmService.EvmService{},
 		chainService.ChainService{},
 		blockService.BlockMgr{},
+		chainIndexerService.ChainIndexerService{},
+		filterService.FilterService{},
 		trace.TraceService{},
 		accountService.AccountService{},
 		consensusService.ConsensusService{},

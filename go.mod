@@ -2,7 +2,6 @@ module github.com/drep-project/drep-chain
 
 require (
 	github.com/AsynkronIT/protoactor-go v0.0.0-20190709223856-3d57163d4695
-	github.com/FactomProject/basen v0.0.0-20150613233007-fe3947df716e
 	github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412 // indirect
 	github.com/allegro/bigcache v1.2.1
 	github.com/aristanetworks/goarista v0.0.0-20190109022107-b3287ee62909
@@ -11,13 +10,11 @@ require (
 	github.com/btcsuite/btcd v0.0.0-20190629003639-c26ffa870fd8
 	github.com/btcsuite/btcutil v0.0.0-20190425235716-9e5f4b9a998d
 	github.com/cespare/cp v1.1.1 // indirect
-	github.com/cmars/basen v0.0.0-20150613233007-fe3947df716e // indirect
 	github.com/cosmos/cosmos-sdk v0.35.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v1.7.1
-	github.com/decred/dcrd/dcrec/secp256k1 v1.0.2
 	github.com/docker/docker v1.13.1
-	github.com/drep-project/binary v0.0.0-20190620075541-75e3510d7ebd
+	github.com/drep-project/binary v0.0.0-20190802091623-feec1575e093
 	github.com/drep-project/dlog v0.0.0-20190227085123-d6565cdad12a
 	github.com/drep-project/rpc v0.0.0-20190627033216-170a674fe35f
 	github.com/elastic/gosigar v0.10.4 // indirect
