@@ -223,7 +223,7 @@ type EventSystem struct {
 	txsCh     chan types.NewTxsEvent      // Channel to receive new transactions event
 	logsCh    chan []*types.Log          // Channel to receive new log event
 	rmLogsCh  chan types.RemovedLogsEvent // Channel to receive removed log event
-	chainCh   chan types.ChainEvent       // Channel to receive new chain event
+	chainCh   chan *types.ChainEvent       // Channel to receive new chain event
 }
 
 // NewEventSystem creates a new manager that listens for event on the given mux,
@@ -242,7 +242,7 @@ func NewEventSystem(mux *event.TypeMux, backend Backend, lightMode bool) *EventS
 		txsCh:     make(chan types.NewTxsEvent, txChanSize),
 		logsCh:    make(chan []*types.Log, logsChanSize),
 		rmLogsCh:  make(chan types.RemovedLogsEvent, rmLogsChanSize),
-		chainCh:   make(chan types.ChainEvent, chainEvChanSize),
+		chainCh:   make(chan *types.ChainEvent, chainEvChanSize),
 	}
 
 	// Subscribe events

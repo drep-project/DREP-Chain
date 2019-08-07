@@ -21,11 +21,14 @@ import (
 	"os"
 	path2 "path"
 	"path/filepath"
+	"time"
 
 	p2pTypes "github.com/drep-project/drep-chain/network/types"
 	accountComponent "github.com/drep-project/drep-chain/pkgs/accounts/component"
 	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
+	chainIndexerTypes "github.com/drep-project/drep-chain/pkgs/chain_indexer"
+	filterTypes "github.com/drep-project/drep-chain/pkgs/filter"
 	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/rpc"
 )
@@ -114,6 +117,15 @@ func gen(ctx *cli.Context) error {
 	chainConfig.ChainId = 0
 	chainConfig.GenesisAddr = params.HoleAddress
 
+	chainIndexerConfig := chainIndexerTypes.ChainIndexerConfig{}
+	chainIndexerConfig.Enable = true
+	chainIndexerConfig.SectionSize = 4096
+	chainIndexerConfig.ConfirmsReq = 256
+	chainIndexerConfig.Throttling = 100 * time.Millisecond
+
+	filterConfig := filterTypes.FilterConfig{}
+	filterConfig.Enable = true
+
 	for i := 0; i < len(nodeItems); i++ {
 		consensusConfig.MyPk = (*secp256k1.PublicKey)(&standbyKey[i].PublicKey)
 		userDir := path2.Join(path, nodeItems[i].Name)
@@ -144,6 +156,8 @@ func gen(ctx *cli.Context) error {
 		offset = writePhase(fs, "p2p", p2pConfig, offset)
 		offset = writePhase(fs, "chain", chainConfig, offset)
 		offset = writePhase(fs, "accounts", walletConfig, offset)
+		offset = writePhase(fs, "chain_indexer", chainIndexerConfig, offset)
+		offset = writePhase(fs, "filter", filterConfig, offset)
 
 		fs.Truncate(offset - 2)
 		fs.WriteAt([]byte("\n}"), offset-2)
