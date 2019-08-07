@@ -54,7 +54,7 @@ type Backend interface {
 	GetLogsByHash(ctx context.Context, blockHash crypto.Hash) ([][]*types.Log, error)
 
 	SubscribeNewTxsEvent(chan<- types.NewTxsEvent) event.Subscription
-	SubscribeChainEvent(ch chan<- types.ChainEvent) event.Subscription
+	SubscribeChainEvent(ch chan<- *types.ChainEvent) event.Subscription
 	SubscribeRemovedLogsEvent(ch chan<- types.RemovedLogsEvent) event.Subscription
 	SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription
 
@@ -514,7 +514,7 @@ func (service *FilterService) SubscribeNewTxsEvent(ch chan<- types.NewTxsEvent) 
 	return service.Blockmgr.NewTxFeed().Subscribe(ch)
 }
 
-func (service *FilterService) SubscribeChainEvent(ch chan<- types.ChainEvent) event.Subscription {
+func (service *FilterService) SubscribeChainEvent(ch chan<- *types.ChainEvent) event.Subscription {
 	return service.ChainService.NewBlockFeed().Subscribe(ch)
 }
 
