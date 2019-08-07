@@ -9,7 +9,7 @@ type BlockAnalysis struct {
 	Config           HistoryConfig
 	getBlock         func(uint64) (*types.Block, error)
 	eventNewBlockSub event.Subscription
-	newBlockChan     chan *types.Block
+	newBlockChan     chan *types.ChainEvent
 
 	detachBlockSub  event.Subscription
 	detachBlockChan chan *types.Block
@@ -21,7 +21,7 @@ func NewBlockAnalysis(config HistoryConfig, getBlock func(uint64) (*types.Block,
 	blockAnalysis := &BlockAnalysis{}
 	blockAnalysis.Config = config
 	blockAnalysis.getBlock = getBlock
-	blockAnalysis.newBlockChan = make(chan *types.Block, 1000)
+	blockAnalysis.newBlockChan = make(chan *types.ChainEvent, 1000)
 	blockAnalysis.detachBlockChan = make(chan *types.Block, 1000)
 	blockAnalysis.readyToQuit = make(chan struct{})
 	return blockAnalysis
@@ -59,7 +59,7 @@ func (blockAnalysis *BlockAnalysis) process() error {
 	for {
 		select {
 		case block := <-blockAnalysis.newBlockChan:
-			blockAnalysis.store.InsertRecord(block)
+			blockAnalysis.store.InsertRecord(block.Block)
 		case block := <-blockAnalysis.detachBlockChan:
 			blockAnalysis.store.DelRecord(block)
 		default:
