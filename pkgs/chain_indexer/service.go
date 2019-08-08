@@ -45,9 +45,6 @@ type ChainIndexerService struct {
 	storedSections uint64 // Number of sections successfully indexed into the database
 	knownSections  uint64 // Number of sections known to be complete (block wise)
 
-	checkpointSections uint64      // Number of sections covered by the checkpoint
-	checkpointHead     crypto.Hash // Section head belonging to the checkpoint
-
 	active    uint32          // Flag whether the event loop was started
 	update    chan struct{}   // Notification channel that headers should be processed
 	quit      chan chan error // Quit channel to tear down running goroutines
@@ -290,12 +287,7 @@ func (chainIndexer *ChainIndexerService) newHead(head uint64, reorg bool) {
 		// Revert the known section number to the reorg point
 		known := (head + 1) / chainIndexer.Config.SectionSize
 		stored := known
-		if known < chainIndexer.checkpointSections {
-			known = 0
-		}
-		if stored < chainIndexer.checkpointSections {
-			stored = chainIndexer.checkpointSections
-		}
+
 		if known < chainIndexer.knownSections {
 			chainIndexer.knownSections = known
 		}
@@ -312,26 +304,9 @@ func (chainIndexer *ChainIndexerService) newHead(head uint64, reorg bool) {
 	var sections uint64
 	if head >= chainIndexer.Config.ConfirmsReq {
 		sections = (head + 1 - chainIndexer.Config.ConfirmsReq) / chainIndexer.Config.SectionSize
-		if sections < chainIndexer.checkpointSections {
-			sections = 0
-		}
-		if sections > chainIndexer.knownSections {
-			if chainIndexer.knownSections < chainIndexer.checkpointSections {
-				// syncing reached the checkpoint, verify section head
-				syncedHead := crypto.Hash{}
-				blockHeader, err := chainIndexer.ChainService.GetBlockHeaderByHeight(chainIndexer.checkpointSections*chainIndexer.Config.SectionSize - 1)
-				if err == nil {
-					syncedHead = *blockHeader.Hash()
-				}
 
-				if syncedHead != chainIndexer.checkpointHead {
-					log.WithField("number", chainIndexer.checkpointSections*chainIndexer.Config.SectionSize-1).
-						WithField("expected", chainIndexer.checkpointHead).
-						WithField("synced", syncedHead).
-						Error("Synced chain does not match checkpoint")
-					return
-				}
-			}
+		if sections > chainIndexer.knownSections {
+
 			chainIndexer.knownSections = sections
 
 			select {
@@ -346,7 +321,7 @@ func (chainIndexer *ChainIndexerService) newHead(head uint64, reorg bool) {
 // actual canonical chain and rolls back reorged sections if necessary to ensure that stored
 // sections are all valid
 func (chainIndexer *ChainIndexerService) verifyLastHead() {
-	for chainIndexer.storedSections > 0 && chainIndexer.storedSections > chainIndexer.checkpointSections {
+	for chainIndexer.storedSections > 0 {
 
 		hash := crypto.Hash{}
 		blockHeader, err := chainIndexer.ChainService.GetBlockHeaderByHeight(chainIndexer.storedSections*chainIndexer.Config.SectionSize - 1)
@@ -432,25 +407,4 @@ func (chainIndexer *ChainIndexerService) commit() error {
 
 func (chainIndexer *ChainIndexerService) GetConfig() *ChainIndexerConfig {
 	return chainIndexer.Config
-}
-
-// AddCheckpoint adds a checkpoint. Sections are never processed and the chain
-// is not expected to be available before this point. The indexer assumes that
-// the backend has sufficient information available to process subsequent sections.
-//
-// Note: knownSections == 0 and storedSections == checkpointSections until
-// syncing reaches the checkpoint
-func (chainIndexer *ChainIndexerService) AddCheckpoint(section uint64, shead crypto.Hash) {
-	chainIndexer.lock.Lock()
-	defer chainIndexer.lock.Unlock()
-
-	// Short circuit if the given checkpoint is below than local's.
-	if chainIndexer.checkpointSections >= section+1 || section < chainIndexer.storedSections {
-		return
-	}
-	chainIndexer.checkpointSections = section + 1
-	chainIndexer.checkpointHead = shead
-
-	chainIndexer.setSectionHead(section, shead)
-	chainIndexer.setValidStoredSections(section + 1)
 }
