@@ -339,10 +339,10 @@ var bn256PairingTests = []precompiledTest{
 }
 
 func testPrecompiled(addr string, test precompiledTest, t *testing.T) {
-	p :=  PrecompiledContracts[crypto.String2Address(addr)]
+	p := PrecompiledContracts[crypto.String2Address(addr)]
 	in := common.Hex2Bytes(test.input)
 	chianId := types.ChainIdType(0)
-	contract := NewContract(crypto.String2Address("0x1337"), chianId,  p.RequiredGas(in), new(big.Int),nil)
+	contract := NewContract(crypto.String2Address("0x1337"), chianId, p.RequiredGas(in), new(big.Int), nil)
 	t.Run(fmt.Sprintf("%s-Gas=%d", test.name, contract.Gas), func(t *testing.T) {
 		if res, err := RunPrecompiledContract(p, in, contract); err != nil {
 			t.Error(err)

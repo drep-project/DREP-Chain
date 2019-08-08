@@ -73,9 +73,9 @@ type ExecuteContext struct {
 	LifeBus      EventBus.Bus
 	Services     []Service
 
-	GitCommit  string
-	Usage      string
-	Quit chan struct{}
+	GitCommit string
+	Usage     string
+	Quit      chan struct{}
 }
 
 // AddService add a service to context, The application then initializes and starts the service.

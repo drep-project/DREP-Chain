@@ -210,7 +210,7 @@ func HashS256(data ...[]byte) []byte {
 	}
 	ret := h.Sum(nil)
 	hash := make([]byte, ByteLen)
-	copy(hash[ByteLen - len(ret):], ret)
+	copy(hash[ByteLen-len(ret):], ret)
 	return hash
 }
 

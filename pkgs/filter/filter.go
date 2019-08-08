@@ -12,7 +12,7 @@ import (
 )
 
 type Filter struct {
-	backend		Backend
+	backend Backend
 
 	addresses []crypto.CommonAddress
 	topics    [][]crypto.Hash

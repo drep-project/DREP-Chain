@@ -70,12 +70,12 @@ func GetHashFn(ref *types.BlockHeader, chain ChainContext) func(n uint64) crypto
 
 // CanTransfer checks whether there are enough funds in the address' account to make a transfer.
 // This does not take the necessary gas in to account to make the transfer valid.
-func CanTransfer(db vm.State, addr crypto.CommonAddress, amount *big.Int) bool {
+func CanTransfer(db vm.VMState, addr crypto.CommonAddress, amount *big.Int) bool {
 	return db.GetBalance(&addr).Cmp(amount) >= 0
 }
 
 // Transfer subtracts amount from sender and adds amount to recipient using the given Db
-func Transfer(db vm.State, sender, to crypto.CommonAddress, amount *big.Int) {
+func Transfer(db vm.VMState, sender, to crypto.CommonAddress, amount *big.Int) {
 	db.SubBalance(&sender, amount)
 	db.AddBalance(&to, amount)
 }

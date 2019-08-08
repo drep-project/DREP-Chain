@@ -417,7 +417,7 @@ func (h *encHandshake) handleAuthMsg(msg *authMsgV4, prv *secp256k1.PrivateKey) 
 		return err
 	}
 	signed := xor(token, h.initNonce)
-	rrpub, err := crypto.Ecrecover(signed, msg.Signature[:],true)
+	rrpub, err := crypto.Ecrecover(signed, msg.Signature[:], true)
 	h.remoteRandomPub, err = importPublicKey(rrpub)
 	if err != nil {
 		return err

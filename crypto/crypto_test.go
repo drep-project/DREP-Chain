@@ -114,7 +114,6 @@ func TestNewContractAddress(t *testing.T) {
 	checkAddr(t, Hex2Address("39b35935d5417dad741f45d9f39e20596bada9d3"), caddr2)
 }
 
-
 func TestValidateSignatureValues(t *testing.T) {
 	check := func(expected bool, v byte, r, s *big.Int) {
 		if ValidateSignatureValues(v, r, s, false) != expected {
@@ -173,7 +172,6 @@ func checkAddr(t *testing.T, addr0, addr1 CommonAddress) {
 		t.Fatalf("address mismatch: want: %x have: %x", addr0, addr1)
 	}
 }
-
 
 func FromPrivString(str string) (*secp256k1.PrivateKey, error) {
 	bytes, err := common.Decode(str)

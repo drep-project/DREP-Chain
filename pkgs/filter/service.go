@@ -70,19 +70,19 @@ type FilterServiceInterface interface {
 var _ FilterServiceInterface = &FilterService{}
 
 type FilterService struct {
-	DatabaseService 		*database.DatabaseService		`service:"database"`
-	Blockmgr        		*blockmgr.BlockMgr        		`service:"blockmgr"`
-	ChainService    		chain.ChainServiceInterface		`service:"chain"`
-	ChainIndexerService		chain_indexer.ChainIndexerServiceInterface `service:"chain_indexer"`
-	Config					*FilterConfig
+	DatabaseService     *database.DatabaseService                  `service:"database"`
+	Blockmgr            *blockmgr.BlockMgr                         `service:"blockmgr"`
+	ChainService        chain.ChainServiceInterface                `service:"chain"`
+	ChainIndexerService chain_indexer.ChainIndexerServiceInterface `service:"chain_indexer"`
+	Config              *FilterConfig
 
-	apis            		[]app.API
+	apis []app.API
 
-	bloomRequests			chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
-	mux       				*event.TypeMux
-	events    				*EventSystem
-	filtersMu 				sync.Mutex
-	filters   				map[ID]*filter
+	bloomRequests chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
+	mux           *event.TypeMux
+	events        *EventSystem
+	filtersMu     sync.Mutex
+	filters       map[ID]*filter
 }
 
 // filter is a helper struct that holds meta information over the filter type
@@ -178,13 +178,13 @@ func (service *FilterService) startBloomHandlers(sectionSize uint64) {
 	for i := 0; i < bloomServiceThreads; i++ {
 		go func() {
 			for {
-				request := <- service.bloomRequests
+				request := <-service.bloomRequests
 				task := <-request
 				task.Bitsets = make([][]byte, len(task.Sections))
 				for i, section := range task.Sections {
 
 					head := crypto.Hash{}
-					blockHeader, err := service.ChainService.GetBlockHeaderByHeight((section+1)*sectionSize-1)
+					blockHeader, err := service.ChainService.GetBlockHeaderByHeight((section+1)*sectionSize - 1)
 					if err == nil {
 						head = *blockHeader.Hash()
 					}

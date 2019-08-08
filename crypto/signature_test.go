@@ -38,7 +38,7 @@ var (
 )
 
 func TestEcrecover(t *testing.T) {
-	pubkey, err := Ecrecover(testmsg, testsig,false)
+	pubkey, err := Ecrecover(testmsg, testsig, false)
 	if err != nil {
 		t.Fatalf("recover error: %s", err)
 	}
@@ -149,7 +149,7 @@ func TestPubkeyRandom(t *testing.T) {
 
 func BenchmarkEcrecoverSignature(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		if _, err := Ecrecover(testmsg, testsig,false); err != nil {
+		if _, err := Ecrecover(testmsg, testsig, false); err != nil {
 			b.Fatal("ecrecover error", err)
 		}
 	}

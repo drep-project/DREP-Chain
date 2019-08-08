@@ -23,6 +23,7 @@ import (
 	"github.com/drep-project/drep-chain/types"
 	"math/big"
 	"sync/atomic"
+	"time"
 )
 
 // emptyCodeHash is used by create to ensure deployment is disallowed to already
@@ -31,9 +32,9 @@ var emptyCodeHash = crypto.Keccak256Hash(nil)
 
 type (
 	// CanTransferFunc is the signature of a transfer guard function
-	CanTransferFunc func(State, crypto.CommonAddress, *big.Int) bool
+	CanTransferFunc func(VMState, crypto.CommonAddress, *big.Int) bool
 	// TransferFunc is the signature of a transfer function
-	TransferFunc func(State, crypto.CommonAddress, crypto.CommonAddress, *big.Int)
+	TransferFunc func(VMState, crypto.CommonAddress, crypto.CommonAddress, *big.Int)
 	// GetHashFunc returns the nth block hash in the blockchain
 	// and is used by the BLOCKHASH EVM op code.
 	GetHashFunc func(uint64) crypto.Hash
@@ -104,7 +105,7 @@ type EVM struct {
 	// Context provides auxiliary blockchain related information
 	Context
 	// StateDB gives access to the underlying state
-	State *State
+	State VMState
 	// Depth is the current call stack
 	depth int
 
@@ -128,7 +129,7 @@ type EVM struct {
 
 // NewEVM returns a new EVM. The returned EVM is not thread safe and should
 // only ever be used *once*.
-func NewEVM(ctx Context, statedb *State, vmConfig *VMConfig) *EVM {
+func NewEVM(ctx Context, statedb VMState, vmConfig *VMConfig) *EVM {
 	evm := &EVM{
 		Context:  ctx,
 		State:    statedb,
@@ -165,7 +166,7 @@ func (evm *EVM) Call(caller crypto.CommonAddress, addr crypto.CommonAddress, cha
 		return nil, gas, ErrDepth
 	}
 	// Fail if we're trying to transfer more than the available balance
-	if !evm.Context.CanTransfer(*evm.State, caller, value) {
+	if !evm.Context.CanTransfer(evm.State, caller, value) {
 		return nil, gas, ErrInsufficientBalance
 	}
 
@@ -184,24 +185,24 @@ func (evm *EVM) Call(caller crypto.CommonAddress, addr crypto.CommonAddress, cha
 		}
 		//evm.State.CreateAccount(addr)
 	}
-	evm.Transfer(*evm.State, caller, to, value)
+	evm.Transfer(evm.State, caller, to, value)
 	// Initialise a new contract and set the code that is to be used by the EVM.
 	// The contract is a scoped environment for this execution context only.
 	contract := NewContract(caller, chainId, gas, value, nil)
 	contract.SetCode(addr, evm.State.GetByteCode(&addr))
 	// Even if the account has no code, we need to continue because it might be a precompile
-	//start := time.Now()
+	start := time.Now()
 
 	// Capture the tracer start/end events in debug mode
-	/*
-		if evm.vmConfig.Debug && evm.depth == 0 {
-			evm.vmConfig.Tracer.CaptureStart(caller, addr, false, input, gas, value)
 
-			defer func() { // Lazy evaluation of the parameters
-				evm.vmConfig.Tracer.CaptureEnd(ret, gas-contract.Gas, time.Since(start), err)
-			}()
-		}
-	*/
+	if evm.vmConfig.LogConfig.Debug && evm.depth == 0 {
+		evm.interpreter.Tracer.CaptureStart(caller, addr, false, input, gas, value)
+
+		defer func() { // Lazy evaluation of the parameters
+			evm.interpreter.Tracer.CaptureEnd(ret, gas-contract.Gas, time.Since(start), err)
+		}()
+	}
+
 	ret, err = run(evm, contract, input, false)
 
 	// When an error was returned by the EVM or when setting the creation code
@@ -232,7 +233,7 @@ func (evm *EVM) CallCode(caller crypto.CommonAddress, addr crypto.CommonAddress,
 		return nil, gas, ErrDepth
 	}
 	// Fail if we're trying to transfer more than the available balance
-	if !evm.CanTransfer(*evm.State, caller, value) {
+	if !evm.CanTransfer(evm.State, caller, value) {
 		return nil, gas, ErrInsufficientBalance
 	}
 
@@ -343,7 +344,7 @@ func (evm *EVM) CreateContractCode(caller crypto.CommonAddress, codeAndHash *cod
 	if evm.depth > int(params.CallCreateDepth) {
 		return nil, crypto.CommonAddress{}, gas, ErrDepth
 	}
-	if !evm.CanTransfer(*evm.State, caller, value) {
+	if !evm.CanTransfer(evm.State, caller, value) {
 		return nil, crypto.CommonAddress{}, gas, ErrInsufficientBalance
 	}
 	nonce := evm.State.GetNonce(&caller)
@@ -355,7 +356,7 @@ func (evm *EVM) CreateContractCode(caller crypto.CommonAddress, codeAndHash *cod
 	}
 	// Create a new account on the state
 	account, err := evm.State.CreateContractAccount(address, codeAndHash.code)
-	evm.Transfer(*evm.State, caller, address, value)
+	evm.Transfer(evm.State, caller, address, value)
 
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context
@@ -368,7 +369,7 @@ func (evm *EVM) CreateContractCode(caller crypto.CommonAddress, codeAndHash *cod
 		return nil, address, gas, nil
 	}
 
-	if evm.vmConfig.Debug && evm.depth == 0 {
+	if evm.vmConfig.LogConfig.Debug && evm.depth == 0 {
 		//evm.vmConfig.Tracer.CaptureStart(caller, address, true, codeAndHash.code, gas, value)
 	}
 	//start := time.Now()
@@ -403,7 +404,7 @@ func (evm *EVM) CreateContractCode(caller crypto.CommonAddress, codeAndHash *cod
 	if maxCodeSizeExceeded && err == nil {
 		err = errMaxCodeSizeExceeded
 	}
-	if evm.vmConfig.Debug && evm.depth == 0 {
+	if evm.vmConfig.LogConfig.Debug && evm.depth == 0 {
 		//evm.vmConfig.Tracer.CaptureEnd(ret, gas-contract.Gas, time.Since(start), err)
 	}
 	return ret, address, contract.Gas, err

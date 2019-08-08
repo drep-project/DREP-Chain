@@ -8,7 +8,7 @@ import (
 
 type VMConfig struct {
 	// Debug enabled debugging Interpreter options
-	Debug bool `json:"debug"`
+	LogConfig *LogConfig `json:"logconfig"`
 	// Tracer is the op code logger
 	//	Tracer Tracer
 	// NoRecursion disabled Interpreter call, callcode,
@@ -25,6 +25,15 @@ type VMConfig struct {
 	EWASMInterpreter string `json:"ewasmInterpreter"`
 	// Type of the EVM interpreter
 	EVMInterpreter string `json:"evmInterpreter"`
+}
+
+// LogConfig are the configuration options for structured logger the EVM
+type LogConfig struct {
+	DisableMemory  bool // disable memory capture
+	DisableStack   bool // disable stack capture
+	DisableStorage bool // disable storage capture
+	Debug          bool // print output during capture end
+	Limit          int  // maximum length of output, but zero means unlimited
 }
 
 type Message struct {

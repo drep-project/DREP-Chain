@@ -32,7 +32,7 @@ func Ecrecover(hash, sig []byte, compress bool) ([]byte, error) {
 	var bytes []byte
 	if compress {
 		bytes = (*secp256k1.PublicKey)(pub).SerializeCompressed()
-	}else{
+	} else {
 		bytes = (*secp256k1.PublicKey)(pub).SerializeUncompressed()
 	}
 	return bytes, err

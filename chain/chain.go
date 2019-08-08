@@ -97,8 +97,8 @@ type ChainService struct {
 	//提供新块订阅
 	newBlockFeed    event.Feed
 	detachBlockFeed event.Feed
-	logsFeed		event.Feed
-	rmLogsFeed		event.Feed
+	logsFeed        event.Feed
+	rmLogsFeed      event.Feed
 
 	blockValidator       []IBlockValidator
 	transactionValidator ITransactionValidator

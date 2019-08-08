@@ -162,7 +162,7 @@ func (filter *FilterApi) GetLogs(crit FilterQuery) ([]*types.Log, error) {
   }
 }
 */
-func (filter *FilterApi) GetFilterLogs (id ID) ([]*types.Log, error) {
+func (filter *FilterApi) GetFilterLogs(id ID) ([]*types.Log, error) {
 	return filter.filterService.GetFilterLogs(context.Background(), id)
 }
 

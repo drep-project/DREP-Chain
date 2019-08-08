@@ -12,7 +12,15 @@ import (
 )
 
 var (
-	DefaultEvmConfig = &vm.VMConfig{}
+	DefaultEvmConfig = &vm.VMConfig{
+		LogConfig: &vm.LogConfig{
+			DisableMemory:  false,
+			DisableStack:   false,
+			DisableStorage: false,
+			Debug:          false,
+			Limit:          0,
+		},
+	}
 )
 
 type EvmService struct {
@@ -55,7 +63,7 @@ func (evmService *EvmService) Stop(executeContext *app.ExecuteContext) error {
 
 func (evmService *EvmService) Receive(context actor.Context) {}
 
-func (evmService *EvmService) Eval(state *vm.State, tx *types.Transaction, header *types.BlockHeader, bc ChainContext, gas uint64, value *big.Int) (ret []byte, gasUsed uint64, failed bool, err error) {
+func (evmService *EvmService) Eval(state vm.VMState, tx *types.Transaction, header *types.BlockHeader, bc ChainContext, gas uint64, value *big.Int) (ret []byte, gasUsed uint64, failed bool, err error) {
 	sender, err := tx.From()
 	if err != nil {
 		return nil, uint64(0), false, err

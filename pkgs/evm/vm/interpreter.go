@@ -13,10 +13,15 @@ type EVMInterpreter struct {
 	JumpTable  [256]operation
 	ReturnData []byte
 	ReadOnly   bool
+	Tracer     Tracer // Opcode logger
 }
 
 func NewEVMInterpreter(evm *EVM) *EVMInterpreter {
-	return &EVMInterpreter{EVM: evm, JumpTable: constantinopleInstructionSet}
+	return &EVMInterpreter{
+		EVM:       evm,
+		JumpTable: constantinopleInstructionSet,
+		Tracer:    NewStructLogger(evm.vmConfig.LogConfig),
+	}
 }
 
 func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (ret []byte, err error) {
@@ -27,6 +32,10 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 			in.IntPool = nil
 		}()
 	}
+
+	// Increment the call depth which is restricted to 1024
+	in.EVM.depth++
+	defer func() { in.EVM.depth-- }()
 
 	if readOnly && !in.ReadOnly {
 		in.ReadOnly = true
@@ -51,36 +60,39 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		// to be uint256. Practically much less so feasible.
 		pc   = uint64(0) // program counter
 		cost uint64
+		// copies used by tracer
+		pcCopy  uint64 // needed for the deferred Tracer
+		gasCopy uint64 // for Tracer to log gas remaining before execution
+		logged  bool   // deferred Tracer should ignore already logged steps
+		res     []byte // result of the opcode execution function
 	)
 	contract.Input = input
 
 	// Reclaim the stack as an int pool when the execution stops
 	defer func() { in.IntPool.put(stack.data...) }()
 
+	if in.EVM.vmConfig.LogConfig.Debug {
+		defer func() {
+			if err != nil {
+				if !logged {
+					in.Tracer.CaptureState(in.EVM, pcCopy, op, gasCopy, cost, mem, stack, contract, in.EVM.depth, err)
+				} else {
+					in.Tracer.CaptureFault(in.EVM, pcCopy, op, gasCopy, cost, mem, stack, contract, in.EVM.depth, err)
+				}
+			}
+		}()
+	}
 	// The Interpreter main run loop (contextual). This loop runs until either an
 	// explicit STOP, RETURN or SELFDESTRUCT is executed, an error occurred during
 	// the execution of one of the operations or until the done flag is set by the
 	// parent context.
-
-	c := contract.ByteCode
-	co := make([]string, len(c))
-	for ii := 0; ii < len(c); ii++ {
-		co[ii] = OpCode(c[ii]).String()
-	}
-	fmt.Println()
-	fmt.Println("c len: ", len(c))
-	fmt.Println("c: ", c)
-	fmt.Println("co: ", co)
-	fmt.Println()
-
-	opCount := 0
 	for atomic.LoadInt32(&in.EVM.Abort) == 0 {
+		if in.EVM.vmConfig.LogConfig.Debug {
+			// Capture pre-execution values for tracing.
+			logged, pcCopy, gasCopy = false, pc, contract.Gas
+		}
 		// Get the operation from the jump table and validate the stack to ensure there are
 		// enough stack items available to perform the operation.
-		opCount += 1
-		fmt.Println()
-		fmt.Println("opCount: ", opCount)
-
 		op = contract.GetOp(pc)
 		operation := in.JumpTable[op]
 		if !operation.valid {
@@ -110,13 +122,6 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		// consume the gas and return an error if not enough gas is available.
 		// cost is explicitly set so that the capture state defer method can get the proper cost
 		cost, err = operation.gasCost(in.EVM, contract, stack, mem, memorySize)
-		fmt.Println("operation: ", operation)
-		fmt.Println("pc: ", pc)
-		fmt.Println("op: ", op.String())
-		fmt.Print("before")
-		stack.Print()
-		fmt.Println("cost: ", cost)
-		fmt.Println("err: ", err)
 		if err != nil || !contract.UseGas(cost) {
 			return nil, ErrOutOfGas
 		}
@@ -124,9 +129,13 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 			mem.Resize(memorySize)
 		}
 
+		if in.EVM.vmConfig.LogConfig.Debug {
+			in.Tracer.CaptureState(in.EVM, pc, op, gasCopy, cost, mem, stack, contract, in.EVM.depth, err)
+			logged = true
+		}
+
 		// execute the operation
-		res, err := operation.execute(&pc, in, contract, mem, stack)
-		fmt.Print("after")
+		res, err = operation.execute(&pc, in, contract, mem, stack)
 		stack.Print()
 		fmt.Print()
 

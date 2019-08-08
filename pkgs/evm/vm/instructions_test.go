@@ -210,7 +210,7 @@ func TestSAR(t *testing.T) {
 // getResult is a convenience function to generate the expected values
 func getResult(args []*twoOperandParams, opFn executionFunc) []TwoOperandTestcase {
 	var (
-		env            = NewEVM(Context{}, nil, &VMConfig{})
+		env         = NewEVM(Context{}, nil, &VMConfig{})
 		stack       = newstack()
 		pc          = uint64(0)
 		interpreter = env.interpreter

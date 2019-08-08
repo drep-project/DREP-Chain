@@ -19,8 +19,8 @@ package vm
 import (
 	"errors"
 	"fmt"
-	"github.com/drep-project/drep-chain/common/math"
 	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/drep-chain/common/math"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"math/big"

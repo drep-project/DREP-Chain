@@ -40,7 +40,7 @@ var _ ChainIndexerServiceInterface = &ChainIndexerService{}
 type ChainIndexerService struct {
 	DatabaseService *database.DatabaseService   `service:"database"`
 	ChainService    chain.ChainServiceInterface `service:"chain"`
-	Config *ChainIndexerConfig
+	Config          *ChainIndexerConfig
 
 	storedSections uint64 // Number of sections successfully indexed into the database
 	knownSections  uint64 // Number of sections known to be complete (block wise)

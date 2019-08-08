@@ -1,13 +1,13 @@
 package filter
 
 import (
-	"fmt"
-	"time"
-	"math/big"
-	"sync"
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"math/big"
+	"sync"
+	"time"
 
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/common/event"
@@ -52,9 +52,9 @@ const (
 
 // FilterQuery contains options for contract log filtering.
 type FilterQuery struct {
-	BlockHash *crypto.Hash     // used by eth_getLogs, return logs only from block with this hash
-	FromBlock *big.Int         // beginning of the queried range, nil means genesis block
-	ToBlock   *big.Int         // end of the range, nil means latest block
+	BlockHash *crypto.Hash           // used by eth_getLogs, return logs only from block with this hash
+	FromBlock *big.Int               // beginning of the queried range, nil means genesis block
+	ToBlock   *big.Int               // end of the range, nil means latest block
 	Addresses []crypto.CommonAddress // restricts matches to events created by specific contracts
 
 	// The Topic list restricts matches to particular event topics. Each event has a list
@@ -74,11 +74,11 @@ type FilterQuery struct {
 // UnmarshalJSON sets *args fields with given data.
 func (args *FilterQuery) UnmarshalJSON(data []byte) error {
 	type input struct {
-		BlockHash *crypto.Hash     `json:"blockHash"`
+		BlockHash *crypto.Hash        `json:"blockHash"`
 		FromBlock *common.BlockNumber `json:"fromBlock"`
 		ToBlock   *common.BlockNumber `json:"toBlock"`
-		Addresses interface{}      `json:"address"`
-		Topics    []interface{}    `json:"topics"`
+		Addresses interface{}         `json:"address"`
+		Topics    []interface{}       `json:"topics"`
 	}
 
 	var raw input
@@ -218,12 +218,12 @@ type EventSystem struct {
 	pendingLogSub *event.TypeMuxSubscription // Subscription for pending log event
 
 	// Channels
-	install   chan *subscription         // install filter for event notification
-	uninstall chan *subscription         // remove filter for event notification
+	install   chan *subscription          // install filter for event notification
+	uninstall chan *subscription          // remove filter for event notification
 	txsCh     chan types.NewTxsEvent      // Channel to receive new transactions event
-	logsCh    chan []*types.Log          // Channel to receive new log event
+	logsCh    chan []*types.Log           // Channel to receive new log event
 	rmLogsCh  chan types.RemovedLogsEvent // Channel to receive removed log event
-	chainCh   chan *types.ChainEvent       // Channel to receive new chain event
+	chainCh   chan *types.ChainEvent      // Channel to receive new chain event
 }
 
 // NewEventSystem creates a new manager that listens for event on the given mux,
@@ -499,11 +499,11 @@ func (es *EventSystem) lightFilterNewHead(newHeader *types.BlockHeader, callBack
 	for oldh.Hash() != newh.Hash() {
 		if oldh.Height >= newh.Height {
 			oldHeaders = append(oldHeaders, oldh)
-			oldh, _ = es.backend.HeaderByNumber(context.Background(), common.BlockNumber(oldh.Height - 1))
+			oldh, _ = es.backend.HeaderByNumber(context.Background(), common.BlockNumber(oldh.Height-1))
 		}
 		if oldh.Height < newh.Height {
 			newHeaders = append(newHeaders, newh)
-			newh, _ = es.backend.HeaderByNumber(context.Background(), common.BlockNumber(newh.Height - 1))
+			newh, _ = es.backend.HeaderByNumber(context.Background(), common.BlockNumber(newh.Height-1))
 			if newh == nil {
 				// happens when CHT syncing, nothing to do
 				newh = oldh

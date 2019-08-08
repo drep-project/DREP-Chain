@@ -182,7 +182,7 @@ func TestDiscardCacheData(t *testing.T) {
 	}
 }
 
-func TestRecoverTrie(t *testing.T){
+func TestRecoverTrie(t *testing.T) {
 	defer os.RemoveAll("./test")
 
 	db, err := NewDatabase("./test")
@@ -203,7 +203,6 @@ func TestRecoverTrie(t *testing.T){
 	db2.Commit()
 
 	root2 := db2.GetStateRoot()
-
 
 	db.trieDb.Commit(crypto.Bytes2Hash(root2), false)
 

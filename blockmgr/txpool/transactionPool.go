@@ -42,7 +42,7 @@ type TransactionPool struct {
 	quit             chan struct{}
 
 	// 提供pending交易订阅
-	txFeed		 event.Feed
+	txFeed event.Feed
 
 	//日志
 	journal *txJournal
@@ -230,7 +230,6 @@ func (pool *TransactionPool) addTx(tx *types.Transaction, isLocal bool) error {
 			return nil
 		}
 	}
-
 
 	//新的一个交易到来，先看看pool是否满；满的话，删除一些价格较低的tx
 	miniPrice := new(big.Int)

@@ -321,8 +321,8 @@ func (chainService *ChainService) reorganizeChain(db *database.Database, detachN
 func (chainService *ChainService) notifyBlock(block *types.Block, logs []*types.Log) {
 	chainEvent := types.ChainEvent{
 		Block: block,
-		Hash: *block.Header.Hash(),
-		Logs: logs,
+		Hash:  *block.Header.Hash(),
+		Logs:  logs,
 	}
 	chainService.NewBlockFeed().Send(&chainEvent)
 	chainService.logsFeed.Send(logs)

@@ -538,7 +538,7 @@ func (db *Database) GetBlockNode(hash *crypto.Hash, blockHeight uint64) (*types.
 	}
 	blockHeader := &types.BlockHeader{}
 	binary.Unmarshal(value[0:len(value)-1], blockHeader)
-	status := value[len(value)-1:len(value)][0]
+	status := value[len(value)-1 : len(value)][0]
 	return blockHeader, types.BlockStatus(status), nil
 }
 

@@ -1,6 +1,5 @@
 package types
 
-
 import (
 	"github.com/drep-project/drep-chain/crypto"
 )
@@ -30,5 +29,3 @@ type ChainSideEvent struct {
 }
 
 type ChainHeadEvent struct{ Block *Block }
-
-

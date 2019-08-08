@@ -45,14 +45,13 @@ type DrepApp struct {
 	options []Option
 }
 
-
 // NewApp create a new app
 func NewApp() *DrepApp {
 	return &DrepApp{
 		Context: &ExecuteContext{
 			Quit: make(chan struct{}),
 		},
-		App: cli.NewApp(),
+		App:     cli.NewApp(),
 		options: []Option{},
 	}
 }
@@ -127,14 +126,14 @@ func GetServiceTag(field reflect.StructField) string {
 }
 
 // Init do something before app run
-func (mApp DrepApp) Option(option func()) {
+func (mApp *DrepApp) Option(option func()) {
 	mApp.options = append(mApp.options, option)
 }
 
 //TODO need a more graceful  command supporter
 //Run read the global configuration, parse the global command parameters,
 // initialize the main process one by one, and execute the service before the main process starts.
-func (mApp DrepApp) Run() error {
+func (mApp *DrepApp) Run() error {
 	for _, op := range mApp.options {
 		op()
 	}
@@ -159,7 +158,7 @@ func (mApp DrepApp) Run() error {
 }
 
 // action used to init and run each services
-func (mApp DrepApp) action(ctx *cli.Context) error {
+func (mApp *DrepApp) action(ctx *cli.Context) error {
 	defer func() {
 		if err := recover(); err != nil {
 			debug.PrintStack()
@@ -190,14 +189,14 @@ func (mApp DrepApp) action(ctx *cli.Context) error {
 	exit := make(chan struct{})
 	exitSignal(exit)
 	select {
-		case <- exit:
-		case <-mApp.Context.Quit:
+	case <-exit:
+	case <-mApp.Context.Quit:
 	}
 	return nil
 }
 
 //  read global config before main process
-func (mApp DrepApp) before(ctx *cli.Context) error {
+func (mApp *DrepApp) before(ctx *cli.Context) error {
 	mApp.Context.Cli = ctx
 
 	homeDir := ""

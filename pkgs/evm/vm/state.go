@@ -14,6 +14,28 @@ var (
 	once  sync.Once
 )
 
+type VMState interface {
+	CreateContractAccount(addr crypto.CommonAddress, byteCode []byte) (*types.Account, error)
+	SubBalance(addr *crypto.CommonAddress, amount *big.Int) error
+	AddBalance(addr *crypto.CommonAddress, amount *big.Int) error
+	GetBalance(addr *crypto.CommonAddress) *big.Int
+	SetNonce(addr *crypto.CommonAddress, nonce uint64) error
+	GetNonce(addr *crypto.CommonAddress) uint64
+	Suicide(addr *crypto.CommonAddress) error
+	GetByteCode(addr *crypto.CommonAddress) crypto.ByteCode
+	GetCodeSize(addr crypto.CommonAddress) int
+	GetCodeHash(addr crypto.CommonAddress) crypto.Hash
+	SetByteCode(addr *crypto.CommonAddress, byteCode crypto.ByteCode) error
+	GetLogs(txHash crypto.Hash) []*types.Log
+	AddLog(contractAddr crypto.CommonAddress, txHash crypto.Hash, data []byte, topics []crypto.Hash, blockNumber uint64) error
+	AddRefund(gas uint64)
+	SubRefund(gas uint64)
+	GetRefund() uint64
+	Load(x *big.Int) []byte
+	Store(x, y *big.Int)
+	Exist(contractAddr crypto.CommonAddress) bool
+}
+
 type State struct {
 	db     *database.Database
 	refund uint64
