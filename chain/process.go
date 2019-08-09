@@ -195,6 +195,9 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *typ
 		db.Commit()
 		oldStateRoot := db.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, oldStateRoot) {
+			if !db.RecoverTrie(chainService.bestChain.tip().StateRoot){
+				log.Fatal("root not equal and recover trie err")
+			}
 			err = errors.Wrapf(ErrNotMathcedStateRoot, "%s not matched %s", hex.EncodeToString(block.Header.StateRoot), hex.EncodeToString(oldStateRoot))
 		}
 	} else {
