@@ -44,4 +44,5 @@ var (
 	ErrCodeNotExists        = errors.New("code not exists")
 	ErrNotLogAddress        = errors.New("a non log address occupied")
 	ErrLogAlreadyExists     = errors.New("log already exists")
+	ErrNoAccount            = errors.New("the account not exist")
 )

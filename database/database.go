@@ -62,9 +62,9 @@ func (db *Database) RecoverTrie(root []byte) bool {
 	return true
 }
 
-func (db *Database) Close() {
-	db.diskDb.Close()
-}
+//func (db *Database) Close1() {
+//	db.diskDb.Close()
+//}
 
 func (db *Database) initState() error {
 	value, _ := db.diskDb.Get(trie.EmptyRoot[:])

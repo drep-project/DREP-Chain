@@ -183,7 +183,9 @@ func (evm *EVM) Call(caller crypto.CommonAddress, addr crypto.CommonAddress, cha
 			//}
 			return nil, gas, nil
 		}
+
 		//evm.State.CreateAccount(addr)
+		return nil, 0, ErrNoAccount
 	}
 	evm.Transfer(evm.State, caller, to, value)
 	// Initialise a new contract and set the code that is to be used by the EVM.
