@@ -5,6 +5,7 @@ import (
 	"github.com/drep-project/drep-chain/database"
 	chainType "github.com/drep-project/drep-chain/types"
 	"math/big"
+	"github.com/drep-project/drep-chain/common/hexutil"
 )
 
 /*
@@ -186,4 +187,46 @@ func (chain *ChainApi) GetAliasByAddress(addr *crypto.CommonAddress) string {
 */
 func (chain *ChainApi) GetAddressByAlias(alias string) *crypto.CommonAddress {
 	return chain.chainService.DatabaseService.AliasGet(alias)
+}
+
+/*
+ name: getByteCode
+ usage: 根据地址获取bytecode
+ params:
+	1. 地址
+ return: bytecode
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getByteCode","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ response:
+   {"jsonrpc":"2.0","id":3,"result":"0x00"}
+*/
+func (chain *ChainApi) GetByteCode(addr *crypto.CommonAddress) hexutil.Bytes {
+	return chain.dbService.GetByteCode(addr)
+}
+
+/*
+ name: getReceipt
+ usage: 根据txhash获取receipt信息
+ params:
+	1. txhash
+ return: receipt
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getReceipt","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
+ response:
+   {"jsonrpc":"2.0","id":3,"result":""}
+*/
+func (chain *ChainApi) GetReceipt(txHash crypto.Hash) *chainType.Receipt {
+	return chain.dbService.GetReceipt(txHash)
+}
+
+/*
+ name: getLogs
+ usage: 根据txhash获取交易log信息
+ params:
+	1. txhash
+ return: []log
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getLogs","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
+ response:
+   {"jsonrpc":"2.0","id":3,"result":""}
+*/
+func (chain *ChainApi) GetLogs(txHash crypto.Hash) []*chainType.Log {
+	return chain.dbService.GetLogs(txHash)
 }
