@@ -329,7 +329,10 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) bool {
 	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
 		stateRoot := db.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
-			log.Debug("rootcmd root !====")
+			if !db.RecoverTrie(bftConsensus.ChainService.GetCurrentHeader().StateRoot){
+				log.Fatal("root not equal and recover trie err")
+			}
+			log.Error("rootcmd root !=")
 			return false
 		}
 	} else {

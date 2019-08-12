@@ -425,7 +425,7 @@ func opCallValue(pc *uint64, interpreter *EVMInterpreter, contract *Contract, me
 }
 
 func opCallDataLoad(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	fmt.Println("call data load contract input: ", contract.Input)
+	//fmt.Println("call data load contract input: ", contract.Input)
 	stack.push(interpreter.IntPool.get().SetBytes(common.GetDataBig(contract.Input, stack.pop(), big32)))
 	return nil, nil
 }

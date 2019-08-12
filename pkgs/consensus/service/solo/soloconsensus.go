@@ -85,7 +85,11 @@ func (soloConsensus *SoloConsensus) Run() (*types.Block, error) {
 	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
 		stateRoot := db.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
-			log.Debug("rootcmd root !=")
+			if !db.RecoverTrie(soloConsensus.ChainService.GetCurrentHeader().StateRoot){
+				log.Fatal("root not equal and recover trie err")
+			}
+
+			log.Error("rootcmd root !=")
 			return nil, fmt.Errorf("state root not equal")
 		}
 	} else {

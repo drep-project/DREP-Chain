@@ -37,7 +37,7 @@ func (d destinations) has(codehash crypto.Hash, code []byte, dest *big.Int) bool
 	if !m.codeSegment(udest) {
 		fmt.Println("false here3")
 	}
-	fmt.Println("rrrrrruuuuuuunnnnnn here")
+	//fmt.Println("rrrrrruuuuuuunnnnnn here")
 	return OpCode(code[udest]) == JUMPDEST && m.codeSegment(udest)
 }
 

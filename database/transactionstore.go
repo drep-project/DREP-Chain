@@ -46,11 +46,6 @@ func (tDb *TransactionStore) Put(key []byte, value []byte) error {
 	return nil
 }
 
-//func (tDb *TransactionStore) Delete(key []byte) error {
-//	tDb.dirties.storageDirties.Store(string(key), nil)
-//	return nil
-//}
-
 func (tDb *TransactionStore) Flush() {
 	tDb.dirties.Range(func(key, value interface{}) bool {
 		bk := []byte(key.(string))
@@ -58,10 +53,12 @@ func (tDb *TransactionStore) Flush() {
 			val := value.([]byte)
 			err := tDb.trie.TryUpdate(bk, val)
 			if err != nil {
-				return false
+				log.Error("Flush():",err)
+				panic(err)
 			}
 
 			tDb.trie.Commit(nil)
+			return true
 		} else {
 			tDb.trie.Delete(bk)
 			tDb.trie.Commit(nil)
@@ -98,23 +95,3 @@ func (tDb *TransactionStore) CopyState() *SnapShot {
 	newDirties.storageDirties = newMap
 	return (*SnapShot)(&newDirties)
 }
-
-//func copyDirMap(m *sync.Map) *sync.Map {
-//	newMap := new(sync.Map)
-//	m.Range(func(key, value interface{}) bool {
-//		if value == nil {
-//			newMap.Store(key, value)
-//		} else {
-//			switch t := value.(type) {
-//			case []byte:
-//				newBytes := make([]byte, len(t))
-//				copy(newBytes, t)
-//				newMap.Store(key, newBytes)
-//			default:
-//				panic("never run here")
-//			}
-//		}
-//		return true
-//	})
-//	return newMap
-//}

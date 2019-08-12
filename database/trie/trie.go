@@ -425,9 +425,18 @@ func (t *Trie) resolve(n node, prefix []byte) (node, error) {
 
 func (t *Trie) resolveHash(n hashNode, prefix []byte) (node, error) {
 	hash := crypto.BytesToHash(n)
+
+	if t.dbWrite != nil {
+		node := t.dbWrite.node(hash)
+		if node != nil {
+			return node, nil
+		}
+	}
+
 	if node := t.db.node(hash); node != nil {
 		return node, nil
 	}
+
 	return nil, &MissingNodeError{NodeHash: hash, Path: prefix}
 }
 

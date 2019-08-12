@@ -62,9 +62,6 @@ func (db *Database) RecoverTrie(root []byte) bool {
 	return true
 }
 
-//func (db *Database) Close1() {
-//	db.diskDb.Close()
-//}
 
 func (db *Database) initState() error {
 	value, _ := db.diskDb.Get(trie.EmptyRoot[:])
@@ -379,19 +376,19 @@ func (db *Database) AddLog(log *types.Log) error {
 
 func (db *Database) PutReceipt(txHash crypto.Hash, receipt *types.Receipt) error {
 	key := sha3.Keccak256([]byte("receipt_" + txHash.String()))
-	fmt.Println("tx receipt: ", receipt)
-	fmt.Println("detail:")
-	fmt.Println("PostState: ", receipt.PostState)
-	fmt.Println("Status: ", receipt.Status)
-	fmt.Println("CumulativeGasUsed: ", receipt.CumulativeGasUsed)
-	fmt.Println("Logs: ", receipt.Logs, receipt.Logs == nil)
-	fmt.Println("TxHash: ", receipt.TxHash)
-	fmt.Println("ContratAddress: ", receipt.ContractAddress)
-	fmt.Println("GasUsed: ", receipt.GasUsed)
-	fmt.Println("BlockNumber: ", receipt.BlockNumber)
-	fmt.Println("BlockHash: ", receipt.BlockHash)
+	//fmt.Println("tx receipt: ", receipt)
+	//fmt.Println("detail:")
+	//fmt.Println("PostState: ", receipt.PostState)
+	//fmt.Println("Status: ", receipt.Status)
+	//fmt.Println("CumulativeGasUsed: ", receipt.CumulativeGasUsed)
+	//fmt.Println("Logs: ", receipt.Logs, receipt.Logs == nil)
+	//fmt.Println("TxHash: ", receipt.TxHash)
+	//fmt.Println("ContratAddress: ", receipt.ContractAddress)
+	//fmt.Println("GasUsed: ", receipt.GasUsed)
+	//fmt.Println("BlockNumber: ", receipt.BlockNumber)
+	//fmt.Println("BlockHash: ", receipt.BlockHash)
 	value, err := binary.Marshal(receipt)
-	fmt.Println("err11: ", err)
+	//fmt.Println("err11: ", err)
 	if err != nil {
 		return err
 	}
@@ -401,8 +398,8 @@ func (db *Database) PutReceipt(txHash crypto.Hash, receipt *types.Receipt) error
 func (db *Database) GetReceipt(txHash crypto.Hash) *types.Receipt {
 	key := sha3.Keccak256([]byte("receipt_" + txHash.String()))
 	value, err := db.Get(key)
-	fmt.Println("err12: ", err)
-	fmt.Println("val: ", value)
+	//fmt.Println("err12: ", err)
+	//fmt.Println("val: ", value)
 	if err != nil {
 		return nil
 	}
@@ -538,7 +535,7 @@ func (db *Database) GetBlockNode(hash *crypto.Hash, blockHeight uint64) (*types.
 	}
 	blockHeader := &types.BlockHeader{}
 	binary.Unmarshal(value[0:len(value)-1], blockHeader)
-	status := value[len(value)-1 : len(value)][0]
+	status := value[len(value)-1:len(value)][0]
 	return blockHeader, types.BlockStatus(status), nil
 }
 
