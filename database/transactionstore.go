@@ -58,7 +58,8 @@ func (tDb *TransactionStore) Flush() {
 			val := value.([]byte)
 			err := tDb.trie.TryUpdate(bk, val)
 			if err != nil {
-				return false
+				//never come here
+				panic(err)
 			}
 
 			tDb.trie.Commit(nil)
