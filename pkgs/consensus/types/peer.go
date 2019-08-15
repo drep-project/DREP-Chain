@@ -1,18 +1,22 @@
 package types
 
 import (
-	"github.com/deckarep/golang-set"
 	"github.com/drep-project/drep-chain/network/p2p"
-	"github.com/drep-project/drep-chain/network/p2p/enode"
 )
 
 var (
 	DefaultPort = 55555
 )
 
+type IPeerInfo interface {
+	GetMsgRW() p2p.MsgReadWriter
+	String() string
+	IP() string
+	Equal(ipeer IPeerInfo) bool
+}
+
 //业务层peer
 type PeerInfo struct {
-	knownBlocks mapset.Set // Set of block hashes known to be known by this peer
 	peer        *p2p.Peer
 	rw          p2p.MsgReadWriter
 }
@@ -29,11 +33,15 @@ func (pi *PeerInfo) GetMsgRW() p2p.MsgReadWriter {
 	return pi.rw
 }
 
-func (pi *PeerInfo) GetID() *enode.ID {
-	id := pi.peer.ID()
-	return &id
-}
-
 func (pi *PeerInfo) IP() string {
 	return pi.peer.IP()
+}
+
+
+func (pi *PeerInfo) String() string {
+	return pi.peer.IP()
+}
+
+func (pi *PeerInfo) Equal(pi2  IPeerInfo) bool {
+	return pi2.IP() == pi.IP()
 }

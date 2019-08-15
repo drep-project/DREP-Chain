@@ -6,28 +6,27 @@ import (
 	"math/big"
 	"sync"
 	"time"
-
+	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/secp256k1/schnorr"
 	"github.com/drep-project/drep-chain/crypto/sha3"
-	p2pService "github.com/drep-project/drep-chain/network/service"
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
 )
 
 type Member struct {
-	leader      *MemberInfo
-	producers   []*MemberInfo
-	liveMembers []*MemberInfo
-	prvKey      *secp256k1.PrivateKey
-	p2pServer   p2pService.P2P
+	leader      		*MemberInfo
+	producers   		[]*MemberInfo
+	liveMembers 		[]*MemberInfo
+	prvKey      		*secp256k1.PrivateKey
+	p2pServer   		Sender
 
-	msg     IConsenMsg
-	msgHash []byte
+	msg     			IConsenMsg
+	msgHash 			[]byte
 
-	randomPrivakey *secp256k1.PrivateKey
-	r              *big.Int
+	randomPrivakey 		*secp256k1.PrivateKey
+	r              		*big.Int
 
-	waitTime time.Duration
+	waitTime 			time.Duration
 
 	completed           chan struct{}
 	timeOutChanel       chan struct{}
@@ -38,13 +37,13 @@ type Member struct {
 	currentHeight       uint64
 	stateLock           sync.RWMutex
 
-	msgPool    chan *MsgWrap
-	cancelPool chan struct{}
-	validator  func(msg IConsenMsg) bool
-	convertor  func(msg []byte) (IConsenMsg, error)
+	msgPool    			chan *MsgWrap
+	cancelPool 			chan struct{}
+	validator  			func(msg IConsenMsg) bool
+	convertor  			func(msg []byte) (IConsenMsg, error)
 }
 
-func NewMember(prvKey *secp256k1.PrivateKey, p2pServer p2pService.P2P, waitTime time.Duration, producers []*MemberInfo, minMember int, curHeight uint64, msgPool chan *MsgWrap) *Member {
+func NewMember(prvKey *secp256k1.PrivateKey, p2pServer Sender, waitTime time.Duration, producers []*MemberInfo, minMember int, curHeight uint64, msgPool chan *MsgWrap) *Member {
 	member := &Member{}
 	member.prvKey = prvKey
 	member.waitTime = waitTime
@@ -91,7 +90,7 @@ func (member *Member) ProcessConsensus() (IConsenMsg, error) {
 		default:
 		}
 	}()
-	log.WithField("IP", member.leader.Peer.IP()).Debug("wait for leader's setup message")
+	log.WithField("IP", member.leader.Peer).Debug("wait for leader's setup message")
 	member.setState(WAIT_SETUP)
 	go member.WaitSetUp()
 	go member.processP2pMessage()
@@ -114,28 +113,28 @@ func (member *Member) processP2pMessage() {
 	for {
 		select {
 		case msg := <-member.msgPool:
-			switch msg.Msg.Code {
+			switch msg.Code {
 			case MsgTypeSetUp:
-				var req Setup
-				if err := msg.Msg.Decode(&req); err != nil {
+				var setup Setup
+				if err := binary.Unmarshal(msg.Msg, &setup); err != nil {
 					log.Debugf("setup msg:%v err:%v", msg, err)
 					continue
 				}
-				go member.OnSetUp(msg.Peer, &req)
+				go member.OnSetUp(msg.Peer, &setup)
 			case MsgTypeChallenge:
-				var req Challenge
-				if err := msg.Msg.Decode(&req); err != nil {
+				var challenge Challenge
+				if err := binary.Unmarshal(msg.Msg, &challenge); err != nil {
 					log.Debugf("challenge msg:%v err:%v", msg, err)
 					continue
 				}
-				go member.OnChallenge(msg.Peer, &req)
+				go member.OnChallenge(msg.Peer, &challenge)
 			case MsgTypeFail:
-				var req Fail
-				if err := msg.Msg.Decode(&req); err != nil {
+				var fail Fail
+				if err := binary.Unmarshal(msg.Msg, &fail); err != nil {
 					log.Debugf("challenge msg:%v err:%v", msg, err)
 					continue
 				}
-				go member.OnFail(msg.Peer, &req)
+				go member.OnFail(msg.Peer, &fail)
 			}
 		case <-member.cancelPool:
 			return
@@ -157,7 +156,7 @@ func (member *Member) WaitSetUp() {
 	}
 }
 
-func (member *Member) OnSetUp(peer *consensusTypes.PeerInfo, setUp *Setup) {
+func (member *Member) OnSetUp(peer consensusTypes.IPeerInfo, setUp *Setup) {
 	if member.currentHeight < setUp.Height {
 		log.WithField("Receive Height", setUp.Height).
 			WithField("Current Height", member.currentHeight).
@@ -181,7 +180,7 @@ func (member *Member) OnSetUp(peer *consensusTypes.PeerInfo, setUp *Setup) {
 	}
 
 	log.Debug("receive setup message")
-	if member.leader.Peer.IP() == peer.IP() {
+	if member.leader.Peer.Equal(peer) {
 		var err error
 		member.msg, err = member.convertor(setUp.Msg)
 		if err != nil {
@@ -216,7 +215,7 @@ func (member *Member) WaitChallenge() {
 	}
 }
 
-func (member *Member) OnChallenge(peer *consensusTypes.PeerInfo, challengeMsg *Challenge) {
+func (member *Member) OnChallenge(peer consensusTypes.IPeerInfo, challengeMsg *Challenge) {
 	if member.currentHeight < challengeMsg.Height {
 		log.WithField("Receive Height", challengeMsg.Height).
 			WithField("Current Height", member.currentHeight).
@@ -238,7 +237,7 @@ func (member *Member) OnChallenge(peer *consensusTypes.PeerInfo, challengeMsg *C
 		return
 	}
 	log.Debug("recieved challenge message")
-	if member.leader.Peer.IP() == peer.IP() && bytes.Equal(member.msgHash, challengeMsg.R) {
+	if member.leader.Peer.Equal(peer) && bytes.Equal(member.msgHash, challengeMsg.R) {
 		member.response(challengeMsg)
 		log.Debug("response has sent")
 		member.setState(COMPLETED)
@@ -253,7 +252,7 @@ func (member *Member) OnChallenge(peer *consensusTypes.PeerInfo, challengeMsg *C
 	//check fail not response and start new round
 }
 
-func (member *Member) OnFail(peer *consensusTypes.PeerInfo, failMsg *Fail) {
+func (member *Member) OnFail(peer consensusTypes.IPeerInfo, failMsg *Fail) {
 	if member.currentHeight < failMsg.Height || member.getState() == COMPLETED || member.getState() == ERROR {
 		return
 	}

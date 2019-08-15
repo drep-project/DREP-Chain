@@ -32,23 +32,23 @@ const (
 )
 
 type ConsensusService struct {
-	P2pServer       p2pService.P2P                     `service:"p2p"`
-	ChainService    chainService.ChainServiceInterface `service:"chain"`
-	BlockMgr        *blockMgrService.BlockMgr          `service:"blockmgr"`
-	DatabaseService *database.DatabaseService          `service:"database"`
-	WalletService   *accountService.AccountService     `service:"accounts"`
+	P2pServer       	p2pService.P2P                     `service:"p2p"`
+	ChainService    	chainService.ChainServiceInterface `service:"chain"`
+	BlockMgr        	*blockMgrService.BlockMgr          `service:"blockmgr"`
+	DatabaseService 	*database.DatabaseService          `service:"database"`
+	WalletService   	*accountService.AccountService     `service:"accounts"`
 
-	apis   []app.API
-	Config *consensusTypes.ConsensusConfig
+	apis   				[]app.API
+	Config 				*consensusTypes.ConsensusConfig
 
-	syncBlockEventSub  event.Subscription
-	syncBlockEventChan chan event.SyncBlockEvent
-	ConsensusEngine    consensusTypes.IConsensusEngin
+	syncBlockEventSub  	event.Subscription
+	syncBlockEventChan 	chan event.SyncBlockEvent
+	ConsensusEngine    	consensusTypes.IConsensusEngine
 	//During the process of synchronizing blocks, the miner stopped mining
-	pauseForSync bool
-	start        bool
-	peersInfo    map[string]*consensusTypes.PeerInfo
-	quit         chan struct{}
+	pauseForSync 		bool
+	start        		bool
+	peersInfo    		map[string]*consensusTypes.PeerInfo
+	quit         		chan struct{}
 }
 
 func (consensusService *ConsensusService) Name() string {
@@ -77,7 +77,9 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	if !consensusService.Config.Enable {
 		return nil
 	}
-
+	if consensusService.WalletService.Wallet == nil {
+		return ErrWalletNotOpen
+	}
 	//consult privkey in wallet
 	accountNode, err := consensusService.WalletService.Wallet.GetAccountByPubkey(consensusService.Config.MyPk)
 	if err != nil {
@@ -85,7 +87,28 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 		return err
 	}
 
-	peersInfo := make(map[string]*consensusTypes.PeerInfo)
+	var engine consensusTypes.IConsensusEngine
+	onlinePeers := make(map[string]consensusTypes.IPeerInfo)
+	if consensusService.Config.ConsensusMode == "bft" {
+		engine = bft.NewBftConsensus(
+			consensusService.ChainService,
+			consensusService.BlockMgr,
+			consensusService.DatabaseService,
+			accountNode.PrivateKey,
+			consensusService.Config.Producers,
+			consensusService.P2pServer,
+			onlinePeers,
+		)
+	} else if consensusService.Config.ConsensusMode == "solo" {
+		engine = solo.NewSoloConsensus(
+			consensusService.ChainService,
+			consensusService.BlockMgr,
+			consensusService.DatabaseService,
+			accountNode.PrivateKey)
+	} else {
+		return nil
+	}
+
 	consensusService.P2pServer.AddProtocols([]p2p.Protocol{
 		p2p.Protocol{
 			Name:   "consensusService",
@@ -93,8 +116,8 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
 				if consensusService.Config.Producers.IsLocalIP(peer.IP()) {
 					pi := consensusTypes.NewPeerInfo(peer, rw)
-					peersInfo[peer.IP()] = pi
-					defer delete(peersInfo, peer.IP())
+					onlinePeers[peer.IP()] = pi
+					defer delete(onlinePeers, peer.IP())
 					return consensusService.ConsensusEngine.ReceiveMsg(pi, rw)
 				}
 				log.WithField("peer.ip", peer.IP()).Info("peer not producer")
@@ -103,30 +126,8 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 			},
 		},
 	})
-
-	if consensusService.Config.ConsensusMode == "bft" {
-		consensusService.ConsensusEngine = bft.NewBftConsensus(
-			consensusService.ChainService,
-			consensusService.BlockMgr,
-			consensusService.DatabaseService,
-			accountNode.PrivateKey,
-			consensusService.Config.Producers,
-			consensusService.P2pServer,
-			peersInfo,
-		)
-		consensusService.ChainService.AddBlockValidator(&bft.BlockMultiSigValidator{consensusService.Config.Producers})
-	} else if consensusService.Config.ConsensusMode == "solo" {
-		consensusService.ConsensusEngine = solo.NewSoloConsensus(
-			consensusService.ChainService,
-			consensusService.BlockMgr,
-			consensusService.DatabaseService,
-			accountNode.PrivateKey)
-		consensusService.ChainService.AddBlockValidator(solo.NewSoloValidator(consensusService.Config.MyPk))
-	} else {
-		return nil
-	}
-
-	consensusService.peersInfo = peersInfo
+	consensusService.ChainService.AddBlockValidator(engine.Validator())
+	consensusService.ConsensusEngine = engine
 	consensusService.syncBlockEventChan = make(chan event.SyncBlockEvent)
 	consensusService.syncBlockEventSub = consensusService.BlockMgr.SubscribeSyncBlockEvent(consensusService.syncBlockEventChan)
 	consensusService.quit = make(chan struct{})
@@ -213,15 +214,6 @@ func (consensusService *ConsensusService) Stop(executeContext *app.ExecuteContex
 	}
 
 	return nil
-}
-
-//本函数只能广播本模块定义的消息
-func (consensusService *ConsensusService) BroadcastConsensusMsg(msgType int, msg interface{}) {
-	go func() {
-		for _, peer := range consensusService.peersInfo {
-			consensusService.P2pServer.Send(peer.GetMsgRW(), uint64(msgType), msg)
-		}
-	}()
 }
 
 func (consensusService *ConsensusService) getWaitTime() (time.Time, time.Duration) {

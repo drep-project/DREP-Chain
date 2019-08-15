@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/network/p2p"
 	"github.com/drep-project/drep-chain/pkgs/consensus/types"
 )
 
@@ -23,8 +22,9 @@ const (
 var NumberOfMsg = 5
 
 type MsgWrap struct {
-	Peer *types.PeerInfo
-	Msg  *p2p.Msg
+	Peer types.IPeerInfo
+	Code uint64
+	Msg  []byte
 }
 
 type Setup struct {
@@ -89,25 +89,25 @@ type IConsenMsg interface {
 	AsMessage() []byte
 }
 
-type ResponseWiteRootMessage struct {
+type CompletedBlockMessage struct {
 	MultiSignature
 	StateRoot []byte //sencond round  leader should send stateroot, then member verify
 }
 
-func (responseWiteRootMessage *ResponseWiteRootMessage) AsSignMessage() []byte {
-	bytes, _ := binary.Marshal(responseWiteRootMessage)
+func (completedBlockMessage *CompletedBlockMessage) AsSignMessage() []byte {
+	bytes, _ := binary.Marshal(completedBlockMessage)
 	return bytes
 }
 
-func (responseWiteRootMessage *ResponseWiteRootMessage) AsMessage() []byte {
-	return responseWiteRootMessage.AsSignMessage()
+func (completedBlockMessage *CompletedBlockMessage) AsMessage() []byte {
+	return completedBlockMessage.AsSignMessage()
 }
 
-func ResponseWiteRootFromMessage(bytes []byte) (*ResponseWiteRootMessage, error) {
-	responseWiteRootMessage := &ResponseWiteRootMessage{}
-	err := binary.Unmarshal(bytes, responseWiteRootMessage)
+func CompletedBlockFromMessage(bytes []byte) (*CompletedBlockMessage, error) {
+	completedBlockMessage := &CompletedBlockMessage{}
+	err := binary.Unmarshal(bytes, completedBlockMessage)
 	if err != nil {
 		return nil, err
 	}
-	return responseWiteRootMessage, nil
+	return completedBlockMessage, nil
 }

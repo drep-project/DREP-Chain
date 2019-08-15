@@ -102,3 +102,7 @@ func (soloConsensus *SoloConsensus) Run() (*types.Block, error) {
 func (soloConsensus *SoloConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, rw p2p.MsgReadWriter) error {
 	return nil
 }
+
+func (soloConsensus *SoloConsensus)  Validator( ) chain.IBlockValidator {
+	return &SoloValidator{soloConsensus.PrivKey.PubKey()}
+}

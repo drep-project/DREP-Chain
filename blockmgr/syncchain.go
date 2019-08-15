@@ -190,9 +190,9 @@ func (blockMgr *BlockMgr) batchReqBlocks(hashs []crypto.Hash, errCh chan error) 
 
 	for _, pi := range blockMgr.peersInfo {
 		blockMgr.syncMut.Lock()
-		//blockMgr.P2pServer.SetIdle(bodyReqPeer.GetMsgRW(), false)
+		//blockMgr.sender.SetIdle(bodyReqPeer.GetMsgRW(), false)
 		err := blockMgr.P2pServer.Send(pi.GetMsgRW(), types.MsgTypeBlockReq, req)
-		//blockMgr.P2pServer.SetIdle(bodyReqPeer, true)
+		//blockMgr.sender.SetIdle(bodyReqPeer, true)
 		blockMgr.syncMut.Unlock()
 
 		if err == nil {
@@ -245,10 +245,10 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 				}
 
 				blockMgr.syncMut.Lock()
-				//blockMgr.P2pServer.SetIdle(peer, false)
+				//blockMgr.sender.SetIdle(peer, false)
 				err := blockMgr.requestHeaders(peer, commonAncestor, maxHeaderHashCountReq)
 				log.WithField("commonAncestor", commonAncestor).Info("req header")
-				//blockMgr.P2pServer.SetIdle(peer, true)
+				//blockMgr.sender.SetIdle(peer, true)
 				blockMgr.syncMut.Unlock()
 				if err != nil {
 					errCh <- err
