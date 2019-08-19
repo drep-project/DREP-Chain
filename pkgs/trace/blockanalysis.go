@@ -2,12 +2,14 @@ package trace
 
 import (
 	"github.com/drep-project/drep-chain/common/event"
+	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/types"
 )
 
 type BlockAnalysis struct {
 	Config           HistoryConfig
 	getBlock         func(uint64) (*types.Block, error)
+	producers		 []crypto.CommonAddress
 	eventNewBlockSub event.Subscription
 	newBlockChan     chan *types.ChainEvent
 
@@ -17,9 +19,10 @@ type BlockAnalysis struct {
 	readyToQuit     chan struct{}
 }
 
-func NewBlockAnalysis(config HistoryConfig, getBlock func(uint64) (*types.Block, error)) *BlockAnalysis {
+func NewBlockAnalysis(config HistoryConfig, producers []crypto.CommonAddress,  getBlock func(uint64) (*types.Block, error)) *BlockAnalysis {
 	blockAnalysis := &BlockAnalysis{}
 	blockAnalysis.Config = config
+	blockAnalysis.producers = producers
 	blockAnalysis.getBlock = getBlock
 	blockAnalysis.newBlockChan = make(chan *types.ChainEvent, 1000)
 	blockAnalysis.detachBlockChan = make(chan *types.Block, 1000)
@@ -37,7 +40,7 @@ func (blockAnalysis *BlockAnalysis) Start(newBlock, detachBlock *event.Feed) err
 			log.WithField("err", err).WithField("path", blockAnalysis.Config.HistoryDir).Error("cannot open db file")
 		}
 	} else if blockAnalysis.Config.DbType == "mongo" {
-		blockAnalysis.store, err = NewMongogDbStore(blockAnalysis.Config.Url, DefaultDbName)
+		blockAnalysis.store, err = NewMongogDbStore(blockAnalysis.Config.Url, blockAnalysis.producers, DefaultDbName)
 		if err != nil {
 			log.WithField("err", err).WithField("url", blockAnalysis.Config.Url).Error("try connect mongo fail")
 		}

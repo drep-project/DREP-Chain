@@ -17,6 +17,10 @@ type Producer struct {
 	IP     string               `json:"ip"`
 }
 
+func (producer *Producer) Address() crypto.CommonAddress {
+	return crypto.PubKey2Address(producer.Pubkey)
+}
+
 type ProducerSet []Producer
 
 func (produceSet *ProducerSet) IsLocalIP(ip string) bool {
@@ -36,6 +40,7 @@ func (produceSet *ProducerSet) IsLocalPk(pk *secp256k1.PublicKey) bool {
 	}
 	return false
 }
+
 
 func (produceSet *ProducerSet) IsLocalAddress(addr crypto.CommonAddress) bool {
 	for _, bp := range *produceSet {

@@ -1,11 +1,13 @@
 package trace
 
 import (
+	"github.com/drep-project/drep-chain/crypto"
 	"path"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/drep-chain/app"
 	chainService "github.com/drep-project/drep-chain/chain"
+	consensusService "github.com/drep-project/drep-chain/pkgs/consensus/service"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -28,10 +30,11 @@ var (
 // support get transaction history of sender address
 // support get transaction history of sender receiver
 type TraceService struct {
-	Config        *HistoryConfig
-	ChainService  chainService.ChainServiceInterface `service:"chain"`
-	apis          []app.API
-	blockAnalysis *BlockAnalysis
+	Config           *HistoryConfig
+	ChainService     chainService.ChainServiceInterface `service:"chain"`
+	ConsensusService consensusService.ConsensusService  `service:"chain"`
+	apis             []app.API
+	blockAnalysis    *BlockAnalysis
 }
 
 func (traceService *TraceService) Name() string {
@@ -70,7 +73,11 @@ func (traceService *TraceService) Init(executeContext *app.ExecuteContext) error
 	if !traceService.Config.Enable {
 		return nil
 	}
-	traceService.blockAnalysis = NewBlockAnalysis(*traceService.Config, traceService.ChainService.GetBlockByHeight)
+	bpAddrs := []crypto.CommonAddress{}
+	for _, bp2 := range traceService.ConsensusService.Config.Producers {
+		bpAddrs = append(bpAddrs, bp2.Address())
+	}
+	traceService.blockAnalysis = NewBlockAnalysis(*traceService.Config, bpAddrs, traceService.ChainService.GetBlockByHeight)
 
 	traceService.apis = []app.API{
 		app.API{

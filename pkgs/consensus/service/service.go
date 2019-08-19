@@ -87,8 +87,9 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 		return err
 	}
 
+	var  addPeer  event.Feed
+	var  removePeer  event.Feed
 	var engine consensusTypes.IConsensusEngine
-	onlinePeers := make(map[string]consensusTypes.IPeerInfo)
 	if consensusService.Config.ConsensusMode == "bft" {
 		engine = bft.NewBftConsensus(
 			consensusService.ChainService,
@@ -97,7 +98,8 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 			accountNode.PrivateKey,
 			consensusService.Config.Producers,
 			consensusService.P2pServer,
-			onlinePeers,
+			&addPeer,
+			&removePeer,
 		)
 	} else if consensusService.Config.ConsensusMode == "solo" {
 		engine = solo.NewSoloConsensus(
@@ -116,8 +118,8 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
 				if consensusService.Config.Producers.IsLocalIP(peer.IP()) {
 					pi := consensusTypes.NewPeerInfo(peer, rw)
-					onlinePeers[peer.IP()] = pi
-					defer delete(onlinePeers, peer.IP())
+					addPeer.Send(pi)
+					defer removePeer.Send(pi)
 					return consensusService.ConsensusEngine.ReceiveMsg(pi, rw)
 				}
 				log.WithField("peer.ip", peer.IP()).Info("peer not producer")
@@ -187,8 +189,10 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 					_, _, err := consensusService.ChainService.ProcessBlock(block)
 					if err == nil {
 						consensusService.BlockMgr.BroadcastBlock(chainTypes.MsgTypeBlock, block, true)
+						log.WithField("Height", block.Header.Height).WithField("txs:", block.Data.TxCount).Info("Process block successfully and broad case block message")
+					}else{
+						log.WithField("Height", block.Header.Height).WithField("txs:", block.Data.TxCount).WithField("err", err).Info("Process Block fail")
 					}
-					log.WithField("Height", consensusService.ChainService.BestChain().Height()).WithField("txs:", block.Data.TxCount).WithField("err", err).Info("Submit Block ")
 				}
 				nextBlockTime, waitSpan := consensusService.getWaitTime()
 				log.WithField("nextBlockTime", nextBlockTime).WithField("waitSpan", waitSpan).Debug("Sleep")

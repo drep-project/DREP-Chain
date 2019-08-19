@@ -61,8 +61,6 @@ func (rpcBlock *RpcBlock) From(block *Block) *RpcBlock {
 	rpcBlock.Timestamp = block.Header.Timestamp
 	rpcBlock.StateRoot = block.Header.StateRoot
 	rpcBlock.TxRoot = block.Header.TxRoot
-	rpcBlock.LeaderPubKey = block.Header.LeaderAddress
-	rpcBlock.MinorPubKeys = block.Header.MinorAddresses
 	rpcBlock.Txs = txs
 	return rpcBlock
 }
@@ -93,8 +91,6 @@ func (rpcBlockHeader *RpcBlockHeader) FromBlockHeader(header *BlockHeader) {
 	rpcBlockHeader.Timestamp = header.Timestamp
 	rpcBlockHeader.StateRoot = header.StateRoot
 	rpcBlockHeader.TxRoot = header.TxRoot
-	rpcBlockHeader.LeaderPubKey = header.LeaderAddress
-	rpcBlockHeader.MinorPubKeys = header.MinorAddresses
 	rpcBlockHeader.Hash = header.Hash()
 }
 
@@ -109,7 +105,5 @@ func (rpcBlockHeader *RpcBlockHeader) ToHeader() *BlockHeader {
 	blockHeader.Timestamp = rpcBlockHeader.Timestamp
 	blockHeader.StateRoot = rpcBlockHeader.StateRoot
 	blockHeader.TxRoot = rpcBlockHeader.TxRoot
-	blockHeader.LeaderAddress = rpcBlockHeader.LeaderPubKey
-	blockHeader.MinorAddresses = rpcBlockHeader.MinorPubKeys
 	return blockHeader
 }

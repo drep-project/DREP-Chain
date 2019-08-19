@@ -130,14 +130,14 @@ func (chainService *ChainService) acceptBlock(block *types.Block) (inMainChain b
 	}
 
 	if block.Header.PreviousHash.IsEqual(chainService.BestChain().Tip().Hash) {
-		logs, err := chainService.connectBlock(db, block, newNode)
+		context, err := chainService.connectBlock(db, block, newNode)
 		if err != nil {
 			return false, err
 		}
 
 		chainService.markState(newNode)
 		//SetTip has save tip but block not saving
-		chainService.notifyBlock(block, logs)
+		chainService.notifyBlock(block, context.Logs)
 		return true, nil
 	}
 	if block.Header.Height <= chainService.BestChain().Tip().Height {
@@ -162,10 +162,10 @@ func (chainService *ChainService) acceptBlock(block *types.Block) (inMainChain b
 	return err == nil, err
 }
 
-func (chainService *ChainService) connectBlock(db *database.Database, block *types.Block, newNode *types.BlockNode) (logs []*types.Log, err error) {
+func (chainService *ChainService) connectBlock(db *database.Database, block *types.Block, newNode *types.BlockNode) (context *BlockExecuteContext, err error) {
 	gp := new(GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
-	context := &BlockExecuteContext{
+	context = &BlockExecuteContext{
 		Db:      db,
 		Block:   block,
 		Gp:      gp,
@@ -173,23 +173,16 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *typ
 		GasFee:  new(big.Int),
 	}
 	for _, blockValidator := range chainService.BlockValidator() {
-		_, allLogs, _, err := blockValidator.ExecuteBlock(context)
+		err := blockValidator.ExecuteBlock(context)
 		if err != nil {
 			break
 		}
-		logs = allLogs
 	}
 
 	if err != nil {
 		chainService.blockIndex.SetStatusFlags(newNode, types.StatusValidateFailed)
 		chainService.flushIndexState()
-		return nil, err
-	}
-	err = chainService.AccumulateRewards(db, block, context.GasFee)
-	if err != nil {
-		chainService.blockIndex.SetStatusFlags(newNode, types.StatusValidateFailed)
-		chainService.flushIndexState()
-		return nil, err
+		return context, err
 	}
 	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
 		db.Commit()
@@ -210,7 +203,7 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *typ
 	} else {
 		chainService.blockIndex.SetStatusFlags(newNode, types.StatusValidateFailed)
 		chainService.flushIndexState()
-		return nil, err
+		return context, err
 	}
 
 	// If this is fast add, or this block node isn't yet marked as
@@ -220,7 +213,7 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *typ
 		chainService.blockIndex.SetStatusFlags(newNode, types.StatusValid)
 		chainService.flushIndexState()
 	}
-	return logs, nil
+	return context, err
 }
 
 func (chainService *ChainService) flushIndexState() {
@@ -308,12 +301,12 @@ func (chainService *ChainService) reorganizeChain(db *database.Database, detachN
 			if err != nil {
 				return err
 			}
-			logs, err := chainService.connectBlock(db, block, blockNode)
+			context, err := chainService.connectBlock(db, block, blockNode)
 			if err != nil {
 				return err
 			}
 			chainService.markState(blockNode)
-			chainService.notifyBlock(block, logs)
+			chainService.notifyBlock(block, context.Logs)
 			log.WithField("Height", blockNode.Height).WithField("Hash", blockNode.Hash).Info("REORGANIZE:Append New Block")
 			elem = elem.Next()
 		}
@@ -473,27 +466,4 @@ func (chainService *ChainService) CalcGasLimit(parent *types.BlockHeader, gasFlo
 		limit = gasCeil
 	}
 	return new(big.Int).SetUint64(limit)
-}
-
-// AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
-func (chainService *ChainService) AccumulateRewards(db *database.Database, b *types.Block, totalGasBalance *big.Int) error {
-	reward := new(big.Int).SetUint64(uint64(params.Rewards))
-	r := new(big.Int)
-	r = r.Div(reward, new(big.Int).SetInt64(2))
-	r.Add(r, totalGasBalance)
-	err := db.AddBalance(&b.Header.LeaderAddress, r)
-	if err != nil {
-		return err
-	}
-	num := len(b.Header.MinorAddresses)
-	for _, memberAddr := range b.Header.MinorAddresses {
-		if memberAddr != b.Header.LeaderAddress {
-			r.Div(reward, new(big.Int).SetInt64(int64(num*2)))
-			err = db.AddBalance(&memberAddr, r)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }

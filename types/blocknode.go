@@ -83,9 +83,6 @@ type BlockNode struct {
 	MerkleRoot   []byte
 	ReceiptRoot  crypto.Hash
 	Bloom        Bloom
-	LeaderPubKey crypto.CommonAddress
-	MinorPubKeys []crypto.CommonAddress
-
 	Status BlockStatus
 }
 
@@ -107,8 +104,6 @@ func InitBlockNode(node *BlockNode, blockHeader *BlockHeader, parent *BlockNode)
 		MerkleRoot:   blockHeader.TxRoot,
 		ReceiptRoot:  blockHeader.ReceiptRoot,
 		Bloom:        blockHeader.Bloom,
-		LeaderPubKey: blockHeader.LeaderAddress,
-		MinorPubKeys: blockHeader.MinorAddresses,
 	}
 	if parent != nil {
 		node.Parent = parent
@@ -145,8 +140,6 @@ func (node *BlockNode) Header() BlockHeader {
 		TxRoot:         node.MerkleRoot,
 		ReceiptRoot:    node.ReceiptRoot,
 		Bloom:          node.Bloom,
-		LeaderAddress:  node.LeaderPubKey,
-		MinorAddresses: node.MinorPubKeys,
 	}
 }
 

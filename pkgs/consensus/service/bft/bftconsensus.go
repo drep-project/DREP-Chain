@@ -6,16 +6,19 @@ import (
 	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/blockmgr"
 	"github.com/drep-project/drep-chain/chain"
+	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/network/p2p"
+	"github.com/drep-project/drep-chain/params"
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
 	"github.com/drep-project/drep-chain/types"
 	"io/ioutil"
 	"math"
 	"math/big"
 	"reflect"
+	"sync"
 	"time"
 )
 
@@ -34,22 +37,31 @@ type BftConsensus struct {
 	DbService    *database.DatabaseService
 	sender       Sender
 
+	peerLock   sync.RWMutex
 	onLinePeer map[string]consensusTypes.IPeerInfo
 	WaitTime   time.Duration
 
 	memberMsgPool chan *MsgWrap
 	leaderMsgPool chan *MsgWrap
 
+	addPeerChan chan *consensusTypes.PeerInfo
+	removePeerChan chan *consensusTypes.PeerInfo
 	Producers consensusTypes.ProducerSet
 }
 
-func NewBftConsensus(chainService chain.ChainServiceInterface,
+func NewBftConsensus(
+	chainService chain.ChainServiceInterface,
 	blockMgr *blockmgr.BlockMgr,
 	dbService *database.DatabaseService,
 	privKey *secp256k1.PrivateKey,
 	producer consensusTypes.ProducerSet,
 	sener Sender,
-	onLinePeer map[string]consensusTypes.IPeerInfo) *BftConsensus {
+	addPeer, removePeer *event.Feed ) *BftConsensus {
+
+	addPeerChan := make(chan *consensusTypes.PeerInfo)
+	removePeerChan:= make(chan  *consensusTypes.PeerInfo)
+	addPeer.Subscribe(addPeerChan)
+	removePeer.Subscribe(removePeerChan)
 	return &BftConsensus{
 		CoinBase:      crypto.PubKey2Address(privKey.PubKey()),
 		PrivKey:       privKey,
@@ -59,28 +71,44 @@ func NewBftConsensus(chainService chain.ChainServiceInterface,
 		minMiners:     int(math.Ceil(float64(len(producer)) * 2 / 3)),
 		Producers:     producer,
 		sender:        sener,
-		onLinePeer:    onLinePeer,
+		onLinePeer:    map[string]consensusTypes.IPeerInfo{},
 		WaitTime:      waitTime,
 		memberMsgPool: make(chan *MsgWrap, 1000),
 		leaderMsgPool: make(chan *MsgWrap, 1000),
+		addPeerChan : addPeerChan,
+		removePeerChan: removePeerChan,
 	}
 }
 
 func (bftConsensus *BftConsensus) Run() (*types.Block, error) {
+	go bftConsensus.processPeers()
 	miners := bftConsensus.collectMemberStatus()
 	if len(miners) > 1 {
 		isM, isL := bftConsensus.moveToNextMiner(miners)
 		if isL {
-			//consensusService.leader.UpdateStatus(miners, minMember, consensusService.ChainService.BestChain().Height())
 			return bftConsensus.runAsLeader(miners)
 		} else if isM {
-			//consensusService.member.UpdateStatus(miners, minMember, consensusService.ChainService.BestChain().Height())
 			return bftConsensus.runAsMember(miners)
 		} else {
 			return nil, ErrBFTNotReady
 		}
 	} else {
 		return nil, ErrBFTNotReady
+	}
+}
+
+func (bftConsensus *BftConsensus) processPeers(){
+	for {
+		select {
+			case addPeer := <- bftConsensus.addPeerChan:
+				bftConsensus.peerLock.Lock()
+				bftConsensus.onLinePeer[addPeer.IP()] = addPeer
+				bftConsensus.peerLock.Unlock()
+			case removePeer := <-  bftConsensus.removePeerChan:
+				bftConsensus.peerLock.Lock()
+				delete(bftConsensus.onLinePeer,removePeer.IP())
+				bftConsensus.peerLock.Unlock()
+		}
 	}
 }
 
@@ -128,9 +156,11 @@ func (bftConsensus *BftConsensus) collectMemberStatus() []*MemberInfo {
 			IsOnline = true
 		} else {
 			//todo  peer获取到的IP地址和配置的ip地址是否相等（nat后是否相等,从tcp原理来看是相等的）
+			bftConsensus.peerLock.RLock()
 			if pi, ok = bftConsensus.onLinePeer[produce.IP]; ok {
 				IsOnline = true
 			}
+			bftConsensus.peerLock.RUnlock()
 		}
 
 		produceInfos = append(produceInfos, &MemberInfo{
@@ -169,7 +199,7 @@ func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo) (block *type
 
 		return block, nil
 	}
-	member.validator = func(msg IConsenMsg) bool {
+	member.validator = func(msg IConsenMsg) error {
 		block = msg.(*types.Block)
 		return bftConsensus.blockVerify(block)
 	}
@@ -186,23 +216,16 @@ func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo) (block *type
 		return CompletedBlockFromMessage(msg)
 	}
 
-	member.validator = func(msg IConsenMsg) bool {
+	member.validator = func(msg IConsenMsg) error {
 		val := msg.(*CompletedBlockMessage)
 		multiSig = &val.MultiSignature
-		minorAddrs := []crypto.CommonAddress{}
-		for index, producer := range bftConsensus.Producers {
-			addr := crypto.PubKey2Address(producer.Pubkey)
-			if multiSig.Bitmap[index] == 1 && block.Header.LeaderAddress != addr {
-				minorAddrs = append(minorAddrs, addr)
-			}
-		}
-		block.Header.MinorAddresses = minorAddrs
 		block.Header.StateRoot = val.StateRoot
 		proof, err := binary.Marshal(multiSig)
 		if err != nil {
-			log.Debugf("fial to marshal MultiSig")
-			return false
+			log.Error("fail to marshal MultiSig")
+			return err
 		}
+		log.WithField("bitmap", multiSig.Bitmap).Info("member receive participant bitmap")
 		block.Proof = proof
 		return bftConsensus.verifyBlockContent(block)
 	}
@@ -237,24 +260,17 @@ func (bftConsensus *BftConsensus) runAsLeader(miners []*MemberInfo) (block *type
 		return nil, err
 	}
 
-	multiSig := &MultiSignature{Sig: *sig, Bitmap: bitmap}
 	leader.Reset()
-	minorAddrs := []crypto.CommonAddress{}
-	for index, producer := range bftConsensus.Producers {
-		addr := crypto.PubKey2Address(producer.Pubkey)
-		if multiSig.Bitmap[index] == 1 && block.Header.LeaderAddress != addr {
-			minorAddrs = append(minorAddrs, crypto.PubKey2Address(producer.Pubkey))
-		}
-	}
-	block.Header.MinorAddresses = minorAddrs
+	multiSig :=  newMultiSignature(*sig, bftConsensus.curMiner, bitmap)
 	proof, err := binary.Marshal(multiSig)
 	if err != nil {
 		log.Debugf("fial to marshal MultiSig")
 		return nil, err
 	}
-	block.Proof = proof
+	log.WithField("bitmap", multiSig.Bitmap).Info("participant bitmap")
 	//Determine reward points
-	err = bftConsensus.ChainService.AccumulateRewards(db, block, gasFee)
+	block.Proof = proof
+	err = bftConsensus.AccumulateRewards(db, multiSig, gasFee)
 	if err != nil {
 		return nil, err
 	}
@@ -273,35 +289,31 @@ func (bftConsensus *BftConsensus) runAsLeader(miners []*MemberInfo) (block *type
 	return block, nil
 }
 
-func (bftConsensus *BftConsensus) blockVerify(block *types.Block) bool {
+func (bftConsensus *BftConsensus) blockVerify(block *types.Block) error {
 	preBlockHash, err := bftConsensus.ChainService.GetBlockHeaderByHash(&block.Header.PreviousHash)
 	if err != nil {
-		log.WithField("err", err).Debug("blockVerify GetBlockHeaderByHash")
-		return false
+		return err
 	}
 	for _, validator := range bftConsensus.ChainService.BlockValidator() {
 		if reflect.TypeOf(validator).Elem() != reflect.TypeOf(BlockMultiSigValidator{}) {
 			err = validator.VerifyHeader(block.Header, preBlockHash)
 			if err != nil {
-				log.WithField("err", err).Debug("blockVerify VerifyHeader")
-				return false
+				return err
 			}
 			err = validator.VerifyBody(block)
 			if err != nil {
-				log.WithField("err", err).Debug("blockVerify VerifyBody")
-				return false
+				return err
 			}
 		}
 	}
-	//TODO need to verify traansaction , a lot of time
-	return err == nil
+	return err
 }
 
-func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) bool {
+func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
 	db := bftConsensus.ChainService.GetDatabaseService().BeginTransaction(false)
-	multiSigValidator := BlockMultiSigValidator{bftConsensus.Producers}
+	multiSigValidator := BlockMultiSigValidator{bftConsensus, bftConsensus.Producers}
 	if err := multiSigValidator.VerifyBody(block); err != nil {
-		return false
+		return err
 	}
 
 	gp := new(chain.GasPool).AddGas(block.Header.GasLimit.Uint64())
@@ -314,32 +326,30 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) bool {
 		GasFee:  new(big.Int),
 	}
 	for _, validator := range bftConsensus.ChainService.BlockValidator() {
-		_, _, _, err := validator.ExecuteBlock(context)
+		err := validator.ExecuteBlock(context)
 		if err != nil {
-			log.WithField("ExecuteBlock", err).Debug("multySigVerify")
-			return false
+			return err
 		}
 	}
-	err := bftConsensus.ChainService.AccumulateRewards(db, block, context.GasFee)
+	multiSig := &MultiSignature{}
+	err := binary.Unmarshal(block.Proof, multiSig)
 	if err != nil {
-		log.WithField("AccumulateRewards", err).Debug("multySigVerify")
-		return false
+		return err
 	}
 	db.Commit()
 	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
 		stateRoot := db.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
 			if !db.RecoverTrie(bftConsensus.ChainService.GetCurrentHeader().StateRoot){
-				log.Fatal("root not equal and recover trie err")
+				log.Error("root not equal and recover trie err")
 			}
 			log.Error("rootcmd root !=")
-			return false
+			return chain.ErrNotMathcedStateRoot
 		}
 	} else {
-		log.WithField("gasUsed", context.GasUsed).Debug("multySigVerify")
-		return false
+		return ErrGasUsed
 	}
-	return true
+	return nil
 }
 
 func (bftConsensus *BftConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, rw p2p.MsgReadWriter) error {
@@ -382,5 +392,33 @@ func (bftConsensus *BftConsensus) ChangeTime(interval time.Duration) {
 }
 
 func (bftConsensus *BftConsensus)  Validator( ) chain.IBlockValidator {
-	return &BlockMultiSigValidator{bftConsensus.Producers}
+	return &BlockMultiSigValidator{bftConsensus, bftConsensus.Producers}
+}
+
+// AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
+func (bftConsensus *BftConsensus) AccumulateRewards(db *database.Database, sig *MultiSignature, totalGasBalance *big.Int) error {
+	reward := new(big.Int).SetUint64(uint64(params.Rewards))
+	r := new(big.Int)
+	r = r.Div(reward, new(big.Int).SetInt64(2))
+	r.Add(r, totalGasBalance)
+	leaderAddr := bftConsensus.Producers[sig.Leader].Address()
+	err := db.AddBalance(&leaderAddr, r)
+	if err != nil {
+		return err
+	}
+
+	num := sig.Num() - 1
+	for index, isCommit := range sig.Bitmap {
+		if isCommit == 1 {
+			addr := bftConsensus.Producers[index].Address()
+			if addr != leaderAddr {
+				r.Div(reward, new(big.Int).SetInt64(int64(num*2)))
+				err = db.AddBalance(&addr, r)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }

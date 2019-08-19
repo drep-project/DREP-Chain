@@ -217,8 +217,8 @@ func (testbft *testBFT) runAsMember(miners []*MemberInfo) *bftResult {
 	testbft.member.convertor = func(msg []byte) (IConsenMsg, error) {
 		return &dummyConsensusMsg{}, nil
 	}
-	testbft.member.validator = func(msg IConsenMsg) bool {
-		return true
+	testbft.member.validator = func(msg IConsenMsg) error {
+		return nil
 	}
 	msg, err := testbft.member.ProcessConsensus()
 	return &bftResult{

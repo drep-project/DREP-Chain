@@ -11,21 +11,13 @@ import (
 )
 
 type BlockMultiSigValidator struct {
+	consensus *BftConsensus
 	Producers types2.ProducerSet
 }
 
 func (blockMultiSigValidator *BlockMultiSigValidator) VerifyHeader(header, parent *types.BlockHeader) error {
 	// check multisig
 	// leader
-	if !blockMultiSigValidator.Producers.IsLocalAddress(header.LeaderAddress) {
-		return ErrBpNotInList
-	}
-	// minor
-	for _, minor := range header.MinorAddresses {
-		if !blockMultiSigValidator.Producers.IsLocalAddress(minor) {
-			return ErrBpNotInList
-		}
-	}
 	return nil
 }
 
@@ -51,6 +43,12 @@ func (blockMultiSigValidator *BlockMultiSigValidator) VerifyBody(block *types.Bl
 	return nil
 }
 
-func (blockMultiSigValidator *BlockMultiSigValidator) ExecuteBlock(context *chain.BlockExecuteContext) (types.Receipts, []*types.Log, uint64, error) {
-	return nil, nil, 0, nil
+func (blockMultiSigValidator *BlockMultiSigValidator) ExecuteBlock(context *chain.BlockExecuteContext) error {
+	multiSig := &MultiSignature{}
+	err := binary.Unmarshal(context.Block.Proof, multiSig)
+	if err != nil {
+		return nil
+	}
+	blockMultiSigValidator.consensus.AccumulateRewards(context.Db, multiSig, context.GasFee)
+	return nil
 }

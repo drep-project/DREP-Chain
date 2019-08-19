@@ -12,7 +12,12 @@ type Sender interface {
 
 type MultiSignature struct {
 	Sig    secp256k1.Signature
+	Leader int
 	Bitmap []byte
+}
+
+func newMultiSignature(sig    secp256k1.Signature, leader int, bitmap []byte) *MultiSignature{
+	return &MultiSignature{sig,leader,bitmap}
 }
 
 func (multiSignature *MultiSignature) AsSignMessage() []byte {
@@ -22,4 +27,14 @@ func (multiSignature *MultiSignature) AsSignMessage() []byte {
 
 func (multiSignature *MultiSignature) AsMessage() []byte {
 	return multiSignature.AsSignMessage()
+}
+
+func (multiSignature *MultiSignature) Num() int {
+	num := 0
+	for _, val := range multiSignature.Bitmap {
+		if val == 1 {
+			num++
+		}
+	}
+	return num
 }

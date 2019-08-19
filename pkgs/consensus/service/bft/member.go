@@ -39,7 +39,7 @@ type Member struct {
 
 	msgPool    			chan *MsgWrap
 	cancelPool 			chan struct{}
-	validator  			func(msg IConsenMsg) bool
+	validator  			func(msg IConsenMsg) error
 	convertor  			func(msg []byte) (IConsenMsg, error)
 }
 
@@ -261,9 +261,8 @@ func (member *Member) OnFail(peer consensusTypes.IPeerInfo, failMsg *Fail) {
 }
 
 func (member *Member) commit() {
-	if !member.validator(member.msg) {
-		//member.pushErrorMsg(ErrValidateMsg)
-		log.WithField("Reason", ErrValidateMsg).Error("member check msg faile")
+	if err := member.validator(member.msg); err != nil {
+		log.WithField("Reason", err).Error("member check msg fail")
 		member.pushErrorMsg(ErrValidateMsg)
 		return
 	}

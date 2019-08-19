@@ -61,7 +61,6 @@ type ChainServiceInterface interface {
 	BlockValidator() []IBlockValidator
 	AddBlockValidator(validator IBlockValidator)
 	Config() *ChainConfig
-	AccumulateRewards(db *database.Database, b *types.Block, totalGasBalance *big.Int) error
 	DetachBlockFeed() *event.Feed
 }
 

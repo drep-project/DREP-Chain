@@ -34,7 +34,6 @@ func (blockMgr *BlockMgr) GenerateBlock(db *database.Database, leaderAddr crypto
 		Height:        height,
 		StateRoot:     []byte{},
 		TxRoot:        []byte{},
-		LeaderAddress: leaderAddr,
 	}
 
 	finalTxs := make([]*types.Transaction, 0, len(txs))

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/common"
 
 	"github.com/drep-project/drep-chain/params"
@@ -43,7 +42,6 @@ func (chainBlockValidator *ChainBlockValidator) VerifyHeader(header, parent *typ
 	}
 	// pre block timestamp before this block time
 	if header.Timestamp <= parent.Timestamp {
-		dlog.Error("*********************************************")
 		return ErrInvalidateTimestamp
 	}
 
@@ -74,7 +72,7 @@ func (chainBlockValidator *ChainBlockValidator) VerifyBody(block *types.Block) e
 	return nil
 }
 
-func (chainBlockValidator *ChainBlockValidator) ExecuteBlock(context *BlockExecuteContext) (types.Receipts, []*types.Log, uint64, error) {
+func (chainBlockValidator *ChainBlockValidator) ExecuteBlock(context *BlockExecuteContext) error {
 	totalGasFee := big.NewInt(0)
 	totalGasUsed := big.NewInt(0)
 	receipts := make([]*types.Receipt, context.Block.Data.TxCount)
@@ -83,13 +81,13 @@ func (chainBlockValidator *ChainBlockValidator) ExecuteBlock(context *BlockExecu
 	if len(context.Block.Data.TxList) < 0 {
 		context.AddGasUsed(totalGasUsed)
 		context.AddGasFee(totalGasFee)
-		return nil, nil, 0, nil
+		return nil
 	}
 
 	for i, t := range context.Block.Data.TxList {
 		receipt, gasUsed, gasFee, err := chainBlockValidator.txValidator.ExecuteTransaction(context.Db, t, context.Gp, context.Block.Header)
 		if err != nil {
-			return nil, nil, 0, err
+			return err
 			//dlog.Debug("execute transaction fail", "txhash", t.Data, "reason", err.Error())
 		}
 		if gasFee != nil {
@@ -105,5 +103,7 @@ func (chainBlockValidator *ChainBlockValidator) ExecuteBlock(context *BlockExecu
 	}
 	context.AddGasUsed(totalGasUsed)
 	context.AddGasFee(totalGasFee)
-	return receipts, allLogs, totalGasUsed.Uint64(), nil
+	context.Logs = allLogs
+	context.Receipts = receipts
+	return nil
 }

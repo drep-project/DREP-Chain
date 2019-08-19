@@ -11,6 +11,7 @@ import (
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/network/p2p"
+	"github.com/drep-project/drep-chain/params"
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
 	"github.com/drep-project/drep-chain/types"
 	"math/big"
@@ -49,16 +50,22 @@ func (soloConsensus *SoloConsensus) Run() (*types.Block, error) {
 		return nil, errors.New("sign block error")
 	}
 	block.Proof = sig.Serialize()
-	err = soloConsensus.ChainService.AccumulateRewards(db, block, gasFee)
+	err = soloConsensus.AccumulateRewards(db, gasFee)
 	if err != nil {
 		return nil, err
 	}
-
 	db.Commit()
 	block.Header.StateRoot = db.GetStateRoot()
 
 	//verify
-	db = soloConsensus.DbService.BeginTransaction(false)
+	if err := soloConsensus.verify(block); err!= nil {
+		return nil, err
+	}
+	return block, nil
+}
+
+func (soloConsensus *SoloConsensus) verify(block *types.Block) error {
+	db := soloConsensus.DbService.BeginTransaction(false)
 	gp := new(chain.GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
 	context := &chain.BlockExecuteContext{
@@ -69,18 +76,12 @@ func (soloConsensus *SoloConsensus) Run() (*types.Block, error) {
 		GasFee:  new(big.Int),
 	}
 	for _, validator := range soloConsensus.ChainService.BlockValidator() {
-		_, _, _, err := validator.ExecuteBlock(context)
+		err := validator.ExecuteBlock(context)
 		if err != nil {
 			log.WithField("ExecuteBlock", err).Debug("multySigVerify")
-			return nil, err
+			return err
 		}
 	}
-	err = soloConsensus.ChainService.AccumulateRewards(db, block, gasFee)
-	if err != nil {
-		log.WithField("AccumulateRewards", err).Debug("multySigVerify")
-		return nil, err
-	}
-
 	db.Commit()
 	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
 		stateRoot := db.GetStateRoot()
@@ -90,13 +91,13 @@ func (soloConsensus *SoloConsensus) Run() (*types.Block, error) {
 			}
 
 			log.Error("rootcmd root !=")
-			return nil, fmt.Errorf("state root not equal")
+			return fmt.Errorf("state root not equal")
 		}
 	} else {
 		log.WithField("gasUsed", context.GasUsed).Debug("multySigVerify")
-		return nil, err
+		return ErrGasUsed
 	}
-	return block, nil
+	return nil
 }
 
 func (soloConsensus *SoloConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, rw p2p.MsgReadWriter) error {
@@ -104,5 +105,14 @@ func (soloConsensus *SoloConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, rw
 }
 
 func (soloConsensus *SoloConsensus)  Validator( ) chain.IBlockValidator {
-	return &SoloValidator{soloConsensus.PrivKey.PubKey()}
+	return &SoloValidator{soloConsensus, soloConsensus.PrivKey.PubKey()}
+}
+
+
+// AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
+func (soloConsensus *SoloConsensus) AccumulateRewards(db *database.Database, totalGasBalance *big.Int) error {
+	soloAddr := crypto.PubKey2Address(soloConsensus.PrivKey.PubKey())
+	db.AddBalance(&soloAddr, totalGasBalance)
+	db.AddBalance(&soloAddr, params.CoinFromNumer(1000))
+	return nil
 }

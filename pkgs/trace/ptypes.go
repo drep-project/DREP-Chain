@@ -70,12 +70,12 @@ func (viewBlockHeader *ViewBlockHeader) From(block *types.Block) *ViewBlockHeade
 	viewBlockHeader.Timestamp = block.Header.Timestamp
 	viewBlockHeader.StateRoot = common.Encode(block.Header.StateRoot)
 	viewBlockHeader.TxRoot = common.Encode(block.Header.TxRoot)
-	viewBlockHeader.LeaderPubKey = block.Header.LeaderAddress.String()
+	//viewBlockHeader.LeaderPubKey = block.Header.LeaderAddress.String()
 
 	viewBlockHeader.MinorPubKeys = []string{}
-	for _, val := range block.Header.MinorAddresses {
-		viewBlockHeader.MinorPubKeys = append(viewBlockHeader.MinorPubKeys, val.String())
-	}
+	//for _, val := range block.Header.MinorAddresses {
+	//	viewBlockHeader.MinorPubKeys = append(viewBlockHeader.MinorPubKeys, val.String())
+	//}
 	return viewBlockHeader
 }
 
@@ -117,12 +117,12 @@ func (rpcBlock *ViewBlock) From(block *types.Block) *ViewBlock {
 	rpcBlock.Timestamp = uint64(block.Header.Timestamp)
 	rpcBlock.StateRoot = common.Encode(block.Header.StateRoot)
 	rpcBlock.TxRoot = common.Encode(block.Header.TxRoot)
-	rpcBlock.LeaderPubKey = block.Header.LeaderAddress.String()
+	//rpcBlock.LeaderPubKey = block.Header.LeaderAddress.String()
 
 	rpcBlock.MinorPubKeys = []string{}
-	for _, val := range block.Header.MinorAddresses {
-		rpcBlock.MinorPubKeys = append(rpcBlock.MinorPubKeys, val.String())
-	}
+	//for _, val := range block.Header.MinorAddresses {
+	//	rpcBlock.MinorPubKeys = append(rpcBlock.MinorPubKeys, val.String())
+//	}
 	rpcBlock.Txs = make([]string, len(txs))
 	for index, val := range txs {
 		rpcBlock.Txs[index] = val.Hash
@@ -156,10 +156,10 @@ func (rpcBlockHeader *RpcBlockHeader) FromBlockHeader(header *types.BlockHeader)
 	rpcBlockHeader.Timestamp = header.Timestamp
 	rpcBlockHeader.StateRoot = common.Encode(header.StateRoot)
 	rpcBlockHeader.TxRoot = common.Encode(header.TxRoot)
-	rpcBlockHeader.LeaderPubKey = header.LeaderAddress.String()
+	//rpcBlockHeader.LeaderPubKey = header.LeaderAddress.String()
 	rpcBlockHeader.MinorPubKeys = []string{}
-	for _, val := range header.MinorAddresses {
-		rpcBlockHeader.MinorPubKeys = append(rpcBlockHeader.MinorPubKeys, val.String())
-	}
+//	for _, val := range header.MinorAddresses {
+//		rpcBlockHeader.MinorPubKeys = append(rpcBlockHeader.MinorPubKeys, val.String())
+//	}
 	rpcBlockHeader.Hash = header.Hash().String()
 }

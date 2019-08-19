@@ -8,6 +8,7 @@ import (
 )
 
 type SoloValidator struct {
+	consensus *SoloConsensus
 	pubkey *secp256k1.PublicKey
 }
 
@@ -33,6 +34,6 @@ func (soloValidator *SoloValidator) VerifyBody(block *types.Block) error {
 	}
 }
 
-func (soloValidator *SoloValidator) ExecuteBlock(context *chain.BlockExecuteContext) (types.Receipts, []*types.Log, uint64, error) {
-	return nil, nil, 0, nil
+func (soloValidator *SoloValidator) ExecuteBlock(context *chain.BlockExecuteContext) error {
+	return soloValidator.consensus.AccumulateRewards(context.Db, context.GasFee)
 }
