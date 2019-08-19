@@ -17,11 +17,11 @@
 package trie
 
 import (
-	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/crypto"
 	"hash"
 	"sync"
 
+	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/drep-chain/crypto"
 	//"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rlp"
 	"golang.org/x/crypto/sha3"
@@ -172,6 +172,7 @@ func (h *hasher) store(n node, db *Database, force bool) (node, error) {
 	if err := rlp.Encode(&h.tmp, n); err != nil {
 		panic("encode error: " + err.Error())
 	}
+
 	if len(h.tmp) < 32 && !force {
 		return n, nil // Nodes smaller than 32 bytes are stored inside their parent
 	}

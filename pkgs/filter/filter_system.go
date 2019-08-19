@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"reflect"
 	"sync"
 	"time"
 
@@ -438,6 +439,8 @@ func (es *EventSystem) broadcast(filters filterIndex, ev interface{}) {
 		return
 	}
 
+	fmt.Println("broadcast:",reflect.TypeOf(ev))
+
 	switch e := ev.(type) {
 	case []*types.Log:
 		if len(e) > 0 {
@@ -471,7 +474,7 @@ func (es *EventSystem) broadcast(filters filterIndex, ev interface{}) {
 		for _, f := range filters[PendingTransactionsSubscription] {
 			f.hashes <- hashes
 		}
-	case types.ChainEvent:
+	case *types.ChainEvent:
 		for _, f := range filters[BlocksSubscription] {
 			f.headers <- e.Block.Header
 		}

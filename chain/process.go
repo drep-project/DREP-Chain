@@ -177,6 +177,7 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *typ
 		if err != nil {
 			break
 		}
+		//logs = append(logs,allLogs...)
 	}
 
 	if err != nil {
@@ -188,7 +189,7 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *typ
 		db.Commit()
 		oldStateRoot := db.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, oldStateRoot) {
-			if !db.RecoverTrie(chainService.bestChain.tip().StateRoot){
+			if !db.RecoverTrie(chainService.bestChain.tip().StateRoot) {
 				log.Fatal("root not equal and recover trie err")
 			}
 			err = errors.Wrapf(ErrNotMathcedStateRoot, "%s not matched %s", hex.EncodeToString(block.Header.StateRoot), hex.EncodeToString(oldStateRoot))
@@ -321,7 +322,10 @@ func (chainService *ChainService) notifyBlock(block *types.Block, logs []*types.
 		Logs:  logs,
 	}
 	chainService.NewBlockFeed().Send(&chainEvent)
-	chainService.logsFeed.Send(logs)
+
+	if len(logs) > 0 {
+		chainService.logsFeed.Send(logs)
+	}
 }
 
 func (chainService *ChainService) notifyDetachBlock(block *types.Block) {

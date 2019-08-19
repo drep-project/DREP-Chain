@@ -419,6 +419,7 @@ func (service *FilterService) GetFilterLogs(ctx context.Context, id ID) ([]*type
 		// Construct the range filter
 		filter = NewRangeFilter(service, begin, end, f.crit.Addresses, f.crit.Topics)
 	}
+	
 	// Run the filter and return all the logs
 	logs, err := filter.Logs(ctx)
 	if err != nil {
