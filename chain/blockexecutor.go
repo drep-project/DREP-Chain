@@ -75,9 +75,8 @@ func (chainBlockValidator *ChainBlockValidator) VerifyBody(block *types.Block) e
 func (chainBlockValidator *ChainBlockValidator) ExecuteBlock(context *BlockExecuteContext) error {
 	totalGasFee := big.NewInt(0)
 	totalGasUsed := big.NewInt(0)
-	receipts := make([]*types.Receipt, context.Block.Data.TxCount)
-	allLogs := make([]*types.Log, 0)
-
+	context.Receipts = make([]*types.Receipt, context.Block.Data.TxCount)
+	context.Logs = make([]*types.Log, 0)
 	if len(context.Block.Data.TxList) < 0 {
 		context.AddGasUsed(totalGasUsed)
 		context.AddGasFee(totalGasFee)
@@ -94,16 +93,18 @@ func (chainBlockValidator *ChainBlockValidator) ExecuteBlock(context *BlockExecu
 			totalGasFee.Add(totalGasFee, gasFee)
 			totalGasUsed.Add(totalGasUsed, gasUsed)
 		}
-		receipts[i] = receipt
-		allLogs = append(allLogs, receipt.Logs...)
+		context.Receipts[i] = receipt
+		context.Logs = append(context.Logs, receipt.Logs...)
 	}
-	context.Db.PutReceipts(*context.Block.Header.Hash(), receipts)
-	for _, receipt := range receipts {
+	newReceiptRoot := chainBlockValidator.chain.DeriveReceiptRoot(context.Receipts)
+	if newReceiptRoot != context.Block.Header.ReceiptRoot {
+		return ErrReceiptRoot
+	}
+	context.Db.PutReceipts(*context.Block.Header.Hash(), context.Receipts)
+	for _, receipt := range context.Receipts {
 		context.Db.PutReceipt(receipt.TxHash, receipt)
 	}
 	context.AddGasUsed(totalGasUsed)
 	context.AddGasFee(totalGasFee)
-	context.Logs = allLogs
-	context.Receipts = receipts
 	return nil
 }

@@ -30,14 +30,14 @@ type Contract struct {
 	Gas          uint64
 	Value        *big.Int
 	Jumpdests    destinations
-	TxHash       crypto.Hash
+	TxHash       *crypto.Hash
 }
 
-func NewContract(callerAddr crypto.CommonAddress, chainId types.ChainIdType, gas uint64, value *big.Int, jumpdests destinations) *Contract {
+func NewContract(callerAddr crypto.CommonAddress, txHash *crypto.Hash, chainId types.ChainIdType, gas uint64, value *big.Int, jumpdests destinations) *Contract {
 	if jumpdests == nil {
-		return &Contract{CallerAddr: callerAddr, ChainId: chainId, Gas: gas, Value: value, Jumpdests: NewDest()}
+		return &Contract{CallerAddr: callerAddr, ChainId: chainId, Gas: gas, Value: value, Jumpdests: NewDest(),TxHash:txHash}
 	}
-	return &Contract{CallerAddr: callerAddr, Gas: gas, Value: value, Jumpdests: jumpdests}
+	return &Contract{CallerAddr: callerAddr, Gas: gas, Value: value, Jumpdests: jumpdests,TxHash:txHash}
 }
 
 func (c *Contract) SetCode(contractAddr crypto.CommonAddress, byteCode crypto.ByteCode) {

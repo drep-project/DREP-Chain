@@ -67,8 +67,6 @@ func (st *Stack) require(n int) error {
 
 // Print dumps the content of the stack
 func (st *Stack) Print() {
-	return
-
 	fmt.Println("### stack ###")
 	if len(st.data) > 0 {
 		for i, val := range st.data {

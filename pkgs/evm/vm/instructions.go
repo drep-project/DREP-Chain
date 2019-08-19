@@ -952,7 +952,7 @@ func makeLog(size int) executionFunc {
 		//})
 		//
 		//interpreter.IntPool.put(mStart, mSize)
-		interpreter.EVM.State.AddLog(contract.CallerAddr, contract.TxHash, d, topics, interpreter.EVM.BlockNumber.Uint64())
+		interpreter.EVM.State.AddLog(contract.CallerAddr, *contract.TxHash, d, topics, interpreter.EVM.BlockNumber.Uint64())
 		return nil, nil
 	}
 }

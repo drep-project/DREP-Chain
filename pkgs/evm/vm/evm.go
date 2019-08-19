@@ -90,6 +90,7 @@ type Context struct {
 	GasLimit    uint64   // Provides information for GASLIMIT
 	BlockNumber *big.Int // Provides information for NUMBER
 	Time        *big.Int // Provides information for TIME
+	TxHash      *crypto.Hash
 }
 
 // EVM is the Ethereum Virtual Machine base object and provides
@@ -124,7 +125,6 @@ type EVM struct {
 	CallGasTemp uint64
 
 	ChainId types.ChainIdType
-	Abort   int32
 }
 
 // NewEVM returns a new EVM. The returned EVM is not thread safe and should
@@ -190,7 +190,7 @@ func (evm *EVM) Call(caller crypto.CommonAddress, addr crypto.CommonAddress, cha
 	evm.Transfer(evm.State, caller, to, value)
 	// Initialise a new contract and set the code that is to be used by the EVM.
 	// The contract is a scoped environment for this execution context only.
-	contract := NewContract(caller, chainId, gas, value, nil)
+	contract := NewContract(caller, evm.TxHash, chainId, gas, value, nil)
 	contract.SetCode(addr, evm.State.GetByteCode(&addr))
 	// Even if the account has no code, we need to continue because it might be a precompile
 	start := time.Now()
@@ -242,7 +242,7 @@ func (evm *EVM) CallCode(caller crypto.CommonAddress, addr crypto.CommonAddress,
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
-	contract := NewContract(caller, evm.ChainId, gas, value, nil)
+	contract := NewContract(caller, evm.TxHash, evm.ChainId, gas, value, nil)
 	contract.SetCode(addr, evm.State.GetByteCode(&addr))
 
 	ret, err = run(evm, contract, input, false)
@@ -272,7 +272,7 @@ func (evm *EVM) DelegateCall(con *Contract, contractAddr crypto.CommonAddress, i
 		return nil, gas, ErrCodeNotExists
 	}
 
-	contract := NewContract(callerAddr, chainId, gas, new(big.Int), jumpdests)
+	contract := NewContract(callerAddr, evm.TxHash, chainId, gas, new(big.Int), jumpdests)
 	contract.SetCode(contractAddr, byteCode)
 
 	ret, err = run(evm, contract, input, false)
@@ -306,7 +306,7 @@ func (evm *EVM) StaticCall(caller crypto.CommonAddress, addr crypto.CommonAddres
 		return nil, gas, ErrCodeNotExists
 	}
 
-	contract := NewContract(caller, evm.ChainId, gas, new(big.Int), nil)
+	contract := NewContract(caller, evm.TxHash, evm.ChainId, gas, new(big.Int), nil)
 	contract.SetCode(addr, byteCode)
 
 	// We do an AddBalance of zero here, just in order to trigger a touch.
@@ -364,7 +364,7 @@ func (evm *EVM) CreateContractCode(caller crypto.CommonAddress, codeAndHash *cod
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
 	contractAddr := account.Address
-	contract := NewContract(caller, evm.ChainId, gas, value, nil)
+	contract := NewContract(caller, evm.TxHash, evm.ChainId, gas, value, nil)
 	contract.SetCode(*contractAddr, codeAndHash.code)
 
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {

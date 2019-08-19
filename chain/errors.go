@@ -34,4 +34,5 @@ var (
 	ErrTooShortAlias             = errors.New("alias too short")
 	ErrTooLongAlias              = errors.New("alias too long")
 	ErrUnsupportAliasChar        = errors.New("alias only support number and letter")
+	ErrReceiptRoot 		  = errors.New("receipt root not match")
 )

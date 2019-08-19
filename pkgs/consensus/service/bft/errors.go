@@ -19,5 +19,5 @@ var (
 	ErrValidateMsg        = errors.New("validate message error")
 	ErrGenerateNouncePriv = errors.New("Generate nounce fail")
 	ErrMsgSize            = errors.New("err msg size")
-	ErrGasUsed = errors.New("GasUsed not match gasUsed in blockheader")
+	ErrGasUsed 			  = errors.New("GasUsed not match gasUsed in blockheader")
 )
