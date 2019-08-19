@@ -48,35 +48,35 @@ The state transitioning model does all the necessary work to work out a valid ne
 6) Derive new state root
 */
 type StateTransition struct {
-	gp              *GasPool
-	tx              *types.Transaction
-	from            *crypto.CommonAddress
-	gas             uint64
-	gasPrice        *big.Int
-	initialGas      uint64
-	value           *big.Int
-	data            []byte
-	header          *types.BlockHeader
-	bc              evm.ChainContext
-	vmService       evm.Vm
-	databaseService *database.Database
-	state           *vm.State
+	gp         *GasPool
+	tx         *types.Transaction
+	from       *crypto.CommonAddress
+	gas        uint64
+	gasPrice   *big.Int
+	initialGas uint64
+	value      *big.Int
+	data       []byte
+	header     *types.BlockHeader
+	bc         evm.ChainContext
+	vmService  evm.Vm
+	db         *database.Database
+	state      *vm.State
 }
 
 // NewStateTransition initialises and returns a new state transition object.
-func NewStateTransition(databaseService *database.Database, vmService evm.Vm, tx *types.Transaction, from *crypto.CommonAddress, header *types.BlockHeader, bc evm.ChainContext, gp *GasPool) *StateTransition {
+func NewStateTransition(db *database.Database, vmService evm.Vm, tx *types.Transaction, from *crypto.CommonAddress, header *types.BlockHeader, bc evm.ChainContext, gp *GasPool) *StateTransition {
 	return &StateTransition{
-		gp:              gp,
-		tx:              tx,
-		from:            from,
-		gasPrice:        tx.GasPrice(),
-		value:           tx.Amount(),
-		data:            tx.Data.Data,
-		header:          header,
-		bc:              bc,
-		vmService:       vmService,
-		databaseService: databaseService,
-		state:           vm.NewState(databaseService),
+		gp:        gp,
+		tx:        tx,
+		from:      from,
+		gasPrice:  tx.GasPrice(),
+		value:     tx.Amount(),
+		data:      tx.Data.Data,
+		header:    header,
+		bc:        bc,
+		vmService: vmService,
+		db:        db,
+		state:     vm.NewState(db),
 	}
 }
 
@@ -99,7 +99,7 @@ func (st *StateTransition) useGas(amount uint64) error {
 
 func (st *StateTransition) buyGas() error {
 	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.tx.Gas()), st.gasPrice)
-	if st.databaseService.GetBalance(st.from).Cmp(mgval) < 0 {
+	if st.db.GetBalance(st.from).Cmp(mgval) < 0 {
 		return ErrInsufficientBalanceForGas
 	}
 	if err := st.gp.SubGas(st.tx.Gas()); err != nil {
@@ -108,13 +108,13 @@ func (st *StateTransition) buyGas() error {
 	st.gas += st.tx.Gas()
 
 	st.initialGas = st.tx.Gas()
-	st.databaseService.SubBalance(st.from, mgval)
+	st.db.SubBalance(st.from, mgval)
 	return nil
 }
 
 func (st *StateTransition) preCheck() error {
 	// Make sure this transaction's nonce is correct.
-	nonce := st.databaseService.GetNonce(st.from)
+	nonce := st.db.GetNonce(st.from)
 	if nonce < st.tx.Nonce() {
 		log.WithField("db nonce", nonce).WithField("tx nonce", st.tx.Nonce()).Info("state precheck too hight")
 		return ErrNonceTooHigh
@@ -135,22 +135,22 @@ func (st *StateTransition) TransitionVmTxDb() (ret []byte, failed bool, err erro
 
 func (st *StateTransition) TransitionTransferDb() (ret []byte, failed bool, err error) {
 	from := st.from
-	originBalance := st.databaseService.GetBalance(from)
-	toBalance := st.databaseService.GetBalance(st.tx.To())
+	originBalance := st.db.GetBalance(from)
+	toBalance := st.db.GetBalance(st.tx.To())
 	leftBalance := originBalance.Sub(originBalance, st.tx.Amount())
 	if leftBalance.Sign() < 0 {
 		return nil, false, ErrBalance
 	}
 	addBalance := toBalance.Add(toBalance, st.tx.Amount())
-	err = st.databaseService.PutBalance(from, leftBalance)
+	err = st.db.PutBalance(from, leftBalance)
 	if err != nil {
 		return nil, false, err
 	}
-	err = st.databaseService.PutBalance(st.tx.To(), addBalance)
+	err = st.db.PutBalance(st.tx.To(), addBalance)
 	if err != nil {
 		return nil, false, err
 	}
-	err = st.databaseService.PutNonce(from, st.tx.Nonce()+1)
+	err = st.db.PutNonce(from, st.tx.Nonce()+1)
 	if err != nil {
 		return nil, false, err
 	}
@@ -198,7 +198,7 @@ func (st *StateTransition) TransitionAliasDb() (ret []byte, failed bool, err err
 	if err := CheckAlias(alias); err != nil {
 		return nil, false, err
 	}
-	err = st.databaseService.AliasSet(from, string(alias))
+	err = st.db.AliasSet(from, string(alias))
 	if err != nil {
 		return nil, false, err
 	}
@@ -288,23 +288,23 @@ func (st *StateTransition) TransitionAliasDb() (ret []byte, failed bool, err err
 	}
 
 	//minus alias fee from from account
-	originBalance := st.databaseService.GetBalance(from)
+	originBalance := st.db.GetBalance(from)
 	leftBalance := originBalance.Sub(originBalance, drepFee)
 	if leftBalance.Sign() < 0 {
 		return nil, false, ErrBalance
 	}
-	err = st.databaseService.PutBalance(from, leftBalance)
+	err = st.db.PutBalance(from, leftBalance)
 	if err != nil {
 		return nil, false, err
 	}
 	// put alias fee to hole address
-	zeroAddressBalance := st.databaseService.GetBalance(&params.HoleAddress)
+	zeroAddressBalance := st.db.GetBalance(&params.HoleAddress)
 	zeroAddressBalance = zeroAddressBalance.Add(zeroAddressBalance, drepFee)
-	err = st.databaseService.PutBalance(&params.HoleAddress, zeroAddressBalance)
+	err = st.db.PutBalance(&params.HoleAddress, zeroAddressBalance)
 	if err != nil {
 		return nil, false, err
 	}
-	err = st.databaseService.PutNonce(from, st.tx.Nonce()+1)
+	err = st.db.PutNonce(from, st.tx.Nonce()+1)
 	if err != nil {
 		return nil, false, err
 	}
@@ -322,7 +322,7 @@ func (st *StateTransition) refundGas() error {
 
 	// Return DREP for remaining gas, exchanged at the original rate.
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
-	err := st.databaseService.AddBalance(st.from, remaining)
+	err := st.db.AddBalance(st.from, remaining)
 	if err != nil {
 		return nil
 	}
