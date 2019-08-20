@@ -18,7 +18,7 @@ type Producer struct {
 }
 
 func (producer *Producer) Address() crypto.CommonAddress {
-	return crypto.PubKey2Address(producer.Pubkey)
+	return crypto.PubkeyToAddress(producer.Pubkey)
 }
 
 type ProducerSet []Producer
@@ -44,7 +44,7 @@ func (produceSet *ProducerSet) IsLocalPk(pk *secp256k1.PublicKey) bool {
 
 func (produceSet *ProducerSet) IsLocalAddress(addr crypto.CommonAddress) bool {
 	for _, bp := range *produceSet {
-		if crypto.PubKey2Address(bp.Pubkey) == addr {
+		if crypto.PubkeyToAddress(bp.Pubkey) == addr {
 			return true
 		}
 	}

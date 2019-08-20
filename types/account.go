@@ -43,7 +43,7 @@ func NewNode(parent *Node, chainId ChainIdType) *Node {
 		prvKey, _ = crypto.ToPrivateKey(h[:KeyBitSize])
 		chainCode = h[KeyBitSize:]
 	}
-	address := crypto.PubKey2Address(prvKey.PubKey())
+	address := crypto.PubkeyToAddress(prvKey.PubKey())
 	return &Node{
 		Address:    &address,
 		PrivateKey: prvKey,

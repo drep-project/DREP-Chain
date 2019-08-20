@@ -180,7 +180,7 @@ func decodeAddress(s string) (crypto.CommonAddress, error) {
 	if err == nil && len(b) != crypto.AddressLength {
 		err = fmt.Errorf("hex has invalid length %d after decoding; expected %d for address", len(b), crypto.AddressLength)
 	}
-	return crypto.Bytes2Address(b), err
+	return crypto.BytesToAddress(b), err
 }
 
 func decodeTopic(s string) (crypto.Hash, error) {

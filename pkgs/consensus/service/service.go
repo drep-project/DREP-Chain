@@ -83,7 +83,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	//consult privkey in wallet
 	accountNode, err := consensusService.WalletService.Wallet.GetAccountByPubkey(consensusService.Config.MyPk)
 	if err != nil {
-		log.WithField("init err", err).WithField("addr", crypto.PubKey2Address(consensusService.Config.MyPk)).Error("privkey of MyPk in Config is not in local wallet")
+		log.WithField("init err", err).WithField("addr", crypto.PubkeyToAddress(consensusService.Config.MyPk)).Error("privkey of MyPk in Config is not in local wallet")
 		return err
 	}
 

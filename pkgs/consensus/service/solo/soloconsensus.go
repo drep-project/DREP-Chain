@@ -27,7 +27,7 @@ type SoloConsensus struct {
 
 func NewSoloConsensus(chainService chain.ChainServiceInterface, blockMgr *blockmgr.BlockMgr, dbService *database.DatabaseService, privKey *secp256k1.PrivateKey) *SoloConsensus {
 	return &SoloConsensus{
-		CoinBase:     crypto.PubKey2Address(privKey.PubKey()),
+		CoinBase:     crypto.PubkeyToAddress(privKey.PubKey()),
 		PrivKey:      privKey,
 		BlockMgr:     blockMgr,
 		ChainService: chainService,
@@ -110,7 +110,7 @@ func (soloConsensus *SoloConsensus)  Validator( ) chain.IBlockValidator {
 
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
 func (soloConsensus *SoloConsensus) AccumulateRewards(db *database.Database, totalGasBalance *big.Int) error {
-	soloAddr := crypto.PubKey2Address(soloConsensus.PrivKey.PubKey())
+	soloAddr := crypto.PubkeyToAddress(soloConsensus.PrivKey.PubKey())
 	db.AddBalance(&soloAddr, totalGasBalance)
 	db.AddBalance(&soloAddr, params.CoinFromNumer(1000))
 	return nil

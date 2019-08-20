@@ -9,9 +9,9 @@ var (
 	HoleAddressStr = "0x0000000000000000000000000000000000000000"
 )
 var (
-	HoleAddress = crypto.String2Address(HoleAddressStr)
+	HoleAddress = crypto.HexToAddress(HoleAddressStr)
 	Preminer    = map[crypto.CommonAddress]*big.Int{
-		crypto.String2Address("0xec61c03f719a5c214f60719c3f36bb362a202125"): CoinFromNumer(10000000000),
+		crypto.HexToAddress("0xaD3dC2D8aedef155eabA42Ab72C1FE480699336c"): CoinFromNumer(10000000000),
 	}
 )
 

@@ -105,7 +105,7 @@ func (wallet *Wallet) GetAccountByPubkey(pubkey *secp256k1.PublicKey) (*types.No
 	if err := wallet.checkWallet(RPERMISSION); err != nil {
 		return nil, ErrClosedWallet
 	}
-	addr := crypto.PubKey2Address(pubkey)
+	addr := crypto.PubkeyToAddress(pubkey)
 	return wallet.GetAccountByAddress(&addr)
 }
 
@@ -210,7 +210,7 @@ func (wallet *Wallet) ImportPrivKey(key *secp256k1.PrivateKey) (*types.Node, err
 	if err := wallet.checkWallet(WPERMISSION); err != nil {
 		return nil, err
 	}
-	addr := crypto.PubKey2Address(key.PubKey())
+	addr := crypto.PubkeyToAddress(key.PubKey())
 	node := &types.Node{
 		Address:    &addr,
 		PrivateKey: key,

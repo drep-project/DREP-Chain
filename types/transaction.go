@@ -57,7 +57,7 @@ func (tx *Transaction) From() (*crypto.CommonAddress, error) {
 	if err != nil {
 		return nil, err
 	}
-	addr := crypto.PubKey2Address(pk)
+	addr := crypto.PubkeyToAddress(pk)
 	tx.from.Store(&addr)
 	return &addr, nil
 }

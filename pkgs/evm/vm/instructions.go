@@ -23,6 +23,7 @@ import (
 	"github.com/drep-project/drep-chain/common/math"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/sha3"
+	"github.com/drep-project/drep-chain/params"
 	"math/big"
 )
 
@@ -399,7 +400,7 @@ func opBalance(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memo
 	slot := stack.peek()
 	//slot.Set(interpreter.evm.StateDB.GetBalance(BigToAddress(slot)))
 	evm := interpreter.EVM
-	addr := crypto.Big2Address(slot)
+	addr := crypto.BigToAddress(slot)
 	balance := evm.State.GetBalance(&addr)
 	slot.Set(balance)
 	return nil, nil
@@ -473,7 +474,7 @@ func opReturnDataCopy(pc *uint64, interpreter *EVMInterpreter, contract *Contrac
 func opExtCodeSize(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	slot := stack.peek()
 	//slot.SetUint64(uint64(interpreter.EVM.StateDB.GetCodeSize(BigToAddress(slot))))
-	l := interpreter.EVM.State.GetCodeSize(crypto.Big2Address(slot))
+	l := interpreter.EVM.State.GetCodeSize(crypto.BigToAddress(slot))
 	slot.SetUint64(uint64(l))
 	return nil, nil
 }
@@ -500,7 +501,7 @@ func opCodeCopy(pc *uint64, interpreter *EVMInterpreter, contract *Contract, mem
 
 func opExtCodeCopy(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	var (
-		addr       = crypto.Big2Address(stack.pop())
+		addr       = crypto.BigToAddress(stack.pop())
 		memOffset  = stack.pop()
 		codeOffset = stack.pop()
 		length     = stack.pop()
@@ -541,7 +542,7 @@ func opExtCodeCopy(pc *uint64, interpreter *EVMInterpreter, contract *Contract, 
 // this account should be regarded as a non-existent account and zero should be returned.
 func opExtCodeHash(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	slot := stack.peek()
-	hash := interpreter.EVM.State.GetCodeHash(crypto.Big2Address(slot)).Bytes()
+	hash := interpreter.EVM.State.GetCodeHash(crypto.BigToAddress(slot)).Bytes()
 	slot.SetBytes(hash)
 	return nil, nil
 }
@@ -791,7 +792,7 @@ func opCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 	args := memory.Get(inOffset.Int64(), inSize.Int64())
 
 	if value.Sign() != 0 {
-		gas += CallStipend
+		gas += params.CallStipend
 	}
 	ret, returnGas, err := interpreter.EVM.Call(contract.CallerAddr, contract.ContractAddr, contract.ChainId, args, gas, value)
 	if err != nil {
@@ -816,13 +817,13 @@ func opCallCode(pc *uint64, interpreter *EVMInterpreter, contract *Contract, mem
 	gas := interpreter.EVM.CallGasTemp
 	// Pop other call parameters.
 	addr, value, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
-	toAddr := crypto.Big2Address(addr)
+	toAddr := crypto.BigToAddress(addr)
 	value = common.U256(value)
 	// Get arguments from the memory.
 	args := memory.Get(inOffset.Int64(), inSize.Int64())
 
 	if value.Sign() != 0 {
-		gas += CallStipend
+		gas += params.CallStipend
 	}
 	ret, returnGas, err := interpreter.EVM.CallCode(contract.CallerAddr, toAddr, args, gas, value)
 	if err != nil {
@@ -846,7 +847,7 @@ func opDelegateCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract,
 	gas := interpreter.EVM.CallGasTemp
 	// Pop other call parameters.
 	addr, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
-	toAddr := crypto.Big2Address(addr)
+	toAddr := crypto.BigToAddress(addr)
 	// Get arguments from the memory.
 	args := memory.Get(inOffset.Int64(), inSize.Int64())
 
@@ -873,7 +874,7 @@ func opStaticCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, m
 	gas := interpreter.EVM.CallGasTemp
 	// Pop other call parameters.
 	addr, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
-	toAddr := crypto.Big2Address(addr)
+	toAddr := crypto.BigToAddress(addr)
 	// Get arguments from the memory.
 	args := memory.Get(inOffset.Int64(), inSize.Int64())
 
@@ -924,7 +925,7 @@ func opSuicide(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memo
 	//interpreter.evm.StateDB.Suicide(contract.GetAddress())
 
 	balance := interpreter.EVM.State.GetBalance(&contract.CallerAddr)
-	addr := crypto.Big2Address(stack.pop())
+	addr := crypto.BigToAddress(stack.pop())
 	interpreter.EVM.State.AddBalance(&addr, balance)
 	interpreter.EVM.State.Suicide(&contract.CallerAddr)
 	return nil, nil

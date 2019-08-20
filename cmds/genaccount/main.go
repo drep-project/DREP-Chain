@@ -80,7 +80,7 @@ func gen(ctx *cli.Context) error {
 		}
 		instanceDir := filepath.Join(path, nodeItems[i].Name, "drepnode")
 		nodePrivateKey := GeneratePrivateKey(instanceDir)
-		fmt.Println(crypto.PubKey2Address(nodePrivateKey.PubKey()).String(), hex.EncodeToString(nodePrivateKey.Serialize()))
+		fmt.Println(crypto.PubkeyToAddress(nodePrivateKey.PubKey()).String(), hex.EncodeToString(nodePrivateKey.Serialize()))
 		node := enode.NewV4(nodePrivateKey.PubKey(), ip, nodeItems[i].Port, nodeItems[i].Port)
 		bootsNodes = append(bootsNodes, node)
 
@@ -190,7 +190,7 @@ func RandomNode(seed []byte) *types.Node {
 	h := hmAC(seed, types.DrepMark)
 	prvKey, _ = crypto.ToPrivateKey(h[:types.KeyBitSize])
 	chainCode = h[types.KeyBitSize:]
-	addr := crypto.PubKey2Address(prvKey.PubKey())
+	addr := crypto.PubkeyToAddress(prvKey.PubKey())
 	return &types.Node{
 		PrivateKey: prvKey,
 		Address:    &addr,

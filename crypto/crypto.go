@@ -55,13 +55,13 @@ func CreateAddress(b CommonAddress, nonce uint64) CommonAddress {
 	var buf = make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, nonce)
 	data := append(b.Bytes(), buf...)
-	return Bytes2Address(sha3.Keccak256(data)[12:])
+	return BytesToAddress(sha3.Keccak256(data)[12:])
 }
 
 // CreateAddress2 creates an ethereum address given the address bytes, initial
 // contract code and a salt.
 func CreateAddress2(b CommonAddress, salt [32]byte, code []byte) CommonAddress {
-	return Bytes2Address(sha3.Keccak256([]byte{0xff}, b.Bytes(), salt[:], sha3.Keccak256(code))[12:])
+	return BytesToAddress(sha3.Keccak256([]byte{0xff}, b.Bytes(), salt[:], sha3.Keccak256(code))[12:])
 }
 
 // LoadECDSA loads a secp256k1 private key from the given file.

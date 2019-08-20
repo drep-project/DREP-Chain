@@ -97,7 +97,6 @@ func (chainBlockValidator *ChainBlockValidator) ExecuteBlock(context *BlockExecu
 		context.Logs = append(context.Logs, receipt.Logs...)
 	}
 	newReceiptRoot := chainBlockValidator.chain.DeriveReceiptRoot(context.Receipts)
-	chainBlockValidator.chain.DeriveReceiptRoot(context.Receipts)
 	if newReceiptRoot != context.Block.Header.ReceiptRoot {
 		return ErrReceiptRoot
 	}

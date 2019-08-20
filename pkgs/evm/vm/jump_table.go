@@ -2,6 +2,7 @@ package vm
 
 import (
 	"errors"
+	"github.com/drep-project/drep-chain/params"
 	"math/big"
 )
 
@@ -475,7 +476,7 @@ func newFrontierInstructionSet() [256]operation {
 		},
 		JUMPDEST: {
 			execute:       opJumpdest,
-			gasCost:       constGasFunc(JumpdestGas),
+			gasCost:       constGasFunc(params.JumpdestGas),
 			validateStack: makeStackFunc(0, 0),
 			valid:         true,
 		},

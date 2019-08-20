@@ -3,6 +3,7 @@ package vm
 import (
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/params"
 )
 
 // memoryGasCosts calculates the quadratic gas for memory expansion. It does so
@@ -28,8 +29,8 @@ func memoryGasCost(mem *Memory, newMemSize uint64) (uint64, error) {
 
 	if newMemSize > uint64(mem.Len()) {
 		square := newMemSizeWords * newMemSizeWords
-		linCoef := newMemSizeWords * MemoryGas
-		quadCoef := square / QuadCoeffDiv
+		linCoef := newMemSizeWords * params.MemoryGas
+		quadCoef := square / params.QuadCoeffDiv
 		newTotalFee := linCoef + quadCoef
 
 		fee := newTotalFee - mem.lastGasCost
@@ -62,7 +63,7 @@ func gasCallDataCopy(evm *EVM, contract *Contract, stack *Stack, mem *Memory, me
 		return 0, errGasUintOverflow
 	}
 
-	if words, overflow = common.SafeMul(common.ToWordSize(words), CopyGas); overflow {
+	if words, overflow = common.SafeMul(common.ToWordSize(words), params.CopyGas); overflow {
 		return 0, errGasUintOverflow
 	}
 
@@ -88,7 +89,7 @@ func gasReturnDataCopy(evm *EVM, contract *Contract, stack *Stack, mem *Memory, 
 		return 0, errGasUintOverflow
 	}
 
-	if words, overflow = common.SafeMul(common.ToWordSize(words), CopyGas); overflow {
+	if words, overflow = common.SafeMul(common.ToWordSize(words), params.CopyGas); overflow {
 		return 0, errGasUintOverflow
 	}
 
@@ -109,14 +110,14 @@ func gasSStore(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySi
 	// 3. From a non-zero to a non-zero                         (CHANGE)
 	if val == nil && y.Sign() != 0 {
 		// 0 => non 0
-		return SstoreSetGas, nil
+		return params.SstoreSetGas, nil
 	} else if val != nil && y.Sign() == 0 {
 		// non 0 => 0
-		evm.State.AddRefund(SstoreRefundGas)
-		return SstoreClearGas, nil
+		evm.State.AddRefund(params.SstoreRefundGas)
+		return params.SstoreClearGas, nil
 	} else {
 		// non 0 => non 0 (or 0 => 0)
-		return SstoreResetGas, nil
+		return params.SstoreResetGas, nil
 	}
 }
 
@@ -132,15 +133,15 @@ func makeGasLog(n uint64) gasFunc {
 			return 0, err
 		}
 
-		if gas, overflow = common.SafeAdd(gas, LogGas); overflow {
+		if gas, overflow = common.SafeAdd(gas, params.LogGas); overflow {
 			return 0, errGasUintOverflow
 		}
-		if gas, overflow = common.SafeAdd(gas, n*LogTopicGas); overflow {
+		if gas, overflow = common.SafeAdd(gas, n*params.LogTopicGas); overflow {
 			return 0, errGasUintOverflow
 		}
 
 		var memorySizeGas uint64
-		if memorySizeGas, overflow = common.SafeMul(requestedSize, LogDataGas); overflow {
+		if memorySizeGas, overflow = common.SafeMul(requestedSize, params.LogDataGas); overflow {
 			return 0, errGasUintOverflow
 		}
 		if gas, overflow = common.SafeAdd(gas, memorySizeGas); overflow {
@@ -157,7 +158,7 @@ func gasSha3(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize
 		return 0, err
 	}
 
-	if gas, overflow = common.SafeAdd(gas, Sha3Gas); overflow {
+	if gas, overflow = common.SafeAdd(gas, params.Sha3Gas); overflow {
 		return 0, errGasUintOverflow
 	}
 
@@ -165,7 +166,7 @@ func gasSha3(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize
 	if overflow {
 		return 0, errGasUintOverflow
 	}
-	if wordGas, overflow = common.SafeMul(common.ToWordSize(wordGas), Sha3WordGas); overflow {
+	if wordGas, overflow = common.SafeMul(common.ToWordSize(wordGas), params.Sha3WordGas); overflow {
 		return 0, errGasUintOverflow
 	}
 	if gas, overflow = common.SafeAdd(gas, wordGas); overflow {
@@ -189,7 +190,7 @@ func gasCodeCopy(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memory
 	if overflow {
 		return 0, errGasUintOverflow
 	}
-	if wordGas, overflow = common.SafeMul(common.ToWordSize(wordGas), CopyGas); overflow {
+	if wordGas, overflow = common.SafeMul(common.ToWordSize(wordGas), params.CopyGas); overflow {
 		return 0, errGasUintOverflow
 	}
 	if gas, overflow = common.SafeAdd(gas, wordGas); overflow {
@@ -214,7 +215,7 @@ func gasExtCodeCopy(evm *EVM, contract *Contract, stack *Stack, mem *Memory, mem
 		return 0, errGasUintOverflow
 	}
 
-	if wordGas, overflow = common.SafeMul(common.ToWordSize(wordGas), CopyGas); overflow {
+	if wordGas, overflow = common.SafeMul(common.ToWordSize(wordGas), params.CopyGas); overflow {
 		return 0, errGasUintOverflow
 	}
 
@@ -270,7 +271,7 @@ func gasCreate(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySi
 	if err != nil {
 		return 0, err
 	}
-	if gas, overflow = common.SafeAdd(gas, CreateGas); overflow {
+	if gas, overflow = common.SafeAdd(gas, params.CreateGas); overflow {
 		return 0, errGasUintOverflow
 	}
 	return gas, nil
@@ -282,7 +283,7 @@ func gasCreate2(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memoryS
 	if err != nil {
 		return 0, err
 	}
-	if gas, overflow = common.SafeAdd(gas, Create2Gas); overflow {
+	if gas, overflow = common.SafeAdd(gas, params.Create2Gas); overflow {
 		return 0, errGasUintOverflow
 	}
 	return gas, nil
@@ -318,13 +319,13 @@ func gasCall(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize
 		gas            = Calls
 		transfersValue = stack.Back(2).Sign() != 0
 	)
-	addr := crypto.Big2Address(stack.Back(1))
+	addr := crypto.BigToAddress(stack.Back(1))
 	//addr := evm.State.GetAccountAddress(stack.Back(1))
 	if addr.IsEmpty() {
-		gas += CallNewAccountGas
+		gas += params.CallNewAccountGas
 	}
 	if transfersValue {
-		gas += CallValueTransferGas
+		gas += params.CallValueTransferGas
 	}
 	memoryGas, err := memoryGasCost(mem, memorySize)
 	if err != nil {
@@ -348,7 +349,7 @@ func gasCall(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize
 func gasCallCode(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	gas := Calls
 	if stack.Back(2).Sign() != 0 {
-		gas += CallValueTransferGas
+		gas += params.CallValueTransferGas
 	}
 	memoryGas, err := memoryGasCost(mem, memorySize)
 	if err != nil {

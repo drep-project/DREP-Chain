@@ -63,7 +63,7 @@ func NewBftConsensus(
 	addPeer.Subscribe(addPeerChan)
 	removePeer.Subscribe(removePeerChan)
 	return &BftConsensus{
-		CoinBase:      crypto.PubKey2Address(privKey.PubKey()),
+		CoinBase:      crypto.PubkeyToAddress(privKey.PubKey()),
 		PrivKey:       privKey,
 		BlockMgr:      blockMgr,
 		ChainService:  chainService,

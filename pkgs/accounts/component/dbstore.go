@@ -75,7 +75,7 @@ func (dbStore *DbStore) StoreKey(key *types.Node, auth string) error {
 	if err != nil {
 		return err
 	}
-	addr := crypto.PubKey2Address(key.PrivateKey.PubKey())
+	addr := crypto.PubkeyToAddress(key.PrivateKey.PubKey())
 	return dbStore.db.Put(addr[:], content, nil)
 }
 

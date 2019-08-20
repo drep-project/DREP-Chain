@@ -131,7 +131,7 @@ func BytesToCryptoNode(data []byte, auth string) (node *types.Node, errRef error
 	*/
 	privD, errRef := DecryptData(*cryptoNode, auth)
 	priv, pub := secp256k1.PrivKeyFromScalar(privD)
-	addr := crypto2.PubKey2Address(pub)
+	addr := crypto2.PubkeyToAddress(pub)
 	node = &types.Node{
 		Address:    &addr,
 		PrivateKey: priv,
