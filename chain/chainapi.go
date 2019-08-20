@@ -228,5 +228,6 @@ func (chain *ChainApi) GetReceipt(txHash crypto.Hash) *chainType.Receipt {
    {"jsonrpc":"2.0","id":3,"result":""}
 */
 func (chain *ChainApi) GetLogs(txHash crypto.Hash) []*chainType.Log {
-	return chain.dbService.GetLogs(txHash)
+	//return chain.dbService.GetLogs(txHash)
+	return chain.dbService.GetReceipt(txHash).Logs
 }

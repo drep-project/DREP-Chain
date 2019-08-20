@@ -47,7 +47,7 @@ func NewStateProcessor(chainservice *ChainService) *StateProcessor {
 // indicating the block was invalid.
 func (stateProcessor *StateProcessor) ApplyTransaction(db *database.Database, bc evm.ChainContext, gp *GasPool, header *types.BlockHeader, tx *types.Transaction, from *crypto.CommonAddress, usedGas *uint64) (*types.Receipt, uint64, error) {
 	// Apply the transaction to the current state (included in the env)
-	_, gas, _, failed, err := stateProcessor.ApplyMessage(db, tx, from, header, bc, gp)
+	logs, _, gas, _, failed, err := stateProcessor.ApplyMessage(db, tx, from, header, bc, gp)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -65,7 +65,7 @@ func (stateProcessor *StateProcessor) ApplyTransaction(db *database.Database, bc
 		fmt.Println(receipt.ContractAddress)
 	}
 	// Set the receipt logs and create a bloom for filtering
-	receipt.Logs = db.GetLogs(*tx.TxHash())
+	receipt.Logs = logs
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
 	//receipt.BlockHash = *header.Hash()
 	receipt.BlockNumber = header.Height
@@ -79,35 +79,37 @@ func (stateProcessor *StateProcessor) ApplyTransaction(db *database.Database, bc
 // the gas used (which includes gas refunds) and an error if it failed. An error always
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
-func (stateProcessor *StateProcessor) ApplyMessage(db *database.Database, tx *types.Transaction, from *crypto.CommonAddress, header *types.BlockHeader, bc evm.ChainContext, gp *GasPool) ([]byte, uint64, uint64, bool, error) {
+func (stateProcessor *StateProcessor) ApplyMessage(db *database.Database, tx *types.Transaction, from *crypto.CommonAddress, header *types.BlockHeader, bc evm.ChainContext, gp *GasPool) ([]*types.Log, []byte, uint64, uint64, bool, error) {
 	stateTransaction := NewStateTransition(db, stateProcessor.chainService.VmService, tx, from, header, bc, gp)
 	if err := stateTransaction.preCheck(); err != nil {
-		return nil, 0, 0, false, err
+		return nil, nil, 0, 0, false, err
 	}
 
 	// Pay intrinsic gastx
 	gas, err := tx.IntrinsicGas()
 	if err != nil {
-		return nil, 0, 0, false, err
+		return nil, nil, 0, 0, false, err
 	}
 
 	if err = stateTransaction.useGas(gas); err != nil {
-		return nil, 0, 0, false, err
+		return nil, nil, 0, 0, false, err
 	}
 
 	var ret []byte
 	var fail bool
+	var logs []*types.Log
 	if tx.Type() == types.TransferType {
 		ret, fail, err = stateTransaction.TransitionTransferDb()
 	} else if tx.Type() == types.CallContractType || tx.Type() == types.CreateContractType {
 		ret, fail, err = stateTransaction.TransitionVmTxDb()
+		logs = stateTransaction.state.GetLogs(tx.TxHash())
 	} else if tx.Type() == types.SetAliasType {
 		ret, fail, err = stateTransaction.TransitionAliasDb()
 	} else {
-		return nil, 0, 0, false, ErrUnsupportTxType
+		return nil, nil, 0, 0, false, ErrUnsupportTxType
 	}
 
 	stateTransaction.refundGas()
 	gasFee := new(big.Int).Mul(new(big.Int).SetUint64(stateTransaction.gasUsed()), stateTransaction.gasPrice).Uint64()
-	return ret, stateTransaction.gasUsed(), gasFee, fail, err
+	return logs, ret, stateTransaction.gasUsed(), gasFee, fail, err
 }

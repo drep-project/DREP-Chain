@@ -345,19 +345,19 @@ func (db *Database) GetReputation(addr *crypto.CommonAddress) *big.Int {
 	return &storage.Reputation
 }
 
-func (db *Database) GetLogs(txHash crypto.Hash) []*types.Log {
-	key := sha3.Keccak256([]byte("logs_" + txHash.String()))
-	value, err := db.Get(key)
-	if err != nil {
-		return make([]*types.Log, 0)
-	}
-	var logs []*types.Log
-	err = binary.Unmarshal(value, &logs)
-	if err != nil {
-		return make([]*types.Log, 0)
-	}
-	return logs
-}
+//func (db *Database) GetLogs(txHash crypto.Hash) []*types.Log {
+//	key := sha3.Keccak256([]byte("logs_" + txHash.String()))
+//	value, err := db.Get(key)
+//	if err != nil {
+//		return make([]*types.Log, 0)
+//	}
+//	var logs []*types.Log
+//	err = binary.Unmarshal(value, &logs)
+//	if err != nil {
+//		return make([]*types.Log, 0)
+//	}
+//	return logs
+//}
 
 func (db *Database) PutLogs(logs []*types.Log, txHash crypto.Hash) error {
 	key := sha3.Keccak256([]byte("logs_" + txHash.String()))
@@ -368,11 +368,12 @@ func (db *Database) PutLogs(logs []*types.Log, txHash crypto.Hash) error {
 	return db.Put(key, value)
 }
 
-func (db *Database) AddLog(log *types.Log) error {
-	logs := db.GetLogs(log.TxHash)
-	logs = append(logs, log)
-	return db.PutLogs(logs, log.TxHash)
-}
+//func (db *Database) AddLog(log *types.Log) error {
+//	//logs := db.GetLogs(log.TxHash)
+//	//logs = append(logs, log)
+//	//return db.PutLogs(logs, log.TxHash)
+//	return nil
+//}
 
 func (db *Database) PutReceipt(txHash crypto.Hash, receipt *types.Receipt) error {
 	key := sha3.Keccak256([]byte("receipt_" + txHash.String()))

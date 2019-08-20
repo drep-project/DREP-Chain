@@ -197,17 +197,17 @@ func (database *DatabaseService) GetReputation(addr *crypto.CommonAddress) *big.
 	return database.db.GetReputation(addr)
 }
 
-func (database *DatabaseService) GetLogs(txHash crypto.Hash) []*chainType.Log {
-	return database.db.GetLogs(txHash)
-}
+//func (database *DatabaseService) GetLogs(txHash crypto.Hash) []*chainType.Log {
+//	return database.db.GetLogs(txHash)
+//}
 
 func (database *DatabaseService) PutLogs(logs []*chainType.Log, txHash crypto.Hash) error {
 	return database.db.PutLogs(logs, txHash)
 }
 
-func (database *DatabaseService) AddLog(log *chainType.Log) error {
-	return database.db.AddLog(log)
-}
+//func (database *DatabaseService) AddLog(log *chainType.Log) error {
+//	return database.db.AddLog(log)
+//}
 
 func (database *DatabaseService) PutReceipt(txHash crypto.Hash, receipt *chainType.Receipt) error {
 	return database.db.PutReceipt(txHash, receipt)

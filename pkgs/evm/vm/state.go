@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"bytes"
 	"math/big"
 	"sync"
 
@@ -26,7 +27,7 @@ type VMState interface {
 	GetCodeSize(addr crypto.CommonAddress) int
 	GetCodeHash(addr crypto.CommonAddress) crypto.Hash
 	SetByteCode(addr *crypto.CommonAddress, byteCode crypto.ByteCode) error
-	GetLogs(txHash crypto.Hash) []*types.Log
+	//GetLogs(txHash crypto.Hash) []*types.Log
 	AddLog(contractAddr crypto.CommonAddress, txHash crypto.Hash, data []byte, topics []crypto.Hash, blockNumber uint64) error
 	AddRefund(gas uint64)
 	SubRefund(gas uint64)
@@ -39,11 +40,13 @@ type VMState interface {
 type State struct {
 	db     *database.Database
 	refund uint64
+	logs   []*types.Log
 }
 
 func NewState(database *database.Database) *State {
 	return &State{
-		db: database,
+		db:   database,
+		logs: make([]*types.Log, 0),
 	}
 }
 
@@ -100,8 +103,14 @@ func (s *State) SetByteCode(addr *crypto.CommonAddress, byteCode crypto.ByteCode
 	return s.db.PutByteCode(addr, byteCode)
 }
 
-func (s *State) GetLogs(txHash crypto.Hash) []*types.Log {
-	return s.db.GetLogs(txHash)
+func (s *State) GetLogs(txHash *crypto.Hash) []*types.Log {
+	retLogs := make([]*types.Log, 0)
+	for _, log := range s.logs {
+		if bytes.Equal(log.TxHash[:], txHash[:]) {
+			retLogs = append(retLogs, log)
+		}
+	}
+	return retLogs
 }
 
 func (s *State) AddLog(contractAddr crypto.CommonAddress, txHash crypto.Hash, data []byte, topics []crypto.Hash, blockNumber uint64) error {
@@ -112,7 +121,8 @@ func (s *State) AddLog(contractAddr crypto.CommonAddress, txHash crypto.Hash, da
 		Topics:  topics,
 		Height:  blockNumber,
 	}
-	return s.db.AddLog(log)
+	s.logs = append(s.logs, log)
+	return nil
 }
 
 func (s *State) AddRefund(gas uint64) {
