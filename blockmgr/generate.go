@@ -42,8 +42,8 @@ func (blockMgr *BlockMgr) GenerateBlock(db *database.Database, leaderAddr crypto
 	gasUsed := new(big.Int)
 	gasFee := new(big.Int)
 	gp := new(chain.GasPool).AddGas(blockHeader.GasLimit.Uint64())
-	stopchanel := make(chan struct{})
-	time.AfterFunc(time.Second*5, func() {
+	stopchanel := make(chan struct{}, 1)
+	tm := time.AfterFunc(time.Second*5, func() {
 		stopchanel <- struct{}{}
 	})
 
@@ -75,7 +75,7 @@ SELECT_TX:
 			}
 		}
 	}
-
+	tm.Stop()
 	blockHeader.GasUsed = *new(big.Int).SetUint64(gasUsed.Uint64())
 	blockHeader.TxRoot = blockMgr.ChainService.DeriveMerkleRoot(finalTxs)
 	blockHeader.ReceiptRoot = blockMgr.ChainService.DeriveReceiptRoot(finalReceipts)
