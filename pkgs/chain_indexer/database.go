@@ -70,8 +70,7 @@ func (chainIndexer *ChainIndexerService) getSectionHead(section uint64) crypto.H
 	if len(value) == 0 {
 		return sectionHead
 	}
-
-	binary.Unmarshal(value, sectionHead)
+	sectionHead.SetBytes(value)
 	return sectionHead
 }
 
@@ -80,17 +79,10 @@ func (chainIndexer *ChainIndexerService) setSectionHead(section uint64, hash cry
 	var data [8]byte
 	bin.BigEndian.PutUint64(data[:], section)
 	key := append([]byte(indexerPrefix+"shead"), data[:]...)
-
-	value, err := binary.Marshal(hash)
+	err := chainIndexer.DatabaseService.Put(key, hash.Bytes())
 	if err != nil {
 		return err
 	}
-
-	err = chainIndexer.DatabaseService.Put(key, value)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 

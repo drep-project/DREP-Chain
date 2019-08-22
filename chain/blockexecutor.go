@@ -28,7 +28,7 @@ func (chainBlockValidator *ChainBlockValidator) VerifyHeader(header, parent *typ
 	if header.ChainId != chainBlockValidator.chain.ChainID() {
 		return ErrChainId
 	}
-	// Verify version  mathch
+	// Verify version  matched
 	if header.Version != common.Version {
 		return ErrVersion
 	}
