@@ -1,6 +1,7 @@
 package blockmgr
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/drep-project/binary"
@@ -31,6 +32,7 @@ type BlockMgrApi struct {
 	{"jsonrpc":"2.0","id":1,"result":"0xf30e858667fa63bc57ae395c3f57ede9bb3ad4969d12f4bce51d900fb5931538"}
 */
 func (blockMgrApi *BlockMgrApi) SendRawTransaction(txbytes common.Bytes) (string, error) {
+	fmt.Println(string(txbytes))
 	tx := &types.Transaction{}
 	err := binary.Unmarshal(txbytes, tx)
 	if err != nil {
@@ -59,6 +61,19 @@ func (blockMgrApi *BlockMgrApi) GasPrice() (*big.Int, error) {
 */
 func (blockMgrApi *BlockMgrApi) GetPoolTransactions(addr *crypto.CommonAddress) []types.Transactions {
 	return blockMgrApi.blockMgr.GetPoolTransactions(addr)
+}
+
+/*
+ name: GetTransactionCount
+ usage: 获取交易池中的交易信息.
+ params:
+	1. 待查询地址
+ return: 交易池中所有交易
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_getTransactionCount","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ response:
+*/
+func (blockMgrApi *BlockMgrApi) GetTransactionCount(addr *crypto.CommonAddress) uint64 {
+	return blockMgrApi.blockMgr.GetTransactionCount(addr)
 }
 
 /*

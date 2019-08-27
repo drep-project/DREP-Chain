@@ -141,7 +141,7 @@ func (database *DatabaseService) Rollback2Block(height uint64, hash *crypto.Hash
 	return database.db.Rollback2Block(height, hash)
 }
 
-func (database *DatabaseService) GetStorage(addr *crypto.CommonAddress) *chainType.Storage {
+func (database *DatabaseService) GetStorage(addr *crypto.CommonAddress) (*chainType.Storage, error) {
 	return database.db.GetStorage(addr)
 }
 

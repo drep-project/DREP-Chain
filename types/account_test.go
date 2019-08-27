@@ -3,13 +3,12 @@ package types
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/drep-project/drep-chain/app"
 	"testing"
 )
 
 func TestNewRootAccount(t *testing.T) {
 	var parent *Node
-	var chainId app.ChainIdType
+	var chainId ChainIdType
 	account, err := NewNormalAccount(parent, chainId)
 	fmt.Println("err: ", err)
 	fmt.Println("account: ", account)
@@ -22,7 +21,7 @@ func TestNewRootAccount(t *testing.T) {
 
 func TestNewChildAccount(t *testing.T) {
 	var parent *Node
-	var chainId app.ChainIdType
+	var chainId ChainIdType
 	root, err := NewNormalAccount(parent, chainId)
 	fmt.Println("root err: ", err)
 	fmt.Println("root: ")
@@ -33,7 +32,7 @@ func TestNewChildAccount(t *testing.T) {
 	fmt.Println("byteCode: ", root.Storage.ByteCode)
 	fmt.Println("codeHash: ", root.Storage.CodeHash)
 	fmt.Println()
-	var cid app.ChainIdType = [app.ChainIdSize]byte{1, 2, 3}
+	var cid ChainIdType = 1
 	child, err := NewNormalAccount(root.Node, cid)
 	fmt.Println("child err: ", err)
 	fmt.Println("child: ", child)

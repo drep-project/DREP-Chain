@@ -379,28 +379,18 @@ func gasRevert(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySi
 }
 
 func gasSuicide(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
-	var gas uint64
-	//// EIP150 homestead gas reprice fork:
-	//if evm.ChainConfig().IsEIP150(evm.BlockNumber) {
-	//	gas = Suicide
-	//	var (
-	//		address = common.BigToAddress(stack.Back(0))
-	//		eip158  = evm.ChainConfig().IsEIP158(evm.BlockNumber)
-	//	)
-	//
-	//	if eip158 {
-	//		// if empty and transfers value
-	//		if evm.StateDB.Empty(address) && evm.StateDB.GetBalance(contract.GetAddress()).Sign() != 0 {
-	//			gas += CreateBySuicide
-	//		}
-	//	} else if !evm.StateDB.Exist(address) {
-	//		gas += CreateBySuicide
-	//	}
-	//}
-	//
-	//if !evm.StateDB.HasSuicided(contract.GetAddress()) {
-	//	evm.StateDB.AddRefund(SuicideRefundGas)
-	//}
+	var gas uint64 = Suicide
+	var (
+		address = crypto.BigToAddress(stack.Back(0))
+	)
+	// if empty and transfers value
+	if evm.State.Empty(&address) && evm.State.GetBalance(&contract.ContractAddr).Sign() != 0 {
+		gas += CreateBySuicide
+	}
+
+	if !evm.State.HasSuicided(contract.ContractAddr) {
+		evm.State.AddRefund(params.SuicideRefundGas)
+	}
 	return gas, nil
 }
 

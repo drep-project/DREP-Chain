@@ -35,6 +35,8 @@ type VMState interface {
 	Load(x *big.Int) []byte
 	Store(x, y *big.Int)
 	Exist(contractAddr crypto.CommonAddress) bool
+	Empty(addr *crypto.CommonAddress) bool
+	HasSuicided(addr crypto.CommonAddress) bool
 }
 
 type State struct {
@@ -49,6 +51,11 @@ func NewState(database *database.Database) *State {
 		logs: make([]*types.Log, 0),
 	}
 }
+func (s *State) Empty(addr *crypto.CommonAddress) bool {
+	so,  _ := s.db.GetStorage(addr)
+	return so == nil || so.Empty()
+}
+
 
 func (s *State) CreateContractAccount(addr crypto.CommonAddress, byteCode []byte) (*types.Account, error) {
 	account, err := types.NewContractAccount(addr)
@@ -81,8 +88,7 @@ func (s *State) GetNonce(addr *crypto.CommonAddress) uint64 {
 }
 
 func (s *State) Suicide(addr *crypto.CommonAddress) error {
-	storage := s.db.GetStorage(addr)
-	return s.db.PutStorage(addr, storage)
+	return s.db.DeleteStorage(addr)
 }
 
 func (s *State) GetByteCode(addr *crypto.CommonAddress) crypto.ByteCode {
@@ -101,6 +107,15 @@ func (s *State) GetCodeHash(addr crypto.CommonAddress) crypto.Hash {
 
 func (s *State) SetByteCode(addr *crypto.CommonAddress, byteCode crypto.ByteCode) error {
 	return s.db.PutByteCode(addr, byteCode)
+}
+
+//TODO test suicided
+func (s *State) HasSuicided(addr crypto.CommonAddress) bool {
+	storage, err := s.db.GetStorage(&addr)
+	if err != nil && storage == nil {
+		return true
+	}
+	return false
 }
 
 func (s *State) GetLogs(txHash *crypto.Hash) []*types.Log {
@@ -149,6 +164,9 @@ func (s *State) Store(x, y *big.Int) {
 }
 
 func (s *State) Exist(contractAddr crypto.CommonAddress) bool {
-	storage := s.db.GetStorage(&contractAddr)
+	storage, err := s.db.GetStorage(&contractAddr)
+	if err != nil || storage == nil{
+		return false
+	}
 	return len(storage.ByteCode) > 0
 }

@@ -46,6 +46,11 @@ func (tDb *TransactionStore) Put(key []byte, value []byte) error {
 	return nil
 }
 
+func (tDb *TransactionStore) Delete(key []byte) error {
+	tDb.dirties.Store(string(key), nil)
+	return nil
+}
+
 func (tDb *TransactionStore) Flush() {
 	tDb.dirties.Range(func(key, value interface{}) bool {
 		bk := []byte(key.(string))

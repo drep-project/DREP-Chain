@@ -898,7 +898,7 @@ func opReturn(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memor
 	offset, size := stack.pop(), stack.pop()
 	ret := memory.GetPtr(offset.Int64(), size.Int64())
 	interpreter.IntPool.put(offset, size)
-	fmt.Println("ret: ", ret)
+	fmt.Println("ret: ", new (big.Int).SetBytes(ret))
 	fmt.Println("ret: ", len(ret))
 	fmt.Println("ret: ", len(contract.ByteCode))
 	return ret, nil
@@ -920,14 +920,14 @@ func opStop(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 }
 
 func opSuicide(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	//balance := interpreter.evm.StateDB.GetBalance(contract.GetAddress())
-	//interpreter.evm.StateDB.AddBalance(BigToAddress(stack.pop()), balance)
-	//interpreter.evm.StateDB.Suicide(contract.GetAddress())
-
-	balance := interpreter.EVM.State.GetBalance(&contract.CallerAddr)
+	state := interpreter.EVM.State
+	balance := state.GetBalance(&contract.ContractAddr)
 	addr := crypto.BigToAddress(stack.pop())
-	interpreter.EVM.State.AddBalance(&addr, balance)
-	interpreter.EVM.State.Suicide(&contract.CallerAddr)
+
+	state.AddBalance(&addr, balance)
+	if !state.HasSuicided(contract.ContractAddr) {
+		state.Suicide(&contract.ContractAddr)
+	}
 	return nil, nil
 }
 

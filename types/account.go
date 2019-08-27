@@ -1,15 +1,18 @@
 package types
 
 import (
+	"bytes"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/drep-chain/crypto/sha3"
 	"math/big"
 )
 
 var (
 	DrepMark   = []byte("Drep Coin Seed")
 	KeyBitSize = 256 >> 3
+	emptyCodeHash = sha3.Keccak256(nil)
 )
 
 type Node struct {
@@ -80,6 +83,10 @@ type Account struct {
 
 func (account *Account) Sign(hash []byte) ([]byte, error) {
 	return crypto.Sign(hash, account.Node.PrivateKey)
+}
+
+func (s *Storage) Empty() bool {
+	return s.Nonce == 0 && s.Balance.Sign() == 0 && bytes.Equal(s.CodeHash[:], emptyCodeHash)
 }
 
 func NewNormalAccount(parent *Node, chainId ChainIdType) (*Account, error) {

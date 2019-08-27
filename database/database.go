@@ -154,7 +154,7 @@ func (db *Database) Rollback2Block(height uint64, hash *crypto.Hash) (error, int
 	return nil, 0
 }
 
-func (db *Database) GetStorage(addr *crypto.CommonAddress) *types.Storage {
+func (db *Database) GetStorage(addr *crypto.CommonAddress) (*types.Storage, error) {
 	storage := &types.Storage{}
 	key := sha3.Keccak256([]byte(addressStorage + addr.Hex()))
 
@@ -167,10 +167,31 @@ func (db *Database) GetStorage(addr *crypto.CommonAddress) *types.Storage {
 	}
 	if err != nil {
 		log.Errorf("get storage err:%v", err)
-		return nil
+		return nil, err
 	}
-	binary.Unmarshal(value, storage)
-	return storage
+	if value == nil {
+		return nil, nil
+	}else{
+		err = binary.Unmarshal(value, storage)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return storage, nil
+}
+
+func (db *Database) DeleteStorage(addr *crypto.CommonAddress) error {
+	key := sha3.Keccak256([]byte(addressStorage + addr.Hex()))
+	if db.cache != nil {
+		return db.cache.Delete(key)
+	} else {
+		err := db.trie.TryDelete(key)
+		if err != nil {
+			return err
+		}
+		_, err = db.trie.Commit(nil)
+		return err
+	}
 }
 
 func (db *Database) PutStorage(addr *crypto.CommonAddress, storage *types.Storage) error {
@@ -205,7 +226,7 @@ func (db *Database) Delete(key []byte) error {
 }
 
 func (db *Database) GetBalance(addr *crypto.CommonAddress) *big.Int {
-	storage := db.GetStorage(addr)
+	storage, _ := db.GetStorage(addr)
 
 	if storage == nil {
 		return new(big.Int)
@@ -214,16 +235,16 @@ func (db *Database) GetBalance(addr *crypto.CommonAddress) *big.Int {
 }
 
 func (db *Database) PutBalance(addr *crypto.CommonAddress, balance *big.Int) error {
-	storage := db.GetStorage(addr)
+	storage, _ := db.GetStorage(addr)
 	if storage == nil {
-		return ErrNoStorage
+		storage = &types.Storage{}
 	}
 	storage.Balance = *balance
 	return db.PutStorage(addr, storage)
 }
 
 func (db *Database) GetNonce(addr *crypto.CommonAddress) uint64 {
-	storage := db.GetStorage(addr)
+	storage, _ := db.GetStorage(addr)
 	if storage == nil {
 		return 0
 	}
@@ -231,16 +252,16 @@ func (db *Database) GetNonce(addr *crypto.CommonAddress) uint64 {
 }
 
 func (db *Database) PutNonce(addr *crypto.CommonAddress, nonce uint64) error {
-	storage := db.GetStorage(addr)
+	storage, _ := db.GetStorage(addr)
 	if storage == nil {
-		return ErrNoStorage
+		storage = &types.Storage{}
 	}
 	storage.Nonce = nonce
 	return db.PutStorage(addr, storage)
 }
 
 func (db *Database) GetStorageAlias(addr *crypto.CommonAddress) string {
-	storage := db.GetStorage(addr)
+	storage, _ := db.GetStorage(addr)
 	if storage == nil {
 		return ""
 	}
@@ -248,9 +269,9 @@ func (db *Database) GetStorageAlias(addr *crypto.CommonAddress) string {
 }
 
 func (db *Database) setStorageAlias(addr *crypto.CommonAddress, alias string) error {
-	storage := db.GetStorage(addr)
+	storage, _ := db.GetStorage(addr)
 	if storage == nil {
-		return ErrNoStorage
+		storage = &types.Storage{}
 	}
 	storage.Alias = alias
 	return db.PutStorage(addr, storage)
@@ -312,7 +333,7 @@ func (db *Database) AliasExist(alias string) bool {
 }
 
 func (db *Database) GetByteCode(addr *crypto.CommonAddress) []byte {
-	storage := db.GetStorage(addr)
+	storage, _  := db.GetStorage(addr)
 	if storage == nil {
 		return nil
 	}
@@ -320,9 +341,9 @@ func (db *Database) GetByteCode(addr *crypto.CommonAddress) []byte {
 }
 
 func (db *Database) PutByteCode(addr *crypto.CommonAddress, byteCode []byte) error {
-	storage := db.GetStorage(addr)
+	storage, _ := db.GetStorage(addr)
 	if storage == nil {
-		return ErrNoStorage
+		storage = &types.Storage{}
 	}
 	storage.ByteCode = byteCode
 	storage.CodeHash = crypto.GetByteCodeHash(byteCode)
@@ -330,7 +351,7 @@ func (db *Database) PutByteCode(addr *crypto.CommonAddress, byteCode []byte) err
 }
 
 func (db *Database) GetCodeHash(addr *crypto.CommonAddress) crypto.Hash {
-	storage := db.GetStorage(addr)
+	storage, _ := db.GetStorage(addr)
 	if storage == nil {
 		return crypto.Hash{}
 	}
@@ -338,7 +359,7 @@ func (db *Database) GetCodeHash(addr *crypto.CommonAddress) crypto.Hash {
 }
 
 func (db *Database) GetReputation(addr *crypto.CommonAddress) *big.Int {
-	storage := db.GetStorage(addr)
+	storage, _ := db.GetStorage(addr)
 	if storage == nil {
 		return big.NewInt(0)
 	}

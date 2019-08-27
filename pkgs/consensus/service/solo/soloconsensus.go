@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math/big"
+
 	"github.com/drep-project/drep-chain/blockmgr"
 	"github.com/drep-project/drep-chain/chain"
 	"github.com/drep-project/drep-chain/crypto"
@@ -14,7 +16,6 @@ import (
 	"github.com/drep-project/drep-chain/params"
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
 	"github.com/drep-project/drep-chain/types"
-	"math/big"
 )
 
 type SoloConsensus struct {
@@ -56,9 +57,8 @@ func (soloConsensus *SoloConsensus) Run() (*types.Block, error) {
 	}
 	db.Commit()
 	block.Header.StateRoot = db.GetStateRoot()
-
 	//verify
-	if err := soloConsensus.verify(block); err!= nil {
+	if err := soloConsensus.verify(block); err != nil {
 		return nil, err
 	}
 	return block, nil
@@ -86,7 +86,7 @@ func (soloConsensus *SoloConsensus) verify(block *types.Block) error {
 	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
 		stateRoot := db.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
-			if !db.RecoverTrie(soloConsensus.ChainService.GetCurrentHeader().StateRoot){
+			if !db.RecoverTrie(soloConsensus.ChainService.GetCurrentHeader().StateRoot) {
 				log.Fatal("root not equal and recover trie err")
 			}
 			log.Error("rootcmd root !=")
@@ -103,10 +103,9 @@ func (soloConsensus *SoloConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, rw
 	return nil
 }
 
-func (soloConsensus *SoloConsensus)  Validator( ) chain.IBlockValidator {
+func (soloConsensus *SoloConsensus) Validator() chain.IBlockValidator {
 	return &SoloValidator{soloConsensus, soloConsensus.PrivKey.PubKey()}
 }
-
 
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
 func (soloConsensus *SoloConsensus) AccumulateRewards(db *database.Database, totalGasBalance *big.Int) error {

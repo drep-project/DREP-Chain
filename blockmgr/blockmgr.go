@@ -228,6 +228,7 @@ func (blockMgr *BlockMgr) SubscribeSyncBlockEvent(subchan chan event.SyncBlockEv
 }
 
 func (blockMgr *BlockMgr) GetTransactionCount(addr *crypto.CommonAddress) uint64 {
+
 	return blockMgr.transactionPool.GetTransactionCount(addr)
 }
 
