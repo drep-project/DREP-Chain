@@ -220,13 +220,13 @@ func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo) (block *type
 		val := msg.(*CompletedBlockMessage)
 		multiSig = &val.MultiSignature
 		block.Header.StateRoot = val.StateRoot
-		proof, err := binary.Marshal(multiSig)
+		multiSigBytes, err := binary.Marshal(multiSig)
 		if err != nil {
 			log.Error("fail to marshal MultiSig")
 			return err
 		}
 		log.WithField("bitmap", multiSig.Bitmap).Info("member receive participant bitmap")
-		block.Proof = proof
+		block.Proof = types.Proof{consensusTypes.Pbft, multiSigBytes}
 		return bftConsensus.verifyBlockContent(block)
 	}
 	_, err = member.ProcessConsensus()
@@ -262,14 +262,14 @@ func (bftConsensus *BftConsensus) runAsLeader(miners []*MemberInfo) (block *type
 
 	leader.Reset()
 	multiSig :=  newMultiSignature(*sig, bftConsensus.curMiner, bitmap)
-	proof, err := binary.Marshal(multiSig)
+	multiSigBytes, err := binary.Marshal(multiSig)
 	if err != nil {
 		log.Debugf("fial to marshal MultiSig")
 		return nil, err
 	}
 	log.WithField("bitmap", multiSig.Bitmap).Info("participant bitmap")
 	//Determine reward points
-	block.Proof = proof
+	block.Proof = types.Proof{consensusTypes.Pbft, multiSigBytes}
 	err = bftConsensus.AccumulateRewards(db, multiSig, gasFee)
 	if err != nil {
 		return nil, err
@@ -332,7 +332,7 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
 		}
 	}
 	multiSig := &MultiSignature{}
-	err := binary.Unmarshal(block.Proof, multiSig)
+	err := binary.Unmarshal(block.Proof.Evidence, multiSig)
 	if err != nil {
 		return err
 	}

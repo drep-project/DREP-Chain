@@ -50,7 +50,7 @@ func (soloConsensus *SoloConsensus) Run() (*types.Block, error) {
 		log.Error("sign block error")
 		return nil, errors.New("sign block error")
 	}
-	block.Proof = sig.Serialize()
+	block.Proof = types.Proof{consensusTypes.Solo, sig.Serialize()}
 	err = soloConsensus.AccumulateRewards(db, gasFee)
 	if err != nil {
 		return nil, err

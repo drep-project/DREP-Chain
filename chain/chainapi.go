@@ -54,7 +54,7 @@ type ChainApi struct {
   }
 }
 */
-func (chain *ChainApi) GetBlock(height uint64) (*chainType.RpcBlock, error) {
+func (chain *ChainApi) GetBlock(height uint64) (*chainType.Block, error) {
 	blocks, err := chain.chainService.GetBlocksFrom(height, 1)
 	if err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func (chain *ChainApi) GetBlock(height uint64) (*chainType.RpcBlock, error) {
 	if len(blocks) == 0 {
 		return nil, ErrBlockNotFound
 	}
-	return new(chainType.RpcBlock).From(blocks[0]), nil
+	return blocks[0], nil
 }
 
 /*
@@ -150,15 +150,15 @@ func (chain *ChainApi) GetReputation(addr crypto.CommonAddress) *big.Int {
   }
 }
 */
-func (chain *ChainApi) GetTransactionByBlockHeightAndIndex(height uint64, index int) (*chainType.RpcTransaction, error) {
+func (chain *ChainApi) GetTransactionByBlockHeightAndIndex(height uint64, index int) (*chainType.Transaction, error) {
 	block, err := chain.GetBlock(height)
 	if err != nil {
 		return nil, err
 	}
-	if index > len(block.Txs) {
+	if index > int(block.Data.TxCount) {
 		return nil, ErrTxIndexOutOfRange
 	}
-	return block.Txs[index], nil
+	return block.Data.TxList[index], nil
 }
 
 /*

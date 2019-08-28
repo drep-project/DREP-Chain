@@ -106,7 +106,7 @@ func (store *LevelDbStore) GetRawTransaction(txHash *crypto.Hash) ([]byte, error
 	return rawData, nil
 }
 
-func (store *LevelDbStore) GetTransaction(txHash *crypto.Hash) (*types.RpcTransaction, error) {
+func (store *LevelDbStore) GetTransaction(txHash *crypto.Hash) (*RpcTransaction, error) {
 	rawData, err := store.GetRawTransaction(txHash)
 	if err != nil {
 		return nil, err
@@ -116,13 +116,13 @@ func (store *LevelDbStore) GetTransaction(txHash *crypto.Hash) (*types.RpcTransa
 	if err != nil {
 		return nil, err
 	}
-	rpcTx := &types.RpcTransaction{}
+	rpcTx := &RpcTransaction{}
 	rpcTx.FromTx(tx)
 	return rpcTx, nil
 }
 
-func (store *LevelDbStore) GetSendTransactionsByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*types.RpcTransaction {
-	txs := []*types.RpcTransaction{}
+func (store *LevelDbStore) GetSendTransactionsByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*RpcTransaction {
+	txs := []*RpcTransaction{}
 	fromIndex := (pageIndex - 1) * pageSize
 	endIndex := fromIndex + pageSize
 	if endIndex <= 0 {
@@ -160,8 +160,8 @@ func (store *LevelDbStore) GetSendTransactionsByAddr(addr *crypto.CommonAddress,
 	return txs
 }
 
-func (store *LevelDbStore) GetReceiveTransactionsByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*types.RpcTransaction {
-	txs := []*types.RpcTransaction{}
+func (store *LevelDbStore) GetReceiveTransactionsByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*RpcTransaction {
+	txs := []*RpcTransaction{}
 	fromIndex := (pageIndex - 1) * pageSize
 	endIndex := fromIndex + pageSize
 	if endIndex <= 0 {

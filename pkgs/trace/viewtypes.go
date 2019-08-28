@@ -1,9 +1,14 @@
 package trace
 
 import (
+	"encoding/hex"
+	"encoding/json"
 	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/pkgs/consensus/service/bft"
 	"math/big"
+	types2 "github.com/drep-project/drep-chain/pkgs/consensus/types"
+	"github.com/drep-project/drep-chain/types"
 )
 
 type ViewTransaction struct {
@@ -34,10 +39,10 @@ type ViewBlock struct {
 	Timestamp    uint64
 	StateRoot    string //hex
 	TxRoot       string //hex
-	LeaderPubKey string
-	MinorPubKeys []string
+	Proof		 interface{}
 	Txs          []string
 }
+
 type ViewBlockHeader struct {
 	ChainId      types.ChainIdType
 	Version      int32
@@ -48,8 +53,6 @@ type ViewBlockHeader struct {
 	Timestamp    uint64
 	StateRoot    string
 	TxRoot       string
-	LeaderPubKey string
-	MinorPubKeys []string
 	Hash         string
 }
 
@@ -70,12 +73,6 @@ func (viewBlockHeader *ViewBlockHeader) From(block *types.Block) *ViewBlockHeade
 	viewBlockHeader.Timestamp = block.Header.Timestamp
 	viewBlockHeader.StateRoot = common.Encode(block.Header.StateRoot)
 	viewBlockHeader.TxRoot = common.Encode(block.Header.TxRoot)
-	//viewBlockHeader.LeaderPubKey = block.Header.LeaderAddress.String()
-
-	viewBlockHeader.MinorPubKeys = []string{}
-	//for _, val := range block.Header.MinorAddresses {
-	//	viewBlockHeader.MinorPubKeys = append(viewBlockHeader.MinorPubKeys, val.String())
-	//}
 	return viewBlockHeader
 }
 
@@ -100,7 +97,7 @@ func (rpcTransaction *ViewTransaction) FromTx(tx *types.Transaction) *ViewTransa
 	return rpcTransaction
 }
 
-func (rpcBlock *ViewBlock) From(block *types.Block) *ViewBlock {
+func (rpcBlock *ViewBlock) From(block *types.Block, addresses[]crypto.CommonAddress) *ViewBlock {
 	txs := make([]*ViewTransaction, len(block.Data.TxList))
 	for i, tx := range block.Data.TxList {
 		txs[i] = new(ViewTransaction).FromTx(tx)
@@ -117,49 +114,26 @@ func (rpcBlock *ViewBlock) From(block *types.Block) *ViewBlock {
 	rpcBlock.Timestamp = uint64(block.Header.Timestamp)
 	rpcBlock.StateRoot = common.Encode(block.Header.StateRoot)
 	rpcBlock.TxRoot = common.Encode(block.Header.TxRoot)
-	//rpcBlock.LeaderPubKey = block.Header.LeaderAddress.String()
 
-	rpcBlock.MinorPubKeys = []string{}
-	//for _, val := range block.Header.MinorAddresses {
-	//	rpcBlock.MinorPubKeys = append(rpcBlock.MinorPubKeys, val.String())
-//	}
+	if block.Proof.Type == types2.Solo {
+		rpcBlock.Proof = block.Proof
+	}else if block.Proof.Type == types2.Pbft {
+		proof := NewPbftProof()
+		multiSig := &bft.MultiSignature{}
+		json.Unmarshal(block.Proof.Evidence, multiSig)
+		proof.Evidence = hex.EncodeToString(block.Proof.Evidence)
+		proof.LeaderPubKey =addresses[multiSig.Leader]
+		for index, val := range multiSig.Bitmap {
+			if val == 1 {
+				proof.MinorPubKeys = append(proof.MinorPubKeys, addresses[index])
+			}
+		}
+		rpcBlock.Proof = proof
+	}
+
 	rpcBlock.Txs = make([]string, len(txs))
 	for index, val := range txs {
 		rpcBlock.Txs[index] = val.Hash
 	}
 	return rpcBlock
-}
-
-type RpcBlockHeader struct {
-	ChainId      types.ChainIdType
-	Version      int32
-	PreviousHash string
-	GasLimit     string
-	GasUsed      string
-	Height       uint64
-	Timestamp    uint64
-	StateRoot    string
-	TxRoot       string
-	LeaderPubKey string
-	MinorPubKeys []string
-
-	Hash string
-}
-
-func (rpcBlockHeader *RpcBlockHeader) FromBlockHeader(header *types.BlockHeader) {
-	rpcBlockHeader.ChainId = header.ChainId
-	rpcBlockHeader.Version = header.Version
-	rpcBlockHeader.PreviousHash = header.PreviousHash.String()
-	rpcBlockHeader.GasLimit = header.GasLimit.String()
-	rpcBlockHeader.GasUsed = header.GasUsed.String()
-	rpcBlockHeader.Height = header.Height
-	rpcBlockHeader.Timestamp = header.Timestamp
-	rpcBlockHeader.StateRoot = common.Encode(header.StateRoot)
-	rpcBlockHeader.TxRoot = common.Encode(header.TxRoot)
-	//rpcBlockHeader.LeaderPubKey = header.LeaderAddress.String()
-	rpcBlockHeader.MinorPubKeys = []string{}
-//	for _, val := range header.MinorAddresses {
-//		rpcBlockHeader.MinorPubKeys = append(rpcBlockHeader.MinorPubKeys, val.String())
-//	}
-	rpcBlockHeader.Hash = header.Hash().String()
 }

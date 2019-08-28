@@ -67,7 +67,7 @@ func (traceApi *TraceApi) GetRawTransaction(txHash *crypto.Hash) (string, error)
 	  }
 	}
 */
-func (traceApi *TraceApi) GetTransaction(txHash *crypto.Hash) (*types.RpcTransaction, error) {
+func (traceApi *TraceApi) GetTransaction(txHash *crypto.Hash) (*RpcTransaction, error) {
 	rpcTx, err := traceApi.blockAnalysis.store.GetTransaction(txHash)
 	if err != nil {
 		return nil, err
@@ -103,13 +103,13 @@ func (traceApi *TraceApi) GetTransaction(txHash *crypto.Hash) (*types.RpcTransac
 	  }
 	}
 */
-func (traceApi *TraceApi) DecodeTrasnaction(bytes common.Bytes) (*types.RpcTransaction, error) {
+func (traceApi *TraceApi) DecodeTrasnaction(bytes common.Bytes) (*RpcTransaction, error) {
 	tx := &types.Transaction{}
 	err := binary.Unmarshal(bytes[:], tx)
 	if err != nil {
 		return nil, err
 	}
-	rpcTx := &types.RpcTransaction{}
+	rpcTx := &RpcTransaction{}
 	rpcTx.FromTx(tx)
 	return rpcTx, nil
 }
@@ -146,7 +146,7 @@ func (traceApi *TraceApi) DecodeTrasnaction(bytes common.Bytes) (*types.RpcTrans
 	  ]
 	}
 */
-func (traceApi *TraceApi) GetSendTransactionByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*types.RpcTransaction {
+func (traceApi *TraceApi) GetSendTransactionByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*RpcTransaction {
 	return traceApi.blockAnalysis.store.GetSendTransactionsByAddr(addr, pageIndex, pageSize)
 }
 
@@ -182,7 +182,7 @@ func (traceApi *TraceApi) GetSendTransactionByAddr(addr *crypto.CommonAddress, p
 	  ]
 	}
 */
-func (traceApi *TraceApi) GetReceiveTransactionByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*types.RpcTransaction {
+func (traceApi *TraceApi) GetReceiveTransactionByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*RpcTransaction {
 	return traceApi.blockAnalysis.store.GetReceiveTransactionsByAddr(addr, pageIndex, pageSize)
 }
 

@@ -5,6 +5,10 @@ import (
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 )
 
+const (
+	Solo = iota
+	Pbft
+)
 type ConsensusConfig struct {
 	ConsensusMode string               `json:"consensusMode"`
 	MyPk          *secp256k1.PublicKey `json:"mypk"`

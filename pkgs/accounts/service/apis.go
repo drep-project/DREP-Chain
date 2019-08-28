@@ -239,14 +239,12 @@ func (accountapi *AccountApi) ReplaceTx(from crypto.CommonAddress, to crypto.Com
   }
 }
 */
-func (accountapi *AccountApi) GetTxInPool(hash string) (*types.RpcTransaction, error) {
+func (accountapi *AccountApi) GetTxInPool(hash string) (*types.Transaction, error) {
 	tx, err := accountapi.blockmgr.GetTxInPool(hash)
 	if err != nil {
 		return nil, err
 	}
-	rpcTx := &types.RpcTransaction{}
-	rpcTx.FromTx(tx)
-	return rpcTx, nil
+	return tx, nil
 }
 
 /*

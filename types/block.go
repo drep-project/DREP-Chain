@@ -43,9 +43,13 @@ type BlockData struct {
 type Block struct {
 	Header *BlockHeader
 	Data   *BlockData
-	Proof  []byte
+	Proof  Proof
 }
 
+type Proof struct {
+	Type int
+	Evidence  []byte
+}
 func (block *Block) GasUsed() uint64 {
 	return block.Header.GasUsed.Uint64()
 }

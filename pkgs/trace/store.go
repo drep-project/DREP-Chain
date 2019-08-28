@@ -15,11 +15,11 @@ type IStore interface {
 
 	GetRawTransaction(txHash *crypto.Hash) ([]byte, error)
 
-	GetTransaction(txHash *crypto.Hash) (*types.RpcTransaction, error)
+	GetTransaction(txHash *crypto.Hash) (*RpcTransaction, error)
 
-	GetSendTransactionsByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*types.RpcTransaction
+	GetSendTransactionsByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*RpcTransaction
 
-	GetReceiveTransactionsByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*types.RpcTransaction
+	GetReceiveTransactionsByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*RpcTransaction
 
 	Close()
 }

@@ -23,7 +23,7 @@ func (soloValidator *SoloValidator) VerifyHeader(header, parent *types.BlockHead
 
 func (soloValidator *SoloValidator) VerifyBody(block *types.Block) error {
 	hash := sha3.Keccak256(block.AsSignMessage())
-	sig, err := secp256k1.ParseSignature(block.Proof)
+	sig, err := secp256k1.ParseSignature(block.Proof.Evidence)
 	if err != nil {
 		return err
 	}

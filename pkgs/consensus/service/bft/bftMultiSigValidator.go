@@ -24,7 +24,7 @@ func (blockMultiSigValidator *BlockMultiSigValidator) VerifyHeader(header, paren
 func (blockMultiSigValidator *BlockMultiSigValidator) VerifyBody(block *types.Block) error {
 	participators := []*secp256k1.PublicKey{}
 	multiSig := &MultiSignature{}
-	err := binary.Unmarshal(block.Proof, multiSig)
+	err := binary.Unmarshal(block.Proof.Evidence, multiSig)
 	if err != nil {
 		return err
 	}
@@ -45,7 +45,7 @@ func (blockMultiSigValidator *BlockMultiSigValidator) VerifyBody(block *types.Bl
 
 func (blockMultiSigValidator *BlockMultiSigValidator) ExecuteBlock(context *chain.BlockExecuteContext) error {
 	multiSig := &MultiSignature{}
-	err := binary.Unmarshal(context.Block.Proof, multiSig)
+	err := binary.Unmarshal(context.Block.Proof.Evidence, multiSig)
 	if err != nil {
 		return nil
 	}
