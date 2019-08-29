@@ -13,7 +13,7 @@ import (
 	"github.com/drep-project/drep-chain/types"
 )
 
-func (blockMgr *BlockMgr) GenerateBlock(db *database.Database, leaderAddr crypto.CommonAddress) (*types.Block, *big.Int, error) {
+func (blockMgr *BlockMgr) GenerateTemplate(db *database.Database, leaderAddr crypto.CommonAddress) (*types.Block, *big.Int, error) {
 	parent, err := blockMgr.ChainService.GetHighestBlock()
 	if err != nil {
 		return nil, nil, err
@@ -25,14 +25,14 @@ func (blockMgr *BlockMgr) GenerateBlock(db *database.Database, leaderAddr crypto
 	timestamp := uint64(time.Now().Unix())
 
 	blockHeader := &types.BlockHeader{
-		Version:       common.Version,
-		PreviousHash:  *previousHash,
-		ChainId:       blockMgr.ChainService.ChainID(),
-		GasLimit:      *newGasLimit,
-		Timestamp:     timestamp,
-		Height:        height,
-		StateRoot:     []byte{},
-		TxRoot:        []byte{},
+		Version:      common.Version,
+		PreviousHash: *previousHash,
+		ChainId:      blockMgr.ChainService.ChainID(),
+		GasLimit:     *newGasLimit,
+		Timestamp:    timestamp,
+		Height:       height,
+		StateRoot:    []byte{},
+		TxRoot:       []byte{},
 	}
 
 	finalTxs := make([]*types.Transaction, 0, len(txs))

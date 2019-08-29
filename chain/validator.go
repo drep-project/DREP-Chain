@@ -7,15 +7,14 @@ import (
 )
 
 type BlockExecuteContext struct {
-	Db      *database.Database
-	Block   *types.Block
-	Gp      *GasPool
-	GasUsed *big.Int
-	GasFee  *big.Int
-	Logs []*types.Log
+	Db       *database.Database
+	Block    *types.Block
+	Gp       *GasPool
+	GasUsed  *big.Int
+	GasFee   *big.Int
+	Logs     []*types.Log
 	Receipts types.Receipts
 }
-
 
 func (blockExecuteContext *BlockExecuteContext) AddGasUsed(gas *big.Int) {
 	blockExecuteContext.GasUsed = blockExecuteContext.GasUsed.Add(blockExecuteContext.GasUsed, gas)
@@ -30,7 +29,7 @@ type IBlockValidator interface {
 
 	VerifyBody(block *types.Block) error
 
-	ExecuteBlock(context *BlockExecuteContext) (error)
+	ExecuteBlock(context *BlockExecuteContext) error
 }
 
 type ITransactionValidator interface {

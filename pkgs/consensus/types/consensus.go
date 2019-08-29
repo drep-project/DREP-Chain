@@ -9,5 +9,5 @@ import (
 type IConsensusEngine interface {
 	Run() (*types.Block, error)
 	ReceiveMsg(peer *PeerInfo, rw p2p.MsgReadWriter) error
-	Validator( ) chain.IBlockValidator
+	Validator() chain.IBlockValidator
 }

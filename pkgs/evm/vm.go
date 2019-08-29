@@ -40,7 +40,7 @@ func NewEVMContext(msg *types.Transaction, header *types.BlockHeader, sender *cr
 		Time:        big.NewInt(int64(header.Timestamp)),
 		GasLimit:    header.GasLimit.Uint64(),
 		GasPrice:    new(big.Int).Set(msg.GasPrice()),
-		TxHash:		 msg.TxHash(),
+		TxHash:      msg.TxHash(),
 	}
 }
 

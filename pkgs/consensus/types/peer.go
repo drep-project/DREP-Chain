@@ -17,8 +17,8 @@ type IPeerInfo interface {
 
 //业务层peer
 type PeerInfo struct {
-	peer        *p2p.Peer
-	rw          p2p.MsgReadWriter
+	peer *p2p.Peer
+	rw   p2p.MsgReadWriter
 }
 
 func NewPeerInfo(peer *p2p.Peer, rw p2p.MsgReadWriter) *PeerInfo {
@@ -37,11 +37,10 @@ func (pi *PeerInfo) IP() string {
 	return pi.peer.IP()
 }
 
-
 func (pi *PeerInfo) String() string {
 	return pi.peer.IP()
 }
 
-func (pi *PeerInfo) Equal(pi2  IPeerInfo) bool {
+func (pi *PeerInfo) Equal(pi2 IPeerInfo) bool {
 	return pi2.IP() == pi.IP()
 }

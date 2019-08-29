@@ -29,7 +29,6 @@ func init() {
 	logrus.SetLevel(logrus.TraceLevel)
 }
 
-
 type testSendor struct {
 	onlinePeers map[string]consensusTypes.IPeerInfo
 	clients     []*testBFT
@@ -89,16 +88,15 @@ func (dummyConsensusMsg *dummyConsensusMsg) AsMessage() []byte {
 	return []byte{}
 }
 
-
 type testBFT struct {
-	PrivKey      *secp256k1.PrivateKey
-	curMiner     int
-	minMiners    int
-	curentHeight uint64
-	onLinePeer   map[string]consensusTypes.IPeerInfo
-	WaitTime     time.Duration
-	sender       Sender
-	ip string
+	PrivKey       *secp256k1.PrivateKey
+	curMiner      int
+	minMiners     int
+	curentHeight  uint64
+	onLinePeer    map[string]consensusTypes.IPeerInfo
+	WaitTime      time.Duration
+	sender        Sender
+	ip            string
 	memberMsgPool chan *MsgWrap
 	leaderMsgPool chan *MsgWrap
 
@@ -118,7 +116,7 @@ func newTestBFT(
 		minMiners:     int(math.Ceil(float64(len(producer)) * 2 / 3)),
 		Producers:     producer,
 		sender:        sender,
-		ip:ip,
+		ip:            ip,
 		onLinePeer:    peersInfo,
 		WaitTime:      waitTime,
 		memberMsgPool: make(chan *MsgWrap, 1000),
@@ -135,10 +133,10 @@ func (testbft *testBFT) Run() *bftResult {
 		} else if isM {
 			return testbft.runAsMember(miners)
 		} else {
-			return &bftResult{err:ErrBFTNotReady}
+			return &bftResult{err: ErrBFTNotReady}
 		}
 	} else {
-		return &bftResult{err:ErrBFTNotReady}
+		return &bftResult{err: ErrBFTNotReady}
 	}
 }
 
@@ -291,7 +289,7 @@ func TestBFT(t *testing.T) {
 				if !schnorr.Verify(sigmaPk, sha3.Keccak256(msg), bftresult.multiSig.R, bftresult.multiSig.S) {
 					t.Error(ErrMultiSig)
 				}
-			}else{
+			} else {
 
 			}
 		}(client)
@@ -299,7 +297,6 @@ func TestBFT(t *testing.T) {
 
 	group.Wait()
 }
-
 
 func TestBFTTimeOut(t *testing.T) {
 	keystore := make([]*secp256k1.PrivateKey, 4)
@@ -319,7 +316,7 @@ func TestBFTTimeOut(t *testing.T) {
 		sendor := &testSendor{onlinePeers, bftClients, p.IP}
 		bftClient := newTestBFT(keystore[i], produces, sendor, p.IP, onlinePeers)
 		bftClients[i] = bftClient
-		if i <2 {
+		if i < 2 {
 			onlinePeers[strconv.Itoa(i)] = &testPeer{p, bftClient}
 		}
 	}
@@ -331,14 +328,14 @@ func TestBFTTimeOut(t *testing.T) {
 			defer group.Done()
 			bftresult := clientt.Run()
 			if clientt.ip == "0" {
-			 	//leader
-			 	if bftresult.err == nil {
-			 		t.Error("expect timeout but got success")
-				}
-			}else if clientt.ip == "1" {
+				//leader
 				if bftresult.err == nil {
 					t.Error("expect timeout but got success")
-				}else{
+				}
+			} else if clientt.ip == "1" {
+				if bftresult.err == nil {
+					t.Error("expect timeout but got success")
+				} else {
 					if bftresult.err != ErrTimeout {
 						t.Errorf("expect timeout err but got %s", bftresult.err)
 					}

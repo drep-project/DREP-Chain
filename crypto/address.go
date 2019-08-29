@@ -21,7 +21,7 @@ var (
 	ErrExceedHashLength = errors.New("bytes length exceed maximum hash length of 32")
 	hashT               = reflect.TypeOf(Hash{})
 	addressT            = reflect.TypeOf(CommonAddress{})
-	ZeroAddress			= CommonAddress{}
+	ZeroAddress         = CommonAddress{}
 )
 
 // Address represents the 20 byte address of an Ethereum account.
@@ -46,6 +46,7 @@ func HexToAddress(s string) CommonAddress { return BytesToAddress(common.FromHex
 func PubkeyToAddress(p *secp256k1.PublicKey) CommonAddress {
 	return BytesToAddress(sha3.Keccak256(p.SerializeUncompressed()[1:])[12:])
 }
+
 // IsHexAddress verifies whether a string can represent a valid hex-encoded
 // Ethereum address or not.
 func IsHexAddress(s string) bool {
@@ -124,8 +125,6 @@ func (a *CommonAddress) UnmarshalText(input []byte) error {
 func (a *CommonAddress) UnmarshalJSON(input []byte) error {
 	return hexutil.UnmarshalFixedJSON(addressT, input, a[:])
 }
-
-
 
 type ByteCode []byte
 

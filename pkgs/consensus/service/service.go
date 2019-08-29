@@ -32,23 +32,25 @@ const (
 )
 
 type ConsensusService struct {
-	P2pServer       	p2pService.P2P                     `service:"p2p"`
-	ChainService    	chainService.ChainServiceInterface `service:"chain"`
-	BlockMgr        	*blockMgrService.BlockMgr          `service:"blockmgr"`
-	DatabaseService 	*database.DatabaseService          `service:"database"`
-	WalletService   	*accountService.AccountService     `service:"accounts"`
+	P2pServer        p2pService.P2P                       `service:"p2p"`
+	ChainService     chainService.ChainServiceInterface   `service:"chain"`
+	BroadCastor      blockMgrService.ISendMessage         `service:"blockmgr"`
+	BlockMgrNotifier blockMgrService.IBlockNotify         `service:"blockmgr"`
+	BlockGenerator   blockMgrService.IBlockBlockGenerator `service:"blockmgr"`
+	DatabaseService  *database.DatabaseService            `service:"database"`
+	WalletService    *accountService.AccountService       `service:"accounts"`
 
-	apis   				[]app.API
-	Config 				*consensusTypes.ConsensusConfig
+	apis   []app.API
+	Config *consensusTypes.ConsensusConfig
 
-	syncBlockEventSub  	event.Subscription
-	syncBlockEventChan 	chan event.SyncBlockEvent
-	ConsensusEngine    	consensusTypes.IConsensusEngine
+	syncBlockEventSub  event.Subscription
+	syncBlockEventChan chan event.SyncBlockEvent
+	ConsensusEngine    consensusTypes.IConsensusEngine
 	//During the process of synchronizing blocks, the miner stopped mining
-	pauseForSync 		bool
-	start        		bool
-	peersInfo    		map[string]*consensusTypes.PeerInfo
-	quit         		chan struct{}
+	pauseForSync bool
+	start        bool
+	peersInfo    map[string]*consensusTypes.PeerInfo
+	quit         chan struct{}
 }
 
 func (consensusService *ConsensusService) Name() string {
@@ -87,13 +89,13 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 		return err
 	}
 
-	var  addPeer  event.Feed
-	var  removePeer  event.Feed
+	var addPeer event.Feed
+	var removePeer event.Feed
 	var engine consensusTypes.IConsensusEngine
 	if consensusService.Config.ConsensusMode == "bft" {
 		engine = bft.NewBftConsensus(
 			consensusService.ChainService,
-			consensusService.BlockMgr,
+			consensusService.BlockGenerator,
 			consensusService.DatabaseService,
 			accountNode.PrivateKey,
 			consensusService.Config.Producers,
@@ -104,7 +106,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	} else if consensusService.Config.ConsensusMode == "solo" {
 		engine = solo.NewSoloConsensus(
 			consensusService.ChainService,
-			consensusService.BlockMgr,
+			consensusService.BlockGenerator,
 			consensusService.DatabaseService,
 			accountNode.PrivateKey)
 	} else {
@@ -131,7 +133,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	consensusService.ChainService.AddBlockValidator(engine.Validator())
 	consensusService.ConsensusEngine = engine
 	consensusService.syncBlockEventChan = make(chan event.SyncBlockEvent)
-	consensusService.syncBlockEventSub = consensusService.BlockMgr.SubscribeSyncBlockEvent(consensusService.syncBlockEventChan)
+	consensusService.syncBlockEventSub = consensusService.BlockMgrNotifier.SubscribeSyncBlockEvent(consensusService.syncBlockEventChan)
 	consensusService.quit = make(chan struct{})
 	consensusService.apis = []app.API{
 		app.API{
@@ -188,9 +190,9 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 				} else {
 					_, _, err := consensusService.ChainService.ProcessBlock(block)
 					if err == nil {
-						consensusService.BlockMgr.BroadcastBlock(chainTypes.MsgTypeBlock, block, true)
+						consensusService.BroadCastor.BroadcastBlock(chainTypes.MsgTypeBlock, block, true)
 						log.WithField("Height", block.Header.Height).WithField("txs:", block.Data.TxCount).Info("Process block successfully and broad case block message")
-					}else{
+					} else {
 						log.WithField("Height", block.Header.Height).WithField("txs:", block.Data.TxCount).WithField("err", err).Info("Process Block fail")
 					}
 				}

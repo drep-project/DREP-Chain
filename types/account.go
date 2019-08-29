@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	DrepMark   = []byte("Drep Coin Seed")
-	KeyBitSize = 256 >> 3
+	DrepMark      = []byte("Drep Coin Seed")
+	KeyBitSize    = 256 >> 3
 	emptyCodeHash = sha3.Keccak256(nil)
 )
 

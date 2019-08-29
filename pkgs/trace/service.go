@@ -32,7 +32,7 @@ var (
 type TraceService struct {
 	Config           *HistoryConfig
 	ChainService     chainService.ChainServiceInterface `service:"chain"`
-	ConsensusService consensusService.ConsensusService  `service:"chain"`
+	ConsensusService consensusService.ConsensusService  `service:"consensus"`
 	apis             []app.API
 	blockAnalysis    *BlockAnalysis
 }

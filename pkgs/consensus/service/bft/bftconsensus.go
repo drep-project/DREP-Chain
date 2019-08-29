@@ -32,7 +32,8 @@ type BftConsensus struct {
 	curMiner  int
 	minMiners int
 
-	BlockMgr     *blockmgr.BlockMgr
+	BlockGenerator blockmgr.IBlockBlockGenerator
+
 	ChainService chain.ChainServiceInterface
 	DbService    *database.DatabaseService
 	sender       Sender
@@ -44,38 +45,38 @@ type BftConsensus struct {
 	memberMsgPool chan *MsgWrap
 	leaderMsgPool chan *MsgWrap
 
-	addPeerChan chan *consensusTypes.PeerInfo
+	addPeerChan    chan *consensusTypes.PeerInfo
 	removePeerChan chan *consensusTypes.PeerInfo
-	Producers consensusTypes.ProducerSet
+	Producers      consensusTypes.ProducerSet
 }
 
 func NewBftConsensus(
 	chainService chain.ChainServiceInterface,
-	blockMgr *blockmgr.BlockMgr,
+	blockGenerator blockmgr.IBlockBlockGenerator,
 	dbService *database.DatabaseService,
 	privKey *secp256k1.PrivateKey,
 	producer consensusTypes.ProducerSet,
 	sener Sender,
-	addPeer, removePeer *event.Feed ) *BftConsensus {
+	addPeer, removePeer *event.Feed) *BftConsensus {
 
 	addPeerChan := make(chan *consensusTypes.PeerInfo)
-	removePeerChan:= make(chan  *consensusTypes.PeerInfo)
+	removePeerChan := make(chan *consensusTypes.PeerInfo)
 	addPeer.Subscribe(addPeerChan)
 	removePeer.Subscribe(removePeerChan)
 	return &BftConsensus{
-		CoinBase:      crypto.PubkeyToAddress(privKey.PubKey()),
-		PrivKey:       privKey,
-		BlockMgr:      blockMgr,
-		ChainService:  chainService,
-		DbService:     dbService,
-		minMiners:     int(math.Ceil(float64(len(producer)) * 2 / 3)),
-		Producers:     producer,
-		sender:        sener,
-		onLinePeer:    map[string]consensusTypes.IPeerInfo{},
-		WaitTime:      waitTime,
-		memberMsgPool: make(chan *MsgWrap, 1000),
-		leaderMsgPool: make(chan *MsgWrap, 1000),
-		addPeerChan : addPeerChan,
+		CoinBase:       crypto.PubkeyToAddress(privKey.PubKey()),
+		PrivKey:        privKey,
+		BlockGenerator: blockGenerator,
+		ChainService:   chainService,
+		DbService:      dbService,
+		minMiners:      int(math.Ceil(float64(len(producer)) * 2 / 3)),
+		Producers:      producer,
+		sender:         sener,
+		onLinePeer:     map[string]consensusTypes.IPeerInfo{},
+		WaitTime:       waitTime,
+		memberMsgPool:  make(chan *MsgWrap, 1000),
+		leaderMsgPool:  make(chan *MsgWrap, 1000),
+		addPeerChan:    addPeerChan,
 		removePeerChan: removePeerChan,
 	}
 }
@@ -97,17 +98,17 @@ func (bftConsensus *BftConsensus) Run() (*types.Block, error) {
 	}
 }
 
-func (bftConsensus *BftConsensus) processPeers(){
+func (bftConsensus *BftConsensus) processPeers() {
 	for {
 		select {
-			case addPeer := <- bftConsensus.addPeerChan:
-				bftConsensus.peerLock.Lock()
-				bftConsensus.onLinePeer[addPeer.IP()] = addPeer
-				bftConsensus.peerLock.Unlock()
-			case removePeer := <-  bftConsensus.removePeerChan:
-				bftConsensus.peerLock.Lock()
-				delete(bftConsensus.onLinePeer,removePeer.IP())
-				bftConsensus.peerLock.Unlock()
+		case addPeer := <-bftConsensus.addPeerChan:
+			bftConsensus.peerLock.Lock()
+			bftConsensus.onLinePeer[addPeer.IP()] = addPeer
+			bftConsensus.peerLock.Unlock()
+		case removePeer := <-bftConsensus.removePeerChan:
+			bftConsensus.peerLock.Lock()
+			delete(bftConsensus.onLinePeer, removePeer.IP())
+			bftConsensus.peerLock.Unlock()
 		}
 	}
 }
@@ -148,7 +149,7 @@ func (bftConsensus *BftConsensus) collectMemberStatus() []*MemberInfo {
 	for _, produce := range bftConsensus.Producers {
 		var (
 			IsOnline, ok bool
-			pi        consensusTypes.IPeerInfo
+			pi           consensusTypes.IPeerInfo
 		)
 
 		isMe := bftConsensus.PrivKey.PubKey().IsEqual(produce.Pubkey)
@@ -246,7 +247,7 @@ func (bftConsensus *BftConsensus) runAsLeader(miners []*MemberInfo) (block *type
 	leader := NewLeader(bftConsensus.PrivKey, bftConsensus.sender, bftConsensus.WaitTime, miners, bftConsensus.minMiners, bftConsensus.ChainService.BestChain().Height(), bftConsensus.leaderMsgPool)
 	db := bftConsensus.DbService.BeginTransaction(false)
 	var gasFee *big.Int
-	block, gasFee, err = bftConsensus.BlockMgr.GenerateBlock(db, bftConsensus.CoinBase)
+	block, gasFee, err = bftConsensus.BlockGenerator.GenerateTemplate(db, bftConsensus.CoinBase)
 	if err != nil {
 		log.WithField("msg", err).Error("generate block fail")
 		return nil, err
@@ -261,7 +262,7 @@ func (bftConsensus *BftConsensus) runAsLeader(miners []*MemberInfo) (block *type
 	}
 
 	leader.Reset()
-	multiSig :=  newMultiSignature(*sig, bftConsensus.curMiner, bitmap)
+	multiSig := newMultiSignature(*sig, bftConsensus.curMiner, bitmap)
 	multiSigBytes, err := binary.Marshal(multiSig)
 	if err != nil {
 		log.Debugf("fial to marshal MultiSig")
@@ -340,7 +341,7 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
 	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
 		stateRoot := db.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
-			if !db.RecoverTrie(bftConsensus.ChainService.GetCurrentHeader().StateRoot){
+			if !db.RecoverTrie(bftConsensus.ChainService.GetCurrentHeader().StateRoot) {
 				log.Error("root not equal and recover trie err")
 			}
 			log.Error("rootcmd root !=")
@@ -374,11 +375,11 @@ func (bftConsensus *BftConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, rw p
 		case MsgTypeChallenge:
 			fallthrough
 		case MsgTypeFail:
-			bftConsensus.memberMsgPool <- &MsgWrap{peer, msg.Code,buf}
+			bftConsensus.memberMsgPool <- &MsgWrap{peer, msg.Code, buf}
 		case MsgTypeCommitment:
 			fallthrough
 		case MsgTypeResponse:
-			bftConsensus.leaderMsgPool <-  &MsgWrap{peer, msg.Code,buf}
+			bftConsensus.leaderMsgPool <- &MsgWrap{peer, msg.Code, buf}
 		default:
 			return fmt.Errorf("consensus unkonw msg type:%d", msg.Code)
 		}
@@ -391,7 +392,7 @@ func (bftConsensus *BftConsensus) ChangeTime(interval time.Duration) {
 	bftConsensus.WaitTime = interval
 }
 
-func (bftConsensus *BftConsensus)  Validator( ) chain.IBlockValidator {
+func (bftConsensus *BftConsensus) Validator() chain.IBlockValidator {
 	return &BlockMultiSigValidator{bftConsensus, bftConsensus.Producers}
 }
 

@@ -6,9 +6,9 @@ import (
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/pkgs/consensus/service/bft"
-	"math/big"
 	types2 "github.com/drep-project/drep-chain/pkgs/consensus/types"
 	"github.com/drep-project/drep-chain/types"
+	"math/big"
 )
 
 type ViewTransaction struct {
@@ -39,7 +39,7 @@ type ViewBlock struct {
 	Timestamp    uint64
 	StateRoot    string //hex
 	TxRoot       string //hex
-	Proof		 interface{}
+	Proof        interface{}
 	Txs          []string
 }
 
@@ -97,7 +97,7 @@ func (rpcTransaction *ViewTransaction) FromTx(tx *types.Transaction) *ViewTransa
 	return rpcTransaction
 }
 
-func (rpcBlock *ViewBlock) From(block *types.Block, addresses[]crypto.CommonAddress) *ViewBlock {
+func (rpcBlock *ViewBlock) From(block *types.Block, addresses []crypto.CommonAddress) *ViewBlock {
 	txs := make([]*ViewTransaction, len(block.Data.TxList))
 	for i, tx := range block.Data.TxList {
 		txs[i] = new(ViewTransaction).FromTx(tx)
@@ -117,12 +117,12 @@ func (rpcBlock *ViewBlock) From(block *types.Block, addresses[]crypto.CommonAddr
 
 	if block.Proof.Type == types2.Solo {
 		rpcBlock.Proof = block.Proof
-	}else if block.Proof.Type == types2.Pbft {
+	} else if block.Proof.Type == types2.Pbft {
 		proof := NewPbftProof()
 		multiSig := &bft.MultiSignature{}
 		json.Unmarshal(block.Proof.Evidence, multiSig)
 		proof.Evidence = hex.EncodeToString(block.Proof.Evidence)
-		proof.LeaderPubKey =addresses[multiSig.Leader]
+		proof.LeaderPubKey = addresses[multiSig.Leader]
 		for index, val := range multiSig.Bitmap {
 			if val == 1 {
 				proof.MinorPubKeys = append(proof.MinorPubKeys, addresses[index])

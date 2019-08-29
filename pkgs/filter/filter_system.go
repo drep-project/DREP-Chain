@@ -439,7 +439,7 @@ func (es *EventSystem) broadcast(filters filterIndex, ev interface{}) {
 		return
 	}
 
-	fmt.Println("broadcast:",reflect.TypeOf(ev))
+	fmt.Println("broadcast:", reflect.TypeOf(ev))
 
 	switch e := ev.(type) {
 	case []*types.Log:

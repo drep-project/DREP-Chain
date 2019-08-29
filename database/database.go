@@ -62,7 +62,6 @@ func (db *Database) RecoverTrie(root []byte) bool {
 	return true
 }
 
-
 func (db *Database) initState() error {
 	value, _ := db.diskDb.Get(trie.EmptyRoot[:])
 	if value == nil {
@@ -171,7 +170,7 @@ func (db *Database) GetStorage(addr *crypto.CommonAddress) (*types.Storage, erro
 	}
 	if value == nil {
 		return nil, nil
-	}else{
+	} else {
 		err = binary.Unmarshal(value, storage)
 		if err != nil {
 			return nil, err
@@ -333,7 +332,7 @@ func (db *Database) AliasExist(alias string) bool {
 }
 
 func (db *Database) GetByteCode(addr *crypto.CommonAddress) []byte {
-	storage, _  := db.GetStorage(addr)
+	storage, _ := db.GetStorage(addr)
 	if storage == nil {
 		return nil
 	}
@@ -557,7 +556,7 @@ func (db *Database) GetBlockNode(hash *crypto.Hash, blockHeight uint64) (*types.
 	}
 	blockHeader := &types.BlockHeader{}
 	binary.Unmarshal(value[0:len(value)-1], blockHeader)
-	status := value[len(value)-1:len(value)][0]
+	status := value[len(value)-1 : len(value)][0]
 	return blockHeader, types.BlockStatus(status), nil
 }
 

@@ -83,7 +83,7 @@ type BlockNode struct {
 	MerkleRoot   []byte
 	ReceiptRoot  crypto.Hash
 	Bloom        Bloom
-	Status BlockStatus
+	Status       BlockStatus
 }
 
 // initBlockNode initializes a block node from the given header and parent node,
@@ -129,17 +129,17 @@ func (node *BlockNode) Header() BlockHeader {
 		prevHash = node.Parent.Hash
 	}
 	return BlockHeader{
-		Height:         node.Height,
-		StateRoot:      node.StateRoot,
-		Timestamp:      node.TimeStamp,
-		ChainId:        node.ChainId,
-		Version:        node.Version,
-		PreviousHash:   *prevHash,
-		GasLimit:       node.GasLimit,
-		GasUsed:        node.GasUsed,
-		TxRoot:         node.MerkleRoot,
-		ReceiptRoot:    node.ReceiptRoot,
-		Bloom:          node.Bloom,
+		Height:       node.Height,
+		StateRoot:    node.StateRoot,
+		Timestamp:    node.TimeStamp,
+		ChainId:      node.ChainId,
+		Version:      node.Version,
+		PreviousHash: *prevHash,
+		GasLimit:     node.GasLimit,
+		GasUsed:      node.GasUsed,
+		TxRoot:       node.MerkleRoot,
+		ReceiptRoot:  node.ReceiptRoot,
+		Bloom:        node.Bloom,
 	}
 }
 

@@ -9,7 +9,7 @@ import (
 type BlockAnalysis struct {
 	Config           HistoryConfig
 	getBlock         func(uint64) (*types.Block, error)
-	producers		 []crypto.CommonAddress
+	producers        []crypto.CommonAddress
 	eventNewBlockSub event.Subscription
 	newBlockChan     chan *types.ChainEvent
 
@@ -19,7 +19,7 @@ type BlockAnalysis struct {
 	readyToQuit     chan struct{}
 }
 
-func NewBlockAnalysis(config HistoryConfig, producers []crypto.CommonAddress,  getBlock func(uint64) (*types.Block, error)) *BlockAnalysis {
+func NewBlockAnalysis(config HistoryConfig, producers []crypto.CommonAddress, getBlock func(uint64) (*types.Block, error)) *BlockAnalysis {
 	blockAnalysis := &BlockAnalysis{}
 	blockAnalysis.Config = config
 	blockAnalysis.producers = producers

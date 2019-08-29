@@ -9,6 +9,7 @@ const (
 	Solo = iota
 	Pbft
 )
+
 type ConsensusConfig struct {
 	ConsensusMode string               `json:"consensusMode"`
 	MyPk          *secp256k1.PublicKey `json:"mypk"`
@@ -44,7 +45,6 @@ func (produceSet *ProducerSet) IsLocalPk(pk *secp256k1.PublicKey) bool {
 	}
 	return false
 }
-
 
 func (produceSet *ProducerSet) IsLocalAddress(addr crypto.CommonAddress) bool {
 	for _, bp := range *produceSet {

@@ -1,11 +1,11 @@
 package chain
 
 import (
+	"github.com/drep-project/drep-chain/common/hexutil"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
 	chainType "github.com/drep-project/drep-chain/types"
 	"math/big"
-	"github.com/drep-project/drep-chain/common/hexutil"
 )
 
 /*

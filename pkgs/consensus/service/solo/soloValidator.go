@@ -9,7 +9,7 @@ import (
 
 type SoloValidator struct {
 	consensus *SoloConsensus
-	pubkey *secp256k1.PublicKey
+	pubkey    *secp256k1.PublicKey
 }
 
 func NewSoloValidator(pubkey *secp256k1.PublicKey) *SoloValidator {

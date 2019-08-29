@@ -7,10 +7,6 @@ import (
 
 // VerifyTransaction use current tip state as environment may not matched read disk state
 // not check tx nonce ; current nonce shoud use pool nonce while receive tx
-func (blockMgr *BlockMgr) VerifyTransaction(tx *types.Transaction) error {
-	return blockMgr.verifyTransaction(tx)
-}
-
 func (blockMgr *BlockMgr) verifyTransaction(tx *types.Transaction) error {
 	//db := blockMgr.ChainService.GetCurrentState()
 	//from, err := tx.From()

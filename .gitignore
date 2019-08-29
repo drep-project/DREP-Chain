@@ -5,11 +5,11 @@ tools/gencode/*.js
 dreptest*
 data
 drep
-drepClient.exe
+drep*.exe
 drepClient
 test_filestore*
 test_db*
-
+txs
 # Build
 vendor/
 build/

@@ -8,18 +8,18 @@ import (
 )
 
 type BlockHeader struct {
-	ChainId        ChainIdType
-	Version        int32
-	PreviousHash   crypto.Hash
-	GasLimit       big.Int
-	GasUsed        big.Int
-	Height         uint64
-	Timestamp      uint64
-	StateRoot      []byte
-	TxRoot         []byte
-	ReceiptRoot    crypto.Hash
-	Bloom          Bloom
-	blockHash      *crypto.Hash `binary:"ignore"`
+	ChainId      ChainIdType
+	Version      int32
+	PreviousHash crypto.Hash
+	GasLimit     big.Int
+	GasUsed      big.Int
+	Height       uint64
+	Timestamp    uint64
+	StateRoot    []byte
+	TxRoot       []byte
+	ReceiptRoot  crypto.Hash
+	Bloom        Bloom
+	blockHash    *crypto.Hash `binary:"ignore"`
 }
 
 func (blockHeader *BlockHeader) Hash() *crypto.Hash {
@@ -47,9 +47,10 @@ type Block struct {
 }
 
 type Proof struct {
-	Type int
-	Evidence  []byte
+	Type     int
+	Evidence []byte
 }
+
 func (block *Block) GasUsed() uint64 {
 	return block.Header.GasUsed.Uint64()
 }
@@ -61,16 +62,16 @@ func (block *Block) GasLimit() uint64 {
 func (block *Block) AsSignMessage() []byte {
 	blockTemp := &Block{
 		Header: &BlockHeader{
-			ChainId:       block.Header.ChainId,
-			Version:       block.Header.Version,
-			PreviousHash:  block.Header.PreviousHash,
-			GasLimit:      block.Header.GasLimit,
-			GasUsed:       block.Header.GasUsed,
-			Height:        block.Header.Height,
-			Timestamp:     block.Header.Timestamp,
-			TxRoot:        block.Header.TxRoot,
-			ReceiptRoot:   block.Header.ReceiptRoot,
-			Bloom:         block.Header.Bloom,
+			ChainId:      block.Header.ChainId,
+			Version:      block.Header.Version,
+			PreviousHash: block.Header.PreviousHash,
+			GasLimit:     block.Header.GasLimit,
+			GasUsed:      block.Header.GasUsed,
+			Height:       block.Header.Height,
+			Timestamp:    block.Header.Timestamp,
+			TxRoot:       block.Header.TxRoot,
+			ReceiptRoot:  block.Header.ReceiptRoot,
+			Bloom:        block.Header.Bloom,
 		},
 	}
 	bytes, _ := binary.Marshal(blockTemp)

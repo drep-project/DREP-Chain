@@ -19,20 +19,24 @@ import (
 )
 
 type SoloConsensus struct {
-	CoinBase     crypto.CommonAddress
-	PrivKey      *secp256k1.PrivateKey
-	BlockMgr     *blockmgr.BlockMgr
-	ChainService chain.ChainServiceInterface
-	DbService    *database.DatabaseService
+	CoinBase       crypto.CommonAddress
+	PrivKey        *secp256k1.PrivateKey
+	blockGenerator blockmgr.IBlockBlockGenerator
+	ChainService   chain.ChainServiceInterface
+	DbService      *database.DatabaseService
 }
 
-func NewSoloConsensus(chainService chain.ChainServiceInterface, blockMgr *blockmgr.BlockMgr, dbService *database.DatabaseService, privKey *secp256k1.PrivateKey) *SoloConsensus {
+func NewSoloConsensus(
+	chainService chain.ChainServiceInterface,
+	blockGenerator blockmgr.IBlockBlockGenerator,
+	dbService *database.DatabaseService,
+	privKey *secp256k1.PrivateKey) *SoloConsensus {
 	return &SoloConsensus{
-		CoinBase:     crypto.PubkeyToAddress(privKey.PubKey()),
-		PrivKey:      privKey,
-		BlockMgr:     blockMgr,
-		ChainService: chainService,
-		DbService:    dbService,
+		CoinBase:       crypto.PubkeyToAddress(privKey.PubKey()),
+		PrivKey:        privKey,
+		blockGenerator: blockGenerator,
+		ChainService:   chainService,
+		DbService:      dbService,
 	}
 }
 
@@ -41,7 +45,7 @@ func (soloConsensus *SoloConsensus) Run() (*types.Block, error) {
 	log.Trace("node leader finishes process consensus")
 
 	db := soloConsensus.DbService.BeginTransaction(false)
-	block, gasFee, err := soloConsensus.BlockMgr.GenerateBlock(db, soloConsensus.CoinBase)
+	block, gasFee, err := soloConsensus.blockGenerator.GenerateTemplate(db, soloConsensus.CoinBase)
 	if err != nil {
 		return nil, err
 	}

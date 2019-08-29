@@ -107,10 +107,10 @@ func (cliService *CliService) localConsole(executeContext *app.ExecuteContext) e
 		return errors.New("ipc must be enable in console mode")
 	}
 	// Attach to the newly started node and start the JavaScript console
-	client, err := cliService.Blockmgr.Attach()
-	if err != nil {
-		return errors.New(fmt.Sprintf("Failed to attach to the inproc drep: %v", err))
+	if cliService.RpcService.IpcHandler == nil {
+		return errors.New("Failed to attach to the inproc drep")
 	}
+	client := rpc.DialInProc(cliService.RpcService.IpcHandler)
 	config := console.Config{
 		HomeDir: executeContext.CommonConfig.HomeDir,
 		DocRoot: executeContext.Cli.GlobalString(cliTypes.JSpathFlag.Name),
@@ -118,6 +118,7 @@ func (cliService *CliService) localConsole(executeContext *app.ExecuteContext) e
 		Preload: cliTypes.MakeConsolePreloads(executeContext.Cli),
 	}
 
+	var err error
 	cliService.console, err = console.New(config)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Failed to start the JavaScript console: %v", err))

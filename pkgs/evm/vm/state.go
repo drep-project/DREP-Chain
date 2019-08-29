@@ -52,10 +52,9 @@ func NewState(database *database.Database) *State {
 	}
 }
 func (s *State) Empty(addr *crypto.CommonAddress) bool {
-	so,  _ := s.db.GetStorage(addr)
+	so, _ := s.db.GetStorage(addr)
 	return so == nil || so.Empty()
 }
-
 
 func (s *State) CreateContractAccount(addr crypto.CommonAddress, byteCode []byte) (*types.Account, error) {
 	account, err := types.NewContractAccount(addr)
@@ -165,7 +164,7 @@ func (s *State) Store(x, y *big.Int) {
 
 func (s *State) Exist(contractAddr crypto.CommonAddress) bool {
 	storage, err := s.db.GetStorage(&contractAddr)
-	if err != nil || storage == nil{
+	if err != nil || storage == nil {
 		return false
 	}
 	return len(storage.ByteCode) > 0

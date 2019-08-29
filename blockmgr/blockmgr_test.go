@@ -27,7 +27,7 @@ func generatorChain(t *testing.T, db *database.Database) []*types.Block {
 	blks := make([]*types.Block, 0)
 
 	for i := 0; i < 10; i++ {
-		block, _, err := bm.GenerateBlock(db, privKey.PubKey())
+		block, _, err := bm.GenerateTemplate(db, privKey.PubKey())
 		if err != nil {
 			t.Fatal("generate block err:", err)
 			return nil

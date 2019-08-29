@@ -3,30 +3,30 @@ package bft
 import (
 	"bytes"
 	"errors"
-	"math/big"
-	"sync"
-	"time"
 	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/secp256k1/schnorr"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
+	"math/big"
+	"sync"
+	"time"
 )
 
 type Member struct {
-	leader      		*MemberInfo
-	producers   		[]*MemberInfo
-	liveMembers 		[]*MemberInfo
-	prvKey      		*secp256k1.PrivateKey
-	p2pServer   		Sender
+	leader      *MemberInfo
+	producers   []*MemberInfo
+	liveMembers []*MemberInfo
+	prvKey      *secp256k1.PrivateKey
+	p2pServer   Sender
 
-	msg     			IConsenMsg
-	msgHash 			[]byte
+	msg     IConsenMsg
+	msgHash []byte
 
-	randomPrivakey 		*secp256k1.PrivateKey
-	r              		*big.Int
+	randomPrivakey *secp256k1.PrivateKey
+	r              *big.Int
 
-	waitTime 			time.Duration
+	waitTime time.Duration
 
 	completed           chan struct{}
 	timeOutChanel       chan struct{}
@@ -37,10 +37,10 @@ type Member struct {
 	currentHeight       uint64
 	stateLock           sync.RWMutex
 
-	msgPool    			chan *MsgWrap
-	cancelPool 			chan struct{}
-	validator  			func(msg IConsenMsg) error
-	convertor  			func(msg []byte) (IConsenMsg, error)
+	msgPool    chan *MsgWrap
+	cancelPool chan struct{}
+	validator  func(msg IConsenMsg) error
+	convertor  func(msg []byte) (IConsenMsg, error)
 }
 
 func NewMember(prvKey *secp256k1.PrivateKey, p2pServer Sender, waitTime time.Duration, producers []*MemberInfo, minMember int, curHeight uint64, msgPool chan *MsgWrap) *Member {

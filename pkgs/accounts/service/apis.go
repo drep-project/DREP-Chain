@@ -22,10 +22,11 @@ usage: 地址管理及发起简单交易
 prefix:account
 */
 type AccountApi struct {
-	Wallet          *Wallet
-	accountService  *AccountService
-	blockmgr        *blockmgr.BlockMgr
-	databaseService *database.DatabaseService
+	Wallet             *Wallet
+	accountService     *AccountService
+	poolQuery          blockmgr.IBlockMgrPool
+	messageBroadCastor blockmgr.ISendMessage
+	databaseService    *database.DatabaseService
 }
 
 /*
@@ -162,14 +163,14 @@ func (accountapi *AccountApi) CloseWallet() {
 	 {"jsonrpc":"2.0","id":1,"result":"0x3a3b59f90a21c2fd1b690aa3a2bc06dc2d40eb5bdc26fdd7ecb7e1105af2638e"}
 */
 func (accountapi *AccountApi) Transfer(from crypto.CommonAddress, to crypto.CommonAddress, amount, gasprice, gaslimit *common.Big, data common.Bytes) (string, error) {
-	nonce := accountapi.blockmgr.GetTransactionCount(&from)
+	nonce := accountapi.poolQuery.GetTransactionCount(&from)
 	tx := types.NewTransaction(to, (*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
 	sig, err := accountapi.Wallet.Sign(&from, tx.TxHash().Bytes())
 	if err != nil {
 		return "", err
 	}
 	tx.Sig = sig
-	err = accountapi.blockmgr.SendTransaction(tx, true)
+	err = accountapi.messageBroadCastor.SendTransaction(tx, true)
 	if err != nil {
 		return "", err
 	}
@@ -203,7 +204,7 @@ func (accountapi *AccountApi) ReplaceTx(from crypto.CommonAddress, to crypto.Com
 		return "", err
 	}
 	tx.Sig = sig
-	err = accountapi.blockmgr.SendTransaction(tx, true)
+	err = accountapi.messageBroadCastor.SendTransaction(tx, true)
 	if err != nil {
 		return "", err
 	}
@@ -240,7 +241,7 @@ func (accountapi *AccountApi) ReplaceTx(from crypto.CommonAddress, to crypto.Com
 }
 */
 func (accountapi *AccountApi) GetTxInPool(hash string) (*types.Transaction, error) {
-	tx, err := accountapi.blockmgr.GetTxInPool(hash)
+	tx, err := accountapi.poolQuery.GetTxInPool(hash)
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +263,7 @@ response:
 	{"jsonrpc":"2.0","id":1,"result":"0x5adb248f2943e12fb91c140bd3d0df6237712061e9abae97345b0869c3daa749"}
 */
 func (accountapi *AccountApi) SetAlias(srcAddr crypto.CommonAddress, alias string, gasprice, gaslimit *common.Big) (string, error) {
-	nonce := accountapi.blockmgr.GetTransactionCount(&srcAddr)
+	nonce := accountapi.poolQuery.GetTransactionCount(&srcAddr)
 	t := types.NewAliasTransaction(alias, (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
 	sig, err := accountapi.Wallet.Sign(&srcAddr, t.TxHash().Bytes())
 	if err != nil {
@@ -271,7 +272,7 @@ func (accountapi *AccountApi) SetAlias(srcAddr crypto.CommonAddress, alias strin
 	t.Sig = sig
 	fmt.Println(hex.EncodeToString(t.AsPersistentMessage()))
 	fmt.Println(t.TxHash().String())
-	err = accountapi.blockmgr.SendTransaction(t, true)
+	err = accountapi.messageBroadCastor.SendTransaction(t, true)
 	if err != nil {
 		return "", err
 	}
@@ -295,14 +296,14 @@ func (accountapi *AccountApi) SetAlias(srcAddr crypto.CommonAddress, alias strin
 	 {"jsonrpc":"2.0","id":1,"result":"0x5d74aba54ace5f01a5f0057f37bfddbbe646ea6de7265b368e2e7d17d9cdeb9c"}
 */
 func (accountapi *AccountApi) Call(from crypto.CommonAddress, to crypto.CommonAddress, input common.Bytes, amount, gasprice, gaslimit *common.Big) (string, error) {
-	nonce := accountapi.blockmgr.GetTransactionCount(&from)
+	nonce := accountapi.poolQuery.GetTransactionCount(&from)
 	t := types.NewCallContractTransaction(to, input, (*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
 	sig, err := accountapi.Wallet.Sign(&from, t.TxHash().Bytes())
 	if err != nil {
 		return "", err
 	}
 	t.Sig = sig
-	accountapi.blockmgr.SendTransaction(t, true)
+	accountapi.messageBroadCastor.SendTransaction(t, true)
 	return t.TxHash().String(), nil
 }
 
@@ -322,14 +323,14 @@ func (accountapi *AccountApi) Call(from crypto.CommonAddress, to crypto.CommonAd
 	 {"jsonrpc":"2.0","id":1,"result":"0x9a8d8d5d7d00bbe0eb1b9431a13a7219008e352241b751b177bfb29e4e75b0d1"}
 */
 func (accountapi *AccountApi) CreateCode(from crypto.CommonAddress, byteCode common.Bytes, amount, gasprice, gaslimit *common.Big) (string, error) {
-	nonce := accountapi.blockmgr.GetTransactionCount(&from)
+	nonce := accountapi.poolQuery.GetTransactionCount(&from)
 	t := types.NewContractTransaction(byteCode, (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
 	sig, err := accountapi.Wallet.Sign(&from, t.TxHash().Bytes())
 	if err != nil {
 		return "", err
 	}
 	t.Sig = sig
-	accountapi.blockmgr.SendTransaction(t, true)
+	accountapi.messageBroadCastor.SendTransaction(t, true)
 	return t.TxHash().String(), nil
 }
 

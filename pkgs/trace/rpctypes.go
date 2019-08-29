@@ -12,10 +12,10 @@ import (
 )
 
 type RpcTransaction struct {
-	Hash            crypto.Hash
-	From            crypto.CommonAddress
+	Hash                  crypto.Hash
+	From                  crypto.CommonAddress
 	types.TransactionData `bson:",inline"`
-	Sig             common.Bytes
+	Sig                   common.Bytes
 }
 
 type RpcBlock struct {
@@ -49,7 +49,7 @@ func (rpcTx *RpcTransaction) ToTx() *types.Transaction {
 	return tx
 }
 
-func (rpcBlock *RpcBlock) From(block *types.Block, addresses[]crypto.CommonAddress) *RpcBlock {
+func (rpcBlock *RpcBlock) From(block *types.Block, addresses []crypto.CommonAddress) *RpcBlock {
 	txs := make([]*RpcTransaction, len(block.Data.TxList))
 	for i, tx := range block.Data.TxList {
 		txs[i] = new(RpcTransaction).FromTx(tx)
@@ -69,12 +69,12 @@ func (rpcBlock *RpcBlock) From(block *types.Block, addresses[]crypto.CommonAddre
 
 	if block.Proof.Type == types2.Solo {
 		rpcBlock.Proof = block.Proof
-	}else if block.Proof.Type == types2.Pbft {
+	} else if block.Proof.Type == types2.Pbft {
 		proof := NewPbftProof()
 		multiSig := &bft.MultiSignature{}
 		json.Unmarshal(block.Proof.Evidence, multiSig)
 		proof.Evidence = hex.EncodeToString(block.Proof.Evidence)
-		proof.LeaderPubKey =addresses[multiSig.Leader]
+		proof.LeaderPubKey = addresses[multiSig.Leader]
 		for index, val := range multiSig.Bitmap {
 			if val == 1 {
 				proof.MinorPubKeys = append(proof.MinorPubKeys, addresses[index])
@@ -86,19 +86,21 @@ func (rpcBlock *RpcBlock) From(block *types.Block, addresses[]crypto.CommonAddre
 }
 
 type PbftProof struct {
-	Type int
+	Type         int
 	LeaderPubKey crypto.CommonAddress
 	MinorPubKeys []crypto.CommonAddress
-	Evidence string
+	Evidence     string
 }
+
 func NewPbftProof() *PbftProof {
-	return &PbftProof {
-		Type:types2.Pbft,
-		MinorPubKeys :  []crypto.CommonAddress{},
+	return &PbftProof{
+		Type:         types2.Pbft,
+		MinorPubKeys: []crypto.CommonAddress{},
 	}
 }
+
 type SoloProof struct {
-	Type int
+	Type     int
 	Evidence string
 }
 type RpcBlockHeader struct {
@@ -127,8 +129,8 @@ func (rpcBlockHeader *RpcBlockHeader) FromBlockHeader(header *types.BlockHeader)
 	rpcBlockHeader.GasUsed = (&gasUsed).String()
 	rpcBlockHeader.Height = header.Height
 	rpcBlockHeader.Timestamp = header.Timestamp
-	rpcBlockHeader.StateRoot = hex.EncodeToString( header.StateRoot)
-	rpcBlockHeader.TxRoot =hex.EncodeToString( header.TxRoot)
+	rpcBlockHeader.StateRoot = hex.EncodeToString(header.StateRoot)
+	rpcBlockHeader.TxRoot = hex.EncodeToString(header.TxRoot)
 	rpcBlockHeader.Hash = header.Hash().String()
 }
 
@@ -142,10 +144,9 @@ func (rpcBlockHeader *RpcBlockHeader) ToHeader() *types.BlockHeader {
 	blockHeader.Height = rpcBlockHeader.Height
 	blockHeader.Timestamp = rpcBlockHeader.Timestamp
 	blockHeader.StateRoot = mustDecode(rpcBlockHeader.StateRoot)
-	blockHeader.TxRoot =  mustDecode(rpcBlockHeader.TxRoot)
+	blockHeader.TxRoot = mustDecode(rpcBlockHeader.TxRoot)
 	return blockHeader
 }
-
 
 func mustDecode(str string) []byte {
 	strBytes, _ := hex.DecodeString(str)

@@ -25,14 +25,14 @@ func (chainService *ChainService) GetGenisiBlock(biosAddress crypto.CommonAddres
 	merkleRoot := chainService.DeriveMerkleRoot(nil)
 	return &types.Block{
 		Header: &types.BlockHeader{
-			Version:       common.Version,
-			PreviousHash:  crypto.Hash{},
-			GasLimit:      *new(big.Int).SetUint64(params.GenesisGasLimit),
-			GasUsed:       *new(big.Int),
-			Timestamp:     1545282765,
-			StateRoot:     root,
-			TxRoot:        merkleRoot,
-			Height:        0,
+			Version:      common.Version,
+			PreviousHash: crypto.Hash{},
+			GasLimit:     *new(big.Int).SetUint64(params.GenesisGasLimit),
+			GasUsed:      *new(big.Int),
+			Timestamp:    1545282765,
+			StateRoot:    root,
+			TxRoot:       merkleRoot,
+			Height:       0,
 		},
 		Data: &types.BlockData{
 			TxCount: 0,
@@ -64,14 +64,14 @@ func (chainService *ChainService) ProcessGenesisBlock(biosAddr crypto.CommonAddr
 	merkleRoot := chainService.DeriveMerkleRoot(nil)
 	return &types.Block{
 		Header: &types.BlockHeader{
-			Version:       common.Version,
-			PreviousHash:  crypto.Hash{},
-			GasLimit:      *new(big.Int).SetUint64(params.GenesisGasLimit),
-			GasUsed:       *new(big.Int),
-			Timestamp:     1545282765,
-			StateRoot:     root,
-			TxRoot:        merkleRoot,
-			Height:        0,
+			Version:      common.Version,
+			PreviousHash: crypto.Hash{},
+			GasLimit:     *new(big.Int).SetUint64(params.GenesisGasLimit),
+			GasUsed:      *new(big.Int),
+			Timestamp:    1545282765,
+			StateRoot:    root,
+			TxRoot:       merkleRoot,
+			Height:       0,
 		},
 		Data: &types.BlockData{
 			TxCount: 0,

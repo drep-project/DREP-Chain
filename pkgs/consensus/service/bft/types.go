@@ -16,8 +16,8 @@ type MultiSignature struct {
 	Bitmap []byte
 }
 
-func newMultiSignature(sig    secp256k1.Signature, leader int, bitmap []byte) *MultiSignature{
-	return &MultiSignature{sig,leader,bitmap}
+func newMultiSignature(sig secp256k1.Signature, leader int, bitmap []byte) *MultiSignature {
+	return &MultiSignature{sig, leader, bitmap}
 }
 
 func (multiSignature *MultiSignature) AsSignMessage() []byte {

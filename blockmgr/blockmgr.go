@@ -13,20 +13,17 @@ import (
 	"gopkg.in/urfave/cli.v1"
 
 	"github.com/drep-project/drep-chain/blockmgr/txpool"
+	"github.com/drep-project/drep-chain/chain"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/network/p2p"
-	"github.com/drep-project/drep-chain/pkgs/evm"
-	"github.com/drep-project/rpc"
-
-	"github.com/drep-project/drep-chain/chain"
 	p2pService "github.com/drep-project/drep-chain/network/service"
+	"github.com/drep-project/drep-chain/pkgs/evm"
 	"github.com/drep-project/drep-chain/types"
 
 	"time"
 
-	"github.com/drep-project/drep-chain/common"
 	rpc2 "github.com/drep-project/drep-chain/pkgs/rpc"
 )
 
@@ -43,7 +40,42 @@ var (
 		JournalFile: "txpool/txs",
 	}
 	span = uint64(params.MaxGasLimit / 360)
+	_    = IBlockMgr((*BlockMgr)(nil)) //compile check
 )
+
+type IBlockMgr interface {
+	app.Service
+	IBlockMgrPool
+	IBlockBlockGenerator
+	IBlockNotify
+	ISendMessage
+}
+
+type IBlockMgrPool interface {
+	//query tx pool message
+	GetTransactionCount(addr *crypto.CommonAddress) uint64
+	GetPoolTransactions(addr *crypto.CommonAddress) []types.Transactions
+	GetPoolMiniPendingNonce(addr *crypto.CommonAddress) uint64
+	GetTxInPool(hash string) (*types.Transaction, error)
+}
+
+type IBlockBlockGenerator interface {
+	//generate block template
+	GenerateTemplate(db *database.Database, leaderAddr crypto.CommonAddress) (*types.Block, *big.Int, error)
+}
+
+type IBlockNotify interface {
+	//notify
+	SubscribeSyncBlockEvent(subchan chan event.SyncBlockEvent) event.Subscription
+	NewTxFeed() *event.Feed
+}
+
+type ISendMessage interface {
+	// send
+	SendTransaction(tx *types.Transaction, islocal bool) error
+	BroadcastBlock(msgType int32, block *types.Block, isLocal bool)
+	BroadcastTx(msgType int32, tx *types.Transaction, isLocal bool)
+}
 
 type BlockMgr struct {
 	ChainService    chain.ChainServiceInterface `service:"chain"`
@@ -212,34 +244,20 @@ func (blockMgr *BlockMgr) Stop(executeContext *app.ExecuteContext) error {
 	if blockMgr.quit != nil {
 		close(blockMgr.quit)
 	}
-
 	return nil
 }
 
-func (blockMgr *BlockMgr) Attach() (*rpc.Client, error) {
-	blockMgr.lock.RLock()
-	defer blockMgr.lock.RUnlock()
-
-	return rpc.DialInProc(blockMgr.RpcService.IpcHandler), nil
-}
-
-func (blockMgr *BlockMgr) SubscribeSyncBlockEvent(subchan chan event.SyncBlockEvent) event.Subscription {
-	return blockMgr.syncBlockEvent.Subscribe(subchan)
-}
-
 func (blockMgr *BlockMgr) GetTransactionCount(addr *crypto.CommonAddress) uint64 {
-
 	return blockMgr.transactionPool.GetTransactionCount(addr)
 }
 
 func (blockMgr *BlockMgr) SendTransaction(tx *types.Transaction, islocal bool) error {
-	//TODO  use pool nonce
 	from, err := tx.From()
 	nonce := blockMgr.transactionPool.GetTransactionCount(from)
 	if nonce > tx.Nonce() {
 		return fmt.Errorf("error nounce db nonce:%d != %d", nonce, tx.Nonce())
 	}
-	err = blockMgr.VerifyTransaction(tx)
+	err = blockMgr.verifyTransaction(tx)
 
 	if err != nil {
 		return err
@@ -299,26 +317,12 @@ func (blockMgr *BlockMgr) GetPoolMiniPendingNonce(addr *crypto.CommonAddress) ui
 	return blockMgr.transactionPool.GetMiniPendingNonce(addr)
 }
 
-func (blockMgr *BlockMgr) GenerateTransferTransaction(to *crypto.CommonAddress, nonce uint64, amount, price, limit common.Big) types.Transaction {
-	t := types.Transaction{
-		Data: types.TransactionData{
-			Version:   common.Version,
-			Nonce:     nonce,
-			ChainId:   blockMgr.ChainService.ChainID(),
-			Type:      types.TxType(types.TransferType),
-			To:        *to,
-			Amount:    amount,
-			GasPrice:  price,
-			GasLimit:  limit,
-			Timestamp: time.Now().Unix(),
-			Data:      []byte{},
-		},
-	}
-	return t
+func (blockMgr *BlockMgr) GetTxInPool(hash string) (*types.Transaction, error) {
+	return blockMgr.transactionPool.GetTxInPool(hash)
 }
 
-func (bm *BlockMgr) GetTxInPool(hash string) (*types.Transaction, error) {
-	return bm.transactionPool.GetTxInPool(hash)
+func (blockMgr *BlockMgr) SubscribeSyncBlockEvent(subchan chan event.SyncBlockEvent) event.Subscription {
+	return blockMgr.syncBlockEvent.Subscribe(subchan)
 }
 
 func (blockMgr *BlockMgr) NewTxFeed() *event.Feed {

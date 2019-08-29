@@ -3,6 +3,7 @@ package service
 import (
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/blockmgr"
+	"github.com/drep-project/drep-chain/chain"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/common/fileutil"
 	"github.com/drep-project/drep-chain/crypto/sha3"
@@ -39,12 +40,14 @@ var (
 
 // AccountService
 type AccountService struct {
-	DatabaseService *database.DatabaseService `service:"database"`
-	Blockmgr        *blockmgr.BlockMgr        `service:"blockmgr"`
-	CommonConfig    *app.CommonConfig
-	Config          *accountTypes.Config
-	Wallet          *Wallet
-	apis            []app.API
+	DatabaseService    *database.DatabaseService   `service:"database"`
+	Chain              chain.ChainServiceInterface `service:"chain"`
+	PoolQuery          blockmgr.IBlockMgrPool      `service:"blockmgr"`
+	MessageBroadCastor blockmgr.ISendMessage       `service:"blockmgr"`
+	CommonConfig       *app.CommonConfig
+	Config             *accountTypes.Config
+	Wallet             *Wallet
+	apis               []app.API
 }
 
 // Name service name
@@ -59,10 +62,11 @@ func (accountService *AccountService) Api() []app.API {
 			Namespace: "account",
 			Version:   "1.0",
 			Service: &AccountApi{
-				Wallet:          accountService.Wallet,
-				blockmgr:        accountService.Blockmgr,
-				accountService:  accountService,
-				databaseService: accountService.DatabaseService,
+				Wallet:             accountService.Wallet,
+				messageBroadCastor: accountService.MessageBroadCastor,
+				poolQuery:          accountService.PoolQuery,
+				accountService:     accountService,
+				databaseService:    accountService.DatabaseService,
 			},
 			Public: true,
 		},
@@ -104,7 +108,7 @@ func (accountService *AccountService) Init(executeContext *app.ExecuteContext) e
 		return nil
 	}
 
-	accountService.Wallet, err = NewWallet(accountService.Config, accountService.Blockmgr.ChainService.ChainID())
+	accountService.Wallet, err = NewWallet(accountService.Config, accountService.Chain.ChainID())
 	if err != nil {
 		return err
 	}
@@ -142,7 +146,7 @@ func (accountService *AccountService) CreateWallet(password string) error {
 
 	store := accountComponent.NewFileStore(accountService.Config.KeyStoreDir)
 	password = string(sha3.Keccak256([]byte(password)))
-	newNode := chainTypes.NewNode(nil, accountService.Blockmgr.ChainService.Config().ChainId)
+	newNode := chainTypes.NewNode(nil, accountService.Chain.Config().ChainId)
 	store.StoreKey(newNode, password)
 	return nil
 }

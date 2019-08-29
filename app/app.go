@@ -85,10 +85,9 @@ func (mApp DrepApp) addService(serviceValue reflect.Value) {
 	serviceType := serviceValue.Type()
 	serviceNumFields := serviceType.Elem().NumField()
 	for i := 0; i < serviceNumFields; i++ {
-		serviceValueField := serviceValue.Elem().Field(i)
 		serviceTypeField := serviceType.Elem().Field(i)
-		if serviceValueField.Type().Implements(reflect.TypeOf((*Service)(nil)).Elem()) {
-			refServiceName := GetServiceTag(serviceTypeField)
+		refServiceName := GetServiceTag(serviceTypeField)
+		if refServiceName != "" {
 			preAddServices := mApp.Context.Services
 			hasService := false
 			for _, addedService := range preAddServices {
@@ -115,11 +114,11 @@ func (mApp DrepApp) addService(serviceValue reflect.Value) {
 func GetServiceTag(field reflect.StructField) string {
 	serviceTagStr := field.Tag.Get("service")
 	if serviceTagStr == "" {
-		return field.Name
+		return ""
 	}
 	serviceName := strings.Split(serviceTagStr, ",")
 	if len(serviceName) == 0 {
-		return field.Name
+		return ""
 	} else {
 		return serviceName[0]
 	}

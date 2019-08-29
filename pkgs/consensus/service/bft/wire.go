@@ -94,7 +94,6 @@ type CompletedBlockMessage struct {
 	StateRoot []byte //sencond round  leader should send stateroot, then member verify
 }
 
-
 func (completedBlockMessage *CompletedBlockMessage) AsSignMessage() []byte {
 	bytes, _ := binary.Marshal(completedBlockMessage)
 	return bytes

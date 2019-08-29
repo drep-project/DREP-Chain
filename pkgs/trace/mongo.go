@@ -15,7 +15,7 @@ import (
 // MongogDbStore used to save tx in mongo db, db name is "drep", col name is "tx"
 type MongogDbStore struct {
 	url       string
-	producers  []crypto.CommonAddress
+	producers []crypto.CommonAddress
 	client    *mongo.Client
 	db        *mongo.Database
 	txCol     *mongo.Collection
@@ -28,7 +28,7 @@ type MongogDbStore struct {
 }
 
 // NewMongogDbStore open a new db from url, if db not exist, auto create
-func NewMongogDbStore(url string, producers  []crypto.CommonAddress, dbName string) (*MongogDbStore, error) {
+func NewMongogDbStore(url string, producers []crypto.CommonAddress, dbName string) (*MongogDbStore, error) {
 	store := &MongogDbStore{
 		url: url,
 	}
@@ -60,7 +60,7 @@ func (store *MongogDbStore) InsertRecord(block *types.Block) {
 	rpcHeader := RpcBlockHeader{}
 	rpcHeader.FromBlockHeader(block.Header)
 	rpcBlock := &RpcBlock{}
-	rpcBlock.From(block,store.producers)
+	rpcBlock.From(block, store.producers)
 	_, err := store.blockCol.InsertOne(ctx, rpcBlock)
 	if err != nil {
 		fmt.Println(err)

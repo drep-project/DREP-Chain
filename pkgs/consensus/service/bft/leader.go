@@ -1,14 +1,14 @@
 package bft
 
 import (
-	"math/big"
-	"sync"
-	"time"
 	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/secp256k1/schnorr"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
+	"math/big"
+	"sync"
+	"time"
 )
 
 const (
@@ -28,24 +28,24 @@ const (
 )
 
 type Leader struct {
-	producers   		[]*MemberInfo
-	liveMembers 		[]*MemberInfo
+	producers   []*MemberInfo
+	liveMembers []*MemberInfo
 
-	pubkey         		*secp256k1.PublicKey
-	privakey       		*secp256k1.PrivateKey
-	randomPrivakey 		*secp256k1.PrivateKey
+	pubkey         *secp256k1.PublicKey
+	privakey       *secp256k1.PrivateKey
+	randomPrivakey *secp256k1.PrivateKey
 
-	commitKey 			*secp256k1.PublicKey
-	sender    			Sender
+	commitKey *secp256k1.PublicKey
+	sender    Sender
 
-	commitBitmap     	[]byte
-	sigmaPubKey       	[]*secp256k1.PublicKey
-	sigmaCommitPubkey 	[]*secp256k1.PublicKey
-	msgHash           	[]byte
+	commitBitmap      []byte
+	sigmaPubKey       []*secp256k1.PublicKey
+	sigmaCommitPubkey []*secp256k1.PublicKey
+	msgHash           []byte
 
-	sigmaS         		*schnorr.Signature
-	responseBitmap 		[]byte
-	syncLock       		sync.Mutex
+	sigmaS         *schnorr.Signature
+	responseBitmap []byte
+	syncLock       sync.Mutex
 
 	msgPool    chan *MsgWrap
 	cancelPool chan struct{}
@@ -134,7 +134,7 @@ func (leader *Leader) processP2pMessage() {
 			switch msg.Code {
 			case MsgTypeCommitment:
 				var req Commitment
-				if err := 	binary.Unmarshal(msg.Msg, &req); err != nil {
+				if err := binary.Unmarshal(msg.Msg, &req); err != nil {
 					log.Debugf("commit msg:%v err:%v", msg, err)
 					continue
 				}

@@ -39,6 +39,8 @@ var (
 	// bloomRetrievalWait is the maximum time to wait for enough bloom bit requests
 	// to accumulate request an entire batch (avoiding hysteresis).
 	bloomRetrievalWait = time.Duration(0)
+
+	_ FilterServiceInterface = (*FilterService)(nil)
 )
 
 type ServiceDatabase interface {
@@ -67,11 +69,10 @@ type FilterServiceInterface interface {
 	Backend
 }
 
-var _ FilterServiceInterface = &FilterService{}
 
 type FilterService struct {
 	DatabaseService     *database.DatabaseService                  `service:"database"`
-	Blockmgr            *blockmgr.BlockMgr                         `service:"blockmgr"`
+	Notifier            blockmgr.IBlockNotify                         `service:"blockmgr"`
 	ChainService        chain.ChainServiceInterface                `service:"chain"`
 	ChainIndexerService chain_indexer.ChainIndexerServiceInterface `service:"chain_indexer"`
 	Config              *FilterConfig
@@ -110,20 +111,6 @@ func (service *FilterService) CommandFlags() ([]cli.Command, []cli.Flag) {
 }
 
 func (service *FilterService) Init(executeContext *app.ExecuteContext) error {
-	// check service dependencies
-	if service.DatabaseService == nil {
-		return fmt.Errorf("batabaseService not init")
-	}
-	if service.Blockmgr == nil {
-		return fmt.Errorf("batabaseService not init")
-	}
-	if service.ChainService == nil {
-		return fmt.Errorf("chainService not init")
-	}
-	if service.ChainIndexerService == nil {
-		return fmt.Errorf("chainIndexerService not init")
-	}
-
 	// initialize module config
 	service.Config = DefaultConfig
 	err := executeContext.UnmashalConfig(service.Name(), service.Config)
@@ -419,7 +406,7 @@ func (service *FilterService) GetFilterLogs(ctx context.Context, id ID) ([]*type
 		// Construct the range filter
 		filter = NewRangeFilter(service, begin, end, f.crit.Addresses, f.crit.Topics)
 	}
-	
+
 	// Run the filter and return all the logs
 	logs, err := filter.Logs(ctx)
 	if err != nil {
@@ -512,7 +499,7 @@ func (service *FilterService) GetLogsByHash(ctx context.Context, blockHash crypt
 }
 
 func (service *FilterService) SubscribeNewTxsEvent(ch chan<- types.NewTxsEvent) event.Subscription {
-	return service.Blockmgr.NewTxFeed().Subscribe(ch)
+	return service.Notifier.NewTxFeed().Subscribe(ch)
 }
 
 func (service *FilterService) SubscribeChainEvent(ch chan<- *types.ChainEvent) event.Subscription {
