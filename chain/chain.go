@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"sync"
@@ -186,6 +187,7 @@ func NewChainService(config *ChainConfig, ds *database.DatabaseService) *ChainSe
 	hash := chainService.genesisBlock.Header.Hash()
 	if !chainService.DatabaseService.HasBlock(hash) {
 		chainService.genesisBlock, err = chainService.ProcessGenesisBlock(chainService.config.GenesisAddr)
+		fmt.Println(hex.EncodeToString(chainService.genesisBlock.Header.StateRoot))
 		err = chainService.createChainState()
 		if err != nil {
 			return nil
@@ -230,6 +232,7 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 	hash := chainService.genesisBlock.Header.Hash()
 	if !chainService.DatabaseService.HasBlock(hash) {
 		chainService.genesisBlock, err = chainService.ProcessGenesisBlock(chainService.config.GenesisAddr)
+		fmt.Println(hex.EncodeToString(chainService.genesisBlock.Header.StateRoot))
 		err = chainService.createChainState()
 		if err != nil {
 			log.Error("createChainState err", err)

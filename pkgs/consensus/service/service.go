@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"time"
 
 	"github.com/drep-project/drep-chain/crypto"
@@ -46,6 +47,7 @@ type ConsensusService struct {
 	syncBlockEventSub  event.Subscription
 	syncBlockEventChan chan event.SyncBlockEvent
 	ConsensusEngine    consensusTypes.IConsensusEngine
+	Miner *secp256k1.PrivateKey
 	//During the process of synchronizing blocks, the miner stopped mining
 	pauseForSync bool
 	start        bool
@@ -76,9 +78,6 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 		consensusService.Config.Enable = executeContext.Cli.GlobalBool(EnableConsensusFlag.Name)
 	}
 
-	if !consensusService.Config.Enable {
-		return nil
-	}
 	if consensusService.WalletService.Wallet == nil {
 		return ErrWalletNotOpen
 	}
@@ -88,7 +87,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 		log.WithField("init err", err).WithField("addr", crypto.PubkeyToAddress(consensusService.Config.MyPk)).Error("privkey of MyPk in Config is not in local wallet")
 		return err
 	}
-
+	consensusService.Miner = accountNode.PrivateKey
 	var addPeer event.Feed
 	var removePeer event.Feed
 	var engine consensusTypes.IConsensusEngine
@@ -97,7 +96,6 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 			consensusService.ChainService,
 			consensusService.BlockGenerator,
 			consensusService.DatabaseService,
-			accountNode.PrivateKey,
 			consensusService.Config.Producers,
 			consensusService.P2pServer,
 			&addPeer,
@@ -107,12 +105,15 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 		engine = solo.NewSoloConsensus(
 			consensusService.ChainService,
 			consensusService.BlockGenerator,
-			consensusService.DatabaseService,
-			accountNode.PrivateKey)
+			consensusService.DatabaseService)
 	} else {
 		return nil
 	}
-
+	consensusService.ChainService.AddBlockValidator(engine.Validator())
+	consensusService.ConsensusEngine = engine
+	if !consensusService.Config.Enable {
+		return nil
+	}
 	consensusService.P2pServer.AddProtocols([]p2p.Protocol{
 		p2p.Protocol{
 			Name:   "consensusService",
@@ -130,8 +131,6 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 			},
 		},
 	})
-	consensusService.ChainService.AddBlockValidator(engine.Validator())
-	consensusService.ConsensusEngine = engine
 	consensusService.syncBlockEventChan = make(chan event.SyncBlockEvent)
 	consensusService.syncBlockEventSub = consensusService.BlockMgrNotifier.SubscribeSyncBlockEvent(consensusService.syncBlockEventChan)
 	consensusService.quit = make(chan struct{})
@@ -184,7 +183,7 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 					continue
 				}
 				log.WithField("Height", consensusService.ChainService.BestChain().Height()).Trace("node start")
-				block, err := consensusService.ConsensusEngine.Run()
+				block, err := consensusService.ConsensusEngine.Run(consensusService.Miner)
 				if err != nil {
 					log.WithField("Reason", err.Error()).Debug("Producer Block Fail")
 				} else {

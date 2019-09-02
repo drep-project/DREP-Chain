@@ -29,18 +29,17 @@ type SoloConsensus struct {
 func NewSoloConsensus(
 	chainService chain.ChainServiceInterface,
 	blockGenerator blockmgr.IBlockBlockGenerator,
-	dbService *database.DatabaseService,
-	privKey *secp256k1.PrivateKey) *SoloConsensus {
+	dbService *database.DatabaseService) *SoloConsensus {
 	return &SoloConsensus{
-		CoinBase:       crypto.PubkeyToAddress(privKey.PubKey()),
-		PrivKey:        privKey,
 		blockGenerator: blockGenerator,
 		ChainService:   chainService,
 		DbService:      dbService,
 	}
 }
 
-func (soloConsensus *SoloConsensus) Run() (*types.Block, error) {
+func (soloConsensus *SoloConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Block, error) {
+	soloConsensus.CoinBase =      crypto.PubkeyToAddress(privKey.PubKey())
+	soloConsensus.PrivKey =      privKey
 	//区块生成 共识 奖励 验证 完成
 	log.Trace("node leader finishes process consensus")
 

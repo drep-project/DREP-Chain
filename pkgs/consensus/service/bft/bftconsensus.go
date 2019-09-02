@@ -54,7 +54,6 @@ func NewBftConsensus(
 	chainService chain.ChainServiceInterface,
 	blockGenerator blockmgr.IBlockBlockGenerator,
 	dbService *database.DatabaseService,
-	privKey *secp256k1.PrivateKey,
 	producer consensusTypes.ProducerSet,
 	sener Sender,
 	addPeer, removePeer *event.Feed) *BftConsensus {
@@ -64,8 +63,6 @@ func NewBftConsensus(
 	addPeer.Subscribe(addPeerChan)
 	removePeer.Subscribe(removePeerChan)
 	return &BftConsensus{
-		CoinBase:       crypto.PubkeyToAddress(privKey.PubKey()),
-		PrivKey:        privKey,
 		BlockGenerator: blockGenerator,
 		ChainService:   chainService,
 		DbService:      dbService,
@@ -81,7 +78,9 @@ func NewBftConsensus(
 	}
 }
 
-func (bftConsensus *BftConsensus) Run() (*types.Block, error) {
+func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Block, error) {
+	bftConsensus.CoinBase =      crypto.PubkeyToAddress(privKey.PubKey())
+	bftConsensus.PrivKey =      privKey
 	go bftConsensus.processPeers()
 	miners := bftConsensus.collectMemberStatus()
 	if len(miners) > 1 {
@@ -271,7 +270,7 @@ func (bftConsensus *BftConsensus) runAsLeader(miners []*MemberInfo) (block *type
 	log.WithField("bitmap", multiSig.Bitmap).Info("participant bitmap")
 	//Determine reward points
 	block.Proof = types.Proof{consensusTypes.Pbft, multiSigBytes}
-	err = bftConsensus.AccumulateRewards(db, multiSig, gasFee)
+	err = AccumulateRewards(db, multiSig,bftConsensus.Producers, gasFee)
 	if err != nil {
 		return nil, err
 	}
@@ -312,7 +311,7 @@ func (bftConsensus *BftConsensus) blockVerify(block *types.Block) error {
 
 func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
 	db := bftConsensus.ChainService.GetDatabaseService().BeginTransaction(false)
-	multiSigValidator := BlockMultiSigValidator{bftConsensus, bftConsensus.Producers}
+	multiSigValidator := BlockMultiSigValidator{bftConsensus.Producers}
 	if err := multiSigValidator.VerifyBody(block); err != nil {
 		return err
 	}
@@ -393,16 +392,16 @@ func (bftConsensus *BftConsensus) ChangeTime(interval time.Duration) {
 }
 
 func (bftConsensus *BftConsensus) Validator() chain.IBlockValidator {
-	return &BlockMultiSigValidator{bftConsensus, bftConsensus.Producers}
+	return &BlockMultiSigValidator{bftConsensus.Producers}
 }
 
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
-func (bftConsensus *BftConsensus) AccumulateRewards(db *database.Database, sig *MultiSignature, totalGasBalance *big.Int) error {
+func AccumulateRewards(db *database.Database, sig *MultiSignature, Producers consensusTypes.ProducerSet, totalGasBalance *big.Int) error {
 	reward := new(big.Int).SetUint64(uint64(params.Rewards))
 	r := new(big.Int)
 	r = r.Div(reward, new(big.Int).SetInt64(2))
 	r.Add(r, totalGasBalance)
-	leaderAddr := bftConsensus.Producers[sig.Leader].Address()
+	leaderAddr := Producers[sig.Leader].Address()
 	err := db.AddBalance(&leaderAddr, r)
 	if err != nil {
 		return err
@@ -411,7 +410,7 @@ func (bftConsensus *BftConsensus) AccumulateRewards(db *database.Database, sig *
 	num := sig.Num() - 1
 	for index, isCommit := range sig.Bitmap {
 		if isCommit == 1 {
-			addr := bftConsensus.Producers[index].Address()
+			addr := Producers[index].Address()
 			if addr != leaderAddr {
 				r.Div(reward, new(big.Int).SetInt64(int64(num*2)))
 				err = db.AddBalance(&addr, r)

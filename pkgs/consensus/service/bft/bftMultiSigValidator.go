@@ -11,7 +11,6 @@ import (
 )
 
 type BlockMultiSigValidator struct {
-	consensus *BftConsensus
 	Producers types2.ProducerSet
 }
 
@@ -49,6 +48,6 @@ func (blockMultiSigValidator *BlockMultiSigValidator) ExecuteBlock(context *chai
 	if err != nil {
 		return nil
 	}
-	blockMultiSigValidator.consensus.AccumulateRewards(context.Db, multiSig, context.GasFee)
+	AccumulateRewards(context.Db, multiSig,  blockMultiSigValidator.Producers, context.GasFee)
 	return nil
 }
