@@ -568,7 +568,6 @@ loop:
 			})
 
 		case <-statsDump.C:
-			log.Trace("<-statsDump.C")
 			/*r, ok := net.ticketStore.radius[testTopic]
 			if !ok {
 				fmt.Printf("(%x) no radius @ %v\n", net.tab.self.ID[:8], time.Now())

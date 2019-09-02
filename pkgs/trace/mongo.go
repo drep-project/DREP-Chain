@@ -38,6 +38,8 @@ func NewMongogDbStore(url string, producers []crypto.CommonAddress, dbName strin
 	if err != nil {
 		return nil, err
 	}
+	ctx.Done()
+	ctx, _ = context.WithTimeout(context.Background(), 2*time.Second)
 	err = store.client.Ping(ctx, nil)
 	if err != nil {
 		return nil, err

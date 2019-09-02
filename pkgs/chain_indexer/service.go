@@ -72,20 +72,7 @@ func (chainIndexer *ChainIndexerService) CommandFlags() ([]cli.Command, []cli.Fl
 }
 
 func (chainIndexer *ChainIndexerService) Init(executeContext *app.ExecuteContext) error {
-	// check service dependencies
-	if chainIndexer.DatabaseService == nil {
-		return fmt.Errorf("batabaseService not init")
-	}
-	if chainIndexer.ChainService == nil {
-		return fmt.Errorf("chainService not init")
-	}
-
 	// initialize module config
-	chainIndexer.Config = DefaultConfig
-	err := executeContext.UnmashalConfig(chainIndexer.Name(), chainIndexer.Config)
-	if err != nil {
-		return err
-	}
 	if executeContext.Cli.GlobalIsSet(EnableChainIndexerFlag.Name) {
 		chainIndexer.Config.Enable = executeContext.Cli.GlobalBool(EnableChainIndexerFlag.Name)
 	}
@@ -407,4 +394,8 @@ func (chainIndexer *ChainIndexerService) commit() error {
 
 func (chainIndexer *ChainIndexerService) GetConfig() *ChainIndexerConfig {
 	return chainIndexer.Config
+}
+
+func (chainIndexer *ChainIndexerService) DefaultConfig() *ChainIndexerConfig {
+	return DefaultConfig
 }

@@ -173,7 +173,31 @@ func (mApp *DrepApp) action(ctx *cli.Context) error {
 	}()
 	mApp.Context.Cli = ctx //NOTE this set is for different commmands-
 	for _, service := range mApp.Context.Services {
-		err := service.Init(mApp.Context)
+		//config
+		serviceValue :=reflect.ValueOf(service)
+		serviceType := serviceValue.Type()
+		var config reflect.Value
+		fieldValue := reflect.ValueOf(service).Elem().FieldByName("Config")
+		if hasMethod(serviceType, "DefaultConfig") {
+			defaultConfigVal := serviceValue.MethodByName("DefaultConfig").Call([]reflect.Value{})
+			if len(defaultConfigVal)>0 && !defaultConfigVal[0].IsNil() {
+				config = defaultConfigVal[0]
+			}else{
+				t := fieldValue.Type()
+				config = reflect.New(t.Elem())
+			}
+		}else{
+			t := fieldValue.Type()
+			config = reflect.New(t.Elem())
+		}
+		fieldValue.Set(config)
+		//flag
+		err := mApp.Context.UnmashalConfig(service.Name(), fieldValue.Interface())
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+		err = service.Init(mApp.Context)
 		if err != nil {
 			return err
 		}
@@ -267,4 +291,15 @@ func loadConfigFile(ctx *cli.Context, homeDir string) (map[string]json.RawMessag
 		return nil, err
 	}
 	return jsonPhase, nil
+}
+
+
+func hasMethod(t reflect.Type, name string) (hashMehod bool) {
+	defer func() {
+		if err := recover(); err != nil{
+			hashMehod = false
+		}
+	}()
+	_, hashMehod = t.MethodByName(name)
+	return
 }

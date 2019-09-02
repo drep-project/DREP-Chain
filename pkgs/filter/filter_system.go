@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"reflect"
 	"sync"
 	"time"
 
@@ -438,9 +437,6 @@ func (es *EventSystem) broadcast(filters filterIndex, ev interface{}) {
 	if ev == nil {
 		return
 	}
-
-	fmt.Println("broadcast:", reflect.TypeOf(ev))
-
 	switch e := ev.(type) {
 	case []*types.Log:
 		if len(e) > 0 {

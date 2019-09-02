@@ -44,7 +44,6 @@ type AccountService struct {
 	Chain              chain.ChainServiceInterface `service:"chain"`
 	PoolQuery          blockmgr.IBlockMgrPool      `service:"blockmgr"`
 	MessageBroadCastor blockmgr.ISendMessage       `service:"blockmgr"`
-	CommonConfig       *app.CommonConfig
 	Config             *accountTypes.Config
 	Wallet             *Wallet
 	apis               []app.API
@@ -84,12 +83,8 @@ func (accountService *AccountService) P2pMessages() map[int]interface{} {
 
 // Init  set console Config
 func (accountService *AccountService) Init(executeContext *app.ExecuteContext) error {
-	accountService.CommonConfig = executeContext.CommonConfig
-	accountService.Config = DefaultConfig
-	accountService.Config.KeyStoreDir = filepath.Join(executeContext.CommonConfig.HomeDir, "keystore")
-	err := executeContext.UnmashalConfig(accountService.Name(), accountService.Config)
-	if err != nil {
-		return err
+	if len(accountService.Config.KeyStoreDir)==0 {
+		accountService.Config.KeyStoreDir = filepath.Join(executeContext.CommonConfig.HomeDir, "keystore")
 	}
 
 	if executeContext.Cli.GlobalIsSet(EnableWalletFlag.Name) {
@@ -108,6 +103,7 @@ func (accountService *AccountService) Init(executeContext *app.ExecuteContext) e
 		return nil
 	}
 
+	var err error
 	accountService.Wallet, err = NewWallet(accountService.Config, accountService.Chain.ChainID())
 	if err != nil {
 		return err
@@ -146,7 +142,13 @@ func (accountService *AccountService) CreateWallet(password string) error {
 
 	store := accountComponent.NewFileStore(accountService.Config.KeyStoreDir)
 	password = string(sha3.Keccak256([]byte(password)))
-	newNode := chainTypes.NewNode(nil, accountService.Chain.Config().ChainId)
+	newNode := chainTypes.NewNode(nil, accountService.Chain.GetConfig().ChainId)
 	store.StoreKey(newNode, password)
 	return nil
 }
+
+
+func (accountService *AccountService) DefaultConfig() *accountTypes.Config {
+	return DefaultConfig
+}
+

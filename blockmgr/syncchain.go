@@ -329,7 +329,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 					if err != nil {
 						switch err {
 						case chain.ErrBlockExsist, chain.ErrOrphanBlockExsist:
-							fmt.Println("process block err:", err)
+							fmt.Println("process block err:", err, b.Header.Height)
 							//删除块高度对应的任务
 							delHash(b)
 							continue
@@ -393,10 +393,8 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 				blockMgr.pendingSyncTasks.Store(reqTimer, headerHashs)
 
 				go func() {
-					fmt.Println("new sync block timer", reqTimer)
 					select {
 					case <-reqTimer.C:
-						fmt.Println("sync timer ,timeout...................")
 						//所有到hash加入到allTasks
 						value, ok := blockMgr.pendingSyncTasks.Load(reqTimer)
 						if !ok {
@@ -411,7 +409,6 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 						}
 
 					case timer := <-blockMgr.syncTimerCh:
-						fmt.Println("stop timer...........", timer)
 						//请求到block都到了，停止此定时器
 						blockMgr.pendingSyncTasks.Delete(timer)
 					case <-quit:

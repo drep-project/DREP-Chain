@@ -75,14 +75,6 @@ func NewP2pService(config *p2pTypes.P2pConfig, homeDir string) *P2pService {
 }
 
 func (p2pService *P2pService) Init(executeContext *app.ExecuteContext) error {
-	// config
-	p2pService.Config = p2pTypes.DefaultP2pConfig
-	err := executeContext.UnmashalConfig(p2pService.Name(), p2pService.Config)
-	if err != nil {
-		log.WithField("err", err).Error("p2pService init err")
-		return err
-	}
-
 	p2pService.Config.DataDir = executeContext.CommonConfig.HomeDir
 	p2pService.outQuene = make(chan *outMessage, MaxConnections*2)
 

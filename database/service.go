@@ -22,7 +22,7 @@ var (
 )
 
 type DatabaseService struct {
-	config *DatabaseConfig
+	Config *DatabaseConfig
 	db     *Database
 }
 
@@ -44,15 +44,11 @@ func (database *DatabaseService) CommandFlags() ([]cli.Command, []cli.Flag) {
 }
 
 func (database *DatabaseService) Init(executeContext *app.ExecuteContext) error {
-	err := executeContext.UnmashalConfig(database.Name(), database.config)
-	if err != nil {
-		return err
-	}
-
 	path := path2.Join(executeContext.CommonConfig.HomeDir, "data")
 	if executeContext.Cli != nil && executeContext.Cli.GlobalIsSet(DataDirFlag.Name) {
 		path = executeContext.Cli.GlobalString(DataDirFlag.Name)
 	}
+	var err error
 	database.db, err = NewDatabase(path)
 	if err != nil {
 		return err

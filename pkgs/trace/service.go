@@ -55,13 +55,11 @@ func (traceService *TraceService) P2pMessages() map[int]interface{} {
 
 // Init used to create connection to storage(leveldb and mongo)
 func (traceService *TraceService) Init(executeContext *app.ExecuteContext) error {
-	traceService.Config = DefaultHistoryConfig
 	homeDir := executeContext.CommonConfig.HomeDir
-	traceService.Config.HistoryDir = path.Join(homeDir, "trace")
-	err := executeContext.UnmashalConfig(traceService.Name(), traceService.Config)
-	if err != nil {
-		return err
+	if len(traceService.Config.HistoryDir) == 0 {
+		traceService.Config.HistoryDir = path.Join(homeDir, "trace")
 	}
+
 	ctx := executeContext.Cli
 	if ctx.GlobalIsSet(EnableTraceFlag.Name) {
 		traceService.Config.Enable = ctx.GlobalBool(EnableTraceFlag.Name)
@@ -110,4 +108,9 @@ func (traceService *TraceService) Stop(executeContext *app.ExecuteContext) error
 
 func (traceService *TraceService) Receive(context actor.Context) {
 
+}
+
+
+func (traceService *TraceService) DefaultConfig() *HistoryConfig {
+	return DefaultHistoryConfig
 }

@@ -111,12 +111,6 @@ func (service *FilterService) CommandFlags() ([]cli.Command, []cli.Flag) {
 }
 
 func (service *FilterService) Init(executeContext *app.ExecuteContext) error {
-	// initialize module config
-	service.Config = DefaultConfig
-	err := executeContext.UnmashalConfig(service.Name(), service.Config)
-	if err != nil {
-		return err
-	}
 	if executeContext.Cli.GlobalIsSet(EnableFilterFlag.Name) {
 		service.Config.Enable = executeContext.Cli.GlobalBool(EnableFilterFlag.Name)
 	}
@@ -522,4 +516,8 @@ func (service *FilterService) ServiceFilter(ctx context.Context, session *bloomb
 	for i := 0; i < bloomFilterThreads; i++ {
 		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, service.bloomRequests)
 	}
+}
+
+func (service *FilterService) DefaultConfig() *FilterConfig {
+	return DefaultConfig
 }

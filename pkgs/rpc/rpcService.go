@@ -67,13 +67,6 @@ func (rpcService *RpcService) P2pMessages() map[int]interface{} {
 }
 
 func (rpcService *RpcService) Init(executeContext *app.ExecuteContext) error {
-	rpcService.Config = &rpc.RpcConfig{}
-	rpcService.Config.HTTPTimeouts = &rpc.DefaultHTTPTimeouts
-	err := executeContext.UnmashalConfig(rpcService.Name(), rpcService.Config)
-	if err != nil {
-		return err
-	}
-
 	rpcService.setRpcLog(executeContext.Cli, executeContext.CommonConfig.HomeDir)
 	rpcService.IpcEndpoint = rpcService.Config.IPCEndpoint()
 	rpcService.HttpEndpoint = rpcService.Config.HTTPEndpoint()
@@ -466,4 +459,10 @@ func DefaultIPCEndpoint(clientIdentifier string) string {
 	}
 
 	return clientIdentifier + ".ipc"
+}
+
+func (rpcService *RpcService) DefaultConfig() *rpc.RpcConfig {
+	return &rpc.RpcConfig{
+		HTTPTimeouts:&rpc.DefaultHTTPTimeouts,
+	}
 }

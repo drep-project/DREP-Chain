@@ -2,7 +2,7 @@ package trace
 
 import (
 	"encoding/hex"
-	"encoding/json"
+	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/pkgs/consensus/service/bft"
@@ -120,7 +120,7 @@ func (rpcBlock *ViewBlock) From(block *types.Block, addresses []crypto.CommonAdd
 	} else if block.Proof.Type == types2.Pbft {
 		proof := NewPbftProof()
 		multiSig := &bft.MultiSignature{}
-		json.Unmarshal(block.Proof.Evidence, multiSig)
+		binary.Unmarshal(block.Proof.Evidence, multiSig)
 		proof.Evidence = hex.EncodeToString(block.Proof.Evidence)
 		proof.LeaderAddress = addresses[multiSig.Leader].String()
 		for index, val := range multiSig.Bitmap {

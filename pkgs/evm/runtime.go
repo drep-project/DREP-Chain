@@ -99,3 +99,6 @@ func (evmService *EvmService) Eval(state vm.VMState, tx *types.Transaction, head
 	}
 	return ret, gas, vmerr != nil, err
 }
+func (evmService *EvmService) DefaultConfig() *vm.VMConfig {
+	return DefaultEvmConfig
+}

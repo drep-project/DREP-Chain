@@ -1,10 +1,10 @@
 package service
 
 import (
+	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"time"
 
-	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/pkgs/consensus/service/bft"
 	"github.com/drep-project/drep-chain/pkgs/consensus/service/solo"
 
@@ -68,12 +68,6 @@ func (consensusService *ConsensusService) CommandFlags() ([]cli.Command, []cli.F
 }
 
 func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContext) error {
-	consensusService.Config = &consensusTypes.ConsensusConfig{}
-	err := executeContext.UnmashalConfig(consensusService.Name(), consensusService.Config)
-	if err != nil {
-		return err
-	}
-
 	if executeContext.Cli.GlobalIsSet(EnableConsensusFlag.Name) {
 		consensusService.Config.Enable = executeContext.Cli.GlobalBool(EnableConsensusFlag.Name)
 	}
@@ -81,13 +75,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	if consensusService.WalletService.Wallet == nil {
 		return ErrWalletNotOpen
 	}
-	//consult privkey in wallet
-	accountNode, err := consensusService.WalletService.Wallet.GetAccountByPubkey(consensusService.Config.MyPk)
-	if err != nil {
-		log.WithField("init err", err).WithField("addr", crypto.PubkeyToAddress(consensusService.Config.MyPk)).Error("privkey of MyPk in Config is not in local wallet")
-		return err
-	}
-	consensusService.Miner = accountNode.PrivateKey
+
 	var addPeer event.Feed
 	var removePeer event.Feed
 	var engine consensusTypes.IConsensusEngine
@@ -114,6 +102,13 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	if !consensusService.Config.Enable {
 		return nil
 	}
+	//consult privkey in wallet
+	accountNode, err := consensusService.WalletService.Wallet.GetAccountByPubkey(consensusService.Config.MyPk)
+	if err != nil {
+		log.WithField("init err", err).WithField("addr", crypto.PubkeyToAddress(consensusService.Config.MyPk)).Error("privkey of MyPk in Config is not in local wallet")
+		return err
+	}
+	consensusService.Miner = accountNode.PrivateKey
 	consensusService.P2pServer.AddProtocols([]p2p.Protocol{
 		p2p.Protocol{
 			Name:   "consensusService",

@@ -183,12 +183,6 @@ func NewBlockMgr(config *BlockMgrConfig, homeDir string, cs chain.ChainServiceIn
 }
 
 func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
-	blockMgr.Config = DefaultChainConfig
-
-	err := executeContext.UnmashalConfig(blockMgr.Name(), blockMgr.Config)
-	if err != nil {
-		return err
-	}
 	blockMgr.headerHashCh = make(chan []*syncHeaderHash)
 	blockMgr.blocksCh = make(chan []*types.Block)
 	blockMgr.allTasks = newHeightSortedMap()
@@ -327,4 +321,8 @@ func (blockMgr *BlockMgr) SubscribeSyncBlockEvent(subchan chan event.SyncBlockEv
 
 func (blockMgr *BlockMgr) NewTxFeed() *event.Feed {
 	return blockMgr.transactionPool.NewTxFeed()
+}
+
+func (blockMgr *BlockMgr) DefaultConfig() *BlockMgrConfig {
+	return DefaultChainConfig
 }

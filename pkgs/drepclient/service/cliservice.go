@@ -25,7 +25,7 @@ var (
 
 // CliService provides an interactive command line window
 type CliService struct {
-	config         *cliTypes.Config
+	Config         *cliTypes.Config
 	Log            *log.LogService                `service:"log"`
 	Blockmgr       *blockmgr.BlockMgr             `service:"blockmgr"`
 	AccountService *accountService.AccountService `service:"accounts"`
@@ -147,15 +147,15 @@ func (cliService *CliService) remoteConsole(executeContext *app.ExecuteContext) 
 	}
 
 	path := executeContext.CommonConfig.HomeDir
-	cliService.config = &cliTypes.Config{}
-	cliService.config.Config = console.Config{
+	cliService.Config = &cliTypes.Config{}
+	cliService.Config.Config = console.Config{
 		HomeDir: path,
 		DocRoot: executeContext.Cli.GlobalString(cliTypes.JSpathFlag.Name),
 		Client:  client,
 		Preload: cliTypes.MakeConsolePreloads(executeContext.Cli),
 	}
 
-	cliService.console, err = console.New(cliService.config.Config)
+	cliService.console, err = console.New(cliService.Config.Config)
 	if err != nil {
 		return fmt.Errorf("Failed to start the JavaScript console: %v", err)
 	}

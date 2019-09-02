@@ -53,11 +53,6 @@ func (logService *LogService) P2pMessages() map[int]interface{} {
 
 //Init init log format and output
 func (logService *LogService) Init(executeContext *app.ExecuteContext) error {
-	logService.Config = DefaultLogConfig
-	err := executeContext.UnmashalConfig(logService.Name(), logService.Config)
-	if err != nil {
-		return err
-	}
 	logService.setLogConfig(executeContext.Cli, executeContext.CommonConfig.HomeDir)
 	baseLogPath := path.Join(logService.Config.DataDir, "log")
 
@@ -153,4 +148,8 @@ func EnsureLogger(moduleName string) *logrus.Entry {
 		loggers[moduleName] = log
 	}
 	return log
+}
+
+func (logService *LogService) DefaultConfig() *LogConfig {
+	return DefaultLogConfig
 }

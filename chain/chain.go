@@ -1,7 +1,6 @@
 package chain
 
 import (
-	"encoding/hex"
 	"fmt"
 	"math/big"
 	"sync"
@@ -61,7 +60,7 @@ type ChainServiceInterface interface {
 	Index() *BlockIndex
 	BlockValidator() []IBlockValidator
 	AddBlockValidator(validator IBlockValidator)
-	Config() *ChainConfig
+	GetConfig() *ChainConfig
 	DetachBlockFeed() *event.Feed
 }
 
@@ -91,7 +90,7 @@ type ChainService struct {
 	blockIndex *BlockIndex
 	bestChain  *ChainView
 
-	config       *ChainConfig
+	Config       *ChainConfig
 	genesisBlock *types.Block
 
 	//提供新块订阅
@@ -118,8 +117,8 @@ func (chainService *ChainService) DetachBlockFeed() *event.Feed {
 
 }
 
-func (chainService *ChainService) Config() *ChainConfig {
-	return chainService.config
+func (chainService *ChainService) GetConfig() *ChainConfig {
+	return chainService.Config
 }
 
 func (chainService *ChainService) BlockValidator() []IBlockValidator {
@@ -172,7 +171,7 @@ func (chainService *ChainService) CommandFlags() ([]cli.Command, []cli.Flag) {
 
 func NewChainService(config *ChainConfig, ds *database.DatabaseService) *ChainService {
 	chainService := &ChainService{}
-	chainService.config = config
+	chainService.Config = config
 	var err error
 	chainService.blockIndex = NewBlockIndex()
 	chainService.bestChain = NewChainView(nil)
@@ -183,11 +182,10 @@ func NewChainService(config *ChainConfig, ds *database.DatabaseService) *ChainSe
 	chainService.blockValidator = []IBlockValidator{NewChainBlockValidator(chainService, chainService.transactionValidator)}
 	chainService.DatabaseService = ds
 	//chainService.blockDb = chainService.DatabaseService.BeginTransaction()
-	chainService.genesisBlock = chainService.GetGenisiBlock(chainService.config.GenesisAddr)
+	chainService.genesisBlock = chainService.GetGenisiBlock(chainService.Config.GenesisAddr)
 	hash := chainService.genesisBlock.Header.Hash()
 	if !chainService.DatabaseService.HasBlock(hash) {
-		chainService.genesisBlock, err = chainService.ProcessGenesisBlock(chainService.config.GenesisAddr)
-		fmt.Println(hex.EncodeToString(chainService.genesisBlock.Header.StateRoot))
+		chainService.genesisBlock, err = chainService.ProcessGenesisBlock(chainService.Config.GenesisAddr)
 		err = chainService.createChainState()
 		if err != nil {
 			return nil
@@ -214,12 +212,6 @@ func NewChainService(config *ChainConfig, ds *database.DatabaseService) *ChainSe
 }
 
 func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error {
-	chainService.config = DefaultChainConfig
-	err := executeContext.UnmashalConfig(chainService.Name(), chainService.config)
-	if err != nil {
-		log.Error("chain service init err:", err)
-		return err
-	}
 	chainService.blockIndex = NewBlockIndex()
 	chainService.bestChain = NewChainView(nil)
 	chainService.orphans = make(map[crypto.Hash]*types.OrphanBlock)
@@ -228,11 +220,11 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 	chainService.transactionValidator = NewTransactionValidator(chainService)
 	chainService.blockValidator = []IBlockValidator{NewChainBlockValidator(chainService, chainService.transactionValidator)}
 
-	chainService.genesisBlock = chainService.GetGenisiBlock(chainService.config.GenesisAddr)
+	var err error
+	chainService.genesisBlock = chainService.GetGenisiBlock(chainService.Config.GenesisAddr)
 	hash := chainService.genesisBlock.Header.Hash()
 	if !chainService.DatabaseService.HasBlock(hash) {
-		chainService.genesisBlock, err = chainService.ProcessGenesisBlock(chainService.config.GenesisAddr)
-		fmt.Println(hex.EncodeToString(chainService.genesisBlock.Header.StateRoot))
+		chainService.genesisBlock, err = chainService.ProcessGenesisBlock(chainService.Config.GenesisAddr)
 		err = chainService.createChainState()
 		if err != nil {
 			log.Error("createChainState err", err)
@@ -408,4 +400,7 @@ func (chainService *ChainService) createChainState() error {
 	} else {
 		return nil
 	}
+}
+func (chainService *ChainService) DefaultConfig() *ChainConfig {
+	return DefaultChainConfig
 }
