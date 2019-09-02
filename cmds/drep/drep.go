@@ -36,9 +36,9 @@ func main() {
 		blockService.BlockMgr{},
 		chainIndexerService.ChainIndexerService{},
 		filterService.FilterService{},
-		trace.TraceService{},
 		accountService.AccountService{},
 		consensusService.ConsensusService{},
+		trace.TraceService{},
 		cliService.CliService{},
 	)
 
