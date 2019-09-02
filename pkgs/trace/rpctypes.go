@@ -74,10 +74,10 @@ func (rpcBlock *RpcBlock) From(block *types.Block, addresses []crypto.CommonAddr
 		multiSig := &bft.MultiSignature{}
 		json.Unmarshal(block.Proof.Evidence, multiSig)
 		proof.Evidence = hex.EncodeToString(block.Proof.Evidence)
-		proof.LeaderPubKey = addresses[multiSig.Leader]
+		proof.LeaderAddress = addresses[multiSig.Leader].String()
 		for index, val := range multiSig.Bitmap {
 			if val == 1 {
-				proof.MinorPubKeys = append(proof.MinorPubKeys, addresses[index])
+				proof.MinorAddresses = append(proof.MinorAddresses, addresses[index].String())
 			}
 		}
 		rpcBlock.Proof = proof
@@ -86,16 +86,16 @@ func (rpcBlock *RpcBlock) From(block *types.Block, addresses []crypto.CommonAddr
 }
 
 type PbftProof struct {
-	Type         int
-	LeaderPubKey crypto.CommonAddress
-	MinorPubKeys []crypto.CommonAddress
-	Evidence     string
+	Type           int
+	LeaderAddress  string
+	MinorAddresses []string
+	Evidence       string
 }
 
 func NewPbftProof() *PbftProof {
 	return &PbftProof{
-		Type:         types2.Pbft,
-		MinorPubKeys: []crypto.CommonAddress{},
+		Type:           types2.Pbft,
+		MinorAddresses: []string{},
 	}
 }
 

@@ -122,10 +122,10 @@ func (rpcBlock *ViewBlock) From(block *types.Block, addresses []crypto.CommonAdd
 		multiSig := &bft.MultiSignature{}
 		json.Unmarshal(block.Proof.Evidence, multiSig)
 		proof.Evidence = hex.EncodeToString(block.Proof.Evidence)
-		proof.LeaderPubKey = addresses[multiSig.Leader]
+		proof.LeaderAddress = addresses[multiSig.Leader].String()
 		for index, val := range multiSig.Bitmap {
 			if val == 1 {
-				proof.MinorPubKeys = append(proof.MinorPubKeys, addresses[index])
+				proof.MinorAddresses = append(proof.MinorAddresses, addresses[index].String())
 			}
 		}
 		rpcBlock.Proof = proof
