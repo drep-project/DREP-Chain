@@ -34,7 +34,7 @@ var (
 	DefaultConfig = &accountTypes.Config{
 		Enable:      true,
 		Type:        "filestore",
-		KeyStoreDir: "keystore",
+		//KeyStoreDir: "keystore",
 	}
 )
 

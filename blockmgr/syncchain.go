@@ -185,10 +185,24 @@ func (blockMgr *BlockMgr) clearSyncCh() {
 	})
 }
 
-func (blockMgr *BlockMgr) batchReqBlocks(hashs []crypto.Hash, errCh chan error) {
+func (blockMgr *BlockMgr) batchReqBlocks(hashs []crypto.Hash, mapHeightHash map[crypto.Hash]uint64, errCh chan error) {
 	req := &types.BlockReq{BlockHashs: hashs}
 
+	var maxHeight uint64
+	for _, value := range mapHeightHash {
+		if value > maxHeight {
+			maxHeight = value
+		}
+	}
+
+	okPeers := make([]types.PeerInfoInterface, 0, len(blockMgr.peersInfo))
 	for _, pi := range blockMgr.peersInfo {
+		if pi.GetHeight() >= maxHeight {
+			okPeers = append(okPeers, pi)
+		}
+	}
+
+	for _, pi := range okPeers {
 		blockMgr.syncMut.Lock()
 		//blockMgr.sender.SetIdle(bodyReqPeer.GetMsgRW(), false)
 		err := blockMgr.P2pServer.Send(pi.GetMsgRW(), types.MsgTypeBlockReq, req)
@@ -369,7 +383,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 					return true
 				})
 				if count >= pendingTimerCount {
-					log.Info("req body routine wait.......")
+					log.Info("req block body routine wait.......")
 					time.Sleep(time.Millisecond * maxSyncSleepTime)
 					continue
 				}
@@ -416,7 +430,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 						return
 					}
 				}()
-				blockMgr.batchReqBlocks(hashs, errCh)
+				blockMgr.batchReqBlocks(hashs, headerHashs, errCh)
 			}
 		}
 	}()

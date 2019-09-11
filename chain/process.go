@@ -8,7 +8,6 @@ import (
 	"math/big"
 
 	"github.com/drep-project/drep-chain/params"
-
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/types"
