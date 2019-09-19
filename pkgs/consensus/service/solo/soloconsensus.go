@@ -21,6 +21,7 @@ import (
 type SoloConsensus struct {
 	CoinBase       crypto.CommonAddress
 	PrivKey        *secp256k1.PrivateKey
+	Pubkey         *secp256k1.PublicKey
 	blockGenerator blockmgr.IBlockBlockGenerator
 	ChainService   chain.ChainServiceInterface
 	DbService      *database.DatabaseService
@@ -29,17 +30,19 @@ type SoloConsensus struct {
 func NewSoloConsensus(
 	chainService chain.ChainServiceInterface,
 	blockGenerator blockmgr.IBlockBlockGenerator,
+	producer consensusTypes.Producer,
 	dbService *database.DatabaseService) *SoloConsensus {
 	return &SoloConsensus{
 		blockGenerator: blockGenerator,
 		ChainService:   chainService,
 		DbService:      dbService,
+		Pubkey:         producer.Pubkey,
 	}
 }
 
 func (soloConsensus *SoloConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Block, error) {
-	soloConsensus.CoinBase =      crypto.PubkeyToAddress(privKey.PubKey())
-	soloConsensus.PrivKey =      privKey
+	soloConsensus.CoinBase = crypto.PubkeyToAddress(privKey.PubKey())
+	soloConsensus.PrivKey = privKey
 	//区块生成 共识 奖励 验证 完成
 	log.Trace("node leader finishes process consensus")
 
@@ -54,7 +57,7 @@ func (soloConsensus *SoloConsensus) Run(privKey *secp256k1.PrivateKey) (*types.B
 		return nil, errors.New("sign block error")
 	}
 	block.Proof = types.Proof{consensusTypes.Solo, sig.Serialize()}
-	err = soloConsensus.AccumulateRewards(db, gasFee)
+	err = AccumulateRewards(soloConsensus.Pubkey, db, gasFee)
 	if err != nil {
 		return nil, err
 	}
@@ -106,13 +109,9 @@ func (soloConsensus *SoloConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, rw
 	return nil
 }
 
-func (soloConsensus *SoloConsensus) Validator() chain.IBlockValidator {
-	return &SoloValidator{soloConsensus, soloConsensus.PrivKey.PubKey()}
-}
-
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
-func (soloConsensus *SoloConsensus) AccumulateRewards(db *database.Database, totalGasBalance *big.Int) error {
-	soloAddr := crypto.PubkeyToAddress(soloConsensus.PrivKey.PubKey())
+func AccumulateRewards(pk *secp256k1.PublicKey, db *database.Database, totalGasBalance *big.Int) error {
+	soloAddr := crypto.PubkeyToAddress(pk)
 	db.AddBalance(&soloAddr, totalGasBalance)
 	db.AddBalance(&soloAddr, params.CoinFromNumer(1000))
 	return nil

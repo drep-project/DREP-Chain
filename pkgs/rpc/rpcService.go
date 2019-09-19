@@ -463,6 +463,6 @@ func DefaultIPCEndpoint(clientIdentifier string) string {
 
 func (rpcService *RpcService) DefaultConfig() *rpc.RpcConfig {
 	return &rpc.RpcConfig{
-		HTTPTimeouts:&rpc.DefaultHTTPTimeouts,
+		HTTPTimeouts: &rpc.DefaultHTTPTimeouts,
 	}
 }

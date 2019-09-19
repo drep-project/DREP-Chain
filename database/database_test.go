@@ -240,7 +240,7 @@ func TestDatabase_UpdateCandidateAddr(t *testing.T) {
 	}
 
 	ret, err := db2.GetCandidateAddrs()
-	if len(ret) !=  10000 {
+	if len(ret) != 10000 {
 		t.Fatal("store err")
 	}
 
@@ -271,7 +271,7 @@ func TestBinary(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _,ok := um[addr]; !ok {
+	if _, ok := um[addr]; !ok {
 		t.Fatal("unmarshal err")
 	}
 }

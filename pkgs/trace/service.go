@@ -32,7 +32,7 @@ var (
 type TraceService struct {
 	Config           *HistoryConfig
 	ChainService     chainService.ChainServiceInterface `service:"chain"`
-	ConsensusService *consensusService.ConsensusService  `service:"consensus"`
+	ConsensusService *consensusService.ConsensusService `service:"consensus"`
 	apis             []app.API
 	blockAnalysis    *BlockAnalysis
 }
@@ -109,7 +109,6 @@ func (traceService *TraceService) Stop(executeContext *app.ExecuteContext) error
 func (traceService *TraceService) Receive(context actor.Context) {
 
 }
-
 
 func (traceService *TraceService) DefaultConfig() *HistoryConfig {
 	return DefaultHistoryConfig

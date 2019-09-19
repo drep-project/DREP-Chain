@@ -79,8 +79,8 @@ func NewBftConsensus(
 }
 
 func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Block, error) {
-	bftConsensus.CoinBase =      crypto.PubkeyToAddress(privKey.PubKey())
-	bftConsensus.PrivKey =      privKey
+	bftConsensus.CoinBase = crypto.PubkeyToAddress(privKey.PubKey())
+	bftConsensus.PrivKey = privKey
 	go bftConsensus.processPeers()
 	miners := bftConsensus.collectMemberStatus()
 	if len(miners) > 1 {
@@ -270,7 +270,7 @@ func (bftConsensus *BftConsensus) runAsLeader(miners []*MemberInfo) (block *type
 	log.WithField("bitmap", multiSig.Bitmap).Info("participant bitmap")
 	//Determine reward points
 	block.Proof = types.Proof{consensusTypes.Pbft, multiSigBytes}
-	err = AccumulateRewards(db, multiSig,bftConsensus.Producers, gasFee)
+	err = AccumulateRewards(db, multiSig, bftConsensus.Producers, gasFee)
 	if err != nil {
 		return nil, err
 	}
@@ -389,10 +389,6 @@ func (bftConsensus *BftConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, rw p
 
 func (bftConsensus *BftConsensus) ChangeTime(interval time.Duration) {
 	bftConsensus.WaitTime = interval
-}
-
-func (bftConsensus *BftConsensus) Validator() chain.IBlockValidator {
-	return &BlockMultiSigValidator{bftConsensus.Producers}
 }
 
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half

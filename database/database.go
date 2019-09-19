@@ -557,7 +557,7 @@ func (db *Database) GetBlockNode(hash *crypto.Hash, blockHeight uint64) (*types.
 	}
 	blockHeader := &types.BlockHeader{}
 	binary.Unmarshal(value[0:len(value)-1], blockHeader)
-	status := value[len(value)-1:len(value)][0]
+	status := value[len(value)-1 : len(value)][0]
 	return blockHeader, types.BlockStatus(status), nil
 }
 
@@ -630,7 +630,7 @@ func (db *Database) GetStateRoot() []byte {
 
 func (db *Database) UpdateCandidateAddr(addr *crypto.CommonAddress, add bool) error {
 	//读取
-	addrs,err := db.GetCandidateAddrs()
+	addrs, err := db.GetCandidateAddrs()
 	if err != nil {
 		return err
 	}
@@ -687,7 +687,7 @@ func (db *Database) GetCandidateAddrs() (map[crypto.CommonAddress]struct{}, erro
 	if addrsBuf == nil {
 		return nil, nil
 	}
-	
+
 	err = binary.Unmarshal(addrsBuf, &addrs)
 	if err != nil {
 		log.Errorf("GetCandidateAddrs, Unmarshal:%v", err)

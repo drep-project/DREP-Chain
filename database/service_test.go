@@ -98,7 +98,7 @@ func TestPutGetStorage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	store,_ := idb.GetStorage(&addr)
+	store, _ := idb.GetStorage(&addr)
 	if store == nil || store.Nonce != 1 {
 		t.Fatal("storage not exist")
 	}

@@ -32,8 +32,8 @@ var (
 	}
 
 	DefaultConfig = &accountTypes.Config{
-		Enable:      true,
-		Type:        "filestore",
+		Enable: true,
+		Type:   "filestore",
 		//KeyStoreDir: "keystore",
 	}
 )
@@ -85,8 +85,8 @@ func (accountService *AccountService) P2pMessages() map[int]interface{} {
 func (accountService *AccountService) Init(executeContext *app.ExecuteContext) error {
 	if len(accountService.Config.KeyStoreDir) == 0 {
 		accountService.Config.KeyStoreDir = filepath.Join(executeContext.CommonConfig.HomeDir, "keystore")
-	}else{
-		if 	!filepath.IsAbs(accountService.Config.KeyStoreDir) {
+	} else {
+		if !filepath.IsAbs(accountService.Config.KeyStoreDir) {
 			accountService.Config.KeyStoreDir = filepath.Join(executeContext.CommonConfig.HomeDir, accountService.Config.KeyStoreDir)
 		}
 	}
@@ -151,8 +151,6 @@ func (accountService *AccountService) CreateWallet(password string) error {
 	return nil
 }
 
-
 func (accountService *AccountService) DefaultConfig() *accountTypes.Config {
 	return DefaultConfig
 }
-

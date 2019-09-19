@@ -69,10 +69,9 @@ type FilterServiceInterface interface {
 	Backend
 }
 
-
 type FilterService struct {
 	DatabaseService     *database.DatabaseService                  `service:"database"`
-	Notifier            blockmgr.IBlockNotify                         `service:"blockmgr"`
+	Notifier            blockmgr.IBlockNotify                      `service:"blockmgr"`
 	ChainService        chain.ChainServiceInterface                `service:"chain"`
 	ChainIndexerService chain_indexer.ChainIndexerServiceInterface `service:"chain_indexer"`
 	Config              *FilterConfig
