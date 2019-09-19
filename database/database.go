@@ -27,6 +27,7 @@ var (
 	dbOperaterMaxSeqKey = "operateMaxSeq"       //记录数据库操作的最大序列号
 	dbOperaterJournal   = "addrOperatesJournal" //每一次数据读写过程的记录
 	addressStorage      = "addressStorage"      //以地址作为KEY的对象存储
+	candidateAddrs      = "candidateAddrs"      //参与竞选出块节点的地址集合
 )
 
 func NewDatabase(dbPath string) (*Database, error) {
@@ -556,7 +557,7 @@ func (db *Database) GetBlockNode(hash *crypto.Hash, blockHeight uint64) (*types.
 	}
 	blockHeader := &types.BlockHeader{}
 	binary.Unmarshal(value[0:len(value)-1], blockHeader)
-	status := value[len(value)-1 : len(value)][0]
+	status := value[len(value)-1:len(value)][0]
 	return blockHeader, types.BlockStatus(status), nil
 }
 
@@ -625,6 +626,74 @@ func (db *Database) CopyState() *SnapShot {
 
 func (db *Database) GetStateRoot() []byte {
 	return db.trie.Hash().Bytes()
+}
+
+func (db *Database) UpdateCandidateAddr(addr *crypto.CommonAddress, add bool) error {
+	//读取
+	addrs,err := db.GetCandidateAddrs()
+	if err != nil {
+		return err
+	}
+
+	if add {
+		if len(addrs) > 0 {
+			addrs[*addr] = struct{}{}
+		} else {
+			addrs = make(map[crypto.CommonAddress]struct{})
+			addrs[*addr] = struct{}{}
+		}
+	} else { //del
+		if len(addrs) == 0 {
+			return nil
+		} else {
+			if _, ok := addrs[*addr]; ok {
+				delete(addrs, *addr)
+			}
+		}
+	}
+
+	addrsBuf, err := binary.Marshal(addrs)
+	if err == nil {
+		db.cache.Put([]byte(candidateAddrs), addrsBuf)
+	}
+	return err
+}
+
+func (db *Database) AddCandidateAddr(addr *crypto.CommonAddress) error {
+	return db.UpdateCandidateAddr(addr, true)
+}
+
+func (db *Database) DelCandidateAddr(addr *crypto.CommonAddress) error {
+	return db.UpdateCandidateAddr(addr, false)
+}
+
+func (db *Database) GetCandidateAddrs() (map[crypto.CommonAddress]struct{}, error) {
+	var addrsBuf []byte
+	var err error
+	key := []byte(candidateAddrs)
+	addrs := make(map[crypto.CommonAddress]struct{})
+
+	if db.cache != nil {
+		addrsBuf, err = db.cache.Get(key)
+	} else {
+		addrsBuf, err = db.trie.TryGet(key)
+	}
+
+	if err != nil {
+		log.Errorf("GetCandidateAddrs:%v", err)
+		return nil, err
+	}
+
+	if addrsBuf == nil {
+		return nil, nil
+	}
+	
+	err = binary.Unmarshal(addrsBuf, &addrs)
+	if err != nil {
+		log.Errorf("GetCandidateAddrs, Unmarshal:%v", err)
+		return nil, err
+	}
+	return addrs, nil
 }
 
 type SnapShot dirtiesKV

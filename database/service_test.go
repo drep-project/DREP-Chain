@@ -98,7 +98,7 @@ func TestPutGetStorage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	store := idb.GetStorage(&addr)
+	store,_ := idb.GetStorage(&addr)
 	if store == nil || store.Nonce != 1 {
 		t.Fatal("storage not exist")
 	}
@@ -125,7 +125,7 @@ func TestRollBack(t *testing.T) {
 		db := idb.BeginTransaction(true)
 		for j = 0; j < 10; j++ {
 			pk, err := crypto.GenerateKey(rand.Reader)
-			addr = crypto.Bytes2Address(pk.PubKey().Serialize())
+			addr = crypto.PubkeyToAddress(pk.PubKey())
 			err = db.AliasSet(&addr, alias+strconv.Itoa(int(i*10+j)))
 			if err != nil {
 				fmt.Println(err)
@@ -162,7 +162,7 @@ func TestRollBack(t *testing.T) {
 
 func TestDatabaseInit(t *testing.T) {
 	dbs := DatabaseService{}
-	dbs.config = &DatabaseConfig{}
+	dbs.Config = &DatabaseConfig{}
 	executeContext := app.ExecuteContext{}
 
 	err := dbs.Init(&executeContext)
