@@ -83,8 +83,12 @@ func (accountService *AccountService) P2pMessages() map[int]interface{} {
 
 // Init  set console Config
 func (accountService *AccountService) Init(executeContext *app.ExecuteContext) error {
-	if len(accountService.Config.KeyStoreDir)==0 {
+	if len(accountService.Config.KeyStoreDir) == 0 {
 		accountService.Config.KeyStoreDir = filepath.Join(executeContext.CommonConfig.HomeDir, "keystore")
+	}else{
+		if 	!filepath.IsAbs(accountService.Config.KeyStoreDir) {
+			accountService.Config.KeyStoreDir = filepath.Join(executeContext.CommonConfig.HomeDir, accountService.Config.KeyStoreDir)
+		}
 	}
 
 	if executeContext.Cli.GlobalIsSet(EnableWalletFlag.Name) {
