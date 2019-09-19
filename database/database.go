@@ -629,8 +629,7 @@ func (db *Database) GetStateRoot() []byte {
 }
 
 func (db *Database) UpdateCandidateAddr(addr *crypto.CommonAddress, add bool) error {
-	//读取
-	addrs,err := db.GetCandidateAddrs()
+	addrs, err := db.GetCandidateAddrs()
 	if err != nil {
 		return err
 	}
@@ -687,13 +686,84 @@ func (db *Database) GetCandidateAddrs() (map[crypto.CommonAddress]struct{}, erro
 	if addrsBuf == nil {
 		return nil, nil
 	}
-	
+
 	err = binary.Unmarshal(addrsBuf, &addrs)
 	if err != nil {
 		log.Errorf("GetCandidateAddrs, Unmarshal:%v", err)
 		return nil, err
 	}
 	return addrs, nil
+}
+
+func (db *Database) VoteCredit(fromAddr, toAddr *crypto.CommonAddress, addBalance *big.Int) error {
+	if toAddr == nil {
+		toAddr = fromAddr
+	}
+
+	storage, _ := db.GetStorage(toAddr)
+	if storage == nil {
+		storage = &types.Storage{}
+	}
+
+	if len(storage.ReceivedVoteCredit) == 0 {
+		storage.ReceivedVoteCredit = make(map[crypto.CommonAddress]big.Int)
+		storage.ReceivedVoteCredit[*fromAddr] = *addBalance
+		db.AddCandidateAddr(toAddr)
+	} else {
+		var totalBalance big.Int
+		if v, ok := storage.ReceivedVoteCredit[*fromAddr]; ok {
+			totalBalance = *addBalance.Add(addBalance, &v)
+			storage.ReceivedVoteCredit[*fromAddr] = totalBalance
+			//todo
+		} else {
+			storage.ReceivedVoteCredit[*fromAddr] = *addBalance
+			db.AddCandidateAddr(toAddr)
+		}
+	}
+
+	return db.PutStorage(toAddr, storage)
+}
+
+func (db *Database) CancelVoteCredit(fromAddr, toAddr *crypto.CommonAddress, addBalance *big.Int) error {
+	if toAddr == nil {
+		toAddr = fromAddr
+	}
+
+	storage, _ := db.GetStorage(toAddr)
+	if storage == nil {
+		storage = &types.Storage{}
+	}
+
+	if len(storage.ReceivedVoteCredit) == 0 {
+		return fmt.Errorf("not exist vote credit")
+	} else {
+		var totalBalance big.Int
+		if v, ok := storage.ReceivedVoteCredit[*fromAddr]; ok {
+			retCmp := v.Cmp(addBalance)
+			if retCmp > 0 {
+				totalBalance = *addBalance.Sub(addBalance, &v)
+				storage.ReceivedVoteCredit[*fromAddr] = totalBalance
+			} else if retCmp == 0 {
+				delete(storage.ReceivedVoteCredit, *fromAddr)
+				db.DelCandidateAddr(fromAddr)
+			} else {
+				return fmt.Errorf("vote credit not enough")
+			}
+		} else {
+			return fmt.Errorf("not exist vote credit")
+		}
+	}
+
+	return db.PutStorage(toAddr, storage)
+}
+
+func (db *Database) GetVoteCredit(addr *crypto.CommonAddress) map[crypto.CommonAddress]big.Int {
+	storage, _ := db.GetStorage(addr)
+	if storage == nil {
+		return nil
+	}
+
+	return storage.ReceivedVoteCredit
 }
 
 type SnapShot dirtiesKV

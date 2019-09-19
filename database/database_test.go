@@ -240,7 +240,7 @@ func TestDatabase_UpdateCandidateAddr(t *testing.T) {
 	}
 
 	ret, err := db2.GetCandidateAddrs()
-	if len(ret) !=  10000 {
+	if len(ret) != 10000 {
 		t.Fatal("store err")
 	}
 
@@ -271,7 +271,74 @@ func TestBinary(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _,ok := um[addr]; !ok {
+	if _, ok := um[addr]; !ok {
 		t.Fatal("unmarshal err")
+	}
+}
+
+func TestVoteCredit(t *testing.T) {
+	defer os.RemoveAll("./test")
+
+	db, err := NewDatabase("./test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	db1 := db.BeginTransaction(false)
+
+	for i := 0; i < 100; i++ {
+		pri, _ := crypto.GenerateKey(rand.Reader)
+		addr := crypto.PubkeyToAddress(pri.PubKey())
+
+		voteValue := new(big.Int).SetInt64(100000)
+		db1.VoteCredit(&addr, &addr, voteValue)
+
+		m := db1.GetVoteCredit(&addr)
+
+		if v, ok := m[addr]; ok {
+			if v.Cmp(voteValue) != 0 {
+				t.Fatal("storage ang get not match")
+			}
+		} else {
+			t.Fatal("storage value err")
+		}
+	}
+}
+
+func TestCancelVoteCredit(t *testing.T) {
+	defer os.RemoveAll("./test")
+
+	db, err := NewDatabase("./test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	db1 := db.BeginTransaction(false)
+	addrs := make([]crypto.CommonAddress, 0)
+
+	for i := 0; i < 100; i++ {
+		pri, _ := crypto.GenerateKey(rand.Reader)
+		addr := crypto.PubkeyToAddress(pri.PubKey())
+
+		voteValue := new(big.Int).SetInt64(100000)
+		db1.VoteCredit(&addr, &addr, voteValue)
+		addrs = append(addrs, addr)
+	}
+
+	for _, addr := range addrs {
+		voteValue := new(big.Int).SetInt64(50000)
+		err = db1.CancelVoteCredit(&addr, &addr, voteValue)
+		if err != nil {
+			t.Fatal("cancel vote ok")
+		}
+
+		m := db1.GetVoteCredit(&addr)
+		if v, ok := m[addr]; ok {
+			if v.Cmp(voteValue) != 0 {
+				t.Fatal("storage ang get not match")
+			}
+		} else {
+			t.Fatal("storage value err")
+		}
 	}
 }

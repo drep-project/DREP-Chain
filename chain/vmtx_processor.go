@@ -105,6 +105,10 @@ func (stateProcessor *StateProcessor) ApplyMessage(db *database.Database, tx *ty
 		logs = stateTransaction.state.GetLogs(tx.TxHash())
 	} else if tx.Type() == types.SetAliasType {
 		ret, fail, err = stateTransaction.TransitionAliasDb()
+	} else if tx.Type() == types.VoteCreditType {
+		ret, fail, err = stateTransaction.TransitionVoteDb()
+	} else if tx.Type() == types.LockBalance {
+
 	} else {
 		return nil, nil, 0, 0, false, ErrUnsupportTxType
 	}

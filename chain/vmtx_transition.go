@@ -312,6 +312,32 @@ func (st *StateTransition) TransitionAliasDb() (ret []byte, failed bool, err err
 	return nil, true, err
 }
 
+func (st *StateTransition) TransitionVoteDb() (ret []byte, failed bool, err error) {
+
+	from := st.from
+	originBalance := st.db.GetBalance(from)
+	toBalance := st.db.GetBalance(st.tx.To())
+	leftBalance := originBalance.Sub(originBalance, st.tx.Amount())
+	if leftBalance.Sign() < 0 {
+		return nil, false, ErrBalance
+	}
+	addBalance := toBalance.Add(toBalance, st.tx.Amount())
+	err = st.db.PutBalance(from, leftBalance)
+	if err != nil {
+		return nil, false, err
+	}
+	err = st.db.VoteCredit(from, st.tx.To(), addBalance)
+	if err != nil {
+		return nil, false, err
+	}
+	err = st.db.PutNonce(from, st.tx.Nonce()+1)
+	if err != nil {
+		return nil, false, err
+	}
+
+	return nil, true, nil
+}
+
 func (st *StateTransition) refundGas() error {
 	// Apply refund counter, capped to half of the used gas.
 	refund := st.gasUsed() / 2
