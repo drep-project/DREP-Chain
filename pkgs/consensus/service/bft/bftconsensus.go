@@ -3,6 +3,13 @@ package bft
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
+	"math"
+	"math/big"
+	"reflect"
+	"sync"
+	"time"
+
 	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/blockmgr"
 	"github.com/drep-project/drep-chain/chain"
@@ -14,12 +21,6 @@ import (
 	"github.com/drep-project/drep-chain/params"
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
 	"github.com/drep-project/drep-chain/types"
-	"io/ioutil"
-	"math"
-	"math/big"
-	"reflect"
-	"sync"
-	"time"
 )
 
 const (
@@ -243,10 +244,20 @@ func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo) (block *type
 //3 leader搜集到所有的签名或者返回的签名个数大于producer个数的三分之二后，开始验证签名
 //4 leader验证签名通过后，广播此块给所有的Peer
 func (bftConsensus *BftConsensus) runAsLeader(miners []*MemberInfo) (block *types.Block, err error) {
-	leader := NewLeader(bftConsensus.PrivKey, bftConsensus.sender, bftConsensus.WaitTime, miners, bftConsensus.minMiners, bftConsensus.ChainService.BestChain().Height(), bftConsensus.leaderMsgPool)
-	db := bftConsensus.DbService.BeginTransaction(false)
+	leader := NewLeader(
+		bftConsensus.PrivKey,
+		bftConsensus.sender,
+		bftConsensus.WaitTime,
+		miners,
+		bftConsensus.minMiners,
+		bftConsensus.ChainService.BestChain().Height(),
+		bftConsensus.leaderMsgPool)
+	trieStore, err := chain.TrieStoreFromStore(bftConsensus.DbService.LevelDb(), bftConsensus.ChainService.BestChain().Tip().StateRoot)
+	if err != nil {
+		return nil, err
+	}
 	var gasFee *big.Int
-	block, gasFee, err = bftConsensus.BlockGenerator.GenerateTemplate(db, bftConsensus.CoinBase)
+	block, gasFee, err = bftConsensus.BlockGenerator.GenerateTemplate(trieStore, bftConsensus.CoinBase)
 	if err != nil {
 		log.WithField("msg", err).Error("generate block fail")
 		return nil, err
@@ -270,12 +281,12 @@ func (bftConsensus *BftConsensus) runAsLeader(miners []*MemberInfo) (block *type
 	log.WithField("bitmap", multiSig.Bitmap).Info("participant bitmap")
 	//Determine reward points
 	block.Proof = types.Proof{consensusTypes.Pbft, multiSigBytes}
-	err = AccumulateRewards(db, multiSig, bftConsensus.Producers, gasFee)
+	err = AccumulateRewards(trieStore, multiSig, bftConsensus.Producers, gasFee)
 	if err != nil {
 		return nil, err
 	}
-	db.Commit()
-	block.Header.StateRoot = db.GetStateRoot()
+
+	block.Header.StateRoot = trieStore.GetStateRoot()
 	rwMsg := &CompletedBlockMessage{*multiSig, block.Header.StateRoot}
 
 	log.Trace("node leader is going to process consensus for round 2")
@@ -310,7 +321,15 @@ func (bftConsensus *BftConsensus) blockVerify(block *types.Block) error {
 }
 
 func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
-	db := bftConsensus.ChainService.GetDatabaseService().BeginTransaction(false)
+	parent, err := bftConsensus.ChainService.GetBlockHeaderByHeight(block.Header.Height - 1)
+	if err != nil {
+		return err
+	}
+	dbstore := &chain.ChainStore{bftConsensus.DbService.LevelDb()}
+	trieStore, err := chain.TrieStoreFromStore(bftConsensus.DbService.LevelDb(), parent.StateRoot)
+	if err != nil {
+		return err
+	}
 	multiSigValidator := BlockMultiSigValidator{bftConsensus.Producers}
 	if err := multiSigValidator.VerifyBody(block); err != nil {
 		return err
@@ -318,13 +337,7 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
 
 	gp := new(chain.GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
-	context := &chain.BlockExecuteContext{
-		Db:      db,
-		Block:   block,
-		Gp:      gp,
-		GasUsed: new(big.Int),
-		GasFee:  new(big.Int),
-	}
+	context := chain.NewBlockExecuteContext(trieStore, gp, dbstore, block)
 	for _, validator := range bftConsensus.ChainService.BlockValidator() {
 		err := validator.ExecuteBlock(context)
 		if err != nil {
@@ -332,15 +345,15 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
 		}
 	}
 	multiSig := &MultiSignature{}
-	err := binary.Unmarshal(block.Proof.Evidence, multiSig)
+	err = binary.Unmarshal(block.Proof.Evidence, multiSig)
 	if err != nil {
 		return err
 	}
-	db.Commit()
+
+	stateRoot := trieStore.GetStateRoot()
 	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
-		stateRoot := db.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
-			if !db.RecoverTrie(bftConsensus.ChainService.GetCurrentHeader().StateRoot) {
+			if !trieStore.RecoverTrie(bftConsensus.ChainService.GetCurrentHeader().StateRoot) {
 				log.Error("root not equal and recover trie err")
 			}
 			log.Error("rootcmd root !=")
@@ -392,13 +405,13 @@ func (bftConsensus *BftConsensus) ChangeTime(interval time.Duration) {
 }
 
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
-func AccumulateRewards(db *database.Database, sig *MultiSignature, Producers consensusTypes.ProducerSet, totalGasBalance *big.Int) error {
+func AccumulateRewards(trieStore *chain.TrieStore, sig *MultiSignature, Producers consensusTypes.ProducerSet, totalGasBalance *big.Int) error {
 	reward := new(big.Int).SetUint64(uint64(params.Rewards))
 	r := new(big.Int)
 	r = r.Div(reward, new(big.Int).SetInt64(2))
 	r.Add(r, totalGasBalance)
 	leaderAddr := Producers[sig.Leader].Address()
-	err := db.AddBalance(&leaderAddr, r)
+	err := trieStore.AddBalance(&leaderAddr, r)
 	if err != nil {
 		return err
 	}
@@ -409,7 +422,7 @@ func AccumulateRewards(db *database.Database, sig *MultiSignature, Producers con
 			addr := Producers[index].Address()
 			if addr != leaderAddr {
 				r.Div(reward, new(big.Int).SetInt64(int64(num*2)))
-				err = db.AddBalance(&addr, r)
+				err = trieStore.AddBalance(&addr, r)
 				if err != nil {
 					return err
 				}

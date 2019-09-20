@@ -75,7 +75,7 @@ func CanTransfer(db vm.VMState, addr crypto.CommonAddress, amount *big.Int) bool
 	return db.GetBalance(&addr).Cmp(amount) >= 0
 }
 
-// Transfer subtracts amount from sender and adds amount to recipient using the given Db
+// Transfer subtracts amount from sender and adds amount to recipient using the given TrieStore
 func Transfer(db vm.VMState, sender, to crypto.CommonAddress, amount *big.Int) {
 	db.SubBalance(&sender, amount)
 	db.AddBalance(&to, amount)

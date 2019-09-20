@@ -4,6 +4,7 @@ import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/dlog"
 	"github.com/drep-project/drep-chain/app"
+	"github.com/drep-project/drep-chain/chain"
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
 	"github.com/drep-project/drep-chain/types"
@@ -25,7 +26,8 @@ var (
 
 type EvmService struct {
 	Config          *vm.VMConfig
-	DatabaseService *database.DatabaseService `service:"database"`
+	Chain           chain.ChainServiceInterface `service:"chain"`
+	DatabaseService *database.DatabaseService   `service:"database"`
 }
 
 func (evmService *EvmService) Name() string {
@@ -50,6 +52,7 @@ func (evmService *EvmService) Init(executeContext *app.ExecuteContext) error {
 	if err != nil {
 		return err
 	}
+	evmService.Chain.AddTransactionValidator(&EvmDeployTransactionSelector{}, &EvmDeployTransactionExecutor{evmService})
 	return nil
 }
 
@@ -99,6 +102,7 @@ func (evmService *EvmService) Eval(state vm.VMState, tx *types.Transaction, head
 	}
 	return ret, gas, vmerr != nil, err
 }
+
 func (evmService *EvmService) DefaultConfig() *vm.VMConfig {
 	return DefaultEvmConfig
 }

@@ -130,9 +130,6 @@ func (ps *chainServiceMock) GetBlockHeaderByHash(hash *crypto.Hash) (*types.Bloc
 func (ps *chainServiceMock) GetBlockHeaderByHeight(number uint64) (*types.BlockHeader, error) {
 	return nil, nil
 }
-func (ps *chainServiceMock) GetBlocksFrom(start, size uint64) ([]*types.Block, error) {
-	return nil, nil
-}
 
 func (ps *chainServiceMock) GetCurrentState() *database.Database {
 	return nil

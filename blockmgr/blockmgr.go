@@ -2,6 +2,7 @@ package blockmgr
 
 import (
 	"fmt"
+	"github.com/drep-project/drep-chain/common/trie"
 	"math/big"
 	"math/rand"
 	"path"
@@ -19,7 +20,6 @@ import (
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/network/p2p"
 	p2pService "github.com/drep-project/drep-chain/network/service"
-	"github.com/drep-project/drep-chain/pkgs/evm"
 	"github.com/drep-project/drep-chain/types"
 
 	"time"
@@ -61,7 +61,7 @@ type IBlockMgrPool interface {
 
 type IBlockBlockGenerator interface {
 	//generate block template
-	GenerateTemplate(db *database.Database, leaderAddr crypto.CommonAddress) (*types.Block, *big.Int, error)
+	GenerateTemplate(trieStore *chain.TrieStore, leaderAddr crypto.CommonAddress) (*types.Block, *big.Int, error)
 }
 
 type IBlockNotify interface {
@@ -82,8 +82,8 @@ type BlockMgr struct {
 	RpcService      *rpc2.RpcService            `service:"rpc"`
 	P2pServer       p2pService.P2P              `service:"p2p"`
 	DatabaseService *database.DatabaseService   `service:"database"`
-	VmService       evm.Vm                      `service:"vm"`
 	transactionPool *txpool.TransactionPool
+	chainStore      *chain.ChainStore
 	apis            []app.API
 
 	lock   sync.RWMutex
@@ -149,8 +149,11 @@ func NewBlockMgr(config *BlockMgrConfig, homeDir string, cs chain.ChainServiceIn
 
 	blockMgr.gpo = NewOracle(blockMgr.ChainService, blockMgr.Config.GasPrice)
 
-	//TODO use disk db
-	blockMgr.transactionPool = txpool.NewTransactionPool(blockMgr.ChainService.GetDatabaseService().Db(), path.Join(homeDir, blockMgr.Config.JournalFile))
+	store, err := chain.TrieStoreFromStore(blockMgr.DatabaseService.LevelDb(), trie.EmptyRoot[:])
+	if err != nil {
+		return nil
+	}
+	blockMgr.transactionPool = txpool.NewTransactionPool(store, path.Join(homeDir, blockMgr.Config.JournalFile))
 
 	blockMgr.P2pServer.AddProtocols([]p2p.Protocol{
 		p2p.Protocol{
@@ -194,9 +197,12 @@ func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 
 	blockMgr.gpo = NewOracle(blockMgr.ChainService, blockMgr.Config.GasPrice)
 
-	//TODO use disk db
-	blockMgr.transactionPool = txpool.NewTransactionPool(blockMgr.ChainService.GetDatabaseService().Db(), path.Join(executeContext.CommonConfig.HomeDir, blockMgr.Config.JournalFile))
-
+	store, err := chain.TrieStoreFromStore(blockMgr.DatabaseService.LevelDb(), trie.EmptyRoot[:])
+	if err != nil {
+		return err
+	}
+	blockMgr.transactionPool = txpool.NewTransactionPool(store, path.Join(executeContext.CommonConfig.HomeDir, blockMgr.Config.JournalFile))
+	blockMgr.chainStore = &chain.ChainStore{blockMgr.DatabaseService.LevelDb()}
 	blockMgr.P2pServer.AddProtocols([]p2p.Protocol{
 		p2p.Protocol{
 			Name:   "blockMgr",

@@ -6,10 +6,10 @@ type TxType uint64
 
 const (
 	TransferType TxType = iota
-	MinerType
+	_
 	CreateContractType
 	CallContractType
-	CrossChainType
+	_
 	SetAliasType //给地址设置昵称
 )
 

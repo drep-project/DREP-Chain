@@ -22,6 +22,7 @@ var (
 	hashT               = reflect.TypeOf(Hash{})
 	addressT            = reflect.TypeOf(CommonAddress{})
 	ZeroAddress         = CommonAddress{}
+	ZeroHash 			= Hash{}
 )
 
 // Address represents the 20 byte address of an Ethereum account.

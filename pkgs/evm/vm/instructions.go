@@ -27,6 +27,10 @@ import (
 	"math/big"
 )
 
+var (
+	Big257 = big.NewInt(257)
+)
+
 func opAdd(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	x, y := stack.pop(), stack.peek()
 	common.U256(y.Add(x, y))
@@ -553,17 +557,14 @@ func opGasprice(pc *uint64, interpreter *EVMInterpreter, contract *Contract, mem
 }
 
 func opBlockhash(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	//TODO get block hash
-	//TODO block hash not complete when execute here
-	fmt.Println("doing blockhash")
-	//num := stack.pop()
-	//n := interpreter.IntPool.get().Sub(interpreter.evm.BlockNumber, Big257)
-	//if num.Cmp(n) > 0 && num.Cmp(interpreter.evm.BlockNumber) < 0 {
-	//	stack.push(interpreter.evm.GetHash(num.Uint64()).Big())
-	//} else {
-	//	stack.push(interpreter.intPool.getZero())
-	//}
-	//interpreter.IntPool.put(num, n)
+	num := stack.pop()
+	n := interpreter.IntPool.get().Sub(interpreter.EVM.BlockNumber, Big257)
+	if num.Cmp(n) > 0 && num.Cmp(interpreter.EVM.BlockNumber) < 0 {
+		stack.push(interpreter.EVM.GetHash(num.Uint64()).Big())
+	} else {
+		stack.push(interpreter.IntPool.getZero())
+	}
+	interpreter.IntPool.put(num, n)
 	return nil, nil
 }
 
@@ -582,8 +583,7 @@ func opTimestamp(pc *uint64, interpreter *EVMInterpreter, contract *Contract, me
 }
 
 func opNumber(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	//TODO block number
-	//stack.push(U256(interpreter.IntPool.get().Set(interpreter.evm.BlockNumber)))
+	stack.push(math.U256(interpreter.IntPool.get().Set(interpreter.EVM.BlockNumber)))
 	return nil, nil
 }
 
@@ -627,32 +627,18 @@ func opMstore8(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memo
 }
 
 func opSload(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	fmt.Println("is sloading")
 	loc := stack.peek()
-	fmt.Println("loc: ", loc)
 	modifiedLoc := new(big.Int).SetBytes(sha3.HashS256(contract.ByteCode, loc.Bytes()))
-	//addr, err := interpreter.EVM.State.GetAccountAddress(loc)
-	//if err != nil {
-	//	loc.Set(new(big.Int))
-	//	return nil, err
-	//}
-	////val := interpreter.evm.StateDB.GetState(contract.GetAddress(), BigToHash(loc))
-	////loc.SetBytes(val.Bytes())
-	//b, err := AddressToBig(addr)
-	//if err != nil {
-	//	loc.Set(new(big.Int))
-	//	return nil, err
-	//}
-	//b := interpreter.EVM.State.Load(loc)
-	b := interpreter.EVM.State.Load(modifiedLoc)
+	b, err := interpreter.EVM.State.Load(modifiedLoc)
+	if err != nil {
+		return nil, err
+	}
 	loc.SetBytes(b)
 	return nil, nil
 }
 
 func opSstore(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	//loc := BigToHash(stack.pop())
 	loc, val := stack.pop(), stack.pop()
-	//fmt.Println("loc: ", loc)
 	modifiedLoc := new(big.Int).SetBytes(sha3.HashS256(contract.ByteCode, loc.Bytes()))
 	interpreter.EVM.State.Store(modifiedLoc, val)
 	//interpreter.EVM.State.Store(loc, val)

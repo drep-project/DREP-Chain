@@ -266,7 +266,6 @@ func (member *Member) commit() {
 		member.pushErrorMsg(ErrValidateMsg)
 		return
 	}
-	//TODO validate block from leader
 	var err error
 	var nouncePk *secp256k1.PublicKey
 

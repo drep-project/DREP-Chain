@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"runtime/debug"
 	"strings"
 
 	"github.com/drep-project/drep-chain/common"
@@ -21,7 +20,7 @@ var (
 	// General settings
 	ConfigFileFlag = cli.StringFlag{
 		Name:  "config",
-		Usage: "TODO add config description",
+		Usage: "add config description",
 	}
 
 	HomeDirFlag = common.DirectoryFlag{
@@ -158,7 +157,7 @@ func (mApp *DrepApp) Run() error {
 
 // action used to init and run each services
 func (mApp *DrepApp) action(ctx *cli.Context) error {
-	defer func() {
+	/*	defer func() {
 		if err := recover(); err != nil {
 			debug.PrintStack()
 			fmt.Println("app action err", err)
@@ -170,7 +169,7 @@ func (mApp *DrepApp) action(ctx *cli.Context) error {
 				return
 			}
 		}
-	}()
+	}()*/
 	mApp.Context.Cli = ctx //NOTE this set is for different commmands-
 	for _, service := range mApp.Context.Services {
 		//config
@@ -197,6 +196,7 @@ func (mApp *DrepApp) action(ctx *cli.Context) error {
 			fmt.Println(err)
 			return err
 		}
+		fmt.Println(service.Name())
 		err = service.Init(mApp.Context)
 		if err != nil {
 			return err

@@ -1,6 +1,8 @@
 package service
 
 import (
+	"path/filepath"
+
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/blockmgr"
 	"github.com/drep-project/drep-chain/chain"
@@ -12,7 +14,6 @@ import (
 	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
 	chainTypes "github.com/drep-project/drep-chain/types"
 	"gopkg.in/urfave/cli.v1"
-	"path/filepath"
 )
 
 var (
@@ -32,9 +33,9 @@ var (
 	}
 
 	DefaultConfig = &accountTypes.Config{
-		Enable: true,
-		Type:   "filestore",
-		//KeyStoreDir: "keystore",
+		Enable:      true,
+		Type:        "filestore",
+		KeyStoreDir: "keystore",
 	}
 )
 

@@ -4,13 +4,13 @@ import (
 	"container/heap"
 	"errors"
 	"fmt"
+	"github.com/drep-project/drep-chain/chain"
 	"math/big"
 	"sync"
 	"time"
 
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/types"
 )
 
@@ -25,7 +25,7 @@ const (
 //2 已经排序好的可以被打包入块
 //3 池子里面的交易根据块中的各个地址的交易对应的Nonce进行删除
 type TransactionPool struct {
-	database     *database.Database
+	chainStore   *chain.TrieStore
 	rlock        sync.RWMutex
 	queue        map[crypto.CommonAddress]*txList
 	pending      map[crypto.CommonAddress]*txList
@@ -50,8 +50,8 @@ type TransactionPool struct {
 }
 
 //NewTransactionPool 创建一个交易池
-func NewTransactionPool(database *database.Database, journalPath string) *TransactionPool {
-	pool := &TransactionPool{database: database}
+func NewTransactionPool(chainStore *chain.TrieStore, journalPath string) *TransactionPool {
+	pool := &TransactionPool{chainStore: chainStore}
 	pool.nonceCp = func(a interface{}, b interface{}) int {
 		ta, oka := a.(*types.Transaction)
 		tb, okb := b.(*types.Transaction)
@@ -150,10 +150,10 @@ func (pool *TransactionPool) addTxs(txs []types.Transaction) []error {
 	return errs
 }
 
-//func (pool *TransactionPool) UpdateState(database *database.Database) {
+//func (pool *TransactionPool) UpdateState(chainStore *chainStore.Database) {
 //	pool.rlock.Lock()
 //	defer pool.rlock.Unlock()
-//	pool.database = database
+//	pool.chainStore = chainStore
 //}
 
 //func (pool *TransactionPool) Contains(id string) bool {
@@ -443,6 +443,7 @@ func (pool *TransactionPool) checkUpdate() {
 
 //已经被处理过NONCE都被清理出去
 func (pool *TransactionPool) adjust(block *types.Block) {
+	pool.chainStore.RecoverTrie(block.Header.StateRoot)
 	addrMap := make(map[crypto.CommonAddress]struct{})
 	var addrs []*crypto.CommonAddress
 	for _, tx := range block.Data.TxList {
@@ -457,7 +458,7 @@ func (pool *TransactionPool) adjust(block *types.Block) {
 		for addr := range addrMap {
 			// 获取数据库里面的nonce
 			//根据nonce是否被处理，删除对应的交易
-			nonce := pool.database.GetNonce(&addr)
+			nonce := pool.chainStore.GetNonce(&addr)
 			pool.mu.Lock()
 			//块同步的时候，db中的nonce持续增加，pool.pendingNonce[addr]中的值不能被更新
 			//此处做更新处理
@@ -491,7 +492,7 @@ func (pool *TransactionPool) getTransactionCount(address *crypto.CommonAddress) 
 	if nonce, ok := pool.pendingNonce[*address]; ok {
 		return nonce
 	}
-	nonce := pool.database.GetNonce(address)
+	nonce := pool.chainStore.GetNonce(address)
 	pool.pendingNonce[*address] = nonce
 	return nonce
 }

@@ -84,6 +84,9 @@ func (logService *LogService) Init(executeContext *app.ExecuteContext) error {
 		args := []interface{}{}
 		pairs := strings.Split(logService.Config.Vmodule, ";")
 		for _, pair := range pairs {
+			if len(pair) == 0 {
+				continue
+			}
 			k_v := strings.Split(pair, "=")
 			if len(k_v) != 2 {
 				return errors.New("not correct module format")

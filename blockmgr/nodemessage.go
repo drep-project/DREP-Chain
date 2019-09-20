@@ -190,7 +190,7 @@ func (blockMgr *BlockMgr) HandleBlockReqMsg(peer *types.PeerInfo, req *types.Blo
 	}
 
 	if endHash != zero {
-		block, err := blockMgr.DatabaseService.GetBlock(&endHash)
+		block, err := blockMgr.chainStore.GetBlock(&endHash)
 		if err != nil {
 			return
 		}
@@ -209,7 +209,7 @@ func (blockMgr *BlockMgr) HandleBlockReqMsg(peer *types.PeerInfo, req *types.Blo
 		}
 
 		node := blockMgr.ChainService.BestChain().NodeByHeight(i)
-		block, err := blockMgr.DatabaseService.GetBlock(node.Hash)
+		block, err := blockMgr.chainStore.GetBlock(node.Hash)
 		if err != nil {
 			return
 		}

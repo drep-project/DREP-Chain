@@ -2,11 +2,11 @@ package vm
 
 import (
 	"bytes"
+	"github.com/drep-project/drep-chain/chain"
 	"math/big"
 	"sync"
 
 	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/types"
 )
 
@@ -32,25 +32,26 @@ type VMState interface {
 	AddRefund(gas uint64)
 	SubRefund(gas uint64)
 	GetRefund() uint64
-	Load(x *big.Int) []byte
-	Store(x, y *big.Int)
+	Load(x *big.Int) ([]byte, error)
+	Store(x, y *big.Int) error
 	Exist(contractAddr crypto.CommonAddress) bool
 	Empty(addr *crypto.CommonAddress) bool
 	HasSuicided(addr crypto.CommonAddress) bool
 }
 
 type State struct {
-	db     *database.Database
+	db     *chain.TrieStore
 	refund uint64
 	logs   []*types.Log
 }
 
-func NewState(database *database.Database) *State {
+func NewState(database *chain.TrieStore) *State {
 	return &State{
 		db:   database,
 		logs: make([]*types.Log, 0),
 	}
 }
+
 func (s *State) Empty(addr *crypto.CommonAddress) bool {
 	so, _ := s.db.GetStorage(addr)
 	return so == nil || so.Empty()
@@ -154,12 +155,13 @@ func (self *State) GetRefund() uint64 {
 	return self.refund
 }
 
-func (s *State) Load(x *big.Int) []byte {
-	return s.db.Load(x)
+func (s *State) Load(x *big.Int) ([]byte, error) {
+	val, _ :=  s.db.Get(x.Bytes())
+	return val, nil
 }
 
-func (s *State) Store(x, y *big.Int) {
-	s.db.Store(x, y)
+func (s *State) Store(x, y *big.Int) error {
+	return s.db.Put(x.Bytes(), y.Bytes())
 }
 
 func (s *State) Exist(contractAddr crypto.CommonAddress) bool {

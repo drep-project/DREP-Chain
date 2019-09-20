@@ -1,10 +1,13 @@
 package chain
 
 import (
+	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/common/hexutil"
+	"github.com/drep-project/drep-chain/common/trie"
 	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/database"
-	chainType "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/drep-chain/crypto/sha3"
+	"github.com/drep-project/drep-chain/database/dbinterface"
+	"github.com/drep-project/drep-chain/types"
 	"math/big"
 )
 
@@ -15,8 +18,17 @@ prefix:chain
 
 */
 type ChainApi struct {
-	chainService *ChainService
-	dbService    *database.DatabaseService
+	store     dbinterface.KeyValueStore
+	chainView *ChainView
+	dbQuery   *ChainStore
+}
+
+func NewChainApi(store dbinterface.KeyValueStore, chainView *ChainView, dbQuery *ChainStore) *ChainApi {
+	return &ChainApi{
+		store:     store,
+		chainView: chainView,
+		dbQuery:   dbQuery,
+	}
 }
 
 /*
@@ -54,15 +66,16 @@ type ChainApi struct {
   }
 }
 */
-func (chain *ChainApi) GetBlock(height uint64) (*chainType.Block, error) {
-	blocks, err := chain.chainService.GetBlocksFrom(height, 1)
+func (chain *ChainApi) GetBlock(height uint64) (*types.Block, error) {
+	node := chain.chainView.NodeByHeight(height)
+	if node == nil {
+		return nil, ErrBlockNotFound
+	}
+	block, err := chain.dbQuery.GetBlock(node.Hash)
 	if err != nil {
 		return nil, err
 	}
-	if len(blocks) == 0 {
-		return nil, ErrBlockNotFound
-	}
-	return blocks[0], nil
+	return block, nil
 }
 
 /*
@@ -76,7 +89,7 @@ func (chain *ChainApi) GetBlock(height uint64) (*chainType.Block, error) {
    {"jsonrpc":"2.0","id":3,"result":193005}
 */
 func (chain *ChainApi) GetMaxHeight() uint64 {
-	return chain.chainService.BestChain().Height()
+	return chain.chainView.Tip().Height
 }
 
 /*
@@ -90,7 +103,8 @@ func (chain *ChainApi) GetMaxHeight() uint64 {
    {"jsonrpc":"2.0","id":3,"result":9987999999999984000000}
 */
 func (chain *ChainApi) GetBalance(addr crypto.CommonAddress) *big.Int {
-	return chain.dbService.GetBalance(&addr)
+	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
+	return trieQuery.GetBalance(&addr)
 }
 
 /*
@@ -104,7 +118,8 @@ func (chain *ChainApi) GetBalance(addr crypto.CommonAddress) *big.Int {
    {"jsonrpc":"2.0","id":3,"result":0}
 */
 func (chain *ChainApi) GetNonce(addr crypto.CommonAddress) uint64 {
-	return chain.dbService.GetNonce(&addr)
+	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
+	return trieQuery.GetNonce(&addr)
 }
 
 /*
@@ -118,7 +133,8 @@ func (chain *ChainApi) GetNonce(addr crypto.CommonAddress) uint64 {
    {"jsonrpc":"2.0","id":3,"result":1}
 */
 func (chain *ChainApi) GetReputation(addr crypto.CommonAddress) *big.Int {
-	return chain.dbService.GetReputation(&addr)
+	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
+	return trieQuery.GetReputation(&addr)
 }
 
 /*
@@ -150,7 +166,7 @@ func (chain *ChainApi) GetReputation(addr crypto.CommonAddress) *big.Int {
   }
 }
 */
-func (chain *ChainApi) GetTransactionByBlockHeightAndIndex(height uint64, index int) (*chainType.Transaction, error) {
+func (chain *ChainApi) GetTransactionByBlockHeightAndIndex(height uint64, index int) (*types.Transaction, error) {
 	block, err := chain.GetBlock(height)
 	if err != nil {
 		return nil, err
@@ -172,7 +188,8 @@ func (chain *ChainApi) GetTransactionByBlockHeightAndIndex(height uint64, index 
 	{"jsonrpc":"2.0","id":3,"result":"tom"}
 */
 func (chain *ChainApi) GetAliasByAddress(addr *crypto.CommonAddress) string {
-	return chain.chainService.DatabaseService.GetStorageAlias(addr)
+	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
+	return trieQuery.GetStorageAlias(addr)
 }
 
 /*
@@ -185,8 +202,9 @@ func (chain *ChainApi) GetAliasByAddress(addr *crypto.CommonAddress) string {
  response:
    {"jsonrpc":"2.0","id":3,"result":"0x8a8e541ddd1272d53729164c70197221a3c27486"}
 */
-func (chain *ChainApi) GetAddressByAlias(alias string) *crypto.CommonAddress {
-	return chain.chainService.DatabaseService.AliasGet(alias)
+func (chain *ChainApi) GetAddressByAlias(alias string) (*crypto.CommonAddress, error) {
+	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
+	return trieQuery.AliasGet(alias)
 }
 
 /*
@@ -200,7 +218,8 @@ func (chain *ChainApi) GetAddressByAlias(alias string) *crypto.CommonAddress {
    {"jsonrpc":"2.0","id":3,"result":"0x00"}
 */
 func (chain *ChainApi) GetByteCode(addr *crypto.CommonAddress) hexutil.Bytes {
-	return chain.dbService.GetByteCode(addr)
+	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
+	return trieQuery.GetByteCode(addr)
 }
 
 /*
@@ -213,8 +232,8 @@ func (chain *ChainApi) GetByteCode(addr *crypto.CommonAddress) hexutil.Bytes {
  response:
    {"jsonrpc":"2.0","id":3,"result":""}
 */
-func (chain *ChainApi) GetReceipt(txHash crypto.Hash) *chainType.Receipt {
-	return chain.dbService.GetReceipt(txHash)
+func (chain *ChainApi) GetReceipt(txHash crypto.Hash) *types.Receipt {
+	return chain.dbQuery.GetReceipt(txHash)
 }
 
 /*
@@ -227,7 +246,91 @@ func (chain *ChainApi) GetReceipt(txHash crypto.Hash) *chainType.Receipt {
  response:
    {"jsonrpc":"2.0","id":3,"result":""}
 */
-func (chain *ChainApi) GetLogs(txHash crypto.Hash) []*chainType.Log {
-	//return chain.dbService.GetLogs(txHash)
-	return chain.dbService.GetReceipt(txHash).Logs
+func (chain *ChainApi) GetLogs(txHash crypto.Hash) []*types.Log {
+	//return chain.chainService.chainStore.GetLogs(txHash)
+	return chain.dbQuery.GetReceipt(txHash).Logs
+}
+
+type TrieQuery struct {
+	dbinterface.KeyValueStore
+	trie *trie.SecureTrie
+	root []byte
+}
+
+func NewTrieQuery(store dbinterface.KeyValueStore, root []byte) (*TrieQuery, error) {
+	trieQuery := &TrieQuery{store, nil, root}
+	trieDb := trie.NewDatabaseWithCache(store, 0)
+	var err error
+	trieQuery.trie, err = trie.NewSecure(crypto.Bytes2Hash(root), trieDb)
+	if err != nil {
+		return nil, err
+	}
+	return trieQuery, nil
+}
+
+func (trieQuery *TrieQuery) Get(key []byte) ([]byte, error) {
+	return trieQuery.trie.TryGet(key)
+}
+
+func (trieQuery *TrieQuery) GetStorage(addr *crypto.CommonAddress) (types.Storage, error) {
+	key := sha3.Keccak256([]byte(addressStorage + addr.Hex()))
+	value, err := trieQuery.trie.TryGet(key)
+	storage := types.Storage{}
+	if value == nil {
+		return storage, nil
+	} else {
+		err = binary.Unmarshal(value, &storage)
+		if err != nil {
+			return storage, err
+		}
+	}
+	return storage, nil
+}
+
+func (trieQuery *TrieQuery) GetStorageAlias(addr *crypto.CommonAddress) string {
+	storage, _ := trieQuery.GetStorage(addr)
+	return storage.Alias
+}
+
+func (trieQuery *TrieQuery) AliasGet(alias string) (*crypto.CommonAddress, error) {
+	buf, err := trieQuery.Get([]byte(aliasPrefix + alias))
+	if err != nil {
+		return nil, err
+	}
+	addr := crypto.CommonAddress{}
+	addr.SetBytes(buf)
+	return &addr, nil
+}
+
+func (trieQuery *TrieQuery) AliasExist(alias string) bool {
+	_, err := trieQuery.Get([]byte(aliasPrefix + alias))
+	if err != nil {
+		return false
+	}
+	return true
+}
+
+func (trieQuery *TrieQuery) GetBalance(addr *crypto.CommonAddress) *big.Int {
+	storage, _ := trieQuery.GetStorage(addr)
+	return &storage.Balance
+}
+
+func (trieQuery *TrieQuery) GetNonce(addr *crypto.CommonAddress) uint64 {
+	storage, _ := trieQuery.GetStorage(addr)
+	return storage.Nonce
+}
+
+func (trieQuery *TrieQuery) GetByteCode(addr *crypto.CommonAddress) []byte {
+	storage, _ := trieQuery.GetStorage(addr)
+	return storage.ByteCode
+}
+
+func (trieQuery *TrieQuery) GetCodeHash(addr *crypto.CommonAddress) crypto.Hash {
+	storage, _ := trieQuery.GetStorage(addr)
+	return storage.CodeHash
+}
+
+func (trieQuery *TrieQuery) GetReputation(addr *crypto.CommonAddress) *big.Int {
+	storage, _ := trieQuery.GetStorage(addr)
+	return &storage.Reputation
 }
