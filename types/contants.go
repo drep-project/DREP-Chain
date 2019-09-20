@@ -10,7 +10,10 @@ const (
 	CreateContractType
 	CallContractType
 	_
-	SetAliasType //给地址设置昵称
+	SetAliasType  //给地址设置昵称
+
+	VoteCreditType  //质押给自己或者别人
+	LockBalance     //锁定drep币，换取其他币
 )
 
 var (
