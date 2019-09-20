@@ -26,8 +26,9 @@ var (
 	aliasPrefix         = "alias"
 	dbOperaterMaxSeqKey = "operateMaxSeq"       //记录数据库操作的最大序列号
 	dbOperaterJournal   = "addrOperatesJournal" //每一次数据读写过程的记录
-	addressStorage      = "addressStorage"      //以地址作为KEY的对象存储
+	addressStorage      = "addressStorage"      //以地址作为KEY,存储账户对象
 	candidateAddrs      = "candidateAddrs"      //参与竞选出块节点的地址集合
+	stakeStorage        = "stakeStorage"        //以地址作为KEY,存储stake相关内容
 )
 
 func NewDatabase(dbPath string) (*Database, error) {
@@ -205,6 +206,65 @@ func (db *Database) PutStorage(addr *crypto.CommonAddress, storage *types.Storag
 		return db.cache.Put(key, value)
 	} else {
 		err = db.trie.TryUpdate(key, value)
+		if err != nil {
+			return err
+		}
+		_, err = db.trie.Commit(nil)
+		return err
+	}
+}
+
+func (db *Database) GetStakeStorage(addr *crypto.CommonAddress) (*types.StakeStorage, error) {
+	storage := &types.StakeStorage{}
+	key := sha3.Keccak256([]byte(stakeStorage + addr.Hex()))
+
+	var value []byte
+	var err error
+	if db.cache != nil {
+		value, err = db.cache.Get(key)
+	} else {
+		value, err = db.trie.TryGet(key)
+	}
+	if err != nil {
+		log.Errorf("get storage err:%v", err)
+		return nil, err
+	}
+	if value == nil {
+		return nil, nil
+	} else {
+		err = binary.Unmarshal(value, storage)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return storage, nil
+}
+
+func (db *Database) PutStakeStorage(addr *crypto.CommonAddress, storage *types.StakeStorage) error {
+	key := sha3.Keccak256([]byte(stakeStorage + addr.Hex()))
+	value, err := binary.Marshal(storage)
+	if err != nil {
+		return err
+	}
+
+	if db.cache != nil {
+		return db.cache.Put(key, value)
+	} else {
+		err = db.trie.TryUpdate(key, value)
+		if err != nil {
+			return err
+		}
+		_, err = db.trie.Commit(nil)
+		return err
+	}
+}
+
+func (db *Database) DelStakeStorage(addr *crypto.CommonAddress) error {
+	key := sha3.Keccak256([]byte(stakeStorage + addr.Hex()))
+	if db.cache != nil {
+		return db.cache.Delete(key)
+	} else {
+		err := db.trie.TryDelete(key)
 		if err != nil {
 			return err
 		}
@@ -557,7 +617,7 @@ func (db *Database) GetBlockNode(hash *crypto.Hash, blockHeight uint64) (*types.
 	}
 	blockHeader := &types.BlockHeader{}
 	binary.Unmarshal(value[0:len(value)-1], blockHeader)
-	status := value[len(value)-1:len(value)][0]
+	status := value[len(value)-1 : len(value)][0]
 	return blockHeader, types.BlockStatus(status), nil
 }
 
@@ -700,9 +760,9 @@ func (db *Database) VoteCredit(fromAddr, toAddr *crypto.CommonAddress, addBalanc
 		toAddr = fromAddr
 	}
 
-	storage, _ := db.GetStorage(toAddr)
+	storage, _ := db.GetStakeStorage(toAddr)
 	if storage == nil {
-		storage = &types.Storage{}
+		storage = &types.StakeStorage{}
 	}
 
 	if len(storage.ReceivedVoteCredit) == 0 {
@@ -721,28 +781,27 @@ func (db *Database) VoteCredit(fromAddr, toAddr *crypto.CommonAddress, addBalanc
 		}
 	}
 
-	return db.PutStorage(toAddr, storage)
+	return db.PutStakeStorage(toAddr, storage)
 }
 
-func (db *Database) CancelVoteCredit(fromAddr, toAddr *crypto.CommonAddress, addBalance *big.Int) error {
+func (db *Database) CancelVoteCredit(fromAddr, toAddr *crypto.CommonAddress, cancelBalance *big.Int) error {
 	if toAddr == nil {
 		toAddr = fromAddr
 	}
 
-	storage, _ := db.GetStorage(toAddr)
+	storage, _ := db.GetStakeStorage(toAddr)
 	if storage == nil {
-		storage = &types.Storage{}
+		storage = &types.StakeStorage{}
 	}
 
 	if len(storage.ReceivedVoteCredit) == 0 {
 		return fmt.Errorf("not exist vote credit")
 	} else {
-		var totalBalance big.Int
 		if v, ok := storage.ReceivedVoteCredit[*fromAddr]; ok {
-			retCmp := v.Cmp(addBalance)
+			resultBalance := new(big.Int)
+			retCmp := v.Cmp(cancelBalance)
 			if retCmp > 0 {
-				totalBalance = *addBalance.Sub(addBalance, &v)
-				storage.ReceivedVoteCredit[*fromAddr] = totalBalance
+				storage.ReceivedVoteCredit[*fromAddr] = *resultBalance.Sub(&v, cancelBalance)
 			} else if retCmp == 0 {
 				delete(storage.ReceivedVoteCredit, *fromAddr)
 				db.DelCandidateAddr(fromAddr)
@@ -754,11 +813,11 @@ func (db *Database) CancelVoteCredit(fromAddr, toAddr *crypto.CommonAddress, add
 		}
 	}
 
-	return db.PutStorage(toAddr, storage)
+	return db.PutStakeStorage(toAddr, storage)
 }
 
 func (db *Database) GetVoteCredit(addr *crypto.CommonAddress) map[crypto.CommonAddress]big.Int {
-	storage, _ := db.GetStorage(addr)
+	storage, _ := db.GetStakeStorage(addr)
 	if storage == nil {
 		return nil
 	}

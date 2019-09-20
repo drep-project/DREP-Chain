@@ -335,7 +335,8 @@ func TestCancelVoteCredit(t *testing.T) {
 		m := db1.GetVoteCredit(&addr)
 		if v, ok := m[addr]; ok {
 			if v.Cmp(voteValue) != 0 {
-				t.Fatal("storage ang get not match")
+				fmt.Println(v, voteValue)
+				t.Fatal("storage ang get not match", v, voteValue)
 			}
 		} else {
 			t.Fatal("storage value err")
