@@ -12,7 +12,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
-// DbStore use leveldb as the storegae
+// ChainStore use leveldb as the storegae
 type DbStore struct {
 	dbDirPath string
 	db        *leveldb.DB

@@ -23,7 +23,6 @@ import (
 	"github.com/drep-project/drep-chain/common/math"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/sha3"
-	"github.com/drep-project/drep-chain/params"
 	"math/big"
 )
 
@@ -778,7 +777,7 @@ func opCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 	args := memory.Get(inOffset.Int64(), inSize.Int64())
 
 	if value.Sign() != 0 {
-		gas += params.CallStipend
+		gas += CallStipend
 	}
 	ret, returnGas, err := interpreter.EVM.Call(contract.CallerAddr, contract.ContractAddr, contract.ChainId, args, gas, value)
 	if err != nil {
@@ -809,7 +808,7 @@ func opCallCode(pc *uint64, interpreter *EVMInterpreter, contract *Contract, mem
 	args := memory.Get(inOffset.Int64(), inSize.Int64())
 
 	if value.Sign() != 0 {
-		gas += params.CallStipend
+		gas += CallStipend
 	}
 	ret, returnGas, err := interpreter.EVM.CallCode(contract.CallerAddr, toAddr, args, gas, value)
 	if err != nil {

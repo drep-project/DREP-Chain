@@ -2,7 +2,6 @@ package vm
 
 import (
 	"errors"
-	"github.com/drep-project/drep-chain/params"
 	"math/big"
 
 	"github.com/drep-project/drep-chain/common"
@@ -43,7 +42,7 @@ func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contr
 type ecrecover struct{}
 
 func (c *ecrecover) RequiredGas(input []byte) uint64 {
-	return params.EcrecoverGas
+	return EcrecoverGas
 }
 
 func (c *ecrecover) Run(input []byte) ([]byte, error) {
@@ -80,7 +79,7 @@ type sha256hash struct{}
 // This method does not require any overflow checking as the input size gas costs
 // required for anything significant is so high it's impossible to pay for.
 func (c *sha256hash) RequiredGas(input []byte) uint64 {
-	return uint64(len(input)+31)/32*params.Sha256PerWordGas + params.Sha256BaseGas
+	return uint64(len(input)+31)/32*Sha256PerWordGas + Sha256BaseGas
 }
 func (c *sha256hash) Run(input []byte) ([]byte, error) {
 	h := sha3.Hash256(input)
@@ -95,7 +94,7 @@ type ripemd160hash struct{}
 // This method does not require any overflow checking as the input size gas costs
 // required for anything significant is so high it's impossible to pay for.
 func (c *ripemd160hash) RequiredGas(input []byte) uint64 {
-	return uint64(len(input)+31)/32*params.Ripemd160PerWordGas + params.Ripemd160BaseGas
+	return uint64(len(input)+31)/32*Ripemd160PerWordGas + Ripemd160BaseGas
 }
 func (c *ripemd160hash) Run(input []byte) ([]byte, error) {
 	ripemd := ripemd160.New()
@@ -111,7 +110,7 @@ type dataCopy struct{}
 // This method does not require any overflow checking as the input size gas costs
 // required for anything significant is so high it's impossible to pay for.
 func (c *dataCopy) RequiredGas(input []byte) uint64 {
-	return uint64(len(input)+31)/32*params.IdentityPerWordGas + params.IdentityBaseGas
+	return uint64(len(input)+31)/32*IdentityPerWordGas + IdentityBaseGas
 }
 func (c *dataCopy) Run(in []byte) ([]byte, error) {
 	return in, nil
@@ -172,7 +171,7 @@ func (c *bigModExp) RequiredGas(input []byte) uint64 {
 		)
 	}
 	gas.Mul(gas, common.BigMax(adjExpLen, big1))
-	gas.Div(gas, new(big.Int).SetUint64(params.ModExpQuadCoeffDiv))
+	gas.Div(gas, new(big.Int).SetUint64(ModExpQuadCoeffDiv))
 
 	if gas.BitLen() > 64 {
 		return common.MaxUint64
@@ -233,7 +232,7 @@ type bn256Add struct{}
 
 // RequiredGas returns the gas required to execute the pre-compiled contract.
 func (c *bn256Add) RequiredGas(input []byte) uint64 {
-	return params.Bn256AddGas
+	return Bn256AddGas
 }
 
 func (c *bn256Add) Run(input []byte) ([]byte, error) {
@@ -255,7 +254,7 @@ type bn256ScalarMul struct{}
 
 // RequiredGas returns the gas required to execute the pre-compiled contract.
 func (c *bn256ScalarMul) RequiredGas(input []byte) uint64 {
-	return params.Bn256ScalarMulGas
+	return Bn256ScalarMulGas
 }
 
 func (c *bn256ScalarMul) Run(input []byte) ([]byte, error) {
@@ -284,7 +283,7 @@ type bn256Pairing struct{}
 
 // RequiredGas returns the gas required to execute the pre-compiled contract.
 func (c *bn256Pairing) RequiredGas(input []byte) uint64 {
-	return params.Bn256PairingBaseGas + uint64(len(input)/192)*params.Bn256PairingPerPointGas
+	return Bn256PairingBaseGas + uint64(len(input)/192)*Bn256PairingPerPointGas
 }
 
 func (c *bn256Pairing) Run(input []byte) ([]byte, error) {

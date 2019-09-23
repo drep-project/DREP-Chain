@@ -2,6 +2,7 @@ package evm
 
 import (
 	"github.com/drep-project/drep-chain/chain"
+	"github.com/drep-project/drep-chain/params"
 	"github.com/drep-project/drep-chain/pkgs/evm/vm"
 	"github.com/drep-project/drep-chain/types"
 )
@@ -26,6 +27,19 @@ type EvmDeployTransactionExecutor struct {
 }
 
 func (vmDeployTransactionExecutor *EvmDeployTransactionExecutor) ExecuteTransaction(context *chain.ExecuteTransactionContext) ([]byte, bool, []*types.Log, error) {
+	tx := context.Tx()
+	contractCreation := tx.To() == nil || tx.To().IsEmpty()
+	// Set the starting gas for the raw transaction
+	gas := uint64(0)
+	if contractCreation {
+		gas = vm.TxGasContractCreation
+	} else {
+		gas = params.TxGas
+	}
+	err :=  context.UseGas(gas)
+	if err != nil {
+		return nil, false, nil, err
+	}
 	state := vm.NewState(context.TrieStore())
 	ret, gas, failed, err := vmDeployTransactionExecutor.vm.Eval(
 		state,

@@ -1,6 +1,9 @@
 package chain
 
-import "github.com/drep-project/drep-chain/types"
+import (
+	"github.com/drep-project/drep-chain/params"
+	"github.com/drep-project/drep-chain/types"
+)
 
 /****************** transfer ********************/
 type TransferTxSelector struct {
@@ -21,6 +24,11 @@ func (transferTransactionProcessor *TransferTransactionProcessor) ExecuteTransac
 	from := context.From()
 	store := context.TrieStore()
 	tx := context.Tx()
+	err :=  context.UseGas(params.TxGas)
+	if err != nil {
+		return nil, false, nil, err
+	}
+
 	originBalance := store.GetBalance(from)
 	toBalance := store.GetBalance(tx.To())
 	leftBalance := originBalance.Sub(originBalance, tx.Amount())
@@ -28,7 +36,7 @@ func (transferTransactionProcessor *TransferTransactionProcessor) ExecuteTransac
 		return nil, false, nil, ErrBalance
 	}
 	addBalance := toBalance.Add(toBalance, tx.Amount())
-	err := store.PutBalance(from, leftBalance)
+	err = store.PutBalance(from, leftBalance)
 	if err != nil {
 		return nil, false, nil, err
 	}

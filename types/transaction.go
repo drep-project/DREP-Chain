@@ -141,14 +141,7 @@ func (tx *Transaction) AsPersistentMessage() []byte {
 
 func (tx *Transaction) IntrinsicGas() (uint64, error) {
 	data := tx.AsPersistentMessage()
-	contractCreation := tx.To() == nil || tx.To().IsEmpty()
-	// Set the starting gas for the raw transaction
 	var gas uint64
-	if contractCreation {
-		gas = params.TxGasContractCreation
-	} else {
-		gas = params.TxGas
-	}
 	// Bump the required gas by the amount of transactional data
 	if len(data) > 0 {
 		// Zero and non-zero bytes are priced differently

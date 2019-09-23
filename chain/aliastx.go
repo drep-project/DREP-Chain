@@ -31,6 +31,7 @@ type AliasTransactionProcessor struct {
 //10 5000 20
 //11 2500 10
 func (aliasTransactionProcessor *AliasTransactionProcessor) ExecuteTransaction(context *ExecuteTransactionContext) ([]byte, bool, []*types.Log, error) {
+
 	from := context.From()
 	store := context.TrieStore()
 	tx := context.Tx()
@@ -42,7 +43,7 @@ func (aliasTransactionProcessor *AliasTransactionProcessor) ExecuteTransaction(c
 	if err != nil {
 		return nil, false, nil, err
 	}
-	err = context.UseGas(params.AliasGas * uint64(len(alias)))
+	err =  context.UseGas(params.AliasGas)
 	if err != nil {
 		return nil, false, nil, err
 	}

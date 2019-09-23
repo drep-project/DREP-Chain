@@ -13,8 +13,6 @@ import (
 
 const (
 	aliasPrefix         = "alias"
-	dbOperaterMaxSeqKey = "operateMaxSeq"       //记录数据库操作的最大序列号
-	dbOperaterJournal   = "addrOperatesJournal" //每一次数据读写过程的记录
 	addressStorage      = "addressStorage"      //以地址作为KEY的对象存储
 )
 
@@ -37,6 +35,28 @@ type TrieRead interface {
 	GetReputation(addr *crypto.CommonAddress) *big.Int
 }
 
+type TrieWrite interface {
+	DeleteStorage(addr *crypto.CommonAddress) error
+	PutStorage(addr *crypto.CommonAddress, storage *types.Storage) error
+	PutBalance(addr *crypto.CommonAddress, balance *big.Int) error
+	PutNonce(addr *crypto.CommonAddress, nonce uint64) error
+	AliasSet(addr *crypto.CommonAddress, alias string) (err error)
+	PutByteCode(addr *crypto.CommonAddress, byteCode []byte) error
+	PutLogs(logs []*types.Log, txHash crypto.Hash) error
+	AddBalance(addr *crypto.CommonAddress, amount *big.Int) error
+	SubBalance(addr *crypto.CommonAddress, amount *big.Int) error
+}
+
+type Revert interface {
+	RevertSnapShot(shot *database.SnapShot)
+	GetSnapShot() *database.SnapShot
+}
+
+type TrieRoot interface {
+	GetStateRoot() []byte
+	RecoverTrie(root []byte) bool
+}
+
 type TrieStore struct {
 	store  dbinterface.KeyValueStore
 	cache  *database.TransactionStore //数据属于storage的缓存，调用flush才会把数据写入到diskDb中
@@ -45,22 +65,22 @@ type TrieStore struct {
 }
 
 func TrieStoreFromStore(store dbinterface.KeyValueStore, stateRoot []byte) (*TrieStore, error) {
-	db := &TrieStore{
+	trieStore := &TrieStore{
 		store: store,
 	}
 
-	db.trieDb = trie.NewDatabaseWithCache(db.store, 0)
+	trieStore.trieDb = trie.NewDatabaseWithCache(trieStore.store, 0)
 
-	err := db.initState()
+	err := trieStore.initState()
 	if err != nil {
 		return nil, err
 	}
-	if !db.RecoverTrie(stateRoot) {
+	if !trieStore.RecoverTrie(stateRoot) {
 		return nil, ErrRecoverRoot
 	}
 
-	db.cache = database.NewTransactionStore(db.trie)
-	return db, nil
+	trieStore.cache = database.NewTransactionStore(trieStore.trie)
+	return trieStore, nil
 }
 
 func (trieStore *TrieStore) initState() error {
@@ -72,7 +92,10 @@ func (trieStore *TrieStore) initState() error {
 			return err
 		}
 
-		trieStore.store.Put(trie.EmptyRoot[:], []byte{0})
+		err = trieStore.store.Put(trie.EmptyRoot[:], []byte{0})
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -211,7 +234,7 @@ func (trieStore *TrieStore) AliasSet(addr *crypto.CommonAddress, alias string) (
 		}
 
 		//2 存入以alias为key的k-v对
-		err = trieStore.AliasPut(alias, addr.Bytes())
+		err = trieStore.cache.Put([]byte(aliasPrefix+alias), addr.Bytes())
 		if err != nil {
 			return err
 		}
@@ -226,12 +249,6 @@ func (trieStore *TrieStore) AliasSet(addr *crypto.CommonAddress, alias string) (
 	}
 	return nil
 }
-
-func (trieStore *TrieStore) AliasPut(alias string, value []byte) error {
-	trieStore.cache.Put([]byte(aliasPrefix+alias), value)
-	return nil
-}
-
 //alias为key的k-v
 func (trieStore *TrieStore) AliasGet(alias string) (*crypto.CommonAddress, error) {
 	buf, err := trieStore.store.Get([]byte(aliasPrefix + alias))
@@ -313,11 +330,11 @@ func (trieStore *TrieStore) cacheToTrie() {
 	}
 }
 
-func (trieStore *TrieStore) RevertState(shot *database.SnapShot) {
-	trieStore.cache.RevertState(shot)
+func (trieStore *TrieStore) RevertSnapShot(shot *database.SnapShot) {
+	trieStore.cache.RevertSnapShot(shot)
 }
 
-func (trieStore *TrieStore) CopyState() *database.SnapShot {
+func (trieStore *TrieStore) GetSnapShot() *database.SnapShot {
 	return trieStore.cache.CopyState()
 }
 

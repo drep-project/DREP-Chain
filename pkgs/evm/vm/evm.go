@@ -19,7 +19,6 @@ package vm
 import (
 	"fmt"
 	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/params"
 	"github.com/drep-project/drep-chain/types"
 	"math/big"
 	"sync/atomic"
@@ -162,7 +161,7 @@ func (evm *EVM) Call(caller crypto.CommonAddress, addr crypto.CommonAddress, cha
 	}
 
 	// Fail if we're trying to execute above the call depth limit
-	if evm.depth > int(params.CallCreateDepth) {
+	if evm.depth > int(CallCreateDepth) {
 		return nil, gas, ErrDepth
 	}
 	// Fail if we're trying to transfer more than the available balance
@@ -231,7 +230,7 @@ func (evm *EVM) CallCode(caller crypto.CommonAddress, addr crypto.CommonAddress,
 	}
 
 	// Fail if we're trying to execute above the call depth limit
-	if evm.depth > int(params.CallCreateDepth) {
+	if evm.depth > int(CallCreateDepth) {
 		return nil, gas, ErrDepth
 	}
 	// Fail if we're trying to transfer more than the available balance
@@ -259,7 +258,7 @@ func (evm *EVM) DelegateCall(con *Contract, contractAddr crypto.CommonAddress, i
 		return nil, gas, nil
 	}
 	// Fail if we're trying to execute above the call depth limit
-	if evm.depth > int(params.CallCreateDepth) {
+	if evm.depth > int(CallCreateDepth) {
 		return nil, gas, ErrDepth
 	}
 
@@ -297,7 +296,7 @@ func (evm *EVM) StaticCall(caller crypto.CommonAddress, addr crypto.CommonAddres
 		return nil, gas, nil
 	}
 	// Fail if we're trying to execute above the call depth limit
-	if evm.depth > int(params.CallCreateDepth) {
+	if evm.depth > int(CallCreateDepth) {
 		return nil, gas, ErrDepth
 	}
 
@@ -343,7 +342,7 @@ func (c *codeAndHash) Hash() crypto.Hash {
 func (evm *EVM) CreateContractCode(caller crypto.CommonAddress, codeAndHash *codeAndHash, gas uint64, value *big.Int, address crypto.CommonAddress) ([]byte, crypto.CommonAddress, uint64, error) {
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
-	if evm.depth > int(params.CallCreateDepth) {
+	if evm.depth > int(CallCreateDepth) {
 		return nil, crypto.CommonAddress{}, gas, ErrDepth
 	}
 	if !evm.CanTransfer(evm.State, caller, value) {
@@ -379,13 +378,13 @@ func (evm *EVM) CreateContractCode(caller crypto.CommonAddress, codeAndHash *cod
 	ret, err := run(evm, contract, nil, false)
 
 	// check whether the max code size has been exceeded
-	maxCodeSizeExceeded := len(ret) > params.MaxCodeSize
+	maxCodeSizeExceeded := len(ret) > MaxCodeSize
 	// if the contract creation ran successfully and no errors were returned
 	// calculate the gas required to store the code. If the code could not
 	// be stored due to not enough gas set an error and let it be handled
 	// by the error checking condition below.
 	if err == nil && !maxCodeSizeExceeded {
-		createDataGas := uint64(len(ret)) * params.CreateDataGas
+		createDataGas := uint64(len(ret)) * CreateDataGas
 		if contract.UseGas(createDataGas) {
 			evm.State.SetByteCode(contractAddr, ret)
 		} else {

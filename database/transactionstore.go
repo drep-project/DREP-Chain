@@ -69,7 +69,7 @@ func (tDb *TransactionStore) Flush() {
 	})
 }
 
-func (tDb *TransactionStore) RevertState(snapShot *SnapShot) {
+func (tDb *TransactionStore) RevertSnapShot(snapShot *SnapShot) {
 	tDb.dirties = snapShot.storageDirties
 }
 

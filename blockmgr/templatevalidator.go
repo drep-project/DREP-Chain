@@ -49,7 +49,7 @@ func (chainBlockValidator *TemplateBlockValidator) ExecuteBlock(context *chain.B
 	}()
 SELECT_TX:
 	for _, t := range context.Block.Data.TxList {
-		snap := context.TrieStore.CopyState()
+		snap := context.TrieStore.GetSnapShot()
 		backGp := *context.Gp
 		select {
 		case <-stopchanel:
@@ -65,12 +65,12 @@ SELECT_TX:
 				context.AddGasFee(gasFee)
 			} else if err == chain.ErrOutOfGas {
 				// return while out of gas
-				context.TrieStore.RevertState(snap)
+				context.TrieStore.RevertSnapShot(snap)
 				context.Gp = &backGp
 				return nil
 			} else {
 				//skip wrong tx
-				context.TrieStore.RevertState(snap)
+				context.TrieStore.RevertSnapShot(snap)
 				context.Gp = &backGp
 				continue
 			}

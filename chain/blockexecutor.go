@@ -14,33 +14,31 @@ import (
 
 type IBlockValidator interface {
 	VerifyHeader(header, parent *types.BlockHeader) error
-
 	VerifyBody(block *types.Block) error
-
 	ExecuteBlock(context *BlockExecuteContext) error
 }
 
 type BlockExecuteContext struct {
-	TrieStore *TrieStore
-	Gp        *GasPool
-	DbStore   *ChainStore
-	Block     *types.Block
-	GasUsed   *big.Int
-	GasFee    *big.Int
-	Logs      []*types.Log
-	Receipts  types.Receipts
+	TrieStore  *TrieStore
+	Gp         *GasPool
+	ChainStore *ChainStore
+	Block      *types.Block
+	GasUsed    *big.Int
+	GasFee     *big.Int
+	Logs       []*types.Log
+	Receipts   types.Receipts
 }
 
-func NewBlockExecuteContext(trieStore *TrieStore, gp *GasPool, dbStore *ChainStore, block *types.Block) *BlockExecuteContext {
+func NewBlockExecuteContext(trieStore *TrieStore, gp *GasPool, chainStore *ChainStore, block *types.Block) *BlockExecuteContext {
 	return &BlockExecuteContext{
-		TrieStore: trieStore,
-		Gp: gp,
-		DbStore: dbStore,
-		Block: block,
-		GasUsed: new(big.Int),
-		GasFee:new(big.Int),
-		Logs:[]*types.Log{},
-		Receipts: types.Receipts{},
+		TrieStore:  trieStore,
+		Gp:         gp,
+		ChainStore: chainStore,
+		Block:      block,
+		GasUsed:    new(big.Int),
+		GasFee:     new(big.Int),
+		Logs:       []*types.Log{},
+		Receipts:   types.Receipts{},
 	}
 }
 
@@ -139,13 +137,13 @@ func (chainBlockValidator *ChainBlockValidator) ExecuteBlock(context *BlockExecu
 	if newReceiptRoot != context.Block.Header.ReceiptRoot {
 		return ErrReceiptRoot
 	}
-	err := context.DbStore.PutReceipts(*context.Block.Header.Hash(), context.Receipts)
+	err := context.ChainStore.PutReceipts(*context.Block.Header.Hash(), context.Receipts)
 	if err != nil {
 		return err
 	}
 	for _, receipt := range context.Receipts {
 		receipt.PostState = newReceiptRoot[:]
-		err =context.DbStore.PutReceipt(receipt.TxHash, receipt)
+		err =context.ChainStore.PutReceipt(receipt.TxHash, receipt)
 		if err != nil {
 			return err
 		}
