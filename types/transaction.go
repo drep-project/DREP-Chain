@@ -239,3 +239,32 @@ func NewAliasTransaction(alias string, gasPrice, gasLimit *big.Int, nonce uint64
 	}
 	return &Transaction{Data: data}
 }
+
+func NewVoteTransaction(to crypto.CommonAddress, amount, gasPrice, gasLimit *big.Int, nonce uint64) *Transaction {
+	data := TransactionData{
+		Version:   common.Version,
+		Nonce:     nonce,
+		Type:      VoteCreditType,
+		To:        to,
+		Amount:    *(*common.Big)(amount),
+		GasPrice:  *(*common.Big)(gasPrice),
+		GasLimit:  *(*common.Big)(gasLimit),
+		Timestamp: int64(time.Now().Unix()),
+	}
+	return &Transaction{Data: data}
+}
+
+
+func NewLockBalanceTransaction(amount, gasPrice, gasLimit *big.Int, nonce uint64) *Transaction {
+	data := TransactionData{
+		Version:   common.Version,
+		Nonce:     nonce,
+		Type:      LockBalance,
+		To:        crypto.CommonAddress{},
+		Amount:    *(*common.Big)(amount),
+		GasPrice:  *(*common.Big)(gasPrice),
+		GasLimit:  *(*common.Big)(gasLimit),
+		Timestamp: int64(time.Now().Unix()),
+	}
+	return &Transaction{Data: data}
+}
