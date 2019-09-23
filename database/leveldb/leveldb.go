@@ -27,7 +27,6 @@ import (
 	"sync"
 	"time"
 
-	//"github.com/ethereum/go-ethereum/common"
 	"github.com/drep-project/drep-chain/database/dbinterface"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/syndtr/goleveldb/leveldb"

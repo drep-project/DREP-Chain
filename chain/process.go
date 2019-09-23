@@ -128,6 +128,11 @@ func (chainService *ChainService) acceptBlock(block *types.Block) (inMainChain b
 	if err != nil {
 		return false, err
 	}
+	defer func() {
+		if err == nil {
+			err = trieStore.trieDb.TrieDb(crypto.Bytes2Hash(newNode.StateRoot), true)
+		}
+	}()
 	if block.Header.PreviousHash.IsEqual(chainService.BestChain().Tip().Hash) {
 		context, err := chainService.connectBlock(trieStore, block, newNode)
 		if err != nil {
@@ -139,7 +144,7 @@ func (chainService *ChainService) acceptBlock(block *types.Block) (inMainChain b
 		chainService.notifyBlock(block, context.Logs)
 		return true, nil
 	}
-	fmt.Println(chainService.BestChain().Tip().Height)
+
 	if block.Header.Height <= chainService.BestChain().Tip().Height {
 		// store but but not reorg
 		log.Debug("block store and validate true but not reorgnize")
@@ -171,7 +176,6 @@ func (chainService *ChainService) connectBlock(trieStore *TrieStore, block *type
 		if err != nil {
 			return context, err
 		}
-		//logs = append(logs,allLogs...)
 	}
 
 	if err != nil {
@@ -273,7 +277,6 @@ func (chainService *ChainService) reorganizeChain(db *TrieStore, detachNodes, at
 		lastBlock := elem.Value.(*types.BlockNode)
 		height := lastBlock.Height - 1
 		//Consider rollback
-		//	db.Rollback2Block(height, lastBlock.Hash)
 		log.WithField("Height", height).Info("REORGANIZE:RollBack state root")
 		chainService.markState(db, lastBlock.Parent)
 		elem = detachNodes.Front()
@@ -339,7 +342,6 @@ func (chainService *ChainService) notifyDetachBlock(block *types.Block) {
 
 func (chainService *ChainService) markState(db *TrieStore, blockNode *types.BlockNode) {
 	chainService.BestChain().SetTip(blockNode)
-	db.trieDb.TrieDb(crypto.Bytes2Hash(blockNode.StateRoot), true)
 }
 
 //TODO improves the performan
@@ -389,7 +391,7 @@ func (chainService *ChainService) InitStates() error {
 	tip := lastNode
 	for {
 		if tip.Height != 0 {
-			_, err := TrieStoreFromStore(chainService.DatabaseService.LevelDb(), lastNode.StateRoot)
+			_, err := TrieStoreFromStore(chainService.DatabaseService.LevelDb(), tip.StateRoot)
 			if err == nil {
 
 				break
@@ -397,7 +399,6 @@ func (chainService *ChainService) InitStates() error {
 
 			// commit fail and repaire here
 			//delete dirty data , and rollback state to journalHeight
-			//去除磁盘中的nodeblock、block信息；回退区块号及相关的操作日志序列号
 			err, _ = chainService.chainStore.RollBack(tip.Height, tip.Hash)
 			if err != nil {
 				log.WithField("height", tip.Height).Error("rollback2block err")
@@ -407,7 +408,7 @@ func (chainService *ChainService) InitStates() error {
 			//去除内存中节点信息
 			chainService.blockIndex.ClearNode(tip)
 		} else {
-			_, err := TrieStoreFromStore(chainService.DatabaseService.LevelDb(), lastNode.StateRoot)
+			_, err := TrieStoreFromStore(chainService.DatabaseService.LevelDb(), tip.StateRoot)
 			if err == nil {
 				break
 			}
