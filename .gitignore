@@ -9,6 +9,7 @@ drep*.exe
 drepClient
 test_filestore*
 test_db*
+./Keystore
 txs
 # Build
 vendor/
