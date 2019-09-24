@@ -21,6 +21,7 @@ import (
 type SoloConsensus struct {
 	CoinBase       crypto.CommonAddress
 	PrivKey        *secp256k1.PrivateKey
+	Pubkey         *secp256k1.PublicKey
 	blockGenerator blockmgr.IBlockBlockGenerator
 	ChainService   chain.ChainServiceInterface
 	DbService      *database.DatabaseService
@@ -29,22 +30,27 @@ type SoloConsensus struct {
 func NewSoloConsensus(
 	chainService chain.ChainServiceInterface,
 	blockGenerator blockmgr.IBlockBlockGenerator,
+	producer consensusTypes.Producer,
 	dbService *database.DatabaseService) *SoloConsensus {
 	return &SoloConsensus{
 		blockGenerator: blockGenerator,
 		ChainService:   chainService,
 		DbService:      dbService,
+		Pubkey:         producer.Pubkey,
 	}
 }
 
 func (soloConsensus *SoloConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Block, error) {
-	soloConsensus.CoinBase =      crypto.PubkeyToAddress(privKey.PubKey())
-	soloConsensus.PrivKey =      privKey
+	soloConsensus.CoinBase = crypto.PubkeyToAddress(privKey.PubKey())
+	soloConsensus.PrivKey = privKey
 	//区块生成 共识 奖励 验证 完成
 	log.Trace("node leader finishes process consensus")
 
-	db := soloConsensus.DbService.BeginTransaction(false)
-	block, gasFee, err := soloConsensus.blockGenerator.GenerateTemplate(db, soloConsensus.CoinBase)
+	trieStore, err := chain.TrieStoreFromStore(soloConsensus.DbService.LevelDb(), soloConsensus.ChainService.BestChain().Tip().StateRoot)
+	if err != nil {
+		return nil, err
+	}
+	block, gasFee, err := soloConsensus.blockGenerator.GenerateTemplate(trieStore, soloConsensus.CoinBase)
 	if err != nil {
 		return nil, err
 	}
@@ -54,12 +60,11 @@ func (soloConsensus *SoloConsensus) Run(privKey *secp256k1.PrivateKey) (*types.B
 		return nil, errors.New("sign block error")
 	}
 	block.Proof = types.Proof{consensusTypes.Solo, sig.Serialize()}
-	err = soloConsensus.AccumulateRewards(db, gasFee)
+	err = AccumulateRewards(soloConsensus.Pubkey, trieStore, gasFee)
 	if err != nil {
 		return nil, err
 	}
-	db.Commit()
-	block.Header.StateRoot = db.GetStateRoot()
+	block.Header.StateRoot = trieStore.GetStateRoot()
 	//verify
 	if err := soloConsensus.verify(block); err != nil {
 		return nil, err
@@ -68,16 +73,20 @@ func (soloConsensus *SoloConsensus) Run(privKey *secp256k1.PrivateKey) (*types.B
 }
 
 func (soloConsensus *SoloConsensus) verify(block *types.Block) error {
-	db := soloConsensus.DbService.BeginTransaction(false)
+	parent, err := soloConsensus.ChainService.GetBlockHeaderByHeight(block.Header.Height - 1)
+	if err != nil {
+		return err
+	}
+	dbstore := &chain.ChainStore{soloConsensus.DbService.LevelDb()}
+	trieStore, err := chain.TrieStoreFromStore(soloConsensus.DbService.LevelDb(), parent.StateRoot)
+	if err != nil {
+		return err
+	}
 	gp := new(chain.GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
-	context := &chain.BlockExecuteContext{
-		Db:      db,
-		Block:   block,
-		Gp:      gp,
-		GasUsed: new(big.Int),
-		GasFee:  new(big.Int),
-	}
+
+	context := chain.NewBlockExecuteContext(trieStore, gp, dbstore, block)
+
 	for _, validator := range soloConsensus.ChainService.BlockValidator() {
 		err := validator.ExecuteBlock(context)
 		if err != nil {
@@ -85,11 +94,11 @@ func (soloConsensus *SoloConsensus) verify(block *types.Block) error {
 			return err
 		}
 	}
-	db.Commit()
+
+	stateRoot := trieStore.GetStateRoot()
 	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
-		stateRoot := db.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
-			if !db.RecoverTrie(soloConsensus.ChainService.GetCurrentHeader().StateRoot) {
+			if !trieStore.RecoverTrie(soloConsensus.ChainService.GetCurrentHeader().StateRoot) {
 				log.Fatal("root not equal and recover trie err")
 			}
 			log.Error("rootcmd root !=")
@@ -106,14 +115,16 @@ func (soloConsensus *SoloConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, rw
 	return nil
 }
 
-func (soloConsensus *SoloConsensus) Validator() chain.IBlockValidator {
-	return &SoloValidator{soloConsensus, soloConsensus.PrivKey.PubKey()}
-}
-
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
-func (soloConsensus *SoloConsensus) AccumulateRewards(db *database.Database, totalGasBalance *big.Int) error {
-	soloAddr := crypto.PubkeyToAddress(soloConsensus.PrivKey.PubKey())
-	db.AddBalance(&soloAddr, totalGasBalance)
-	db.AddBalance(&soloAddr, params.CoinFromNumer(1000))
+func AccumulateRewards(pubkey *secp256k1.PublicKey, trieStore *chain.TrieStore, totalGasBalance *big.Int) error {
+	soloAddr := crypto.PubkeyToAddress(pubkey)
+	err := trieStore.AddBalance(&soloAddr, totalGasBalance)
+	if err != nil {
+		return err
+	}
+	err = trieStore.AddBalance(&soloAddr, params.CoinFromNumer(1000))
+	if err != nil {
+		return err
+	}
 	return nil
 }

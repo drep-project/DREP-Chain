@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"runtime/debug"
 	"strings"
 
 	"github.com/drep-project/drep-chain/common"
@@ -21,7 +20,7 @@ var (
 	// General settings
 	ConfigFileFlag = cli.StringFlag{
 		Name:  "config",
-		Usage: "TODO add config description",
+		Usage: "add config description",
 	}
 
 	HomeDirFlag = common.DirectoryFlag{
@@ -158,7 +157,7 @@ func (mApp *DrepApp) Run() error {
 
 // action used to init and run each services
 func (mApp *DrepApp) action(ctx *cli.Context) error {
-	defer func() {
+	/*	defer func() {
 		if err := recover(); err != nil {
 			debug.PrintStack()
 			fmt.Println("app action err", err)
@@ -170,23 +169,23 @@ func (mApp *DrepApp) action(ctx *cli.Context) error {
 				return
 			}
 		}
-	}()
+	}()*/
 	mApp.Context.Cli = ctx //NOTE this set is for different commmands-
 	for _, service := range mApp.Context.Services {
 		//config
-		serviceValue :=reflect.ValueOf(service)
+		serviceValue := reflect.ValueOf(service)
 		serviceType := serviceValue.Type()
 		var config reflect.Value
 		fieldValue := reflect.ValueOf(service).Elem().FieldByName("Config")
 		if hasMethod(serviceType, "DefaultConfig") {
 			defaultConfigVal := serviceValue.MethodByName("DefaultConfig").Call([]reflect.Value{})
-			if len(defaultConfigVal)>0 && !defaultConfigVal[0].IsNil() {
+			if len(defaultConfigVal) > 0 && !defaultConfigVal[0].IsNil() {
 				config = defaultConfigVal[0]
-			}else{
+			} else {
 				t := fieldValue.Type()
 				config = reflect.New(t.Elem())
 			}
-		}else{
+		} else {
 			t := fieldValue.Type()
 			config = reflect.New(t.Elem())
 		}
@@ -197,6 +196,7 @@ func (mApp *DrepApp) action(ctx *cli.Context) error {
 			fmt.Println(err)
 			return err
 		}
+		fmt.Println(service.Name())
 		err = service.Init(mApp.Context)
 		if err != nil {
 			return err
@@ -293,10 +293,9 @@ func loadConfigFile(ctx *cli.Context, homeDir string) (map[string]json.RawMessag
 	return jsonPhase, nil
 }
 
-
 func hasMethod(t reflect.Type, name string) (hashMehod bool) {
 	defer func() {
-		if err := recover(); err != nil{
+		if err := recover(); err != nil {
 			hashMehod = false
 		}
 	}()

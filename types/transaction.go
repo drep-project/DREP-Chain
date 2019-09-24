@@ -255,6 +255,20 @@ func NewVoteTransaction(to crypto.CommonAddress, amount, gasPrice, gasLimit *big
 }
 
 
+func NewCancelVoteTransaction(to crypto.CommonAddress, amount, gasPrice, gasLimit *big.Int, nonce uint64) *Transaction {
+	data := TransactionData{
+		Version:   common.Version,
+		Nonce:     nonce,
+		Type:      CancelVoteCreditType,
+		To:        to,
+		Amount:    *(*common.Big)(amount),
+		GasPrice:  *(*common.Big)(gasPrice),
+		GasLimit:  *(*common.Big)(gasLimit),
+		Timestamp: int64(time.Now().Unix()),
+	}
+	return &Transaction{Data: data}
+}
+
 func NewLockBalanceTransaction(amount, gasPrice, gasLimit *big.Int, nonce uint64) *Transaction {
 	data := TransactionData{
 		Version:   common.Version,

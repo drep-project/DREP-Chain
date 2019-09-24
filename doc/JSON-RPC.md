@@ -730,7 +730,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_c
  2. 接受者的地址
  3. 金额
  4. gas价格
- 5. gas上线
+ 5. gas上限
  6. 备注
 
 #### 返回值：交易地址
@@ -756,7 +756,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
  2. 接受者的地址
  3. 金额
  4. gas价格
- 5. gas上线
+ 5. gas上限
  6. 备注
  7. 被代替交易的nonce
 
@@ -872,7 +872,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
  2. 合约内容
  3. 金额
  4. gas价格
- 5. gas上线
+ 5. gas上限
 
 #### 返回值：合约地址
 

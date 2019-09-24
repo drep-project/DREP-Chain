@@ -8,8 +8,7 @@ import (
 )
 
 type SoloValidator struct {
-	consensus *SoloConsensus
-	pubkey    *secp256k1.PublicKey
+	pubkey *secp256k1.PublicKey
 }
 
 func NewSoloValidator(pubkey *secp256k1.PublicKey) *SoloValidator {
@@ -35,5 +34,5 @@ func (soloValidator *SoloValidator) VerifyBody(block *types.Block) error {
 }
 
 func (soloValidator *SoloValidator) ExecuteBlock(context *chain.BlockExecuteContext) error {
-	return soloValidator.consensus.AccumulateRewards(context.Db, context.GasFee)
+	return AccumulateRewards(soloValidator.pubkey, context.TrieStore, context.GasFee)
 }

@@ -47,7 +47,7 @@ type ConsensusService struct {
 	syncBlockEventSub  event.Subscription
 	syncBlockEventChan chan event.SyncBlockEvent
 	ConsensusEngine    consensusTypes.IConsensusEngine
-	Miner *secp256k1.PrivateKey
+	Miner              *secp256k1.PrivateKey
 	//During the process of synchronizing blocks, the miner stopped mining
 	pauseForSync bool
 	start        bool
@@ -72,10 +72,21 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 		consensusService.Config.Enable = executeContext.Cli.GlobalBool(EnableConsensusFlag.Name)
 	}
 
-	if consensusService.WalletService.Wallet == nil {
-		return ErrWalletNotOpen
+	if consensusService.Config.ConsensusMode == "bft" {
+		consensusService.ChainService.AddBlockValidator(&bft.BlockMultiSigValidator{consensusService.Config.Producers})
+	} else if consensusService.Config.ConsensusMode == "solo" {
+		consensusService.ChainService.AddBlockValidator(solo.NewSoloValidator(consensusService.Config.MyPk))
+	} else {
+		return nil
 	}
 
+	if !consensusService.Config.Enable {
+		return nil
+	} else {
+		if consensusService.WalletService.Wallet == nil {
+			return ErrWalletNotOpen
+		}
+	}
 	var addPeer event.Feed
 	var removePeer event.Feed
 	var engine consensusTypes.IConsensusEngine
@@ -93,13 +104,9 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 		engine = solo.NewSoloConsensus(
 			consensusService.ChainService,
 			consensusService.BlockGenerator,
+			consensusService.Config.Producers[0],
 			consensusService.DatabaseService)
 	} else {
-		return nil
-	}
-	consensusService.ChainService.AddBlockValidator(engine.Validator())
-	consensusService.ConsensusEngine = engine
-	if !consensusService.Config.Enable {
 		return nil
 	}
 	//consult privkey in wallet
@@ -126,6 +133,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 			},
 		},
 	})
+	consensusService.ConsensusEngine = engine
 	consensusService.syncBlockEventChan = make(chan event.SyncBlockEvent)
 	consensusService.syncBlockEventSub = consensusService.BlockMgrNotifier.SubscribeSyncBlockEvent(consensusService.syncBlockEventChan)
 	consensusService.quit = make(chan struct{})

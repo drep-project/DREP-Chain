@@ -282,7 +282,7 @@ func (evm *EVM) DelegateCall(con *Contract, contractAddr crypto.CommonAddress, i
 			contract.UseGas(contract.Gas)
 		}
 	} else {
-		//evm.State.dt.Commit()
+		//evm.State.dt.TrieDb()
 	}
 
 	return ret, con.Gas, err

@@ -86,6 +86,12 @@ func (h Hash) MarshalText() ([]byte, error) {
 	return common.Bytes(h[:]).MarshalText()
 }
 
+// Big converts a hash to a big integer.
+func (h Hash) Big() *big.Int {
+	return new(big.Int).SetBytes(h[:])
+}
+
+
 func RandomHash() Hash {
 	key := make([]byte, HashLength)
 	rand.Read(key)

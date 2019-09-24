@@ -1,25 +1,26 @@
 package chain
 
 import (
+	"github.com/drep-project/drep-chain/common/trie"
 	"math/big"
 
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/database"
-	"github.com/drep-project/drep-chain/database/drepdb/memorydb"
+	"github.com/drep-project/drep-chain/database/memorydb"
 	"github.com/drep-project/drep-chain/params"
-	types "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/drep-chain/types"
 )
 
 func (chainService *ChainService) GetGenisiBlock(biosAddress crypto.CommonAddress) *types.Block {
 	var root []byte
-	db, _ := database.DatabaseFromStore(memorydb.New())
+	db, _ := TrieStoreFromStore(memorydb.New(), trie.EmptyRoot[:])
 	for addr, balance := range params.Preminer {
 		//add preminer addr and balance
 		storage := types.NewStorage()
 		storage.Balance = *balance
 		db.PutStorage(&addr, storage)
 	}
+
 	root = db.GetStateRoot()
 
 	merkleRoot := chainService.DeriveMerkleRoot(nil)
@@ -45,22 +46,21 @@ func (chainService *ChainService) ProcessGenesisBlock(biosAddr crypto.CommonAddr
 	var err error
 	var root []byte
 
+	chainStore, err := TrieStoreFromStore(chainService.DatabaseService.LevelDb(), trie.EmptyRoot[:])
+	if err != nil {
+		return nil, err
+	}
 	for addr, balance := range params.Preminer {
 		//add preminer addr and balance
 		storage := types.NewStorage()
 		storage.Balance = *balance
-		chainService.DatabaseService.PutStorage(&addr, storage)
+		chainStore.PutStorage(&addr, storage)
 	}
-
-	root = chainService.DatabaseService.GetStateRoot()
+	root = chainStore.GetStateRoot()
+	err = chainStore.trieDb.TrieDb(crypto.Bytes2Hash(root), true)
 	if err != nil {
 		return nil, err
 	}
-
-	chainService.DatabaseService.Commit()
-	triedb := chainService.DatabaseService.GetTriedDB()
-	triedb.Commit(crypto.Bytes2Hash(root), true)
-
 	merkleRoot := chainService.DeriveMerkleRoot(nil)
 	return &types.Block{
 		Header: &types.BlockHeader{

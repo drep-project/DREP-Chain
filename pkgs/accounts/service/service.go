@@ -1,6 +1,8 @@
 package service
 
 import (
+	"path/filepath"
+
 	"github.com/drep-project/drep-chain/app"
 	"github.com/drep-project/drep-chain/blockmgr"
 	"github.com/drep-project/drep-chain/chain"
@@ -12,7 +14,6 @@ import (
 	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
 	chainTypes "github.com/drep-project/drep-chain/types"
 	"gopkg.in/urfave/cli.v1"
-	"path/filepath"
 )
 
 var (
@@ -34,7 +35,7 @@ var (
 	DefaultConfig = &accountTypes.Config{
 		Enable:      true,
 		Type:        "filestore",
-		//KeyStoreDir: "keystore",
+		KeyStoreDir: "keystore",
 	}
 )
 
@@ -83,8 +84,12 @@ func (accountService *AccountService) P2pMessages() map[int]interface{} {
 
 // Init  set console Config
 func (accountService *AccountService) Init(executeContext *app.ExecuteContext) error {
-	if len(accountService.Config.KeyStoreDir)==0 {
+	if len(accountService.Config.KeyStoreDir) == 0 {
 		accountService.Config.KeyStoreDir = filepath.Join(executeContext.CommonConfig.HomeDir, "keystore")
+	} else {
+		if !filepath.IsAbs(accountService.Config.KeyStoreDir) {
+			accountService.Config.KeyStoreDir = filepath.Join(executeContext.CommonConfig.HomeDir, accountService.Config.KeyStoreDir)
+		}
 	}
 
 	if executeContext.Cli.GlobalIsSet(EnableWalletFlag.Name) {
@@ -147,8 +152,6 @@ func (accountService *AccountService) CreateWallet(password string) error {
 	return nil
 }
 
-
 func (accountService *AccountService) DefaultConfig() *accountTypes.Config {
 	return DefaultConfig
 }
-

@@ -5,12 +5,16 @@ import "math/big"
 type TxType uint64
 
 const (
-	TransferType   TxType = iota
-	VoteCreditType  //质押给自己或者别人
+	TransferType TxType = iota
+	_
 	CreateContractType
 	CallContractType
-	LockBalance   //锁定drep币，换取其他币
+	_
 	SetAliasType  //给地址设置昵称
+
+	VoteCreditType        //质押给自己或者别人
+	CancelVoteCreditType  //撤销质押币
+	LockBalance           //锁定drep币，换取其他币
 )
 
 var (

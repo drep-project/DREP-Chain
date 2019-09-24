@@ -1614,14 +1614,14 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
             });
 
 
-            var transfer = new Method({
-                name: 'transfer',
+            var replaceTx = new Method({
+                name: 'replaceTx',
                 call: 'account_replaceTx',
                 params: 7,
                 inputFormatter: [formatters.inputAddressFormatter, formatters.inputAddressFormatter, utils.fromDecimal, utils.fromDecimal, utils.fromDecimal, null, utils.fromDecimal]
             });
 
-            var transfer = new Method({
+            var getTxInPool = new Method({
                 name: 'getTxInPool',
                 call: 'account_getTxInPool',
                 params: 1,
@@ -1655,7 +1655,7 @@ require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c=
                 params: 1,
                 inputFormatter: [formatters.inputAddressFormatter]
             });
-            return [call,closeWallet,createAccount,createCode,createWallet,dumpPrivkey,gasPrice,getCode,listAddress,lockWallet,openWallet,setAlias,sign,transfer,unLockWallet,importKeyStore,importPrivkey,generateAddresses]
+            return [getTxInPool, replaceTx, call,closeWallet,createAccount,createCode,createWallet,dumpPrivkey,gasPrice,getCode,listAddress,lockWallet,openWallet,setAlias,sign,transfer,unLockWallet,importKeyStore,importPrivkey,generateAddresses]
         }
 
         module.exports = ACCOUNT;
