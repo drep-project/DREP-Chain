@@ -5,6 +5,7 @@ import (
 	"container/list"
 	"encoding/hex"
 	"fmt"
+	"github.com/drep-project/drep-chain/chain/store"
 	"math/big"
 
 	"github.com/drep-project/drep-chain/crypto"
@@ -124,7 +125,7 @@ func (chainService *ChainService) acceptBlock(block *types.Block) (inMainChain b
 	if err != nil {
 		return false, err
 	}
-	trieStore, err := TrieStoreFromStore(chainService.DatabaseService.LevelDb(), prevNode.StateRoot)
+	trieStore, err := store.TrieStoreFromStore(chainService.DatabaseService.LevelDb(), prevNode.StateRoot)
 	if err != nil {
 		return false, err
 	}
@@ -162,7 +163,7 @@ func (chainService *ChainService) acceptBlock(block *types.Block) (inMainChain b
 	return err == nil, err
 }
 
-func (chainService *ChainService) connectBlock(trieStore *TrieStore, block *types.Block, newNode *types.BlockNode) (context *BlockExecuteContext, err error) {
+func (chainService *ChainService) connectBlock(trieStore store.StoreInterface, block *types.Block, newNode *types.BlockNode) (context *BlockExecuteContext, err error) {
 	gp := new(GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
 	context = NewBlockExecuteContext(trieStore, gp, chainService.chainStore, block)
@@ -264,7 +265,7 @@ func (chainService *ChainService) getReorganizeNodes(node *types.BlockNode) (*li
 	return detachNodes, attachNodes
 }
 
-func (chainService *ChainService) reorganizeChain(db *TrieStore, detachNodes, attachNodes *list.List) error {
+func (chainService *ChainService) reorganizeChain(db store.StoreInterface, detachNodes, attachNodes *list.List) error {
 	if detachNodes.Len() == 0 && attachNodes.Len() == 0 {
 		return nil
 	}
@@ -337,9 +338,9 @@ func (chainService *ChainService) notifyDetachBlock(block *types.Block) {
 	chainService.rmLogsFeed.Send(types.RemovedLogsEvent{Logs: rmLogs})
 }
 
-func (chainService *ChainService) markState(db *TrieStore, blockNode *types.BlockNode) {
+func (chainService *ChainService) markState(db store.StoreInterface, blockNode *types.BlockNode) {
 	chainService.BestChain().SetTip(blockNode)
-	db.trieDb.TrieDb(crypto.Bytes2Hash(blockNode.StateRoot), true)
+	db.TrieDB().TrieDb(crypto.Bytes2Hash(blockNode.StateRoot), true)
 }
 
 //TODO improves the performan
@@ -389,7 +390,7 @@ func (chainService *ChainService) InitStates() error {
 	tip := lastNode
 	for {
 		if tip.Height != 0 {
-			_, err := TrieStoreFromStore(chainService.DatabaseService.LevelDb(), lastNode.StateRoot)
+			_, err := store.TrieStoreFromStore(chainService.DatabaseService.LevelDb(), lastNode.StateRoot)
 			if err == nil {
 
 				break
@@ -407,7 +408,7 @@ func (chainService *ChainService) InitStates() error {
 			//去除内存中节点信息
 			chainService.blockIndex.ClearNode(tip)
 		} else {
-			_, err := TrieStoreFromStore(chainService.DatabaseService.LevelDb(), lastNode.StateRoot)
+			_, err := store.TrieStoreFromStore(chainService.DatabaseService.LevelDb(), lastNode.StateRoot)
 			if err == nil {
 				break
 			}

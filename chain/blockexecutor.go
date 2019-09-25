@@ -3,6 +3,7 @@ package chain
 import (
 	"bytes"
 	"fmt"
+	"github.com/drep-project/drep-chain/chain/store"
 	"github.com/drep-project/drep-chain/crypto"
 	"math/big"
 
@@ -21,7 +22,7 @@ type IBlockValidator interface {
 }
 
 type BlockExecuteContext struct {
-	TrieStore *TrieStore
+	TrieStore store.StoreInterface
 	Gp        *GasPool
 	DbStore   *ChainStore
 	Block     *types.Block
@@ -31,7 +32,7 @@ type BlockExecuteContext struct {
 	Receipts  types.Receipts
 }
 
-func NewBlockExecuteContext(trieStore *TrieStore, gp *GasPool, dbStore *ChainStore, block *types.Block) *BlockExecuteContext {
+func NewBlockExecuteContext(trieStore store.StoreInterface, gp *GasPool, dbStore *ChainStore, block *types.Block) *BlockExecuteContext {
 	return &BlockExecuteContext{
 		TrieStore: trieStore,
 		Gp: gp,
@@ -187,7 +188,7 @@ func (chainBlockValidator *ChainBlockValidator) RouteTransaction(context *BlockE
 			if err != nil {
 				return nil, 0, err
 			}
-			//context.TrieStore.CacheToTrie()
+			//context.trieAccountStore.CacheToTrie()
 			// Create a new receipt for the transaction, storing the intermediate root and gasRemained used by the tx
 			// based on the eip phase, we're passing whether the root touch-delete accounts.
 			//crypto.ZeroHash[:]

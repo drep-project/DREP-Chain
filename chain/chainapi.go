@@ -2,6 +2,7 @@ package chain
 
 import (
 	"github.com/drep-project/binary"
+	"github.com/drep-project/drep-chain/chain/store"
 	"github.com/drep-project/drep-chain/common/hexutil"
 	"github.com/drep-project/drep-chain/common/trie"
 	"github.com/drep-project/drep-chain/crypto"
@@ -273,7 +274,7 @@ func (trieQuery *TrieQuery) Get(key []byte) ([]byte, error) {
 }
 
 func (trieQuery *TrieQuery) GetStorage(addr *crypto.CommonAddress) (types.Storage, error) {
-	key := sha3.Keccak256([]byte(addressStorage + addr.Hex()))
+	key := sha3.Keccak256([]byte(store.AddressStorage + addr.Hex()))
 	value, err := trieQuery.trie.TryGet(key)
 	storage := types.Storage{}
 	if value == nil {
@@ -293,7 +294,7 @@ func (trieQuery *TrieQuery) GetStorageAlias(addr *crypto.CommonAddress) string {
 }
 
 func (trieQuery *TrieQuery) AliasGet(alias string) (*crypto.CommonAddress, error) {
-	buf, err := trieQuery.Get([]byte(aliasPrefix + alias))
+	buf, err := trieQuery.Get([]byte(store.AliasPrefix + alias))
 	if err != nil {
 		return nil, err
 	}
@@ -303,7 +304,7 @@ func (trieQuery *TrieQuery) AliasGet(alias string) (*crypto.CommonAddress, error
 }
 
 func (trieQuery *TrieQuery) AliasExist(alias string) bool {
-	_, err := trieQuery.Get([]byte(aliasPrefix + alias))
+	_, err := trieQuery.Get([]byte(store.AliasPrefix + alias))
 	if err != nil {
 		return false
 	}

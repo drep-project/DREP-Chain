@@ -3,6 +3,7 @@ package bft
 import (
 	"bytes"
 	"fmt"
+	"github.com/drep-project/drep-chain/chain/store"
 	"io/ioutil"
 	"math"
 	"math/big"
@@ -252,7 +253,7 @@ func (bftConsensus *BftConsensus) runAsLeader(miners []*MemberInfo) (block *type
 		bftConsensus.minMiners,
 		bftConsensus.ChainService.BestChain().Height(),
 		bftConsensus.leaderMsgPool)
-	trieStore, err := chain.TrieStoreFromStore(bftConsensus.DbService.LevelDb(), bftConsensus.ChainService.BestChain().Tip().StateRoot)
+	trieStore, err := store.TrieStoreFromStore(bftConsensus.DbService.LevelDb(), bftConsensus.ChainService.BestChain().Tip().StateRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -326,7 +327,7 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
 		return err
 	}
 	dbstore := &chain.ChainStore{bftConsensus.DbService.LevelDb()}
-	trieStore, err := chain.TrieStoreFromStore(bftConsensus.DbService.LevelDb(), parent.StateRoot)
+	trieStore, err := store.TrieStoreFromStore(bftConsensus.DbService.LevelDb(), parent.StateRoot)
 	if err != nil {
 		return err
 	}
@@ -405,7 +406,7 @@ func (bftConsensus *BftConsensus) ChangeTime(interval time.Duration) {
 }
 
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
-func AccumulateRewards(trieStore *chain.TrieStore, sig *MultiSignature, Producers consensusTypes.ProducerSet, totalGasBalance *big.Int) error {
+func AccumulateRewards(trieStore store.StoreInterface, sig *MultiSignature, Producers consensusTypes.ProducerSet, totalGasBalance *big.Int) error {
 	reward := new(big.Int).SetUint64(uint64(params.Rewards))
 	r := new(big.Int)
 	r = r.Div(reward, new(big.Int).SetInt64(2))

@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"github.com/drep-project/drep-chain/chain/store"
 	"github.com/drep-project/drep-chain/common/trie"
 	"math/big"
 
@@ -13,7 +14,7 @@ import (
 
 func (chainService *ChainService) GetGenisiBlock(biosAddress crypto.CommonAddress) *types.Block {
 	var root []byte
-	db, _ := TrieStoreFromStore(memorydb.New(), trie.EmptyRoot[:])
+	db, _ := store.TrieStoreFromStore(memorydb.New(), trie.EmptyRoot[:])
 	for addr, balance := range params.Preminer {
 		//add preminer addr and balance
 		storage := types.NewStorage()
@@ -46,7 +47,7 @@ func (chainService *ChainService) ProcessGenesisBlock(biosAddr crypto.CommonAddr
 	var err error
 	var root []byte
 
-	chainStore, err := TrieStoreFromStore(chainService.DatabaseService.LevelDb(), trie.EmptyRoot[:])
+	chainStore, err := store.TrieStoreFromStore(chainService.DatabaseService.LevelDb(), trie.EmptyRoot[:])
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +58,7 @@ func (chainService *ChainService) ProcessGenesisBlock(biosAddr crypto.CommonAddr
 		chainStore.PutStorage(&addr, storage)
 	}
 	root = chainStore.GetStateRoot()
-	err = chainStore.trieDb.TrieDb(crypto.Bytes2Hash(root), true)
+	err = chainStore.TrieDB().TrieDb(crypto.Bytes2Hash(root), true)
 	if err != nil {
 		return nil, err
 	}

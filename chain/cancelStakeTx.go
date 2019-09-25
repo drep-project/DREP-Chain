@@ -24,7 +24,7 @@ type CancelStakeTransactionProcessor struct {
 func (processor *CancelStakeTransactionProcessor) ExecuteTransaction(context *ExecuteTransactionContext) ([]byte, bool, []*types.Log, error) {
 	from := context.From()
 	tx := context.Tx()
-	stakeStore := context.TrieStakeStore()
+	stakeStore := context.TrieStore()
 
 	err := stakeStore.CancelVoteCredit(from, tx.To(), tx.Amount(), context.blockContext.Block.Header.Height)
 	if err != nil {

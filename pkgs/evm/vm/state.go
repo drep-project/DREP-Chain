@@ -2,7 +2,7 @@ package vm
 
 import (
 	"bytes"
-	"github.com/drep-project/drep-chain/chain"
+	"github.com/drep-project/drep-chain/chain/store"
 	"math/big"
 	"sync"
 
@@ -40,12 +40,12 @@ type VMState interface {
 }
 
 type State struct {
-	db     *chain.TrieStore
+	db     store.StoreInterface
 	refund uint64
 	logs   []*types.Log
 }
 
-func NewState(database *chain.TrieStore) *State {
+func NewState(database store.StoreInterface) *State {
 	return &State{
 		db:   database,
 		logs: make([]*types.Log, 0),

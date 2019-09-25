@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"github.com/drep-project/drep-chain/chain/store"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/types"
 	"math/big"
@@ -16,8 +17,7 @@ type ITransactionSelector interface {
 
 type ExecuteTransactionContext struct {
 	blockContext   *BlockExecuteContext
-	trieStore      *TrieStore
-	trieStakeStore *TrieStakeStore
+	trieStore      store.StoreInterface
 
 	gp          *GasPool
 	tx          *types.Transaction
@@ -30,7 +30,7 @@ type ExecuteTransactionContext struct {
 	initialGas  uint64
 }
 
-func NewExecuteTransactionContext(blockContext *BlockExecuteContext, chainstore *TrieStore, gasPool *GasPool, from *crypto.CommonAddress, tx *types.Transaction) *ExecuteTransactionContext {
+func NewExecuteTransactionContext(blockContext *BlockExecuteContext, chainstore store.StoreInterface, gasPool *GasPool, from *crypto.CommonAddress, tx *types.Transaction) *ExecuteTransactionContext {
 	context := &ExecuteTransactionContext{trieStore: chainstore, gp: gasPool, tx: tx, from: from}
 	context.blockContext = blockContext
 	context.from = from
@@ -38,7 +38,6 @@ func NewExecuteTransactionContext(blockContext *BlockExecuteContext, chainstore 
 	context.value = tx.Amount()
 	context.data = tx.GetData()
 	context.header = blockContext.Block.Header
-	context.trieStakeStore = NewStakeStorage(chainstore)
 	return context
 }
 func (context *ExecuteTransactionContext) Header() *types.BlockHeader {
@@ -81,13 +80,10 @@ func (context *ExecuteTransactionContext) Gp() *GasPool {
 	return context.gp
 }
 
-func (context *ExecuteTransactionContext) TrieStore() *TrieStore {
+func (context *ExecuteTransactionContext) TrieStore() store.StoreInterface {
 	return context.trieStore
 }
 
-func (context *ExecuteTransactionContext) TrieStakeStore() *TrieStakeStore {
-	return context.trieStakeStore
-}
 
 func (context *ExecuteTransactionContext) RefundCoin() error {
 	// Return DREP for remaining gasRemained, exchanged at the original rate.
@@ -134,8 +130,7 @@ func (context *ExecuteTransactionContext) buyGas() error {
 	context.gasRemained += context.tx.Gas()
 
 	context.initialGas = context.tx.Gas()
-	context.trieStore.SubBalance(context.from, mgval)
-	return nil
+	return context.trieStore.SubBalance(context.from, mgval)
 }
 
 func (context *ExecuteTransactionContext) PreCheck() error {

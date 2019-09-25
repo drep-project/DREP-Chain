@@ -9,6 +9,14 @@ import (
 	"github.com/drep-project/drep-chain/types"
 )
 
+var (
+	MetaDataPrefix   = []byte("metaData_")
+	ChainStatePrefix = []byte("chainState_")
+	BlockPrefix      = []byte("block_")
+	BlockNodePrefix  = []byte("blockNode_")
+)
+
+
 type ChainStore struct {
 	dbinterface.KeyValueStore
 }
