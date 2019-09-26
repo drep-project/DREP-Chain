@@ -4,7 +4,7 @@ import (
 	"container/heap"
 	"errors"
 	"fmt"
-	"github.com/drep-project/drep-chain/chain"
+	"github.com/drep-project/drep-chain/chain/store"
 	"math/big"
 	"sync"
 	"time"
@@ -25,7 +25,7 @@ const (
 //2 已经排序好的可以被打包入块
 //3 池子里面的交易根据块中的各个地址的交易对应的Nonce进行删除
 type TransactionPool struct {
-	chainStore   *chain.TrieStore
+	chainStore   store.StoreInterface
 	rlock        sync.RWMutex
 	queue        map[crypto.CommonAddress]*txList
 	pending      map[crypto.CommonAddress]*txList
@@ -50,7 +50,7 @@ type TransactionPool struct {
 }
 
 //NewTransactionPool 创建一个交易池
-func NewTransactionPool(chainStore *chain.TrieStore, journalPath string) *TransactionPool {
+func NewTransactionPool(chainStore store.StoreInterface, journalPath string) *TransactionPool {
 	pool := &TransactionPool{chainStore: chainStore}
 	pool.nonceCp = func(a interface{}, b interface{}) int {
 		ta, oka := a.(*types.Transaction)

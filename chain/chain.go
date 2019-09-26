@@ -2,6 +2,7 @@ package chain
 
 import (
 	"fmt"
+	"github.com/drep-project/drep-chain/chain/store"
 	"math/big"
 	"sync"
 
@@ -102,7 +103,7 @@ type ChainService struct {
 
 type ChainState struct {
 	types.BestState
-	db *TrieStore
+	db *store.StoreInterface
 }
 
 func NewChainService(config *ChainConfig, ds *database.DatabaseService) *ChainService {
@@ -167,7 +168,7 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 			log.Error("createChainState err", err)
 			return err
 		}
-		TrieStoreFromStore(chainService.DatabaseService.LevelDb(), chainService.genesisBlock.Header.StateRoot)
+		store.TrieStoreFromStore(chainService.DatabaseService.LevelDb(), chainService.genesisBlock.Header.StateRoot)
 	}
 
 	err = chainService.InitStates()

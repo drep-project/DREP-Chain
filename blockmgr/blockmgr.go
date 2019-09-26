@@ -2,6 +2,7 @@ package blockmgr
 
 import (
 	"fmt"
+	"github.com/drep-project/drep-chain/chain/store"
 	"github.com/drep-project/drep-chain/common/trie"
 	"math/big"
 	"math/rand"
@@ -61,7 +62,7 @@ type IBlockMgrPool interface {
 
 type IBlockBlockGenerator interface {
 	//generate block template
-	GenerateTemplate(trieStore *chain.TrieStore, leaderAddr crypto.CommonAddress) (*types.Block, *big.Int, error)
+	GenerateTemplate(trieStore store.StoreInterface, leaderAddr crypto.CommonAddress) (*types.Block, *big.Int, error)
 }
 
 type IBlockNotify interface {
@@ -149,7 +150,7 @@ func NewBlockMgr(config *BlockMgrConfig, homeDir string, cs chain.ChainServiceIn
 
 	blockMgr.gpo = NewOracle(blockMgr.ChainService, blockMgr.Config.GasPrice)
 
-	store, err := chain.TrieStoreFromStore(blockMgr.DatabaseService.LevelDb(), trie.EmptyRoot[:])
+	store, err := store.TrieStoreFromStore(blockMgr.DatabaseService.LevelDb(), trie.EmptyRoot[:])
 	if err != nil {
 		return nil
 	}
@@ -197,7 +198,7 @@ func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 
 	blockMgr.gpo = NewOracle(blockMgr.ChainService, blockMgr.Config.GasPrice)
 
-	store, err := chain.TrieStoreFromStore(blockMgr.DatabaseService.LevelDb(), trie.EmptyRoot[:])
+	store, err := store.TrieStoreFromStore(blockMgr.DatabaseService.LevelDb(), trie.EmptyRoot[:])
 	if err != nil {
 		return err
 	}

@@ -25,7 +25,7 @@ func (processor *StakeTransactionProcessor) ExecuteTransaction(context *ExecuteT
 	from := context.From()
 	store := context.TrieStore()
 	tx := context.Tx()
-	stakeStore := context.TrieStakeStore()
+	stakeStore := context.TrieStore()
 
 	originBalance := store.GetBalance(from)
 	toBalance := store.GetBalance(tx.To())

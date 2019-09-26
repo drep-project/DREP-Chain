@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/drep-project/drep-chain/chain/store"
 	"math/big"
 
 	"github.com/drep-project/drep-chain/blockmgr"
@@ -46,7 +47,7 @@ func (soloConsensus *SoloConsensus) Run(privKey *secp256k1.PrivateKey) (*types.B
 	//区块生成 共识 奖励 验证 完成
 	log.Trace("node leader finishes process consensus")
 
-	trieStore, err := chain.TrieStoreFromStore(soloConsensus.DbService.LevelDb(), soloConsensus.ChainService.BestChain().Tip().StateRoot)
+	trieStore, err := store.TrieStoreFromStore(soloConsensus.DbService.LevelDb(), soloConsensus.ChainService.BestChain().Tip().StateRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +79,7 @@ func (soloConsensus *SoloConsensus) verify(block *types.Block) error {
 		return err
 	}
 	dbstore := &chain.ChainStore{soloConsensus.DbService.LevelDb()}
-	trieStore, err := chain.TrieStoreFromStore(soloConsensus.DbService.LevelDb(), parent.StateRoot)
+	trieStore, err := store.TrieStoreFromStore(soloConsensus.DbService.LevelDb(), parent.StateRoot)
 	if err != nil {
 		return err
 	}
@@ -116,7 +117,7 @@ func (soloConsensus *SoloConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, rw
 }
 
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
-func AccumulateRewards(pubkey *secp256k1.PublicKey, trieStore *chain.TrieStore, totalGasBalance *big.Int) error {
+func AccumulateRewards(pubkey *secp256k1.PublicKey, trieStore store.StoreInterface, totalGasBalance *big.Int) error {
 	soloAddr := crypto.PubkeyToAddress(pubkey)
 	err := trieStore.AddBalance(&soloAddr, totalGasBalance)
 	if err != nil {
