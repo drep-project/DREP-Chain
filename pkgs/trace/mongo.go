@@ -44,6 +44,7 @@ func NewMongogDbStore(url string, producers []crypto.CommonAddress, dbName strin
 	if err != nil {
 		return nil, err
 	}
+
 	store.producers = producers
 	store.db = store.client.Database(dbName)
 	store.txCol = store.db.Collection("tx")
