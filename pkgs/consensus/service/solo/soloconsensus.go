@@ -61,10 +61,11 @@ func (soloConsensus *SoloConsensus) Run(privKey *secp256k1.PrivateKey) (*types.B
 		return nil, errors.New("sign block error")
 	}
 	block.Proof = types.Proof{consensusTypes.Solo, sig.Serialize()}
-	err = AccumulateRewards(soloConsensus.Pubkey, trieStore, gasFee)
+	err = AccumulateRewards(soloConsensus.Pubkey, trieStore, gasFee, block.Header.Height)
 	if err != nil {
 		return nil, err
 	}
+
 	block.Header.StateRoot = trieStore.GetStateRoot()
 	//verify
 	if err := soloConsensus.verify(block); err != nil {
@@ -117,13 +118,13 @@ func (soloConsensus *SoloConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, rw
 }
 
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
-func AccumulateRewards(pubkey *secp256k1.PublicKey, trieStore store.StoreInterface, totalGasBalance *big.Int) error {
+func AccumulateRewards(pubkey *secp256k1.PublicKey, trieStore store.StoreInterface, totalGasBalance *big.Int, height uint64) error {
 	soloAddr := crypto.PubkeyToAddress(pubkey)
-	err := trieStore.AddBalance(&soloAddr, totalGasBalance)
+	err := trieStore.AddBalance(&soloAddr, height, totalGasBalance)
 	if err != nil {
 		return err
 	}
-	err = trieStore.AddBalance(&soloAddr, params.CoinFromNumer(1000))
+	err = trieStore.AddBalance(&soloAddr, height, params.CoinFromNumer(1000))
 	if err != nil {
 		return err
 	}

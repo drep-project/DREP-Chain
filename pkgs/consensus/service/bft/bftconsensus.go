@@ -157,7 +157,6 @@ func (bftConsensus *BftConsensus) collectMemberStatus() []*MemberInfo {
 		if isMe {
 			IsOnline = true
 		} else {
-			//todo  peer获取到的IP地址和配置的ip地址是否相等（nat后是否相等,从tcp原理来看是相等的）
 			bftConsensus.peerLock.RLock()
 			if pi, ok = bftConsensus.onLinePeer[produce.IP]; ok {
 				IsOnline = true
@@ -282,7 +281,7 @@ func (bftConsensus *BftConsensus) runAsLeader(miners []*MemberInfo) (block *type
 	log.WithField("bitmap", multiSig.Bitmap).Info("participant bitmap")
 	//Determine reward points
 	block.Proof = types.Proof{consensusTypes.Pbft, multiSigBytes}
-	err = AccumulateRewards(trieStore, multiSig, bftConsensus.Producers, gasFee)
+	err = AccumulateRewards(trieStore, multiSig, bftConsensus.Producers, gasFee, block.Header.Height)
 	if err != nil {
 		return nil, err
 	}
@@ -406,13 +405,13 @@ func (bftConsensus *BftConsensus) ChangeTime(interval time.Duration) {
 }
 
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
-func AccumulateRewards(trieStore store.StoreInterface, sig *MultiSignature, Producers consensusTypes.ProducerSet, totalGasBalance *big.Int) error {
+func AccumulateRewards(trieStore store.StoreInterface, sig *MultiSignature, Producers consensusTypes.ProducerSet, totalGasBalance *big.Int, height uint64) error {
 	reward := new(big.Int).SetUint64(uint64(params.Rewards))
 	r := new(big.Int)
 	r = r.Div(reward, new(big.Int).SetInt64(2))
 	r.Add(r, totalGasBalance)
 	leaderAddr := Producers[sig.Leader].Address()
-	err := trieStore.AddBalance(&leaderAddr, r)
+	err := trieStore.AddBalance(&leaderAddr, height, r)
 	if err != nil {
 		return err
 	}
@@ -423,7 +422,7 @@ func AccumulateRewards(trieStore store.StoreInterface, sig *MultiSignature, Prod
 			addr := Producers[index].Address()
 			if addr != leaderAddr {
 				r.Div(reward, new(big.Int).SetInt64(int64(num*2)))
-				err = trieStore.AddBalance(&addr, r)
+				err = trieStore.AddBalance(&addr, height, r)
 				if err != nil {
 					return err
 				}

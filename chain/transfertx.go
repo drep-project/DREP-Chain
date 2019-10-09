@@ -21,19 +21,19 @@ func (transferTransactionProcessor *TransferTransactionProcessor) ExecuteTransac
 	from := context.From()
 	store := context.TrieStore() // GetBalance
 	tx := context.Tx()
-	originBalance := store.GetBalance(from)
-	toBalance := store.GetBalance(tx.To())
+	originBalance := store.GetBalance(from, context.header.Height)
+	toBalance := store.GetBalance(tx.To(), context.header.Height)
 	leftBalance := originBalance.Sub(originBalance, tx.Amount())
 	if leftBalance.Sign() < 0 {
 		return nil, false, nil, ErrBalance
 	}
 	addBalance := toBalance.Add(toBalance, tx.Amount())
-	err := store.PutBalance(from, leftBalance)
+	err := store.PutBalance(from, context.header.Height, leftBalance)
 	if err != nil {
 		return nil, false, nil, err
 	}
 
-	err = store.PutBalance(tx.To(), addBalance)
+	err = store.PutBalance(tx.To(), context.header.Height, addBalance)
 	if err != nil {
 		return nil, false, nil, err
 	}

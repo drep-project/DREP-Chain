@@ -6,7 +6,6 @@ import (
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/database/dbinterface"
 	dlog "github.com/drep-project/drep-chain/pkgs/log"
-	"github.com/drep-project/drep-chain/types"
 	"math/big"
 )
 
@@ -19,18 +18,18 @@ var (
 )
 
 type StoreInterface interface {
-	GetStorage(addr *crypto.CommonAddress) (*types.Storage, error)
-	GetStorageAlias(addr *crypto.CommonAddress) string
-	PutStorage(addr *crypto.CommonAddress, storage *types.Storage) error
+	//GetStorage(addr *crypto.CommonAddress) (*types.Storage, error)
+	//PutStorage(addr *crypto.CommonAddress, storage *types.Storage) error
 	DeleteStorage(addr *crypto.CommonAddress) error
 
+	GetStorageAlias(addr *crypto.CommonAddress) string
 	AliasGet(alias string) (*crypto.CommonAddress, error)
 	AliasExist(alias string) bool
 
-	GetBalance(addr *crypto.CommonAddress) *big.Int
-	PutBalance(addr *crypto.CommonAddress, balance *big.Int) error
-	AddBalance(addr *crypto.CommonAddress, amount *big.Int) error
-	SubBalance(addr *crypto.CommonAddress, amount *big.Int) error
+	GetBalance(addr *crypto.CommonAddress, height uint64) *big.Int
+	PutBalance(addr *crypto.CommonAddress, height uint64, balance *big.Int) error
+	AddBalance(addr *crypto.CommonAddress, height uint64, amount *big.Int) error
+	SubBalance(addr *crypto.CommonAddress, height uint64, amount *big.Int) error
 
 	GetNonce(addr *crypto.CommonAddress) uint64
 	PutNonce(addr *crypto.CommonAddress, nonce uint64) error
@@ -55,6 +54,10 @@ type StoreInterface interface {
 	CopyState() *database.SnapShot
 	RevertState(shot *database.SnapShot)
 
+	Empty(addr *crypto.CommonAddress) bool
+
+	GetCandidateAddrs() (map[crypto.CommonAddress]struct{}, error)
+	GetVoteCredit(addr *crypto.CommonAddress) *big.Int
 }
 
 type Store struct {
@@ -63,21 +66,20 @@ type Store struct {
 	db      *StoreDB
 }
 
-
-func (s Store) SubBalance(addr *crypto.CommonAddress, amount *big.Int)error {
-	return s.account.SubBalance(addr,amount)
+func (s Store) GetCandidateAddrs() (map[crypto.CommonAddress]struct{}, error) {
+	return s.stake.GetCandidateAddrs()
 }
 
-func (s Store) GetStorage(addr *crypto.CommonAddress) (*types.Storage, error) {
-	return s.account.GetStorage(addr)
+func (s Store) GetVoteCredit(addr *crypto.CommonAddress) *big.Int {
+	return s.stake.GetVoteCredit(addr)
+}
+
+func (s Store) Empty(addr *crypto.CommonAddress) bool {
+	return s.Empty(addr)
 }
 
 func (s Store) GetStorageAlias(addr *crypto.CommonAddress) string {
 	return s.account.GetStorageAlias(addr)
-}
-
-func (s Store) PutStorage(addr *crypto.CommonAddress, storage *types.Storage) error {
-	return s.account.PutStorage(addr, storage)
 }
 
 func (s Store) DeleteStorage(addr *crypto.CommonAddress) error {
@@ -92,18 +94,43 @@ func (s Store) AliasExist(alias string) bool {
 	return s.account.AliasExist(alias)
 }
 
-func (s Store) GetBalance(addr *crypto.CommonAddress) *big.Int {
-	return s.account.GetBalance(addr)
-
-	//todo
+func (s Store) AddBalance(addr *crypto.CommonAddress, height uint64, amount *big.Int) error {
+	voteCredit, err := s.stake.CancelVoteCreditToBalance(addr, height)
+	if err != nil {
+		return err
+	}
+	return s.account.AddBalance(addr, amount.Add(amount, voteCredit))
 }
 
-func (s Store) PutBalance(addr *crypto.CommonAddress, balance *big.Int) error {
+func (s Store) SubBalance(addr *crypto.CommonAddress, height uint64, amount *big.Int) error {
+	voteCredit, err := s.stake.CancelVoteCreditToBalance(addr, height)
+	if err != nil {
+		return err
+	}
+
+	err = s.account.AddBalance(addr, voteCredit)
+	if err != nil {
+		return err
+	}
+
+	return s.account.SubBalance(addr, amount)
+}
+
+func (s Store) GetBalance(addr *crypto.CommonAddress, height uint64) *big.Int {
+	return new(big.Int).Add(s.stake.GetCancelVoteCreditForBalance(addr, height), s.account.GetBalance(addr))
+}
+
+func (s Store) PutBalance(addr *crypto.CommonAddress, height uint64, balance *big.Int) error {
+	voteCredit, err := s.stake.CancelVoteCreditToBalance(addr, height)
+	if err != nil {
+		return err
+	}
+
+	err = s.account.AddBalance(addr, voteCredit)
+	if err != nil {
+		return err
+	}
 	return s.account.PutBalance(addr, balance)
-}
-
-func (s Store) AddBalance(addr *crypto.CommonAddress, amount *big.Int) error {
-	return s.account.AddBalance(addr, amount)
 }
 
 func (s Store) GetNonce(addr *crypto.CommonAddress) uint64 {
@@ -155,9 +182,7 @@ func (s Store) Put(key []byte, value []byte) error {
 }
 
 func TrieStoreFromStore(diskDB dbinterface.KeyValueStore, stateRoot []byte) (StoreInterface, error) {
-	db := NewStoreDB(diskDB, nil, nil, nil)
-	db.trieDb = trie.NewDatabaseWithCache(diskDB, 0)
-	db.cache = database.NewTransactionStore(db.trie)
+	db := NewStoreDB(diskDB, nil, nil, trie.NewDatabaseWithCache(diskDB, 0))
 
 	store := &Store{
 		stake:   NewStakeStorage(db),
@@ -165,41 +190,31 @@ func TrieStoreFromStore(diskDB dbinterface.KeyValueStore, stateRoot []byte) (Sto
 		db:      db,
 	}
 
-	err := db.initState()
-	if err != nil {
-		return nil, err
-	}
+	//err := db.initState()
+	//if err != nil {
+	//	return nil, err
+	//}
+
 	if !store.RecoverTrie(stateRoot) {
 		return nil, ErrRecoverRoot
 	}
+
 	return store, nil
 }
 
-
-func (s *Store) cacheToTrie() {
-	s.db.Flush()
-}
-
-func (s *Store)  RevertState(shot *database.SnapShot) {
-	s.db.cache.RevertState(shot)
+func (s *Store) RevertState(shot *database.SnapShot) {
+	s.db.RevertState(shot)
 }
 
 func (s Store) CopyState() *database.SnapShot {
-	return s.db.cache.CopyState()
+	return s.db.CopyState()
 }
 
-func (s Store)  GetStateRoot() []byte {
-	s.cacheToTrie()
-	return s.db.trie.Hash().Bytes()
+func (s Store) GetStateRoot() []byte {
+	s.db.Flush()
+	return s.db.getStateRoot()
 }
 
-func (s *Store)  RecoverTrie(root []byte) bool {
-	var err error
-	s.db.trie, err = trie.NewSecure(crypto.Bytes2Hash(root), s.db.trieDb)
-	if err != nil {
-		return false
-	}
-	s.db.cache = database.NewTransactionStore(s.db.trie)
-	return true
+func (s *Store) RecoverTrie(root []byte) bool {
+	return s.db.RecoverTrie(root)
 }
-

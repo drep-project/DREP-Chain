@@ -14,6 +14,11 @@ import (
 const (
 	candidateAddrs = "candidateAddrs" //参与竞选出块节点的地址集合
 	stakeStorage   = "stakeStorage"   //以地址作为KEY,存储stake相关内容
+
+	pledgeLimit uint64 = 1000000    //候选节点需要抵押币的总数
+	drepUnit    uint64 = 1000000000 //drep单位
+
+	ChangeCycle = 100 //出块节点Change cycle
 )
 
 type stakeStoreInterface interface {
@@ -75,6 +80,9 @@ func (trieStore *trieStakeStore) UpdateCandidateAddr(addr *crypto.CommonAddress,
 
 	if add {
 		if len(addrs) > 0 {
+			if _, ok := addrs[*addr]; ok {
+				return nil
+			}
 			addrs[*addr] = struct{}{}
 		} else {
 			addrs = make(map[crypto.CommonAddress]struct{})
@@ -139,20 +147,27 @@ func (trieStore *trieStakeStore) VoteCredit(fromAddr, toAddr *crypto.CommonAddre
 		storage = &types.StakeStorage{}
 	}
 
+	var totalBalance big.Int
 	if len(storage.ReceivedVoteCredit) == 0 {
 		storage.ReceivedVoteCredit = make(map[crypto.CommonAddress]big.Int)
 		storage.ReceivedVoteCredit[*fromAddr] = *addBalance
 		trieStore.AddCandidateAddr(toAddr)
+		totalBalance = *addBalance
 	} else {
 		var totalBalance big.Int
 		if v, ok := storage.ReceivedVoteCredit[*fromAddr]; ok {
 			totalBalance = *addBalance.Add(addBalance, &v)
 			storage.ReceivedVoteCredit[*fromAddr] = totalBalance
-			//todo
 		} else {
 			storage.ReceivedVoteCredit[*fromAddr] = *addBalance
 			trieStore.AddCandidateAddr(toAddr)
+			totalBalance = *addBalance
 		}
+	}
+
+	//投给自己，而且数量足够大
+	if bytes.Equal(toAddr.Bytes(), fromAddr.Bytes()) && totalBalance.Cmp(new(big.Int).Mul(new(big.Int).SetUint64(pledgeLimit), new(big.Int).SetUint64(drepUnit))) >= 0 {
+		trieStore.AddCandidateAddr(toAddr)
 	}
 
 	return trieStore.PutStakeStorage(toAddr, storage)
@@ -178,15 +193,21 @@ func (trieStore *trieStakeStore) CancelVoteCredit(fromAddr, toAddr *crypto.Commo
 				storage.ReceivedVoteCredit[*fromAddr] = *resultBalance.Sub(&v, cancelBalance)
 			} else if retCmp == 0 {
 				delete(storage.ReceivedVoteCredit, *fromAddr)
-				trieStore.DelCandidateAddr(fromAddr)
+				//trieStore.DelCandidateAddr(fromAddr)
 			} else {
 				return fmt.Errorf("vote credit not enough")
 			}
+
+			if bytes.Equal(toAddr.Bytes(), fromAddr.Bytes()) && resultBalance.Cmp(new(big.Int).Mul(new(big.Int).SetUint64(pledgeLimit), new(big.Int).SetUint64(drepUnit))) < 0 {
+				trieStore.DelCandidateAddr(toAddr)
+			}
+
 		} else {
 			return fmt.Errorf("not exist vote credit")
 		}
 	}
-	err :=  trieStore.PutStakeStorage(toAddr, storage)
+
+	err := trieStore.PutStakeStorage(toAddr, storage)
 	if err != nil {
 		return err
 	}
@@ -194,22 +215,67 @@ func (trieStore *trieStakeStore) CancelVoteCredit(fromAddr, toAddr *crypto.Commo
 	//目的stakeStorage；存储临时被退回的币
 	if bytes.Equal(toAddr.Bytes(), fromAddr.Bytes()) {
 		storage.CancelVoteCredit[height] = *cancelBalance
-	} else{
+	} else {
 		storage, _ := trieStore.GetStakeStorage(fromAddr)
 		if storage == nil {
 			storage = &types.StakeStorage{}
 		}
 		storage.CancelVoteCredit[height] = *cancelBalance
 	}
-	return  trieStore.PutStakeStorage(fromAddr, storage)
-
+	return trieStore.PutStakeStorage(fromAddr, storage)
 }
 
-func (trieStore *trieStakeStore) GetVoteCredit(addr *crypto.CommonAddress) map[crypto.CommonAddress]big.Int {
+//取消抵押周期已经到，取消的币可以加入到account的balance中了
+func (trieStore *trieStakeStore) GetCancelVoteCreditForBalance(addr *crypto.CommonAddress, height uint64) *big.Int {
 	storage, _ := trieStore.GetStakeStorage(addr)
 	if storage == nil {
-		return nil
+		return &big.Int{}
 	}
 
-	return storage.ReceivedVoteCredit
+	total := new(big.Int)
+	for cancelHeight, balance := range storage.CancelVoteCredit {
+		if height >= cancelHeight+ChangeCycle {
+			total.Add(total, &balance)
+			//delete(storage.CancelVoteCredit, cancelHeight)
+		}
+	}
+
+	return total
+}
+
+//取消抵押周期已经到，取消的币可以加入到account的balance中了
+func (trieStore *trieStakeStore) CancelVoteCreditToBalance(addr *crypto.CommonAddress, height uint64)( *big.Int, error ){
+	storage, _ := trieStore.GetStakeStorage(addr)
+	if storage == nil {
+		return &big.Int{},nil
+	}
+
+	total := new(big.Int)
+	for cancelHeight, balance := range storage.CancelVoteCredit {
+		if height >= cancelHeight+ChangeCycle {
+			total.Add(total, &balance)
+			delete(storage.CancelVoteCredit, cancelHeight)
+		}
+	}
+
+	err := trieStore.PutStakeStorage(addr, storage)
+	if err != nil {
+		return &big.Int{}, nil
+	}
+	return total,nil
+}
+
+//获取到候选人所有的质押金
+func (trieStore *trieStakeStore) GetVoteCredit(addr *crypto.CommonAddress) *big.Int {
+	storage, _ := trieStore.GetStakeStorage(addr)
+	if storage == nil {
+		return &big.Int{}
+	}
+
+	total := new(big.Int)
+	for _,value := range storage.ReceivedVoteCredit{
+		total.Add(total,&value)
+	}
+
+	return total
 }

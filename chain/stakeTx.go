@@ -27,14 +27,14 @@ func (processor *StakeTransactionProcessor) ExecuteTransaction(context *ExecuteT
 	tx := context.Tx()
 	stakeStore := context.TrieStore()
 
-	originBalance := store.GetBalance(from)
-	toBalance := store.GetBalance(tx.To())
+	originBalance := store.GetBalance(from, context.header.Height)
+	toBalance := store.GetBalance(tx.To(), context.header.Height)
 	leftBalance := originBalance.Sub(originBalance, tx.Amount())
 	if leftBalance.Sign() < 0 {
 		return nil, false, nil, ErrBalance
 	}
 	addBalance := toBalance.Add(toBalance, tx.Amount())
-	err := store.PutBalance(from, leftBalance)
+	err := store.PutBalance(from, context.header.Height, leftBalance)
 	if err != nil {
 		return nil, false, nil, err
 	}

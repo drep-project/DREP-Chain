@@ -48,6 +48,6 @@ func (blockMultiSigValidator *BlockMultiSigValidator) ExecuteBlock(context *chai
 	if err != nil {
 		return nil
 	}
-	AccumulateRewards(context.TrieStore, multiSig, blockMultiSigValidator.Producers, context.GasFee)
+	AccumulateRewards(context.TrieStore, multiSig, blockMultiSigValidator.Producers, context.GasFee, context.Block.Header.Height)
 	return nil
 }

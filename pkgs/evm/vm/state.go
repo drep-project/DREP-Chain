@@ -43,18 +43,19 @@ type State struct {
 	db     store.StoreInterface
 	refund uint64
 	logs   []*types.Log
+	height uint64
 }
 
-func NewState(database store.StoreInterface) *State {
+func NewState(database store.StoreInterface, height uint64) *State {
 	return &State{
 		db:   database,
 		logs: make([]*types.Log, 0),
+		height:height,
 	}
 }
 
 func (s *State) Empty(addr *crypto.CommonAddress) bool {
-	so, _ := s.db.GetStorage(addr)
-	return so == nil || so.Empty()
+	return s.db.Empty(addr)
 }
 
 func (s *State) CreateContractAccount(addr crypto.CommonAddress, byteCode []byte) (*types.Account, error) {
@@ -63,20 +64,20 @@ func (s *State) CreateContractAccount(addr crypto.CommonAddress, byteCode []byte
 		return nil, err
 	}
 	account.Storage.ByteCode = byteCode
-	return account, s.db.PutStorage(account.Address, account.Storage)
+	return account, s.db.PutByteCode(account.Address, byteCode)
 }
 
 func (s *State) SubBalance(addr *crypto.CommonAddress, amount *big.Int) error {
-	balance := s.db.GetBalance(addr)
-	return s.db.PutBalance(addr, new(big.Int).Sub(balance, amount))
+	balance := s.db.GetBalance(addr, s.height)
+	return s.db.PutBalance(addr, s.height, new(big.Int).Sub(balance, amount))
 }
 
 func (s *State) AddBalance(addr *crypto.CommonAddress, amount *big.Int) error {
-	return s.db.AddBalance(addr, amount)
+	return s.db.AddBalance(addr,s.height, amount)
 }
 
 func (s *State) GetBalance(addr *crypto.CommonAddress) *big.Int {
-	return s.db.GetBalance(addr)
+	return s.db.GetBalance(addr, s.height)
 }
 
 func (s *State) SetNonce(addr *crypto.CommonAddress, nonce uint64) error {
@@ -111,11 +112,7 @@ func (s *State) SetByteCode(addr *crypto.CommonAddress, byteCode crypto.ByteCode
 
 //TODO test suicided
 func (s *State) HasSuicided(addr crypto.CommonAddress) bool {
-	storage, err := s.db.GetStorage(&addr)
-	if err != nil && storage == nil {
-		return true
-	}
-	return false
+	return s.db.Empty(&addr)
 }
 
 func (s *State) GetLogs(txHash *crypto.Hash) []*types.Log {
@@ -156,7 +153,7 @@ func (self *State) GetRefund() uint64 {
 }
 
 func (s *State) Load(x *big.Int) ([]byte, error) {
-	val, _ :=  s.db.Get(x.Bytes())
+	val, _ := s.db.Get(x.Bytes())
 	return val, nil
 }
 
@@ -165,9 +162,5 @@ func (s *State) Store(x, y *big.Int) error {
 }
 
 func (s *State) Exist(contractAddr crypto.CommonAddress) bool {
-	storage, err := s.db.GetStorage(&contractAddr)
-	if err != nil || storage == nil {
-		return false
-	}
-	return len(storage.ByteCode) > 0
+	return len(s.db.GetByteCode(&contractAddr)) > 0
 }

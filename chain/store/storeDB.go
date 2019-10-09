@@ -2,9 +2,9 @@ package store
 
 import (
 	"github.com/drep-project/drep-chain/common/trie"
+	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/database/dbinterface"
-	"github.com/drep-project/drep-chain/crypto"
 )
 
 type StoreDB struct {
@@ -23,7 +23,7 @@ func NewStoreDB(store dbinterface.KeyValueStore, cache *database.TransactionStor
 	}
 }
 
-func (s *StoreDB) initState() error{
+func (s *StoreDB) initState() error {
 	var err error
 	s.trie, err = trie.NewSecure(crypto.Hash{}, s.trieDb)
 	return err
@@ -68,8 +68,30 @@ func (s *StoreDB) Delete(key []byte) error {
 	return err
 }
 
-func (s *StoreDB) Flush(){
+func (s *StoreDB) Flush() {
 	if s.cache != nil {
 		s.cache.Flush()
 	}
+}
+
+func (s *StoreDB) RevertState(shot *database.SnapShot) {
+	s.cache.RevertState(shot)
+}
+
+func (s *StoreDB) CopyState() *database.SnapShot {
+	return s.cache.CopyState()
+}
+
+func (s *StoreDB)getStateRoot() []byte{
+	return s.trie.Hash().Bytes()
+}
+
+func (s *StoreDB)RecoverTrie(root []byte) bool{
+	var err error
+	s.trie, err = trie.NewSecure(crypto.Bytes2Hash(root), s.trieDb)
+	if err != nil {
+		return false
+	}
+	s.cache = database.NewTransactionStore(s.trie)
+	return true
 }

@@ -128,19 +128,19 @@ func (aliasTransactionProcessor *AliasTransactionProcessor) ExecuteTransaction(c
 	}
 
 	//minus alias fee from from account
-	originBalance := store.GetBalance(from)
+	originBalance := store.GetBalance(from, context.header.Height)
 	leftBalance := originBalance.Sub(originBalance, drepFee)
 	if leftBalance.Sign() < 0 {
 		return nil, false, nil, ErrBalance
 	}
-	err = store.PutBalance(from, leftBalance)
+	err = store.PutBalance(from, context.header.Height, leftBalance)
 	if err != nil {
 		return nil, false, nil, err
 	}
 	// put alias fee to hole address
-	zeroAddressBalance := store.GetBalance(&params.HoleAddress)
+	zeroAddressBalance := store.GetBalance(&params.HoleAddress, context.header.Height)
 	zeroAddressBalance = zeroAddressBalance.Add(zeroAddressBalance, drepFee)
-	err = store.PutBalance(&params.HoleAddress, zeroAddressBalance)
+	err = store.PutBalance(&params.HoleAddress, context.header.Height, zeroAddressBalance)
 	if err != nil {
 		return nil, false, nil, err
 	}

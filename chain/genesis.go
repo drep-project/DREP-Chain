@@ -17,9 +17,10 @@ func (chainService *ChainService) GetGenisiBlock(biosAddress crypto.CommonAddres
 	db, _ := store.TrieStoreFromStore(memorydb.New(), trie.EmptyRoot[:])
 	for addr, balance := range params.Preminer {
 		//add preminer addr and balance
-		storage := types.NewStorage()
-		storage.Balance = *balance
-		db.PutStorage(&addr, storage)
+		//storage := types.NewStorage()
+		//storage.Balance = *balance
+		//db.PutStorage(&addr, storage)
+		db.PutBalance(&addr, 0, balance)
 	}
 
 	root = db.GetStateRoot()
@@ -53,9 +54,7 @@ func (chainService *ChainService) ProcessGenesisBlock(biosAddr crypto.CommonAddr
 	}
 	for addr, balance := range params.Preminer {
 		//add preminer addr and balance
-		storage := types.NewStorage()
-		storage.Balance = *balance
-		chainStore.PutStorage(&addr, storage)
+		chainStore.PutBalance(&addr, 0, balance)
 	}
 	root = chainStore.GetStateRoot()
 	err = chainStore.TrieDB().TrieDb(crypto.Bytes2Hash(root), true)

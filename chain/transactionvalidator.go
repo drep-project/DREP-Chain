@@ -16,8 +16,8 @@ type ITransactionSelector interface {
 }
 
 type ExecuteTransactionContext struct {
-	blockContext   *BlockExecuteContext
-	trieStore      store.StoreInterface
+	blockContext *BlockExecuteContext
+	trieStore    store.StoreInterface
 
 	gp          *GasPool
 	tx          *types.Transaction
@@ -84,11 +84,10 @@ func (context *ExecuteTransactionContext) TrieStore() store.StoreInterface {
 	return context.trieStore
 }
 
-
 func (context *ExecuteTransactionContext) RefundCoin() error {
 	// Return DREP for remaining gasRemained, exchanged at the original rate.
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(context.gasRemained), context.gasPrice)
-	err := context.trieStore.AddBalance(context.from, remaining)
+	err := context.trieStore.AddBalance(context.from, context.header.Height, remaining)
 	if err != nil {
 		return nil
 	}
@@ -121,7 +120,7 @@ func (context *ExecuteTransactionContext) UseGas(amount uint64) error {
 
 func (context *ExecuteTransactionContext) buyGas() error {
 	mgval := new(big.Int).Mul(new(big.Int).SetUint64(context.tx.Gas()), context.gasPrice)
-	if context.trieStore.GetBalance(context.from).Cmp(mgval) < 0 {
+	if context.trieStore.GetBalance(context.from, context.header.Height).Cmp(mgval) < 0 {
 		return ErrInsufficientBalanceForGas
 	}
 	if err := context.gp.SubGas(context.tx.Gas()); err != nil {
@@ -130,7 +129,7 @@ func (context *ExecuteTransactionContext) buyGas() error {
 	context.gasRemained += context.tx.Gas()
 
 	context.initialGas = context.tx.Gas()
-	return context.trieStore.SubBalance(context.from, mgval)
+	return context.trieStore.SubBalance(context.from, context.header.Height, mgval)
 }
 
 func (context *ExecuteTransactionContext) PreCheck() error {
