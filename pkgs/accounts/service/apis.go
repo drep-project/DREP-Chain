@@ -2,7 +2,6 @@ package service
 
 import (
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"github.com/drep-project/drep-chain/pkgs/accounts/addrgenerator"
 	"math/big"
@@ -175,77 +174,6 @@ func (accountapi *AccountApi) Transfer(from crypto.CommonAddress, to crypto.Comm
 		return "", err
 	}
 	return tx.TxHash().String(), nil
-}
-
-/*
- name: ReplaceTx
- usage: 替换老的交易
- params:
-	1. 发起转账的地址
-	2. 接受者的地址
-	3. 金额
-	4. gas价格
-	5. gas上限
-	6. 备注
-	7. 被代替交易的nonce
- return: 新交易地址
- example: curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_replaceTx","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000","",1000],"id":1}' http://127.0.0.1:15645
- response:
-	 {"jsonrpc":"2.0","id":1,"result":"0x3a3b59f90a21c2fd1b690aa3a2bc06dc2d40eb5bdc26fdd7ecb7e1105af2638e"}
-*/
-func (accountapi *AccountApi) ReplaceTx(from crypto.CommonAddress, to crypto.CommonAddress, amount, gasprice, gaslimit *common.Big, data common.Bytes, nonce *uint64) (string, error) {
-	if nonce == nil {
-		return "", errors.New("nonce is nil")
-	}
-
-	tx := types.NewTransaction(to, (*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), *nonce)
-	sig, err := accountapi.Wallet.Sign(&from, tx.TxHash().Bytes())
-	if err != nil {
-		return "", err
-	}
-	tx.Sig = sig
-	err = accountapi.messageBroadCastor.SendTransaction(tx, true)
-	if err != nil {
-		return "", err
-	}
-	return tx.TxHash().String(), nil
-}
-
-/*
- name: GetTxInPool
- usage: 查询交易是否在交易池，如果在，返回交易
- params:
-	1. 发起转账的地址
-
- return: 交易完整信息
- example: curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_getTxInPool","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5"],"id":1}' http://127.0.0.1:15645
- response:
-   {
-  "jsonrpc": "2.0",
-  "id": 3,
-  "result": {
-    "Hash": "0xfa5c34114ff459b4c97e7cd268c507c0ccfcfc89d3ccdcf71e96402f9899d040",
-    "From": "0x7923a30bbfbcb998a6534d56b313e68c8e0c594a",
-    "Version": 1,
-    "Nonce": 15632,
-    "Type": 0,
-    "To": "0x7923a30bbfbcb998a6534d56b313e68c8e0c594a",
-    "ChainId": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-    "Amount": "0x111",
-    "GasPrice": "0x110",
-    "GasLimit": "0x30000",
-    "Timestamp": 1559322808,
-    "Data": null,
-    "Sig": "0x20f25b86c4bf73aa4fa0bcb01e2f5731de3a3917c8861d1ce0574a8d8331aedcf001e678000f6afc95d35a53ef623a2055fce687f85c2fd752dc455ab6db802b1f"
-  }
-}
-*/
-func (accountapi *AccountApi) GetTxInPool(hash string) (*types.Transaction, error) {
-	tx, err := accountapi.poolQuery.GetTxInPool(hash)
-	if err != nil {
-		return nil, err
-	}
-	return tx, nil
 }
 
 /*
