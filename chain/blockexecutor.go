@@ -35,13 +35,13 @@ type BlockExecuteContext struct {
 func NewBlockExecuteContext(trieStore store.StoreInterface, gp *GasPool, dbStore *ChainStore, block *types.Block) *BlockExecuteContext {
 	return &BlockExecuteContext{
 		TrieStore: trieStore,
-		Gp: gp,
-		DbStore: dbStore,
-		Block: block,
-		GasUsed: new(big.Int),
-		GasFee:new(big.Int),
-		Logs:[]*types.Log{},
-		Receipts: types.Receipts{},
+		Gp:        gp,
+		DbStore:   dbStore,
+		Block:     block,
+		GasUsed:   new(big.Int),
+		GasFee:    new(big.Int),
+		Logs:      []*types.Log{},
+		Receipts:  types.Receipts{},
 	}
 }
 
@@ -146,7 +146,7 @@ func (chainBlockValidator *ChainBlockValidator) ExecuteBlock(context *BlockExecu
 	}
 	for _, receipt := range context.Receipts {
 		receipt.PostState = newReceiptRoot[:]
-		err =context.DbStore.PutReceipt(receipt.TxHash, receipt)
+		err = context.DbStore.PutReceipt(receipt.TxHash, receipt)
 		if err != nil {
 			return err
 		}

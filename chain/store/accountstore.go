@@ -31,7 +31,7 @@ type trieAccountStore struct {
 
 func NewTrieAccoutStore(store *StoreDB) *trieAccountStore {
 	return &trieAccountStore{
-		storeDB:store,
+		storeDB: store,
 	}
 }
 

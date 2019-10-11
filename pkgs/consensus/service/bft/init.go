@@ -5,7 +5,7 @@ dlog "github.com/drep-project/drep-chain/pkgs/log"
 )
 
 const (
-	MODULENAME = "consensus"
+	MODULENAME = "bft"
 )
 
 var (

@@ -254,7 +254,6 @@ func NewVoteTransaction(to crypto.CommonAddress, amount, gasPrice, gasLimit *big
 	return &Transaction{Data: data}
 }
 
-
 func NewCancelVoteTransaction(to crypto.CommonAddress, amount, gasPrice, gasLimit *big.Int, nonce uint64) *Transaction {
 	data := TransactionData{
 		Version:   common.Version,

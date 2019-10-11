@@ -129,6 +129,11 @@ func (chainService *ChainService) acceptBlock(block *types.Block) (inMainChain b
 	if err != nil {
 		return false, err
 	}
+	defer func() {
+		if err == nil {
+			trieStore.TrieDB().TrieDb(crypto.Bytes2Hash(newNode.StateRoot), true)
+		}
+	}()
 	if block.Header.PreviousHash.IsEqual(chainService.BestChain().Tip().Hash) {
 		context, err := chainService.connectBlock(trieStore, block, newNode)
 		if err != nil {
@@ -340,7 +345,6 @@ func (chainService *ChainService) notifyDetachBlock(block *types.Block) {
 
 func (chainService *ChainService) markState(db store.StoreInterface, blockNode *types.BlockNode) {
 	chainService.BestChain().SetTip(blockNode)
-	db.TrieDB().TrieDb(crypto.Bytes2Hash(blockNode.StateRoot), true)
 }
 
 //TODO improves the performan

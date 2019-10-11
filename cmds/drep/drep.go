@@ -26,7 +26,7 @@ func main() {
 	debug.SetGCPercent(20)
 
 	drepApp := app.NewApp()
-	err := drepApp.AddServices(
+	err := drepApp.IncludeServices(
 		database.DatabaseService{},
 		rpc.RpcService{},
 		logServer.LogService{},

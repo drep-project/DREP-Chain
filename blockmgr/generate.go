@@ -44,7 +44,7 @@ func (blockMgr *BlockMgr) GenerateTemplate(trieStore store.StoreInterface, leade
 	gp := new(chain.GasPool).AddGas(newGasLimit.Uint64())
 	//process transaction
 	chainStore := &chain.ChainStore{blockMgr.DatabaseService.LevelDb()}
-	context := chain.NewBlockExecuteContext(trieStore,gp,chainStore,block)
+	context := chain.NewBlockExecuteContext(trieStore, gp, chainStore, block)
 
 	templateValidator := NewTemplateBlockValidator(blockMgr.ChainService)
 	err = templateValidator.ExecuteBlock(context)

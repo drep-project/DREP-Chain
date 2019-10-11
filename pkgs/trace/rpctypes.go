@@ -6,7 +6,7 @@ import (
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/pkgs/consensus/service/bft"
-	types2 "github.com/drep-project/drep-chain/pkgs/consensus/types"
+	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
 	"github.com/drep-project/drep-chain/types"
 	"math/big"
 )
@@ -67,9 +67,9 @@ func (rpcBlock *RpcBlock) From(block *types.Block, addresses []crypto.CommonAddr
 	rpcBlock.TxRoot = block.Header.TxRoot
 	rpcBlock.Txs = txs
 
-	if block.Proof.Type == types2.Solo {
+	if block.Proof.Type == consensusTypes.Solo {
 		rpcBlock.Proof = block.Proof
-	} else if block.Proof.Type == types2.Pbft {
+	} else if block.Proof.Type == consensusTypes.Pbft {
 		proof := NewPbftProof()
 		multiSig := &bft.MultiSignature{}
 		json.Unmarshal(block.Proof.Evidence, multiSig)
@@ -94,7 +94,7 @@ type PbftProof struct {
 
 func NewPbftProof() *PbftProof {
 	return &PbftProof{
-		Type:           types2.Pbft,
+		Type:           consensusTypes.Pbft,
 		MinorAddresses: []string{},
 	}
 }

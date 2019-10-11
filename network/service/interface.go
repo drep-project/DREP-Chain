@@ -2,6 +2,7 @@ package service
 
 import (
 	"github.com/drep-project/drep-chain/app"
+	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/network/p2p"
 )
 
@@ -13,4 +14,5 @@ type P2P interface {
 	AddPeer(nodeUrl string) error
 	RemovePeer(url string)
 	AddProtocols(protocols []p2p.Protocol)
+	SubscribeEvents(ch chan *p2p.PeerEvent) event.Subscription
 }

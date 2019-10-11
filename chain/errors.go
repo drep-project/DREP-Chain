@@ -36,9 +36,8 @@ var (
 	ErrUnsupportAliasChar        = errors.New("alias only support number and letter")
 	ErrReceiptRoot               = errors.New("receipt root not match")
 
-	ErrNoStorage       = errors.New("no account storage found")
-	ErrKeyNotFound     = errors.New("key not found")
-	ErrKeyUnSpport     = errors.New("unsupport")
-	ErrOutOfGas        = errors.New("out of gas")
-
+	ErrNoStorage   = errors.New("no account storage found")
+	ErrKeyNotFound = errors.New("key not found")
+	ErrKeyUnSpport = errors.New("unsupport")
+	ErrOutOfGas    = errors.New("out of gas")
 )

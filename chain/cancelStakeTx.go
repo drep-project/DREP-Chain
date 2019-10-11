@@ -1,7 +1,7 @@
 package chain
 
 import (
-"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/drep-chain/types"
 )
 
 /**********************stake********************/

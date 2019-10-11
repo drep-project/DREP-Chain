@@ -91,7 +91,6 @@ func (h Hash) Big() *big.Int {
 	return new(big.Int).SetBytes(h[:])
 }
 
-
 func RandomHash() Hash {
 	key := make([]byte, HashLength)
 	rand.Read(key)

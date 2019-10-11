@@ -103,6 +103,9 @@ func (chainIndexer *ChainIndexerService) Start(executeContext *app.ExecuteContex
 }
 
 func (chainIndexer *ChainIndexerService) Stop(executeContext *app.ExecuteContext) error {
+	if chainIndexer.Config == nil || chainIndexer.Config.Enable {
+		return nil
+	}
 	var errs []error
 	chainIndexer.ctxCancel()
 

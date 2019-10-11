@@ -90,7 +90,6 @@ func (blockMgrApi *BlockMgrApi) GetPoolMiniPendingNonce(addr *crypto.CommonAddre
 	return blockMgrApi.blockMgr.GetPoolMiniPendingNonce(addr)
 }
 
-
 /*
  name: GetTxInPool
  usage: 查询交易是否在交易池，如果在，返回交易

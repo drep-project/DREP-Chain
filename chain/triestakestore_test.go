@@ -141,4 +141,3 @@ func TestCancelVoteCredit(t *testing.T) {
 		}
 	}
 }
-

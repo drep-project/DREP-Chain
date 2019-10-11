@@ -57,7 +57,7 @@ func (writeIo *writeIo) WriteMsg(msg p2p.Msg) error {
 }
 
 type testPeer struct {
-	consensusTypes.Producer
+	Producer
 	client *testBFT
 }
 
@@ -102,12 +102,12 @@ type testBFT struct {
 
 	leader    *Leader
 	member    *Member
-	Producers consensusTypes.ProducerSet
+	Producers ProducerSet
 }
 
 func newTestBFT(
 	privKey *secp256k1.PrivateKey,
-	producer consensusTypes.ProducerSet,
+	producer ProducerSet,
 	sender Sender,
 	ip string,
 	peersInfo map[string]consensusTypes.IPeerInfo) *testBFT {
@@ -188,7 +188,7 @@ func (testbft *testBFT) collectMemberStatus() []*MemberInfo {
 		}
 
 		produceInfos = append(produceInfos, &MemberInfo{
-			Producer: &consensusTypes.Producer{Pubkey: produce.Pubkey, IP: produce.IP},
+			Producer: &Producer{Pubkey: produce.Pubkey, IP: produce.IP},
 			Peer:     pi,
 			IsMe:     isMe,
 			IsOnline: IsOnline,
@@ -249,7 +249,7 @@ func (testbft *testBFT) ChangeTime(interval time.Duration) {
 
 func TestBFT(t *testing.T) {
 	keystore := make([]*secp256k1.PrivateKey, 4)
-	produces := make([]consensusTypes.Producer, 4)
+	produces := make([]Producer, 4)
 	onlinePeers := make(map[string]consensusTypes.IPeerInfo)
 	bftClients := make([]*testBFT, 4)
 	for i := 0; i < 4; i++ {
@@ -258,7 +258,7 @@ func TestBFT(t *testing.T) {
 			i--
 			continue
 		}
-		p := consensusTypes.Producer{priv.PubKey(), strconv.Itoa(i)}
+		p := Producer{priv.PubKey(), strconv.Itoa(i)}
 		produces[i] = p
 		keystore[i] = priv
 
@@ -300,7 +300,7 @@ func TestBFT(t *testing.T) {
 
 func TestBFTTimeOut(t *testing.T) {
 	keystore := make([]*secp256k1.PrivateKey, 4)
-	produces := make([]consensusTypes.Producer, 4)
+	produces := make([]Producer, 4)
 	onlinePeers := make(map[string]consensusTypes.IPeerInfo)
 	bftClients := make([]*testBFT, 4)
 	for i := 0; i < 4; i++ {
@@ -309,7 +309,7 @@ func TestBFTTimeOut(t *testing.T) {
 			i--
 			continue
 		}
-		p := consensusTypes.Producer{priv.PubKey(), strconv.Itoa(i)}
+		p := Producer{priv.PubKey(), strconv.Itoa(i)}
 		produces[i] = p
 		keystore[i] = priv
 

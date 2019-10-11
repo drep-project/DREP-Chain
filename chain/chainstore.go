@@ -16,7 +16,6 @@ var (
 	BlockNodePrefix  = []byte("blockNode_")
 )
 
-
 type ChainStore struct {
 	dbinterface.KeyValueStore
 }

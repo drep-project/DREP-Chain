@@ -6,12 +6,11 @@ import (
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/secp256k1/schnorr"
 	"github.com/drep-project/drep-chain/crypto/sha3"
-	types2 "github.com/drep-project/drep-chain/pkgs/consensus/types"
 	"github.com/drep-project/drep-chain/types"
 )
 
 type BlockMultiSigValidator struct {
-	Producers types2.ProducerSet
+	Producers ProducerSet
 }
 
 func (blockMultiSigValidator *BlockMultiSigValidator) VerifyHeader(header, parent *types.BlockHeader) error {
