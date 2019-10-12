@@ -2,9 +2,7 @@ package bft
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/drep-project/drep-chain/chain/store"
-	"io/ioutil"
 	"math"
 	"math/big"
 	"reflect"
@@ -18,7 +16,6 @@ import (
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/database"
-	"github.com/drep-project/drep-chain/network/p2p"
 	"github.com/drep-project/drep-chain/params"
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
 	"github.com/drep-project/drep-chain/types"
@@ -49,14 +46,14 @@ type BftConsensus struct {
 
 	addPeerChan    chan *consensusTypes.PeerInfo
 	removePeerChan chan *consensusTypes.PeerInfo
-	Producers      consensusTypes.ProducerSet
+	Producers      ProducerSet
 }
 
 func NewBftConsensus(
 	chainService chain.ChainServiceInterface,
 	blockGenerator blockmgr.IBlockBlockGenerator,
 	dbService *database.DatabaseService,
-	producer consensusTypes.ProducerSet,
+	producer ProducerSet,
 	sener Sender,
 	addPeer, removePeer *event.Feed) *BftConsensus {
 
@@ -157,6 +154,7 @@ func (bftConsensus *BftConsensus) collectMemberStatus() []*MemberInfo {
 		if isMe {
 			IsOnline = true
 		} else {
+			//todo  peer获取到的IP地址和配置的ip地址是否相等（nat后是否相等,从tcp原理来看是相等的）
 			bftConsensus.peerLock.RLock()
 			if pi, ok = bftConsensus.onLinePeer[produce.IP]; ok {
 				IsOnline = true
@@ -165,7 +163,7 @@ func (bftConsensus *BftConsensus) collectMemberStatus() []*MemberInfo {
 		}
 
 		produceInfos = append(produceInfos, &MemberInfo{
-			Producer: &consensusTypes.Producer{Pubkey: produce.Pubkey, IP: produce.IP},
+			Producer: &Producer{Pubkey: produce.Pubkey, IP: produce.IP},
 			Peer:     pi,
 			IsMe:     isMe,
 			IsOnline: IsOnline,
@@ -365,39 +363,22 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
 	return nil
 }
 
-func (bftConsensus *BftConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, rw p2p.MsgReadWriter) error {
-	for {
-		msg, err := rw.ReadMsg()
-		if err != nil {
-			log.WithField("Reason", err).Info("consensus receive msg")
-			return err
-		}
-
-		if msg.Size > MaxMsgSize {
-			return ErrMsgSize
-		}
-		buf, err := ioutil.ReadAll(msg.Payload)
-		if err != nil {
-			return err
-		}
-		log.WithField("addr", peer).WithField("code", msg.Code).Debug("Receive setup msg")
-		switch msg.Code {
-		case MsgTypeSetUp:
-			fallthrough
-		case MsgTypeChallenge:
-			fallthrough
-		case MsgTypeFail:
-			bftConsensus.memberMsgPool <- &MsgWrap{peer, msg.Code, buf}
-		case MsgTypeCommitment:
-			fallthrough
-		case MsgTypeResponse:
-			bftConsensus.leaderMsgPool <- &MsgWrap{peer, msg.Code, buf}
-		default:
-			return fmt.Errorf("consensus unkonw msg type:%d", msg.Code)
-		}
+func (bftConsensus *BftConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, t uint64, buf []byte) {
+	log.WithField("addr", peer).WithField("code", t).Debug("Receive setup msg")
+	switch t {
+	case MsgTypeSetUp:
+		fallthrough
+	case MsgTypeChallenge:
+		fallthrough
+	case MsgTypeFail:
+		bftConsensus.memberMsgPool <- &MsgWrap{peer, t, buf}
+	case MsgTypeCommitment:
+		fallthrough
+	case MsgTypeResponse:
+		bftConsensus.leaderMsgPool <- &MsgWrap{peer, t, buf}
+	default:
+		//return fmt.Errorf("consensus unkonw msg type:%d", msg.Code)
 	}
-
-	return nil
 }
 
 func (bftConsensus *BftConsensus) ChangeTime(interval time.Duration) {
@@ -405,7 +386,7 @@ func (bftConsensus *BftConsensus) ChangeTime(interval time.Duration) {
 }
 
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
-func AccumulateRewards(trieStore store.StoreInterface, sig *MultiSignature, Producers consensusTypes.ProducerSet, totalGasBalance *big.Int, height uint64) error {
+func AccumulateRewards(trieStore store.StoreInterface, sig *MultiSignature, Producers ProducerSet, totalGasBalance *big.Int, height uint64) error {
 	reward := new(big.Int).SetUint64(uint64(params.Rewards))
 	r := new(big.Int)
 	r = r.Div(reward, new(big.Int).SetInt64(2))

@@ -2,12 +2,12 @@ package trace
 
 import (
 	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/pkgs/consensus/service/bft"
 	"path"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/drep-chain/app"
 	chainService "github.com/drep-project/drep-chain/chain"
-	consensusService "github.com/drep-project/drep-chain/pkgs/consensus/service"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -32,7 +32,7 @@ var (
 type TraceService struct {
 	Config           *HistoryConfig
 	ChainService     chainService.ChainServiceInterface `service:"chain"`
-	ConsensusService *consensusService.ConsensusService `service:"consensus"`
+	ConsensusService *bft.ConsensusService             `service:"bft"`
 	apis             []app.API
 	blockAnalysis    *BlockAnalysis
 }

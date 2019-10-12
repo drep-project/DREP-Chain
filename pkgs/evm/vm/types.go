@@ -14,7 +14,7 @@ type VMConfig struct {
 	// NoRecursion disabled Interpreter call, callcode,
 	// delegate call and create.
 	NoRecursion bool `json:"noRecursion"`
-	// Enable recording of SHA3/keccak preimages
+	// Miner recording of SHA3/keccak preimages
 	EnablePreimageRecording bool `json:"enablePreimageRecording"`
 	// JumpTable contains the EVM instruction table. This
 	// may be left uninitialised and will be set to the default

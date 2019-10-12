@@ -14,6 +14,8 @@ import (
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/network/p2p/enode"
 	"github.com/drep-project/drep-chain/params"
+	"github.com/drep-project/drep-chain/pkgs/consensus/service"
+	"github.com/drep-project/drep-chain/pkgs/consensus/service/bft"
 	"github.com/drep-project/drep-chain/pkgs/log"
 	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
@@ -27,7 +29,6 @@ import (
 	accountComponent "github.com/drep-project/drep-chain/pkgs/accounts/component"
 	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
 	chainIndexerTypes "github.com/drep-project/drep-chain/pkgs/chain_indexer"
-	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
 	filterTypes "github.com/drep-project/drep-chain/pkgs/filter"
 	"github.com/drep-project/drep-chain/types"
 	"github.com/drep-project/rpc"
@@ -69,7 +70,7 @@ func gen(ctx *cli.Context) error {
 	bootsNodes := []*enode.Node{}
 	standbyKey := []*secp256k1.PrivateKey{}
 	nodes := []*types.Node{}
-	produces := make([]consensusTypes.Producer, 0)
+	produces := make([]bft.Producer, 0)
 	for i := 0; i < len(nodeItems); i++ {
 		aNode := getAccount(nodeItems[i].Name)
 		nodes = append(nodes, aNode)
@@ -85,7 +86,7 @@ func gen(ctx *cli.Context) error {
 		bootsNodes = append(bootsNodes, node)
 
 		standbyKey = append(standbyKey, aNode.PrivateKey)
-		produces = append(produces, consensusTypes.Producer{
+		produces = append(produces, bft.Producer{
 			IP:     nodeItems[i].Ip,
 			Pubkey: aNode.PrivateKey.PubKey(),
 		})
@@ -106,10 +107,13 @@ func gen(ctx *cli.Context) error {
 	p2pConfig.StaticNodes = bootsNodes
 	p2pConfig.ListenAddr = "0.0.0.0:55555"
 
-	consensusConfig := consensusTypes.ConsensusConfig{}
-	consensusConfig.Enable = true
+	consensusConfig := &service.ConsensusConfig{}
 	consensusConfig.ConsensusMode = "bft"
-	consensusConfig.Producers = produces
+	consensusConfig.Bft= bft.BftConfig{
+		MyPk:      nil,
+		Miner:     true,
+		Producers: produces,
+	}
 	//consensusConfig.Producers = produces
 
 	chainConfig := chain.ChainConfig{}
@@ -127,7 +131,7 @@ func gen(ctx *cli.Context) error {
 	filterConfig.Enable = true
 
 	for i := 0; i < len(nodeItems); i++ {
-		consensusConfig.MyPk = (*secp256k1.PublicKey)(&standbyKey[i].PublicKey)
+		consensusConfig.Bft.MyPk = (*secp256k1.PublicKey)(&standbyKey[i].PublicKey)
 		userDir := path2.Join(path, nodeItems[i].Name)
 		os.MkdirAll(userDir, os.ModeDir|os.ModePerm)
 		keyStorePath := path2.Join(userDir, "keystore")

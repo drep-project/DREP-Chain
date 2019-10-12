@@ -84,7 +84,7 @@ type NodeConfig struct {
 	// stack to encrypt communications
 	PrivateKey *ecdsa.PrivateKey
 
-	// Enable peer events for Msgs
+	// Miner peer events for Msgs
 	EnableMsgEvents bool
 
 	// Name is a human friendly name for the node like "node01"

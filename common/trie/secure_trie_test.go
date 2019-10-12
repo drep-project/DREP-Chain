@@ -62,7 +62,9 @@ func makeTestSecureTrie() (*Database, *SecureTrie, map[string][]byte) {
 	// Return the generated trie
 	return triedb, trie, content
 }
+func Test111SecureDelete(t *testing.T) {
 
+}
 func TestSecureDelete(t *testing.T) {
 	trie := newEmptySecure()
 	vals := []struct{ k, v string }{

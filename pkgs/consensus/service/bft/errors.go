@@ -3,6 +3,8 @@ package bft
 import "errors"
 
 var (
+	ErrSignBlock     = errors.New("sign block error")
+	ErrWalletNotOpen = errors.New("wallet is close")
 	ErrBpConfig           = errors.New("the pubkey config not in bp nodes")
 	ErrBFTNotReady        = errors.New("BFT node not ready")
 	ErrBpNotInList        = errors.New("bp node not in local list")

@@ -130,7 +130,7 @@ func (accountService *AccountService) Start(executeContext *app.ExecuteContext) 
 }
 
 func (accountService *AccountService) Stop(executeContext *app.ExecuteContext) error {
-	if accountService.Config.Enable {
+	if accountService.Config == nil || accountService.Config.Enable {
 		return nil
 	}
 	return nil

@@ -13,7 +13,6 @@ import (
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/crypto/sha3"
 	"github.com/drep-project/drep-chain/database"
-	"github.com/drep-project/drep-chain/network/p2p"
 	"github.com/drep-project/drep-chain/params"
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
 	"github.com/drep-project/drep-chain/types"
@@ -31,13 +30,13 @@ type SoloConsensus struct {
 func NewSoloConsensus(
 	chainService chain.ChainServiceInterface,
 	blockGenerator blockmgr.IBlockBlockGenerator,
-	producer consensusTypes.Producer,
+	myPk *secp256k1.PublicKey,
 	dbService *database.DatabaseService) *SoloConsensus {
 	return &SoloConsensus{
 		blockGenerator: blockGenerator,
 		ChainService:   chainService,
 		DbService:      dbService,
-		Pubkey:         producer.Pubkey,
+		Pubkey:        	myPk,
 	}
 }
 
@@ -113,8 +112,7 @@ func (soloConsensus *SoloConsensus) verify(block *types.Block) error {
 	return nil
 }
 
-func (soloConsensus *SoloConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, rw p2p.MsgReadWriter) error {
-	return nil
+func (soloConsensus *SoloConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, t uint64, buf []byte) {
 }
 
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half

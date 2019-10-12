@@ -6,12 +6,13 @@ import (
 	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/pkgs/consensus/service/bft"
-	types2 "github.com/drep-project/drep-chain/pkgs/consensus/types"
+	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
 	"github.com/drep-project/drep-chain/types"
 	"math/big"
 )
 
 type ViewTransaction struct {
+	Id string `bson:"_id"`
 	Hash      string
 	From      string
 	Version   int32
@@ -29,6 +30,7 @@ type ViewTransaction struct {
 }
 
 type ViewBlock struct {
+	Id string `bson:"_id"`
 	Hash         string
 	ChainId      types.ChainIdType
 	Version      int32
@@ -44,6 +46,7 @@ type ViewBlock struct {
 }
 
 type ViewBlockHeader struct {
+	Id string `bson:"_id"`
 	ChainId      types.ChainIdType
 	Version      int32
 	PreviousHash string
@@ -63,6 +66,7 @@ func (viewBlockHeader *ViewBlockHeader) From(block *types.Block) *ViewBlockHeade
 		txs[i].Height = block.Header.Height
 	}
 
+	viewBlockHeader.Id= block.Header.Hash().String()
 	viewBlockHeader.Hash = block.Header.Hash().String()
 	viewBlockHeader.ChainId = block.Header.ChainId
 	viewBlockHeader.Version = block.Header.Version
@@ -78,6 +82,7 @@ func (viewBlockHeader *ViewBlockHeader) From(block *types.Block) *ViewBlockHeade
 
 func (rpcTransaction *ViewTransaction) FromTx(tx *types.Transaction) *ViewTransaction {
 	from, _ := tx.From()
+	rpcTransaction.Id = tx.TxHash().String()
 	rpcTransaction.Hash = tx.TxHash().String()
 	rpcTransaction.Version = tx.Data.Version
 	rpcTransaction.Nonce = tx.Data.Nonce
@@ -103,7 +108,7 @@ func (rpcBlock *ViewBlock) From(block *types.Block, addresses []crypto.CommonAdd
 		txs[i] = new(ViewTransaction).FromTx(tx)
 		txs[i].Height = block.Header.Height
 	}
-
+	rpcBlock.Id= block.Header.Hash().String()
 	rpcBlock.Hash = block.Header.Hash().String()
 	rpcBlock.ChainId = block.Header.ChainId
 	rpcBlock.Version = block.Header.Version
@@ -115,9 +120,9 @@ func (rpcBlock *ViewBlock) From(block *types.Block, addresses []crypto.CommonAdd
 	rpcBlock.StateRoot = common.Encode(block.Header.StateRoot)
 	rpcBlock.TxRoot = common.Encode(block.Header.TxRoot)
 
-	if block.Proof.Type == types2.Solo {
+	if block.Proof.Type == consensusTypes.Solo {
 		rpcBlock.Proof = block.Proof
-	} else if block.Proof.Type == types2.Pbft {
+	} else if block.Proof.Type == consensusTypes.Pbft {
 		proof := NewPbftProof()
 		multiSig := &bft.MultiSignature{}
 		binary.Unmarshal(block.Proof.Evidence, multiSig)
