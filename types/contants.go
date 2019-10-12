@@ -6,15 +6,16 @@ type TxType uint64
 
 const (
 	TransferType TxType = iota
-	_
+
 	CreateContractType
 	CallContractType
-	_
+
 	SetAliasType //给地址设置昵称
 
 	VoteCreditType       //质押给自己或者别人
 	CancelVoteCreditType //撤销质押币
 	LockBalance          //锁定drep币，换取其他币
+	RegisterProducer
 )
 
 var (
@@ -24,4 +25,5 @@ var (
 	CallContractGas   = big.NewInt(10000000)
 	CrossChainGas     = big.NewInt(10000000)
 	SeAliasGas        = big.NewInt(10000000)
+	RegisterProducerGas        = big.NewInt(10000000)
 )

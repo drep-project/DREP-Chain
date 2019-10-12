@@ -120,7 +120,7 @@ func (blockMgrApi *BlockMgrApi) GetPoolMiniPendingNonce(addr *crypto.CommonAddre
 }
 */
 func (blockMgrApi *BlockMgrApi) GetTxInPool(hash string) (*types.Transaction, error) {
-	tx, err := blockMgrApi.GetTxInPool(hash)
+	tx, err := blockMgrApi.blockMgr.transactionPool.GetTxInPool(hash)
 	if err != nil {
 		return nil, err
 	}
