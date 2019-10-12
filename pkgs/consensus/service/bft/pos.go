@@ -1,21 +1,16 @@
-package pos
+package bft
 
 import (
 	"container/heap"
 	"github.com/drep-project/drep-chain/chain/store"
 	"github.com/drep-project/drep-chain/crypto"
-	dlog "github.com/drep-project/drep-chain/pkgs/log"
 	"math/big"
 )
 
 const (
-	MODULENAME = "pos"
 	BftBackboneNum = 7
 )
 
-var (
-	log = dlog.EnsureLogger(MODULENAME)
-)
 
 type addrAndCredit struct {
 	addr  *crypto.CommonAddress
@@ -40,7 +35,7 @@ func (h *creditsHeap) Pop() interface{} {
 	return x
 }
 
-func GetCandidates(store store.StoreInterface) []*crypto.CommonAddress {
+func GetCandidates(store store.StoreInterface, registerAddrs []crypto.CommonAddress) []*crypto.CommonAddress {
 	voteAddrs, err := store.GetCandidateAddrs()
 	if err != nil {
 		log.Errorf("get candidates err:%v", err)
@@ -49,7 +44,6 @@ func GetCandidates(store store.StoreInterface) []*crypto.CommonAddress {
 
 	csh := make(creditsHeap, 0)
 	for addr, _ := range voteAddrs {
-		addr := addr
 		totalCredit := store.GetVoteCredit(&addr)
 		csh = append(csh, &addrAndCredit{addr: &addr, value: totalCredit})
 	}
@@ -57,11 +51,25 @@ func GetCandidates(store store.StoreInterface) []*crypto.CommonAddress {
 	heap.Init(&csh)
 
 	candidateAddrs := make([]*crypto.CommonAddress, 0)
-	for i := 1; i <= BftBackboneNum; i++ {
+	include := func(voted crypto.CommonAddress) bool {
+		for _, addr := range registerAddrs {
+			if addr  == voted {
+				return true
+			}
+		}
+		return false
+	}
+	addNum := 0
+	for {
 		v := heap.Pop(&csh)
 		ac := v.(*addrAndCredit)
-		candidateAddrs = append(candidateAddrs, ac.addr)
+		if include(*ac.addr) {
+			candidateAddrs = append(candidateAddrs, ac.addr)
+			addNum++
+			if addNum == BftBackboneNum {
+				return candidateAddrs
+			}
+		}
 	}
-
-	return candidateAddrs
+	panic("not enough voter")
 }

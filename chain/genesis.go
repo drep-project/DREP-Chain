@@ -12,15 +12,22 @@ import (
 	"github.com/drep-project/drep-chain/types"
 )
 
-func (chainService *ChainService) GetGenisiBlock(biosAddress crypto.CommonAddress) *types.Block {
+func (chainService *ChainService) GetGenisiBlock(biosAddress crypto.CommonAddress) (*types.Block, error) {
 	var root []byte
-	db, _ := store.TrieStoreFromStore(memorydb.New(), trie.EmptyRoot[:])
-	for addr, balance := range params.Preminer {
-		//add preminer addr and balance
-		//storage := types.NewStorage()
-		//storage.Balance = *balance
-		//db.PutStorage(&addr, storage)
-		db.PutBalance(&addr, 0, balance)
+	db, err := store.TrieStoreFromStore(memorydb.New(), trie.EmptyRoot[:])
+	if err != nil {
+		return nil, err
+	}
+
+	genesisContext, err := NewGenesisContext(chainService.genesisConfig, db)
+	if err != nil {
+		return nil, err
+	}
+	for _, genesisProcess := range chainService.genesisProcess {
+		err :=genesisProcess.Genesis(genesisContext)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	root = db.GetStateRoot()
@@ -41,7 +48,7 @@ func (chainService *ChainService) GetGenisiBlock(biosAddress crypto.CommonAddres
 			TxCount: 0,
 			TxList:  []*types.Transaction{},
 		},
-	}
+	}, nil
 }
 
 func (chainService *ChainService) ProcessGenesisBlock(biosAddr crypto.CommonAddress) (*types.Block, error) {
@@ -52,10 +59,17 @@ func (chainService *ChainService) ProcessGenesisBlock(biosAddr crypto.CommonAddr
 	if err != nil {
 		return nil, err
 	}
-	for addr, balance := range params.Preminer {
-		//add preminer addr and balance
-		chainStore.PutBalance(&addr, 0, balance)
+	genesisContext, err := NewGenesisContext(chainService.genesisConfig, chainStore)
+	if err != nil {
+		return nil, err
 	}
+	for _, genesisProcess := range chainService.genesisProcess {
+		err :=genesisProcess.Genesis(genesisContext)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	root = chainStore.GetStateRoot()
 	err = chainStore.TrieDB().TrieDb(crypto.Bytes2Hash(root), true)
 	if err != nil {
@@ -79,3 +93,5 @@ func (chainService *ChainService) ProcessGenesisBlock(biosAddr crypto.CommonAddr
 		},
 	}, nil
 }
+
+

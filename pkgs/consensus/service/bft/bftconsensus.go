@@ -81,7 +81,16 @@ func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Blo
 	bftConsensus.CoinBase = crypto.PubkeyToAddress(privKey.PubKey())
 	bftConsensus.PrivKey = privKey
 	go bftConsensus.processPeers()
-	miners := bftConsensus.collectMemberStatus()
+	trie, err := store.TrieStoreFromStore(bftConsensus.DbService.LevelDb(), bftConsensus.ChainService.BestChain().Tip().StateRoot)
+	if err != nil {
+		panic("recover tree fail")
+	}
+	op := ConsensusOp{trie}
+	producers, err := op.GetProducer()
+	if err != nil {
+		panic("recover tree fail")
+	}
+	miners := bftConsensus.collectMemberStatus(producers)
 	if len(miners) > 1 {
 		isM, isL := bftConsensus.moveToNextMiner(miners)
 		if isL {
@@ -142,9 +151,9 @@ func (bftConsensus *BftConsensus) moveToNextMiner(produceInfos []*MemberInfo) (b
 	}
 }
 
-func (bftConsensus *BftConsensus) collectMemberStatus() []*MemberInfo {
+func (bftConsensus *BftConsensus) collectMemberStatus(producers map[crypto.CommonAddress]Producer) []*MemberInfo {
 	produceInfos := make([]*MemberInfo, 0, len(bftConsensus.Producers))
-	for _, produce := range bftConsensus.Producers {
+	for _, produce := range producers {
 		var (
 			IsOnline, ok bool
 			pi           consensusTypes.IPeerInfo

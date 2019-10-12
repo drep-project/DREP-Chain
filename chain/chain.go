@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/drep-project/drep-chain/chain/store"
 	"math/big"
+	"path"
 	"sync"
 
 	"github.com/drep-project/drep-chain/app"
@@ -59,6 +60,7 @@ type ChainServiceInterface interface {
 	AddBlockValidator(validator IBlockValidator)
 	TransactionValidators() map[ITransactionSelector]ITransactionValidator
 	AddTransactionValidator(selector ITransactionSelector, validator ITransactionValidator)
+	AddGenesisProcess(validator IGenesisProcess)
 	GetConfig() *ChainConfig
 	DetachBlockFeed() *event.Feed
 }
@@ -97,7 +99,8 @@ type ChainService struct {
 
 	blockValidator       []IBlockValidator
 	transactionValidator map[ITransactionSelector]ITransactionValidator
-
+	genesisProcess       []IGenesisProcess
+	genesisConfig		 string
 	chainStore *ChainStore
 }
 
@@ -107,20 +110,26 @@ type ChainState struct {
 }
 
 func NewChainService(config *ChainConfig, ds *database.DatabaseService) *ChainService {
+	var err error
 	chainService := &ChainService{}
 	chainService.Config = config
-	var err error
 	chainService.blockIndex = NewBlockIndex()
 	chainService.bestChain = NewChainView(nil)
 	chainService.orphans = make(map[crypto.Hash]*types.OrphanBlock)
 	chainService.prevOrphans = make(map[crypto.Hash][]*types.OrphanBlock)
+	chainService.chainStore = &ChainStore{ds.LevelDb()}
+
 	chainService.transactionValidator = map[ITransactionSelector]ITransactionValidator{
 		&TransferTxSelector{}: &TransferTransactionProcessor{},
 		&AliasTxSelector{}:    &AliasTransactionProcessor{},
 	}
 	chainService.blockValidator = []IBlockValidator{NewChainBlockValidator(chainService)}
-	chainService.chainStore = &ChainStore{ds.LevelDb()}
-	chainService.genesisBlock = chainService.GetGenisiBlock(chainService.Config.GenesisAddr)
+	chainService.genesisProcess = []IGenesisProcess{NewPreminerGenesisProcessor()}
+
+	chainService.genesisBlock, err = chainService.GetGenisiBlock(chainService.Config.GenesisAddr)
+	if err != nil {
+		return nil
+	}
 	hash := chainService.genesisBlock.Header.Hash()
 	if !chainService.chainStore.HasBlock(hash) {
 		chainService.genesisBlock, err = chainService.ProcessGenesisBlock(chainService.Config.GenesisAddr)
@@ -152,31 +161,16 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 	chainService.chainStore = &ChainStore{chainService.DatabaseService.LevelDb()}
 	chainService.orphans = make(map[crypto.Hash]*types.OrphanBlock)
 	chainService.prevOrphans = make(map[crypto.Hash][]*types.OrphanBlock)
+
+	chainService.blockValidator = []IBlockValidator{NewChainBlockValidator(chainService)}
+	chainService.genesisProcess = []IGenesisProcess{NewPreminerGenesisProcessor()}
 	chainService.transactionValidator = map[ITransactionSelector]ITransactionValidator{
 		&TransferTxSelector{}: &TransferTransactionProcessor{},
 		&AliasTxSelector{}:    &AliasTransactionProcessor{},
 		&StakeTxSelector{}:    &StakeTransactionProcessor{},
 	}
-	chainService.blockValidator = []IBlockValidator{NewChainBlockValidator(chainService)}
-	var err error
-	chainService.genesisBlock = chainService.GetGenisiBlock(chainService.Config.GenesisAddr)
-	hash := chainService.genesisBlock.Header.Hash()
-	if !chainService.chainStore.HasBlock(hash) {
-		chainService.genesisBlock, err = chainService.ProcessGenesisBlock(chainService.Config.GenesisAddr)
-		err = chainService.createChainState()
-		if err != nil {
-			log.Error("createChainState err", err)
-			return err
-		}
-		store.TrieStoreFromStore(chainService.DatabaseService.LevelDb(), chainService.genesisBlock.Header.StateRoot)
-	}
 
-	err = chainService.InitStates()
-	if err != nil {
-		log.Error("InitStates err:", err)
-		return err
-	}
-
+	chainService.genesisConfig = path.Join(executeContext.CommonConfig.HomeDir, "genesis.json")
 	chainService.apis = []app.API{
 		{
 			Namespace: MODULENAME,
@@ -189,6 +183,29 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 }
 
 func (chainService *ChainService) Start(executeContext *app.ExecuteContext) error {
+	var err error
+	chainService.genesisBlock, err  = chainService.GetGenisiBlock(chainService.Config.GenesisAddr)
+	if err != nil {
+		return err
+	}
+	hash := chainService.genesisBlock.Header.Hash()
+	if !chainService.chainStore.HasBlock(hash) {
+		chainService.genesisBlock, err = chainService.ProcessGenesisBlock(chainService.Config.GenesisAddr)
+		err = chainService.createChainState()
+		if err != nil {
+			log.Error("createChainState err", err)
+			return err
+		}
+		_, err = store.TrieStoreFromStore(chainService.DatabaseService.LevelDb(), chainService.genesisBlock.Header.StateRoot)
+		if err != nil {
+			return err
+		}
+	}
+	err = chainService.InitStates()
+	if err != nil {
+		log.Error("InitStates err:", err)
+		return err
+	}
 	return nil
 }
 
@@ -348,8 +365,13 @@ func (chainService *ChainService) TransactionValidators() map[ITransactionSelect
 func (chainService *ChainService) AddBlockValidator(validator IBlockValidator) {
 	chainService.blockValidator = append(chainService.blockValidator, validator)
 }
+
 func (chainService *ChainService) AddTransactionValidator(selector ITransactionSelector, validator ITransactionValidator) {
 	chainService.transactionValidator[selector] = validator
+}
+
+func (chainService *ChainService) AddGenesisProcess(validator IGenesisProcess) {
+	chainService.genesisProcess = append(chainService.genesisProcess, validator)
 }
 
 func (chainService *ChainService) Index() *BlockIndex {

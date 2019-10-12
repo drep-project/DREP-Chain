@@ -75,7 +75,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 	}
 
 	consensusService.ChainService.AddBlockValidator(&BlockMultiSigValidator{consensusService.Config.Producers})
-
+	consensusService.ChainService.AddGenesisProcess(NewMinerGenesisProcessor() )
 	if !consensusService.Config.Miner {
 		return nil
 	} else {

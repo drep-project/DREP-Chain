@@ -1,4 +1,4 @@
-package pos
+package bft
 
 import (
 	"crypto/rand"
