@@ -237,6 +237,7 @@ func (trieStore *trieAccountStore) AddBalance(addr *crypto.CommonAddress, amount
 	if balance == nil {
 		balance = new(big.Int).SetInt64(0)
 	}
+
 	return trieStore.PutBalance(addr, new(big.Int).Add(balance, amount))
 }
 
