@@ -27,11 +27,11 @@ func (p2pApis *P2PApi) GetPeers() []*p2p.Peer {
 }
 
 /*
- name: addPeers（未实现）
+ name: addPeers
  usage: 添加节点
- params:
- return:
- example:
+ params: enode://publickey@ip:p2p端口
+ return:nil
+ example: "enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555"
  response:
 
 */
@@ -40,11 +40,11 @@ func (p2pApis *P2PApi) AddPeers(addr string) {
 }
 
 /*
- name: removePeers（未实现）
+ name: removePeers
  usage: 移除节点
- params:
+ params:enode://publickey@ip:p2p端口
  return:
- example:
+ example: "enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555"
  response:
 */
 func (p2pApis *P2PApi) RemovePeers(addr string) {
