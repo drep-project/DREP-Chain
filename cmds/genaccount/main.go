@@ -57,7 +57,7 @@ func main() {
 func gen(ctx *cli.Context) error {
 	appPath := getCurPath()
 	cfgPath := path2.Join(appPath, "config.json")
-	nodeItems, err := parserConfig(cfgPath)
+	cfg, err := parserConfig(cfgPath)
 	if err != nil {
 		return err
 	}
@@ -67,6 +67,7 @@ func gen(ctx *cli.Context) error {
 	} else {
 		path = appPath
 	}
+	nodeItems := cfg.Miners
 	bootsNodes := []*enode.Node{}
 	standbyKey := []*secp256k1.PrivateKey{}
 	nodes := []*types.Node{}
@@ -112,7 +113,6 @@ func gen(ctx *cli.Context) error {
 	consensusConfig.Bft = bft.BftConfig{
 		MyPk:       nil,
 		StartMiner: true,
-		Producers:  produces,
 	}
 	//consensusConfig.Producers = produces
 
@@ -165,6 +165,17 @@ func gen(ctx *cli.Context) error {
 
 		fs.Truncate(offset - 2)
 		fs.WriteAt([]byte("\n}"), offset-2)
+
+		//genesis
+		genesisConfig := path2.Join(userDir, "genesis.json")
+		fs, _ = os.Create(genesisConfig)
+		offset = int64(0)
+		fs.WriteAt([]byte("{\n"), offset)
+		offset = int64(2)
+		offset = writePhase(fs, "preminer", cfg.Preminer, offset)
+		offset = writePhase(fs, "miners", cfg.Miners, offset)
+		fs.Truncate(offset - 2)
+		fs.WriteAt([]byte("\n}"), offset-2)
 	}
 	return nil
 }
@@ -214,17 +225,22 @@ func getCurPath() string {
 	return dir
 }
 
-func parserConfig(cfgPath string) ([]*NodeItem, error) {
+func parserConfig(cfgPath string) (*Config, error) {
 	content, err := ioutil.ReadFile(cfgPath)
 	if err != nil {
 		return nil, err
 	}
-	cfg := []*NodeItem{}
+	cfg := &Config{}
 	err = json.Unmarshal([]byte(content), &cfg)
 	if err != nil {
 		return nil, err
 	}
 	return cfg, nil
+}
+
+type Config struct {
+	Preminer []*chain.Preminer
+	Miners []*NodeItem
 }
 
 type NodeItem struct {
