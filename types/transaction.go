@@ -36,10 +36,13 @@ type TransactionData struct {
 	Data      []byte
 }
 
+func (tx*Transaction)Time()int64  {
+	return tx.Data.Timestamp
+}
+
 func (tx *Transaction) Nonce() uint64 {
 	return tx.Data.Nonce
 }
-
 func (tx *Transaction) Type() TxType {
 	return tx.Data.Type
 }
@@ -99,10 +102,6 @@ func (tx *Transaction) GasPrice() *big.Int {
 	bigint := (big.Int)(tx.Data.GasPrice)
 	return &bigint
 }
-
-//func (tx *Transaction) PubKey() *secp256k1.PublicKey {
-//	return tx.Data.PubKey
-//}
 
 func (tx *Transaction) TxHash() *crypto.Hash {
 	if val := tx.txHash.Load(); val != nil {
@@ -268,16 +267,16 @@ func NewCancelVoteTransaction(to crypto.CommonAddress, amount, gasPrice, gasLimi
 	return &Transaction{Data: data}
 }
 
-func NewLockBalanceTransaction(amount, gasPrice, gasLimit *big.Int, nonce uint64) *Transaction {
-	data := TransactionData{
-		Version:   common.Version,
-		Nonce:     nonce,
-		Type:      LockBalance,
-		To:        crypto.CommonAddress{},
-		Amount:    *(*common.Big)(amount),
-		GasPrice:  *(*common.Big)(gasPrice),
-		GasLimit:  *(*common.Big)(gasLimit),
-		Timestamp: int64(time.Now().Unix()),
-	}
-	return &Transaction{Data: data}
-}
+//func NewLockBalanceTransaction(amount, gasPrice, gasLimit *big.Int, nonce uint64) *Transaction {
+//	data := TransactionData{
+//		Version:   common.Version,
+//		Nonce:     nonce,
+//		Type:      LockBalance,
+//		To:        crypto.CommonAddress{},
+//		Amount:    *(*common.Big)(amount),
+//		GasPrice:  *(*common.Big)(gasPrice),
+//		GasLimit:  *(*common.Big)(gasLimit),
+//		Timestamp: int64(time.Now().Unix()),
+//	}
+//	return &Transaction{Data: data}
+//}

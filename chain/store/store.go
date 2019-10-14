@@ -18,13 +18,12 @@ var (
 )
 
 type StoreInterface interface {
-	//GetStorage(addr *crypto.CommonAddress) (*types.Storage, error)
-	//PutStorage(addr *crypto.CommonAddress, storage *types.Storage) error
 	DeleteStorage(addr *crypto.CommonAddress) error
 
 	GetStorageAlias(addr *crypto.CommonAddress) string
 	AliasGet(alias string) (*crypto.CommonAddress, error)
 	AliasExist(alias string) bool
+	AliasSet(addr *crypto.CommonAddress, alias string) (err error)
 
 	GetBalance(addr *crypto.CommonAddress, height uint64) *big.Int
 	PutBalance(addr *crypto.CommonAddress, height uint64, balance *big.Int) error
@@ -41,23 +40,21 @@ type StoreInterface interface {
 	GetReputation(addr *crypto.CommonAddress) *big.Int
 	GetStateRoot() []byte
 	RecoverTrie(root []byte) bool
-	AliasSet(addr *crypto.CommonAddress, alias string) (err error)
 
-	CancelVoteCredit(fromAddr, toAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) error
 	TrieDB() *trie.Database
-
 	Get(key []byte) ([]byte, error)
 	Put(key []byte, value []byte) error
-
-	VoteCredit(addresses *crypto.CommonAddress, to *crypto.CommonAddress, addBalance *big.Int) error
 
 	CopyState() *database.SnapShot
 	RevertState(shot *database.SnapShot)
 
 	Empty(addr *crypto.CommonAddress) bool
 
+	//pos
 	GetCandidateAddrs() (map[crypto.CommonAddress]struct{}, error)
-	GetVoteCredit(addr *crypto.CommonAddress) *big.Int
+	GetVoteCreditCount(addr *crypto.CommonAddress) *big.Int
+	CancelVoteCredit(fromAddr, toAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) error
+	VoteCredit(addresses *crypto.CommonAddress, to *crypto.CommonAddress, addBalance *big.Int) error
 }
 
 type Store struct {
@@ -70,8 +67,8 @@ func (s Store) GetCandidateAddrs() (map[crypto.CommonAddress]struct{}, error) {
 	return s.stake.GetCandidateAddrs()
 }
 
-func (s Store) GetVoteCredit(addr *crypto.CommonAddress) *big.Int {
-	return s.stake.GetVoteCredit(addr)
+func (s Store) GetVoteCreditCount(addr *crypto.CommonAddress) *big.Int {
+	return s.stake.GetVoteCreditCount(addr)
 }
 
 func (s Store) Empty(addr *crypto.CommonAddress) bool {
@@ -217,4 +214,8 @@ func (s Store) GetStateRoot() []byte {
 
 func (s *Store) RecoverTrie(root []byte) bool {
 	return s.db.RecoverTrie(root)
+}
+
+func (s *Store)GetVoteCreditDetails(addr *crypto.CommonAddress) map[crypto.CommonAddress]big.Int {
+	return s.stake.GetVoteCreditDetails(addr)
 }

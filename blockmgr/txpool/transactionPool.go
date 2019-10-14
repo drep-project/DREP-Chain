@@ -15,9 +15,10 @@ import (
 )
 
 const (
-	maxAllTxsCount  = 100000  //交易池所弄容纳的总的交易数量
-	maxTxsOfQueue   = 20      //单个地址对应的乱序队列中，最多容纳交易数目
-	maxTxsOfPending = 1000000 //单个地址对应的有序队列中，最多容纳交易数目
+	maxAllTxsCount  = 100000           //交易池所弄容纳的总的交易数量
+	maxTxsOfQueue   = 20               //单个地址对应的乱序队列中，最多容纳交易数目
+	maxTxsOfPending = 1000000          //单个地址对应的有序队列中，最多容纳交易数目
+	expireTimeTx    = 60 * 60 * 24 * 7 //交易在一周内，还没有被打包，则被丢弃
 )
 
 //TransactionPool ...
@@ -329,7 +330,6 @@ func (pool *TransactionPool) syncToPending(address *crypto.CommonAddress) {
 		}
 
 		pool.pendingNonce[*address] = nonce
-
 		pool.txFeed.Send(types.NewTxsEvent{Txs: list})
 	}
 }
@@ -424,12 +424,47 @@ func (pool *TransactionPool) Stop() {
 	pool.journal.close()
 }
 
+func (pool *TransactionPool) eliminateExpiredTxs() {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
+	for _, list := range pool.queue {
+		if !list.Empty() {
+			txs := list.Flatten()
+			for _, tx := range txs {
+				if tx.Time()+expireTimeTx <= time.Now().Unix() {
+					delete(pool.allTxs, tx.TxHash().String())
+					pool.allPricedTxs.Remove(tx)
+					list.Remove(tx)
+				}
+			}
+		}
+	}
+
+	for _, list := range pool.pending {
+		if !list.Empty() {
+			txs := list.Flatten()
+			for _, tx := range txs {
+				if tx.Time()+expireTimeTx <= time.Now().Unix() {
+					delete(pool.allTxs, tx.TxHash().String())
+					pool.allPricedTxs.Remove(tx)
+					list.Remove(tx)
+				}
+			}
+		}
+	}
+}
+
 func (pool *TransactionPool) checkUpdate() {
 	timer := time.NewTicker(time.Second * 5)
 	for {
 		select {
 		case <-timer.C:
 			pool.mu.Lock()
+			//Check whether the transaction is timeout
+			pool.eliminateExpiredTxs()
+
+			//to journal
 			all := pool.local()
 			pool.journal.rotate(all)
 			pool.mu.Unlock()

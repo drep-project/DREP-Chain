@@ -151,16 +151,13 @@ func (trieStore *trieStakeStore) VoteCredit(fromAddr, toAddr *crypto.CommonAddre
 	if len(storage.ReceivedVoteCredit) == 0 {
 		storage.ReceivedVoteCredit = make(map[crypto.CommonAddress]big.Int)
 		storage.ReceivedVoteCredit[*fromAddr] = *addBalance
-		trieStore.AddCandidateAddr(toAddr)
 		totalBalance = *addBalance
 	} else {
-		var totalBalance big.Int
-		if v, ok := storage.ReceivedVoteCredit[*fromAddr]; ok {
+		if v, ok := storage.ReceivedVoteCredit[*toAddr]; ok {
 			totalBalance = *addBalance.Add(addBalance, &v)
 			storage.ReceivedVoteCredit[*fromAddr] = totalBalance
 		} else {
 			storage.ReceivedVoteCredit[*fromAddr] = *addBalance
-			trieStore.AddCandidateAddr(toAddr)
 			totalBalance = *addBalance
 		}
 	}
@@ -193,7 +190,6 @@ func (trieStore *trieStakeStore) CancelVoteCredit(fromAddr, toAddr *crypto.Commo
 				storage.ReceivedVoteCredit[*fromAddr] = *resultBalance.Sub(&v, cancelBalance)
 			} else if retCmp == 0 {
 				delete(storage.ReceivedVoteCredit, *fromAddr)
-				//trieStore.DelCandidateAddr(fromAddr)
 			} else {
 				return fmt.Errorf("vote credit not enough")
 			}
@@ -244,10 +240,10 @@ func (trieStore *trieStakeStore) GetCancelVoteCreditForBalance(addr *crypto.Comm
 }
 
 //取消抵押周期已经到，取消的币可以加入到account的balance中了
-func (trieStore *trieStakeStore) CancelVoteCreditToBalance(addr *crypto.CommonAddress, height uint64)( *big.Int, error ){
+func (trieStore *trieStakeStore) CancelVoteCreditToBalance(addr *crypto.CommonAddress, height uint64) (*big.Int, error) {
 	storage, _ := trieStore.GetStakeStorage(addr)
 	if storage == nil {
-		return &big.Int{},nil
+		return &big.Int{}, nil
 	}
 
 	total := new(big.Int)
@@ -262,20 +258,29 @@ func (trieStore *trieStakeStore) CancelVoteCreditToBalance(addr *crypto.CommonAd
 	if err != nil {
 		return &big.Int{}, nil
 	}
-	return total,nil
+	return total, nil
 }
 
 //获取到候选人所有的质押金
-func (trieStore *trieStakeStore) GetVoteCredit(addr *crypto.CommonAddress) *big.Int {
+func (trieStore *trieStakeStore) GetVoteCreditCount(addr *crypto.CommonAddress) *big.Int {
 	storage, _ := trieStore.GetStakeStorage(addr)
 	if storage == nil {
 		return &big.Int{}
 	}
 
 	total := new(big.Int)
-	for _,value := range storage.ReceivedVoteCredit{
-		total.Add(total,&value)
+	for _, value := range storage.ReceivedVoteCredit {
+		total.Add(total, &value)
 	}
 
 	return total
+}
+
+func (trieStore *trieStakeStore) GetVoteCreditDetails(addr *crypto.CommonAddress) map[crypto.CommonAddress]big.Int {
+	storage, _ := trieStore.GetStakeStorage(addr)
+	if storage == nil {
+		return nil
+	}
+
+	return storage.ReceivedVoteCredit
 }
