@@ -14,11 +14,11 @@ type GetProducers func([]byte) ([]*Producer, error)
 type GetBlock func(hash *crypto.Hash) (*types.Block, error)
 type BlockMultiSigValidator struct {
 	getProducers GetProducers
-	getBlock GetBlock
+	getBlock     GetBlock
 }
 
-func NewBlockMultiSigValidator(getProducers GetProducers,	getBlock GetBlock) *BlockMultiSigValidator {
-	return &BlockMultiSigValidator{getProducers,getBlock}
+func NewBlockMultiSigValidator(getProducers GetProducers, getBlock GetBlock) *BlockMultiSigValidator {
+	return &BlockMultiSigValidator{getProducers, getBlock}
 }
 
 func (blockMultiSigValidator *BlockMultiSigValidator) VerifyHeader(header, parent *types.BlockHeader) error {
@@ -34,17 +34,17 @@ func (blockMultiSigValidator *BlockMultiSigValidator) VerifyBody(block *types.Bl
 	if err != nil {
 		return err
 	}
-	parentBlock, err  := blockMultiSigValidator.getBlock(&block.Header.PreviousHash)
+	parentBlock, err := blockMultiSigValidator.getBlock(&block.Header.PreviousHash)
 	if err != nil {
 		return err
 	}
-	producers, err  := blockMultiSigValidator.getProducers(parentBlock.Header.StateRoot)
+	producers, err := blockMultiSigValidator.getProducers(parentBlock.Header.StateRoot)
 	if err != nil {
 		return err
 	}
 	for index, val := range multiSig.Bitmap {
 		if val == 1 {
-			producer :=producers[index]
+			producer := producers[index]
 			participators = append(participators, producer.Pubkey)
 		}
 	}
@@ -59,11 +59,11 @@ func (blockMultiSigValidator *BlockMultiSigValidator) VerifyBody(block *types.Bl
 
 func (blockMultiSigValidator *BlockMultiSigValidator) ExecuteBlock(context *chain.BlockExecuteContext) error {
 	multiSig := &MultiSignature{}
-	parentBlock, err  := blockMultiSigValidator.getBlock(&context.Block.Header.PreviousHash)
+	parentBlock, err := blockMultiSigValidator.getBlock(&context.Block.Header.PreviousHash)
 	if err != nil {
 		return err
 	}
-	producers, err  := blockMultiSigValidator.getProducers(parentBlock.Header.StateRoot)
+	producers, err := blockMultiSigValidator.getProducers(parentBlock.Header.StateRoot)
 	if err != nil {
 		return err
 	}

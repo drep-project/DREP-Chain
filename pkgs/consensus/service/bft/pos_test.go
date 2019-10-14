@@ -122,7 +122,7 @@ func (s StoreFake) GetCandidateAddrs() (map[crypto.CommonAddress]struct{}, error
 func (s StoreFake) GetVoteCredit(addr *crypto.CommonAddress) *big.Int {
 	if _, ok := s.m[*addr]; ok {
 		rd, _ := rand.Int(rand.Reader, new(big.Int).SetUint64(1000000))
-		fmt.Println(addr.String(),rd)
+		fmt.Println(addr.String(), rd)
 		return rd
 	}
 	return &big.Int{}
@@ -144,7 +144,7 @@ func TestGetCandidates(t *testing.T) {
 	var si store.StoreInterface
 	si = NewStoreFake()
 	addrs := GetCandidates(si)
-	for _,a := range addrs{
+	for _, a := range addrs {
 		fmt.Println(a.String())
 	}
 }

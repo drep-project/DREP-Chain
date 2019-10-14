@@ -11,8 +11,8 @@ import (
 
 var (
 	MinerPrefix = []byte("miner")
-	_ = (chain.ITransactionSelector)((*RegisterAsProducerTransactionSelector)(nil))
-	_ = (chain.ITransactionValidator)((*RegisterAsProducerTransactionExecutor)(nil))
+	_           = (chain.ITransactionSelector)((*RegisterAsProducerTransactionSelector)(nil))
+	_           = (chain.ITransactionValidator)((*RegisterAsProducerTransactionExecutor)(nil))
 )
 
 // ***********DEPLOY**************//
@@ -26,39 +26,39 @@ type RegisterAsProducerTransactionExecutor struct {
 }
 
 func (registerAsProducerTransactionExecutor *RegisterAsProducerTransactionExecutor) ExecuteTransaction(context *chain.ExecuteTransactionContext) ([]byte, bool, []*types.Log, error) {
-		from := context.From()
-		data :=context.Data()
-		newProducer := &Producer{}
-		err := binary.Unmarshal(data, newProducer)
-		if err == nil {
-			return nil, false, nil ,err
-		}
-		if *from == crypto.PubkeyToAddress(newProducer.Pubkey) {
-			return nil, false, nil, errors.New("only register himself")
-		}
-		op := ConsensusOp{context.TrieStore()}
-		oldProducers, err := op.GetProducer()
-		if err == nil {
-			return nil, false, nil ,err
-		}
+	from := context.From()
+	data := context.Data()
+	newProducer := &Producer{}
+	err := binary.Unmarshal(data, newProducer)
+	if err == nil {
+		return nil, false, nil, err
+	}
+	if *from == crypto.PubkeyToAddress(newProducer.Pubkey) {
+		return nil, false, nil, errors.New("only register himself")
+	}
+	op := ConsensusOp{context.TrieStore()}
+	oldProducers, err := op.GetProducer()
+	if err == nil {
+		return nil, false, nil, err
+	}
 
-		exit := false
-		for _, oldProducer := range oldProducers {
-			if oldProducer.Address() == newProducer.Address() {
-				exit = true
-				oldProducer.Pubkey = newProducer.Pubkey
-				oldProducer.IP = newProducer.IP
-			}
+	exit := false
+	for _, oldProducer := range oldProducers {
+		if oldProducer.Address() == newProducer.Address() {
+			exit = true
+			oldProducer.Pubkey = newProducer.Pubkey
+			oldProducer.IP = newProducer.IP
 		}
-		if !exit {
-			oldProducers = append(oldProducers, newProducer)
-		}
+	}
+	if !exit {
+		oldProducers = append(oldProducers, newProducer)
+	}
 
-		err = op.SaveProducer(oldProducers)
-		if err == nil {
-			return nil, false, nil ,err
-		}
-		return nil,true,nil,nil
+	err = op.SaveProducer(oldProducers)
+	if err == nil {
+		return nil, false, nil, err
+	}
+	return nil, true, nil, nil
 }
 
 type ConsensusOp struct {

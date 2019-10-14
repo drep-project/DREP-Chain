@@ -216,6 +216,6 @@ func (s *Store) RecoverTrie(root []byte) bool {
 	return s.db.RecoverTrie(root)
 }
 
-func (s *Store)GetVoteCreditDetails(addr *crypto.CommonAddress) map[crypto.CommonAddress]big.Int {
+func (s *Store) GetVoteCreditDetails(addr *crypto.CommonAddress) map[crypto.CommonAddress]big.Int {
 	return s.stake.GetVoteCreditDetails(addr)
 }

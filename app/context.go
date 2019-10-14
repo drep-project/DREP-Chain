@@ -53,7 +53,6 @@ type API struct {
 	Public    bool        // indication if the methods must be considered safe for public use
 }
 
-
 // ExecuteContext centralizes all the data and global parameters of application execution,
 // and each service can read the part it needs.
 type ExecuteContext struct {
@@ -80,14 +79,17 @@ func (econtext *ExecuteContext) GetService(name string) Service {
 	return nil
 }
 
-func (econtext *ExecuteContext) replaceService(replaceService , serviceValue Service) {
+func (econtext *ExecuteContext) replaceService(replaceService, serviceValue Service) {
 	preAddServices := econtext.Services
 	for index, service := range preAddServices {
 		if service == replaceService {
-			econtext.Services = preAddServices[0:index]
-			suffService := preAddServices[index+1:]
+			econtext.Services =[]Service{}
+			preService := preAddServices[0:index]
+			suffService := preAddServices[index:]
+			econtext.Services = append(econtext.Services, preService...)
 			econtext.Services = append(econtext.Services, serviceValue)
 			econtext.Services = append(econtext.Services, suffService...)
+			break
 		}
 	}
 }
@@ -134,7 +136,6 @@ func (econtext *ExecuteContext) GetConfig(phaseName string) json.RawMessage {
 	}
 }
 
-
 func (econtext *ExecuteContext) FlatConfig(phaseName string) error {
 	phaseConfig, ok := econtext.PhaseConfig[phaseName]
 	if ok {
@@ -148,9 +149,9 @@ func (econtext *ExecuteContext) FlatConfig(phaseName string) error {
 			return err
 		}
 
-		for key, val := range  subConfig {
+		for key, val := range subConfig {
 			subConfigItem, _ := val.MarshalJSON()
-			if subConfigItem [0] == '{' {
+			if subConfigItem[0] == '{' {
 				econtext.PhaseConfig[key] = val
 			}
 		}

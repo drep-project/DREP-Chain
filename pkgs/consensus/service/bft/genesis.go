@@ -18,13 +18,13 @@ func (minerGenesisProcessor *MinerGenesisProcessor) Genesis(context *chain.Genes
 	if ok {
 		miners := []*Producer{}
 		bytes, _ := val.MarshalJSON()
-		err := json.Unmarshal(bytes, &miners)  //parserjson
+		err := json.Unmarshal(bytes, &miners) //parserjson
 		if err != nil {
 			return err
 		}
 
 		op := ConsensusOp{context.Store()}
-		err = op.SaveProducer(miners)		// binary serilize and save to trie
+		err = op.SaveProducer(miners) // binary serilize and save to trie
 		if err != nil {
 			return err
 		}
@@ -32,4 +32,3 @@ func (minerGenesisProcessor *MinerGenesisProcessor) Genesis(context *chain.Genes
 	return nil
 
 }
-

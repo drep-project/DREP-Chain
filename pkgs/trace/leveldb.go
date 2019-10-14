@@ -21,17 +21,19 @@ const (
 // "SEND_TXHISTORY" for transaction group by sender addr,   	format "SEND_TXHISTORY" + addr + hash
 // "RECEIVE_TXHISTORY" for transaction group by receive addr	format "RECEIVE_TXHISTORY" + addr + hash
 type LevelDbStore struct {
-	path string
-	db   *leveldb.DB
+	getProducer   GetProducer
+	path          string
+	consensusMode string
+	db            *leveldb.DB
 }
 
-func NewLevelDbStore(path string) (*LevelDbStore, error) {
+func NewLevelDbStore(path string, getProducer GetProducer, consensusMode string) (*LevelDbStore, error) {
 	fileutil.EnsureDir(path)
 	db, err := leveldb.OpenFile(path, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &LevelDbStore{path, db}, nil
+	return &LevelDbStore{getProducer, path, consensusMode, db}, nil
 }
 
 func (store *LevelDbStore) ExistRecord(block *types.Block) (bool, error) {

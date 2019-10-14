@@ -100,8 +100,8 @@ type ChainService struct {
 	blockValidator       []IBlockValidator
 	transactionValidator map[ITransactionSelector]ITransactionValidator
 	genesisProcess       []IGenesisProcess
-	genesisConfig		 string
-	chainStore *ChainStore
+	genesisConfig        string
+	chainStore           *ChainStore
 }
 
 type ChainState struct {
@@ -184,7 +184,7 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 
 func (chainService *ChainService) Start(executeContext *app.ExecuteContext) error {
 	var err error
-	chainService.genesisBlock, err  = chainService.GetGenisiBlock(chainService.Config.GenesisAddr)
+	chainService.genesisBlock, err = chainService.GetGenisiBlock(chainService.Config.GenesisAddr)
 	if err != nil {
 		return err
 	}

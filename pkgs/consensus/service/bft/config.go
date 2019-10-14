@@ -6,9 +6,9 @@ import (
 )
 
 type BftConfig struct {
-	MyPk      *secp256k1.PublicKey `json:"mypk"`
-	Miner     bool                 `json:"miner"`
-	Producers ProducerSet          `json:"producers"`
+	MyPk       *secp256k1.PublicKey `json:"mypk"`
+	StartMiner bool                 `json:"startMiner"`
+	Producers  ProducerSet          `json:"producers"`
 }
 
 type Producer struct {

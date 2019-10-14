@@ -14,7 +14,7 @@ var (
 )
 
 func makeMongoData(dbName string) (*MongogDbStore, []*types.Block) {
-	mongoStore, err := NewMongogDbStore(testMongoUrl, dbName)
+	mongoStore, err := NewMongoDbStore(testMongoUrl, dbName)
 	if err != nil {
 		fmt.Println(err)
 	}

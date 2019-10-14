@@ -425,9 +425,6 @@ func (pool *TransactionPool) Stop() {
 }
 
 func (pool *TransactionPool) eliminateExpiredTxs() {
-	pool.mu.Lock()
-	defer pool.mu.Unlock()
-
 	for _, list := range pool.queue {
 		if !list.Empty() {
 			txs := list.Flatten()

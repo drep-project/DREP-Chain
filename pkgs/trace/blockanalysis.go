@@ -1,17 +1,25 @@
 package trace
 
 import (
+	"github.com/drep-project/drep-chain/chain/store"
 	"github.com/drep-project/drep-chain/common/event"
 	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/database/dbinterface"
+	"github.com/drep-project/drep-chain/pkgs/consensus/service"
+	"github.com/drep-project/drep-chain/pkgs/consensus/service/bft"
 	"github.com/drep-project/drep-chain/types"
 )
+
+type GetProducer func(root []byte) ([]crypto.CommonAddress, error)
 
 type BlockAnalysis struct {
 	Config           HistoryConfig
 	getBlock         func(uint64) (*types.Block, error)
-	producers        []crypto.CommonAddress
 	eventNewBlockSub event.Subscription
 	newBlockChan     chan *types.ChainEvent
+
+	consensusService *service.ConsensusService
+	trieStore     dbinterface.KeyValueStore
 
 	detachBlockSub  event.Subscription
 	detachBlockChan chan *types.Block
@@ -19,11 +27,12 @@ type BlockAnalysis struct {
 	readyToQuit     chan struct{}
 }
 
-func NewBlockAnalysis(config HistoryConfig, producers []crypto.CommonAddress, getBlock func(uint64) (*types.Block, error)) *BlockAnalysis {
+func NewBlockAnalysis(config HistoryConfig, consensusService *service.ConsensusService, trieStore dbinterface.KeyValueStore, getBlock func(uint64) (*types.Block, error)) *BlockAnalysis {
 	blockAnalysis := &BlockAnalysis{}
 	blockAnalysis.Config = config
-	blockAnalysis.producers = producers
 	blockAnalysis.getBlock = getBlock
+	blockAnalysis.trieStore = trieStore
+	blockAnalysis.consensusService= consensusService
 	blockAnalysis.newBlockChan = make(chan *types.ChainEvent, 1000)
 	blockAnalysis.detachBlockChan = make(chan *types.Block, 1000)
 	blockAnalysis.readyToQuit = make(chan struct{})
@@ -34,13 +43,35 @@ func (blockAnalysis *BlockAnalysis) Start(newBlock, detachBlock *event.Feed) err
 	blockAnalysis.eventNewBlockSub = newBlock.Subscribe(blockAnalysis.newBlockChan)
 	blockAnalysis.detachBlockSub = detachBlock.Subscribe(blockAnalysis.detachBlockChan)
 	var err error
+	getProducer := func(root []byte) ([]crypto.CommonAddress, error) {
+		if blockAnalysis.consensusService.Config.ConsensusMode == "solo" {
+			pk := blockAnalysis.consensusService.SoloService.Config.MyPk
+			return []crypto.CommonAddress{crypto.PubkeyToAddress(pk)}, nil
+		}else{
+			trie, err := store.TrieStoreFromStore(blockAnalysis.trieStore, root)
+			if err != nil {
+				return nil, err
+			}
+			op := bft.ConsensusOp{trie}
+			producers, err := op.GetProducer()
+			if err != nil {
+				return nil, err
+			}
+			miners := make([]crypto.CommonAddress, len(producers))
+			for index, p := range producers {
+				miners[index] = crypto.PubkeyToAddress(p.Pubkey)
+			}
+			return miners, nil
+		}
+
+	}
 	if blockAnalysis.Config.DbType == "leveldb" {
-		blockAnalysis.store, err = NewLevelDbStore(blockAnalysis.Config.HistoryDir)
+		blockAnalysis.store, err = NewLevelDbStore(blockAnalysis.Config.HistoryDir, getProducer, blockAnalysis.consensusService.Config.ConsensusMode)
 		if err != nil {
 			log.WithField("err", err).WithField("path", blockAnalysis.Config.HistoryDir).Error("cannot open db file")
 		}
 	} else if blockAnalysis.Config.DbType == "mongo" {
-		blockAnalysis.store, err = NewMongogDbStore(blockAnalysis.Config.Url, blockAnalysis.producers, DefaultDbName)
+		blockAnalysis.store, err = NewMongoDbStore(blockAnalysis.Config.Url, getProducer, blockAnalysis.consensusService.Config.ConsensusMode, DefaultDbName)
 		if err != nil {
 			log.WithField("err", err).WithField("url", blockAnalysis.Config.Url).Error("try connect mongo fail")
 		}

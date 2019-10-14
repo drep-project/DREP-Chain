@@ -34,5 +34,5 @@ func (soloValidator *SoloValidator) VerifyBody(block *types.Block) error {
 }
 
 func (soloValidator *SoloValidator) ExecuteBlock(context *chain.BlockExecuteContext) error {
-	return AccumulateRewards(soloValidator.pubkey, context.TrieStore, context.GasFee,context.Block.Header.Height)
+	return AccumulateRewards(soloValidator.pubkey, context.TrieStore, context.GasFee, context.Block.Header.Height)
 }

@@ -34,7 +34,7 @@ const (
 	blockInterval = time.Second * 5
 )
 
-type ConsensusService struct {
+type BftConsensusService struct {
 	P2pServer        p2pService.P2P                       `service:"p2p"`
 	ChainService     chainService.ChainServiceInterface   `service:"chain"`
 	BroadCastor      blockMgrService.ISendMessage         `service:"blockmgr"`
@@ -59,56 +59,55 @@ type ConsensusService struct {
 	quit         chan struct{}
 }
 
-func (consensusService *ConsensusService) Name() string {
+func (bftConsensusService *BftConsensusService) Name() string {
 	return "bft"
 }
 
-func (consensusService *ConsensusService) Api() []app.API {
-	return consensusService.apis
+func (bftConsensusService *BftConsensusService) Api() []app.API {
+	return bftConsensusService.apis
 }
 
-func (consensusService *ConsensusService) CommandFlags() ([]cli.Command, []cli.Flag) {
+func (bftConsensusService *BftConsensusService) CommandFlags() ([]cli.Command, []cli.Flag) {
 	return nil, []cli.Flag{MinerFlag}
 }
 
-func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContext) error {
+func (bftConsensusService *BftConsensusService) Init(executeContext *app.ExecuteContext) error {
 	if executeContext.Cli.GlobalIsSet(MinerFlag.Name) {
-		consensusService.Config.Miner = executeContext.Cli.GlobalBool(MinerFlag.Name)
+		bftConsensusService.Config.StartMiner = executeContext.Cli.GlobalBool(MinerFlag.Name)
 	}
 
 	var addPeerFeed event.Feed
 	var removePeerFeed event.Feed
-	consensusService.BftConsensus = NewBftConsensus(
-		consensusService.ChainService,
-		consensusService.BlockGenerator,
-		consensusService.DatabaseService,
-		consensusService.P2pServer,
+	bftConsensusService.BftConsensus = NewBftConsensus(
+		bftConsensusService.ChainService,
+		bftConsensusService.BlockGenerator,
+		bftConsensusService.DatabaseService,
+		bftConsensusService.P2pServer,
 		&addPeerFeed,
 		&removePeerFeed,
 	)
 
-	consensusService.ChainService.AddBlockValidator(&BlockMultiSigValidator{consensusService.BftConsensus.GetProducers, consensusService.ChainService.GetBlockByHash})
-	consensusService.ChainService.AddGenesisProcess(NewMinerGenesisProcessor() )
-	if !consensusService.Config.Miner {
+	bftConsensusService.ChainService.AddBlockValidator(&BlockMultiSigValidator{bftConsensusService.BftConsensus.GetProducers, bftConsensusService.ChainService.GetBlockByHash})
+	bftConsensusService.ChainService.AddGenesisProcess(NewMinerGenesisProcessor())
+	if !bftConsensusService.Config.StartMiner {
 		return nil
 	} else {
-		if consensusService.WalletService.Wallet == nil {
+		if bftConsensusService.WalletService.Wallet == nil {
 			return ErrWalletNotOpen
 		}
 	}
 
-
 	//consult privkey in wallet
-	accountNode, err := consensusService.WalletService.Wallet.GetAccountByPubkey(consensusService.Config.MyPk)
+	accountNode, err := bftConsensusService.WalletService.Wallet.GetAccountByPubkey(bftConsensusService.Config.MyPk)
 	if err != nil {
-		log.WithField("init err", err).WithField("addr", crypto.PubkeyToAddress(consensusService.Config.MyPk).String()).Error("privkey of MyPk in Config is not in local wallet")
+		log.WithField("init err", err).WithField("addr", crypto.PubkeyToAddress(bftConsensusService.Config.MyPk).String()).Error("privkey of MyPk in Config is not in local wallet")
 		return err
 	}
-	consensusService.Miner = accountNode.PrivateKey
-	consensusService.P2pServer.AddProtocols([]p2p.Protocol{
+	bftConsensusService.Miner = accountNode.PrivateKey
+	bftConsensusService.P2pServer.AddProtocols([]p2p.Protocol{
 		p2p.Protocol{
-			Name:   "consensusService",
-			Length: NumberOfMsg +2,
+			Name:   "bftConsensusService",
+			Length: NumberOfMsg + 2,
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
 				MsgTypeValidateReq := uint64(NumberOfMsg)
 				MsgTypeValidateRes := uint64(NumberOfMsg + 1)
@@ -116,14 +115,14 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 				//send verify message
 				randomBytes := [32]byte{}
 				rand.Read(randomBytes[:])
-				err := consensusService.P2pServer.Send(rw, MsgTypeValidateReq, randomBytes)
+				err := bftConsensusService.P2pServer.Send(rw, MsgTypeValidateReq, randomBytes)
 				if err != nil {
 					return err
 				}
 				fmt.Println(pi.IP())
 				//del peer event
 				ch := make(chan *p2p.PeerEvent)
-				sub := consensusService.P2pServer.SubscribeEvents(ch)
+				sub := bftConsensusService.P2pServer.SubscribeEvents(ch)
 				//control producer validator by timer
 				tm := time.NewTimer(time.Second * 10)
 				defer func() {
@@ -151,7 +150,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 						}
 
 						switch msg.Code {
-						//	case consensusService.P2pServer
+						//	case bftConsensusService.P2pServer
 						case MsgTypeValidateReq:
 							if err != nil {
 								return err
@@ -160,7 +159,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 							if err != nil {
 								return err
 							}
-							err = consensusService.P2pServer.Send(rw, MsgTypeValidateRes, sig)
+							err = bftConsensusService.P2pServer.Send(rw, MsgTypeValidateRes, sig)
 							if err != nil {
 								return err
 							}
@@ -170,7 +169,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 							if err != nil {
 								return err
 							}
-							producers,err  := consensusService.BftConsensus.GetProducers(consensusService.ChainService.BestChain().Tip().StateRoot)
+							producers, err := bftConsensusService.BftConsensus.GetProducers(bftConsensusService.ChainService.BestChain().Tip().StateRoot)
 							if err != nil {
 								return err
 							}
@@ -182,7 +181,7 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 							}
 							continue
 						default:
-							consensusService.BftConsensus.ReceiveMsg(pi, msg.Code, buf)
+							bftConsensusService.BftConsensus.ReceiveMsg(pi, msg.Code, buf)
 						}
 					}
 
@@ -194,71 +193,71 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 			},
 		},
 	})
-	consensusService.syncBlockEventChan = make(chan event.SyncBlockEvent)
-	consensusService.syncBlockEventSub = consensusService.BlockMgrNotifier.SubscribeSyncBlockEvent(consensusService.syncBlockEventChan)
-	consensusService.quit = make(chan struct{})
-	consensusService.apis = []app.API{
+	bftConsensusService.syncBlockEventChan = make(chan event.SyncBlockEvent)
+	bftConsensusService.syncBlockEventSub = bftConsensusService.BlockMgrNotifier.SubscribeSyncBlockEvent(bftConsensusService.syncBlockEventChan)
+	bftConsensusService.quit = make(chan struct{})
+	bftConsensusService.apis = []app.API{
 		app.API{
 			Namespace: "consensus",
 			Version:   "1.0",
 			Service: &ConsensusApi{
-				consensusService: consensusService,
+				consensusService: bftConsensusService,
 			},
 			Public: true,
 		},
 	}
 
-	go consensusService.handlerEvent()
+	go bftConsensusService.handlerEvent()
 
 	return nil
 }
 
-func (consensusService *ConsensusService) handlerEvent() {
+func (bftConsensusService *BftConsensusService) handlerEvent() {
 	for {
 		select {
-		case e := <-consensusService.syncBlockEventChan:
+		case e := <-bftConsensusService.syncBlockEventChan:
 			if e.EventType == event.StartSyncBlock {
-				consensusService.pauseForSync = true
+				bftConsensusService.pauseForSync = true
 				log.Info("Start Sync Blcok")
 			} else {
-				consensusService.pauseForSync = false
+				bftConsensusService.pauseForSync = false
 				log.Info("Stop Sync Blcok")
 			}
-		case <-consensusService.quit:
+		case <-bftConsensusService.quit:
 			return
 		}
 	}
 }
 
-func (consensusService *ConsensusService) Start(executeContext *app.ExecuteContext) error {
-	if !consensusService.Config.Miner {
+func (bftConsensusService *BftConsensusService) Start(executeContext *app.ExecuteContext) error {
+	if !bftConsensusService.Config.StartMiner {
 		return nil
 	}
-	consensusService.start = true
+	bftConsensusService.start = true
 	go func() {
 		select {
-		case <-consensusService.quit:
+		case <-bftConsensusService.quit:
 			return
 		default:
 			for {
-				if consensusService.pauseForSync {
+				if bftConsensusService.pauseForSync {
 					time.Sleep(time.Millisecond * 500)
 					continue
 				}
-				log.WithField("Height", consensusService.ChainService.BestChain().Height()).Trace("node start")
-				block, err := consensusService.BftConsensus.Run(consensusService.Miner)
+				log.WithField("Height", bftConsensusService.ChainService.BestChain().Height()).Trace("node start")
+				block, err := bftConsensusService.BftConsensus.Run(bftConsensusService.Miner)
 				if err != nil {
 					log.WithField("Reason", err.Error()).Debug("Producer Block Fail")
 				} else {
-					_, _, err := consensusService.ChainService.ProcessBlock(block)
+					_, _, err := bftConsensusService.ChainService.ProcessBlock(block)
 					if err == nil {
-						consensusService.BroadCastor.BroadcastBlock(chainTypes.MsgTypeBlock, block, true)
+						bftConsensusService.BroadCastor.BroadcastBlock(chainTypes.MsgTypeBlock, block, true)
 						log.WithField("Height", block.Header.Height).WithField("txs:", block.Data.TxCount).Info("Process block successfully and broad case block message")
 					} else {
 						log.WithField("Height", block.Header.Height).WithField("txs:", block.Data.TxCount).WithField("err", err).Info("Process Block fail")
 					}
 				}
-				nextBlockTime, waitSpan := consensusService.getWaitTime()
+				nextBlockTime, waitSpan := bftConsensusService.getWaitTime()
 				log.WithField("nextBlockTime", nextBlockTime).WithField("waitSpan", waitSpan).Debug("Sleep")
 				time.Sleep(waitSpan)
 			}
@@ -268,28 +267,28 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 	return nil
 }
 
-func (consensusService *ConsensusService) Stop(executeContext *app.ExecuteContext) error {
-	if consensusService.Config == nil || !consensusService.Config.Miner {
+func (bftConsensusService *BftConsensusService) Stop(executeContext *app.ExecuteContext) error {
+	if bftConsensusService.Config == nil || !bftConsensusService.Config.StartMiner {
 		return nil
 	}
 
-	if consensusService.quit != nil {
-		close(consensusService.quit)
+	if bftConsensusService.quit != nil {
+		close(bftConsensusService.quit)
 	}
 
-	if consensusService.syncBlockEventSub != nil {
-		consensusService.syncBlockEventSub.Unsubscribe()
+	if bftConsensusService.syncBlockEventSub != nil {
+		bftConsensusService.syncBlockEventSub.Unsubscribe()
 	}
 
 	return nil
 }
 
-func (consensusService *ConsensusService) getWaitTime() (time.Time, time.Duration) {
+func (bftConsensusService *BftConsensusService) getWaitTime() (time.Time, time.Duration) {
 	// max_delay_time +(min_block_interval)*windows = expected_block_interval*windows
 	// 6h + 5s*windows = 10s*windows
 	// windows = 4320
 
-	lastBlockTime := time.Unix(int64(consensusService.ChainService.BestChain().Tip().TimeStamp), 0)
+	lastBlockTime := time.Unix(int64(bftConsensusService.ChainService.BestChain().Tip().TimeStamp), 0)
 	targetTime := lastBlockTime.Add(blockInterval)
 	now := time.Now()
 	if targetTime.Before(now) {
@@ -299,9 +298,9 @@ func (consensusService *ConsensusService) getWaitTime() (time.Time, time.Duratio
 	}
 	/*
 		     window := int64(4320)
-		     endBlock := consensusService.DatabaseService.GetHighestBlock().Header
+		     endBlock := bftConsensusService.DatabaseService.GetHighestBlock().Header
 		     if endBlock.Height < window {
-				 lastBlockTime := time.Unix(consensusService.DatabaseService.GetHighestBlock().Header.Timestamp, 0)
+				 lastBlockTime := time.Unix(bftConsensusService.DatabaseService.GetHighestBlock().Header.Timestamp, 0)
 				 span := time.Now().Sub(lastBlockTime)
 				 if span > blockInterval {
 					 span = 0
@@ -315,7 +314,7 @@ func (consensusService *ConsensusService) getWaitTime() (time.Time, time.Duratio
 				 if startHeight <0 {
 					 startHeight = int64(0)
 				 }
-				 startBlock :=consensusService.DatabaseService.GetBlock(startHeight).Header
+				 startBlock :=bftConsensusService.DatabaseService.GetBlock(startHeight).Header
 
 				 xx := window * 10 -(time.Unix(startBlock.Timestamp,0).Sub(time.Unix(endBlock.Timestamp,0))).Seconds()
 

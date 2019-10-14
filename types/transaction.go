@@ -36,7 +36,7 @@ type TransactionData struct {
 	Data      []byte
 }
 
-func (tx*Transaction)Time()int64  {
+func (tx *Transaction) Time() int64 {
 	return tx.Data.Timestamp
 }
 

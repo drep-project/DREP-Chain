@@ -48,9 +48,9 @@ type State struct {
 
 func NewState(database store.StoreInterface, height uint64) *State {
 	return &State{
-		db:   database,
-		logs: make([]*types.Log, 0),
-		height:height,
+		db:     database,
+		logs:   make([]*types.Log, 0),
+		height: height,
 	}
 }
 
@@ -73,7 +73,7 @@ func (s *State) SubBalance(addr *crypto.CommonAddress, amount *big.Int) error {
 }
 
 func (s *State) AddBalance(addr *crypto.CommonAddress, amount *big.Int) error {
-	return s.db.AddBalance(addr,s.height, amount)
+	return s.db.AddBalance(addr, s.height, amount)
 }
 
 func (s *State) GetBalance(addr *crypto.CommonAddress) *big.Int {

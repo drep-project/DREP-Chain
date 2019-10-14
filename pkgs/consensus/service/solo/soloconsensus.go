@@ -36,7 +36,7 @@ func NewSoloConsensus(
 		blockGenerator: blockGenerator,
 		ChainService:   chainService,
 		DbService:      dbService,
-		Pubkey:        	myPk,
+		Pubkey:         myPk,
 	}
 }
 

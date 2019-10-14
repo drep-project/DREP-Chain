@@ -19,11 +19,11 @@ const (
 )
 
 var (
-	TransferGas       = big.NewInt(30000)
-	MinerGas          = big.NewInt(20000)
-	CreateContractGas = big.NewInt(1000000)
-	CallContractGas   = big.NewInt(10000000)
-	CrossChainGas     = big.NewInt(10000000)
-	SeAliasGas        = big.NewInt(10000000)
-	RegisterProducerGas        = big.NewInt(10000000)
+	TransferGas         = big.NewInt(30000)
+	MinerGas            = big.NewInt(20000)
+	CreateContractGas   = big.NewInt(1000000)
+	CallContractGas     = big.NewInt(10000000)
+	CrossChainGas       = big.NewInt(10000000)
+	SeAliasGas          = big.NewInt(10000000)
+	RegisterProducerGas = big.NewInt(10000000)
 )

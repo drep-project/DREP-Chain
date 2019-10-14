@@ -22,7 +22,6 @@ type Service interface {
 	Stop(executeContext *ExecuteContext) error
 }
 
-
 type OrService interface {
 	Service
 	SelectService() Service

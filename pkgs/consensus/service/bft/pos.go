@@ -11,7 +11,6 @@ const (
 	BftBackboneNum = 7
 )
 
-
 type addrAndCredit struct {
 	addr  *crypto.CommonAddress
 	value *big.Int
@@ -44,7 +43,7 @@ func GetCandidates(store store.StoreInterface, registerAddrs []crypto.CommonAddr
 
 	csh := make(creditsHeap, 0)
 	for addr, _ := range voteAddrs {
-		totalCredit := store.GetVoteCredit(&addr)
+		totalCredit := store.GetVoteCreditCount(&addr)
 		csh = append(csh, &addrAndCredit{addr: &addr, value: totalCredit})
 	}
 
@@ -53,7 +52,7 @@ func GetCandidates(store store.StoreInterface, registerAddrs []crypto.CommonAddr
 	candidateAddrs := make([]*crypto.CommonAddress, 0)
 	include := func(voted crypto.CommonAddress) bool {
 		for _, addr := range registerAddrs {
-			if addr  == voted {
+			if addr == voted {
 				return true
 			}
 		}

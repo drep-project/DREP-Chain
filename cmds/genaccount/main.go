@@ -109,10 +109,10 @@ func gen(ctx *cli.Context) error {
 
 	consensusConfig := &service.ConsensusConfig{}
 	consensusConfig.ConsensusMode = "bft"
-	consensusConfig.Bft= bft.BftConfig{
-		MyPk:      nil,
-		Miner:     true,
-		Producers: produces,
+	consensusConfig.Bft = bft.BftConfig{
+		MyPk:       nil,
+		StartMiner: true,
+		Producers:  produces,
 	}
 	//consensusConfig.Producers = produces
 

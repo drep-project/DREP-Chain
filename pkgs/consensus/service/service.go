@@ -20,7 +20,9 @@ type ConsensusConfig struct {
 	Bft           bft.BftConfig   `json:"bft"`
 }
 type ConsensusService struct {
-	Config   *ConsensusConfig
+	SoloService *solo.SoloConsensusService
+	BftService  *bft.BftConsensusService
+	Config      *ConsensusConfig
 }
 
 func (consensusService *ConsensusService) Name() string {
@@ -36,6 +38,8 @@ func (consensusService *ConsensusService) CommandFlags() ([]cli.Command, []cli.F
 }
 
 func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContext) error {
+	consensusService.SoloService = &solo.SoloConsensusService{}
+	consensusService.BftService = &bft.BftConsensusService{}
 	return nil
 }
 
@@ -53,9 +57,9 @@ func (consensusService *ConsensusService) Stop(executeContext *app.ExecuteContex
 func (consensusService *ConsensusService) SelectService() app.Service {
 	switch consensusService.Config.ConsensusMode {
 	case "solo":
-		return &solo.ConsensusService{}
+		return consensusService.SoloService
 	case "bft":
-		return &bft.ConsensusService{}
+		return consensusService.BftService
 	}
 	return nil
 }

@@ -6,9 +6,8 @@ usage: 查询共识节点功能
 prefix:consensus
 */
 type ConsensusApi struct {
-	consensusService *ConsensusService
+	consensusService *BftConsensusService
 }
-
 
 /*
 	 name: changeWaitTime

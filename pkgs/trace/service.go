@@ -1,8 +1,8 @@
 package trace
 
 import (
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/pkgs/consensus/service/bft"
+	"github.com/drep-project/drep-chain/database"
+	consensusService "github.com/drep-project/drep-chain/pkgs/consensus/service"
 	"path"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
@@ -32,7 +32,8 @@ var (
 type TraceService struct {
 	Config           *HistoryConfig
 	ChainService     chainService.ChainServiceInterface `service:"chain"`
-	ConsensusService *bft.ConsensusService             `service:"bft"`
+	ConsensusService *consensusService.ConsensusService `service:"consensus"`
+	DatabaseService  *database.DatabaseService          `service:"database"`
 	apis             []app.API
 	blockAnalysis    *BlockAnalysis
 }
@@ -71,11 +72,7 @@ func (traceService *TraceService) Init(executeContext *app.ExecuteContext) error
 	if !traceService.Config.Enable {
 		return nil
 	}
-	bpAddrs := []crypto.CommonAddress{}
-	for _, bp2 := range traceService.ConsensusService.Config.Producers {
-		bpAddrs = append(bpAddrs, bp2.Address())
-	}
-	traceService.blockAnalysis = NewBlockAnalysis(*traceService.Config, bpAddrs, traceService.ChainService.GetBlockByHeight)
+	traceService.blockAnalysis = NewBlockAnalysis(*traceService.Config, traceService.ConsensusService, traceService.DatabaseService.LevelDb(), traceService.ChainService.GetBlockByHeight)
 
 	traceService.apis = []app.API{
 		app.API{

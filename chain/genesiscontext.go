@@ -15,10 +15,10 @@ type IGenesisProcess interface {
 // GenesisContext used to deliver config information  through all genesis processor
 type GenesisContext struct {
 	config map[string]json.RawMessage
-	store store.StoreInterface
+	store  store.StoreInterface
 }
 
-func NewGenesisContext(gensisPath string, store store.StoreInterface) ( *GenesisContext, error) {
+func NewGenesisContext(gensisPath string, store store.StoreInterface) (*GenesisContext, error) {
 	fileContent, err := ioutil.ReadFile(gensisPath)
 	if err != nil {
 		return nil, err
@@ -39,5 +39,3 @@ func (g GenesisContext) Config() map[string]json.RawMessage {
 func (g GenesisContext) Store() store.StoreInterface {
 	return g.store
 }
-
-

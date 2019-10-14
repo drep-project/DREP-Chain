@@ -82,11 +82,11 @@ func (s *StoreDB) CopyState() *database.SnapShot {
 	return s.cache.CopyState()
 }
 
-func (s *StoreDB)getStateRoot() []byte{
+func (s *StoreDB) getStateRoot() []byte {
 	return s.trie.Hash().Bytes()
 }
 
-func (s *StoreDB)RecoverTrie(root []byte) bool{
+func (s *StoreDB) RecoverTrie(root []byte) bool {
 	var err error
 	s.trie, err = trie.NewSecure(crypto.Bytes2Hash(root), s.trieDb)
 	if err != nil {

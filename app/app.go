@@ -134,13 +134,20 @@ func (mApp *DrepApp) action(ctx *cli.Context) error {
 			}
 		}
 	}()
-	mApp.Context.Cli = ctx //NOTE this set is for different commmands-
-	for _, service := range mApp.Context.Services {
+	mApp.Context.Cli = ctx //NOTE this set is for different commmands-\\
+	endIndex:= len( mApp.Context.Services)
+	for i:=0;i<endIndex;i++{
+		service := mApp.Context.Services[i]
+		err := mApp.parserConfig(service)
+		if err != nil {
+			return err
+		}
+		mApp.Context.resolveService(service)
+		err = service.Init(mApp.Context)
+		if err != nil {
+			return err
+		}
 		if reflect.TypeOf(service).Implements(TOrService) {
-			err := mApp.parserConfig(service)
-			if err != nil {
-				return err
-			}
 			//flate config
 			err = mApp.Context.FlatConfig(service.Name())
 			if err != nil {
@@ -163,18 +170,11 @@ func (mApp *DrepApp) action(ctx *cli.Context) error {
 			if err != nil {
 				return err
 			}
-		}else{
-			err := mApp.parserConfig(service)
-			if err != nil {
-				return err
-			}
-			mApp.Context.resolveService(service)
-			err = service.Init(mApp.Context)
-			if err != nil {
-				return err
-			}
+			i++
+			endIndex++
 		}
 	}
+
 
 	for _, service := range mApp.Context.Services {
 		err := service.Start(mApp.Context)
@@ -208,13 +208,14 @@ func (mApp *DrepApp) parserConfig(service Service) error {
 		t := fieldValue.Type()
 		if t.Kind() == reflect.Ptr {
 			config = reflect.New(t.Elem())
-		}else{
+		} else {
 			config = reflect.New(t).Elem()
 		}
 	}
 	fieldValue.Set(config)
 	return mApp.Context.UnmashalConfig(service.Name(), fieldValue.Interface())
 }
+
 //  read global config before main process
 func (mApp *DrepApp) before(ctx *cli.Context) error {
 	mApp.Context.Cli = ctx

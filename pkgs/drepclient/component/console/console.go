@@ -149,13 +149,13 @@ func (c *Console) init(preload []string) error {
 			}
 			flatten += fmt.Sprintf("var %s = drep.%s; ", api, api)
 		} else if obj, err := c.jsre.Run("drep." + api); err == nil && obj.IsObject() {
-			// Miner drep.js built-in extension if available.
+			// StartMiner drep.js built-in extension if available.
 			flatten += fmt.Sprintf("var %s = drep.%s; ", api, api)
 		}
 	}
 	for api := range apis {
 		if obj, err := c.jsre.Run("drep." + api); err == nil && obj.IsObject() {
-			// Miner drep.js built-in extension if available.
+			// StartMiner drep.js built-in extension if available.
 			flatten += fmt.Sprintf("var %s = drep.%s; ", api, api)
 		}
 	}

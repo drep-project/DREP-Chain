@@ -230,7 +230,7 @@ func getResult(args []*twoOperandParams, opFn executionFunc) []TwoOperandTestcas
 }
 
 // utility function to fill the json-file with testcases
-// Miner this test to generate the 'testcases_xx.json' files
+// StartMiner this test to generate the 'testcases_xx.json' files
 func xTestWriteExpectedValues(t *testing.T) {
 	for name, method := range twoOpMethods {
 		data, err := json.Marshal(getResult(commonParams, method))

@@ -12,7 +12,7 @@ import (
 )
 
 type ViewTransaction struct {
-	Id string `bson:"_id"`
+	Id        string `bson:"_id"`
 	Hash      string
 	From      string
 	Version   int32
@@ -30,7 +30,7 @@ type ViewTransaction struct {
 }
 
 type ViewBlock struct {
-	Id string `bson:"_id"`
+	Id           string `bson:"_id"`
 	Hash         string
 	ChainId      types.ChainIdType
 	Version      int32
@@ -46,7 +46,7 @@ type ViewBlock struct {
 }
 
 type ViewBlockHeader struct {
-	Id string `bson:"_id"`
+	Id           string `bson:"_id"`
 	ChainId      types.ChainIdType
 	Version      int32
 	PreviousHash string
@@ -66,7 +66,7 @@ func (viewBlockHeader *ViewBlockHeader) From(block *types.Block) *ViewBlockHeade
 		txs[i].Height = block.Header.Height
 	}
 
-	viewBlockHeader.Id= block.Header.Hash().String()
+	viewBlockHeader.Id = block.Header.Hash().String()
 	viewBlockHeader.Hash = block.Header.Hash().String()
 	viewBlockHeader.ChainId = block.Header.ChainId
 	viewBlockHeader.Version = block.Header.Version
@@ -108,7 +108,7 @@ func (rpcBlock *ViewBlock) From(block *types.Block, addresses []crypto.CommonAdd
 		txs[i] = new(ViewTransaction).FromTx(tx)
 		txs[i].Height = block.Header.Height
 	}
-	rpcBlock.Id= block.Header.Hash().String()
+	rpcBlock.Id = block.Header.Hash().String()
 	rpcBlock.Hash = block.Header.Hash().String()
 	rpcBlock.ChainId = block.Header.ChainId
 	rpcBlock.Version = block.Header.Version

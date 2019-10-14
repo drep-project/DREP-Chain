@@ -26,9 +26,9 @@ const (
 )
 
 type BftConsensus struct {
-	CoinBase  crypto.CommonAddress
-	PrivKey   *secp256k1.PrivateKey
-	curMiner  int
+	CoinBase crypto.CommonAddress
+	PrivKey  *secp256k1.PrivateKey
+	curMiner int
 
 	BlockGenerator blockmgr.IBlockBlockGenerator
 
