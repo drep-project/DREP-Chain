@@ -43,6 +43,8 @@ type ConsensusService struct {
 	DatabaseService  *database.DatabaseService            `service:"database"`
 	WalletService    *accountService.AccountService       `service:"accounts"`
 
+	BftConsensus *BftConsensus
+
 	apis   []app.API
 	Config *BftConfig
 
@@ -74,7 +76,18 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 		consensusService.Config.Miner = executeContext.Cli.GlobalBool(MinerFlag.Name)
 	}
 
-	consensusService.ChainService.AddBlockValidator(&BlockMultiSigValidator{consensusService.Config.Producers})
+	var addPeerFeed event.Feed
+	var removePeerFeed event.Feed
+	consensusService.BftConsensus = NewBftConsensus(
+		consensusService.ChainService,
+		consensusService.BlockGenerator,
+		consensusService.DatabaseService,
+		consensusService.P2pServer,
+		&addPeerFeed,
+		&removePeerFeed,
+	)
+
+	consensusService.ChainService.AddBlockValidator(&BlockMultiSigValidator{consensusService.BftConsensus.GetProducers, consensusService.ChainService.GetBlockByHash})
 	consensusService.ChainService.AddGenesisProcess(NewMinerGenesisProcessor() )
 	if !consensusService.Config.Miner {
 		return nil
@@ -83,18 +96,8 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 			return ErrWalletNotOpen
 		}
 	}
-	var addPeerFeed event.Feed
-	var removePeerFeed event.Feed
-	var engine consensusTypes.IConsensusEngine
-	engine = NewBftConsensus(
-		consensusService.ChainService,
-		consensusService.BlockGenerator,
-		consensusService.DatabaseService,
-		consensusService.Config.Producers,
-		consensusService.P2pServer,
-		&addPeerFeed,
-		&removePeerFeed,
-	)
+
+
 	//consult privkey in wallet
 	accountNode, err := consensusService.WalletService.Wallet.GetAccountByPubkey(consensusService.Config.MyPk)
 	if err != nil {
@@ -167,15 +170,19 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 							if err != nil {
 								return err
 							}
-							for _, producer := range consensusService.Config.Producers {
+							producers,err  := consensusService.BftConsensus.GetProducers(consensusService.ChainService.BestChain().Tip().StateRoot)
+							if err != nil {
+								return err
+							}
+							for _, producer := range producers {
 								if sig.Verify(randomBytes[:], producer.Pubkey) {
 									addPeerFeed.Send(pi)
 									tm.Stop()
-									continue
 								}
 							}
+							continue
 						default:
-							consensusService.ConsensusEngine.ReceiveMsg(pi, msg.Code, buf)
+							consensusService.BftConsensus.ReceiveMsg(pi, msg.Code, buf)
 						}
 					}
 
@@ -187,7 +194,6 @@ func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContex
 			},
 		},
 	})
-	consensusService.ConsensusEngine = engine
 	consensusService.syncBlockEventChan = make(chan event.SyncBlockEvent)
 	consensusService.syncBlockEventSub = consensusService.BlockMgrNotifier.SubscribeSyncBlockEvent(consensusService.syncBlockEventChan)
 	consensusService.quit = make(chan struct{})
@@ -240,7 +246,7 @@ func (consensusService *ConsensusService) Start(executeContext *app.ExecuteConte
 					continue
 				}
 				log.WithField("Height", consensusService.ChainService.BestChain().Height()).Trace("node start")
-				block, err := consensusService.ConsensusEngine.Run(consensusService.Miner)
+				block, err := consensusService.BftConsensus.Run(consensusService.Miner)
 				if err != nil {
 					log.WithField("Reason", err.Error()).Debug("Producer Block Fail")
 				} else {

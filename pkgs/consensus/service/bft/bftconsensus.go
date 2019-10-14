@@ -29,7 +29,6 @@ type BftConsensus struct {
 	CoinBase  crypto.CommonAddress
 	PrivKey   *secp256k1.PrivateKey
 	curMiner  int
-	minMiners int
 
 	BlockGenerator blockmgr.IBlockBlockGenerator
 
@@ -46,17 +45,14 @@ type BftConsensus struct {
 
 	addPeerChan    chan *consensusTypes.PeerInfo
 	removePeerChan chan *consensusTypes.PeerInfo
-	Producers      ProducerSet
 }
 
 func NewBftConsensus(
 	chainService chain.ChainServiceInterface,
 	blockGenerator blockmgr.IBlockBlockGenerator,
 	dbService *database.DatabaseService,
-	producer ProducerSet,
 	sener Sender,
 	addPeer, removePeer *event.Feed) *BftConsensus {
-
 	addPeerChan := make(chan *consensusTypes.PeerInfo)
 	removePeerChan := make(chan *consensusTypes.PeerInfo)
 	addPeer.Subscribe(addPeerChan)
@@ -65,8 +61,6 @@ func NewBftConsensus(
 		BlockGenerator: blockGenerator,
 		ChainService:   chainService,
 		DbService:      dbService,
-		minMiners:      int(math.Ceil(float64(len(producer)) * 2 / 3)),
-		Producers:      producer,
 		sender:         sener,
 		onLinePeer:     map[string]consensusTypes.IPeerInfo{},
 		WaitTime:       waitTime,
@@ -77,26 +71,36 @@ func NewBftConsensus(
 	}
 }
 
-func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Block, error) {
-	bftConsensus.CoinBase = crypto.PubkeyToAddress(privKey.PubKey())
-	bftConsensus.PrivKey = privKey
-	go bftConsensus.processPeers()
-	trie, err := store.TrieStoreFromStore(bftConsensus.DbService.LevelDb(), bftConsensus.ChainService.BestChain().Tip().StateRoot)
+func (bftConsensus *BftConsensus) GetProducers(root []byte) ([]*Producer, error) {
+	trie, err := store.TrieStoreFromStore(bftConsensus.DbService.LevelDb(), root)
 	if err != nil {
-		panic("recover tree fail")
+		return nil, err
 	}
 	op := ConsensusOp{trie}
 	producers, err := op.GetProducer()
 	if err != nil {
-		panic("recover tree fail")
+		return nil, err
 	}
+	return producers, nil
+}
+
+func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Block, error) {
+	bftConsensus.CoinBase = crypto.PubkeyToAddress(privKey.PubKey())
+	bftConsensus.PrivKey = privKey
+	go bftConsensus.processPeers()
+	producers, err := bftConsensus.GetProducers(bftConsensus.ChainService.BestChain().Tip().StateRoot)
+	if err != nil {
+		return nil, err
+	}
+	minMiners := int(math.Ceil(float64(len(producers)) * 2 / 3))
 	miners := bftConsensus.collectMemberStatus(producers)
+
 	if len(miners) > 1 {
 		isM, isL := bftConsensus.moveToNextMiner(miners)
 		if isL {
-			return bftConsensus.runAsLeader(miners)
+			return bftConsensus.runAsLeader(producers, miners, minMiners)
 		} else if isM {
-			return bftConsensus.runAsMember(miners)
+			return bftConsensus.runAsMember(miners, minMiners)
 		} else {
 			return nil, ErrBFTNotReady
 		}
@@ -151,8 +155,8 @@ func (bftConsensus *BftConsensus) moveToNextMiner(produceInfos []*MemberInfo) (b
 	}
 }
 
-func (bftConsensus *BftConsensus) collectMemberStatus(producers map[crypto.CommonAddress]Producer) []*MemberInfo {
-	produceInfos := make([]*MemberInfo, 0, len(bftConsensus.Producers))
+func (bftConsensus *BftConsensus) collectMemberStatus(producers []*Producer) []*MemberInfo {
+	produceInfos := make([]*MemberInfo, 0, len(producers))
 	for _, produce := range producers {
 		var (
 			IsOnline, ok bool
@@ -181,8 +185,8 @@ func (bftConsensus *BftConsensus) collectMemberStatus(producers map[crypto.Commo
 	return produceInfos
 }
 
-func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo) (block *types.Block, err error) {
-	member := NewMember(bftConsensus.PrivKey, bftConsensus.sender, bftConsensus.WaitTime, miners, bftConsensus.minMiners, bftConsensus.ChainService.BestChain().Height(), bftConsensus.memberMsgPool)
+func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo, minMiners int) (block *types.Block, err error) {
+	member := NewMember(bftConsensus.PrivKey, bftConsensus.sender, bftConsensus.WaitTime, miners, minMiners, bftConsensus.ChainService.BestChain().Height(), bftConsensus.memberMsgPool)
 	log.Trace("node member is going to process consensus for round 1")
 	member.convertor = func(msg []byte) (IConsenMsg, error) {
 		block, err = types.BlockFromMessage(msg)
@@ -250,13 +254,13 @@ func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo) (block *type
 //2 其他producer收到后，签自己的构建数字签名;然后把签名后的块返回给leader
 //3 leader搜集到所有的签名或者返回的签名个数大于producer个数的三分之二后，开始验证签名
 //4 leader验证签名通过后，广播此块给所有的Peer
-func (bftConsensus *BftConsensus) runAsLeader(miners []*MemberInfo) (block *types.Block, err error) {
+func (bftConsensus *BftConsensus) runAsLeader(producers ProducerSet, miners []*MemberInfo, minMiners int) (block *types.Block, err error) {
 	leader := NewLeader(
 		bftConsensus.PrivKey,
 		bftConsensus.sender,
 		bftConsensus.WaitTime,
 		miners,
-		bftConsensus.minMiners,
+		minMiners,
 		bftConsensus.ChainService.BestChain().Height(),
 		bftConsensus.leaderMsgPool)
 	trieStore, err := store.TrieStoreFromStore(bftConsensus.DbService.LevelDb(), bftConsensus.ChainService.BestChain().Tip().StateRoot)
@@ -288,7 +292,7 @@ func (bftConsensus *BftConsensus) runAsLeader(miners []*MemberInfo) (block *type
 	log.WithField("bitmap", multiSig.Bitmap).Info("participant bitmap")
 	//Determine reward points
 	block.Proof = types.Proof{consensusTypes.Pbft, multiSigBytes}
-	err = AccumulateRewards(trieStore, multiSig, bftConsensus.Producers, gasFee, block.Header.Height)
+	err = AccumulateRewards(trieStore, multiSig, producers, gasFee, block.Header.Height)
 	if err != nil {
 		return nil, err
 	}
@@ -337,7 +341,7 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
 	if err != nil {
 		return err
 	}
-	multiSigValidator := BlockMultiSigValidator{bftConsensus.Producers}
+	multiSigValidator := BlockMultiSigValidator{bftConsensus.GetProducers, bftConsensus.ChainService.GetBlockByHash}
 	if err := multiSigValidator.VerifyBody(block); err != nil {
 		return err
 	}

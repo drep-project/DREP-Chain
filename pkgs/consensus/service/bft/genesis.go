@@ -3,7 +3,6 @@ package bft
 import (
 	"encoding/json"
 	"github.com/drep-project/drep-chain/chain"
-	"github.com/drep-project/drep-chain/crypto"
 )
 
 type MinerGenesisProcessor struct {
@@ -17,19 +16,15 @@ func (minerGenesisProcessor *MinerGenesisProcessor) Genesis(context *chain.Genes
 
 	val, ok := context.Config()["miner"]
 	if ok {
-		miners := []Producer{}
+		miners := []*Producer{}
 		bytes, _ := val.MarshalJSON()
-		err := json.Unmarshal(bytes, &miners)
+		err := json.Unmarshal(bytes, &miners)  //parserjson
 		if err != nil {
 			return err
 		}
 
 		op := ConsensusOp{context.Store()}
-		producers := map[crypto.CommonAddress]Producer{}
-		for _, producer := range miners {
-			producers[crypto.PubkeyToAddress(producer.Pubkey)] = producer
-		}
-		err = op.SaveProducer(producers)
+		err = op.SaveProducer(miners)		// binary serilize and save to trie
 		if err != nil {
 			return err
 		}

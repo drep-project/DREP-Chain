@@ -28,21 +28,33 @@ type RegisterAsProducerTransactionExecutor struct {
 func (registerAsProducerTransactionExecutor *RegisterAsProducerTransactionExecutor) ExecuteTransaction(context *chain.ExecuteTransactionContext) ([]byte, bool, []*types.Log, error) {
 		from := context.From()
 		data :=context.Data()
-		p := &Producer{}
-		err := binary.Unmarshal(data, p)
+		newProducer := &Producer{}
+		err := binary.Unmarshal(data, newProducer)
 		if err == nil {
 			return nil, false, nil ,err
 		}
-		if *from == crypto.PubkeyToAddress(p.Pubkey) {
+		if *from == crypto.PubkeyToAddress(newProducer.Pubkey) {
 			return nil, false, nil, errors.New("only register himself")
 		}
 		op := ConsensusOp{context.TrieStore()}
-		producers, err := op.GetProducer()
+		oldProducers, err := op.GetProducer()
 		if err == nil {
 			return nil, false, nil ,err
 		}
-		producers[*from] = *p
-		err = op.SaveProducer(producers)
+
+		exit := false
+		for _, oldProducer := range oldProducers {
+			if oldProducer.Address() == newProducer.Address() {
+				exit = true
+				oldProducer.Pubkey = newProducer.Pubkey
+				oldProducer.IP = newProducer.IP
+			}
+		}
+		if !exit {
+			oldProducers = append(oldProducers, newProducer)
+		}
+
+		err = op.SaveProducer(oldProducers)
 		if err == nil {
 			return nil, false, nil ,err
 		}
@@ -53,7 +65,7 @@ type ConsensusOp struct {
 	store.StoreInterface
 }
 
-func (consensusOp *ConsensusOp) SaveProducer(p map[crypto.CommonAddress]Producer) error {
+func (consensusOp *ConsensusOp) SaveProducer(p []*Producer) error {
 	b, err := binary.Marshal(p)
 	if err != nil {
 		return err
@@ -66,8 +78,8 @@ func (consensusOp *ConsensusOp) SaveProducer(p map[crypto.CommonAddress]Producer
 	return nil
 }
 
-func (consensusOp *ConsensusOp) GetProducer() (map[crypto.CommonAddress]Producer, error) {
-	producers := make(map[crypto.CommonAddress]Producer)
+func (consensusOp *ConsensusOp) GetProducer() ([]*Producer, error) {
+	producers := []*Producer{}
 	bytes, err := consensusOp.Get(MinerPrefix)
 	if err != nil {
 		return nil, err
