@@ -13,7 +13,7 @@ import (
 
 const (
 	candidateAddrs = "candidateAddrs" //参与竞选出块节点的地址集合
-	stakeStorage   = "stakeStorage"   //以地址作为KEY,存储stake相关内容
+	StakeStorage   = "StakeStorage"   //以地址作为KEY,存储stake相关内容
 
 	pledgeLimit uint64 = 1000000    //候选节点需要抵押币的总数
 	drepUnit    uint64 = 1000000000 //drep单位
@@ -39,7 +39,7 @@ func NewStakeStorage(store *StoreDB) *trieStakeStore {
 
 func (trieStore *trieStakeStore) GetStakeStorage(addr *crypto.CommonAddress) (*types.StakeStorage, error) {
 	storage := &types.StakeStorage{}
-	key := sha3.Keccak256([]byte(stakeStorage + addr.Hex()))
+	key := sha3.Keccak256([]byte(StakeStorage + addr.Hex()))
 
 	value, err := trieStore.store.Get(key)
 	if err != nil {
@@ -58,7 +58,7 @@ func (trieStore *trieStakeStore) GetStakeStorage(addr *crypto.CommonAddress) (*t
 }
 
 func (trieStore *trieStakeStore) PutStakeStorage(addr *crypto.CommonAddress, storage *types.StakeStorage) error {
-	key := sha3.Keccak256([]byte(stakeStorage + addr.Hex()))
+	key := sha3.Keccak256([]byte(StakeStorage + addr.Hex()))
 	value, err := binary.Marshal(storage)
 	if err != nil {
 		return err
@@ -68,7 +68,7 @@ func (trieStore *trieStakeStore) PutStakeStorage(addr *crypto.CommonAddress, sto
 }
 
 func (trieStore *trieStakeStore) DelStakeStorage(addr *crypto.CommonAddress) error {
-	key := sha3.Keccak256([]byte(stakeStorage + addr.Hex()))
+	key := sha3.Keccak256([]byte(StakeStorage + addr.Hex()))
 	return trieStore.store.Delete(key)
 }
 
@@ -147,18 +147,27 @@ func (trieStore *trieStakeStore) VoteCredit(fromAddr, toAddr *crypto.CommonAddre
 		storage = &types.StakeStorage{}
 	}
 
-	var totalBalance big.Int
-	if len(storage.ReceivedVoteCredit) == 0 {
-		storage.ReceivedVoteCredit = make(map[crypto.CommonAddress]big.Int)
-		storage.ReceivedVoteCredit[*fromAddr] = *addBalance
-		totalBalance = *addBalance
+	totalBalance := *addBalance
+	if len(storage.ReceivedVoteCreditValue) == 0 {
+		storage.ReceivedVoteCreditValue = make([]big.Int, 0)
+		storage.ReceivedVoteCreditAddr = make([]crypto.CommonAddress, 0)
+
+		storage.ReceivedVoteCreditAddr = append(storage.ReceivedVoteCreditAddr, *toAddr)
+		storage.ReceivedVoteCreditValue = append(storage.ReceivedVoteCreditValue, totalBalance)
 	} else {
-		if v, ok := storage.ReceivedVoteCredit[*toAddr]; ok {
-			totalBalance = *addBalance.Add(addBalance, &v)
-			storage.ReceivedVoteCredit[*fromAddr] = totalBalance
-		} else {
-			storage.ReceivedVoteCredit[*fromAddr] = *addBalance
-			totalBalance = *addBalance
+		found := false
+		for index, addr := range storage.ReceivedVoteCreditAddr {
+			if addr.String() == toAddr.String() {
+				totalBalance.Add(&storage.ReceivedVoteCreditValue[index], &totalBalance)
+				storage.ReceivedVoteCreditValue[index] = totalBalance
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			storage.ReceivedVoteCreditAddr = append(storage.ReceivedVoteCreditAddr, *toAddr)
+			storage.ReceivedVoteCreditValue = append(storage.ReceivedVoteCreditValue, totalBalance)
 		}
 	}
 
@@ -180,25 +189,32 @@ func (trieStore *trieStakeStore) CancelVoteCredit(fromAddr, toAddr *crypto.Commo
 	if storage == nil {
 		storage = &types.StakeStorage{}
 	}
-	if len(storage.ReceivedVoteCredit) == 0 {
+	if len(storage.ReceivedVoteCreditValue) == 0 {
 		return fmt.Errorf("not exist vote credit")
 	} else {
-		if v, ok := storage.ReceivedVoteCredit[*fromAddr]; ok {
-			resultBalance := new(big.Int)
-			retCmp := v.Cmp(cancelBalance)
-			if retCmp > 0 {
-				storage.ReceivedVoteCredit[*fromAddr] = *resultBalance.Sub(&v, cancelBalance)
-			} else if retCmp == 0 {
-				delete(storage.ReceivedVoteCredit, *fromAddr)
-			} else {
-				return fmt.Errorf("vote credit not enough")
-			}
+		found := false
+		for index, addr := range storage.ReceivedVoteCreditAddr {
+			if addr.String() == fromAddr.String() {
+				found = true
+				voteCredit := storage.ReceivedVoteCreditValue[index]
+				resultBalance := new(big.Int)
+				retCmp := voteCredit.Cmp(cancelBalance)
+				if retCmp > 0 {
+					storage.ReceivedVoteCreditValue[index] = *resultBalance.Sub(&voteCredit, cancelBalance)
+				} else if retCmp == 0 {
+					storage.ReceivedVoteCreditAddr = append(storage.ReceivedVoteCreditAddr[0:index], storage.ReceivedVoteCreditAddr[index+1:]...)
+					storage.ReceivedVoteCreditValue = append(storage.ReceivedVoteCreditValue[0:index], storage.ReceivedVoteCreditValue[index+1:]...)
+				} else {
+					return fmt.Errorf("vote credit not enough")
+				}
 
-			if bytes.Equal(toAddr.Bytes(), fromAddr.Bytes()) && resultBalance.Cmp(new(big.Int).Mul(new(big.Int).SetUint64(pledgeLimit), new(big.Int).SetUint64(drepUnit))) < 0 {
-				trieStore.DelCandidateAddr(toAddr)
+				if bytes.Equal(toAddr.Bytes(), fromAddr.Bytes()) && resultBalance.Cmp(new(big.Int).Mul(new(big.Int).SetUint64(pledgeLimit), new(big.Int).SetUint64(drepUnit))) < 0 {
+					trieStore.DelCandidateAddr(toAddr)
+				}
 			}
+		}
 
-		} else {
+		if !found {
 			return fmt.Errorf("not exist vote credit")
 		}
 	}
@@ -209,15 +225,30 @@ func (trieStore *trieStakeStore) CancelVoteCredit(fromAddr, toAddr *crypto.Commo
 	}
 
 	//目的stakeStorage；存储临时被退回的币
-	if bytes.Equal(toAddr.Bytes(), fromAddr.Bytes()) {
-		storage.CancelVoteCredit[height] = *cancelBalance
-	} else {
-		storage, _ := trieStore.GetStakeStorage(fromAddr)
+	if !bytes.Equal(toAddr.Bytes(), fromAddr.Bytes()) {
+		storage, _ = trieStore.GetStakeStorage(fromAddr)
 		if storage == nil {
 			storage = &types.StakeStorage{}
 		}
-		storage.CancelVoteCredit[height] = *cancelBalance
 	}
+
+	if len(storage.CancelVoteCreditValue) == 0 {
+		storage.CancelVoteCreditValue = make([]big.Int, 0)
+		storage.CancelVoteCreditValue[height] = *cancelBalance
+	} else {
+		found := false
+		for index, vh := range storage.CancelVoteCreditHeight {
+			if vh == height {
+				found = true
+				storage.CancelVoteCreditValue[index].Add(&storage.CancelVoteCreditValue[index], cancelBalance)
+			}
+		}
+		if !found {
+			storage.CancelVoteCreditHeight = append(storage.CancelVoteCreditHeight, height)
+			storage.CancelVoteCreditValue = append(storage.CancelVoteCreditValue, *cancelBalance)
+		}
+	}
+
 	return trieStore.PutStakeStorage(fromAddr, storage)
 }
 
@@ -229,10 +260,9 @@ func (trieStore *trieStakeStore) GetCancelVoteCreditForBalance(addr *crypto.Comm
 	}
 
 	total := new(big.Int)
-	for cancelHeight, balance := range storage.CancelVoteCredit {
+	for index, cancelHeight := range storage.CancelVoteCreditHeight {
 		if height >= cancelHeight+ChangeCycle {
-			total.Add(total, &balance)
-			//delete(storage.CancelVoteCredit, cancelHeight)
+			total.Add(total, &storage.CancelVoteCreditValue[index])
 		}
 	}
 
@@ -247,10 +277,11 @@ func (trieStore *trieStakeStore) CancelVoteCreditToBalance(addr *crypto.CommonAd
 	}
 
 	total := new(big.Int)
-	for cancelHeight, balance := range storage.CancelVoteCredit {
+	for index, cancelHeight := range storage.CancelVoteCreditHeight {
 		if height >= cancelHeight+ChangeCycle {
-			total.Add(total, &balance)
-			delete(storage.CancelVoteCredit, cancelHeight)
+			total.Add(total, &storage.CancelVoteCreditValue[index])
+			storage.CancelVoteCreditHeight = append(storage.CancelVoteCreditHeight[0:index], storage.CancelVoteCreditHeight[index+1:]...)
+			storage.CancelVoteCreditValue = append(storage.CancelVoteCreditValue[0:index], storage.CancelVoteCreditValue[index+1:]...)
 		}
 	}
 
@@ -269,7 +300,7 @@ func (trieStore *trieStakeStore) GetVoteCreditCount(addr *crypto.CommonAddress) 
 	}
 
 	total := new(big.Int)
-	for _, value := range storage.ReceivedVoteCredit {
+	for _, value := range storage.ReceivedVoteCreditValue {
 		total.Add(total, &value)
 	}
 
@@ -277,10 +308,15 @@ func (trieStore *trieStakeStore) GetVoteCreditCount(addr *crypto.CommonAddress) 
 }
 
 func (trieStore *trieStakeStore) GetVoteCreditDetails(addr *crypto.CommonAddress) map[crypto.CommonAddress]big.Int {
+	m := make(map[crypto.CommonAddress]big.Int)
 	storage, _ := trieStore.GetStakeStorage(addr)
 	if storage == nil {
 		return nil
 	}
 
-	return storage.ReceivedVoteCredit
+	for index,addr := range storage.ReceivedVoteCreditAddr{
+		m[addr] = storage.ReceivedVoteCreditValue[index]
+	}
+
+	return m
 }

@@ -209,18 +209,18 @@ func (chain *ChainApi) GetAddressByAlias(alias string) (*crypto.CommonAddress, e
 }
 
 /*
- name: getByteCode
+ name: getVoteCreditDetails
  usage: 根据地址获取bytecode
  params:
 	1. 地址
  return: bytecode
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getByteCode","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getVoteCreditDetails","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
-   {"jsonrpc":"2.0","id":3,"result":"0x00"}
+   {"jsonrpc":"2.0","id":3,"result":"[[k:v],[k2:v2]"}
 */
-func (chain *ChainApi) GetByteCode(addr *crypto.CommonAddress) hexutil.Bytes {
+func (chain *ChainApi) GetVoteCreditDetails(addr *crypto.CommonAddress) map[crypto.CommonAddress]big.Int {
 	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
-	return trieQuery.GetByteCode(addr)
+	return trieQuery.GetVoteCreditDetails(addr)
 }
 
 /*
@@ -250,6 +250,21 @@ func (chain *ChainApi) GetReceipt(txHash crypto.Hash) *types.Receipt {
 func (chain *ChainApi) GetLogs(txHash crypto.Hash) []*types.Log {
 	//return chain.chainService.chainStore.GetLogs(txHash)
 	return chain.dbQuery.GetReceipt(txHash).Logs
+}
+
+/*
+ name: getByteCode
+ usage: 根据地址获取bytecode
+ params:
+	1. 地址
+ return: bytecode
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getByteCode","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ response:
+   {"jsonrpc":"2.0","id":3,"result":"0x00"}
+*/
+func (chain *ChainApi) GetByteCode(addr *crypto.CommonAddress) hexutil.Bytes {
+	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
+	return trieQuery.GetByteCode(addr)
 }
 
 type TrieQuery struct {
@@ -334,4 +349,32 @@ func (trieQuery *TrieQuery) GetCodeHash(addr *crypto.CommonAddress) crypto.Hash 
 func (trieQuery *TrieQuery) GetReputation(addr *crypto.CommonAddress) *big.Int {
 	storage, _ := trieQuery.GetStorage(addr)
 	return &storage.Reputation
+}
+
+func (trieQuery *TrieQuery) GetVoteCreditDetails(addr *crypto.CommonAddress) map[crypto.CommonAddress]big.Int {
+	key := sha3.Keccak256([]byte(store.StakeStorage + addr.Hex()))
+
+	storage := &types.StakeStorage{}
+
+	value, err := trieQuery.trie.TryGet(key)
+	if err != nil {
+		log.Errorf("get storage err:%v", err)
+		return nil
+	}
+	if value == nil {
+		return nil
+	} else {
+		err = binary.Unmarshal(value, storage)
+		if err != nil {
+			return nil
+		}
+	}
+
+	m := make(map[crypto.CommonAddress]big.Int)
+
+	for index,addr := range storage.ReceivedVoteCreditAddr{
+		m[addr] = storage.ReceivedVoteCreditValue[index]
+	}
+
+	return m
 }

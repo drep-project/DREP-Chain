@@ -58,8 +58,10 @@ func GetCandidates(store store.StoreInterface, registerAddrs []crypto.CommonAddr
 		}
 		return false
 	}
+
 	addNum := 0
-	for {
+	for csh.Len() > 0{
+
 		v := heap.Pop(&csh)
 		ac := v.(*addrAndCredit)
 		if include(*ac.addr) {
