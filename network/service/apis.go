@@ -1,8 +1,5 @@
 package service
 
-import (
-	"github.com/drep-project/drep-chain/network/p2p"
-)
 
 /*
 name: p2p网络接口
