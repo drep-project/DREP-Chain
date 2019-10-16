@@ -284,7 +284,7 @@ func (bftConsensusService *BftConsensusService) getWaitTime() (time.Time, time.D
 	// windows = 4320
 
 	lastBlockTime := time.Unix(int64(bftConsensusService.ChainService.BestChain().Tip().TimeStamp), 0)
-	targetTime := lastBlockTime.Add(time.Duration(bftConsensusService.Config.BlockInterval))
+	targetTime := lastBlockTime.Add(time.Duration(int(time.Second)*bftConsensusService.Config.BlockInterval))
 	now := time.Now()
 	if targetTime.Before(now) {
 		return now.Add(time.Millisecond * 500), time.Millisecond * 500

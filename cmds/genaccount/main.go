@@ -16,6 +16,7 @@ import (
 	"github.com/drep-project/drep-chain/params"
 	"github.com/drep-project/drep-chain/pkgs/consensus/service"
 	"github.com/drep-project/drep-chain/pkgs/consensus/service/bft"
+	"github.com/drep-project/drep-chain/pkgs/consensus/service/solo"
 	"github.com/drep-project/drep-chain/pkgs/log"
 	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
@@ -109,11 +110,23 @@ func gen(ctx *cli.Context) error {
 	p2pConfig.ListenAddr = "0.0.0.0:55555"
 
 	consensusConfig := &service.ConsensusConfig{}
-	consensusConfig.ConsensusMode = "bft"
-	consensusConfig.Bft = bft.BftConfig{
-		MyPk:       nil,
-		StartMiner: true,
+
+	if len(nodeItems) == 1 {
+		consensusConfig.ConsensusMode = "solo"
+		consensusConfig.Solo = solo.SoloConfig{
+			MyPk:       nil,
+			StartMiner: true,
+			BlockInterval:5,
+		}
+	}else{	consensusConfig.ConsensusMode = "bft"
+
+		consensusConfig.Bft = bft.BftConfig{
+			MyPk:       nil,
+			StartMiner: true,
+			BlockInterval:5,
+		}
 	}
+
 
 	chainConfig := chain.ChainConfig{}
 	chainConfig.RemotePort = 55556
@@ -129,19 +142,19 @@ func gen(ctx *cli.Context) error {
 	filterConfig := filterTypes.FilterConfig{}
 	filterConfig.Enable = true
 
-	for i := 0; i < len(nodeItems); i++ {
-		consensusConfig.Bft.MyPk = (*secp256k1.PublicKey)(&standbyKey[i].PublicKey)
-		userDir := path2.Join(path, nodeItems[i].Name)
+	if  len(nodeItems) == 1 {
+		consensusConfig.Bft.MyPk = (*secp256k1.PublicKey)(&standbyKey[0].PublicKey)
+		userDir := path2.Join(path, nodeItems[0].Name)
 		os.MkdirAll(userDir, os.ModeDir|os.ModePerm)
 		keyStorePath := path2.Join(userDir, "keystore")
 		password := "123"
-		if nodeItems[i].Password != "" {
-			password = nodeItems[i].Password
+		if nodeItems[0].Password != "" {
+			password = nodeItems[0].Password
 		}
 
 		store := accountComponent.NewFileStore(keyStorePath)
 		cryptoPassowrd := string(sha3.Keccak256([]byte(password)))
-		store.StoreKey(nodes[i], cryptoPassowrd)
+		store.StoreKey(nodes[0], cryptoPassowrd)
 
 		walletConfig := accountTypes.Config{}
 		walletConfig.Enable = true
@@ -175,6 +188,11 @@ func gen(ctx *cli.Context) error {
 		offset = writePhase(fs, "miners", cfg.Miners, offset)
 		fs.Truncate(offset - 2)
 		fs.WriteAt([]byte("\n}"), offset-2)
+	}else{
+
+		for i := 0; i < len(nodeItems); i++ {
+
+		}
 	}
 	return nil
 }
