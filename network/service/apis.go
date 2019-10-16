@@ -22,9 +22,15 @@ type P2PApi struct {
  response:
    {"jsonrpc":"2.0","id":3,"result":[{},{},{},{}]}
 */
-func (p2pApis *P2PApi) GetPeers() []*p2p.Peer {
-	return p2pApis.p2pService.Peers()
-}
+func (p2pApis *P2PApi) GetPeers() []string {
+	peersInfo := make([]string,0)
+	peers := p2pApis.p2pService.Peers()
+
+	for _,peer := range peers{
+		peersInfo = append(peersInfo, peer.ID().String() + "@"+ peer.IP())
+	}
+	return peersInfo
+} 
 
 /*
  name: addPeers（未实现）
