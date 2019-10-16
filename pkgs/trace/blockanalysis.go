@@ -19,7 +19,7 @@ type BlockAnalysis struct {
 	newBlockChan     chan *types.ChainEvent
 
 	consensusService *service.ConsensusService
-	trieStore     dbinterface.KeyValueStore
+	trieStore        dbinterface.KeyValueStore
 
 	detachBlockSub  event.Subscription
 	detachBlockChan chan *types.Block
@@ -32,7 +32,7 @@ func NewBlockAnalysis(config HistoryConfig, consensusService *service.ConsensusS
 	blockAnalysis.Config = config
 	blockAnalysis.getBlock = getBlock
 	blockAnalysis.trieStore = trieStore
-	blockAnalysis.consensusService= consensusService
+	blockAnalysis.consensusService = consensusService
 	blockAnalysis.newBlockChan = make(chan *types.ChainEvent, 1000)
 	blockAnalysis.detachBlockChan = make(chan *types.Block, 1000)
 	blockAnalysis.readyToQuit = make(chan struct{})
@@ -47,7 +47,7 @@ func (blockAnalysis *BlockAnalysis) Start(newBlock, detachBlock *event.Feed) err
 		if blockAnalysis.consensusService.Config.ConsensusMode == "solo" {
 			pk := blockAnalysis.consensusService.SoloService.Config.MyPk
 			return []crypto.CommonAddress{crypto.PubkeyToAddress(pk)}, nil
-		}else{
+		} else {
 			trie, err := store.TrieStoreFromStore(blockAnalysis.trieStore, root)
 			if err != nil {
 				return nil, err

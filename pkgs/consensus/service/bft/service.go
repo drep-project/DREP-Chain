@@ -30,10 +30,6 @@ var (
 	}
 )
 
-const (
-	blockInterval = time.Second * 5
-)
-
 type BftConsensusService struct {
 	P2pServer        p2pService.P2P                       `service:"p2p"`
 	ChainService     chainService.ChainServiceInterface   `service:"chain"`
@@ -184,7 +180,6 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 							bftConsensusService.BftConsensus.ReceiveMsg(pi, msg.Code, buf)
 						}
 					}
-
 				}
 
 				log.WithField("peer.ip", peer.IP()).Info("peer not producer")
@@ -289,7 +284,7 @@ func (bftConsensusService *BftConsensusService) getWaitTime() (time.Time, time.D
 	// windows = 4320
 
 	lastBlockTime := time.Unix(int64(bftConsensusService.ChainService.BestChain().Tip().TimeStamp), 0)
-	targetTime := lastBlockTime.Add(blockInterval)
+	targetTime := lastBlockTime.Add(time.Duration(bftConsensusService.Config.BlockInterval))
 	now := time.Now()
 	if targetTime.Before(now) {
 		return now.Add(time.Millisecond * 500), time.Millisecond * 500
@@ -323,4 +318,10 @@ func (bftConsensusService *BftConsensusService) getWaitTime() (time.Time, time.D
 				 return time.Duration(avgSpan) * time.Nanosecond
 			 }
 	*/
+}
+
+func (bftConsensusService *BftConsensusService) DefaultConfig() *BftConfig {
+	return &BftConfig{
+		BlockInterval: int(time.Second * 5),
+	}
 }

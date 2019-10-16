@@ -22,4 +22,5 @@ type ConsensusApi struct {
 		 {"jsonrpc":"2.0","id":3,"result":null}
 */
 func (consensusApi *ConsensusApi) ChangeWaitTime(waitTime int) {
+
 }

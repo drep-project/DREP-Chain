@@ -173,7 +173,7 @@ func (soloConsensusService *SoloConsensusService) getWaitTime() (time.Time, time
 	// windows = 4320
 
 	lastBlockTime := time.Unix(int64(soloConsensusService.ChainService.BestChain().Tip().TimeStamp), 0)
-	targetTime := lastBlockTime.Add(blockInterval)
+	targetTime := lastBlockTime.Add(time.Duration(soloConsensusService.Config.BlockInterval))
 	now := time.Now()
 	if targetTime.Before(now) {
 		return now.Add(time.Millisecond * 500), time.Millisecond * 500
@@ -207,4 +207,9 @@ func (soloConsensusService *SoloConsensusService) getWaitTime() (time.Time, time
 				 return time.Duration(avgSpan) * time.Nanosecond
 			 }
 	*/
+}
+func (soloConsensusService *SoloConsensusService) DefaultConfig() *SoloConfig {
+	return &SoloConfig{
+		BlockInterval: int(time.Second * 5),
+	}
 }

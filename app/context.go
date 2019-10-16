@@ -83,7 +83,7 @@ func (econtext *ExecuteContext) replaceService(replaceService, serviceValue Serv
 	preAddServices := econtext.Services
 	for index, service := range preAddServices {
 		if service == replaceService {
-			econtext.Services =[]Service{}
+			econtext.Services = []Service{}
 			preService := preAddServices[0:index]
 			suffService := preAddServices[index:]
 			econtext.Services = append(econtext.Services, preService...)

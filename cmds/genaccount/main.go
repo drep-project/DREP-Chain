@@ -114,7 +114,6 @@ func gen(ctx *cli.Context) error {
 		MyPk:       nil,
 		StartMiner: true,
 	}
-	//consensusConfig.Producers = produces
 
 	chainConfig := chain.ChainConfig{}
 	chainConfig.RemotePort = 55556
@@ -240,7 +239,7 @@ func parserConfig(cfgPath string) (*Config, error) {
 
 type Config struct {
 	Preminer []*chain.Preminer
-	Miners []*NodeItem
+	Miners   []*NodeItem
 }
 
 type NodeItem struct {

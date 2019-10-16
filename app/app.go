@@ -135,8 +135,8 @@ func (mApp *DrepApp) action(ctx *cli.Context) error {
 		}
 	}()
 	mApp.Context.Cli = ctx //NOTE this set is for different commmands-\\
-	endIndex:= len( mApp.Context.Services)
-	for i:=0;i<endIndex;i++{
+	endIndex := len(mApp.Context.Services)
+	for i := 0; i < endIndex; i++ {
 		service := mApp.Context.Services[i]
 		err := mApp.parserConfig(service)
 		if err != nil {
@@ -174,7 +174,6 @@ func (mApp *DrepApp) action(ctx *cli.Context) error {
 			endIndex++
 		}
 	}
-
 
 	for _, service := range mApp.Context.Services {
 		err := service.Start(mApp.Context)
