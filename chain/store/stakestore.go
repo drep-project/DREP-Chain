@@ -165,12 +165,12 @@ func (trieStore *trieStakeStore) VoteCredit(fromAddr, toAddr *crypto.CommonAddre
 		storage.ReceivedCreditValue = make([]big.Int, 0)
 		storage.ReceivedCreditAddr = make([]crypto.CommonAddress, 0)
 
-		storage.ReceivedCreditAddr = append(storage.ReceivedCreditAddr, *toAddr)
+		storage.ReceivedCreditAddr = append(storage.ReceivedCreditAddr, *fromAddr)
 		storage.ReceivedCreditValue = append(storage.ReceivedCreditValue, totalBalance)
 	} else {
 		found := false
 		for index, addr := range storage.ReceivedCreditAddr {
-			if addr.String() == toAddr.String() {
+			if addr.String() == fromAddr.String() {
 				totalBalance.Add(&storage.ReceivedCreditValue[index], &totalBalance)
 				storage.ReceivedCreditValue[index] = totalBalance
 				found = true
@@ -179,7 +179,7 @@ func (trieStore *trieStakeStore) VoteCredit(fromAddr, toAddr *crypto.CommonAddre
 		}
 
 		if !found {
-			storage.ReceivedCreditAddr = append(storage.ReceivedCreditAddr, *toAddr)
+			storage.ReceivedCreditAddr = append(storage.ReceivedCreditAddr, *fromAddr)
 			storage.ReceivedCreditValue = append(storage.ReceivedCreditValue, totalBalance)
 		}
 	}
@@ -239,8 +239,10 @@ func (trieStore *trieStakeStore) CancelVoteCredit(fromAddr, toAddr *crypto.Commo
 	}
 
 	if len(storage.CancelCreditValue) == 0 {
-		storage.CancelCreditValue = make([]big.Int, 0)
-		storage.CancelCreditValue[height] = *cancelBalance
+		storage.CancelCreditValue = make([]big.Int, 0, 1)
+		storage.CancelCreditHeight = make([]uint64, 0, 1)
+		storage.CancelCreditHeight = append(storage.CancelCreditHeight, height)
+		storage.CancelCreditValue = append(storage.CancelCreditValue, *cancelBalance)
 	} else {
 		found := false
 		for index, vh := range storage.CancelCreditHeight {
@@ -379,7 +381,7 @@ func (trieStore *trieStakeStore) CandidateCredit(addresses *crypto.CommonAddress
 	}
 }
 
-//可以全部取消质押的币；可以只取消一部分质押的币，当质押的币不满足最低候选要求，则会被撤销候选人地址列表
+//可以全部取消质押的币；也可以只取消一部分质押的币，当质押的币不满足最低候选要求，则会被撤销候选人地址列表
 func (trieStore *trieStakeStore) CancelCandidateCredit(fromAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) error {
 	//找到币被抵押到的stakeStorage;减去取消的值
 	storage, _ := trieStore.GetStakeStorage(fromAddr)
@@ -429,7 +431,7 @@ func (trieStore *trieStakeStore) CancelCandidateCredit(fromAddr *crypto.CommonAd
 	} else {
 		found := false
 		for index, vh := range storage.CancelCreditHeight {
-			if vh == height {
+			if vh == height { //一个块中多笔退款交易
 				found = true
 				storage.CancelCreditValue[index].Add(&storage.CancelCreditValue[index], cancelBalance)
 			}

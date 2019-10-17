@@ -15,35 +15,31 @@ func (StakeTxSelector *RegCandidateTxSelector) Select(tx *types.Transaction) boo
 
 var (
 	_ = (ITransactionSelector)((*StakeTxSelector)(nil))
-	_ = (ITransactionValidator)((*RegCandidateTransactionProcessor)(nil))
+	_ = (ITransactionValidator)((*CandidateTransactionProcessor)(nil))
 )
 
-type RegCandidateTransactionProcessor struct {
+type CandidateTransactionProcessor struct {
 }
 
-func (processor *RegCandidateTransactionProcessor) ExecuteTransaction(context *ExecuteTransactionContext) ([]byte, bool, []*types.Log, error) {
+func (processor *CandidateTransactionProcessor) ExecuteTransaction(context *ExecuteTransactionContext) ([]byte, bool, []*types.Log, error) {
 	from := context.From()
 	store := context.TrieStore()
 	tx := context.Tx()
-	stakeStore := context.TrieStore()
 
 	originBalance := store.GetBalance(from, context.header.Height)
-	toBalance := store.GetBalance(tx.To(), context.header.Height)
+	if originBalance.Cmp(tx.Amount()) < 0 {
+		return nil, false, nil, ErrBalance
+	}
 	leftBalance := originBalance.Sub(originBalance, tx.Amount())
 	if leftBalance.Sign() < 0 {
 		return nil, false, nil, ErrBalance
 	}
-	addBalance := toBalance.Add(toBalance, tx.Amount())
-	err := store.PutBalance(from, context.header.Height, leftBalance)
-	if err != nil {
-		return nil, false, nil, err
-	}
 
 	cd := types.CandidateData{}
-	if err = cd.Unmarshal(tx.GetData()); nil != err {
+	if err := cd.Unmarshal(tx.GetData()); nil != err {
 		return nil, false, nil, err
 	}
-	err = stakeStore.CandidateCredit(from, addBalance, tx.GetData())
+	err := store.CandidateCredit(from, tx.Amount(), tx.GetData())
 	if err != nil {
 		return nil, false, nil, err
 	}

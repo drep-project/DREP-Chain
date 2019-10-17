@@ -50,7 +50,7 @@ func GetCandidates(store store.StoreInterface, topN int) []*Producer {
 
 	heap.Init(&csh)
 
-	candidateAddrs := make([]*Producer, topN)
+	candidateAddrs := []*Producer{}
 
 	addNum := 0
 	for csh.Len() > 0 {
