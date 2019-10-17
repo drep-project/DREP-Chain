@@ -7,6 +7,7 @@ import (
 	"github.com/drep-project/drep-chain/common/trie"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/database"
+	"github.com/drep-project/drep-chain/types"
 	"math/big"
 	"testing"
 )
@@ -16,7 +17,15 @@ type StoreFake struct {
 }
 
 func (s StoreFake) GetCandidateData(addr *crypto.CommonAddress) ([]byte, error) {
-	panic("implement me")
+	pk,_ := crypto.GenerateKey(rand.Reader)
+	b,_ := pk.PubKey().MarshalText()
+	fmt.Println(string(b))
+
+	cd := &types.CandidateData{}
+	cd.P2PPubkey = string(b)
+	cd.Addr = "127.0.0.1:55555"
+
+	return cd.Marshal()
 }
 
 func (s StoreFake) CandidateCredit(addresses *crypto.CommonAddress, addBalance *big.Int, data []byte) error {
@@ -155,7 +164,7 @@ func NewStoreFake() *StoreFake {
 func TestGetCandidates(t *testing.T) {
 	var si store.StoreInterface
 	si = NewStoreFake()
-	addrs := GetCandidates(si,nil)
+	addrs := GetCandidates(si,5)
 	for addr, data := range addrs {
 		fmt.Println(addr.String(), data)
 	}

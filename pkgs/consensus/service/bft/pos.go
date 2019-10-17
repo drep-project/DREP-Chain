@@ -68,6 +68,7 @@ func GetCandidates(store store.StoreInterface, topN int) map[crypto.CommonAddres
 			continue
 		}
 
+		candidateAddrs[*ac.addr] = *cd
 		addNum++
 		if addNum == topN {
 			return candidateAddrs
