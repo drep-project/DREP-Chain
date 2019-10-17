@@ -118,13 +118,13 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 				fmt.Println(pi.IP())
 				//del peer event
 				ch := make(chan *p2p.PeerEvent)
-				sub := bftConsensusService.P2pServer.SubscribeEvents(ch)
+				//sub := bftConsensusService.P2pServer.SubscribeEvents(ch)
 				//control producer validator by timer
 				tm := time.NewTimer(time.Second * 10)
 				defer func() {
 					peer.Disconnect(p2p.DiscQuitting)
 					removePeerFeed.Send(pi)
-					sub.Unsubscribe()
+					//sub.Unsubscribe()
 				}()
 				for {
 					select {
@@ -167,7 +167,8 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 							}
 							producers, err := bftConsensusService.BftConsensus.GetProducers(bftConsensusService.ChainService.BestChain().Tip().StateRoot)
 							if err != nil {
-								return err
+								log.WithField("err", err).Info("get producers")
+								//return err
 							}
 							for _, producer := range producers {
 								if sig.Verify(randomBytes[:], producer.Pubkey) {

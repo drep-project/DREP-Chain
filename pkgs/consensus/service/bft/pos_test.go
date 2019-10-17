@@ -15,6 +15,18 @@ type StoreFake struct {
 	m map[crypto.CommonAddress]struct{}
 }
 
+func (s StoreFake) GetCandidateData(addr *crypto.CommonAddress) ([]byte, error) {
+	panic("implement me")
+}
+
+func (s StoreFake) CandidateCredit(addresses *crypto.CommonAddress, addBalance *big.Int, data []byte) error {
+	panic("implement me")
+}
+
+func (s StoreFake) CancelCandidateCredit(fromAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) error {
+	panic("implement me")
+}
+
 func (StoreFake) DeleteStorage(addr *crypto.CommonAddress) error {
 	panic("implement me")
 }
@@ -119,7 +131,7 @@ func (s StoreFake) GetCandidateAddrs() (map[crypto.CommonAddress]struct{}, error
 	return s.m, nil
 }
 
-func (s StoreFake) GetVoteCredit(addr *crypto.CommonAddress) *big.Int {
+func (s StoreFake) GetVoteCreditCount(addr *crypto.CommonAddress) *big.Int {
 	if _, ok := s.m[*addr]; ok {
 		rd, _ := rand.Int(rand.Reader, new(big.Int).SetUint64(1000000))
 		fmt.Println(addr.String(), rd)
@@ -143,9 +155,9 @@ func NewStoreFake() *StoreFake {
 func TestGetCandidates(t *testing.T) {
 	var si store.StoreInterface
 	si = NewStoreFake()
-	addrs := GetCandidates(si)
-	for _, a := range addrs {
-		fmt.Println(a.String())
+	addrs := GetCandidates(si,nil)
+	for addr, data := range addrs {
+		fmt.Println(addr.String(), data)
 	}
 }
 

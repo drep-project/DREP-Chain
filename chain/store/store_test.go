@@ -37,8 +37,8 @@ func TestGetVoteCredit(t *testing.T) {
 		total.Add(total, new(big.Int).SetUint64(uint64(222+i)*drepUnit))
 	}
 
-	store.stake.VoteCredit(&backbone, nil, new(big.Int).SetUint64(pledgeLimit*drepUnit))
-	total.Add(total, new(big.Int).SetUint64(pledgeLimit*drepUnit))
+	store.stake.VoteCredit(&backbone, nil, new(big.Int).SetUint64(registerPledgeLimit*drepUnit))
+	total.Add(total, new(big.Int).SetUint64(registerPledgeLimit*drepUnit))
 
 	m, err := store.GetCandidateAddrs()
 	if err != nil {
@@ -53,7 +53,7 @@ func TestGetVoteCredit(t *testing.T) {
 		t.Fatalf("vote coin err,%v,%v", total, store.GetVoteCreditCount(&backbone))
 	}
 
-	m1 := store.GetVoteCreditDetails(&backbone)
+	m1 := store.GetCreditDetails(&backbone)
 	for addr, value := range m1 {
 		fmt.Println(addr.String(), value)
 	}

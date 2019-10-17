@@ -249,7 +249,7 @@ func (testbft *testBFT) ChangeTime(interval time.Duration) {
 
 func TestBFT(t *testing.T) {
 	keystore := make([]*secp256k1.PrivateKey, 4)
-	produces := make([]Producer, 4)
+	produces := make(ProducerSet, 4)
 	onlinePeers := make(map[string]consensusTypes.IPeerInfo)
 	bftClients := make([]*testBFT, 4)
 	for i := 0; i < 4; i++ {
@@ -259,7 +259,7 @@ func TestBFT(t *testing.T) {
 			continue
 		}
 		p := Producer{priv.PubKey(), strconv.Itoa(i)}
-		produces[i] = p
+		produces[i] = &p
 		keystore[i] = priv
 
 		sendor := &testSendor{onlinePeers, bftClients, p.IP}
@@ -300,7 +300,7 @@ func TestBFT(t *testing.T) {
 
 func TestBFTTimeOut(t *testing.T) {
 	keystore := make([]*secp256k1.PrivateKey, 4)
-	produces := make([]Producer, 4)
+	produces := make(ProducerSet, 4)
 	onlinePeers := make(map[string]consensusTypes.IPeerInfo)
 	bftClients := make([]*testBFT, 4)
 	for i := 0; i < 4; i++ {
@@ -310,7 +310,7 @@ func TestBFTTimeOut(t *testing.T) {
 			continue
 		}
 		p := Producer{priv.PubKey(), strconv.Itoa(i)}
-		produces[i] = p
+		produces[i] = &p
 		keystore[i] = priv
 
 		sendor := &testSendor{onlinePeers, bftClients, p.IP}

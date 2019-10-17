@@ -372,8 +372,8 @@ func (trieQuery *TrieQuery) GetVoteCreditDetails(addr *crypto.CommonAddress) map
 
 	m := make(map[crypto.CommonAddress]big.Int)
 
-	for index,addr := range storage.ReceivedVoteCreditAddr{
-		m[addr] = storage.ReceivedVoteCreditValue[index]
+	for index,addr := range storage.ReceivedCreditAddr {
+		m[addr] = storage.ReceivedCreditValue[index]
 	}
 
 	return m

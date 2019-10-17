@@ -55,6 +55,9 @@ type StoreInterface interface {
 	GetVoteCreditCount(addr *crypto.CommonAddress) *big.Int
 	CancelVoteCredit(fromAddr, toAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) error
 	VoteCredit(addresses *crypto.CommonAddress, to *crypto.CommonAddress, addBalance *big.Int) error
+	CandidateCredit(addresses *crypto.CommonAddress, addBalance *big.Int, data []byte) error
+	CancelCandidateCredit(fromAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) error
+	GetCandidateData(addr *crypto.CommonAddress) ([]byte, error)
 }
 
 type Store struct {
@@ -63,12 +66,20 @@ type Store struct {
 	db      *StoreDB
 }
 
+func (s Store) CancelCandidateCredit(fromAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) error {
+	return s.stake.CancelCandidateCredit(fromAddr, cancelBalance, height)
+}
+
+func (s Store) GetCandidateData(addr *crypto.CommonAddress) ([]byte, error) {
+	return s.stake.GetCandidateData(addr)
+}
+
 func (s Store) GetCandidateAddrs() (map[crypto.CommonAddress]struct{}, error) {
 	return s.stake.GetCandidateAddrs()
 }
 
 func (s Store) GetVoteCreditCount(addr *crypto.CommonAddress) *big.Int {
-	return s.stake.GetVoteCreditCount(addr)
+	return s.stake.GetCreditCount(addr)
 }
 
 func (s Store) Empty(addr *crypto.CommonAddress) bool {
@@ -92,7 +103,7 @@ func (s Store) AliasExist(alias string) bool {
 }
 
 func (s Store) AddBalance(addr *crypto.CommonAddress, height uint64, amount *big.Int) error {
-	voteCredit, err := s.stake.CancelVoteCreditToBalance(addr, height)
+	voteCredit, err := s.stake.CancelCreditToBalance(addr, height)
 	if err != nil {
 		return err
 	}
@@ -100,7 +111,7 @@ func (s Store) AddBalance(addr *crypto.CommonAddress, height uint64, amount *big
 }
 
 func (s Store) SubBalance(addr *crypto.CommonAddress, height uint64, amount *big.Int) error {
-	voteCredit, err := s.stake.CancelVoteCreditToBalance(addr, height)
+	voteCredit, err := s.stake.CancelCreditToBalance(addr, height)
 	if err != nil {
 		return err
 	}
@@ -114,11 +125,11 @@ func (s Store) SubBalance(addr *crypto.CommonAddress, height uint64, amount *big
 }
 
 func (s Store) GetBalance(addr *crypto.CommonAddress, height uint64) *big.Int {
-	return new(big.Int).Add(s.stake.GetCancelVoteCreditForBalance(addr, height), s.account.GetBalance(addr))
+	return new(big.Int).Add(s.stake.GetCancelCreditForBalance(addr, height), s.account.GetBalance(addr))
 }
 
 func (s Store) PutBalance(addr *crypto.CommonAddress, height uint64, balance *big.Int) error {
-	voteCredit, err := s.stake.CancelVoteCreditToBalance(addr, height)
+	voteCredit, err := s.stake.CancelCreditToBalance(addr, height)
 	if err != nil {
 		return err
 	}
@@ -166,6 +177,9 @@ func (s Store) VoteCredit(fromAddr *crypto.CommonAddress, to *crypto.CommonAddre
 	return s.stake.VoteCredit(fromAddr, to, addBalance)
 }
 
+func (s Store) CandidateCredit(fromAddr *crypto.CommonAddress, addBalance *big.Int, data []byte) error {
+	return s.stake.CandidateCredit(fromAddr, addBalance, data)
+}
 func (s Store) TrieDB() *trie.Database {
 	return s.account.TrieDB()
 }
@@ -216,6 +230,6 @@ func (s *Store) RecoverTrie(root []byte) bool {
 	return s.db.RecoverTrie(root)
 }
 
-func (s *Store) GetVoteCreditDetails(addr *crypto.CommonAddress) map[crypto.CommonAddress]big.Int {
-	return s.stake.GetVoteCreditDetails(addr)
+func (s *Store) GetCreditDetails(addr *crypto.CommonAddress) map[crypto.CommonAddress]big.Int {
+	return s.stake.GetCreditDetails(addr)
 }

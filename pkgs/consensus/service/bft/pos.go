@@ -4,11 +4,8 @@ import (
 	"container/heap"
 	"github.com/drep-project/drep-chain/chain/store"
 	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/types"
 	"math/big"
-)
-
-const (
-	BftBackboneNum = 7
 )
 
 type addrAndCredit struct {
@@ -34,7 +31,7 @@ func (h *creditsHeap) Pop() interface{} {
 	return x
 }
 
-func GetCandidates(store store.StoreInterface, registerAddrs []crypto.CommonAddress) []*crypto.CommonAddress {
+func GetCandidates(store store.StoreInterface, topN int) map[crypto.CommonAddress]types.CandidateData {
 	voteAddrs, err := store.GetCandidateAddrs()
 	if err != nil {
 		log.Errorf("get candidates err:%v", err)
@@ -43,34 +40,38 @@ func GetCandidates(store store.StoreInterface, registerAddrs []crypto.CommonAddr
 
 	csh := make(creditsHeap, 0)
 	for addr, _ := range voteAddrs {
+		addr := addr
 		totalCredit := store.GetVoteCreditCount(&addr)
 		csh = append(csh, &addrAndCredit{addr: &addr, value: totalCredit})
 	}
 
 	heap.Init(&csh)
 
-	candidateAddrs := make([]*crypto.CommonAddress, 0)
-	include := func(voted crypto.CommonAddress) bool {
-		for _, addr := range registerAddrs {
-			if addr == voted {
-				return true
-			}
-		}
-		return false
-	}
+	candidateAddrs := make(map[crypto.CommonAddress]types.CandidateData, 0)
 
 	addNum := 0
-	for csh.Len() > 0{
-
+	for csh.Len() > 0 {
 		v := heap.Pop(&csh)
 		ac := v.(*addrAndCredit)
-		if include(*ac.addr) {
-			candidateAddrs = append(candidateAddrs, ac.addr)
-			addNum++
-			if addNum == BftBackboneNum {
-				return candidateAddrs
-			}
+
+		data, err := store.GetCandidateData(ac.addr)
+		if err != nil {
+			log.WithField("err", err).Info("get candidate data err")
+			continue
+		}
+
+		cd := &types.CandidateData{}
+
+		err = cd.Unmarshal(data)
+		if err != nil {
+			log.WithField("err", err).Info("unmarshal data to candidateData err")
+			continue
+		}
+
+		addNum++
+		if addNum == topN {
+			return candidateAddrs
 		}
 	}
-	panic("not enough voter")
+	return candidateAddrs
 }

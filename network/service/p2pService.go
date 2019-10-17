@@ -172,9 +172,7 @@ func (p2pService *P2pService) sendMessage(outMessage *outMessage) error {
 }
 
 func (p2pService *P2pService) Peers() []*p2p.Peer {
-	peers := p2pService.server.Peers()
-
-	return peers
+	return p2pService.server.Peers()
 }
 
 func (p2pService *P2pService) AddPeer(nodeUrl string) error {

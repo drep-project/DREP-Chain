@@ -10,11 +10,11 @@ const (
 	CreateContractType
 	CallContractType
 
-	SetAliasType //给地址设置昵称
-
-	VoteCreditType       //质押给自己或者别人
-	CancelVoteCreditType //撤销质押币
-	LockBalance          //锁定drep币，换取其他币
+	SetAliasType          //给地址设置昵称
+	VoteCreditType        //质押给别人
+	CancelVoteCreditType  //撤销质押币
+	CandidateType         //申请成为候选出块节点
+	CancelCandidateType   //申请成为候选出块节点
 	RegisterProducer
 )
 
