@@ -216,6 +216,8 @@ func TestVoteCredit(t *testing.T) {
 }
 
 func TestCancelVoteCredit(t *testing.T) {
+	defer os.RemoveAll("./test")
+
 	diskDB, _ := leveldb.New("./test", 16, 512, "")
 	storeInterface, err := TrieStoreFromStore(diskDB, trie.EmptyRoot[:])
 
@@ -273,5 +275,4 @@ func TestCancelVoteCredit(t *testing.T) {
 			t.Fatalf("cancel vote err,%v", b)
 		}
 	}
-
 }
