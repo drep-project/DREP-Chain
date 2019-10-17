@@ -176,7 +176,7 @@ func (leader *Leader) setUp(msg IConsenMsg) {
 
 	for _, member := range leader.liveMembers {
 		if member.Peer != nil && !member.IsMe {
-			log.WithField("IP", member.Peer).WithField("Height", setup.Height).Trace("leader sent setup message")
+			log.WithField("Node", member.Peer).WithField("Height", setup.Height).Trace("leader sent setup message")
 			leader.sender.SendAsync(member.Peer.GetMsgRW(), MsgTypeSetUp, setup)
 		}
 	}
@@ -286,7 +286,7 @@ func (leader *Leader) challenge(msg IConsenMsg) {
 
 		member := leader.getMemberByPk(pk)
 		if member.IsOnline && !member.IsMe {
-			log.WithField("IP", member.Peer).WithField("Height", leader.currentHeight).Debug("leader sent challenge message")
+			log.WithField("Node", member.Peer).WithField("Height", leader.currentHeight).Debug("leader sent challenge message")
 			leader.sender.SendAsync(member.Peer.GetMsgRW(), MsgTypeChallenge, challenge)
 		}
 	}

@@ -53,7 +53,7 @@ type Interface interface {
 // Note that mechanism names are not case-sensitive.
 //
 //     "" or "none"         return nil
-//     "extip:77.12.33.4"   will assume the local machine is reachable on the given IP
+//     "extip:77.12.33.4"   will assume the local machine is reachable on the given Node
 //     "any"                uses the first auto-detected mechanism
 //     "upnp"               uses the Universal Plug and Play protocol
 //     "pmp"                uses NAT-PMP with an auto-detected gateway address
@@ -67,7 +67,7 @@ func Parse(spec string) (Interface, error) {
 	if len(parts) > 1 {
 		ip = net.ParseIP(parts[1])
 		if ip == nil {
-			return nil, errors.New("invalid IP address")
+			return nil, errors.New("invalid Node address")
 		}
 	}
 	switch mech {
@@ -77,7 +77,7 @@ func Parse(spec string) (Interface, error) {
 		return Any(), nil
 	case "extip", "ip":
 		if ip == nil {
-			return nil, errors.New("missing IP address")
+			return nil, errors.New("missing Node address")
 		}
 		return ExtIP(ip), nil
 	case "upnp":
@@ -126,7 +126,7 @@ func Map(m Interface, c chan struct{}, protocol string, extport, intport int, na
 }
 
 // ExtIP assumes that the local machine is reachable on the given
-// external IP address, and that any required ports were mapped manually.
+// external Node address, and that any required ports were mapped manually.
 // Mapping operations will not return an error but won't actually do anything.
 type ExtIP net.IP
 
@@ -163,7 +163,7 @@ func UPnP() Interface {
 }
 
 // PMP returns a port mapper that uses NAT-PMP. The provided gateway
-// address should be the IP of your router. If the given gateway
+// address should be the Node of your router. If the given gateway
 // address is nil, PMP will attempt to auto-discover the router.
 func PMP(gateway net.IP) Interface {
 	if gateway != nil {

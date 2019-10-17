@@ -5,28 +5,28 @@ import (
 	"fmt"
 	"github.com/drep-project/drep-chain/common/hexutil"
 	"github.com/drep-project/drep-chain/crypto"
-	"net"
-	"regexp"
-	"strconv"
-	"strings"
+	"github.com/drep-project/drep-chain/network/p2p/enode"
 )
 
+type P2pNode struct {
+
+}
 //候选节点数据部分信息
 type CandidateData struct {
-	P2PPubkey string //出块节点的pubkey
-	Addr      string //出块节点的地址
+	Pubkey string       //出块节点的pubkey
+	Node  string //出块节点的地址
 }
 
 func (cd CandidateData) check() error {
-	pk,_ := hexutil.Decode(cd.P2PPubkey)
+	pk,_ := hexutil.Decode(cd.Pubkey)
 
 	_, err := crypto.DecompressPubkey(pk)
 	if err != nil {
-		return fmt.Errorf("pubkey:%s err:%s", cd.P2PPubkey, err.Error())
+		return fmt.Errorf("pubkey:%s err:%s", cd.Pubkey, err.Error())
 	}
 
-	if !hostAddrCheck(cd.Addr) {
-		return fmt.Errorf("addr err:%s", cd.Addr)
+	if !hostAddrCheck(cd.Node) {
+		return fmt.Errorf("addr err:%s", cd.Node)
 	}
 
 	return nil
@@ -51,32 +51,7 @@ func (cd *CandidateData) Unmarshal(data []byte) error {
 }
 
 func hostAddrCheck(addr string) bool {
-	items := strings.Split(addr, ":")
-	if items == nil || len(items) != 2 {
-		return false
-	}
-
-	a := net.ParseIP(items[0])
-	if a == nil {
-		return false
-	}
-
-	match, err := regexp.MatchString("^[0-9]*$", items[1])
-	if err != nil {
-		return false
-	}
-
-	i, err := strconv.Atoi(items[1])
-	if err != nil {
-		return false
-	}
-	if i < 0 || i > 65535 {
-		return false
-	}
-
-	if match == false {
-		return false
-	}
-
-	return true
+	n := enode.Node{}
+	err := n.UnmarshalText([]byte(addr))
+	return err != nil
 }

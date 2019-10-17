@@ -3,18 +3,19 @@ package bft
 import (
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/drep-chain/network/p2p/enode"
 )
 
 type BftConfig struct {
 	MyPk          *secp256k1.PublicKey `json:"mypk"`
 	StartMiner    bool                 `json:"startMiner"`
-	Producers     ProducerSet          `json:"producers"`
+	ProducerNum  int	`json:"producerNum"`
 	BlockInterval int                  `json:"blockInterval"`
 }
 
 type Producer struct {
 	Pubkey *secp256k1.PublicKey `json:"pubkey"`
-	IP     string               `json:"ip"`
+	Node   *enode.Node
 }
 
 func (producer *Producer) Address() crypto.CommonAddress {
@@ -25,7 +26,7 @@ type ProducerSet []*Producer
 
 func (produceSet *ProducerSet) IsLocalIP(ip string) bool {
 	for _, bp := range *produceSet {
-		if bp.IP == ip {
+		if bp.Node.IP().String() == ip {
 			return true
 		}
 	}

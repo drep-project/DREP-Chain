@@ -47,7 +47,7 @@ func (registerAsProducerTransactionExecutor *RegisterAsProducerTransactionExecut
 		if oldProducer.Address() == newProducer.Address() {
 			exit = true
 			oldProducer.Pubkey = newProducer.Pubkey
-			oldProducer.IP = newProducer.IP
+			oldProducer.Node = newProducer.Node
 		}
 	}
 	if !exit {

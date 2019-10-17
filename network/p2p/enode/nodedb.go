@@ -42,7 +42,7 @@ const (
 	dbLocalPrefix  = "local:"
 	dbDiscoverRoot = "v4"
 
-	// These fields are stored per ID and IP, the full key is "n:<ID>:v4:<IP>:findfail".
+	// These fields are stored per ID and Node, the full key is "n:<ID>:v4:<Node>:findfail".
 	// Use nodeItemKey to create those keys.
 	dbNodeFindFails = "findfail"
 	dbNodePing      = "lastping"
@@ -149,7 +149,7 @@ func splitNodeKey(key []byte) (id ID, rest []byte) {
 func nodeItemKey(id ID, ip net.IP, field string) []byte {
 	ip16 := ip.To16()
 	if ip16 == nil {
-		panic(fmt.Errorf("invalid IP (length %d)", len(ip)))
+		panic(fmt.Errorf("invalid Node (length %d)", len(ip)))
 	}
 	return bytes.Join([][]byte{nodeKey(id), ip16, []byte(field)}, []byte{':'})
 }
@@ -162,7 +162,7 @@ func splitNodeItemKey(key []byte) (id ID, ip net.IP, field string) {
 		return id, nil, ""
 	}
 	key = key[len(dbDiscoverRoot)+1:]
-	// Split out the IP.
+	// Split out the Node.
 	ip = net.IP(key[:16])
 	if ip4 := ip.To4(); ip4 != nil {
 		ip = ip4
@@ -329,7 +329,7 @@ func (db *DB) expireNodes() {
 				youngestPong = time
 			}
 			if time < threshold {
-				// Last pong from this IP older than threshold, remove fields belonging to it.
+				// Last pong from this Node older than threshold, remove fields belonging to it.
 				deleteRange(db.lvl, nodeItemKey(id, ip, ""))
 			}
 		}

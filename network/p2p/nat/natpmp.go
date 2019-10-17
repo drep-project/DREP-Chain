@@ -96,7 +96,7 @@ func discoverPMP() Interface {
 }
 
 var (
-	// LAN IP ranges
+	// LAN Node ranges
 	_, lan10, _  = net.ParseCIDR("10.0.0.0/8")
 	_, lan176, _ = net.ParseCIDR("172.16.0.0/12")
 	_, lan192, _ = net.ParseCIDR("192.168.0.0/16")

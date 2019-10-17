@@ -210,6 +210,6 @@ func (soloConsensusService *SoloConsensusService) getWaitTime() (time.Time, time
 }
 func (soloConsensusService *SoloConsensusService) DefaultConfig() *SoloConfig {
 	return &SoloConfig{
-		BlockInterval: int(time.Second * 5),
+		BlockInterval: 5,
 	}
 }

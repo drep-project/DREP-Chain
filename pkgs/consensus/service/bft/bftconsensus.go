@@ -28,6 +28,7 @@ const (
 type BftConsensus struct {
 	CoinBase crypto.CommonAddress
 	PrivKey  *secp256k1.PrivateKey
+	producerNum int
 	curMiner int
 
 	BlockGenerator blockmgr.IBlockBlockGenerator
@@ -45,6 +46,9 @@ type BftConsensus struct {
 
 	addPeerChan    chan *consensusTypes.PeerInfo
 	removePeerChan chan *consensusTypes.PeerInfo
+
+	producer []*Producer
+	changeInterval uint64
 }
 
 func NewBftConsensus(
@@ -52,6 +56,7 @@ func NewBftConsensus(
 	blockGenerator blockmgr.IBlockBlockGenerator,
 	dbService *database.DatabaseService,
 	sener Sender,
+	producerNum int,
 	addPeer, removePeer *event.Feed) *BftConsensus {
 	addPeerChan := make(chan *consensusTypes.PeerInfo)
 	removePeerChan := make(chan *consensusTypes.PeerInfo)
@@ -60,6 +65,7 @@ func NewBftConsensus(
 	return &BftConsensus{
 		BlockGenerator: blockGenerator,
 		ChainService:   chainService,
+		producerNum:producerNum,
 		DbService:      dbService,
 		sender:         sener,
 		onLinePeer:     map[string]consensusTypes.IPeerInfo{},
@@ -71,24 +77,30 @@ func NewBftConsensus(
 	}
 }
 
-func (bftConsensus *BftConsensus) GetProducers(root []byte) ([]*Producer, error) {
-	trie, err := store.TrieStoreFromStore(bftConsensus.DbService.LevelDb(), root)
-	if err != nil {
-		return nil, err
+func (bftConsensus *BftConsensus) GetProducers(height uint64, topN int) ([]*Producer, error) {
+	if  bftConsensus.producer == nil && height%bftConsensus.changeInterval == 0 {
+		height = height - height%bftConsensus.changeInterval
+		block, err := bftConsensus.ChainService.GetBlockByHeight(height)
+		if err != nil {
+			return nil, err
+		}
+		trie, err := store.TrieStoreFromStore(bftConsensus.DbService.LevelDb(), block.Header.StateRoot)
+		if err != nil {
+			return nil, err
+		}
+		producers := GetCandidates(trie, topN)
+		bftConsensus.producer = producers
+		return producers, nil
+	}else{
+		return bftConsensus.producer, nil
 	}
-	op := ConsensusOp{trie}
-	producers, err := op.GetProducer()
-	if err != nil {
-		return nil, err
-	}
-	return producers, nil
 }
 
 func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Block, error) {
 	bftConsensus.CoinBase = crypto.PubkeyToAddress(privKey.PubKey())
 	bftConsensus.PrivKey = privKey
 	go bftConsensus.processPeers()
-	producers, err := bftConsensus.GetProducers(bftConsensus.ChainService.BestChain().Tip().StateRoot)
+	producers, err := bftConsensus.GetProducers(bftConsensus.ChainService.BestChain().Tip().Height, bftConsensus.producerNum)
 	if err != nil {
 		return nil, err
 	}
@@ -169,14 +181,14 @@ func (bftConsensus *BftConsensus) collectMemberStatus(producers []*Producer) []*
 		} else {
 			//todo  peer获取到的IP地址和配置的ip地址是否相等（nat后是否相等,从tcp原理来看是相等的）
 			bftConsensus.peerLock.RLock()
-			if pi, ok = bftConsensus.onLinePeer[produce.IP]; ok {
+			if pi, ok = bftConsensus.onLinePeer[produce.Node.IP().String()]; ok {
 				IsOnline = true
 			}
 			bftConsensus.peerLock.RUnlock()
 		}
 
 		produceInfos = append(produceInfos, &MemberInfo{
-			Producer: &Producer{Pubkey: produce.Pubkey, IP: produce.IP},
+			Producer: &Producer{Pubkey: produce.Pubkey, Node: produce.Node},
 			Peer:     pi,
 			IsMe:     isMe,
 			IsOnline: IsOnline,
@@ -341,7 +353,7 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
 	if err != nil {
 		return err
 	}
-	multiSigValidator := BlockMultiSigValidator{bftConsensus.GetProducers, bftConsensus.ChainService.GetBlockByHash}
+	multiSigValidator := BlockMultiSigValidator{bftConsensus.GetProducers, bftConsensus.ChainService.GetBlockByHash, bftConsensus.producerNum}
 	if err := multiSigValidator.VerifyBody(block); err != nil {
 		return err
 	}

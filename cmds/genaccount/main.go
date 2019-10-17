@@ -89,7 +89,7 @@ func gen(ctx *cli.Context) error {
 
 		standbyKey = append(standbyKey, aNode.PrivateKey)
 		produces = append(produces, bft.Producer{
-			IP:     nodeItems[i].Ip,
+			Node:   nodeItems[i].Ip,
 			Pubkey: aNode.PrivateKey.PubKey(),
 		})
 	}
@@ -124,6 +124,7 @@ func gen(ctx *cli.Context) error {
 			MyPk:       nil,
 			StartMiner: true,
 			BlockInterval:5,
+			ProducerNum:len(nodeItems),
 		}
 	}
 

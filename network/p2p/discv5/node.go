@@ -82,7 +82,7 @@ func (n *Node) addrEqual(a *net.UDPAddr) bool {
 	return n.UDP == uint16(a.Port) && n.IP.Equal(ip)
 }
 
-// Incomplete returns true for nodes with no IP address.
+// Incomplete returns true for nodes with no Node address.
 func (n *Node) Incomplete() bool {
 	return n.IP == nil
 }
@@ -99,7 +99,7 @@ func (n *Node) validateComplete() error {
 		return errors.New("missing TCP port")
 	}
 	if n.IP.IsMulticast() || n.IP.IsUnspecified() {
-		return errors.New("invalid IP (multicast/unspecified)")
+		return errors.New("invalid Node (multicast/unspecified)")
 	}
 	_, err := n.ID.Pubkey() // validate the key (on curve, etc.)
 	return err
@@ -128,7 +128,7 @@ var incompleteNodeURL = regexp.MustCompile("(?i)^(?:enode://)?([0-9a-f]+)$")
 //
 // There are two basic forms of node designators
 //   - incomplete nodes, which only have the public key (node ID)
-//   - complete nodes, which contain the public key and IP/Port information
+//   - complete nodes, which contain the public key and Node/Port information
 //
 // For incomplete nodes, the designator must look like one of these
 //
@@ -137,13 +137,13 @@ var incompleteNodeURL = regexp.MustCompile("(?i)^(?:enode://)?([0-9a-f]+)$")
 //
 // For complete nodes, the node ID is encoded in the username portion
 // of the URL, separated from the host by an @ sign. The hostname can
-// only be given as an IP address, DNS domain names are not allowed.
+// only be given as an Node address, DNS domain names are not allowed.
 // The port in the host name section is the TCP listening port. If the
 // TCP and UDP (discovery) ports differ, the UDP port is specified as
 // query parameter "discport".
 //
 // In the following example, the node URL describes
-// a node with IP address 10.3.58.6, TCP listening port 30303
+// a node with Node address 10.3.58.6, TCP listening port 30303
 // and UDP discovery port 30301.
 //
 //    enode://<hex node id>@10.3.58.6:30303?discport=30301
@@ -178,15 +178,15 @@ func parseComplete(rawurl string) (*Node, error) {
 	if id, err = HexID(u.User.String()); err != nil {
 		return nil, fmt.Errorf("invalid node ID (%v)", err)
 	}
-	// Parse the IP address.
+	// Parse the Node address.
 	host, port, err := net.SplitHostPort(u.Host)
 	if err != nil {
 		return nil, fmt.Errorf("invalid host: %v", err)
 	}
 	if ip = net.ParseIP(host); ip == nil {
-		return nil, errors.New("invalid IP address")
+		return nil, errors.New("invalid Node address")
 	}
-	// Ensure the IP is 4 bytes long for IPv4 addresses.
+	// Ensure the Node is 4 bytes long for IPv4 addresses.
 	if ipv4 := ip.To4(); ipv4 != nil {
 		ip = ipv4
 	}

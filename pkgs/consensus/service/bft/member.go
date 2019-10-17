@@ -90,7 +90,7 @@ func (member *Member) ProcessConsensus() (IConsenMsg, error) {
 		default:
 		}
 	}()
-	log.WithField("IP", member.leader.Peer).Debug("wait for leader's setup message")
+	log.WithField("Node", member.leader.Peer).Debug("wait for leader's setup message")
 	member.setState(WAIT_SETUP)
 	go member.WaitSetUp()
 	go member.processP2pMessage()

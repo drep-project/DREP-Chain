@@ -279,7 +279,7 @@ func (accountapi *AccountApi) CancelVoteCredit(from crypto.CommonAddress, to cry
 	5. gas上线
 	6. 用户pubkey ip等信息
  return: 交易地址
- example:   curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_candidateCredit","params":["0x0373654ccdb250f2cfcfe64c783a44b9ea85bc47f2f00c480d05082428d277d6d0","0x111","0x110","0x30000","{"P2PPubkey":"122fldldldfjkdkdk","Addr":"127.0.0.12:55555"}"],"id":1}' http://127.0.0.1:15645
+ example:   curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_candidateCredit","params":["0x0373654ccdb250f2cfcfe64c783a44b9ea85bc47f2f00c480d05082428d277d6d0","0x111","0x110","0x30000","{"Pubkey":"122fldldldfjkdkdk","Addr":"127.0.0.12:55555"}"],"id":1}' http://127.0.0.1:15645
  response:
 	 {"jsonrpc":"2.0","id":1,"result":"0x3a3b59f90a21c2fd1b690aa3a2bc06dc2d40eb5bdc26fdd7ecb7e1105af2638e"}
 */

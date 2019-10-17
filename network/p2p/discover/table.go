@@ -49,7 +49,7 @@ const (
 	nBuckets          = hashBits / 15       // Number of buckets
 	bucketMinDistance = hashBits - nBuckets // Log distance of closest bucket
 
-	// IP address limits.
+	// Node address limits.
 	bucketIPLimit, bucketSubnet = 2, 24 // at most 2 addresses from the same /24
 	tableIPLimit, tableSubnet   = 10, 24
 
@@ -582,7 +582,7 @@ func (tab *Table) addSeenNode(n *node) {
 		return
 	}
 	if !tab.addIP(b, n.IP()) {
-		// Can't add: IP limit reached.
+		// Can't add: Node limit reached.
 		return
 	}
 	// Add to end of bucket:
@@ -624,7 +624,7 @@ func (tab *Table) addVerifiedNode(n *node) {
 		return
 	}
 	if !tab.addIP(b, n.IP()) {
-		// Can't add: IP limit reached.
+		// Can't add: Node limit reached.
 		return
 	}
 	// Add to front of bucket.
@@ -649,11 +649,11 @@ func (tab *Table) addIP(b *bucket, ip net.IP) bool {
 		return true
 	}
 	if !tab.ips.Add(ip) {
-		log.WithField("ip", ip).Debug("IP exceeds table limit")
+		log.WithField("ip", ip).Debug("Node exceeds table limit")
 		return false
 	}
 	if !b.ips.Add(ip) {
-		log.WithField("ip", ip).Debug("IP exceeds bucket limit")
+		log.WithField("ip", ip).Debug("Node exceeds bucket limit")
 		tab.ips.Remove(ip)
 		return false
 	}
@@ -710,7 +710,7 @@ func (tab *Table) bumpInBucket(b *bucket, n *node) bool {
 	for i := range b.entries {
 		if b.entries[i].ID() == n.ID() {
 			if !n.IP().Equal(b.entries[i].IP()) {
-				// Endpoint has changed, ensure that the new IP fits into table limits.
+				// Endpoint has changed, ensure that the new Node fits into table limits.
 				tab.removeIP(b, b.entries[i].IP())
 				if !tab.addIP(b, n.IP()) {
 					// It doesn't, put the previous one back.

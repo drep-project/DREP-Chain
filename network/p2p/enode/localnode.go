@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	// IP tracker configuration
+	// Node tracker configuration
 	iptrackMinStatements = 10
 	iptrackWindow        = 5 * time.Minute
 	iptrackContactWindow = 10 * time.Minute
@@ -129,7 +129,7 @@ func (ln *LocalNode) delete(e enr.Entry) {
 	}
 }
 
-// SetStaticIP sets the local IP to the given one unconditionally.
+// SetStaticIP sets the local Node to the given one unconditionally.
 // This disables endpoint prediction.
 func (ln *LocalNode) SetStaticIP(ip net.IP) {
 	ln.mu.Lock()
@@ -139,8 +139,8 @@ func (ln *LocalNode) SetStaticIP(ip net.IP) {
 	ln.updateEndpoints()
 }
 
-// SetFallbackIP sets the last-resort IP address. This address is used
-// if no endpoint prediction can be made and no static IP is set.
+// SetFallbackIP sets the last-resort Node address. This address is used
+// if no endpoint prediction can be made and no static Node is set.
 func (ln *LocalNode) SetFallbackIP(ip net.IP) {
 	ln.mu.Lock()
 	defer ln.mu.Unlock()
@@ -204,7 +204,7 @@ func (ln *LocalNode) updateEndpoints() {
 }
 
 // predictAddr wraps IPTracker.PredictEndpoint, converting from its string-based
-// endpoint representation to IP and port types.
+// endpoint representation to Node and port types.
 func predictAddr(t *netutil.IPTracker) (net.IP, int) {
 	ep := t.PredictEndpoint()
 	if ep == "" {

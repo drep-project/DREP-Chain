@@ -58,7 +58,7 @@ func (n *Node) Seq() uint64 {
 	return n.r.Seq()
 }
 
-// Incomplete returns true for nodes with no IP address.
+// Incomplete returns true for nodes with no Node address.
 func (n *Node) Incomplete() bool {
 	return n.IP() == nil
 }
@@ -68,7 +68,7 @@ func (n *Node) Load(k enr.Entry) error {
 	return n.r.Load(k)
 }
 
-// IP returns the IP address of the node.
+// Node returns the Node address of the node.
 func (n *Node) IP() net.IP {
 	var ip net.IP
 	n.Load((*enr.IP)(&ip))
@@ -115,7 +115,7 @@ func (n *Node) ValidateComplete() error {
 	}
 	ip := n.IP()
 	if ip.IsMulticast() || ip.IsUnspecified() {
-		return errors.New("invalid IP (multicast/unspecified)")
+		return errors.New("invalid Node (multicast/unspecified)")
 	}
 	// Validate the node key (on curve, etc.).
 	var key Secp256k1

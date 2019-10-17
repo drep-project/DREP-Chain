@@ -66,15 +66,15 @@ func (testPeer *testPeer) GetMsgRW() p2p.MsgReadWriter {
 }
 
 func (testPeer *testPeer) String() string {
-	return testPeer.Producer.IP
+	return testPeer.Producer.Node
 }
 
 func (testPeer *testPeer) IP() string {
-	return testPeer.Producer.IP
+	return testPeer.Producer.Node
 }
 
 func (testPeer *testPeer) Equal(ipeer consensusTypes.IPeerInfo) bool {
-	return testPeer.Producer.IP == ipeer.IP()
+	return testPeer.Producer.Node == ipeer.IP()
 }
 
 type dummyConsensusMsg struct {
@@ -182,13 +182,13 @@ func (testbft *testBFT) collectMemberStatus() []*MemberInfo {
 			IsOnline = true
 		} else {
 			//todo  peer获取到的IP地址和配置的ip地址是否相等（nat后是否相等,从tcp原理来看是相等的）
-			if pi, ok = testbft.onLinePeer[produce.IP]; ok {
+			if pi, ok = testbft.onLinePeer[produce.Node]; ok {
 				IsOnline = true
 			}
 		}
 
 		produceInfos = append(produceInfos, &MemberInfo{
-			Producer: &Producer{Pubkey: produce.Pubkey, IP: produce.IP},
+			Producer: &Producer{Pubkey: produce.Pubkey, Node: produce.Node},
 			Peer:     pi,
 			IsMe:     isMe,
 			IsOnline: IsOnline,
@@ -262,8 +262,8 @@ func TestBFT(t *testing.T) {
 		produces[i] = &p
 		keystore[i] = priv
 
-		sendor := &testSendor{onlinePeers, bftClients, p.IP}
-		bftClient := newTestBFT(keystore[i], produces, sendor, p.IP, onlinePeers)
+		sendor := &testSendor{onlinePeers, bftClients, p.Node}
+		bftClient := newTestBFT(keystore[i], produces, sendor, p.Node, onlinePeers)
 		bftClients[i] = bftClient
 		onlinePeers[strconv.Itoa(i)] = &testPeer{p, bftClient}
 	}
@@ -313,8 +313,8 @@ func TestBFTTimeOut(t *testing.T) {
 		produces[i] = &p
 		keystore[i] = priv
 
-		sendor := &testSendor{onlinePeers, bftClients, p.IP}
-		bftClient := newTestBFT(keystore[i], produces, sendor, p.IP, onlinePeers)
+		sendor := &testSendor{onlinePeers, bftClients, p.Node}
+		bftClient := newTestBFT(keystore[i], produces, sendor, p.Node, onlinePeers)
 		bftClients[i] = bftClient
 		if i < 2 {
 			onlinePeers[strconv.Itoa(i)] = &testPeer{p, bftClient}

@@ -3,7 +3,10 @@ package bft
 import (
 	"container/heap"
 	"github.com/drep-project/drep-chain/chain/store"
+	"github.com/drep-project/drep-chain/common/hexutil"
 	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/drep-chain/network/p2p/enode"
 	"github.com/drep-project/drep-chain/types"
 	"math/big"
 )
@@ -31,7 +34,7 @@ func (h *creditsHeap) Pop() interface{} {
 	return x
 }
 
-func GetCandidates(store store.StoreInterface, topN int) map[crypto.CommonAddress]types.CandidateData {
+func GetCandidates(store store.StoreInterface, topN int) []*Producer {
 	voteAddrs, err := store.GetCandidateAddrs()
 	if err != nil {
 		log.Errorf("get candidates err:%v", err)
@@ -47,7 +50,7 @@ func GetCandidates(store store.StoreInterface, topN int) map[crypto.CommonAddres
 
 	heap.Init(&csh)
 
-	candidateAddrs := make(map[crypto.CommonAddress]types.CandidateData, 0)
+	candidateAddrs := make([]*Producer, topN)
 
 	addNum := 0
 	for csh.Len() > 0 {
@@ -67,7 +70,24 @@ func GetCandidates(store store.StoreInterface, topN int) map[crypto.CommonAddres
 			log.WithField("err", err).Info("unmarshal data to candidateData err")
 			continue
 		}
-
+		pkBytes, err := hexutil.Decode(cd.Pubkey)
+		if err != nil {
+			continue
+		}
+		pk, err := secp256k1.ParsePubKey(pkBytes)
+		if err != nil {
+			continue
+		}
+		n := &enode.Node{}
+		err = n.UnmarshalText([]byte(cd.Node))
+		if err != nil {
+			continue
+		}
+		producer := &Producer{
+			Pubkey: pk,
+			Node:   n,
+		}
+		candidateAddrs = append(candidateAddrs, producer)
 		addNum++
 		if addNum == topN {
 			return candidateAddrs

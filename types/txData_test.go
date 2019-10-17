@@ -14,12 +14,12 @@ func TestCandidateMarshal(t *testing.T)  {
 	////}
 	////_, err := secp256k1.ParsePubKey([]byte("0x0373654ccdb250f2cfcfe64c783a44b9ea85bc47f2f00c480d05082428d277d6d0"))
 	//pk := secp256k1.NewPublicKey(nil,nil)
-	//err := pk.UnmarshalText([]byte(cd.P2PPubkey))
+	//err := pk.UnmarshalText([]byte(cd.Pubkey))
 
 
 	cd := &CandidateData{
-		P2PPubkey:string("0x0373654ccdb250f2cfcfe64c783a44b9ea85bc47f2f00c480d05082428d277d6d0"),
-		Addr:"127.0.0.12:34",
+		Pubkey: string("0x0373654ccdb250f2cfcfe64c783a44b9ea85bc47f2f00c480d05082428d277d6d0"),
+		Addr:   "127.0.0.12:34",
 	}
 
 	b,err := cd.Marshal()

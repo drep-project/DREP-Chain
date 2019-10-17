@@ -109,9 +109,9 @@ type Config struct {
 	// allowed to connect, even above the peer limit.
 	ProduceNodes []*enode.Node
 
-	// Connectivity can be restricted to certain IP networks.
+	// Connectivity can be restricted to certain Node networks.
 	// If this option is set to a non-nil value, only hosts which match one of the
-	// IP networks contained in the list are considered.
+	// Node networks contained in the list are considered.
 	NetRestrict *netutil.Netlist `json:",omitempty"`
 
 	// NodeDatabase is the path to the database containing the previously seen
@@ -501,11 +501,11 @@ func (srv *Server) setupLocalNode() error {
 	case nil:
 		// No NAT interface, do nothing.
 	case nat.ExtIP:
-		// ExtIP doesn't block, set the IP right away.
+		// ExtIP doesn't block, set the Node right away.
 		ip, _ := srv.NAT.ExternalIP()
 		srv.localnode.SetStaticIP(ip)
 	default:
-		// Ask the router about the IP. This takes a while and blocks startup,
+		// Ask the router about the Node. This takes a while and blocks startup,
 		// do it in the background.
 		srv.loopWG.Add(1)
 		go func() {
@@ -1030,7 +1030,7 @@ type NodeInfo struct {
 	Name  string `json:"name"`  // Name of the node, including client type, version, OS, custom data
 	Enode string `json:"enode"` // Enode URL for adding this peer from remote peers
 	ENR   string `json:"enr"`   // Ethereum Node Record
-	IP    string `json:"ip"`    // IP address of the node
+	IP    string `json:"ip"`    // Node address of the node
 	Ports struct {
 		Discovery int `json:"discovery"` // UDP listening port for discovery protocol
 		Listener  int `json:"listener"`  // TCP listening port for RLPx

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/drep-project/binary"
+	"github.com/drep-project/drep-chain/chain/store"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"io/ioutil"
@@ -79,11 +80,12 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 		bftConsensusService.BlockGenerator,
 		bftConsensusService.DatabaseService,
 		bftConsensusService.P2pServer,
+		bftConsensusService.Config.ProducerNum,
 		&addPeerFeed,
 		&removePeerFeed,
 	)
 
-	bftConsensusService.ChainService.AddBlockValidator(&BlockMultiSigValidator{bftConsensusService.BftConsensus.GetProducers, bftConsensusService.ChainService.GetBlockByHash})
+	bftConsensusService.ChainService.AddBlockValidator(&BlockMultiSigValidator{bftConsensusService.BftConsensus.GetProducers, bftConsensusService.ChainService.GetBlockByHash,bftConsensusService.Config.ProducerNum})
 	bftConsensusService.ChainService.AddGenesisProcess(NewMinerGenesisProcessor())
 	if !bftConsensusService.Config.StartMiner {
 		return nil
@@ -165,7 +167,7 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 							if err != nil {
 								return err
 							}
-							producers, err := bftConsensusService.BftConsensus.GetProducers(bftConsensusService.ChainService.BestChain().Tip().StateRoot)
+							producers, err := bftConsensusService.GetProducers(bftConsensusService.ChainService.BestChain().Tip().Height, bftConsensusService.Config.ProducerNum*2)
 							if err != nil {
 								log.WithField("err", err).Info("get producers")
 								//return err
@@ -321,8 +323,22 @@ func (bftConsensusService *BftConsensusService) getWaitTime() (time.Time, time.D
 	*/
 }
 
+
+func (bftConsensusService *BftConsensusService) GetProducers(height uint64, topN int) ([]*Producer, error) {
+	block, err := bftConsensusService.ChainService.GetBlockByHeight(height)
+	if err != nil {
+		return nil, err
+	}
+	trie, err := store.TrieStoreFromStore(bftConsensusService.DatabaseService.LevelDb(), block.Header.StateRoot)
+	if err != nil {
+		return nil, err
+	}
+	return GetCandidates(trie, topN), nil
+}
+
 func (bftConsensusService *BftConsensusService) DefaultConfig() *BftConfig {
 	return &BftConfig{
 		BlockInterval: int(time.Second * 5),
+		ProducerNum: 7,
 	}
 }

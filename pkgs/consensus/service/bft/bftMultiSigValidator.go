@@ -10,15 +10,17 @@ import (
 	"github.com/drep-project/drep-chain/types"
 )
 
-type GetProducers func([]byte) ([]*Producer, error)
+type GetProducers func(uint64,int) ([]*Producer, error)
 type GetBlock func(hash *crypto.Hash) (*types.Block, error)
+
 type BlockMultiSigValidator struct {
 	getProducers GetProducers
 	getBlock     GetBlock
+	producerNum int
 }
 
-func NewBlockMultiSigValidator(getProducers GetProducers, getBlock GetBlock) *BlockMultiSigValidator {
-	return &BlockMultiSigValidator{getProducers, getBlock}
+func NewBlockMultiSigValidator(getProducers GetProducers, getBlock GetBlock,producerNum int) *BlockMultiSigValidator {
+	return &BlockMultiSigValidator{getProducers, getBlock,producerNum}
 }
 
 func (blockMultiSigValidator *BlockMultiSigValidator) VerifyHeader(header, parent *types.BlockHeader) error {
@@ -38,7 +40,7 @@ func (blockMultiSigValidator *BlockMultiSigValidator) VerifyBody(block *types.Bl
 	if err != nil {
 		return err
 	}
-	producers, err := blockMultiSigValidator.getProducers(parentBlock.Header.StateRoot)
+	producers, err := blockMultiSigValidator.getProducers(parentBlock.Header.Height,blockMultiSigValidator.producerNum)
 	if err != nil {
 		return err
 	}
@@ -63,7 +65,7 @@ func (blockMultiSigValidator *BlockMultiSigValidator) ExecuteBlock(context *chai
 	if err != nil {
 		return err
 	}
-	producers, err := blockMultiSigValidator.getProducers(parentBlock.Header.StateRoot)
+	producers, err := blockMultiSigValidator.getProducers(parentBlock.Header.Height, blockMultiSigValidator.producerNum)
 	if err != nil {
 		return err
 	}
