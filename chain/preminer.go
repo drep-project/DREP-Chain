@@ -2,7 +2,10 @@ package chain
 
 import (
 	"encoding/json"
+	"github.com/drep-project/binary"
+	"github.com/drep-project/drep-chain/chain/store"
 	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/drep-chain/types"
 	"math/big"
 )
 
@@ -33,6 +36,41 @@ func (NewPreminerGenesisProcessor *PreminerGenesisProcessor) Genesis(context *Ge
 			if err != nil {
 				return err
 			}
+		}
+	}
+
+	val, ok = context.Config()["miners"]
+	if ok {
+		miners := []types.CandidateData{}
+		bytes, _ := val.MarshalJSON()
+		err := json.Unmarshal(bytes, &miners)
+		if err != nil {
+			return err
+		}
+
+		stakeStorage := store.NewStakeStorage(context.Store())
+		addrs := []crypto.CommonAddress{}
+		for _, miner := range miners {
+			minerBytes, err :=  binary.Marshal(miner)
+			if err != nil {
+				return err
+			}
+			addr := crypto.PubkeyToAddress(miner.Pubkey)
+			stakeStorage.PutStakeStorage(&addr, &types.StakeStorage{
+				CandidateData:minerBytes,
+			})
+			addrs = append(addrs,addr)
+		}
+
+
+		addrsBytes, err :=  binary.Marshal(addrs)
+		if err != nil {
+			return err
+		}
+
+		err = context.Store().Put([]byte(store.CandidateAddrs), addrsBytes)
+		if err != nil {
+			return err
 		}
 	}
 	return nil

@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	candidateAddrs = "candidateAddrs" //参与竞选出块节点的地址集合
+	CandidateAddrs = "CandidateAddrs" //参与竞选出块节点的地址集合
 	StakeStorage   = "StakeStorage"   //以地址作为KEY,存储stake相关内容
 
 	registerPledgeLimit uint64 = 1000000    //候选节点需要抵押币的总数
@@ -100,7 +100,7 @@ func (trieStore *trieStakeStore) UpdateCandidateAddr(addr *crypto.CommonAddress,
 
 	addrsBuf, err := binary.Marshal(addrs)
 	if err == nil {
-		trieStore.store.Put([]byte(candidateAddrs), addrsBuf)
+		trieStore.store.Put([]byte(CandidateAddrs), addrsBuf)
 	}
 	return err
 }
@@ -122,12 +122,11 @@ func (trieStore *trieStakeStore) GetCandidateData(addr *crypto.CommonAddress) ([
 	return storage.CandidateData, nil
 }
 
-func (trieStore *trieStakeStore) GetCandidateAddrs() (map[crypto.CommonAddress]struct{}, error) {
+func (trieStore *trieStakeStore) GetCandidateAddrs() ([]crypto.CommonAddress, error) {
 	var addrsBuf []byte
 	var err error
-	key := []byte(candidateAddrs)
-	addrs := make(map[crypto.CommonAddress]struct{})
-
+	key := []byte(CandidateAddrs)
+	addrs := []crypto.CommonAddress{}
 	addrsBuf, err = trieStore.store.Get(key)
 	if err != nil {
 		log.Errorf("GetCandidateAddrs:%v", err)

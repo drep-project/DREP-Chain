@@ -3,9 +3,7 @@ package bft
 import (
 	"container/heap"
 	"github.com/drep-project/drep-chain/chain/store"
-	"github.com/drep-project/drep-chain/common/hexutil"
 	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/network/p2p/enode"
 	"github.com/drep-project/drep-chain/types"
 	"math/big"
@@ -70,21 +68,13 @@ func GetCandidates(store store.StoreInterface, topN int) []*Producer {
 			log.WithField("err", err).Info("unmarshal data to candidateData err")
 			continue
 		}
-		pkBytes, err := hexutil.Decode(cd.Pubkey)
-		if err != nil {
-			continue
-		}
-		pk, err := secp256k1.ParsePubKey(pkBytes)
-		if err != nil {
-			continue
-		}
 		n := &enode.Node{}
 		err = n.UnmarshalText([]byte(cd.Node))
 		if err != nil {
 			continue
 		}
 		producer := &Producer{
-			Pubkey: pk,
+			Pubkey: cd.Pubkey,
 			Node:   n,
 		}
 		candidateAddrs = append(candidateAddrs, producer)

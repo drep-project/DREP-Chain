@@ -28,7 +28,7 @@ const (
 type BftConsensus struct {
 	CoinBase crypto.CommonAddress
 	PrivKey  *secp256k1.PrivateKey
-	producerNum int
+	config *BftConfig
 	curMiner int
 
 	BlockGenerator blockmgr.IBlockBlockGenerator
@@ -48,7 +48,6 @@ type BftConsensus struct {
 	removePeerChan chan *consensusTypes.PeerInfo
 
 	producer []*Producer
-	changeInterval uint64
 }
 
 func NewBftConsensus(
@@ -56,7 +55,7 @@ func NewBftConsensus(
 	blockGenerator blockmgr.IBlockBlockGenerator,
 	dbService *database.DatabaseService,
 	sener Sender,
-	producerNum int,
+	config *BftConfig,
 	addPeer, removePeer *event.Feed) *BftConsensus {
 	addPeerChan := make(chan *consensusTypes.PeerInfo)
 	removePeerChan := make(chan *consensusTypes.PeerInfo)
@@ -65,7 +64,7 @@ func NewBftConsensus(
 	return &BftConsensus{
 		BlockGenerator: blockGenerator,
 		ChainService:   chainService,
-		producerNum:producerNum,
+		config:	config,
 		DbService:      dbService,
 		sender:         sener,
 		onLinePeer:     map[string]consensusTypes.IPeerInfo{},
@@ -78,8 +77,9 @@ func NewBftConsensus(
 }
 
 func (bftConsensus *BftConsensus) GetProducers(height uint64, topN int) ([]*Producer, error) {
-	if  bftConsensus.producer == nil && height%bftConsensus.changeInterval == 0 {
-		height = height - height%bftConsensus.changeInterval
+	newEpoch :=  height%uint64(bftConsensus.config.ChangeInterval)
+	if  bftConsensus.producer == nil && newEpoch == 0 {
+		height = height - newEpoch
 		block, err := bftConsensus.ChainService.GetBlockByHeight(height)
 		if err != nil {
 			return nil, err
@@ -100,7 +100,7 @@ func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Blo
 	bftConsensus.CoinBase = crypto.PubkeyToAddress(privKey.PubKey())
 	bftConsensus.PrivKey = privKey
 	go bftConsensus.processPeers()
-	producers, err := bftConsensus.GetProducers(bftConsensus.ChainService.BestChain().Tip().Height, bftConsensus.producerNum)
+	producers, err := bftConsensus.GetProducers(bftConsensus.ChainService.BestChain().Tip().Height, bftConsensus.config.ProducerNum)
 	if err != nil {
 		return nil, err
 	}
@@ -353,7 +353,7 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
 	if err != nil {
 		return err
 	}
-	multiSigValidator := BlockMultiSigValidator{bftConsensus.GetProducers, bftConsensus.ChainService.GetBlockByHash, bftConsensus.producerNum}
+	multiSigValidator := BlockMultiSigValidator{bftConsensus.GetProducers, bftConsensus.ChainService.GetBlockByHash, bftConsensus.config.ProducerNum}
 	if err := multiSigValidator.VerifyBody(block); err != nil {
 		return err
 	}

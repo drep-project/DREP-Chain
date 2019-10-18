@@ -80,7 +80,7 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 		bftConsensusService.BlockGenerator,
 		bftConsensusService.DatabaseService,
 		bftConsensusService.P2pServer,
-		bftConsensusService.Config.ProducerNum,
+		bftConsensusService.Config,
 		&addPeerFeed,
 		&removePeerFeed,
 	)
@@ -340,5 +340,6 @@ func (bftConsensusService *BftConsensusService) DefaultConfig() *BftConfig {
 	return &BftConfig{
 		BlockInterval: int(time.Second * 5),
 		ProducerNum: 7,
+		ChangeInterval:1000,
 	}
 }
