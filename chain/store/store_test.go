@@ -57,10 +57,10 @@ func TestCandidateCredit(t *testing.T) {
 
 	store := storeInterface.(*Store)
 	pk, _ := crypto.GenerateKey(rand.Reader)
-	pkText, _ := pk.PubKey().MarshalText()
+
 	cd := &types.CandidateData{
-		P2PPubkey: string(pkText),
-		Addr:      "127.0.0.1:55555",
+		Pubkey: pk.PubKey(),
+		Node:   "127.0.0.1:55555",
 	}
 	data, _ := cd.Marshal()
 	store.stake.CandidateCredit(&backbone, new(big.Int).SetUint64(registerPledgeLimit*drepUnit), data, 0)
@@ -70,7 +70,13 @@ func TestCandidateCredit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, ok := m[backbone]; !ok {
+	found := false
+	for _, addr := range m {
+		if addr.String() == backbone.String() {
+			found = true
+		}
+	}
+	if !found {
 		t.Fatal("vote addr err")
 	}
 
