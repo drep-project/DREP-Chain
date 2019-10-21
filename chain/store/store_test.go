@@ -33,7 +33,7 @@ func TestGetVoteCredit(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		pri, _ := crypto.GenerateKey(rand.Reader)
 		addr := crypto.PubkeyToAddress(pri.PubKey())
-		store.stake.VoteCredit(&addr, &backbone, new(big.Int).SetUint64(uint64(222+i)*drepUnit))
+		store.stake.VoteCredit(&addr, &backbone, new(big.Int).SetUint64(uint64(222+i)*drepUnit), 0)
 		total.Add(total, new(big.Int).SetUint64(uint64(222+i)*drepUnit))
 	}
 
@@ -63,7 +63,7 @@ func TestCandidateCredit(t *testing.T) {
 		Addr:      "127.0.0.1:55555",
 	}
 	data, _ := cd.Marshal()
-	store.stake.CandidateCredit(&backbone, new(big.Int).SetUint64(registerPledgeLimit*drepUnit), data)
+	store.stake.CandidateCredit(&backbone, new(big.Int).SetUint64(registerPledgeLimit*drepUnit), data, 0)
 
 	m, err := store.GetCandidateAddrs()
 	if err != nil {
@@ -105,7 +105,7 @@ func TestPutBalance(t *testing.T) {
 	}
 
 	//todo + -
-	store.stake.VoteCredit(&addr, &backbone, new(big.Int).SetUint64(100))
+	store.stake.VoteCredit(&addr, &backbone, new(big.Int).SetUint64(100), 0)
 	store.stake.CancelVoteCredit(&addr, &backbone, new(big.Int).SetUint64(10), 0)
 
 	err = store.AddBalance(&addr, ChangeCycle, new(big.Int).SetUint64(20))
@@ -205,7 +205,7 @@ func TestVoteCredit(t *testing.T) {
 		addr := crypto.PubkeyToAddress(pri.PubKey())
 
 		voteValue := new(big.Int).SetInt64(100000)
-		store.VoteCredit(&addr, &backbone, voteValue)
+		store.VoteCredit(&addr, &backbone, voteValue, 0)
 
 		v := store.GetVoteCreditCount(&backbone)
 		voteValue = new(big.Int).SetUint64(uint64(100000 * (i + 1)))
@@ -237,7 +237,7 @@ func TestCancelVoteCredit(t *testing.T) {
 		addr := crypto.PubkeyToAddress(pri.PubKey())
 
 		voteValue := new(big.Int).SetInt64(100000)
-		store.VoteCredit(&addr, &backbone, voteValue)
+		store.VoteCredit(&addr, &backbone, voteValue, 0)
 		addrs = append(addrs, addr)
 	}
 
@@ -247,7 +247,6 @@ func TestCancelVoteCredit(t *testing.T) {
 		if err != nil {
 			t.Fatal("cancel vote ok")
 		}
-
 	}
 
 	v := store.GetVoteCreditCount(&backbone)

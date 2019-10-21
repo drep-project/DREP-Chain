@@ -48,22 +48,21 @@ func (NewPreminerGenesisProcessor *PreminerGenesisProcessor) Genesis(context *Ge
 			return err
 		}
 
-		stakeStorage := store.NewStakeStorage(context.Store())
 		addrs := []crypto.CommonAddress{}
 		for _, miner := range miners {
-			minerBytes, err :=  binary.Marshal(miner)
+			minerBytes, err := binary.Marshal(miner)
 			if err != nil {
 				return err
 			}
 			addr := crypto.PubkeyToAddress(miner.Pubkey)
-			stakeStorage.PutStakeStorage(&addr, &types.StakeStorage{
-				CandidateData:minerBytes,
-			})
-			addrs = append(addrs,addr)
+
+			context.Store().CandidateCredit(&addr, new(big.Int).SetUint64(10), minerBytes, 0)
+			context.store.AddCandidateAddr(&addr)
+
+			addrs = append(addrs, addr)
 		}
 
-
-		addrsBytes, err :=  binary.Marshal(addrs)
+		addrsBytes, err := binary.Marshal(addrs)
 		if err != nil {
 			return err
 		}

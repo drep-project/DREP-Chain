@@ -51,19 +51,24 @@ type StoreInterface interface {
 	Empty(addr *crypto.CommonAddress) bool
 
 	//pos
-	GetCandidateAddrs() (map[crypto.CommonAddress]struct{}, error)
+	GetCandidateAddrs() ([]crypto.CommonAddress, error)
 	GetVoteCreditCount(addr *crypto.CommonAddress) *big.Int
 	CancelVoteCredit(fromAddr, toAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) error
-	VoteCredit(addresses *crypto.CommonAddress, to *crypto.CommonAddress, addBalance *big.Int) error
-	CandidateCredit(addresses *crypto.CommonAddress, addBalance *big.Int, data []byte) error
+	VoteCredit(addresses *crypto.CommonAddress, to *crypto.CommonAddress, addBalance *big.Int, height uint64) error
+	CandidateCredit(addresses *crypto.CommonAddress, addBalance *big.Int, data []byte, height uint64) error
 	CancelCandidateCredit(fromAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) error
 	GetCandidateData(addr *crypto.CommonAddress) ([]byte, error)
+	AddCandidateAddr(addr *crypto.CommonAddress) error
 }
 
 type Store struct {
 	stake   *trieStakeStore
 	account *trieAccountStore
 	db      *StoreDB
+}
+
+func (s Store) AddCandidateAddr(addr *crypto.CommonAddress) error{
+	return s.stake.AddCandidateAddr(addr)
 }
 
 func (s Store) CancelCandidateCredit(fromAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) error {
@@ -74,7 +79,7 @@ func (s Store) GetCandidateData(addr *crypto.CommonAddress) ([]byte, error) {
 	return s.stake.GetCandidateData(addr)
 }
 
-func (s Store) GetCandidateAddrs() (map[crypto.CommonAddress]struct{}, error) {
+func (s Store) GetCandidateAddrs() ([]crypto.CommonAddress, error) {
 	return s.stake.GetCandidateAddrs()
 }
 
@@ -173,12 +178,12 @@ func (s Store) CancelVoteCredit(fromAddr, toAddr *crypto.CommonAddress, cancelBa
 	return s.stake.CancelVoteCredit(fromAddr, toAddr, cancelBalance, height)
 }
 
-func (s Store) VoteCredit(fromAddr *crypto.CommonAddress, to *crypto.CommonAddress, addBalance *big.Int) error {
-	return s.stake.VoteCredit(fromAddr, to, addBalance)
+func (s Store) VoteCredit(fromAddr *crypto.CommonAddress, to *crypto.CommonAddress, addBalance *big.Int, height uint64) error {
+	return s.stake.VoteCredit(fromAddr, to, addBalance, height)
 }
 
-func (s Store) CandidateCredit(fromAddr *crypto.CommonAddress, addBalance *big.Int, data []byte) error {
-	return s.stake.CandidateCredit(fromAddr, addBalance, data)
+func (s Store) CandidateCredit(fromAddr *crypto.CommonAddress, addBalance *big.Int, data []byte, height uint64) error {
+	return s.stake.CandidateCredit(fromAddr, addBalance, data, height)
 }
 func (s Store) TrieDB() *trie.Database {
 	return s.account.TrieDB()

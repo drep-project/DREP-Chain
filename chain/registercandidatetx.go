@@ -39,7 +39,7 @@ func (processor *CandidateTransactionProcessor) ExecuteTransaction(context *Exec
 	if err := cd.Unmarshal(tx.GetData()); nil != err {
 		return nil, false, nil, err
 	}
-	err := store.CandidateCredit(from, tx.Amount(), tx.GetData())
+	err := store.CandidateCredit(from, tx.Amount(), tx.GetData(), context.header.Height)
 	if err != nil {
 		return nil, false, nil, err
 	}

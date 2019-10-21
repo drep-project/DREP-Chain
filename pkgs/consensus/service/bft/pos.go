@@ -40,7 +40,7 @@ func GetCandidates(store store.StoreInterface, topN int) []*Producer {
 	}
 
 	csh := make(creditsHeap, 0)
-	for addr, _ := range voteAddrs {
+	for _, addr := range voteAddrs {
 		addr := addr
 		totalCredit := store.GetVoteCreditCount(&addr)
 		csh = append(csh, &addrAndCredit{addr: &addr, value: totalCredit})

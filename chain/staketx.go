@@ -38,7 +38,7 @@ func (processor *StakeTransactionProcessor) ExecuteTransaction(context *ExecuteT
 	if err != nil {
 		return nil, false, nil, err
 	}
-	err = stakeStore.VoteCredit(from, tx.To(), addBalance)
+	err = stakeStore.VoteCredit(from, tx.To(), addBalance, context.header.Height)
 	if err != nil {
 		return nil, false, nil, err
 	}

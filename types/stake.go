@@ -5,18 +5,34 @@ import (
 	"math/big"
 )
 
-type StakeStorage struct {
-	ReceivedCreditAddr  []crypto.CommonAddress //Trust given by oneself and others
-	ReceivedCreditValue []big.Int              //value of vote
+//某个高度对应的某creadit value
+type HeightValue struct {
+	CreditHeight uint64
+	CreditValue  big.Int
+}
 
-	//撤销给与别人的信任数据存放于此；等待一段时间或者高度后，value对应的balance加入到Balance中。key是撤销时交易所在的高度
-	CancelCreditHeight []uint64
+type ReceivedCredit struct {
+	Addr crypto.CommonAddress
+	Hv   []HeightValue
+}
+
+type CancelCredit struct {
+	CancelCreditHeight uint64
 	CancelCreditValue  []big.Int
+}
+
+type StakeStorage struct {
+	//ReceivedCreditAddr []crypto.CommonAddress //Trust given by oneself and others
+	////ReceivedCreditValue  []big.Int              //value of vote
+	////ReceivedCreditHeight []uint64               // height of vote tx
+	//ReceivedCreditHeightValue [][]HeightValue
+
+	RC []ReceivedCredit
+
+	//撤销给与别人的信任数据存放于此；
+	//CancelCreditHeight []uint64
+	//CancelCreditValue  []big.Int
+	CC []CancelCredit
 
 	CandidateData []byte //注册候选节点时，需要携带的pubkey/ip等信息
 }
-
-////存储所有候选人的地址及相关属性信息
-//type CandidateInfoStorage struct {
-//	Addrs []crypto.CommonAddress
-//}

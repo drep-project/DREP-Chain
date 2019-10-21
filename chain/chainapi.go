@@ -372,9 +372,15 @@ func (trieQuery *TrieQuery) GetVoteCreditDetails(addr *crypto.CommonAddress) map
 
 	m := make(map[crypto.CommonAddress]big.Int)
 
-	for index,addr := range storage.ReceivedCreditAddr {
-		m[addr] = storage.ReceivedCreditValue[index]
+	for _, rc := range storage.RC {
+		total := new(big.Int)
+		for _, value := range rc.Hv {
+			total.Add(total, &value.CreditValue)
+		}
+		m[rc.Addr] = *total //storage.ReceivedCreditValue[index]
 	}
+
+	return m
 
 	return m
 }
