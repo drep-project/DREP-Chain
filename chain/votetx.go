@@ -25,7 +25,7 @@ func (processor *StakeTransactionProcessor) ExecuteTransaction(context *ExecuteT
 	from := context.From()
 	store := context.TrieStore()
 	tx := context.Tx()
-	stakeStore := context.TrieStore()
+	//stakeStore := TrieStore()
 
 	originBalance := store.GetBalance(from, context.header.Height)
 	toBalance := store.GetBalance(tx.To(), context.header.Height)
@@ -38,7 +38,7 @@ func (processor *StakeTransactionProcessor) ExecuteTransaction(context *ExecuteT
 	if err != nil {
 		return nil, false, nil, err
 	}
-	err = stakeStore.VoteCredit(from, tx.To(), addBalance)
+	err = store.VoteCredit(from, tx.To(), addBalance, context.header.Height)
 	if err != nil {
 		return nil, false, nil, err
 	}
