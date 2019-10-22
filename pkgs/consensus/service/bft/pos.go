@@ -2,6 +2,7 @@ package bft
 
 import (
 	"container/heap"
+	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/chain/store"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/network/p2p/enode"
@@ -62,8 +63,7 @@ func GetCandidates(store store.StoreInterface, topN int) []*Producer {
 		}
 
 		cd := &types.CandidateData{}
-
-		err = cd.Unmarshal(data)
+		err = binary.Unmarshal(data, cd)
 		if err != nil {
 			log.WithField("err", err).Info("unmarshal data to candidateData err")
 			continue

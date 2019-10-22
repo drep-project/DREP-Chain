@@ -89,6 +89,15 @@ func TestCandidateCredit(t *testing.T) {
 	fmt.Println(string(b))
 }
 
+
+func TestBigInt(t *testing.T) {
+	a := new(big.Int).SetUint64(100)
+	b := new(big.Int).SetUint64(96)
+	c := b.Div(a,b)
+	fmt.Println(c)
+
+}
+
 func TestPutBalance(t *testing.T) {
 	defer os.RemoveAll("./test")
 	diskDB, _ := leveldb.New("./test", 16, 512, "")
@@ -109,21 +118,27 @@ func TestPutBalance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	//10天        172800
+	heightLen := 172800*3*12
 	//todo + -
 	store.stake.VoteCredit(&addr, &backbone, new(big.Int).SetUint64(100), 0)
-	store.stake.CancelVoteCredit(&addr, &backbone, new(big.Int).SetUint64(10), 0)
+	store.stake.CancelVoteCredit(&addr, &backbone, new(big.Int).SetUint64(10), uint64(ChangeCycle*heightLen))
+	//fmt.Println(store.GetBalance(&addr, 0))
+	total := store.GetBalance(&addr, uint64(ChangeCycle*heightLen)+ChangeCycle)
+	interest := total.Sub(total,new(big.Int).SetUint64(10000+10)).Uint64()
+	interestRate:= float64(interest)/float64(10)
+	fmt.Println("interst ratio:",interestRate,"every %s month", 12)
 
 	err = store.AddBalance(&addr, ChangeCycle, new(big.Int).SetUint64(20))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	fmt.Println(store.GetBalance(&addr, 0))
+	fmt.Println(store.GetBalance(&addr, uint64(ChangeCycle*heightLen)+ChangeCycle))
 
-	ret := new(big.Int).SetUint64(10000 + 10 + 20).Cmp(store.GetBalance(&addr, ChangeCycle))
-	if ret != 0 {
-		t.Fatal("vote not merge to balance")
+	ret := new(big.Int).SetUint64(10000 + 10 + 20).Cmp(store.GetBalance(&addr, uint64(ChangeCycle*heightLen)+ChangeCycle))
+	if ret > 0 {
+		t.Fatal("vote not merge to balance", store.GetBalance(&addr, uint64(ChangeCycle*heightLen)+ChangeCycle))
 	}
 }
 
@@ -247,16 +262,21 @@ func TestCancelVoteCredit(t *testing.T) {
 		addrs = append(addrs, addr)
 	}
 
+	v := store.GetVoteCreditCount(&backbone)
+	fmt.Println(v)
 	for _, addr := range addrs {
 		voteValue := new(big.Int).SetInt64(50000)
 		err = store.CancelVoteCredit(&addr, &backbone, voteValue, 0)
 		if err != nil {
 			t.Fatal("cancel vote ok")
 		}
+
+		if voteValue.Cmp(store.GetBalance(&addr,ChangeCycle)) != 0 {
+			t.Fatal(voteValue, "!=", store.GetBalance(&addr,ChangeCycle))
+		}
 	}
 
-	v := store.GetVoteCreditCount(&backbone)
-
+	v = store.GetVoteCreditCount(&backbone)
 	if v.Cmp(new(big.Int).SetUint64(100000*10/2)) != 0 {
 		fmt.Println(v)
 		t.Fatal("storage ang get not match", v, 100000*10/2)
@@ -264,7 +284,7 @@ func TestCancelVoteCredit(t *testing.T) {
 
 	m := store.GetCreditDetails(&backbone)
 	for k, v := range m {
-		fmt.Println(k.String(), v)
+		fmt.Println("credit details:",k.String(), v)
 	}
 
 	for _, addr := range addrs {
