@@ -218,7 +218,7 @@ func (accountapi *AccountApi) SetAlias(srcAddr crypto.CommonAddress, alias strin
 	5. gas上线
 	6. 备注
  return: 交易地址
- example:   curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_voteCredit","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000",""],"id":1}' http://127.0.0.1:15645
+ example:   curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_voteCredit","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
  response:
 	 {"jsonrpc":"2.0","id":1,"result":"0x3a3b59f90a21c2fd1b690aa3a2bc06dc2d40eb5bdc26fdd7ecb7e1105af2638e"}
 */
@@ -278,13 +278,13 @@ func (accountapi *AccountApi) CancelVoteCredit(from crypto.CommonAddress, to cry
 	5. gas上线
 	6. 用户pubkey ip等信息
  return: 交易地址
- example:   curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_candidateCredit","params":["0x0373654ccdb250f2cfcfe64c783a44b9ea85bc47f2f00c480d05082428d277d6d0","0x111","0x110","0x30000","{"Pubkey":"122fldldldfjkdkdk","Addr":"127.0.0.12:55555"}"],"id":1}' http://127.0.0.1:15645
+ example:   curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_candidateCredit","params":["0x0373654ccdb250f2cfcfe64c783a44b9ea85bc47f2f00c480d05082428d277d6d0","0x111","0x110","0x30000","{\"Pubkey\":\"0x020e233ebaed5ade5e48d7ee7a999e173df054321f4ddaebecdb61756f8a43e91c\",\"Node\":\"192.168.31.51:55555\"}"],"id":1}' http://127.0.0.1:15645
  response:
 	 {"jsonrpc":"2.0","id":1,"result":"0x3a3b59f90a21c2fd1b690aa3a2bc06dc2d40eb5bdc26fdd7ecb7e1105af2638e"}
 */
-func (accountapi *AccountApi) CandidateCredit(from crypto.CommonAddress, amount, gasprice, gaslimit *common.Big, data common.Bytes) (string, error) {
+func (accountapi *AccountApi) CandidateCredit(from crypto.CommonAddress, amount, gasprice, gaslimit *common.Big, data string) (string, error) {
 	nonce := accountapi.poolQuery.GetTransactionCount(&from)
-	tx := types.NewCandidateTransaction((*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce, data)
+	tx := types.NewCandidateTransaction((*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce, []byte(data))
 	sig, err := accountapi.Wallet.Sign(&from, tx.TxHash().Bytes())
 	if err != nil {
 		return "", err

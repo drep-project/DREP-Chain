@@ -6,10 +6,10 @@ import (
 
 /**********************register********************/
 
-type RegCandidateTxSelector struct {
+type CandidateTxSelector struct {
 }
 
-func (StakeTxSelector *RegCandidateTxSelector) Select(tx *types.Transaction) bool {
+func (StakeTxSelector *CandidateTxSelector) Select(tx *types.Transaction) bool {
 	return tx.Type() == types.CandidateType
 }
 

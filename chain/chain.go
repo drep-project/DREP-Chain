@@ -168,6 +168,9 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 		&TransferTxSelector{}: &TransferTransactionProcessor{},
 		&AliasTxSelector{}:    &AliasTransactionProcessor{},
 		&StakeTxSelector{}:    &StakeTransactionProcessor{},
+		&CancelStakeTxSelector{}: &CancelStakeTransactionProcessor{},
+		&CandidateTxSelector{}: &CandidateTransactionProcessor{},
+		&CancelCandidateTxSelector{}: &CancelCandidateTransactionProcessor{},
 	}
 
 	chainService.genesisConfig = path.Join(executeContext.CommonConfig.HomeDir, "genesis.json")

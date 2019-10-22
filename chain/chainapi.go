@@ -1,8 +1,10 @@
 package chain
 
 import (
+	"encoding/json"
 	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/chain/store"
+	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/common/hexutil"
 	"github.com/drep-project/drep-chain/common/trie"
 	"github.com/drep-project/drep-chain/crypto"
@@ -216,9 +218,9 @@ func (chain *ChainApi) GetAddressByAlias(alias string) (*crypto.CommonAddress, e
  return: bytecode
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getVoteCreditDetails","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
-   {"jsonrpc":"2.0","id":3,"result":"[[k:v],[k2:v2]"}
+   {"jsonrpc":"2.0","id":3,"result":"{\"0x300fc5a14e578be28c64627c0e7e321771c58cd4\":\"0x3641100\"}"}
 */
-func (chain *ChainApi) GetVoteCreditDetails(addr *crypto.CommonAddress) map[crypto.CommonAddress]big.Int {
+func (chain *ChainApi) GetVoteCreditDetails(addr *crypto.CommonAddress) string {
 	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
 	return trieQuery.GetVoteCreditDetails(addr)
 }
@@ -351,7 +353,7 @@ func (trieQuery *TrieQuery) GetReputation(addr *crypto.CommonAddress) *big.Int {
 	return &storage.Reputation
 }
 
-func (trieQuery *TrieQuery) GetVoteCreditDetails(addr *crypto.CommonAddress) map[crypto.CommonAddress]big.Int {
+func (trieQuery *TrieQuery) GetVoteCreditDetails(addr *crypto.CommonAddress) string {
 	key := sha3.Keccak256([]byte(store.StakeStorage + addr.Hex()))
 
 	storage := &types.StakeStorage{}
@@ -359,26 +361,27 @@ func (trieQuery *TrieQuery) GetVoteCreditDetails(addr *crypto.CommonAddress) map
 	value, err := trieQuery.trie.TryGet(key)
 	if err != nil {
 		log.Errorf("get storage err:%v", err)
-		return nil
+		return ""
 	}
 	if value == nil {
-		return nil
+		return ""
 	} else {
 		err = binary.Unmarshal(value, storage)
 		if err != nil {
-			return nil
+			return ""
 		}
 	}
 
-	m := make(map[crypto.CommonAddress]big.Int)
+	m := make(map[crypto.CommonAddress]common.Big)
 
 	for _, rc := range storage.RC {
 		total := new(big.Int)
 		for _, value := range rc.Hv {
 			total.Add(total, &value.CreditValue)
 		}
-		m[rc.Addr] = *total //storage.ReceivedCreditValue[index]
+		m[rc.Addr] = common.Big(*total)
 	}
+	b,_:=json.Marshal(m)
 
-	return m
+	return string(b)
 }
