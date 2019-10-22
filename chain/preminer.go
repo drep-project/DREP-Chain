@@ -50,7 +50,7 @@ func (NewPreminerGenesisProcessor *PreminerGenesisProcessor) Genesis(context *Ge
 
 		addrs := []crypto.CommonAddress{}
 		for _, miner := range miners {
-			minerBytes, err := binary.Marshal(miner)
+			minerBytes, err := json.Marshal(miner)
 			if err != nil {
 				return err
 			}

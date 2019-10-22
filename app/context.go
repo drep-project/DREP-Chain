@@ -219,6 +219,7 @@ func (econtext *ExecuteContext) UnmashalConfig(serviceName string, config interf
 	if phase == nil {
 		return nil
 	}
+	fmt.Println(string(phase))
 	err := json.Unmarshal(phase, config)
 	if err != nil {
 		return err

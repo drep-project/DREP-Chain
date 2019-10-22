@@ -1,6 +1,7 @@
 package bft
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/drep-project/binary"
@@ -109,11 +110,34 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
 				MsgTypeValidateReq := uint64(NumberOfMsg)
 				MsgTypeValidateRes := uint64(NumberOfMsg + 1)
+
+				producers, err := bftConsensusService.GetProducers(bftConsensusService.ChainService.BestChain().Tip().Height, bftConsensusService.Config.ProducerNum*2)
+				if err != nil {
+					log.WithField("err", err).Info("get producers")
+					//return err
+				}
+
+				ipChecked := false
+				for _, producer := range producers {
+					if producer.Node.IP().String() == peer.Node().IP().String() {
+						ipChecked = true
+					}
+				}
+				if !ipChecked {
+
+
+					fmt.Println(peer.Node().String())
+					fmt.Println(peer.Node().IP().String() + " : "+ hex.EncodeToString(peer.Node().Pubkey().Serialize()))
+					for _, producer := range producers {
+						fmt.Println(producer.Node.IP().String() + " : "+ hex.EncodeToString(producer.Node.Pubkey().Serialize()))
+					}
+					return ErrBpNotInList
+				}
 				pi := consensusTypes.NewPeerInfo(peer, rw)
 				//send verify message
 				randomBytes := [32]byte{}
 				rand.Read(randomBytes[:])
-				err := bftConsensusService.P2pServer.Send(rw, MsgTypeValidateReq, randomBytes)
+				err = bftConsensusService.P2pServer.Send(rw, MsgTypeValidateReq, randomBytes)
 				if err != nil {
 					return err
 				}
@@ -167,11 +191,7 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 							if err != nil {
 								return err
 							}
-							producers, err := bftConsensusService.GetProducers(bftConsensusService.ChainService.BestChain().Tip().Height, bftConsensusService.Config.ProducerNum*2)
-							if err != nil {
-								log.WithField("err", err).Info("get producers")
-								//return err
-							}
+
 							for _, producer := range producers {
 								if sig.Verify(randomBytes[:], producer.Pubkey) {
 									addPeerFeed.Send(pi)
@@ -340,6 +360,6 @@ func (bftConsensusService *BftConsensusService) DefaultConfig() *BftConfig {
 	return &BftConfig{
 		BlockInterval: int(time.Second * 5),
 		ProducerNum: 7,
-		ChangeInterval:1000,
+		ChangeInterval:10,
 	}
 }

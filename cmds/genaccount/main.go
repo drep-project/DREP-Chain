@@ -118,13 +118,14 @@ func gen(ctx *cli.Context) error {
 			StartMiner: true,
 			BlockInterval:5,
 		}
-	}else{	consensusConfig.ConsensusMode = "bft"
-
+	}else{
+		consensusConfig.ConsensusMode = "bft"
 		consensusConfig.Bft = bft.BftConfig{
 			MyPk:       nil,
 			StartMiner: true,
 			BlockInterval:5,
 			ProducerNum:len(nodeItems),
+			ChangeInterval:10,
 		}
 	}
 

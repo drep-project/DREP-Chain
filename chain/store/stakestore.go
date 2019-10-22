@@ -1,6 +1,7 @@
 package store
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -417,7 +418,12 @@ func (trieStore *trieStakeStore) CandidateCredit(addresses *crypto.CommonAddress
 			trieStore.AddCandidateAddr(addresses)
 		}
 	}
-
+	candidataDate := &types.CandidateData{}
+	err := json.Unmarshal(data, candidataDate)
+	if err != nil {
+		return err
+	}
+	data, err = binary.Marshal(candidataDate)
 	if len(data) > 0 {
 		update = true
 		storage.CandidateData = data
