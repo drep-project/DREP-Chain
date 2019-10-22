@@ -381,6 +381,4 @@ func (trieQuery *TrieQuery) GetVoteCreditDetails(addr *crypto.CommonAddress) map
 	}
 
 	return m
-
-	return m
 }

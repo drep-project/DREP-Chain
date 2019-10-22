@@ -50,6 +50,7 @@ func TestGetVoteCredit(t *testing.T) {
 func TestCandidateCredit(t *testing.T) {
 	defer os.RemoveAll("./test")
 	diskDB, _ := leveldb.New("./test", 16, 512, "")
+
 	storeInterface, _ := TrieStoreFromStore(diskDB, trie.EmptyRoot[:])
 
 	pri, _ := crypto.GenerateKey(rand.Reader)

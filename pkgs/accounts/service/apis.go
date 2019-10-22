@@ -267,7 +267,6 @@ func (accountapi *AccountApi) CancelVoteCredit(from crypto.CommonAddress, to cry
 	return tx.TxHash().String(), nil
 }
 
-
 /*
  name: CandidateCredit
  usage: 转账

@@ -206,11 +206,6 @@ func TrieStoreFromStore(diskDB dbinterface.KeyValueStore, stateRoot []byte) (Sto
 		db:      db,
 	}
 
-	//err := db.initState()
-	//if err != nil {
-	//	return nil, err
-	//}
-
 	if !store.RecoverTrie(stateRoot) {
 		return nil, ErrRecoverRoot
 	}
