@@ -170,20 +170,8 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 		&StakeTxSelector{}:    &StakeTransactionProcessor{},
 	}
 
-	chainService.genesisConfig = path.Join(executeContext.CommonConfig.HomeDir, "genesis.json")
-	chainService.apis = []app.API{
-		{
-			Namespace: MODULENAME,
-			Version:   "1.0",
-			Service:   NewChainApi(chainService.DatabaseService.LevelDb(), chainService.BestChain(), chainService.chainStore),
-			Public:    true,
-		},
-	}
-	return nil
-}
-
-func (chainService *ChainService) Start(executeContext *app.ExecuteContext) error {
 	var err error
+	chainService.genesisConfig = path.Join(executeContext.CommonConfig.HomeDir, "genesis.json")
 	chainService.genesisBlock, err = chainService.GetGenisiBlock(chainService.Config.GenesisAddr)
 	if err != nil {
 		return err
@@ -206,6 +194,18 @@ func (chainService *ChainService) Start(executeContext *app.ExecuteContext) erro
 		log.Error("InitStates err:", err)
 		return err
 	}
+	chainService.apis = []app.API{
+		{
+			Namespace: MODULENAME,
+			Version:   "1.0",
+			Service:   NewChainApi(chainService.DatabaseService.LevelDb(), chainService.BestChain(), chainService.chainStore),
+			Public:    true,
+		},
+	}
+	return nil
+}
+
+func (chainService *ChainService) Start(executeContext *app.ExecuteContext) error {
 	return nil
 }
 
