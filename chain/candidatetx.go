@@ -28,6 +28,7 @@ func (processor *CandidateTransactionProcessor) ExecuteTransaction(context *Exec
 
 	originBalance := store.GetBalance(from, context.header.Height)
 	if originBalance.Cmp(tx.Amount()) < 0 {
+		log.WithField("originBalance", originBalance).WithField("tx amount",tx.Amount()).Info("no enough balance for candidate")
 		return nil, false, nil, ErrBalance
 	}
 	leftBalance := originBalance.Sub(originBalance, tx.Amount())

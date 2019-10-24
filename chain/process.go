@@ -130,8 +130,6 @@ func (chainService *ChainService) acceptBlock(block *types.Block) (inMainChain b
 		return false, err
 	}
 
-	fmt.Println("accept block", block.Header.Height, block.Header.StateRoot)
-
 	if block.Header.PreviousHash.IsEqual(chainService.BestChain().Tip().Hash) {
 		context, err := chainService.connectBlock(trieStore, block, newNode)
 		if err != nil {

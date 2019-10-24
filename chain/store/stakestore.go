@@ -188,7 +188,7 @@ func (trieStore *trieStakeStore) cancelCredit(fromAddr, toAddr *crypto.CommonAdd
 	//找到币被抵押到的stakeStorage;减去取消的值
 	storage, _ := trieStore.getStakeStorage(toAddr)
 	if storage == nil {
-		storage = &types.StakeStorage{}
+		return fmt.Errorf("not exist vote credit")
 	}
 
 	leftCredit := new(big.Int)
@@ -223,7 +223,7 @@ func (trieStore *trieStakeStore) cancelCredit(fromAddr, toAddr *crypto.CommonAdd
 
 						} else {
 
-							interest := getInterst(vc.CreditHeight, height+ChangeCycle, vc.CreditValue.ToInt())
+							interest := getInterst(vc.CreditHeight, height+ChangeCycle, cancelBalance)
 							cancelBalance.Add(cancelBalance, interest)
 
 							cv := vc.CreditValue.ToInt()

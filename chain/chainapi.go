@@ -269,6 +269,21 @@ func (chain *ChainApi) GetVoteCreditDetails(addr *crypto.CommonAddress) string {
 }
 
 /*
+ name: GetCancelCreditDetails
+ usage: 根据地址获取stake 所有细节信息
+ params:
+	1. 地址
+ return: bytecode
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCancelCreditDetails","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ response:
+   {"jsonrpc":"2.0","id":3,"result":"{\"0x300fc5a14e578be28c64627c0e7e321771c58cd4\":\"0x3641100\"}"}
+*/
+func (chain *ChainApi) GetCancelCreditDetails(addr *crypto.CommonAddress) string {
+	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
+	return trieQuery.GetCancelCreditDetails(addr)
+}
+
+/*
  name: GetCandidateAddrs
  usage: 根据地址获取所有候选节点
  params:
@@ -423,3 +438,34 @@ func (trieQuery *TrieQuery) GetCandidateAddrs() string {
 	b, _ := json.Marshal(addrs)
 	return string(b)
 }
+
+func (trieQuery *TrieQuery) GetCancelCreditDetails(addr *crypto.CommonAddress) string {
+	key := sha3.Keccak256([]byte(store.StakeStorage + addr.Hex()))
+
+	storage := &types.StakeStorage{}
+
+	value, err := trieQuery.trie.TryGet(key)
+	if err != nil {
+		log.Errorf("get storage err:%v", err)
+		return ""
+	}
+	if value == nil {
+		return ""
+	} else {
+		err = binary.Unmarshal(value, storage)
+		if err != nil {
+			return ""
+		}
+	}
+
+	//for _, rc := range storage.RC {
+	//	total := new(big.Int)
+	//	for _, value := range rc.Hv {
+	//		total.Add(total, &value.CreditValue)
+	//	}
+	//	m[rc.Addr] = common.Big(*total)
+	//}
+	b, _ := json.Marshal(storage.CC)
+	return string(b)
+}
+
