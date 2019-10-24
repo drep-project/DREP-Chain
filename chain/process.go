@@ -129,11 +129,9 @@ func (chainService *ChainService) acceptBlock(block *types.Block) (inMainChain b
 	if err != nil {
 		return false, err
 	}
-	defer func() {
-		if err == nil {
-			trieStore.TrieDB().TrieDb(crypto.Bytes2Hash(newNode.StateRoot), true)
-		}
-	}()
+
+	fmt.Println("accept block", block.Header.Height, block.Header.StateRoot)
+
 	if block.Header.PreviousHash.IsEqual(chainService.BestChain().Tip().Hash) {
 		context, err := chainService.connectBlock(trieStore, block, newNode)
 		if err != nil {
@@ -145,7 +143,7 @@ func (chainService *ChainService) acceptBlock(block *types.Block) (inMainChain b
 		chainService.notifyBlock(block, context.Logs)
 		return true, nil
 	}
-	fmt.Println(chainService.BestChain().Tip().Height)
+
 	if block.Header.Height <= chainService.BestChain().Tip().Height {
 		// store but but not reorg
 		log.Debug("block store and validate true but not reorgnize")
@@ -165,6 +163,7 @@ func (chainService *ChainService) acceptBlock(block *types.Block) (inMainChain b
 	if writeErr := chainService.blockIndex.FlushToDB(chainService.chainStore.PutBlockNode); writeErr != nil {
 		log.WithField("Reason", writeErr).Warn("Error flushing block index changes to disk")
 	}
+
 	return err == nil, err
 }
 
@@ -185,6 +184,9 @@ func (chainService *ChainService) connectBlock(trieStore store.StoreInterface, b
 		chainService.flushIndexState()
 		return context, err
 	}
+
+	trieStore.Commit()
+
 	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
 		oldStateRoot := trieStore.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, oldStateRoot) {
@@ -344,6 +346,8 @@ func (chainService *ChainService) notifyDetachBlock(block *types.Block) {
 }
 
 func (chainService *ChainService) markState(db store.StoreInterface, blockNode *types.BlockNode) {
+	db.Commit()
+	db.TrieDB().Commit(crypto.Bytes2Hash(blockNode.StateRoot), true)
 	chainService.BestChain().SetTip(blockNode)
 }
 

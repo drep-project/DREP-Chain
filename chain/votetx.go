@@ -23,26 +23,25 @@ type StakeTransactionProcessor struct {
 
 func (processor *StakeTransactionProcessor) ExecuteTransaction(context *ExecuteTransactionContext) ([]byte, bool, []*types.Log, error) {
 	from := context.From()
-	store := context.TrieStore()
+	ts := context.TrieStore()
 	tx := context.Tx()
-	//stakeStore := TrieStore()
 
-	originBalance := store.GetBalance(from, context.header.Height)
-	toBalance := store.GetBalance(tx.To(), context.header.Height)
+	originBalance := ts.GetBalance(from, context.header.Height)
+	toBalance := ts.GetBalance(tx.To(), context.header.Height)
 	leftBalance := originBalance.Sub(originBalance, tx.Amount())
 	if leftBalance.Sign() < 0 {
 		return nil, false, nil, ErrBalance
 	}
 	addBalance := toBalance.Add(toBalance, tx.Amount())
-	err := store.PutBalance(from, context.header.Height, leftBalance)
+	err := ts.PutBalance(from, context.header.Height, leftBalance)
 	if err != nil {
 		return nil, false, nil, err
 	}
-	err = store.VoteCredit(from, tx.To(), addBalance, context.header.Height)
+	err = ts.VoteCredit(from, tx.To(), addBalance, context.header.Height)
 	if err != nil {
 		return nil, false, nil, err
 	}
-	err = store.PutNonce(from, tx.Nonce()+1)
+	err = ts.PutNonce(from, tx.Nonce()+1)
 	if err != nil {
 		return nil, false, nil, err
 	}

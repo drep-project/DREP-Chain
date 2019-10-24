@@ -475,7 +475,18 @@ func (pool *TransactionPool) checkUpdate() {
 
 //已经被处理过NONCE都被清理出去
 func (pool *TransactionPool) adjust(block *types.Block) {
-	pool.chainStore.RecoverTrie(block.Header.StateRoot)
+
+	//trieStore, err := store.TrieStoreFromStore(chainService.DatabaseService.LevelDb(), block.Header.StateRoot)
+	//if err != nil {
+	//	log.WithField("recoverRet", b).WithField("h:", block.Header.Height).Info("revover from")
+	//	return nil
+	//}
+	//
+	b := pool.chainStore.RecoverTrie(block.Header.StateRoot)
+	if !b {
+		log.WithField("recoverRet", b).WithField("h:", block.Header.Height).Info("revover from")
+	}
+	fmt.Println("adjuct:", block.Header.Height, block.Header.StateRoot)
 	addrMap := make(map[crypto.CommonAddress]struct{})
 	var addrs []*crypto.CommonAddress
 	for _, tx := range block.Data.TxList {

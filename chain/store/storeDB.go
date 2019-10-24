@@ -90,6 +90,7 @@ func (s *StoreDB) RecoverTrie(root []byte) bool {
 	var err error
 	s.trie, err = trie.NewSecure(crypto.Bytes2Hash(root), s.trieDb)
 	if err != nil {
+		log.WithField("err",err).Info("new secure")
 		return false
 	}
 	s.cache = database.NewTransactionStore(s.trie)

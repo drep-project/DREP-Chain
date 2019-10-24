@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/chain/store"
-	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/common/hexutil"
 	"github.com/drep-project/drep-chain/common/trie"
 	"github.com/drep-project/drep-chain/crypto"
@@ -211,21 +210,6 @@ func (chain *ChainApi) GetAddressByAlias(alias string) (*crypto.CommonAddress, e
 }
 
 /*
- name: getVoteCreditDetails
- usage: 根据地址获取bytecode
- params:
-	1. 地址
- return: bytecode
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getVoteCreditDetails","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
- response:
-   {"jsonrpc":"2.0","id":3,"result":"{\"0x300fc5a14e578be28c64627c0e7e321771c58cd4\":\"0x3641100\"}"}
-*/
-func (chain *ChainApi) GetVoteCreditDetails(addr *crypto.CommonAddress) string {
-	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
-	return trieQuery.GetVoteCreditDetails(addr)
-}
-
-/*
  name: getReceipt
  usage: 根据txhash获取receipt信息
  params:
@@ -267,6 +251,36 @@ func (chain *ChainApi) GetLogs(txHash crypto.Hash) []*types.Log {
 func (chain *ChainApi) GetByteCode(addr *crypto.CommonAddress) hexutil.Bytes {
 	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
 	return trieQuery.GetByteCode(addr)
+}
+
+/*
+ name: getVoteCreditDetails
+ usage: 根据地址获取stake 所有细节信息
+ params:
+	1. 地址
+ return: bytecode
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getVoteCreditDetails","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ response:
+   {"jsonrpc":"2.0","id":3,"result":"{\"0x300fc5a14e578be28c64627c0e7e321771c58cd4\":\"0x3641100\"}"}
+*/
+func (chain *ChainApi) GetVoteCreditDetails(addr *crypto.CommonAddress) string {
+	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
+	return trieQuery.GetVoteCreditDetails(addr)
+}
+
+/*
+ name: GetCandidateAddrs
+ usage: 根据地址获取所有候选节点
+ params:
+	1. 地址
+ return: bytecode
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCandidateAddrs","params":[""], "id": 3}' -H "Content-Type:application/json"
+ response:
+   {"jsonrpc":"2.0","id":3,"result":"{\"0x300fc5a14e578be28c64627c0e7e321771c58cd4\":\"0x3641100\"}"}
+*/
+func (chain *ChainApi) GetCandidateAddrs() string {
+	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
+	return trieQuery.GetCandidateAddrs()
 }
 
 type TrieQuery struct {
@@ -372,16 +386,40 @@ func (trieQuery *TrieQuery) GetVoteCreditDetails(addr *crypto.CommonAddress) str
 		}
 	}
 
-	m := make(map[crypto.CommonAddress]common.Big)
+	//for _, rc := range storage.RC {
+	//	total := new(big.Int)
+	//	for _, value := range rc.Hv {
+	//		total.Add(total, &value.CreditValue)
+	//	}
+	//	m[rc.Addr] = common.Big(*total)
+	//}
+	b, _ := json.Marshal(storage.RC)
+	return string(b)
+}
 
-	for _, rc := range storage.RC {
-		total := new(big.Int)
-		for _, value := range rc.Hv {
-			total.Add(total, &value.CreditValue)
-		}
-		m[rc.Addr] = common.Big(*total)
+func (trieQuery *TrieQuery) GetCandidateAddrs() string {
+	var addrsBuf []byte
+	var err error
+
+	key := []byte(store.CandidateAddrs)
+
+	addrs := []crypto.CommonAddress{}
+	addrsBuf = trieQuery.trie.Get(key)
+	if err != nil {
+		log.Errorf("GetCandidateAddrs:%v", err)
+		return ""
 	}
-	b,_:=json.Marshal(m)
 
+	if addrsBuf == nil {
+		return ""
+	}
+
+	err = binary.Unmarshal(addrsBuf, &addrs)
+	if err != nil {
+		log.Errorf("GetCandidateAddrs, Unmarshal:%v", err)
+		return ""
+	}
+
+	b, _ := json.Marshal(addrs)
 	return string(b)
 }

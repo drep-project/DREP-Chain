@@ -140,6 +140,7 @@ func (soloConsensusService *SoloConsensusService) Start(executeContext *app.Exec
 					} else {
 						log.WithField("Height", block.Header.Height).WithField("txs:", block.Data.TxCount).WithField("err", err).Info("Process Block fail")
 					}
+
 				}
 				nextBlockTime, waitSpan := soloConsensusService.getWaitTime()
 				log.WithField("nextBlockTime", nextBlockTime).WithField("waitSpan", waitSpan).Debug("Sleep")

@@ -46,6 +46,8 @@ func (soloConsensus *SoloConsensus) Run(privKey *secp256k1.PrivateKey) (*types.B
 	//区块生成 共识 奖励 验证 完成
 	log.Trace("node leader finishes process consensus")
 
+	fmt.Println("run solo:",soloConsensus.ChainService.BestChain().Tip().Height, soloConsensus.ChainService.BestChain().Tip().StateRoot)
+
 	trieStore, err := store.TrieStoreFromStore(soloConsensus.DbService.LevelDb(), soloConsensus.ChainService.BestChain().Tip().StateRoot)
 	if err != nil {
 		return nil, err
