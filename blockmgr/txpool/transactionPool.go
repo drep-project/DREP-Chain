@@ -15,10 +15,11 @@ import (
 )
 
 const (
-	maxAllTxsCount  = 100000           //交易池所弄容纳的总的交易数量
-	maxTxsOfQueue   = 20               //单个地址对应的乱序队列中，最多容纳交易数目
-	maxTxsOfPending = 1000000          //单个地址对应的有序队列中，最多容纳交易数目
-	expireTimeTx    = 60 * 60 * 24 * 7 //交易在一周内，还没有被打包，则被丢弃
+	maxAllTxsCount  = 100000  //交易池所弄容纳的总的交易数量
+	maxTxsOfQueue   = 20      //单个地址对应的乱序队列中，最多容纳交易数目
+	maxTxsOfPending = 1000000 //单个地址对应的有序队列中，最多容纳交易数目
+	//expireTimeTx    = 60 * 60 * 24 * 7 //交易在一周内，还没有被打包，则被丢弃
+	expireTimeTx = 60 * 10 //交易在一周内，还没有被打包，则被丢弃
 )
 
 //TransactionPool ...
@@ -430,6 +431,8 @@ func (pool *TransactionPool) eliminateExpiredTxs() {
 			txs := list.Flatten()
 			for _, tx := range txs {
 				if tx.Time()+expireTimeTx <= time.Now().Unix() {
+					from, _ := tx.From()
+					log.WithField("tx time", tx.Time()).WithField("tx nonce", tx.Nonce()).WithField("from", from.String()).Info("tx expire")
 					delete(pool.allTxs, tx.TxHash().String())
 					pool.allPricedTxs.Remove(tx)
 					list.Remove(tx)
@@ -443,6 +446,8 @@ func (pool *TransactionPool) eliminateExpiredTxs() {
 			txs := list.Flatten()
 			for _, tx := range txs {
 				if tx.Time()+expireTimeTx <= time.Now().Unix() {
+					from, _ := tx.From()
+					log.WithField("tx time", tx.Time()).WithField("tx nonce", tx.Nonce()).WithField("from", from.String()).Info("tx expire")
 					delete(pool.allTxs, tx.TxHash().String())
 					pool.allPricedTxs.Remove(tx)
 					list.Remove(tx)
@@ -475,7 +480,11 @@ func (pool *TransactionPool) checkUpdate() {
 
 //已经被处理过NONCE都被清理出去
 func (pool *TransactionPool) adjust(block *types.Block) {
-	pool.chainStore.RecoverTrie(block.Header.StateRoot)
+	b := pool.chainStore.RecoverTrie(block.Header.StateRoot)
+	if !b {
+		log.WithField("recoverRet", b).WithField("h:", block.Header.Height).Error("RecoverTrie")
+	}
+
 	addrMap := make(map[crypto.CommonAddress]struct{})
 	var addrs []*crypto.CommonAddress
 	for _, tx := range block.Data.TxList {

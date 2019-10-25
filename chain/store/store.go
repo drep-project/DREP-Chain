@@ -44,6 +44,7 @@ type StoreInterface interface {
 	TrieDB() *trie.Database
 	Get(key []byte) ([]byte, error)
 	Put(key []byte, value []byte) error
+	Commit()
 
 	CopyState() *database.SnapShot
 	RevertState(shot *database.SnapShot)
@@ -67,7 +68,7 @@ type Store struct {
 	db      *StoreDB
 }
 
-func (s Store) AddCandidateAddr(addr *crypto.CommonAddress) error{
+func (s Store) AddCandidateAddr(addr *crypto.CommonAddress) error {
 	return s.stake.AddCandidateAddr(addr)
 }
 
@@ -206,11 +207,6 @@ func TrieStoreFromStore(diskDB dbinterface.KeyValueStore, stateRoot []byte) (Sto
 		db:      db,
 	}
 
-	//err := db.initState()
-	//if err != nil {
-	//	return nil, err
-	//}
-
 	if !store.RecoverTrie(stateRoot) {
 		return nil, ErrRecoverRoot
 	}
@@ -224,6 +220,10 @@ func (s *Store) RevertState(shot *database.SnapShot) {
 
 func (s Store) CopyState() *database.SnapShot {
 	return s.db.CopyState()
+}
+
+func (s Store) Commit() {
+	s.db.Flush()
 }
 
 func (s Store) GetStateRoot() []byte {

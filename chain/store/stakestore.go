@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/drep-project/drep-chain/common"
 	"math/big"
 
 	"github.com/drep-project/binary"
@@ -156,7 +157,7 @@ func (trieStore *trieStakeStore) VoteCredit(fromAddr, toAddr *crypto.CommonAddre
 		storage.RC = make([]types.ReceivedCredit, 0, 1)
 	}
 
-	hv := types.HeightValue{height, totalBalance}
+	hv := types.HeightValue{height, common.Big(totalBalance)}
 
 	found := false
 	for index, rc := range storage.RC {
@@ -187,7 +188,7 @@ func (trieStore *trieStakeStore) cancelCredit(fromAddr, toAddr *crypto.CommonAdd
 	//找到币被抵押到的stakeStorage;减去取消的值
 	storage, _ := trieStore.getStakeStorage(toAddr)
 	if storage == nil {
-		storage = &types.StakeStorage{}
+		return fmt.Errorf("not exist vote credit")
 	}
 
 	leftCredit := new(big.Int)
@@ -201,7 +202,7 @@ func (trieStore *trieStakeStore) cancelCredit(fromAddr, toAddr *crypto.CommonAdd
 				found = true
 
 				for _, vc := range rc.Hv {
-					leftCredit.Add(leftCredit, &vc.CreditValue)
+					leftCredit.Add(leftCredit, vc.CreditValue.ToInt())
 				}
 
 				cancelBalanceTmp := cancelBalance
@@ -209,11 +210,11 @@ func (trieStore *trieStakeStore) cancelCredit(fromAddr, toAddr *crypto.CommonAdd
 					leftCredit.Sub(leftCredit,cancelBalance)
 
 					for hvIndex, vc := range rc.Hv {
-						if cancelBalanceTmp.Cmp(&vc.CreditValue) >= 0 {
+						if cancelBalanceTmp.Cmp(vc.CreditValue.ToInt()) >= 0 {
 
-							interest := getInterst(vc.CreditHeight, height+ChangeCycle, &vc.CreditValue)
+							interest := getInterst(vc.CreditHeight, height+ChangeCycle, vc.CreditValue.ToInt())
 							cancelBalance.Add(cancelBalance, interest)
-							cancelBalanceTmp.Sub(cancelBalanceTmp, &vc.CreditValue)
+							cancelBalanceTmp.Sub(cancelBalanceTmp, vc.CreditValue.ToInt())
 							rc.Hv = rc.Hv[1:]
 
 							if cancelBalanceTmp.Cmp(new(big.Int).SetUint64(0)) == 0 {
@@ -222,9 +223,11 @@ func (trieStore *trieStakeStore) cancelCredit(fromAddr, toAddr *crypto.CommonAdd
 
 						} else {
 
-							interest := getInterst(vc.CreditHeight, height+ChangeCycle, &vc.CreditValue)
+							interest := getInterst(vc.CreditHeight, height+ChangeCycle, cancelBalance)
 							cancelBalance.Add(cancelBalance, interest)
-							rc.Hv[hvIndex].CreditValue = *vc.CreditValue.Sub(&vc.CreditValue, cancelBalanceTmp)
+
+							cv := vc.CreditValue.ToInt()
+							rc.Hv[hvIndex].CreditValue = common.Big(*cv.Sub(cv, cancelBalanceTmp))
 							break
 						}
 					}
@@ -358,7 +361,7 @@ func (trieStore *trieStakeStore) GetCreditCount(addr *crypto.CommonAddress) *big
 	total := new(big.Int)
 	for _, rc := range storage.RC {
 		for _, hv := range rc.Hv {
-			total.Add(total, &hv.CreditValue)
+			total.Add(total, hv.CreditValue.ToInt())
 		}
 	}
 
@@ -375,7 +378,7 @@ func (trieStore *trieStakeStore) GetCreditDetails(addr *crypto.CommonAddress) ma
 	for _, rc := range storage.RC {
 		total := new(big.Int)
 		for _, value := range rc.Hv {
-			total.Add(total, &value.CreditValue)
+			total.Add(total, value.CreditValue.ToInt())
 		}
 		m[rc.Addr] = *total //storage.ReceivedCreditValue[index]
 	}
@@ -392,9 +395,8 @@ func (trieStore *trieStakeStore) CandidateCredit(addresses *crypto.CommonAddress
 	update := false
 
 	if addBalance != nil {
-		hv := types.HeightValue{height, *addBalance}
+		hv := types.HeightValue{height, common.Big(*addBalance)}
 		update = true
-
 		totalBalance := new(big.Int).Set(addBalance)
 
 		if len(storage.RC) == 0 {
@@ -405,7 +407,7 @@ func (trieStore *trieStakeStore) CandidateCredit(addresses *crypto.CommonAddress
 		for index, rc := range storage.RC {
 			if rc.Addr.String() == addresses.String() {
 				for _, hv := range rc.Hv {
-					totalBalance.Add(totalBalance, &hv.CreditValue)
+					totalBalance.Add(totalBalance, hv.CreditValue.ToInt())
 				}
 
 				storage.RC[index].Hv = append(storage.RC[index].Hv, hv)

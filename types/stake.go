@@ -1,6 +1,7 @@
 package types
 
 import (
+	"github.com/drep-project/drep-chain/common"
 	"github.com/drep-project/drep-chain/crypto"
 	"math/big"
 )
@@ -8,7 +9,7 @@ import (
 //某个高度对应的某creadit value
 type HeightValue struct {
 	CreditHeight uint64
-	CreditValue  big.Int
+	CreditValue  common.Big
 }
 
 type ReceivedCredit struct {

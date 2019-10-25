@@ -689,6 +689,10 @@ func (db *Database) Cap(limit common.StorageSize) error {
 	return nil
 }
 
+func (db *Database) Commit(node crypto.Hash, report bool) error {
+	return db.TrieDb(node, report)
+}
+
 // TrieDb iterates over all the children of a particular node, writes them out
 // to disk, forcefully tearing down all references in both directions. As a side
 // effect, all pre-images accumulated up to this point are also written.

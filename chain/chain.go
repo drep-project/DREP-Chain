@@ -165,9 +165,12 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 	chainService.blockValidator = []IBlockValidator{NewChainBlockValidator(chainService)}
 	chainService.genesisProcess = []IGenesisProcess{NewPreminerGenesisProcessor()}
 	chainService.transactionValidator = map[ITransactionSelector]ITransactionValidator{
-		&TransferTxSelector{}: &TransferTransactionProcessor{},
-		&AliasTxSelector{}:    &AliasTransactionProcessor{},
-		&StakeTxSelector{}:    &StakeTransactionProcessor{},
+		&TransferTxSelector{}:        &TransferTransactionProcessor{},
+		&AliasTxSelector{}:           &AliasTransactionProcessor{},
+		&StakeTxSelector{}:           &StakeTransactionProcessor{},
+		&CancelStakeTxSelector{}:     &CancelStakeTransactionProcessor{},
+		&CandidateTxSelector{}:       &CandidateTransactionProcessor{},
+		&CancelCandidateTxSelector{}: &CancelCandidateTransactionProcessor{},
 	}
 
 	var err error

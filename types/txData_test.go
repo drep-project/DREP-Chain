@@ -1,25 +1,19 @@
 package types
 
 import (
+	"crypto/rand"
 	"fmt"
+	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/drep-chain/crypto"
 	"testing"
 )
 
 func TestCandidateMarshal(t *testing.T)  {
-	//p, _ := crypto.GenerateKey(rand.Reader)
-	//b,_:= p.PubKey().MarshalText()
-	//fmt.Println(string(b))
-	//
-	//
-	////}
-	////_, err := secp256k1.ParsePubKey([]byte("0x0373654ccdb250f2cfcfe64c783a44b9ea85bc47f2f00c480d05082428d277d6d0"))
-	//pk := secp256k1.NewPublicKey(nil,nil)
-	//err := pk.UnmarshalText([]byte(cd.Pubkey))
-
+	p, _ := crypto.GenerateKey(rand.Reader)
 
 	cd := &CandidateData{
-		Pubkey: string("0x0373654ccdb250f2cfcfe64c783a44b9ea85bc47f2f00c480d05082428d277d6d0"),
-		Addr:   "127.0.0.12:34",
+		Pubkey: p.PubKey(),
+		Node:   "192.168.31.51:55555",
 	}
 
 	b,err := cd.Marshal()
@@ -27,7 +21,12 @@ func TestCandidateMarshal(t *testing.T)  {
 		t.Fatal(err)
 	}
 
-	//fmt.Println(string(b))
+	fmt.Println(string(b))
+
+	cb := common.Bytes(b)
+
+	cbb, _:= cb.MarshalText()
+	fmt.Println(string(cbb))
 
 	cd2 := &CandidateData{}
 	err = cd2.Unmarshal(b)
