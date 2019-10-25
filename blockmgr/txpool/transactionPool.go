@@ -89,9 +89,6 @@ func NewTransactionPool(chainStore store.StoreInterface, journalPath string) *Tr
 
 	pool.journal = newTxJournal(journalPath)
 	pool.locals = make(map[crypto.CommonAddress]struct{})
-	pool.journal.load(pool.addTxs)
-	pool.journal.rotate(pool.local())
-	//todo 添加本地addr
 
 	return pool
 }
@@ -413,7 +410,15 @@ END:
 }
 
 //Start 开启交易池
-func (pool *TransactionPool) Start(feed *event.Feed) {
+func (pool *TransactionPool) Start(feed *event.Feed, tipRoot []byte) {
+	b := pool.chainStore.RecoverTrie(tipRoot)
+	if !b {
+		log.WithField("recoverRet", b).Error("tx pool")
+	}
+
+	pool.journal.load(pool.addTxs)
+	pool.journal.rotate(pool.local())
+
 	go pool.checkUpdate()
 	pool.eventNewBlockSub = feed.Subscribe(pool.newBlockChan)
 }

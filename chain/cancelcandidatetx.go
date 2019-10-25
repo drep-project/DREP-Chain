@@ -31,5 +31,10 @@ func (processor *CancelCandidateTransactionProcessor) ExecuteTransaction(context
 		return nil, false, nil, err
 	}
 
+	err = stakeStore.PutNonce(from, tx.Nonce()+1)
+	if err != nil {
+		return nil, false, nil, err
+	}
+
 	return nil, true, nil, err
 }

@@ -205,9 +205,9 @@ func (trieStore *trieStakeStore) cancelCredit(fromAddr, toAddr *crypto.CommonAdd
 					leftCredit.Add(leftCredit, vc.CreditValue.ToInt())
 				}
 
-				cancelBalanceTmp := cancelBalance
+				cancelBalanceTmp := new(big.Int).Set(cancelBalance)
 				if leftCredit.Cmp(cancelBalance) >= 0 {
-					leftCredit.Sub(leftCredit,cancelBalance)
+					leftCredit.Sub(leftCredit, cancelBalance)
 
 					for hvIndex, vc := range rc.Hv {
 						if cancelBalanceTmp.Cmp(vc.CreditValue.ToInt()) >= 0 {
@@ -287,8 +287,8 @@ func (trieStore *trieStakeStore) CancelVoteCredit(fromAddr, toAddr *crypto.Commo
 		return errors.New("from euqal to addr")
 	}
 
-	if cancelBalance == nil {
-		return errors.New("cancel credit value == 0")
+	if cancelBalance == nil || cancelBalance.Cmp(new(big.Int).SetUint64(0)) <= 0 {
+		return fmt.Errorf("cancel credit value(%v) <= 0", cancelBalance)
 	}
 
 	return trieStore.cancelCredit(fromAddr, toAddr, cancelBalance, endHeight, func(_ *big.Int, storage *types.StakeStorage) (*types.StakeStorage, error) {
@@ -447,7 +447,7 @@ func (trieStore *trieStakeStore) CandidateCredit(addresses *crypto.CommonAddress
 
 //可以全部取消质押的币；也可以只取消一部分质押的币，当质押的币不满足最低候选要求，则会被撤销候选人地址列表
 func (trieStore *trieStakeStore) CancelCandidateCredit(fromAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) error {
-	return trieStore.cancelCredit(fromAddr, fromAddr, cancelBalance, height, func(leftCredit *big.Int, storage *types.StakeStorage)(*types.StakeStorage, error) {
+	return trieStore.cancelCredit(fromAddr, fromAddr, cancelBalance, height, func(leftCredit *big.Int, storage *types.StakeStorage) (*types.StakeStorage, error) {
 		if leftCredit.Cmp(new(big.Int).Mul(new(big.Int).SetUint64(registerPledgeLimit), new(big.Int).SetUint64(drepUnit))) < 0 {
 			trieStore.DelCandidateAddr(fromAddr)
 		}

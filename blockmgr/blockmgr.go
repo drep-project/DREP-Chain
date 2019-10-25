@@ -235,7 +235,7 @@ func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 }
 
 func (blockMgr *BlockMgr) Start(executeContext *app.ExecuteContext) error {
-	blockMgr.transactionPool.Start(blockMgr.ChainService.NewBlockFeed())
+	blockMgr.transactionPool.Start(blockMgr.ChainService.NewBlockFeed(),blockMgr.ChainService.BestChain().Tip().StateRoot)
 	go blockMgr.synchronise()
 	go blockMgr.syncTxs()
 	return nil

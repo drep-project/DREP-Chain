@@ -54,6 +54,7 @@ func (soloConsensus *SoloConsensus) Run(privKey *secp256k1.PrivateKey) (*types.B
 	if err != nil {
 		return nil, err
 	}
+
 	sig, err := soloConsensus.PrivKey.Sign(sha3.Keccak256(block.AsSignMessage()))
 	if err != nil {
 		log.Error("sign block error")
@@ -78,6 +79,7 @@ func (soloConsensus *SoloConsensus) verify(block *types.Block) error {
 	if err != nil {
 		return err
 	}
+
 	dbstore := &chain.ChainStore{soloConsensus.DbService.LevelDb()}
 	trieStore, err := store.TrieStoreFromStore(soloConsensus.DbService.LevelDb(), parent.StateRoot)
 	if err != nil {
@@ -97,6 +99,7 @@ func (soloConsensus *SoloConsensus) verify(block *types.Block) error {
 	}
 
 	stateRoot := trieStore.GetStateRoot()
+
 	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
 		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
 			if !trieStore.RecoverTrie(soloConsensus.ChainService.GetCurrentHeader().StateRoot) {
