@@ -44,6 +44,5 @@ func (cd *CandidateData) Unmarshal(data []byte) error {
 
 func hostAddrCheck(addr string) bool {
 	n := enode.Node{}
-	err := n.UnmarshalText([]byte(addr))
-	return err != nil
+	return n.UnmarshalText([]byte(addr)) == nil
 }

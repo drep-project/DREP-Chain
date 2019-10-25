@@ -78,7 +78,7 @@ func NewBftConsensus(
 
 func (bftConsensus *BftConsensus) GetProducers(height uint64, topN int) ([]*Producer, error) {
 	newEpoch :=  height%uint64(bftConsensus.config.ChangeInterval)
-	if  bftConsensus.producer == nil && newEpoch == 0 {
+	if  bftConsensus.producer == nil || newEpoch == 0 {
 		height = height - newEpoch
 		block, err := bftConsensus.ChainService.GetBlockByHeight(height)
 		if err != nil {
