@@ -42,7 +42,12 @@ func (vmDeployTransactionExecutor *EvmDeployTransactionExecutor) ExecuteTransact
 		refund = state.GetRefund()
 	}
 	context.RefundGas(refund)
-	return ret, failed, state.GetLogs(context.Tx().TxHash()), err
+
+	logs := state.GetLogs(context.Tx().TxHash())
+	for _,log := range logs {
+		log.TxType = context.Tx().Type()
+	}
+	return ret, failed, logs, err
 }
 
 // ***********CALL**************//
