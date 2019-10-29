@@ -6,6 +6,7 @@ import (
 	"github.com/drep-project/drep-chain/database"
 	"github.com/drep-project/drep-chain/database/dbinterface"
 	dlog "github.com/drep-project/drep-chain/pkgs/log"
+	"github.com/drep-project/drep-chain/types"
 	"math/big"
 )
 
@@ -54,10 +55,10 @@ type StoreInterface interface {
 	//pos
 	GetCandidateAddrs() ([]crypto.CommonAddress, error)
 	GetVoteCreditCount(addr *crypto.CommonAddress) *big.Int
-	CancelVoteCredit(fromAddr, toAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) error
+	CancelVoteCredit(fromAddr, toAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) (*types.IntersetDetail, error)
 	VoteCredit(addresses *crypto.CommonAddress, to *crypto.CommonAddress, addBalance *big.Int, height uint64) error
 	CandidateCredit(addresses *crypto.CommonAddress, addBalance *big.Int, data []byte, height uint64) error
-	CancelCandidateCredit(fromAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) error
+	CancelCandidateCredit(fromAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) (*types.IntersetDetail, error)
 	GetCandidateData(addr *crypto.CommonAddress) ([]byte, error)
 	AddCandidateAddr(addr *crypto.CommonAddress) error
 }
@@ -72,7 +73,7 @@ func (s Store) AddCandidateAddr(addr *crypto.CommonAddress) error {
 	return s.stake.AddCandidateAddr(addr)
 }
 
-func (s Store) CancelCandidateCredit(fromAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) error {
+func (s Store) CancelCandidateCredit(fromAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) (*types.IntersetDetail, error) {
 	return s.stake.CancelCandidateCredit(fromAddr, cancelBalance, height)
 }
 
@@ -175,7 +176,7 @@ func (s Store) AliasSet(addr *crypto.CommonAddress, alias string) (err error) {
 	return s.account.AliasSet(addr, alias)
 }
 
-func (s Store) CancelVoteCredit(fromAddr, toAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) error {
+func (s Store) CancelVoteCredit(fromAddr, toAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) (*types.IntersetDetail, error) {
 	return s.stake.CancelVoteCredit(fromAddr, toAddr, cancelBalance, height)
 }
 

@@ -168,7 +168,7 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 		&TransferTxSelector{}:        &TransferTransactionProcessor{},
 		&AliasTxSelector{}:           &AliasTransactionProcessor{},
 		&StakeTxSelector{}:           &StakeTransactionProcessor{},
-		&CancelStakeTxSelector{}:     &CancelStakeTransactionProcessor{},
+		&CancelVoteTxSelector{}:      &CancelVoteTransactionProcessor{},
 		&CandidateTxSelector{}:       &CandidateTransactionProcessor{},
 		&CancelCandidateTxSelector{}: &CancelCandidateTransactionProcessor{},
 	}

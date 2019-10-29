@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"encoding/json"
 	"github.com/drep-project/drep-chain/types"
 )
 
@@ -26,15 +27,21 @@ func (processor *CancelCandidateTransactionProcessor) ExecuteTransaction(context
 	tx := context.Tx()
 	stakeStore := context.TrieStore()
 
-	err := stakeStore.CancelCandidateCredit(from, tx.Amount(), context.header.Height)
+	detail, err := stakeStore.CancelCandidateCredit(from, tx.Amount(), context.header.Height)
 	if err != nil {
 		return nil, false, nil, err
 	}
+
+	logs := make([]*types.Log, 0, 1)
+	data, _ := json.Marshal(detail)
+
+	log := types.Log{TxType: tx.Type(), TxHash: *tx.TxHash(), Data: data, Height: context.header.Height, TxIndex: 0}
+	logs = append(logs, &log)
 
 	err = stakeStore.PutNonce(from, tx.Nonce()+1)
 	if err != nil {
 		return nil, false, nil, err
 	}
 
-	return nil, true, nil, err
+	return nil, true, logs, err
 }
