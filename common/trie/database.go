@@ -752,11 +752,11 @@ func (db *Database) TrieDb(node crypto.Hash, report bool) error {
 	db.preimages = make(map[crypto.Hash][]byte)
 	db.preimagesSize = 0
 
-	logger := log.Info
-	if !report {
-		logger = log.Debug
-	}
-	logger("Persisted trie from memory database", "nodes", nodes-len(db.dirties)+int(db.flushnodes), "size", storage-db.dirtiesSize+db.flushsize, "time", time.Since(start)+db.flushtime,
+	//logger := log.Info
+	//if !report {
+	//	logger = log.Debug
+	//}
+	log.Debug("Persisted trie from memory database", "nodes", nodes-len(db.dirties)+int(db.flushnodes), "size", storage-db.dirtiesSize+db.flushsize, "time", time.Since(start)+db.flushtime,
 		"gcnodes", db.gcnodes, "gcsize", db.gcsize, "gctime", db.gctime, "livenodes", len(db.dirties), "livesize", db.dirtiesSize)
 
 	// Reset the garbage collection statistics
