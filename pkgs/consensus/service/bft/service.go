@@ -3,7 +3,6 @@ package bft
 import (
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/chain/store"
 	"github.com/drep-project/drep-chain/crypto"
@@ -106,21 +105,19 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 	bftConsensusService.P2pServer.AddProtocols([]p2p.Protocol{
 		p2p.Protocol{
 			Name:   "bftConsensusService",
-			Length: NumberOfMsg + 2,
+			Length: NumberOfMsg,
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
-				MsgTypeValidateReq := uint64(NumberOfMsg)
-				MsgTypeValidateRes := uint64(NumberOfMsg + 1)
-
 				producers, err := bftConsensusService.GetProducers(bftConsensusService.ChainService.BestChain().Tip().Height, bftConsensusService.Config.ProducerNum*2)
 				if err != nil {
-					log.WithField("err", err).Info("get producers")
-					//return err
+					log.WithField("err", err).Info("fail to get producers")
+					return err
 				}
 
 				ipChecked := false
 				for _, producer := range producers {
 					if producer.Node.IP().String() == peer.Node().IP().String() {
 						ipChecked = true
+						break
 					}
 				}
 				if !ipChecked {
@@ -142,16 +139,15 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 				if err != nil {
 					return err
 				}
-				fmt.Println(pi.IP())
 				//del peer event
 				ch := make(chan *p2p.PeerEvent)
-				//sub := bftConsensusService.P2pServer.SubscribeEvents(ch)
+				sub := bftConsensusService.P2pServer.SubscribeEvents(ch)
 				//control producer validator by timer
 				tm := time.NewTimer(time.Second * 10)
 				defer func() {
 					peer.Disconnect(p2p.DiscQuitting)
 					removePeerFeed.Send(pi)
-					//sub.Unsubscribe()
+					sub.Unsubscribe()
 				}()
 				for {
 					select {
