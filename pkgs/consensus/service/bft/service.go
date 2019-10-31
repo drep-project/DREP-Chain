@@ -107,6 +107,9 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 			Name:   "bftConsensusService",
 			Length: NumberOfMsg,
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
+				defer func() {
+					peer.Disconnect(p2p.DiscQuitting)
+				}()
 				producers, err := bftConsensusService.GetProducers(bftConsensusService.ChainService.BestChain().Tip().Height, bftConsensusService.Config.ProducerNum*2)
 				if err != nil {
 					log.WithField("err", err).Info("fail to get producers")
@@ -145,7 +148,6 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 				//control producer validator by timer
 				tm := time.NewTimer(time.Second * 10)
 				defer func() {
-					peer.Disconnect(p2p.DiscQuitting)
 					removePeerFeed.Send(pi)
 					sub.Unsubscribe()
 				}()
@@ -294,10 +296,6 @@ func (bftConsensusService *BftConsensusService) Stop(executeContext *app.Execute
 }
 
 func (bftConsensusService *BftConsensusService) getWaitTime() (time.Time, time.Duration) {
-	// max_delay_time +(min_block_interval)*windows = expected_block_interval*windows
-	// 6h + 5s*windows = 10s*windows
-	// windows = 4320
-
 	lastBlockTime := time.Unix(int64(bftConsensusService.ChainService.BestChain().Tip().TimeStamp), 0)
 	targetTime := lastBlockTime.Add(time.Duration(int64(time.Second) * bftConsensusService.Config.BlockInterval))
 	now := time.Now()
@@ -305,38 +303,10 @@ func (bftConsensusService *BftConsensusService) getWaitTime() (time.Time, time.D
 		interval := now.Sub(lastBlockTime)
 		nextBlockInterval := int64(interval/(time.Second * time.Duration(bftConsensusService.Config.BlockInterval))) + 1
 		nextBlockTime := lastBlockTime.Add(time.Second * time.Duration(nextBlockInterval *  bftConsensusService.Config.BlockInterval))
-
 		return nextBlockTime, nextBlockTime.Sub(now)
 	} else {
 		return targetTime, targetTime.Sub(now)
 	}
-	/*
-		     window := int64(4320)
-		     endBlock := bftConsensusService.DatabaseService.GetHighestBlock().Header
-		     if endBlock.Height < window {
-				 lastBlockTime := time.Unix(bftConsensusService.DatabaseService.GetHighestBlock().Header.Timestamp, 0)
-				 span := time.Now().Sub(lastBlockTime)
-				 if span > blockInterval {
-					 span = 0
-				 } else {
-					 span = blockInterval - span
-				 }
-				 return span
-			 }else{
-			 	//wait for test
-				 startHeight := endBlock.Height - window
-				 if startHeight <0 {
-					 startHeight = int64(0)
-				 }
-				 startBlock :=bftConsensusService.DatabaseService.GetBlock(startHeight).Header
-
-				 xx := window * 10 -(time.Unix(startBlock.Timestamp,0).Sub(time.Unix(endBlock.Timestamp,0))).Seconds()
-
-				 span := time.Unix(startBlock.Timestamp,0).Sub(time.Unix(endBlock.Timestamp,0))  //window time
-				 avgSpan := span.Nanoseconds()/window
-				 return time.Duration(avgSpan) * time.Nanosecond
-			 }
-	*/
 }
 
 func (bftConsensusService *BftConsensusService) GetProducers(height uint64, topN int) ([]*Producer, error) {
