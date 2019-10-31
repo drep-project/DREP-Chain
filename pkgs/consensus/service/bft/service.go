@@ -86,7 +86,7 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 		&removePeerFeed,
 	)
 
-	bftConsensusService.ChainService.AddBlockValidator(&BlockMultiSigValidator{bftConsensusService.BftConsensus.GetProducers, bftConsensusService.ChainService.GetBlockByHash,bftConsensusService.Config.ProducerNum})
+	bftConsensusService.ChainService.AddBlockValidator(&BlockMultiSigValidator{bftConsensusService.BftConsensus.GetProducers, bftConsensusService.ChainService.GetBlockByHash, bftConsensusService.Config.ProducerNum})
 	bftConsensusService.ChainService.AddGenesisProcess(NewMinerGenesisProcessor())
 	if !bftConsensusService.Config.StartMiner {
 		return nil
@@ -124,12 +124,13 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 					}
 				}
 				if !ipChecked {
-
-
-					fmt.Println(peer.Node().String())
-					fmt.Println(peer.Node().IP().String() + " : "+ hex.EncodeToString(peer.Node().Pubkey().Serialize()))
+					log.WithField("IP", peer.Node().IP().String()).
+						WithField("PublicKey", hex.EncodeToString(peer.Node().Pubkey().Serialize())).
+						Debug("Receive remove peer")
 					for _, producer := range producers {
-						fmt.Println(producer.Node.IP().String() + " : "+ hex.EncodeToString(producer.Node.Pubkey().Serialize()))
+						log.WithField("IP", producer.Node.IP().String()).
+							WithField("PublicKey", hex.EncodeToString(producer.Node.Pubkey().Serialize())).
+							Debug("Exit Candidate peer")
 					}
 					return ErrBpNotInList
 				}
@@ -307,7 +308,7 @@ func (bftConsensusService *BftConsensusService) getWaitTime() (time.Time, time.D
 	// windows = 4320
 
 	lastBlockTime := time.Unix(int64(bftConsensusService.ChainService.BestChain().Tip().TimeStamp), 0)
-	targetTime := lastBlockTime.Add(time.Duration(int(time.Second)*bftConsensusService.Config.BlockInterval))
+	targetTime := lastBlockTime.Add(time.Duration(int(time.Second) * bftConsensusService.Config.BlockInterval))
 	now := time.Now()
 	if targetTime.Before(now) {
 		return now.Add(time.Millisecond * 500), time.Millisecond * 500
@@ -343,7 +344,6 @@ func (bftConsensusService *BftConsensusService) getWaitTime() (time.Time, time.D
 	*/
 }
 
-
 func (bftConsensusService *BftConsensusService) GetProducers(height uint64, topN int) ([]*Producer, error) {
 	block, err := bftConsensusService.ChainService.GetBlockByHeight(height)
 	if err != nil {
@@ -358,8 +358,8 @@ func (bftConsensusService *BftConsensusService) GetProducers(height uint64, topN
 
 func (bftConsensusService *BftConsensusService) DefaultConfig() *BftConfig {
 	return &BftConfig{
-		BlockInterval: int(time.Second * 5),
-		ProducerNum: 7,
-		ChangeInterval:10,
+		BlockInterval:  int(time.Second * 5),
+		ProducerNum:    7,
+		ChangeInterval: 100,
 	}
 }

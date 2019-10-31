@@ -285,7 +285,7 @@ func (leader *Leader) challenge(msg IConsenMsg) {
 		}
 
 		member := leader.getMemberByPk(pk)
-		if member.IsOnline && !member.IsMe {
+		if member!=nil && member.IsOnline && !member.IsMe {
 			log.WithField("Node", member.Peer).WithField("Height", leader.currentHeight).Debug("leader sent challenge message")
 			leader.sender.SendAsync(member.Peer.GetMsgRW(), MsgTypeChallenge, challenge)
 		}

@@ -178,8 +178,6 @@ func (member *Member) OnSetUp(peer consensusTypes.IPeerInfo, setUp *Setup) {
 			Debug("setup error status")
 		return
 	}
-
-	log.Debug("receive setup message")
 	if member.leader.Peer.Equal(peer) {
 		var err error
 		member.msg, err = member.convertor(setUp.Msg)

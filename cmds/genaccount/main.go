@@ -125,7 +125,7 @@ func gen(ctx *cli.Context) error {
 			StartMiner: true,
 			BlockInterval:5,
 			ProducerNum:len(nodeItems),
-			ChangeInterval:10,
+			ChangeInterval:100,
 		}
 	}
 
