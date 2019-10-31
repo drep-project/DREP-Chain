@@ -201,10 +201,6 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 						}
 					}
 				}
-
-				log.WithField("peer.ip", peer.IP()).Info("peer not producer")
-				//非骨干节点，不启动共识相关处理
-				return nil
 			},
 		},
 	})
@@ -223,7 +219,6 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 	}
 
 	go bftConsensusService.handlerEvent()
-
 	return nil
 }
 
@@ -304,10 +299,14 @@ func (bftConsensusService *BftConsensusService) getWaitTime() (time.Time, time.D
 	// windows = 4320
 
 	lastBlockTime := time.Unix(int64(bftConsensusService.ChainService.BestChain().Tip().TimeStamp), 0)
-	targetTime := lastBlockTime.Add(time.Duration(int(time.Second) * bftConsensusService.Config.BlockInterval))
+	targetTime := lastBlockTime.Add(time.Duration(int64(time.Second) * bftConsensusService.Config.BlockInterval))
 	now := time.Now()
 	if targetTime.Before(now) {
-		return now.Add(time.Millisecond * 500), time.Millisecond * 500
+		interval := now.Sub(lastBlockTime)
+		nextBlockInterval := int64(interval/(time.Second * time.Duration(bftConsensusService.Config.BlockInterval))) + 1
+		nextBlockTime := lastBlockTime.Add(time.Second * time.Duration(nextBlockInterval *  bftConsensusService.Config.BlockInterval))
+
+		return nextBlockTime, nextBlockTime.Sub(now)
 	} else {
 		return targetTime, targetTime.Sub(now)
 	}
@@ -354,7 +353,7 @@ func (bftConsensusService *BftConsensusService) GetProducers(height uint64, topN
 
 func (bftConsensusService *BftConsensusService) DefaultConfig() *BftConfig {
 	return &BftConfig{
-		BlockInterval:  int(time.Second * 5),
+		BlockInterval:  10,
 		ProducerNum:    7,
 		ChangeInterval: 100,
 	}
