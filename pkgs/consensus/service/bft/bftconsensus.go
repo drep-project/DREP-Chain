@@ -28,7 +28,7 @@ const (
 type BftConsensus struct {
 	CoinBase crypto.CommonAddress
 	PrivKey  *secp256k1.PrivateKey
-	config *BftConfig
+	config   *BftConfig
 	curMiner int
 
 	BlockGenerator blockmgr.IBlockBlockGenerator
@@ -64,21 +64,21 @@ func NewBftConsensus(
 	return &BftConsensus{
 		BlockGenerator: blockGenerator,
 		ChainService:   chainService,
-		config:	config,
+		config:         config,
 		DbService:      dbService,
 		sender:         sener,
 		onLinePeer:     map[string]consensusTypes.IPeerInfo{},
 		WaitTime:       waitTime,
-		memberMsgPool:  make(chan *MsgWrap, 1000),
-		leaderMsgPool:  make(chan *MsgWrap, 1000),
 		addPeerChan:    addPeerChan,
 		removePeerChan: removePeerChan,
+		memberMsgPool : make(chan *MsgWrap, 1000),
+		leaderMsgPool : make(chan *MsgWrap, 1000),
 	}
 }
 
 func (bftConsensus *BftConsensus) GetProducers(height uint64, topN int) ([]*Producer, error) {
-	newEpoch :=  height%uint64(bftConsensus.config.ChangeInterval)
-	if  bftConsensus.producer == nil || newEpoch == 0 {
+	newEpoch := height % uint64(bftConsensus.config.ChangeInterval)
+	if bftConsensus.producer == nil || newEpoch == 0 {
 		height = height - newEpoch
 		block, err := bftConsensus.ChainService.GetBlockByHeight(height)
 		if err != nil {
@@ -91,7 +91,7 @@ func (bftConsensus *BftConsensus) GetProducers(height uint64, topN int) ([]*Prod
 		producers := GetCandidates(trie, topN)
 		bftConsensus.producer = producers
 		return producers, nil
-	}else{
+	} else {
 		return bftConsensus.producer, nil
 	}
 }
@@ -104,11 +104,24 @@ func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Blo
 	if err != nil {
 		return nil, err
 	}
+	found := false
+	for _, p := range producers {
+		if bytes.Equal(p.Pubkey.Serialize(), bftConsensus.config.MyPk.Serialize()) {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, ErrNotMyTurn
+	}
 	minMiners := int(math.Ceil(float64(len(producers)) * 2 / 3))
 	miners := bftConsensus.collectMemberStatus(producers)
 
 	if len(miners) > 1 {
-		isM, isL := bftConsensus.moveToNextMiner(miners)
+		isM, isL, err := bftConsensus.moveToNextMiner(miners)
+		if err != nil {
+			return nil, err
+		}
 		if isL {
 			return bftConsensus.runAsLeader(producers, miners, minMiners)
 		} else if isM {
@@ -136,7 +149,7 @@ func (bftConsensus *BftConsensus) processPeers() {
 	}
 }
 
-func (bftConsensus *BftConsensus) moveToNextMiner(produceInfos []*MemberInfo) (bool, bool) {
+func (bftConsensus *BftConsensus) moveToNextMiner(produceInfos []*MemberInfo) (bool, bool, error) {
 	liveMembers := []*MemberInfo{}
 
 	for _, produce := range produceInfos {
@@ -145,7 +158,9 @@ func (bftConsensus *BftConsensus) moveToNextMiner(produceInfos []*MemberInfo) (b
 		}
 	}
 	curentHeight := bftConsensus.ChainService.BestChain().Height()
-
+	if uint64(len(liveMembers)) == 0 {
+		return false, false, ErrBFTNotReady
+	}
 	liveMinerIndex := int(curentHeight % uint64(len(liveMembers)))
 	curMiner := liveMembers[liveMinerIndex]
 
@@ -161,9 +176,9 @@ func (bftConsensus *BftConsensus) moveToNextMiner(produceInfos []*MemberInfo) (b
 	}
 
 	if curMiner.IsMe {
-		return false, true
+		return false, true, nil
 	} else {
-		return true, false
+		return true, false, nil
 	}
 }
 
@@ -389,18 +404,38 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
 }
 
 func (bftConsensus *BftConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, t uint64, buf []byte) {
-	log.WithField("addr", peer).WithField("code", t).Debug("Receive setup msg")
+	switch t {
+	case MsgTypeSetUp:
+		log.WithField("addr", peer).WithField("code", t).Debug("Receive MsgTypeSetUp msg")
+	case MsgTypeChallenge:
+		log.WithField("addr", peer).WithField("code", t).Debug("Receive MsgTypeChallenge msg")
+	case MsgTypeFail:
+		log.WithField("addr", peer).WithField("code", t).Debug("Receive MsgTypeFail msg")
+	case MsgTypeCommitment:
+		log.WithField("addr", peer).WithField("code", t).Debug("Receive MsgTypeCommitment msg")
+	case MsgTypeResponse:
+		log.WithField("addr", peer).WithField("code", t).Debug("Receive MsgTypeResponse msg")
+	default:
+		//return fmt.Errorf("consensus unkonw msg type:%d", msg.Code)
+	}
 	switch t {
 	case MsgTypeSetUp:
 		fallthrough
 	case MsgTypeChallenge:
 		fallthrough
 	case MsgTypeFail:
-		bftConsensus.memberMsgPool <- &MsgWrap{peer, t, buf}
+		select {
+		case bftConsensus.memberMsgPool <- &MsgWrap{peer, t, buf}:
+		default:
+		}
 	case MsgTypeCommitment:
 		fallthrough
 	case MsgTypeResponse:
-		bftConsensus.leaderMsgPool <- &MsgWrap{peer, t, buf}
+		select {
+		case bftConsensus.leaderMsgPool <- &MsgWrap{peer, t, buf}:
+		default:
+		}
+
 	default:
 		//return fmt.Errorf("consensus unkonw msg type:%d", msg.Code)
 	}

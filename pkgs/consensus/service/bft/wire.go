@@ -15,11 +15,13 @@ const (
 	MsgTypeResponse   = 2
 	MsgTypeChallenge  = 3
 	MsgTypeFail       = 4
+	MsgTypeValidateReq = 5
+	MsgTypeValidateRes = 6
 
 	MaxMsgSize = 20 << 20
 )
 
-var NumberOfMsg = 5
+var NumberOfMsg = 7
 
 type MsgWrap struct {
 	Peer types.IPeerInfo

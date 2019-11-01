@@ -73,6 +73,11 @@ func (trieStore *trieStakeStore) UpdateCandidateAddr(addr *crypto.CommonAddress,
 	}
 
 	if add {
+		for _, temAddr := range addrs {
+			if temAddr.String() == addr.String() {
+				return nil
+			}
+		}
 		addrs = append(addrs, *addr)
 
 	} else { //del

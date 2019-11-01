@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/types"
 	"github.com/meling/urs"
@@ -24,12 +25,18 @@ func FromECDSAPub(pub *ecdsa.PublicKey) []byte {
 type AAA string
 
 func main() {
-	_,pk := secp256k1.PrivKeyFromScalar(common.MustDecode("0x29936977e507d150e2bb699042e605cdcebb59b83db372f8895b814904be8179"))
+	var ch chan string
+	select {
+		case ch <- "x":
+	default:
+
+	}
+	_,pk := secp256k1.PrivKeyFromScalar(common.MustDecode("0x544b577506dda6ec6d7cfe8f2cd5b326b01dedac58528009da2e120d10d3353b"))
 	dddd, _ := json.Marshal(pk)
 	fmt.Println(string(dddd))
 	fmt.Println(common.Encode(pk.Serialize()))
-//	curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_candidateCredit","params":["0x300fc5a14e578be28c64627c0e7e321771c58cd4","0x3641100","0x110","0x30000","{\"Pubkey\":\"0x03ad000bc9a4a29c11227d6b5ee05076b594c1c22567cdd85fbb8222e6a715924e\",\"Node\":\"enode://da388eb91ff35bc840b30a0adc771507cb5e933dff0818cf687644341e477e7e@192.168.147.134:55555\"}"],"id":1}' http://127.0.0.1:15645
-
+	fmt.Println(crypto.PubkeyToAddress(pk).String())
+//	self=enode://7acb8d508c9207ee703f7fac3e027d15a7d10785fde68f703d4788353da3fafb@127.0.0.1:55555
 str := "{\"Pubkey\":\"0x03ad000bc9a4a29c11227d6b5ee05076b594c1c22567cdd85fbb8222e6a715924e\",\"Node\":\"enode://da388eb91ff35bc840b30a0adc771507cb5e933dff0818cf687644341e477e7e@192.168.147.134:55555\"}"
 	ddd := &types.CandidateData{}
 	ec := 	ddd.Unmarshal([]byte(str))
