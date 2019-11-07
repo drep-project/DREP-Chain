@@ -151,7 +151,6 @@ func (bftConsensus *BftConsensus) processPeers() {
 
 func (bftConsensus *BftConsensus) moveToNextMiner(produceInfos []*MemberInfo) (bool, bool, error) {
 	liveMembers := []*MemberInfo{}
-
 	for _, produce := range produceInfos {
 		if produce.IsOnline {
 			liveMembers = append(liveMembers, produce)

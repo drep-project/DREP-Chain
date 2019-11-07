@@ -113,14 +113,14 @@ func gen(ctx *cli.Context) error {
 
 	if len(nodeItems) == 1 {
 		consensusConfig.ConsensusMode = "solo"
-		consensusConfig.Solo = solo.SoloConfig{
+		consensusConfig.Solo = &solo.SoloConfig{
 			MyPk:       nil,
 			StartMiner: true,
 			BlockInterval:5,
 		}
 	}else{
 		consensusConfig.ConsensusMode = "bft"
-		consensusConfig.Bft = bft.BftConfig{
+		consensusConfig.Bft = &bft.BftConfig{
 			MyPk:       nil,
 			StartMiner: true,
 			BlockInterval:5,

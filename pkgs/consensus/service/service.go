@@ -16,8 +16,8 @@ var (
 
 type ConsensusConfig struct {
 	ConsensusMode string          `json:"consensusMode"`
-	Solo          solo.SoloConfig `json:"solo"`
-	Bft           bft.BftConfig   `json:"bft"`
+	Solo          *solo.SoloConfig `json:"solo,omitempty"`
+	Bft           *bft.BftConfig   `json:"bft,omitempty"`
 }
 type ConsensusService struct {
 	SoloService *solo.SoloConsensusService
