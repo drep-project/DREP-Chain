@@ -16,7 +16,7 @@ import (
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"github.com/drep-project/drep-chain/database"
-	"github.com/drep-project/drep-chain/params"
+
 	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
 	"github.com/drep-project/drep-chain/types"
 )
@@ -318,7 +318,8 @@ func (bftConsensus *BftConsensus) runAsLeader(producers ProducerSet, miners []*M
 	log.WithField("bitmap", multiSig.Bitmap).Info("participant bitmap")
 	//Determine reward points
 	block.Proof = types.Proof{consensusTypes.Pbft, multiSigBytes}
-	err = AccumulateRewards(trieStore, multiSig, producers, gasFee, block.Header.Height)
+	calculator := NewRewardCalculator(trieStore, multiSig, producers, gasFee, block.Header.Height)
+	err = calculator.AccumulateRewards()
 	if err != nil {
 		return nil, err
 	}
@@ -444,30 +445,3 @@ func (bftConsensus *BftConsensus) ChangeTime(interval time.Duration) {
 	bftConsensus.WaitTime = interval
 }
 
-// AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
-func AccumulateRewards(trieStore store.StoreInterface, sig *MultiSignature, Producers ProducerSet, totalGasBalance *big.Int, height uint64) error {
-	reward := new(big.Int).SetUint64(uint64(params.Rewards))
-	r := new(big.Int)
-	r = r.Div(reward, new(big.Int).SetInt64(2))
-	r.Add(r, totalGasBalance)
-	leaderAddr := Producers[sig.Leader].Address()
-	err := trieStore.AddBalance(&leaderAddr, height, r)
-	if err != nil {
-		return err
-	}
-
-	num := sig.Num() - 1
-	for index, isCommit := range sig.Bitmap {
-		if isCommit == 1 {
-			addr := Producers[index].Address()
-			if addr != leaderAddr {
-				r.Div(reward, new(big.Int).SetInt64(int64(num*2)))
-				err = trieStore.AddBalance(&addr, height, r)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	}
-	return nil
-}
