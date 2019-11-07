@@ -147,6 +147,9 @@ func (mApp *DrepApp) action(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
+
+		fmt.Println("*****:",reflect.TypeOf(service))
+
 		if reflect.TypeOf(service).Implements(TOrService) {
 			//flate config
 			err = mApp.Context.FlatConfig(service.Name())
