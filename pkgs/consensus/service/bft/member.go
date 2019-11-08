@@ -26,7 +26,7 @@ type Member struct {
 	randomPrivakey *secp256k1.PrivateKey
 	r              *big.Int
 
-	 time.Duration
+	waitTime time.Duration
 
 	completed           chan struct{}
 	timeOutChanel       chan struct{}
