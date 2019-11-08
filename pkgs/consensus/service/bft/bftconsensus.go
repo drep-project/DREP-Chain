@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"github.com/drep-project/drep-chain/chain/store"
 	"math"
+	"fmt"
 	"math/big"
 	"reflect"
+	"strconv"
 	"sync"
 	"time"
 
@@ -116,6 +118,12 @@ func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Blo
 	}
 	minMiners := int(math.Ceil(float64(len(producers)) * 2 / 3))
 	miners := bftConsensus.collectMemberStatus(producers)
+	//print miners status
+	str := "-----------------------------------\n"
+	for _, m := range miners {
+		str += "|	"+m.Producer.Node.IP().String() + "|	"+ strconv.FormatBool(m.IsOnline)  +"	|\n"
+	}
+	fmt.Println(str)
 
 	if len(miners) > 1 {
 		isM, isL, err := bftConsensus.moveToNextMiner(miners)

@@ -25,13 +25,7 @@ func FromECDSAPub(pub *ecdsa.PublicKey) []byte {
 type AAA string
 
 func main() {
-	var ch chan string
-	select {
-		case ch <- "x":
-	default:
-
-	}
-	_,pk := secp256k1.PrivKeyFromScalar(common.MustDecode("0x544b577506dda6ec6d7cfe8f2cd5b326b01dedac58528009da2e120d10d3353b"))
+	_,pk := secp256k1.PrivKeyFromScalar(common.MustDecode("0x6706ef6c477bd5f513c6af7162d12995f7e8795c284c761591aa82c598e489c9"))
 	dddd, _ := json.Marshal(pk)
 	fmt.Println(string(dddd))
 	fmt.Println(common.Encode(pk.Serialize()))
