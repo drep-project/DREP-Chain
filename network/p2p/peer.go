@@ -261,7 +261,7 @@ func (p *Peer) pingLoop() {
 		case <-ping.C:
 			if err := SendItems(p.rw, pingMsg); err != nil {
 				p.protoErr <- err
-				fmt.Println("ping msg err")
+				log.WithField("err", err).Info("ping msg err")
 				return
 			}
 			ping.Reset(pingInterval)
