@@ -214,7 +214,11 @@ func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 				}
 				pi := types.NewPeerInfo(peer, rw)
 				blockMgr.peersInfo[peer.IP()] = pi
-				defer delete(blockMgr.peersInfo, peer.IP())
+
+				//err := blockMgr.receiveMsg(pi, rw)
+				//delete(blockMgr.peersInfo, peer.IP())
+				//return err
+				defer 	delete(blockMgr.peersInfo, peer.IP())
 				return blockMgr.receiveMsg(pi, rw)
 			},
 		},

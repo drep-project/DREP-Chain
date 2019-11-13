@@ -29,7 +29,7 @@ replace (
 	gopkg.in/urfave/cli.v1 => github.com/urfave/cli v1.21.0
 )
 
-go 1.12
+go 1.13
 
 require (
 	github.com/AsynkronIT/protoactor-go v0.0.0-20191102041813-8372a58e6b17
@@ -62,8 +62,6 @@ require (
 	github.com/mattn/go-colorable v0.1.4
 	github.com/meling/urs v0.0.0-20140826003057-dfe7ae28e94c
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
-	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
-	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/olekukonko/tablewriter v0.0.2 // indirect
 	github.com/pborman/uuid v1.2.0 // indirect
 	github.com/peterh/liner v1.1.0
