@@ -213,12 +213,14 @@ func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 					return ErrEnoughPeer
 				}
 				pi := types.NewPeerInfo(peer, rw)
+				blockMgr.lock.Lock()
 				blockMgr.peersInfo[peer.IP()] = pi
 
 				//err := blockMgr.receiveMsg(pi, rw)
 				//delete(blockMgr.peersInfo, peer.IP())
 				//return err
-				defer 	delete(blockMgr.peersInfo, peer.IP())
+				defer delete(blockMgr.peersInfo, peer.IP())
+				defer blockMgr.lock.Unlock()
 				return blockMgr.receiveMsg(pi, rw)
 			},
 		},
@@ -239,7 +241,7 @@ func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 }
 
 func (blockMgr *BlockMgr) Start(executeContext *app.ExecuteContext) error {
-	blockMgr.transactionPool.Start(blockMgr.ChainService.NewBlockFeed(),blockMgr.ChainService.BestChain().Tip().StateRoot)
+	blockMgr.transactionPool.Start(blockMgr.ChainService.NewBlockFeed(), blockMgr.ChainService.BestChain().Tip().StateRoot)
 	go blockMgr.synchronise()
 	go blockMgr.syncTxs()
 	return nil

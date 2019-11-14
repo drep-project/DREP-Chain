@@ -46,7 +46,7 @@ const (
 
 	snappyProtocolVersion = 5
 
-	pingInterval = 1 * time.Second
+	pingInterval = 15 * time.Second
 )
 
 const (
@@ -261,7 +261,7 @@ func (p *Peer) pingLoop() {
 		case <-ping.C:
 			if err := SendItems(p.rw, pingMsg); err != nil {
 				p.protoErr <- err
-				fmt.Println("ping msg err")
+				fmt.Println("ping msg err,ip:", p.IP())
 				return
 			}
 			ping.Reset(pingInterval)
@@ -385,7 +385,7 @@ func (p *Peer) startProtocols(writeStart <-chan struct{}, writeErr chan<- error)
 				p.log.Info(fmt.Sprintf("may be not support Protocols %s/%d returned", proto.Name, proto.Version))
 				err = errProtocolReturned
 			} else if err != io.EOF {
-				p.log.Info(fmt.Sprintf("Protocol %s/%d failed", proto.Name, proto.Version), "err", err)
+				p.log.Info(fmt.Sprintf("err Protocol: %s/%d failed", proto.Name, proto.Version), "err", err)
 			}
 			p.protoErr <- err
 			p.wg.Done()

@@ -526,7 +526,7 @@ func readHandshakeMsg(msg plainDecoder, plainSize int, prv *secp256k1.PrivateKey
 	}
 
 	_, err := key.Decrypt(buf, nil, nil)
-	fmt.Println(err)
+	fmt.Println("readHandshakeMsg err:",err)
 	// Could be EIP-8 format, try that.
 	prefix := buf[:2]
 	size := binary.BigEndian.Uint16(prefix)
