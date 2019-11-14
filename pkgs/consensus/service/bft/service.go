@@ -108,12 +108,7 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 			Name:   "bftConsensusService",
 			Length: NumberOfMsg,
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
-				//defer func() {
-				//	log.WithField("IP", peer.Node().IP().String()).
-				//		WithField("PublicKey", hex.EncodeToString(peer.Node().Pubkey().Serialize())).
-				//		Debug("bft protocol err, disconnect peer")
-				//	peer.Disconnect(p2p.DiscQuitting)
-				//}()
+
 				producers, err := bftConsensusService.GetProducers(bftConsensusService.ChainService.BestChain().Tip().Height, bftConsensusService.Config.ProducerNum*2)
 				if err != nil {
 					log.WithField("err", err).Info("fail to get producers")
@@ -195,16 +190,20 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 								return err
 							}
 
+							ok := false
 							for _, producer := range producers {
-								if sig.Verify(randomBytes[:], producer.Pubkey) {
+								ok := sig.Verify(randomBytes[:], producer.Pubkey)
+								if ok {
 									addPeerFeed.Send(pi)
 									tm.Stop()
-								} else {
-									fmt.Println("MsgTypeValidateRes pubkey err*********")
-									return fmt.Errorf("MsgTypeValidateRes pubkey err")
+									break
 								}
 							}
 
+							if !ok {
+								fmt.Println("MsgTypeValidateRes pubkey err*********")
+								return fmt.Errorf("MsgTypeValidateRes pubkey err")
+							}
 						default:
 							bftConsensusService.BftConsensus.ReceiveMsg(pi, msg.Code, buf)
 						}
@@ -308,8 +307,8 @@ func (bftConsensusService *BftConsensusService) getWaitTime() (time.Time, time.D
 	now := time.Now()
 	if targetTime.Before(now) {
 		interval := now.Sub(lastBlockTime)
-		nextBlockInterval := int64(interval/(time.Second * time.Duration(bftConsensusService.Config.BlockInterval))) + 1
-		nextBlockTime := lastBlockTime.Add(time.Second * time.Duration(nextBlockInterval *  bftConsensusService.Config.BlockInterval))
+		nextBlockInterval := int64(interval/(time.Second*time.Duration(bftConsensusService.Config.BlockInterval))) + 1
+		nextBlockTime := lastBlockTime.Add(time.Second * time.Duration(nextBlockInterval*bftConsensusService.Config.BlockInterval))
 		return nextBlockTime, nextBlockTime.Sub(now)
 	} else {
 		return targetTime, targetTime.Sub(now)
