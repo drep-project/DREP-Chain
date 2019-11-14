@@ -3,6 +3,7 @@ package bft
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/chain/store"
 	"github.com/drep-project/drep-chain/crypto"
@@ -107,12 +108,12 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 			Name:   "bftConsensusService",
 			Length: NumberOfMsg,
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
-				defer func() {
-					log.WithField("IP", peer.Node().IP().String()).
-						WithField("PublicKey", hex.EncodeToString(peer.Node().Pubkey().Serialize())).
-						Debug("bft protocol err, disconnect peer")
-					peer.Disconnect(p2p.DiscQuitting)
-				}()
+				//defer func() {
+				//	log.WithField("IP", peer.Node().IP().String()).
+				//		WithField("PublicKey", hex.EncodeToString(peer.Node().Pubkey().Serialize())).
+				//		Debug("bft protocol err, disconnect peer")
+				//	peer.Disconnect(p2p.DiscQuitting)
+				//}()
 				producers, err := bftConsensusService.GetProducers(bftConsensusService.ChainService.BestChain().Tip().Height, bftConsensusService.Config.ProducerNum*2)
 				if err != nil {
 					log.WithField("err", err).Info("fail to get producers")
@@ -198,9 +199,12 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 								if sig.Verify(randomBytes[:], producer.Pubkey) {
 									addPeerFeed.Send(pi)
 									tm.Stop()
+								} else {
+									fmt.Println("MsgTypeValidateRes pubkey err*********")
+									return fmt.Errorf("MsgTypeValidateRes pubkey err")
 								}
 							}
-							continue
+
 						default:
 							bftConsensusService.BftConsensus.ReceiveMsg(pi, msg.Code, buf)
 						}
