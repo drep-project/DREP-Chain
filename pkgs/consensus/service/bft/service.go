@@ -110,8 +110,8 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 				defer func() {
 					log.WithField("IP", peer.Node().IP().String()).
 						WithField("PublicKey", hex.EncodeToString(peer.Node().Pubkey().Serialize())).
-						Debug("disconnect remove peer")
-				//	peer.Disconnect(p2p.DiscQuitting)
+						Debug("bft protocol err, disconnect peer")
+					peer.Disconnect(p2p.DiscQuitting)
 				}()
 				producers, err := bftConsensusService.GetProducers(bftConsensusService.ChainService.BestChain().Tip().Height, bftConsensusService.Config.ProducerNum*2)
 				if err != nil {
