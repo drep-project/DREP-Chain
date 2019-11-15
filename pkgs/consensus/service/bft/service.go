@@ -1,14 +1,10 @@
 package bft
 
 import (
-	"encoding/hex"
-	"errors"
-	"github.com/drep-project/binary"
 	"github.com/drep-project/drep-chain/chain/store"
 	"github.com/drep-project/drep-chain/crypto"
 	"github.com/drep-project/drep-chain/crypto/secp256k1"
 	"io/ioutil"
-	"math/rand"
 	"time"
 
 	"github.com/drep-project/drep-chain/app"
@@ -107,104 +103,27 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 			Name:   "bftConsensusService",
 			Length: NumberOfMsg,
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
-				defer func() {
-					log.WithField("IP", peer.Node().IP().String()).
-						WithField("PublicKey", hex.EncodeToString(peer.Node().Pubkey().Serialize())).
-						Debug("disconnect remove peer")
-				//	peer.Disconnect(p2p.DiscQuitting)
-				}()
-				producers, err := bftConsensusService.GetProducers(bftConsensusService.ChainService.BestChain().Tip().Height, bftConsensusService.Config.ProducerNum*2)
-				if err != nil {
-					log.WithField("err", err).Info("fail to get producers")
-					return err
-				}
-
-				ipChecked := false
-				for _, producer := range producers {
-					if producer.Node.IP().String() == peer.Node().IP().String() {
-						ipChecked = true
-						break
-					}
-				}
-				if !ipChecked {
-					log.WithField("IP", peer.Node().IP().String()).
-						WithField("PublicKey", hex.EncodeToString(peer.Node().Pubkey().Serialize())).
-						Debug("Receive remove peer")
-					for _, producer := range producers {
-						log.WithField("IP", producer.Node.IP().String()).
-							WithField("PublicKey", hex.EncodeToString(producer.Node.Pubkey().Serialize())).
-							Debug("Exit Candidate peer")
-					}
-					return ErrBpNotInList
-				}
 				pi := consensusTypes.NewPeerInfo(peer, rw)
-				//send verify message
-				randomBytes := [32]byte{}
-				rand.Read(randomBytes[:])
-				err = bftConsensusService.P2pServer.Send(rw, MsgTypeValidateReq, randomBytes)
-				if err != nil {
-					return err
-				}
 				//del peer event
 				ch := make(chan *p2p.PeerEvent)
 				sub := bftConsensusService.P2pServer.SubscribeEvents(ch)
 				//control producer validator by timer
-				tm := time.NewTimer(time.Second * 10)
 				defer func() {
 					removePeerFeed.Send(pi)
 					sub.Unsubscribe()
 				}()
 				for {
-					select {
-					case e := <-ch:
-						if e.Type == p2p.PeerEventTypeDrop {
-							return errors.New(e.Error)
-						}
-					case <-tm.C:
-						return errors.New("timeout: wait validata message")
-					default:
-						msg, err := rw.ReadMsg()
-						if err != nil {
-							log.WithField("Reason", err).WithField("Ip", pi.IP()).Error("consensus receive msg")
-							return err
-						}
-						buf, err := ioutil.ReadAll(msg.Payload)
-						if err != nil {
-							return err
-						}
-
-						switch msg.Code {
-						//	case bftConsensusService.P2pServer
-						case MsgTypeValidateReq:
-							if err != nil {
-								return err
-							}
-							sig, err := accountNode.PrivateKey.Sign(buf)
-							if err != nil {
-								return err
-							}
-							err = bftConsensusService.P2pServer.Send(rw, MsgTypeValidateRes, sig)
-							if err != nil {
-								return err
-							}
-						case MsgTypeValidateRes:
-							sig := &secp256k1.Signature{}
-							err := binary.Unmarshal(buf, sig)
-							if err != nil {
-								return err
-							}
-
-							for _, producer := range producers {
-								if sig.Verify(randomBytes[:], producer.Pubkey) {
-									addPeerFeed.Send(pi)
-									tm.Stop()
-								}
-							}
-							continue
-						default:
-							bftConsensusService.BftConsensus.ReceiveMsg(pi, msg.Code, buf)
-						}
+					msg, err := rw.ReadMsg()
+					if err != nil {
+						log.WithField("Reason", err).WithField("Ip", pi.IP()).Error("consensus receive msg")
+						return err
 					}
+					buf, err := ioutil.ReadAll(msg.Payload)
+					if err != nil {
+						return err
+					}
+
+					bftConsensusService.BftConsensus.ReceiveMsg(pi, msg.Code, buf)
 				}
 			},
 		},
@@ -304,8 +223,8 @@ func (bftConsensusService *BftConsensusService) getWaitTime() (time.Time, time.D
 	now := time.Now()
 	if targetTime.Before(now) {
 		interval := now.Sub(lastBlockTime)
-		nextBlockInterval := int64(interval/(time.Second * time.Duration(bftConsensusService.Config.BlockInterval))) + 1
-		nextBlockTime := lastBlockTime.Add(time.Second * time.Duration(nextBlockInterval *  bftConsensusService.Config.BlockInterval))
+		nextBlockInterval := int64(interval/(time.Second*time.Duration(bftConsensusService.Config.BlockInterval))) + 1
+		nextBlockTime := lastBlockTime.Add(time.Second * time.Duration(nextBlockInterval*bftConsensusService.Config.BlockInterval))
 		return nextBlockTime, nextBlockTime.Sub(now)
 	} else {
 		return targetTime, targetTime.Sub(now)
