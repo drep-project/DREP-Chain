@@ -72,8 +72,8 @@ Also, make sure your firewall is configured to allow inbound connections to port
 ### Binaries (Windows/Linux/macOS)
 
 Binary releases are provided for common operating systems and architectures:
+https://github.com/drep-project/DREP-Chain/releases/tag/4.0
 
-https://drep.org/downloads
 
 ### Build from source (all platforms)
 
