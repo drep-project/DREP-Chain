@@ -7,7 +7,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	rippleCrypto "github.com/rubblelabs/ripple/crypto"
 	"github.com/sasaxie/go-client-api/common/base58"

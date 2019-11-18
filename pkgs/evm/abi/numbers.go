@@ -1,8 +1,8 @@
 package abi
 
 import (
-	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/DREP-Chain/common"
+	"github.com/drep-project/DREP-Chain/crypto"
 	"math/big"
 	"reflect"
 )

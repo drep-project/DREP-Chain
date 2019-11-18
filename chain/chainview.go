@@ -1,7 +1,7 @@
 package chain
 
 import (
-	types "github.com/drep-project/drep-chain/types"
+	types "github.com/drep-project/DREP-Chain/types"
 	"sync"
 )
 

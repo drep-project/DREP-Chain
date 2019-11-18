@@ -26,9 +26,9 @@ import (
 	"time"
 
 	log "github.com/drep-project/dlog"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/network/p2p/enode"
-	"github.com/drep-project/drep-chain/network/p2p/enr"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/network/p2p/enode"
+	"github.com/drep-project/DREP-Chain/network/p2p/enr"
 	"golang.org/x/crypto/sha3"
 )
 

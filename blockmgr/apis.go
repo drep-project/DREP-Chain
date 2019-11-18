@@ -5,10 +5,10 @@ import (
 	"math/big"
 
 	"github.com/drep-project/binary"
-	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/database"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/common"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/database"
+	"github.com/drep-project/DREP-Chain/types"
 )
 
 /*

@@ -23,7 +23,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/drep-project/drep-chain/common/mclock"
+	"github.com/drep-project/DREP-Chain/common/mclock"
 )
 
 const (

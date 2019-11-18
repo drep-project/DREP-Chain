@@ -1,6 +1,6 @@
 package types
 
-import "github.com/drep-project/drep-chain/crypto"
+import "github.com/drep-project/DREP-Chain/crypto"
 
 //本模块的消息只能在调用本模块（chain及对应的子模块）的函数中使用
 const (

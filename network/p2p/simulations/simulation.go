@@ -20,7 +20,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/drep-project/drep-chain/network/p2p/enode"
+	"github.com/drep-project/DREP-Chain/network/p2p/enode"
 )
 
 // Simulation provides a framework for running actions in a simulated network

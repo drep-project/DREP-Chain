@@ -1,11 +1,11 @@
 package txpool
 
 import (
-	"github.com/drep-project/drep-chain/common/event"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/database"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/common/event"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
+	"github.com/drep-project/DREP-Chain/database"
+	"github.com/drep-project/DREP-Chain/types"
 
 	rand2 "math/rand"
 

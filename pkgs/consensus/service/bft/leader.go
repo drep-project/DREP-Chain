@@ -2,10 +2,10 @@ package bft
 
 import (
 	"github.com/drep-project/binary"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/crypto/secp256k1/schnorr"
-	"github.com/drep-project/drep-chain/crypto/sha3"
-	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
+	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
+	"github.com/drep-project/DREP-Chain/crypto/secp256k1/schnorr"
+	"github.com/drep-project/DREP-Chain/crypto/sha3"
+	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
 	"math/big"
 	"sync"
 	"time"

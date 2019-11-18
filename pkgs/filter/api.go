@@ -2,7 +2,7 @@ package filter
 
 import (
 	"context"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/types"
 )
 
 /*

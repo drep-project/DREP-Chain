@@ -2,13 +2,13 @@ package database
 
 import (
 	"github.com/drep-project/binary"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/sha3"
-	"github.com/drep-project/drep-chain/database/drepdb"
-	"github.com/drep-project/drep-chain/database/drepdb/leveldb"
-	"github.com/drep-project/drep-chain/database/drepdb/memorydb"
-	"github.com/drep-project/drep-chain/database/trie"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/crypto/sha3"
+	"github.com/drep-project/DREP-Chain/database/drepdb"
+	"github.com/drep-project/DREP-Chain/database/drepdb/leveldb"
+	"github.com/drep-project/DREP-Chain/database/drepdb/memorydb"
+	"github.com/drep-project/DREP-Chain/database/trie"
+	"github.com/drep-project/DREP-Chain/types"
 
 	"fmt"
 	"math/big"

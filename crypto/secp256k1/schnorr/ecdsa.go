@@ -8,8 +8,8 @@ import (
 	"bytes"
 	"crypto/rand"
 	"fmt"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/crypto/sha3"
+	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
+	"github.com/drep-project/DREP-Chain/crypto/sha3"
 	"math/big"
 )
 

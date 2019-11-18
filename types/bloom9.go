@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/drep-project/drep-chain/common/hexutil"
-	"github.com/drep-project/drep-chain/crypto/sha3"
+	"github.com/drep-project/DREP-Chain/common/hexutil"
+	"github.com/drep-project/DREP-Chain/crypto/sha3"
 )
 
 type bytesBacked interface {

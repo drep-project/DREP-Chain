@@ -1,7 +1,7 @@
 package nat
 
 import (
-	dlog "github.com/drep-project/drep-chain/pkgs/log"
+	dlog "github.com/drep-project/DREP-Chain/pkgs/log"
 	"github.com/sirupsen/logrus"
 )
 

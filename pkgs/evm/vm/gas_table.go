@@ -1,9 +1,9 @@
 package vm
 
 import (
-	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/params"
+	"github.com/drep-project/DREP-Chain/common"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/params"
 )
 
 // memoryGasCosts calculates the quadratic gas for memory expansion. It does so

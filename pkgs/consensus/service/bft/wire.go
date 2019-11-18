@@ -3,8 +3,8 @@ package bft
 import (
 	"encoding/json"
 	"github.com/drep-project/binary"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/pkgs/consensus/types"
+	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
+	"github.com/drep-project/DREP-Chain/pkgs/consensus/types"
 )
 
 //本模块的消息只能在调用本模块（consensus及对应的子模块）的函数中使用，否则会出错

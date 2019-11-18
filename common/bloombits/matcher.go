@@ -26,8 +26,8 @@ import (
 	"time"
 
 	"context"
-	"github.com/drep-project/drep-chain/common/bitutil"
-	"github.com/drep-project/drep-chain/crypto/sha3"
+	"github.com/drep-project/DREP-Chain/common/bitutil"
+	"github.com/drep-project/DREP-Chain/crypto/sha3"
 )
 
 // bloomIndexes represents the bit indexes inside the bloom filter that belong

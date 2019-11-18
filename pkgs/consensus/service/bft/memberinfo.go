@@ -1,6 +1,6 @@
 package bft
 
-import "github.com/drep-project/drep-chain/pkgs/consensus/types"
+import "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
 
 type MemberInfo struct {
 	Peer     types.IPeerInfo

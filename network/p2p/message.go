@@ -26,8 +26,8 @@ import (
 	"time"
 
 	"github.com/drep-project/binary"
-	"github.com/drep-project/drep-chain/common/event"
-	"github.com/drep-project/drep-chain/network/p2p/enode"
+	"github.com/drep-project/DREP-Chain/common/event"
+	"github.com/drep-project/DREP-Chain/network/p2p/enode"
 )
 
 // Msg defines the structure of a p2p message.

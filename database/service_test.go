@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/drep-project/drep-chain/app"
+	"github.com/drep-project/DREP-Chain/app"
 	"math/big"
 	"os"
 	"os/exec"
@@ -16,8 +16,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/drep-project/drep-chain/crypto"
-	chainType "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/crypto"
+	chainType "github.com/drep-project/DREP-Chain/types"
 )
 
 func TestGetSetAlias(t *testing.T) {

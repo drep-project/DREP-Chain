@@ -3,7 +3,7 @@ package chain_indexer
 import (
 	bin "encoding/binary"
 	"github.com/drep-project/binary"
-	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/DREP-Chain/crypto"
 )
 
 var (

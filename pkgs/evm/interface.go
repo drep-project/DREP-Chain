@@ -1,9 +1,9 @@
 package evm
 
 import (
-	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/pkgs/evm/vm"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/app"
+	"github.com/drep-project/DREP-Chain/pkgs/evm/vm"
+	"github.com/drep-project/DREP-Chain/types"
 	"math/big"
 )
 

@@ -5,10 +5,10 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/common/bloombits"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/common"
+	"github.com/drep-project/DREP-Chain/common/bloombits"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/types"
 )
 
 type Filter struct {

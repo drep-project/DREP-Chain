@@ -25,9 +25,9 @@ import (
 	"time"
 
 	"github.com/drep-project/binary"
-	"github.com/drep-project/drep-chain/common/mclock"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/network/p2p/netutil"
+	"github.com/drep-project/DREP-Chain/common/mclock"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/network/p2p/netutil"
 	"golang.org/x/crypto/sha3"
 )
 

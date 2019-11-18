@@ -3,11 +3,11 @@ package service
 import (
 	"path"
 
-	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/network/p2p"
-	"github.com/drep-project/drep-chain/network/p2p/enode"
-	p2pTypes "github.com/drep-project/drep-chain/network/types"
+	"github.com/drep-project/DREP-Chain/app"
+	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
+	"github.com/drep-project/DREP-Chain/network/p2p"
+	"github.com/drep-project/DREP-Chain/network/p2p/enode"
+	p2pTypes "github.com/drep-project/DREP-Chain/network/types"
 	"gopkg.in/urfave/cli.v1"
 )
 

@@ -3,9 +3,9 @@ package blockmgr
 import (
 	"time"
 
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/network/p2p"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/network/p2p"
+	"github.com/drep-project/DREP-Chain/types"
 	"github.com/pkg/errors"
 )
 

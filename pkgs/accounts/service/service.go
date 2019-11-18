@@ -1,16 +1,16 @@
 package service
 
 import (
-	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/blockmgr"
-	"github.com/drep-project/drep-chain/chain"
-	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/common/fileutil"
-	"github.com/drep-project/drep-chain/crypto/sha3"
-	"github.com/drep-project/drep-chain/database"
-	accountComponent "github.com/drep-project/drep-chain/pkgs/accounts/component"
-	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
-	chainTypes "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/app"
+	"github.com/drep-project/DREP-Chain/blockmgr"
+	"github.com/drep-project/DREP-Chain/chain"
+	"github.com/drep-project/DREP-Chain/common"
+	"github.com/drep-project/DREP-Chain/common/fileutil"
+	"github.com/drep-project/DREP-Chain/crypto/sha3"
+	"github.com/drep-project/DREP-Chain/database"
+	accountComponent "github.com/drep-project/DREP-Chain/pkgs/accounts/component"
+	accountTypes "github.com/drep-project/DREP-Chain/pkgs/accounts/types"
+	chainTypes "github.com/drep-project/DREP-Chain/types"
 	"gopkg.in/urfave/cli.v1"
 	"path/filepath"
 )

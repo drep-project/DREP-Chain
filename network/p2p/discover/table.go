@@ -32,10 +32,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/network/p2p/enode"
-	"github.com/drep-project/drep-chain/network/p2p/netutil"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
+	"github.com/drep-project/DREP-Chain/network/p2p/enode"
+	"github.com/drep-project/DREP-Chain/network/p2p/netutil"
 )
 
 const (

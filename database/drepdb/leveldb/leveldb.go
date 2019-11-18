@@ -21,14 +21,14 @@ package leveldb
 
 import (
 	"fmt"
-	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/DREP-Chain/common"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	//"github.com/ethereum/go-ethereum/common"
-	"github.com/drep-project/drep-chain/database/drepdb"
+	"github.com/drep-project/DREP-Chain/database/drepdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"

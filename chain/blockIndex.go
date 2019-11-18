@@ -3,8 +3,8 @@ package chain
 import (
 	"sync"
 
-	"github.com/drep-project/drep-chain/crypto"
-	types "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/crypto"
+	types "github.com/drep-project/DREP-Chain/types"
 )
 
 // BlockIndex provides facilities for keeping track of an in-memory Index of the

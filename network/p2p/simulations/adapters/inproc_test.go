@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/drep-project/drep-chain/network/p2p/simulations/pipes"
+	"github.com/drep-project/DREP-Chain/network/p2p/simulations/pipes"
 )
 
 func TestTCPPipe(t *testing.T) {

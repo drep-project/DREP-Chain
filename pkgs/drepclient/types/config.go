@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/drep-project/drep-chain/pkgs/drepclient/component/console"
+	"github.com/drep-project/DREP-Chain/pkgs/drepclient/component/console"
 )
 
 type Config struct {

@@ -19,7 +19,7 @@ package trie
 import (
 	"fmt"
 
-	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/DREP-Chain/crypto"
 )
 
 // MissingNodeError is returned by the trie functions (TryGet, TryUpdate, TryDelete)

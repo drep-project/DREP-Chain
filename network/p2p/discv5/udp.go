@@ -23,14 +23,14 @@ import (
 	"net"
 	"time"
 
-	"github.com/drep-project/drep-chain/crypto/sha3"
+	"github.com/drep-project/DREP-Chain/crypto/sha3"
 
 	"github.com/drep-project/binary"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/network/p2p/enr"
-	"github.com/drep-project/drep-chain/network/p2p/nat"
-	"github.com/drep-project/drep-chain/network/p2p/netutil"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
+	"github.com/drep-project/DREP-Chain/network/p2p/enr"
+	"github.com/drep-project/DREP-Chain/network/p2p/nat"
+	"github.com/drep-project/DREP-Chain/network/p2p/netutil"
 )
 
 const Version = 4

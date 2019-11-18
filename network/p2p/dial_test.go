@@ -24,9 +24,9 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/drep-project/drep-chain/network/p2p/enode"
-	"github.com/drep-project/drep-chain/network/p2p/enr"
-	"github.com/drep-project/drep-chain/network/p2p/netutil"
+	"github.com/drep-project/DREP-Chain/network/p2p/enode"
+	"github.com/drep-project/DREP-Chain/network/p2p/enr"
+	"github.com/drep-project/DREP-Chain/network/p2p/netutil"
 )
 
 func init() {

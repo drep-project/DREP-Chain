@@ -27,9 +27,9 @@ import (
 
 	"github.com/allegro/bigcache"
 	//drepbinary "github.com/drep-project/binary"
-	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/database/drepdb"
+	"github.com/drep-project/DREP-Chain/common"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/database/drepdb"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 

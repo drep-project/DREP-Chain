@@ -1,7 +1,7 @@
 package service
 
 import (
-	"github.com/drep-project/drep-chain/pkgs/consensus/service/bft"
+	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/bft"
 	"time"
 )
 

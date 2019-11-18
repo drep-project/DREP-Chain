@@ -7,8 +7,8 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 )
 
 func FromECDSAPub(pub *ecdsa.PublicKey) []byte {

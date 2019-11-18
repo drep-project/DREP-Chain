@@ -21,9 +21,9 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/sha3"
-	dlog "github.com/drep-project/drep-chain/pkgs/log"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/crypto/sha3"
+	dlog "github.com/drep-project/DREP-Chain/pkgs/log"
 )
 
 var (

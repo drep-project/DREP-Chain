@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/drep-project/binary"
-	"github.com/drep-project/drep-chain/crypto"
-	chainTypes "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/crypto"
+	chainTypes "github.com/drep-project/DREP-Chain/types"
 )
 
 func TestNewDatabase(t *testing.T) {

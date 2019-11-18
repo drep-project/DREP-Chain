@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/ethereum/go-ethereum/common"
 )
 

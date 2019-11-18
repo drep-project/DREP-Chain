@@ -3,9 +3,9 @@ package database
 import (
 	"bytes"
 	"fmt"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/database/drepdb/memorydb"
-	"github.com/drep-project/drep-chain/database/trie"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/database/drepdb/memorydb"
+	"github.com/drep-project/DREP-Chain/database/trie"
 	"strconv"
 	"testing"
 )

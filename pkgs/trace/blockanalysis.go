@@ -1,9 +1,9 @@
 package trace
 
 import (
-	"github.com/drep-project/drep-chain/common/event"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/common/event"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/types"
 )
 
 type BlockAnalysis struct {

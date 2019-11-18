@@ -23,8 +23,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/database/drepdb"
+	"github.com/drep-project/DREP-Chain/common"
+	"github.com/drep-project/DREP-Chain/database/drepdb"
 )
 
 var (

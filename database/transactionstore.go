@@ -3,8 +3,8 @@ package database
 import (
 	"sync"
 
-	"github.com/drep-project/drep-chain/database/drepdb"
-	"github.com/drep-project/drep-chain/database/trie"
+	"github.com/drep-project/DREP-Chain/database/drepdb"
+	"github.com/drep-project/DREP-Chain/database/trie"
 )
 
 type TransactionStore struct {

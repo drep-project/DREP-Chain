@@ -5,12 +5,12 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/drep-project/drep-chain/chain"
-	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/database"
-	"github.com/drep-project/drep-chain/params"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/chain"
+	"github.com/drep-project/DREP-Chain/common"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/database"
+	"github.com/drep-project/DREP-Chain/params"
+	"github.com/drep-project/DREP-Chain/types"
 )
 
 func (blockMgr *BlockMgr) GenerateTemplate(db *database.Database, leaderAddr crypto.CommonAddress) (*types.Block, *big.Int, error) {

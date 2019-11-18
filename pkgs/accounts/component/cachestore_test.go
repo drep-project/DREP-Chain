@@ -3,9 +3,9 @@ package component
 import (
 	"bytes"
 	"github.com/aristanetworks/goarista/test"
-	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/app"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/types"
 	"testing"
 )
 

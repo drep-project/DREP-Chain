@@ -18,9 +18,9 @@ package trie
 
 import (
 	"fmt"
-	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/DREP-Chain/common"
 
-	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/DREP-Chain/crypto"
 )
 
 // SecureTrie wraps a trie with key hashing. In a secure trie, all

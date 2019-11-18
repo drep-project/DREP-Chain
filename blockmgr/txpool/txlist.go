@@ -5,8 +5,8 @@ import (
 	"math/big"
 	"sort"
 
-	"github.com/drep-project/drep-chain/crypto"
-	types "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/crypto"
+	types "github.com/drep-project/DREP-Chain/types"
 )
 
 // nonceHeap is a heap.Interface implementation over 64bit unsigned integers for

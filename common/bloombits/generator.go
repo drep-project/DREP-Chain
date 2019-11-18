@@ -19,7 +19,7 @@ package bloombits
 import (
 	"errors"
 
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/types"
 )
 
 var (

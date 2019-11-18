@@ -1,13 +1,13 @@
 package service
 
 import (
-	"github.com/drep-project/drep-chain/common/fileutil"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/crypto/sha3"
-	accountsComponent "github.com/drep-project/drep-chain/pkgs/accounts/component"
-	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/common/fileutil"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
+	"github.com/drep-project/DREP-Chain/crypto/sha3"
+	accountsComponent "github.com/drep-project/DREP-Chain/pkgs/accounts/component"
+	accountTypes "github.com/drep-project/DREP-Chain/pkgs/accounts/types"
+	"github.com/drep-project/DREP-Chain/types"
 	"github.com/pkg/errors"
 	"sync/atomic"
 )

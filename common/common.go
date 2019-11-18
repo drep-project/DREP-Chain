@@ -3,7 +3,7 @@ package common
 import (
 	"crypto/hmac"
 	"crypto/sha512"
-	"github.com/drep-project/drep-chain/crypto/sha3"
+	"github.com/drep-project/DREP-Chain/crypto/sha3"
 	"math/rand"
 	"net"
 	"os"

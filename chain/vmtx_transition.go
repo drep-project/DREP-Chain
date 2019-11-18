@@ -18,14 +18,14 @@ package chain
 import (
 	"math/big"
 
-	"github.com/drep-project/drep-chain/params"
+	"github.com/drep-project/DREP-Chain/params"
 
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/database"
-	"github.com/drep-project/drep-chain/pkgs/evm"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/database"
+	"github.com/drep-project/DREP-Chain/pkgs/evm"
+	"github.com/drep-project/DREP-Chain/types"
 
-	"github.com/drep-project/drep-chain/pkgs/evm/vm"
+	"github.com/drep-project/DREP-Chain/pkgs/evm/vm"
 )
 
 var ()

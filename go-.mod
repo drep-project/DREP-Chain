@@ -1,4 +1,4 @@
-module github.com/drep-project/drep-chain
+module github.com/drep-project/DREP-Chain
 
 go 1.13
 

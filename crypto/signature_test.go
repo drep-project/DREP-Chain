@@ -21,13 +21,13 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"github.com/drep-project/drep-chain/common/math"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/DREP-Chain/common/math"
+	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"reflect"
 	"testing"
 
-	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/common/hexutil"
+	"github.com/drep-project/DREP-Chain/common"
+	"github.com/drep-project/DREP-Chain/common/hexutil"
 )
 
 var (

@@ -3,12 +3,12 @@ package service
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/crypto/sha3"
-	accountTypes "github.com/drep-project/drep-chain/pkgs/accounts/types"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/app"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
+	"github.com/drep-project/DREP-Chain/crypto/sha3"
+	accountTypes "github.com/drep-project/DREP-Chain/pkgs/accounts/types"
+	"github.com/drep-project/DREP-Chain/types"
 	"os"
 	"testing"
 )
