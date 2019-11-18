@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	MidPath = "src/github.com/drep-project/drep-chain/"
+	MidPath = "src/github.com/drep-project/DREP-Chain/"
 )
 
 var (
