@@ -9,7 +9,7 @@ DREP Chain
 
 drep is a full node implementation of Drep written in Go (golang).
 
-It acts as a fully-validating chain daemon for the Drep cryptocurrency.  dcrd
+It acts as a fully-validating chain daemon for the Drep cryptocurrency.  drep
 maintains the entire past transactional ledger of Drep and allows relaying of
 transactions to other Drep nodes around the world.
 
@@ -34,7 +34,7 @@ transactions to the rest of the global network.
 
 ## Why run drep?
 
-As described in the previous section, the Decred cryptocurrency relies on having
+As described in the previous section, the Drep cryptocurrency relies on having
 a peer-to-peer network of nodes that fully validate all transactions and blocks
 and then relay them to other full nodes.
 
@@ -44,7 +44,7 @@ network, increases the available paths for transactions and blocks to relay.
 In terms of individual benefits, since drep fully validates every block and
 transaction, it provides the highest security and privacy possible when used in
 conjunction with a wallet that also supports directly connecting to it in full
-validation mode, such as [wallet](https://github.com/drep/wallet).
+validation mode, such as [wallet](https://drep.top/appdrep1.2.0.apk).
 
 ## Minimum Recommended Specifications (drep only)
 
@@ -79,19 +79,18 @@ https://drep.org/downloads
 
 Building or updating from source requires the following build dependencies:
 
-http://drep.org/docs/solo-miner
+http://docs.drep.org/advanced/solo-miner/
 
 
 ### Running Tests
 
-http://drep.org/docs/testnet
-
+http://docs.drep.org/advanced/using-testnet/
 
 ## Documentation
 
 The documentation for drep is a work-in-progress.  It is located in the
-[docs](https://github.com/drep/master/docs) folder.
+[docs](http://docs.drep.org) folder.
 
 ## License
 
-dcrd is licensed under the [copyfree](http://copyfree.org) ISC License.
+drep is licensed under the [copyfree](http://copyfree.org) ISC License.
