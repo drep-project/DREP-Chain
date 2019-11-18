@@ -2,7 +2,7 @@ package vm
 
 import (
 	"errors"
-	"github.com/drep-project/drep-chain/params"
+	"github.com/drep-project/DREP-Chain/params"
 	"math/big"
 )
 

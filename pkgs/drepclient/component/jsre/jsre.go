@@ -27,7 +27,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/drep-project/drep-chain/pkgs/drepclient/component/jsre/deps"
+	"github.com/drep-project/DREP-Chain/pkgs/drepclient/component/jsre/deps"
 	"github.com/robertkrimen/otto"
 )
 

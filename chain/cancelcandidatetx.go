@@ -2,7 +2,7 @@ package chain
 
 import (
 	"encoding/json"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/types"
 )
 
 /**********************un register ********************/

@@ -1,19 +1,19 @@
 package solo
 
 import (
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"time"
 
-	"github.com/drep-project/drep-chain/app"
-	blockMgrService "github.com/drep-project/drep-chain/blockmgr"
-	chainService "github.com/drep-project/drep-chain/chain"
-	"github.com/drep-project/drep-chain/common/event"
-	"github.com/drep-project/drep-chain/database"
-	p2pService "github.com/drep-project/drep-chain/network/service"
-	accountService "github.com/drep-project/drep-chain/pkgs/accounts/service"
-	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
-	chainTypes "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/app"
+	blockMgrService "github.com/drep-project/DREP-Chain/blockmgr"
+	chainService "github.com/drep-project/DREP-Chain/chain"
+	"github.com/drep-project/DREP-Chain/common/event"
+	"github.com/drep-project/DREP-Chain/database"
+	p2pService "github.com/drep-project/DREP-Chain/network/service"
+	accountService "github.com/drep-project/DREP-Chain/pkgs/accounts/service"
+	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
+	chainTypes "github.com/drep-project/DREP-Chain/types"
 	"gopkg.in/urfave/cli.v1"
 )
 

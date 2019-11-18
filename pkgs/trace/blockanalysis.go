@@ -1,13 +1,13 @@
 package trace
 
 import (
-	"github.com/drep-project/drep-chain/chain/store"
-	"github.com/drep-project/drep-chain/common/event"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/database/dbinterface"
-	"github.com/drep-project/drep-chain/pkgs/consensus/service"
-	"github.com/drep-project/drep-chain/pkgs/consensus/service/bft"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/chain/store"
+	"github.com/drep-project/DREP-Chain/common/event"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/database/dbinterface"
+	"github.com/drep-project/DREP-Chain/pkgs/consensus/service"
+	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/bft"
+	"github.com/drep-project/DREP-Chain/types"
 )
 
 type GetProducer func(root []byte) ([]crypto.CommonAddress, error)

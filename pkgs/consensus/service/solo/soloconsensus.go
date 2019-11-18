@@ -4,18 +4,18 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/drep-project/drep-chain/chain/store"
+	"github.com/drep-project/DREP-Chain/chain/store"
 	"math/big"
 
-	"github.com/drep-project/drep-chain/blockmgr"
-	"github.com/drep-project/drep-chain/chain"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/crypto/sha3"
-	"github.com/drep-project/drep-chain/database"
-	"github.com/drep-project/drep-chain/params"
-	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/blockmgr"
+	"github.com/drep-project/DREP-Chain/chain"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
+	"github.com/drep-project/DREP-Chain/crypto/sha3"
+	"github.com/drep-project/DREP-Chain/database"
+	"github.com/drep-project/DREP-Chain/params"
+	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
+	"github.com/drep-project/DREP-Chain/types"
 )
 
 type SoloConsensus struct {

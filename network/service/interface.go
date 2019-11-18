@@ -1,9 +1,9 @@
 package service
 
 import (
-	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/common/event"
-	"github.com/drep-project/drep-chain/network/p2p"
+	"github.com/drep-project/DREP-Chain/app"
+	"github.com/drep-project/DREP-Chain/common/event"
+	"github.com/drep-project/DREP-Chain/network/p2p"
 )
 
 type P2P interface {

@@ -20,13 +20,13 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/drep-project/drep-chain/common/hexutil"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/crypto/sha3"
+	"github.com/drep-project/DREP-Chain/common/hexutil"
+	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
+	"github.com/drep-project/DREP-Chain/crypto/sha3"
 	"math/big"
 	"testing"
 
-	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/DREP-Chain/common"
 )
 
 var testAddrHex = "0x0b105f01e19fa1683f40ff86f8c9d4381fdc9631"

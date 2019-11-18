@@ -3,8 +3,8 @@ package types
 import (
 	"crypto/rand"
 	"fmt"
-	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/DREP-Chain/common"
+	"github.com/drep-project/DREP-Chain/crypto"
 	"testing"
 )
 

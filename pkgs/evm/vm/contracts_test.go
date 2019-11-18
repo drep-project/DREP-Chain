@@ -18,8 +18,8 @@ package vm
 
 import (
 	"fmt"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/types"
 	"math/big"
 	"testing"
 

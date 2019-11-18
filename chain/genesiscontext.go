@@ -3,7 +3,7 @@ package chain
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/drep-project/drep-chain/chain/store"
+	"github.com/drep-project/DREP-Chain/chain/store"
 	"io/ioutil"
 )
 

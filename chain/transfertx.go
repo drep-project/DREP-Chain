@@ -1,6 +1,6 @@
 package chain
 
-import "github.com/drep-project/drep-chain/types"
+import "github.com/drep-project/DREP-Chain/types"
 
 /****************** transfer ********************/
 type TransferTxSelector struct {

@@ -3,11 +3,11 @@ package evm
 import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/dlog"
-	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/chain"
-	"github.com/drep-project/drep-chain/database"
-	"github.com/drep-project/drep-chain/pkgs/evm/vm"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/app"
+	"github.com/drep-project/DREP-Chain/chain"
+	"github.com/drep-project/DREP-Chain/database"
+	"github.com/drep-project/DREP-Chain/pkgs/evm/vm"
+	"github.com/drep-project/DREP-Chain/types"
 	"gopkg.in/urfave/cli.v1"
 	"math/big"
 )

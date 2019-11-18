@@ -4,7 +4,7 @@ import (
 	"gopkg.in/urfave/cli.v1"
 	"strings"
 
-	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/DREP-Chain/common"
 
 	"github.com/drep-project/rpc"
 )

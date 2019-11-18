@@ -4,14 +4,14 @@ import (
 	"container/heap"
 	"errors"
 	"fmt"
-	"github.com/drep-project/drep-chain/chain/store"
+	"github.com/drep-project/DREP-Chain/chain/store"
 	"math/big"
 	"sync"
 	"time"
 
-	"github.com/drep-project/drep-chain/common/event"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/common/event"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/types"
 )
 
 const (

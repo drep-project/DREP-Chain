@@ -1,22 +1,26 @@
 package bft
 
 import (
-	"github.com/drep-project/drep-chain/chain/store"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"github.com/drep-project/DREP-Chain/chain/store"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"io/ioutil"
+	"math/rand"
 	"time"
-
-	"github.com/drep-project/drep-chain/app"
-	blockMgrService "github.com/drep-project/drep-chain/blockmgr"
-	chainService "github.com/drep-project/drep-chain/chain"
-	"github.com/drep-project/drep-chain/common/event"
-	"github.com/drep-project/drep-chain/database"
-	"github.com/drep-project/drep-chain/network/p2p"
-	p2pService "github.com/drep-project/drep-chain/network/service"
-	accountService "github.com/drep-project/drep-chain/pkgs/accounts/service"
-	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
-	chainTypes "github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/binary"
+	"github.com/drep-project/DREP-Chain/app"
+	blockMgrService "github.com/drep-project/DREP-Chain/blockmgr"
+	chainService "github.com/drep-project/DREP-Chain/chain"
+	"github.com/drep-project/DREP-Chain/common/event"
+	"github.com/drep-project/DREP-Chain/database"
+	"github.com/drep-project/DREP-Chain/network/p2p"
+	p2pService "github.com/drep-project/DREP-Chain/network/service"
+	accountService "github.com/drep-project/DREP-Chain/pkgs/accounts/service"
+	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
+	chainTypes "github.com/drep-project/DREP-Chain/types"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -103,27 +107,106 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 			Name:   "bftConsensusService",
 			Length: NumberOfMsg,
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
+
+				producers, err := bftConsensusService.GetProducers(bftConsensusService.ChainService.BestChain().Tip().Height, bftConsensusService.Config.ProducerNum*2)
+				if err != nil {
+					log.WithField("err", err).Info("fail to get producers")
+					return err
+				}
+
+				ipChecked := false
+				for _, producer := range producers {
+					if producer.Node.IP().String() == peer.Node().IP().String() {
+						ipChecked = true
+						break
+					}
+				}
+				if !ipChecked {
+					log.WithField("IP", peer.Node().IP().String()).
+						WithField("PublicKey", hex.EncodeToString(peer.Node().Pubkey().Serialize())).
+						Debug("Receive remove peer")
+					for _, producer := range producers {
+						log.WithField("IP", producer.Node.IP().String()).
+							WithField("PublicKey", hex.EncodeToString(producer.Node.Pubkey().Serialize())).
+							Debug("Exit Candidate peer")
+					}
+					return ErrBpNotInList
+				}
 				pi := consensusTypes.NewPeerInfo(peer, rw)
+				//send verify message
+				randomBytes := [32]byte{}
+				rand.Read(randomBytes[:])
+				err = bftConsensusService.P2pServer.Send(rw, MsgTypeValidateReq, randomBytes)
+				if err != nil {
+					return err
+				}
 				//del peer event
 				ch := make(chan *p2p.PeerEvent)
 				sub := bftConsensusService.P2pServer.SubscribeEvents(ch)
 				//control producer validator by timer
+				tm := time.NewTimer(time.Second * 10)
 				defer func() {
 					removePeerFeed.Send(pi)
 					sub.Unsubscribe()
 				}()
 				for {
-					msg, err := rw.ReadMsg()
-					if err != nil {
-						log.WithField("Reason", err).WithField("Ip", pi.IP()).Error("consensus receive msg")
-						return err
-					}
-					buf, err := ioutil.ReadAll(msg.Payload)
-					if err != nil {
-						return err
-					}
+					select {
+					case e := <-ch:
+						if e.Type == p2p.PeerEventTypeDrop {
+							return errors.New(e.Error)
+						}
+					case <-tm.C:
+						return errors.New("timeout: wait validata message")
+					default:
+						msg, err := rw.ReadMsg()
+						if err != nil {
+							log.WithField("Reason", err).WithField("Ip", pi.IP()).Error("consensus receive msg")
+							return err
+						}
+						buf, err := ioutil.ReadAll(msg.Payload)
+						if err != nil {
+							return err
+						}
 
-					bftConsensusService.BftConsensus.ReceiveMsg(pi, msg.Code, buf)
+						switch msg.Code {
+						//	case bftConsensusService.P2pServer
+						case MsgTypeValidateReq:
+							if err != nil {
+								return err
+							}
+							sig, err := accountNode.PrivateKey.Sign(buf)
+							if err != nil {
+								return err
+							}
+							err = bftConsensusService.P2pServer.Send(rw, MsgTypeValidateRes, sig)
+							if err != nil {
+								return err
+							}
+						case MsgTypeValidateRes:
+							sig := &secp256k1.Signature{}
+							err := binary.Unmarshal(buf, sig)
+							if err != nil {
+								return err
+							}
+
+							ok := false
+							for _, producer := range producers {
+								ok := sig.Verify(randomBytes[:], producer.Pubkey)
+								if ok {
+									addPeerFeed.Send(pi)
+									tm.Stop()
+									break
+								}
+							}
+
+							if !ok {
+								fmt.Println("MsgTypeValidateRes pubkey err*********")
+								return fmt.Errorf("MsgTypeValidateRes pubkey err")
+							}
+						default:
+							bftConsensusService.BftConsensus.ReceiveMsg(pi, msg.Code, buf)
+						}
+					}
 				}
 			},
 		},

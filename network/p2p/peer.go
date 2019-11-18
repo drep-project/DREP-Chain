@@ -28,10 +28,10 @@ import (
 	"time"
 
 	"github.com/drep-project/binary"
-	"github.com/drep-project/drep-chain/common/event"
-	"github.com/drep-project/drep-chain/common/mclock"
-	"github.com/drep-project/drep-chain/network/p2p/enode"
-	"github.com/drep-project/drep-chain/network/p2p/enr"
+	"github.com/drep-project/DREP-Chain/common/event"
+	"github.com/drep-project/DREP-Chain/common/mclock"
+	"github.com/drep-project/DREP-Chain/network/p2p/enode"
+	"github.com/drep-project/DREP-Chain/network/p2p/enr"
 	"github.com/sirupsen/logrus"
 )
 

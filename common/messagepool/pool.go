@@ -1,7 +1,7 @@
 package messagepool
 
 import (
-	"github.com/drep-project/drep-chain/common/"
+	"github.com/drep-project/DREP-Chain/common/"
 	"sync"
 	"time"
 )

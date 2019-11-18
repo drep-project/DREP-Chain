@@ -3,7 +3,7 @@ package listenpool
 import (
 	"github.com/drep-project/binary"
 	"github.com/drep-project/dlog"
-	types "github.com/drep-project/drep-chain/types"
+	types "github.com/drep-project/DREP-Chain/types"
 	"sync"
 )
 

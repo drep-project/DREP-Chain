@@ -1,7 +1,7 @@
 package database
 
 import (
-	"github.com/drep-project/drep-chain/common/trie"
+	"github.com/drep-project/DREP-Chain/common/trie"
 	"sync"
 )
 

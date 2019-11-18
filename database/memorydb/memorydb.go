@@ -24,8 +24,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/database/dbinterface"
+	"github.com/drep-project/DREP-Chain/common"
+	"github.com/drep-project/DREP-Chain/database/dbinterface"
 )
 
 var (

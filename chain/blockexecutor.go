@@ -3,14 +3,14 @@ package chain
 import (
 	"bytes"
 	"fmt"
-	"github.com/drep-project/drep-chain/chain/store"
-	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/DREP-Chain/chain/store"
+	"github.com/drep-project/DREP-Chain/crypto"
 	"math/big"
 
-	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/DREP-Chain/common"
 
-	"github.com/drep-project/drep-chain/params"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/params"
+	"github.com/drep-project/DREP-Chain/types"
 )
 
 type IBlockValidator interface {

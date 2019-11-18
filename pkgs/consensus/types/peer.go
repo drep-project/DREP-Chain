@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/drep-project/drep-chain/network/p2p"
+	"github.com/drep-project/DREP-Chain/network/p2p"
 )
 
 var (

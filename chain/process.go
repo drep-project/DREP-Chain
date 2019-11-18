@@ -5,12 +5,12 @@ import (
 	"container/list"
 	"encoding/hex"
 	"fmt"
-	"github.com/drep-project/drep-chain/chain/store"
+	"github.com/drep-project/DREP-Chain/chain/store"
 	"math/big"
 
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/params"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/params"
+	"github.com/drep-project/DREP-Chain/types"
 	"github.com/pkg/errors"
 )
 

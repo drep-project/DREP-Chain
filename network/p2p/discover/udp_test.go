@@ -35,8 +35,8 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/network/p2p/enode"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/network/p2p/enode"
 	"github.com/ethereum/go-ethereum/common"
 )
 

@@ -20,13 +20,13 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"math/bits"
 	"math/rand"
 	"net"
 	"strings"
 
-	"github.com/drep-project/drep-chain/network/p2p/enr"
+	"github.com/drep-project/DREP-Chain/network/p2p/enr"
 )
 
 // Node represents a host on the network.

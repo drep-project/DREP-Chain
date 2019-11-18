@@ -3,11 +3,11 @@ package trace
 import (
 	"encoding/hex"
 	"encoding/json"
-	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/pkgs/consensus/service/bft"
-	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/common"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/bft"
+	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
+	"github.com/drep-project/DREP-Chain/types"
 	"math/big"
 )
 

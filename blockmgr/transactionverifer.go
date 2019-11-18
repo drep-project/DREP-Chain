@@ -1,8 +1,8 @@
 package blockmgr
 
 import (
-	"github.com/drep-project/drep-chain/chain"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/chain"
+	"github.com/drep-project/DREP-Chain/types"
 )
 
 // VerifyTransaction use current tip state as environment may not matched read disk state

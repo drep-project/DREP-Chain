@@ -17,9 +17,9 @@
 package blockmgr
 
 import (
-	xxx "github.com/drep-project/drep-chain/chain"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/types"
+	xxx "github.com/drep-project/DREP-Chain/chain"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/types"
 	"math/big"
 	"sort"
 	"sync"

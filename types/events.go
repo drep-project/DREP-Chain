@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/DREP-Chain/crypto"
 )
 
 // NewTxsEvent is posted when a batch of transactions enter the transaction pool.

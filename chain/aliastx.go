@@ -1,8 +1,8 @@
 package chain
 
 import (
-	"github.com/drep-project/drep-chain/params"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/params"
+	"github.com/drep-project/DREP-Chain/types"
 	"math/big"
 )
 

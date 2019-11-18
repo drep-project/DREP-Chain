@@ -3,7 +3,7 @@ package log
 import (
 	"errors"
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/drep-project/drep-chain/app"
+	"github.com/drep-project/DREP-Chain/app"
 	"github.com/shiena/ansicolor"
 	"github.com/sirupsen/logrus"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"

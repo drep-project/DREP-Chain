@@ -1,9 +1,9 @@
 package evm
 
 import (
-	"github.com/drep-project/drep-chain/chain"
-	"github.com/drep-project/drep-chain/pkgs/evm/vm"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/chain"
+	"github.com/drep-project/DREP-Chain/pkgs/evm/vm"
+	"github.com/drep-project/DREP-Chain/types"
 )
 
 var (

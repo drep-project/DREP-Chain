@@ -2,30 +2,30 @@ package blockmgr
 
 import (
 	"fmt"
-	"github.com/drep-project/drep-chain/chain/store"
-	"github.com/drep-project/drep-chain/common/trie"
+	"github.com/drep-project/DREP-Chain/chain/store"
+	"github.com/drep-project/DREP-Chain/common/trie"
 	"math/big"
 	"math/rand"
 	"path"
 	"sync"
 
-	"github.com/drep-project/drep-chain/params"
+	"github.com/drep-project/DREP-Chain/params"
 
-	"github.com/drep-project/drep-chain/app"
+	"github.com/drep-project/DREP-Chain/app"
 	"gopkg.in/urfave/cli.v1"
 
-	"github.com/drep-project/drep-chain/blockmgr/txpool"
-	"github.com/drep-project/drep-chain/chain"
-	"github.com/drep-project/drep-chain/common/event"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/database"
-	"github.com/drep-project/drep-chain/network/p2p"
-	p2pService "github.com/drep-project/drep-chain/network/service"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/blockmgr/txpool"
+	"github.com/drep-project/DREP-Chain/chain"
+	"github.com/drep-project/DREP-Chain/common/event"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/database"
+	"github.com/drep-project/DREP-Chain/network/p2p"
+	p2pService "github.com/drep-project/DREP-Chain/network/service"
+	"github.com/drep-project/DREP-Chain/types"
 
 	"time"
 
-	rpc2 "github.com/drep-project/drep-chain/pkgs/rpc"
+	rpc2 "github.com/drep-project/DREP-Chain/pkgs/rpc"
 )
 
 var (

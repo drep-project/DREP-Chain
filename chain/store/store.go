@@ -1,12 +1,12 @@
 package store
 
 import (
-	"github.com/drep-project/drep-chain/common/trie"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/database"
-	"github.com/drep-project/drep-chain/database/dbinterface"
-	dlog "github.com/drep-project/drep-chain/pkgs/log"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/common/trie"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/database"
+	"github.com/drep-project/DREP-Chain/database/dbinterface"
+	dlog "github.com/drep-project/DREP-Chain/pkgs/log"
+	"github.com/drep-project/DREP-Chain/types"
 	"math/big"
 )
 

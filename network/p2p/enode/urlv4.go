@@ -21,15 +21,15 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
+	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"net"
 	"net/url"
 	"regexp"
 	"strconv"
 
-	"github.com/drep-project/drep-chain/common/math"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/network/p2p/enr"
+	"github.com/drep-project/DREP-Chain/common/math"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/network/p2p/enr"
 )
 
 var incompleteNodeURL = regexp.MustCompile("(?i)^(?:enode://)?([0-9a-f]+)$")

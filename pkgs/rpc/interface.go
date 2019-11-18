@@ -1,7 +1,7 @@
 package rpc
 
 import (
-	"github.com/drep-project/drep-chain/app"
+	"github.com/drep-project/DREP-Chain/app"
 	"github.com/drep-project/rpc"
 )
 

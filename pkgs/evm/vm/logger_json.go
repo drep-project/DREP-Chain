@@ -18,9 +18,9 @@ package vm
 
 import (
 	"encoding/json"
-	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/common/math"
-	"github.com/drep-project/drep-chain/crypto"
+	"github.com/drep-project/DREP-Chain/common"
+	"github.com/drep-project/DREP-Chain/common/math"
+	"github.com/drep-project/DREP-Chain/crypto"
 	"io"
 	"math/big"
 	"time"

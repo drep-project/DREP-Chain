@@ -1,8 +1,8 @@
 package chain
 
 import (
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/types"
 )
 
 type ChainConfig struct {

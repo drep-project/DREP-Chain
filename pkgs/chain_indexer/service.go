@@ -9,14 +9,14 @@ import (
 
 	"gopkg.in/urfave/cli.v1"
 
-	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/chain"
-	"github.com/drep-project/drep-chain/common/bitutil"
-	"github.com/drep-project/drep-chain/common/bloombits"
-	"github.com/drep-project/drep-chain/common/event"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/database"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/app"
+	"github.com/drep-project/DREP-Chain/chain"
+	"github.com/drep-project/DREP-Chain/common/bitutil"
+	"github.com/drep-project/DREP-Chain/common/bloombits"
+	"github.com/drep-project/DREP-Chain/common/event"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/database"
+	"github.com/drep-project/DREP-Chain/types"
 )
 
 // ChainIndexerChain interface is used for connecting the indexer to a blockchain

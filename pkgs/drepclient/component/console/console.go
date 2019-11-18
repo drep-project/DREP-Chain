@@ -27,7 +27,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/drep-project/drep-chain/pkgs/drepclient/component/jsre"
+	"github.com/drep-project/DREP-Chain/pkgs/drepclient/component/jsre"
 	"github.com/drep-project/rpc"
 	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"

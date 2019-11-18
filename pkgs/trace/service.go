@@ -1,13 +1,13 @@
 package trace
 
 import (
-	"github.com/drep-project/drep-chain/database"
-	consensusService "github.com/drep-project/drep-chain/pkgs/consensus/service"
+	"github.com/drep-project/DREP-Chain/database"
+	consensusService "github.com/drep-project/DREP-Chain/pkgs/consensus/service"
 	"path"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/drep-project/drep-chain/app"
-	chainService "github.com/drep-project/drep-chain/chain"
+	"github.com/drep-project/DREP-Chain/app"
+	chainService "github.com/drep-project/DREP-Chain/chain"
 	"gopkg.in/urfave/cli.v1"
 )
 

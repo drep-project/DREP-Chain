@@ -12,7 +12,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/DREP-Chain/common"
 	"hash"
 	"math/big"
 )

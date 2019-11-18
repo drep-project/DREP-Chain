@@ -1,7 +1,7 @@
 package log
 
 import (
-	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/DREP-Chain/common"
 	"gopkg.in/urfave/cli.v1"
 )
 

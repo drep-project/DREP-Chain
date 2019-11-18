@@ -32,10 +32,10 @@ import (
 	"sync"
 
 	log "github.com/drep-project/dlog"
-	"github.com/drep-project/drep-chain/network/p2p"
-	"github.com/drep-project/drep-chain/network/p2p/enode"
-	"github.com/drep-project/drep-chain/network/p2p/simulations"
-	"github.com/drep-project/drep-chain/network/p2p/simulations/adapters"
+	"github.com/drep-project/DREP-Chain/network/p2p"
+	"github.com/drep-project/DREP-Chain/network/p2p/enode"
+	"github.com/drep-project/DREP-Chain/network/p2p/simulations"
+	"github.com/drep-project/DREP-Chain/network/p2p/simulations/adapters"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/rpc"
 )

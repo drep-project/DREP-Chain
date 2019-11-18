@@ -1,9 +1,9 @@
 package service
 
 import (
-	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/pkgs/consensus/service/bft"
-	"github.com/drep-project/drep-chain/pkgs/consensus/service/solo"
+	"github.com/drep-project/DREP-Chain/app"
+	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/bft"
+	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/solo"
 	"gopkg.in/urfave/cli.v1"
 )
 

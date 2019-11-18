@@ -1,8 +1,8 @@
 package types
 
 import (
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
+	"github.com/drep-project/DREP-Chain/types"
 )
 
 type IConsensusEngine interface {

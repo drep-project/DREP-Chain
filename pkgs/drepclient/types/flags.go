@@ -19,14 +19,14 @@ package types
 
 import (
 	"fmt"
-	"github.com/drep-project/drep-chain/common/fileutil"
+	"github.com/drep-project/DREP-Chain/common/fileutil"
 	"io"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 
-	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/DREP-Chain/common"
 	"gopkg.in/urfave/cli.v1"
 )
 

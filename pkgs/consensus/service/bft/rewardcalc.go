@@ -1,8 +1,8 @@
 package bft
 
 import (
-	"github.com/drep-project/drep-chain/chain/store"
-	"github.com/drep-project/drep-chain/params"
+	"github.com/drep-project/DREP-Chain/chain/store"
+	"github.com/drep-project/DREP-Chain/params"
 	"math/big"
 )
 

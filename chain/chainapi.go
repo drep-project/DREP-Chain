@@ -3,13 +3,13 @@ package chain
 import (
 	"encoding/json"
 	"github.com/drep-project/binary"
-	"github.com/drep-project/drep-chain/chain/store"
-	"github.com/drep-project/drep-chain/common/hexutil"
-	"github.com/drep-project/drep-chain/common/trie"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/sha3"
-	"github.com/drep-project/drep-chain/database/dbinterface"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/chain/store"
+	"github.com/drep-project/DREP-Chain/common/hexutil"
+	"github.com/drep-project/DREP-Chain/common/trie"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/crypto/sha3"
+	"github.com/drep-project/DREP-Chain/database/dbinterface"
+	"github.com/drep-project/DREP-Chain/types"
 	"math/big"
 )
 

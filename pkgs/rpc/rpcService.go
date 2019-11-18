@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/drep-project/drep-chain/app"
+	"github.com/drep-project/DREP-Chain/app"
 
 	"github.com/drep-project/rpc"
 	"gopkg.in/urfave/cli.v1"

@@ -2,7 +2,7 @@ package bft
 
 import (
 	"bytes"
-	"github.com/drep-project/drep-chain/chain/store"
+	"github.com/drep-project/DREP-Chain/chain/store"
 	"math"
 	"fmt"
 	"math/big"
@@ -12,15 +12,15 @@ import (
 	"time"
 
 	"github.com/drep-project/binary"
-	"github.com/drep-project/drep-chain/blockmgr"
-	"github.com/drep-project/drep-chain/chain"
-	"github.com/drep-project/drep-chain/common/event"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/crypto/secp256k1"
-	"github.com/drep-project/drep-chain/database"
+	"github.com/drep-project/DREP-Chain/blockmgr"
+	"github.com/drep-project/DREP-Chain/chain"
+	"github.com/drep-project/DREP-Chain/common/event"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
+	"github.com/drep-project/DREP-Chain/database"
 
-	consensusTypes "github.com/drep-project/drep-chain/pkgs/consensus/types"
-	"github.com/drep-project/drep-chain/types"
+	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
+	"github.com/drep-project/DREP-Chain/types"
 )
 
 const (

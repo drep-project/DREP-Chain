@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/drep-project/drep-chain/network/p2p/enr"
+	"github.com/drep-project/DREP-Chain/network/p2p/enr"
 	"github.com/stretchr/testify/assert"
 )
 

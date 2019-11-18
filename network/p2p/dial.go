@@ -23,8 +23,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/drep-project/drep-chain/network/p2p/enode"
-	"github.com/drep-project/drep-chain/network/p2p/netutil"
+	"github.com/drep-project/DREP-Chain/network/p2p/enode"
+	"github.com/drep-project/DREP-Chain/network/p2p/netutil"
 )
 
 const (

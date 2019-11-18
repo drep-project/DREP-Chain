@@ -2,7 +2,7 @@ package bft
 
 import (
 	"encoding/json"
-	"github.com/drep-project/drep-chain/chain"
+	"github.com/drep-project/DREP-Chain/chain"
 )
 
 type MinerGenesisProcessor struct {

@@ -8,7 +8,7 @@ package secp256k1
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
-	"github.com/drep-project/drep-chain/common"
+	"github.com/drep-project/DREP-Chain/common"
 	"io"
 	"math/big"
 )

@@ -1,12 +1,12 @@
 package database
 
 import (
-	"github.com/drep-project/drep-chain/app"
-	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/database/dbinterface"
-	"github.com/drep-project/drep-chain/database/leveldb"
-	"github.com/drep-project/drep-chain/database/memorydb"
-	dlog "github.com/drep-project/drep-chain/pkgs/log"
+	"github.com/drep-project/DREP-Chain/app"
+	"github.com/drep-project/DREP-Chain/common"
+	"github.com/drep-project/DREP-Chain/database/dbinterface"
+	"github.com/drep-project/DREP-Chain/database/leveldb"
+	"github.com/drep-project/DREP-Chain/database/memorydb"
+	dlog "github.com/drep-project/DREP-Chain/pkgs/log"
 
 	"gopkg.in/urfave/cli.v1"
 	path2 "path"

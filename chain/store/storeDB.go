@@ -1,10 +1,10 @@
 package store
 
 import (
-	"github.com/drep-project/drep-chain/common/trie"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/database"
-	"github.com/drep-project/drep-chain/database/dbinterface"
+	"github.com/drep-project/DREP-Chain/common/trie"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/database"
+	"github.com/drep-project/DREP-Chain/database/dbinterface"
 )
 
 type StoreDB struct {

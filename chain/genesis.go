@@ -1,15 +1,15 @@
 package chain
 
 import (
-	"github.com/drep-project/drep-chain/chain/store"
-	"github.com/drep-project/drep-chain/common/trie"
+	"github.com/drep-project/DREP-Chain/chain/store"
+	"github.com/drep-project/DREP-Chain/common/trie"
 	"math/big"
 
-	"github.com/drep-project/drep-chain/common"
-	"github.com/drep-project/drep-chain/crypto"
-	"github.com/drep-project/drep-chain/database/memorydb"
-	"github.com/drep-project/drep-chain/params"
-	"github.com/drep-project/drep-chain/types"
+	"github.com/drep-project/DREP-Chain/common"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/database/memorydb"
+	"github.com/drep-project/DREP-Chain/params"
+	"github.com/drep-project/DREP-Chain/types"
 )
 
 func (chainService *ChainService) GetGenisiBlock(biosAddress crypto.CommonAddress) (*types.Block, error) {

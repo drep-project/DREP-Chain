@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	mclock2 "github.com/drep-project/drep-chain/common/mclock"
+	mclock2 "github.com/drep-project/DREP-Chain/common/mclock"
 )
 
 // Subscription represents a stream of events. The carrier of the events is typically a

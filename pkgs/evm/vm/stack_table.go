@@ -2,7 +2,7 @@ package vm
 
 import (
 	"fmt"
-	"github.com/drep-project/drep-chain/params"
+	"github.com/drep-project/DREP-Chain/params"
 )
 
 func makeStackFunc(pop, push int) stackValidationFunc {
