@@ -245,7 +245,7 @@ loop:
 			break loop
 		}
 	}
-
+	log.WithField("err",err).WithField("ip",p.IP()).Error("runProtocols out")
 	close(p.closed)
 	p.rw.close(reason)
 	p.wg.Wait()

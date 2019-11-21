@@ -109,11 +109,22 @@ type BlockMgr struct {
 	syncTimerCh      chan *time.Timer
 
 	//与此模块通信的所有Peer
-	peersInfo map[string]types.PeerInfoInterface
+	//peersInfo map[string]types.PeerInfoInterface
+	peersInfo sync.Map
+
 	newPeerCh chan *types.PeerInfo
 
 	gpo  *Oracle
 	quit chan struct{}
+}
+
+func getPeersCount(peerInfos sync.Map) int {
+	count := 0
+	peerInfos.Range(func(key, value interface{}) bool {
+		count++
+		return true
+	})
+	return count
 }
 
 type syncHeaderHash struct {
@@ -144,7 +155,7 @@ func NewBlockMgr(config *BlockMgrConfig, homeDir string, cs chain.ChainServiceIn
 	blockMgr.allTasks = newHeightSortedMap()
 	//blockMgr.pendingSyncTasks = make(map[*time.Timer]map[crypto.Hash]uint64)
 	blockMgr.syncTimerCh = make(chan *time.Timer, pendingTimerCount)
-	blockMgr.peersInfo = make(map[string]types.PeerInfoInterface)
+	//blockMgr.peersInfo = sync.Map{} //make(map[string]types.PeerInfoInterface)
 	blockMgr.newPeerCh = make(chan *types.PeerInfo, maxLivePeer)
 	blockMgr.taskTxsCh = make(chan tasksTxsSync, maxLivePeer)
 
@@ -161,12 +172,13 @@ func NewBlockMgr(config *BlockMgrConfig, homeDir string, cs chain.ChainServiceIn
 			Name:   "blockMgr",
 			Length: types.NumberOfMsg,
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
-				if len(blockMgr.peersInfo) >= maxLivePeer {
+				if getPeersCount(blockMgr.peersInfo) >= maxLivePeer {
 					return ErrEnoughPeer
 				}
 				pi := types.NewPeerInfo(peer, rw)
-				blockMgr.peersInfo[peer.IP()] = pi
-				defer delete(blockMgr.peersInfo, peer.IP())
+				blockMgr.peersInfo.Store(peer.IP(), pi)
+
+				defer blockMgr.peersInfo.Delete(peer.IP()) // delete(blockMgr.peersInfo, peer.IP())
 				return blockMgr.receiveMsg(pi, rw)
 			},
 		},
@@ -192,7 +204,7 @@ func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 	blockMgr.allTasks = newHeightSortedMap()
 	//blockMgr.pendingSyncTasks = make(map[*time.Timer]map[crypto.Hash]uint64)
 	blockMgr.syncTimerCh = make(chan *time.Timer, 1)
-	blockMgr.peersInfo = make(map[string]types.PeerInfoInterface)
+	//blockMgr.peersInfo = make(map[string]types.PeerInfoInterface)
 	blockMgr.newPeerCh = make(chan *types.PeerInfo, maxLivePeer)
 	blockMgr.taskTxsCh = make(chan tasksTxsSync, maxLivePeer)
 
@@ -209,18 +221,13 @@ func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 			Name:   "blockMgr",
 			Length: types.NumberOfMsg,
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
-				if len(blockMgr.peersInfo) >= maxLivePeer {
+				if getPeersCount(blockMgr.peersInfo) >= maxLivePeer {
 					return ErrEnoughPeer
 				}
 				pi := types.NewPeerInfo(peer, rw)
-				blockMgr.lock.Lock()
-				blockMgr.peersInfo[peer.IP()] = pi
+				blockMgr.peersInfo.Store(peer.IP(), pi)
 
-				//err := blockMgr.receiveMsg(pi, rw)
-				//delete(blockMgr.peersInfo, peer.IP())
-				//return err
-				defer delete(blockMgr.peersInfo, peer.IP())
-				defer blockMgr.lock.Unlock()
+				defer blockMgr.peersInfo.Delete(peer.IP())
 				return blockMgr.receiveMsg(pi, rw)
 			},
 		},
@@ -280,39 +287,44 @@ func (blockMgr *BlockMgr) SendTransaction(tx *types.Transaction, islocal bool) e
 }
 
 func (blockMgr *BlockMgr) BroadcastBlock(msgType int32, block *types.Block, isLocal bool) {
-	for _, peer := range blockMgr.peersInfo {
+	blockMgr.peersInfo.Range(func(key, value interface{}) bool {
+		peer := value.(types.PeerInfoInterface)
 		b := peer.KnownBlock(block)
 		if !b {
 			if !isLocal {
-				//收到远端来的消息，仅仅广播给1/3的peer
+				//收到远端来的消息，仅仅广播给2/3的peer
 				rd := rand.Intn(broadcastRatio)
-				if rd > 1 {
-					continue
+				if rd > 2 {
+					return false
 				}
 			}
 			peer.MarkBlock(block)
 			blockMgr.P2pServer.Send(peer.GetMsgRW(), uint64(msgType), block)
 		}
-	}
+		return true
+	})
 }
 
 func (blockMgr *BlockMgr) BroadcastTx(msgType int32, tx *types.Transaction, isLocal bool) {
 	go func() {
-		for _, peer := range blockMgr.peersInfo {
+
+		blockMgr.peersInfo.Range(func(key, value interface{}) bool {
+			peer := value.(types.PeerInfoInterface)
 			b := peer.KnownTx(tx)
 			if !b {
 				if !isLocal {
-					//收到远端来的消息，仅仅广播给1/3的peer
+					//收到远端来的消息，仅仅广播给2/3的peer
 					rd := rand.Intn(broadcastRatio)
-					if rd > 1 {
-						continue
+					if rd > 2 {
+						return false
 					}
 				}
 
 				peer.MarkTx(tx)
 				blockMgr.P2pServer.Send(peer.GetMsgRW(), uint64(msgType), []*types.Transaction{tx})
 			}
-		}
+			return true
+		})
 	}()
 }
 

@@ -195,12 +195,14 @@ func (blockMgr *BlockMgr) batchReqBlocks(hashs []crypto.Hash, mapHeightHash map[
 		}
 	}
 
-	okPeers := make([]types.PeerInfoInterface, 0, len(blockMgr.peersInfo))
-	for _, pi := range blockMgr.peersInfo {
-		if pi.GetHeight() >= maxHeight {
-			okPeers = append(okPeers, pi)
+	okPeers := make([]types.PeerInfoInterface, 0, getPeersCount(blockMgr.peersInfo))
+	blockMgr.peersInfo.Range(func(key, value interface{}) bool {
+		peer := value.(types.PeerInfoInterface)
+		if peer.GetHeight() >= maxHeight {
+			okPeers = append(okPeers, peer)
 		}
-	}
+		return true
+	})
 
 	for _, pi := range okPeers {
 		blockMgr.syncMut.Lock()
@@ -457,7 +459,8 @@ func (blockMgr *BlockMgr) handleReqPeerState(peer *types.PeerInfo, peerState *ty
 
 func (blockMgr *BlockMgr) GetBestPeerInfo() types.PeerInfoInterface {
 	var curPeer types.PeerInfoInterface
-	for _, pi := range blockMgr.peersInfo {
+	blockMgr.peersInfo.Range(func(key, value interface{}) bool {
+		pi := value.(types.PeerInfoInterface)
 		if curPeer != nil {
 			if curPeer.GetHeight() < pi.GetHeight() {
 				curPeer = pi
@@ -465,7 +468,9 @@ func (blockMgr *BlockMgr) GetBestPeerInfo() types.PeerInfoInterface {
 		} else {
 			curPeer = pi
 		}
-	}
+		return true
+	})
+
 	return curPeer
 }
 
@@ -490,7 +495,6 @@ func (blockMgr *BlockMgr) checkHeaderChain(chain []types.BlockHeader) error {
 				return err
 			}
 		}
-
 	}
 	return nil
 }

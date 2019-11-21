@@ -1,36 +1,24 @@
 {
   "miners":[
     {
-      "name": "dreptest1",
-      "ip": "47.75.98.179",
+      "name": "10",
+      "ip": "192.168.31.10",
       "port": 55555,
       "password": "33333333333333"
     },
     {
-      "name": "dreptest2",
-      "ip": "39.98.39.224",
+      "name": "42",
+      "ip": "192.168.31.42",
       "port": 55555,
       "password": "33333333333333"
     },
     {
-      "name": "dreptest3",
+      "name": "local",
       "ip": "39.100.111.74",
       "port": 55555,
       "password": "33333333333333"
-    },
-    {
-      "name": "dreptest4",
-      "ip": "149.129.172.91",
-      "port": 55555,
-      "password": "33333333333333"
-    },
-       {
-      "name": "dreptest5",
-      "ip": "192.168.43.62",
-      "port": 55555,
-      "password": "33333333333333"
     }
-  ],
+    ],
   "preminer":[
     {
       "0xaD3dC2D8aedef155eabA42Ab72C1FE480699336c":"0xffffffffffff"

@@ -148,6 +148,7 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 				defer func() {
 					removePeerFeed.Send(pi)
 					sub.Unsubscribe()
+
 				}()
 				for {
 					select {
@@ -156,7 +157,9 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 							return errors.New(e.Error)
 						}
 					case <-tm.C:
+						fmt.Println("time out******************************")
 						return errors.New("timeout: wait validata message")
+
 					default:
 						msg, err := rw.ReadMsg()
 						if err != nil {
@@ -201,8 +204,9 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 
 							if !ok {
 								fmt.Println("MsgTypeValidateRes pubkey err*********")
-								return fmt.Errorf("MsgTypeValidateRes pubkey err")
+								//return fmt.Errorf("MsgTypeValidateRes pubkey err")
 							}
+							continue
 						default:
 							bftConsensusService.BftConsensus.ReceiveMsg(pi, msg.Code, buf)
 						}
