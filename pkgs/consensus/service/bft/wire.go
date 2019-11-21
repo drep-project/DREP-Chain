@@ -21,7 +21,7 @@ const (
 	MaxMsgSize = 20 << 20
 )
 
-var NumberOfMsg = 8
+var NumberOfMsg = 7
 
 type MsgWrap struct {
 	Peer types.IPeerInfo
