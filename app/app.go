@@ -194,7 +194,7 @@ func (mApp *DrepApp) action(ctx *cli.Context) error {
 		//flag
 		err := mApp.Context.UnmashalConfig(service.Name(), fieldValue.Interface())
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("unmashalConfig", service.Name(), err)
 			return err
 		}
 		err = service.Init(mApp.Context)
