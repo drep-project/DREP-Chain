@@ -4,7 +4,6 @@ import (
 	"path"
 
 	"github.com/drep-project/DREP-Chain/app"
-	"github.com/drep-project/DREP-Chain/common/event"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/network/p2p"
 	"github.com/drep-project/DREP-Chain/network/p2p/enode"
@@ -199,6 +198,6 @@ func (p2pService *P2pService) RemovePeer(nodeUrl string) {
 	}
 }
 
-func (p2pService *P2pService) SubscribeEvents(ch chan *p2p.PeerEvent) event.Subscription {
-	return p2pService.server.SubscribeEvents(ch)
-}
+//func (p2pService *P2pService) SubscribeEvents(ch chan *p2p.PeerEvent) event.Subscription {
+//	return p2pService.server.SubscribeEvents(ch)
+//}

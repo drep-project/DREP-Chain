@@ -288,7 +288,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 				}
 			}
 		}
-		log.Info("fetch all headers end ****************************")
+		log.Info("fetch all headers end")
 		headerRoutineExit = true
 	}()
 
