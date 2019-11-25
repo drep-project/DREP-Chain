@@ -28,7 +28,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/drep-project/binary"
 	"github.com/drep-project/DREP-Chain/common"
 	"github.com/drep-project/DREP-Chain/common/event"
 	"github.com/drep-project/DREP-Chain/common/mclock"
@@ -40,6 +39,7 @@ import (
 	"github.com/drep-project/DREP-Chain/network/p2p/enr"
 	"github.com/drep-project/DREP-Chain/network/p2p/nat"
 	"github.com/drep-project/DREP-Chain/network/p2p/netutil"
+	"github.com/drep-project/binary"
 	"github.com/sirupsen/logrus"
 )
 
@@ -295,7 +295,7 @@ func (srv *Server) Peers() []*Peer {
 	// environments.
 	case srv.peerOp <- func(peers map[enode.ID]*Peer) {
 		for _, p := range peers {
-			fmt.Println("peer ip :",p.IP())
+			fmt.Println("peer ip :", p.IP())
 			ps = append(ps, p)
 		}
 	}:
@@ -715,7 +715,7 @@ running:
 			// This channel is used by Peers and PeerCount.
 			op(peers)
 			fmt.Println("peerOp:")
-			for kkk,_ := range peers{
+			for kkk, _ := range peers {
 				fmt.Println(kkk.String())
 			}
 			srv.peerOpDone <- struct{}{}
@@ -1018,15 +1018,20 @@ func (srv *Server) runPeer(p *Peer) {
 		srv.newPeerHook(p)
 	}
 
+	fmt.Println("send PeerEventTypeAdd 00", p.IP())
 	// broadcast peer add
 	srv.peerFeed.Send(&PeerEvent{
 		Type: PeerEventTypeAdd,
 		Peer: p.ID(),
 	})
 
+
+	fmt.Println("send PeerEventTypeAdd 11", p.IP())
+
 	// run the protocol
 	remoteRequested, err := p.runProtocols()
 
+	fmt.Println("send PeerEventTypeDrop 00", p.IP())
 	// broadcast peer drop
 	srv.peerFeed.Send(&PeerEvent{
 		Type:  PeerEventTypeDrop,
@@ -1034,9 +1039,12 @@ func (srv *Server) runPeer(p *Peer) {
 		Error: err.Error(),
 	})
 
+	fmt.Println("send PeerEventTypeDrop 11", p.IP())
+
 	// Note: run waits for existing peers to be sent on srv.delpeer
 	// before returning, so this send should not select on srv.quit.
 	srv.delpeer <- peerDrop{p, err, remoteRequested}
+	fmt.Println("send PeerEventTypeDrop 22", p.IP())
 }
 
 // NodeInfo represents a short summary of the information known about the host.

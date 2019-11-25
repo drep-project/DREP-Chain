@@ -50,102 +50,91 @@ func (blockMgr *BlockMgr) receiveMsg(peer *types.PeerInfo, rw p2p.MsgReadWriter)
 }
 
 func (blockMgr *BlockMgr) dealMsg(peer *types.PeerInfo, rw p2p.MsgReadWriter) error {
-	ch := make(chan *p2p.PeerEvent)
-	sub := blockMgr.P2pServer.SubscribeEvents(ch)
-	defer func() {
-		sub.Unsubscribe()
-	}()
 
 	log.WithField("peer addr:", peer.GetAddr()).Info("new peer receive")
 
 	for {
-		select {
-		case e := <-ch:
-			if e.Type == p2p.PeerEventTypeDrop {
-				return errors.New(e.Error)
-			}
-		default:
-			msg, err := rw.ReadMsg()
-			if err != nil {
-				log.WithField("Reason", err).Info("receive blockMgr msg fail")
-				return err
-			}
-
-			if msg.Size > types.MaxMsgSize {
-				return ErrOverFlowMaxMsgSize
-			}
-
-			switch msg.Code {
-			case types.MsgTypeBlockReq:
-				var req types.BlockReq
-				if err := msg.Decode(&req); err != nil {
-					return errors.Wrapf(ErrDecodeMsg, "MsgTypeBlockReq msg:%v err:%v", msg, err)
-				}
-				go blockMgr.HandleBlockReqMsg(peer, &req)
-			case types.MsgTypeBlockResp:
-				var resp types.BlockResp
-				if err := msg.Decode(&resp); err != nil {
-					return errors.Wrapf(ErrDecodeMsg, "BlockResp msg:%v err:%v", msg, err)
-				}
-				go blockMgr.HandleBlockRespMsg(&resp)
-			case types.MsgTypeTransaction:
-				var txs []*types.Transaction
-				if err := msg.Decode(&txs); err != nil {
-					return errors.Wrapf(ErrDecodeMsg, "Transactions msg:%v err:%v", msg, err)
-				}
-
-				// TODO backup nodes should not add
-				for _, tx := range txs {
-					log.WithField("transaction", tx.Nonce()).Trace("comming transaction")
-					tx := tx
-					peer.MarkTx(tx)
-					blockMgr.SendTransaction(tx, false)
-				}
-
-			case types.MsgTypeBlock:
-				var newBlock types.Block
-				if err := msg.Decode(&newBlock); err != nil {
-					return errors.Wrapf(ErrDecodeMsg, "Block msg:%v err:%v", msg, err)
-				}
-
-				_, isOrPhan, err := blockMgr.ChainService.ProcessBlock(&newBlock)
-				if err == nil {
-					//return err
-				}
-
-				peer.MarkBlock(&newBlock)
-				blockMgr.BroadcastBlock(types.MsgTypeBlock, &newBlock, false)
-
-				if isOrPhan {
-					// todo 触发同步
-					//blockMgr.synchronise()
-				}
-			case types.MsgTypePeerState:
-				var resp types.PeerState
-				if err := msg.Decode(&resp); err != nil {
-					return errors.Wrapf(ErrDecodeMsg, "PeerState msg:%v err:%v", msg, err)
-				}
-				go blockMgr.handlePeerState(peer, &resp)
-			case types.MsgTypePeerStateReq:
-				var req types.PeerStateReq
-				if err := msg.Decode(&req); err != nil {
-					return errors.Wrapf(ErrDecodeMsg, "PeerStateReq msg:%v err:%v", msg, err)
-				}
-				go blockMgr.handleReqPeerState(peer, &req)
-			case types.MsgTypeHeaderReq:
-				var req types.HeaderReq
-				if err := msg.Decode(&req); err != nil {
-					return errors.Wrapf(ErrDecodeMsg, "HeaderReq msg:%v err:%v", msg, err)
-				}
-				go blockMgr.handleHeaderReq(peer, &req)
-			case types.MsgTypeHeaderRsp:
-				var resp types.HeaderRsp
-				if err := msg.Decode(&resp); err != nil {
-					return errors.Wrapf(ErrDecodeMsg, "HeaderRsp msg:%v err:%v", msg, err)
-				}
-				go blockMgr.handleHeaderRsp(peer, &resp)
-			}
+		msg, err := rw.ReadMsg()
+		if err != nil {
+			log.WithField("Reason", err).Info("receive blockMgr msg fail")
+			return err
 		}
+
+		if msg.Size > types.MaxMsgSize {
+			return ErrOverFlowMaxMsgSize
+		}
+
+		switch msg.Code {
+		case types.MsgTypeBlockReq:
+			var req types.BlockReq
+			if err := msg.Decode(&req); err != nil {
+				return errors.Wrapf(ErrDecodeMsg, "MsgTypeBlockReq msg:%v err:%v", msg, err)
+			}
+			go blockMgr.HandleBlockReqMsg(peer, &req)
+		case types.MsgTypeBlockResp:
+			var resp types.BlockResp
+			if err := msg.Decode(&resp); err != nil {
+				return errors.Wrapf(ErrDecodeMsg, "BlockResp msg:%v err:%v", msg, err)
+			}
+			go blockMgr.HandleBlockRespMsg(&resp)
+		case types.MsgTypeTransaction:
+			var txs []*types.Transaction
+			if err := msg.Decode(&txs); err != nil {
+				return errors.Wrapf(ErrDecodeMsg, "Transactions msg:%v err:%v", msg, err)
+			}
+
+			// TODO backup nodes should not add
+			for _, tx := range txs {
+				log.WithField("transaction", tx.Nonce()).Trace("comming transaction")
+				tx := tx
+				peer.MarkTx(tx)
+				blockMgr.SendTransaction(tx, false)
+			}
+
+		case types.MsgTypeBlock:
+			var newBlock types.Block
+			if err := msg.Decode(&newBlock); err != nil {
+				return errors.Wrapf(ErrDecodeMsg, "Block msg:%v err:%v", msg, err)
+			}
+
+			_, isOrPhan, err := blockMgr.ChainService.ProcessBlock(&newBlock)
+			if err == nil {
+				//return err
+			}
+
+			peer.MarkBlock(&newBlock)
+			blockMgr.BroadcastBlock(types.MsgTypeBlock, &newBlock, false)
+
+			if isOrPhan {
+				// todo 触发同步
+				//blockMgr.synchronise()
+			}
+		case types.MsgTypePeerState:
+			var resp types.PeerState
+			if err := msg.Decode(&resp); err != nil {
+				return errors.Wrapf(ErrDecodeMsg, "PeerState msg:%v err:%v", msg, err)
+			}
+			go blockMgr.handlePeerState(peer, &resp)
+		case types.MsgTypePeerStateReq:
+			var req types.PeerStateReq
+			if err := msg.Decode(&req); err != nil {
+				return errors.Wrapf(ErrDecodeMsg, "PeerStateReq msg:%v err:%v", msg, err)
+			}
+			go blockMgr.handleReqPeerState(peer, &req)
+		case types.MsgTypeHeaderReq:
+			var req types.HeaderReq
+			if err := msg.Decode(&req); err != nil {
+				return errors.Wrapf(ErrDecodeMsg, "HeaderReq msg:%v err:%v", msg, err)
+			}
+			go blockMgr.handleHeaderReq(peer, &req)
+		case types.MsgTypeHeaderRsp:
+			var resp types.HeaderRsp
+			if err := msg.Decode(&resp); err != nil {
+				return errors.Wrapf(ErrDecodeMsg, "HeaderRsp msg:%v err:%v", msg, err)
+			}
+			go blockMgr.handleHeaderRsp(peer, &resp)
+		}
+
 	}
 
 	return nil
