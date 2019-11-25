@@ -664,7 +664,13 @@ func (srv *Server) run(dialstate dialer) {
 
 running:
 	for {
+		//for kkk,_ := range peers{
+		//	fmt.Println("11111111:",kkk.String())
+		//}
 		scheduleTasks()
+		//for kkk,_ := range peers{
+		//	fmt.Println("22222222:",kkk.String())
+		//}
 
 		select {
 		case <-srv.quit:
@@ -708,6 +714,10 @@ running:
 		case op := <-srv.peerOp:
 			// This channel is used by Peers and PeerCount.
 			op(peers)
+			fmt.Println("peerOp:")
+			for kkk,_ := range peers{
+				fmt.Println(kkk.String())
+			}
 			srv.peerOpDone <- struct{}{}
 		case t := <-taskdone:
 			// A task got done. Tell dialstate about it so it
@@ -765,8 +775,11 @@ running:
 				WithField("req", pd.requested).
 				WithField("err", pd.err).
 				WithField("ip", pd.Peer.IP()).
+				WithField("id", pd.ID().String()).
 				Info("Removing p2p peer")
+
 			delete(peers, pd.ID())
+
 			if pd.Inbound() {
 				inboundCount--
 			}

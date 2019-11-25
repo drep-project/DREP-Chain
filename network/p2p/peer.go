@@ -245,10 +245,12 @@ loop:
 			break loop
 		}
 	}
-	log.WithField("err",err).WithField("ip",p.IP()).Error("runProtocols out")
+	//log.WithField("err",err).WithField("ip",p.IP()).Error("runProtocols out")
 	close(p.closed)
 	p.rw.close(reason)
 	p.wg.Wait()
+
+	log.WithField("err",err).WithField("ip",p.IP()).Error("runProtocols out")
 	return remoteRequested, err
 }
 
@@ -261,7 +263,6 @@ func (p *Peer) pingLoop() {
 		case <-ping.C:
 			if err := SendItems(p.rw, pingMsg); err != nil {
 				p.protoErr <- err
-				fmt.Println("ping msg err,ip:", p.IP())
 				return
 			}
 			ping.Reset(pingInterval)

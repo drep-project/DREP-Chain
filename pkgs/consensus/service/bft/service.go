@@ -141,21 +141,21 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 					return err
 				}
 				//del peer event
-				ch := make(chan *p2p.PeerEvent)
-				sub := bftConsensusService.P2pServer.SubscribeEvents(ch)
+				//ch := make(chan *p2p.PeerEvent)
+				//sub := bftConsensusService.P2pServer.SubscribeEvents(ch)
 				//control producer validator by timer
 				tm := time.NewTimer(time.Second * 10)
 				defer func() {
 					removePeerFeed.Send(pi)
-					sub.Unsubscribe()
+					//sub.Unsubscribe()
 
 				}()
 				for {
 					select {
-					case e := <-ch:
-						if e.Type == p2p.PeerEventTypeDrop {
-							return errors.New(e.Error)
-						}
+					//case e := <-ch:
+					//	if e.Type == p2p.PeerEventTypeDrop {
+					//		return errors.New(e.Error)
+					//	}
 					case <-tm.C:
 						fmt.Println("time out******************************")
 						return errors.New("timeout: wait validata message")
