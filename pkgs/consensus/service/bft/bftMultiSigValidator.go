@@ -27,6 +27,12 @@ func (blockMultiSigValidator *BlockMultiSigValidator) VerifyBody(block *types.Bl
 	if err != nil {
 		return err
 	}
+
+	//Non outgoing node, only accept incoming block
+	if len(blockMultiSigValidator.Producers) == 0 {
+		return nil
+	}
+
 	for index, val := range multiSig.Bitmap {
 		if val == 1 {
 			producer := blockMultiSigValidator.Producers[index]

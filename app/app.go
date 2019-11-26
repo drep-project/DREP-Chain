@@ -285,6 +285,7 @@ func loadConfigFile(ctx *cli.Context, homeDir string) (map[string]json.RawMessag
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println(string(content))
 	jsonPhase := map[string]json.RawMessage{}
 	err = json.Unmarshal(content, &jsonPhase)
 	if err != nil {

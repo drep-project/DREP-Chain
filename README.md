@@ -73,7 +73,7 @@ Also, make sure your firewall is configured to allow inbound connections to port
 
 Binary releases and config files are provided for common operating systems and architectures:
 
-https://github.com/drep-project/DREP-Chain/releases/tag/4.0
+https://github.com/drep-project/DREP-Chain/releases
 
 
 ### Build from source (all platforms)
