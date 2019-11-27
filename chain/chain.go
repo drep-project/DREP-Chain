@@ -56,7 +56,7 @@ type ChainServiceInterface interface {
 	GetRMLogsFeed() *event.Feed
 	BlockExists(blockHash *crypto.Hash) bool
 	Index() *BlockIndex
-	BlockValidator() []IBlockValidator
+	BlockValidator() BlockValidators
 	AddBlockValidator(validator IBlockValidator)
 	TransactionValidators() map[ITransactionSelector]ITransactionValidator
 	AddTransactionValidator(selector ITransactionSelector, validator ITransactionValidator)
@@ -97,7 +97,7 @@ type ChainService struct {
 	logsFeed        event.Feed
 	rmLogsFeed      event.Feed
 
-	blockValidator       []IBlockValidator
+	blockValidator       BlockValidators
 	transactionValidator map[ITransactionSelector]ITransactionValidator
 	genesisProcess       []IGenesisProcess
 	genesisConfig        string
@@ -350,14 +350,13 @@ func (chainService *ChainService) GetDatabaseService() *database.DatabaseService
 
 func (chainService *ChainService) DetachBlockFeed() *event.Feed {
 	return &chainService.detachBlockFeed
-
 }
 
 func (chainService *ChainService) GetConfig() *ChainConfig {
 	return chainService.Config
 }
 
-func (chainService *ChainService) BlockValidator() []IBlockValidator {
+func (chainService *ChainService) BlockValidator() BlockValidators {
 	return chainService.blockValidator
 }
 

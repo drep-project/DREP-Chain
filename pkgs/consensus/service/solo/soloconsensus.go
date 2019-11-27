@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/drep-project/DREP-Chain/chain/store"
 	"math/big"
+	"reflect"
 
 	"github.com/drep-project/DREP-Chain/blockmgr"
 	"github.com/drep-project/DREP-Chain/chain"
@@ -89,15 +90,12 @@ func (soloConsensus *SoloConsensus) verify(block *types.Block) error {
 	//process transaction
 
 	context := chain.NewBlockExecuteContext(trieStore, gp, dbstore, block)
-
-	for _, validator := range soloConsensus.ChainService.BlockValidator() {
-		err := validator.ExecuteBlock(context)
-		if err != nil {
-			log.WithField("ExecuteBlock", err).Debug("multySigVerify")
-			return err
-		}
+	validator := soloConsensus.ChainService.BlockValidator().SelectByType(reflect.TypeOf(chain.ChainBlockValidator{}))
+	err = validator.ExecuteBlock(context)
+	if err != nil {
+		log.WithField("ExecuteBlock", err).Debug("multySigVerify")
+		return err
 	}
-
 	stateRoot := trieStore.GetStateRoot()
 
 	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {

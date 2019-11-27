@@ -16,6 +16,7 @@ func NewSoloValidator(pubkey *secp256k1.PublicKey) *SoloValidator {
 		pubkey: pubkey,
 	}
 }
+
 func (soloValidator *SoloValidator) VerifyHeader(header, parent *types.BlockHeader) error {
 	return nil
 }

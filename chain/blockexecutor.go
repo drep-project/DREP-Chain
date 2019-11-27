@@ -6,12 +6,24 @@ import (
 	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"math/big"
+	"reflect"
 
 	"github.com/drep-project/DREP-Chain/common"
 
 	"github.com/drep-project/DREP-Chain/params"
 	"github.com/drep-project/DREP-Chain/types"
 )
+
+type BlockValidators []IBlockValidator
+
+func(blockValidators BlockValidators) SelectByType(t reflect.Type) IBlockValidator {
+	for _, validator := range blockValidators {
+		if t == reflect.TypeOf(validator).Elem() {
+			return validator
+		}
+	}
+	return nil
+}
 
 type IBlockValidator interface {
 	VerifyHeader(header, parent *types.BlockHeader) error

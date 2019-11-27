@@ -352,17 +352,14 @@ func (bftConsensus *BftConsensus) blockVerify(block *types.Block) error {
 	if err != nil {
 		return err
 	}
-	for _, validator := range bftConsensus.ChainService.BlockValidator() {
-		if reflect.TypeOf(validator).Elem() != reflect.TypeOf(BlockMultiSigValidator{}) {
-			err = validator.VerifyHeader(block.Header, preBlockHash)
-			if err != nil {
-				return err
-			}
-			err = validator.VerifyBody(block)
-			if err != nil {
-				return err
-			}
-		}
+	validator := bftConsensus.ChainService.BlockValidator().SelectByType(reflect.TypeOf(chain.ChainBlockValidator{}))
+	err = validator.VerifyHeader(block.Header, preBlockHash)
+	if err != nil {
+		return err
+	}
+	err = validator.VerifyBody(block)
+	if err != nil {
+		return err
 	}
 	return err
 }
@@ -385,12 +382,12 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
 	gp := new(chain.GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
 	context := chain.NewBlockExecuteContext(trieStore, gp, dbstore, block)
-	for _, validator := range bftConsensus.ChainService.BlockValidator() {
-		err := validator.ExecuteBlock(context)
-		if err != nil {
-			return err
-		}
+	validator := bftConsensus.ChainService.BlockValidator().SelectByType(reflect.TypeOf(chain.ChainBlockValidator{}))
+	err = validator.ExecuteBlock(context)
+	if err != nil {
+		return err
 	}
+
 	multiSig := &MultiSignature{}
 	err = binary.Unmarshal(block.Proof.Evidence, multiSig)
 	if err != nil {
