@@ -297,6 +297,7 @@ func (bftConsensus *BftConsensus) runAsLeader(producers ProducerSet, miners []*M
 		minMiners,
 		bftConsensus.ChainService.BestChain().Height(),
 		bftConsensus.leaderMsgPool)
+	defer leader.Close()
 	trieStore, err := store.TrieStoreFromStore(bftConsensus.DbService.LevelDb(), bftConsensus.ChainService.BestChain().Tip().StateRoot)
 	if err != nil {
 		return nil, err

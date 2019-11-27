@@ -90,9 +90,15 @@ func (leader *Leader) Reset() {
 	leader.commitBitmap = make([]byte, length)
 	leader.responseBitmap = make([]byte, length)
 
-	leader.cancelPool = make(chan struct{}, 1)
-	leader.cancelWaitCommit = make(chan struct{}, 1)
-	leader.cancelWaitChallenge = make(chan struct{}, 1)
+	leader.cancelPool = make(chan struct{})
+	leader.cancelWaitCommit = make(chan struct{})
+	leader.cancelWaitChallenge = make(chan struct{})
+}
+
+func (leader *Leader) Close() {
+	close(leader.cancelPool)
+	close(leader.cancelWaitCommit)
+	close(leader.cancelWaitChallenge)
 }
 
 func (leader *Leader) ProcessConsensus(msg IConsenMsg) (error, *secp256k1.Signature, []byte) {

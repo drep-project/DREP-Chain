@@ -74,13 +74,22 @@ func (member *Member) Reset() {
 	member.msg = nil
 	member.msgHash = nil
 	member.randomPrivakey = nil
-	member.cancelPool = make(chan struct{}, 1)
-	member.errorChanel = make(chan error, 1)
-	member.completed = make(chan struct{}, 1)
-	member.cancelWaitSetUp = make(chan struct{}, 1)
-	member.timeOutChanel = make(chan struct{}, 1)
-	member.cancelWaitChallenge = make(chan struct{}, 1)
+	member.cancelPool = make(chan struct{})
+	member.errorChanel = make(chan error)
+	member.completed = make(chan struct{})
+	member.timeOutChanel = make(chan struct{})
+	member.cancelWaitSetUp = make(chan struct{})
+	member.cancelWaitChallenge = make(chan struct{})
 	member.setState(INIT)
+}
+
+func (member *Member) Close() {
+	close(member.cancelPool)
+	close(member.errorChanel)
+	close(member.completed)
+	close(member.cancelWaitSetUp)
+	close(member.timeOutChanel)
+	close(member.cancelWaitChallenge)
 }
 
 func (member *Member) ProcessConsensus() (IConsenMsg, error) {
