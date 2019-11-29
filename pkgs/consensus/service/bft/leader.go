@@ -90,15 +90,9 @@ func (leader *Leader) Reset() {
 	leader.commitBitmap = make([]byte, length)
 	leader.responseBitmap = make([]byte, length)
 
-	leader.cancelPool = make(chan struct{})
-	leader.cancelWaitCommit = make(chan struct{})
-	leader.cancelWaitChallenge = make(chan struct{})
-}
-
-func (leader *Leader) Close() {
-	close(leader.cancelPool)
-	close(leader.cancelWaitCommit)
-	close(leader.cancelWaitChallenge)
+	leader.cancelPool = make(chan struct{}, 1)
+	leader.cancelWaitCommit = make(chan struct{}, 1)
+	leader.cancelWaitChallenge = make(chan struct{}, 1)
 }
 
 func (leader *Leader) ProcessConsensus(msg IConsenMsg) (error, *secp256k1.Signature, []byte) {
@@ -218,9 +212,10 @@ func (leader *Leader) OnCommit(peer consensusTypes.IPeerInfo, commit *Commitment
 
 func (leader *Leader) waitForCommit() bool {
 	leader.setState(WAIT_COMMIT)
+	tm := time.NewTimer(leader.waitTime)
 	for {
 		select {
-		case <-time.After(leader.waitTime):
+		case <-tm.C:
 			commitNum := leader.getCommitNum()
 			log.WithField("commitNum", commitNum).WithField("producers", len(leader.producers)).Debug("waitForCommit  finish")
 			if commitNum >= leader.minMember {
@@ -335,9 +330,10 @@ CANCEL:
 
 func (leader *Leader) waitForResponse() bool {
 	leader.setState(WAIT_RESPONSE)
+	tm := time.NewTimer(leader.waitTime)
 	for {
 		select {
-		case <-time.After(leader.waitTime):
+		case <-tm.C:
 			responseNum := leader.getResponseNum()
 			log.WithField("responseNum", responseNum).WithField("liveMembers", len(leader.liveMembers)).Debug("waitForResponse finish")
 			if responseNum == len(leader.sigmaPubKey) {

@@ -89,10 +89,6 @@ func (s *Storage) Empty() bool {
 }
 
 func NewNormalAccount(parent *Node, chainId ChainIdType) (*Account, error) {
-	/*IsRoot := chainId == RootChain
-	if !IsRoot && parent == nil {
-		return nil, errors.New("missing parent account")
-	}*/
 	node := NewNode(parent, chainId)
 	address := node.Address
 	storage := newStorage()
