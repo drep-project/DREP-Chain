@@ -382,11 +382,14 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
 	gp := new(chain.GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
 	context := chain.NewBlockExecuteContext(trieStore, gp, dbstore, block)
-	validator := bftConsensus.ChainService.BlockValidator().SelectByType(reflect.TypeOf(chain.ChainBlockValidator{}))
-	err = validator.ExecuteBlock(context)
-	if err != nil {
-		return err
+	validators := bftConsensus.ChainService.BlockValidator()
+	for _, validator := range validators {
+		err = validator.ExecuteBlock(context)
+		if err != nil {
+			return err
+		}
 	}
+
 
 	multiSig := &MultiSignature{}
 	err = binary.Unmarshal(block.Proof.Evidence, multiSig)
