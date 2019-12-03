@@ -66,6 +66,7 @@ func NewMember(prvKey *secp256k1.PrivateKey, p2pServer Sender, waitTime time.Dur
 			}
 		}
 	}
+	member.cancelPool = make(chan struct{})
 	member.Reset()
 	return member
 }
@@ -94,7 +95,7 @@ func (member *Member) ProcessConsensus() (IConsenMsg, error) {
 	member.setState(WAIT_SETUP)
 	go member.WaitSetUp()
 	go member.processP2pMessage()
-	for {
+
 		select {
 		case err := <-member.errorChanel:
 			log.WithField("Reason", err).Error("member consensus fail")
@@ -106,7 +107,6 @@ func (member *Member) ProcessConsensus() (IConsenMsg, error) {
 			member.setState(COMPLETED)
 			return member.msg, nil
 		}
-	}
 
 }
 func (member *Member) processP2pMessage() {

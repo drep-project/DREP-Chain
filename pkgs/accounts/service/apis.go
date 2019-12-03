@@ -209,7 +209,7 @@ func (accountapi *AccountApi) SetAlias(srcAddr crypto.CommonAddress, alias strin
 
 /*
  name: VoteCredit
- usage: 转账
+ usage: 投票
  params:
 	1. 发起转账的地址
 	2. 接受者的地址
@@ -239,7 +239,7 @@ func (accountapi *AccountApi) VoteCredit(from crypto.CommonAddress, to crypto.Co
 
 /*
  name: CancelVoteCredit
- usage: 转账
+ usage:
  params:
 	1. 发起转账的地址
 	2. 接受者的地址
@@ -269,7 +269,7 @@ func (accountapi *AccountApi) CancelVoteCredit(from crypto.CommonAddress, to cry
 
 /*
  name: CandidateCredit
- usage: 转账
+ usage: 候选投票
  params:
 	1. 发起转账的地址
 	2. 接受者的地址
@@ -299,7 +299,7 @@ func (accountapi *AccountApi) CandidateCredit(from crypto.CommonAddress, amount,
 
 /*
  name: CancelCandidateCredit
- usage: 转账
+ usage: 取消候选
  params:
 	1. 发起转账的地址
 	2. 接受者的地址
