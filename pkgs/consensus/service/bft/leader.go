@@ -1,12 +1,14 @@
 package bft
 
 import (
+	"fmt"
 	"github.com/drep-project/binary"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1/schnorr"
 	"github.com/drep-project/DREP-Chain/crypto/sha3"
 	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
 	"math/big"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -76,6 +78,7 @@ func NewLeader(privkey *secp256k1.PrivateKey, p2pServer Sender, waitTime time.Du
 			l.liveMembers = append(l.liveMembers, producer)
 		}
 	}
+	l.cancelPool = make(chan struct{})
 	l.Reset()
 	return l
 }
@@ -216,10 +219,12 @@ func (leader *Leader) OnCommit(peer consensusTypes.IPeerInfo, commit *Commitment
 
 func (leader *Leader) waitForCommit() bool {
 	leader.setState(WAIT_COMMIT)
+	fmt.Println(leader.waitTime.String())
+	fmt.Println(time.Now())
 	tm := time.NewTimer(leader.waitTime)
-	for {
 		select {
 		case <-tm.C:
+			fmt.Println(time.Now())
 			commitNum := leader.getCommitNum()
 			log.WithField("commitNum", commitNum).WithField("producers", len(leader.producers)).Debug("waitForCommit  finish")
 			if commitNum >= leader.minMember {
@@ -230,7 +235,6 @@ func (leader *Leader) waitForCommit() bool {
 		case <-leader.cancelWaitCommit:
 			return true
 		}
-	}
 }
 
 func (leader *Leader) OnResponse(peer consensusTypes.IPeerInfo, response *Response) {
@@ -335,7 +339,6 @@ CANCEL:
 func (leader *Leader) waitForResponse() bool {
 	leader.setState(WAIT_RESPONSE)
 	tm := time.NewTimer(leader.waitTime)
-	for {
 		select {
 		case <-tm.C:
 			responseNum := leader.getResponseNum()
@@ -349,7 +352,7 @@ func (leader *Leader) waitForResponse() bool {
 		case <-leader.cancelWaitChallenge:
 			return true
 		}
-	}
+	
 }
 
 func (leader *Leader) Validate(msg IConsenMsg, r *big.Int, s *big.Int) bool {
@@ -447,6 +450,11 @@ func (leader *Leader) setState(state int) {
 	leader.stateLock.Lock()
 	defer leader.stateLock.Unlock()
 
+	if state == WAIT_COMMIT_IMEOUT {
+		fmt.Print("")
+	}
+	fmt.Println("oldstatus:"+ strconv.FormatInt(int64(leader.currentState),10))
+	fmt.Println("newstate:"+strconv.FormatInt(int64(state), 10))
 	leader.currentState = state
 }
 
