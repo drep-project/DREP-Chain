@@ -48,12 +48,13 @@ func (blockAnalysis *BlockAnalysis) Start(newBlock, detachBlock *event.Feed) err
 			pk := blockAnalysis.consensusService.SoloService.Config.MyPk
 			return []crypto.CommonAddress{crypto.PubkeyToAddress(pk)}, nil
 		} else {
+
+
 			trie, err := store.TrieStoreFromStore(blockAnalysis.trieStore, root)
 			if err != nil {
 				return nil, err
 			}
-			op := bft.ConsensusOp{trie}
-			producers, err := op.GetProducer()
+			producers := bft.GetCandidates(trie, 4)
 			if err != nil {
 				return nil, err
 			}
@@ -63,7 +64,6 @@ func (blockAnalysis *BlockAnalysis) Start(newBlock, detachBlock *event.Feed) err
 			}
 			return miners, nil
 		}
-
 	}
 	if blockAnalysis.Config.DbType == "leveldb" {
 		blockAnalysis.store, err = NewLevelDbStore(blockAnalysis.Config.HistoryDir, getProducer, blockAnalysis.consensusService.Config.ConsensusMode)
