@@ -89,7 +89,7 @@ func gen(ctx *cli.Context) error {
 
 		standbyKey = append(standbyKey, aNode.PrivateKey)
 		produces = append(produces, types.CandidateData{
-			Node:  node.String(),
+			Node:   node.String(),
 			Pubkey: aNode.PrivateKey.PubKey(),
 		})
 	}
@@ -114,21 +114,20 @@ func gen(ctx *cli.Context) error {
 	if len(nodeItems) == 1 {
 		consensusConfig.ConsensusMode = "solo"
 		consensusConfig.Solo = &solo.SoloConfig{
-			MyPk:       nil,
-			StartMiner: true,
-			BlockInterval:5,
+			MyPk:          nil,
+			StartMiner:    true,
+			BlockInterval: 5,
 		}
-	}else{
+	} else {
 		consensusConfig.ConsensusMode = "bft"
 		consensusConfig.Bft = &bft.BftConfig{
-			MyPk:       nil,
-			StartMiner: true,
-			BlockInterval:5,
-			ProducerNum:len(nodeItems),
-			ChangeInterval:100,
+			MyPk:           nil,
+			StartMiner:     true,
+			BlockInterval:  5,
+			ProducerNum:    len(nodeItems),
+			ChangeInterval: 100,
 		}
 	}
-
 
 	chainConfig := chain.ChainConfig{}
 	chainConfig.RemotePort = 55556
@@ -144,7 +143,7 @@ func gen(ctx *cli.Context) error {
 	filterConfig := filterTypes.FilterConfig{}
 	filterConfig.Enable = true
 
-	if  len(nodeItems) == 1 {
+	if len(nodeItems) == 1 {
 		consensusConfig.Bft.MyPk = (*secp256k1.PublicKey)(&standbyKey[0].PublicKey)
 		userDir := path2.Join(path, nodeItems[0].Name)
 		os.MkdirAll(userDir, os.ModeDir|os.ModePerm)
@@ -176,21 +175,17 @@ func gen(ctx *cli.Context) error {
 		offset = writePhase(fs, "accounts", walletConfig, offset)
 		offset = writePhase(fs, "chain_indexer", chainIndexerConfig, offset)
 		offset = writePhase(fs, "filter", filterConfig, offset)
-
+		offset = writePhase(fs, "genesis",
+			struct {
+				Preminer []*chain.Preminer
+				Miners   []types.CandidateData
+			}{
+				Preminer: cfg.Preminer,
+				Miners:   produces,
+			}, offset)
 		fs.Truncate(offset - 2)
 		fs.WriteAt([]byte("\n}"), offset-2)
-
-		//genesis
-		genesisConfig := path2.Join(userDir, "genesis.json")
-		fs, _ = os.Create(genesisConfig)
-		offset = int64(0)
-		fs.WriteAt([]byte("{\n"), offset)
-		offset = int64(2)
-		offset = writePhase(fs, "preminer", cfg.Preminer, offset)
-		offset = writePhase(fs, "miners", cfg.Miners, offset)
-		fs.Truncate(offset - 2)
-		fs.WriteAt([]byte("\n}"), offset-2)
-	}else{
+	} else {
 		for i := 0; i < len(nodeItems); i++ {
 			consensusConfig.Bft.MyPk = (*secp256k1.PublicKey)(&standbyKey[i].PublicKey)
 			userDir := path2.Join(path, nodeItems[i].Name)
@@ -224,17 +219,14 @@ func gen(ctx *cli.Context) error {
 			offset = writePhase(fs, "chain_indexer", chainIndexerConfig, offset)
 			offset = writePhase(fs, "filter", filterConfig, offset)
 
-			fs.Truncate(offset - 2)
-			fs.WriteAt([]byte("\n}"), offset-2)
-
-			//genesis
-			genesisConfig := path2.Join(userDir, "genesis.json")
-			fs, _ = os.Create(genesisConfig)
-			offset = int64(0)
-			fs.WriteAt([]byte("{\n"), offset)
-			offset = int64(2)
-			offset = writePhase(fs, "preminer", cfg.Preminer, offset)
-			offset = writePhase(fs, "miners", produces , offset)
+			offset = writePhase(fs, "genesis",
+				struct {
+					Preminer []*chain.Preminer
+					Miners   []types.CandidateData
+				}{
+					Preminer: cfg.Preminer,
+					Miners:   produces,
+				}, offset)
 			fs.Truncate(offset - 2)
 			fs.WriteAt([]byte("\n}"), offset-2)
 		}
@@ -264,9 +256,10 @@ func RandomNode(seed []byte) *types.Node {
 		chainCode []byte
 	)
 
-	h := hmAC(seed, types.DrepMark)
-	prvKey, _ = crypto.ToPrivateKey(h[:types.KeyBitSize])
-	chainCode = h[types.KeyBitSize:]
+	prvKey, _ = crypto.GenerateKey(rand.Reader)
+	chainCode = append(seed, []byte(types.DrepMark)...)
+	chainCode = common.HmAC(chainCode, prvKey.PubKey().Serialize())
+
 	addr := crypto.PubkeyToAddress(prvKey.PubKey())
 	return &types.Node{
 		PrivateKey: prvKey,
@@ -287,12 +280,12 @@ func getCurPath() string {
 	return dir
 }
 
-func parserConfig(cfgPath string) (*Config, error) {
+func parserConfig(cfgPath string) (*GenesisConfig, error) {
 	content, err := ioutil.ReadFile(cfgPath)
 	if err != nil {
 		return nil, err
 	}
-	cfg := &Config{}
+	cfg := &GenesisConfig{}
 	err = json.Unmarshal([]byte(content), &cfg)
 	if err != nil {
 		return nil, err
@@ -300,7 +293,7 @@ func parserConfig(cfgPath string) (*Config, error) {
 	return cfg, nil
 }
 
-type Config struct {
+type GenesisConfig struct {
 	Preminer []*chain.Preminer
 	Miners   []*NodeItem
 }
