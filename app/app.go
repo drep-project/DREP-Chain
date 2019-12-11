@@ -148,7 +148,7 @@ func (mApp *DrepApp) action(ctx *cli.Context) error {
 			return err
 		}
 
-		fmt.Println("*****:",reflect.TypeOf(service))
+		fmt.Println("*****:", reflect.TypeOf(service))
 
 		if reflect.TypeOf(service).Implements(TOrService) {
 			//flate config
@@ -257,7 +257,7 @@ func loadConfigFile(ctx *cli.Context, homeDir string) (map[string]json.RawMessag
 
 	if ctx.GlobalIsSet(ConfigFileFlag.Name) {
 		file := ctx.GlobalString(ConfigFileFlag.Name)
-		if fileutil.IsFileExists(file) {
+		if !fileutil.IsFileExists(file) {
 			//report error when user specify
 			return nil, ErrConfigiNotFound
 		}
