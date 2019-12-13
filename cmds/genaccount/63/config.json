@@ -1,0 +1,85 @@
+{
+	"log" : {
+	      "logLevel": 4
+	},
+	"rpc" : {
+	      "ipcEnabled": true,
+	      "httpEnabled": true,
+	      "wsEnabled": false,
+	      "wsExposeall": false,
+	      "restEnabled": false
+	},
+	"consensus" : {
+	      "consensusMode": "bft",
+	      "bft": {
+	            "mypk": "0x02443ec8976c5acf8197d52f198b0b5f26b3043c09b7f6908f6c2aefa6c9adea63",
+	            "startMiner": true,
+	            "producerNum": 4,
+	            "blockInterval": 5,
+	            "changeInterval": 100
+	      }
+	},
+	"p2p" : {
+	      "MaxPeers": 20,
+	      "NoDiscovery": false,
+	      "DiscoveryV5": true,
+	      "Name": "drepnode",
+	      "BootstrapNodes": null,
+	      "StaticNodes": [
+	            "enode://e82841c9a99233525d8a9ce65e6c50a1958d67f3c5bfece4d866227a0f7b3584@192.168.31.211:44444",
+	            "enode://1fc030996d9d08552eaca7c2a4da5b93cd9e20a831faabca408eaa67327cfc8b@192.168.31.63:44444",
+	            "enode://16e4236dfde95f259ebf4ea2947353df531f7f74a6e973b9cb9cb8440d4e2952@192.168.31.160:44444",
+	            "enode://fee75db3927ba348b484bc3c688e5401396f4e5da0a549e3a45e1e2014254a01@192.168.31.221:44444"
+	      ],
+	      "ProduceNodes": [
+	            "enode://e82841c9a99233525d8a9ce65e6c50a1958d67f3c5bfece4d866227a0f7b3584@192.168.31.211:44444",
+	            "enode://1fc030996d9d08552eaca7c2a4da5b93cd9e20a831faabca408eaa67327cfc8b@192.168.31.63:44444",
+	            "enode://16e4236dfde95f259ebf4ea2947353df531f7f74a6e973b9cb9cb8440d4e2952@192.168.31.160:44444",
+	            "enode://fee75db3927ba348b484bc3c688e5401396f4e5da0a549e3a45e1e2014254a01@192.168.31.221:44444"
+	      ],
+	      "ListenAddr": "0.0.0.0:55555"
+	},
+	"chain" : {
+	      "remoteport": 55556,
+	      "genesisaddr": "0x0000000000000000000000000000000000000000"
+	},
+	"accounts" : {
+	      "enable": true,
+	      "password": "123"
+	},
+	"chain_indexer" : {
+	      "enable": true,
+	      "sectionsize": 4096,
+	      "confirmsreq": 256,
+	      "throttling": 100000000
+	},
+	"filter" : {
+	      "enable": true
+	},
+	"genesis" : {
+	      "Preminer": [
+	            {
+	                  "Addr": "0x0000000000000000000000000000000000000000",
+	                  "Value": 0
+	            }
+	      ],
+	      "Miners": [
+	            {
+	                  "Pubkey": "0x036742f40abbbbb2aa7c733b5a43d14288810a1097f815a886533346e73fca93e3",
+	                  "Node": "enode://e82841c9a99233525d8a9ce65e6c50a1958d67f3c5bfece4d866227a0f7b3584@192.168.31.211:44444"
+	            },
+	            {
+	                  "Pubkey": "0x02443ec8976c5acf8197d52f198b0b5f26b3043c09b7f6908f6c2aefa6c9adea63",
+	                  "Node": "enode://1fc030996d9d08552eaca7c2a4da5b93cd9e20a831faabca408eaa67327cfc8b@192.168.31.63:44444"
+	            },
+	            {
+	                  "Pubkey": "0x020a2542f5c4e9d5ad31cc298f32225bc86fdea3eb54611fb3d8f58e362e496074",
+	                  "Node": "enode://16e4236dfde95f259ebf4ea2947353df531f7f74a6e973b9cb9cb8440d4e2952@192.168.31.160:44444"
+	            },
+	            {
+	                  "Pubkey": "0x0246af221f1e86ba00e9f11580763982817b2601ad2a1e4066bc7f334977b52830",
+	                  "Node": "enode://fee75db3927ba348b484bc3c688e5401396f4e5da0a549e3a45e1e2014254a01@192.168.31.221:44444"
+	            }
+	      ]
+	}
+}
