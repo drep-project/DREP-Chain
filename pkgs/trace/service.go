@@ -22,7 +22,7 @@ var (
 		Name:  "enableTrace",
 		Usage: "is  trace enable flag",
 	}
-	DefaultDbName = "drep"
+	DefaultDbName = "dump-drep"
 )
 
 // HistoryService use to record tx data for query

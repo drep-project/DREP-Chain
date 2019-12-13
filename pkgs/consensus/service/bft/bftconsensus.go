@@ -2,22 +2,22 @@ package bft
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/drep-project/DREP-Chain/chain/store"
 	"math"
-	"fmt"
 	"math/big"
 	"reflect"
 	"strconv"
 	"sync"
 	"time"
 
-	"github.com/drep-project/binary"
 	"github.com/drep-project/DREP-Chain/blockmgr"
 	"github.com/drep-project/DREP-Chain/chain"
 	"github.com/drep-project/DREP-Chain/common/event"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/database"
+	"github.com/drep-project/binary"
 
 	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
 	"github.com/drep-project/DREP-Chain/types"
@@ -40,7 +40,7 @@ type BftConsensus struct {
 	sender       Sender
 
 	peerLock   sync.RWMutex
-	onLinePeer map[string]consensusTypes.IPeerInfo
+	onLinePeer map[string]consensusTypes.IPeerInfo //key: enode.ID，value ,peerInfo
 	WaitTime   time.Duration
 
 	memberMsgPool chan *MsgWrap
@@ -73,8 +73,8 @@ func NewBftConsensus(
 		WaitTime:       waitTime,
 		addPeerChan:    addPeerChan,
 		removePeerChan: removePeerChan,
-		memberMsgPool : make(chan *MsgWrap, 1000),
-		leaderMsgPool : make(chan *MsgWrap, 1000),
+		memberMsgPool:  make(chan *MsgWrap, 1000),
+		leaderMsgPool:  make(chan *MsgWrap, 1000),
 	}
 }
 
@@ -121,7 +121,7 @@ func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Blo
 	//print miners status
 	str := "-----------------------------------\n"
 	for _, m := range miners {
-		str += "|	"+m.Producer.Node.IP().String() + "|	"+ strconv.FormatBool(m.IsOnline)  +"	|\n"
+		str += "|	" + m.Producer.Node.IP().String() + "|	" + strconv.FormatBool(m.IsOnline) + "	|\n"
 	}
 	fmt.Println(str)
 
@@ -147,11 +147,11 @@ func (bftConsensus *BftConsensus) processPeers() {
 		select {
 		case addPeer := <-bftConsensus.addPeerChan:
 			bftConsensus.peerLock.Lock()
-			bftConsensus.onLinePeer[addPeer.IP()] = addPeer
+			bftConsensus.onLinePeer[addPeer.ID()] = addPeer
 			bftConsensus.peerLock.Unlock()
 		case removePeer := <-bftConsensus.removePeerChan:
 			bftConsensus.peerLock.Lock()
-			delete(bftConsensus.onLinePeer, removePeer.IP())
+			delete(bftConsensus.onLinePeer, removePeer.ID())
 			bftConsensus.peerLock.Unlock()
 		}
 	}
@@ -203,7 +203,7 @@ func (bftConsensus *BftConsensus) collectMemberStatus(producers []*Producer) []*
 		} else {
 			//todo  peer获取到的IP地址和配置的ip地址是否相等（nat后是否相等,从tcp原理来看是相等的）
 			bftConsensus.peerLock.RLock()
-			if pi, ok = bftConsensus.onLinePeer[produce.Node.IP().String()]; ok {
+			if pi, ok = bftConsensus.onLinePeer[produce.Node.ID().String()]; ok {
 				IsOnline = true
 			}
 			bftConsensus.peerLock.RUnlock()
@@ -228,6 +228,10 @@ func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo, minMiners in
 			return nil, err
 		}
 
+		if block == nil {
+			return nil, fmt.Errorf("unmarshal msg err")
+		}
+
 		//faste calc less process time
 		calcHash := func(txs []*types.Transaction) {
 			for _, tx := range txs {
@@ -242,7 +246,6 @@ func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo, minMiners in
 				go calcHash(block.Data.TxList[1000*i : 1000*(i+1)])
 			}
 		}
-
 		return block, nil
 	}
 	member.validator = func(msg IConsenMsg) error {
@@ -390,7 +393,6 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
 		}
 	}
 
-
 	multiSig := &MultiSignature{}
 	err = binary.Unmarshal(block.Proof.Evidence, multiSig)
 	if err != nil {
@@ -415,15 +417,15 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
 func (bftConsensus *BftConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, t uint64, buf []byte) {
 	switch t {
 	case MsgTypeSetUp:
-		log.WithField("addr", peer).WithField("code", t).Debug("Receive MsgTypeSetUp msg")
+		log.WithField("addr", peer.IP()).WithField("code", t).Debug("Receive MsgTypeSetUp msg")
 	case MsgTypeChallenge:
-		log.WithField("addr", peer).WithField("code", t).Debug("Receive MsgTypeChallenge msg")
+		log.WithField("addr", peer.IP()).WithField("code", t).Debug("Receive MsgTypeChallenge msg")
 	case MsgTypeFail:
-		log.WithField("addr", peer).WithField("code", t).Debug("Receive MsgTypeFail msg")
+		log.WithField("addr", peer.IP()).WithField("code", t).Debug("Receive MsgTypeFail msg")
 	case MsgTypeCommitment:
-		log.WithField("addr", peer).WithField("code", t).Debug("Receive MsgTypeCommitment msg")
+		log.WithField("addr", peer.IP()).WithField("code", t).Debug("Receive MsgTypeCommitment msg")
 	case MsgTypeResponse:
-		log.WithField("addr", peer).WithField("code", t).Debug("Receive MsgTypeResponse msg")
+		log.WithField("addr", peer.IP()).WithField("code", t).Debug("Receive MsgTypeResponse msg")
 	default:
 		//return fmt.Errorf("consensus unkonw msg type:%d", msg.Code)
 	}
@@ -453,4 +455,3 @@ func (bftConsensus *BftConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, t ui
 func (bftConsensus *BftConsensus) ChangeTime(interval time.Duration) {
 	bftConsensus.WaitTime = interval
 }
-

@@ -3,11 +3,11 @@ package bft
 import (
 	"bytes"
 	"errors"
-	"github.com/drep-project/binary"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1/schnorr"
 	"github.com/drep-project/DREP-Chain/crypto/sha3"
 	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
+	"github.com/drep-project/binary"
 	"math/big"
 	"sync"
 	"time"
@@ -96,17 +96,17 @@ func (member *Member) ProcessConsensus() (IConsenMsg, error) {
 	go member.WaitSetUp()
 	go member.processP2pMessage()
 
-		select {
-		case err := <-member.errorChanel:
-			log.WithField("Reason", err).Error("member consensus fail")
-			return nil, err
-		case <-member.timeOutChanel:
-			member.setState(ERROR)
-			return nil, ErrTimeout
-		case <-member.completed:
-			member.setState(COMPLETED)
-			return member.msg, nil
-		}
+	select {
+	case err := <-member.errorChanel:
+		log.WithField("Reason", err).Error("member consensus fail")
+		return nil, err
+	case <-member.timeOutChanel:
+		member.setState(ERROR)
+		return nil, ErrTimeout
+	case <-member.completed:
+		member.setState(COMPLETED)
+		return member.msg, nil
+	}
 
 }
 func (member *Member) processP2pMessage() {
@@ -182,9 +182,11 @@ func (member *Member) OnSetUp(peer consensusTypes.IPeerInfo, setUp *Setup) {
 	if member.leader.Peer.Equal(peer) {
 		var err error
 		member.msg, err = member.convertor(setUp.Msg)
-		if err != nil {
+		if err != nil || member.msg == nil {
+			log.Errorf("convertor msg to block err:%s,height:%v,msg:%s", err.Error(), setUp.Height, setUp.String())
 			return
 		}
+
 		member.msgHash = sha3.Keccak256(member.msg.AsSignMessage())
 		member.commit()
 		log.Debug("sent commit message to leader")

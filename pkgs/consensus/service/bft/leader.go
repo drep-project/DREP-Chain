@@ -2,11 +2,11 @@ package bft
 
 import (
 	"fmt"
-	"github.com/drep-project/binary"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1/schnorr"
 	"github.com/drep-project/DREP-Chain/crypto/sha3"
 	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
+	"github.com/drep-project/binary"
 	"math/big"
 	"strconv"
 	"sync"
@@ -104,11 +104,9 @@ func (leader *Leader) Close() {
 
 func (leader *Leader) ProcessConsensus(msg IConsenMsg) (error, *secp256k1.Signature, []byte) {
 	defer func() {
-		select {
-		case leader.cancelPool <- struct{}{}:
-		default:
-		}
+		leader.cancelPool <- struct{}{}
 	}()
+
 	leader.setState(INIT)
 	go leader.processP2pMessage()
 	leader.setUp(msg)
@@ -145,14 +143,14 @@ func (leader *Leader) processP2pMessage() {
 					log.Debugf("commit msg:%v err:%v", msg, err)
 					continue
 				}
-				go leader.OnCommit(msg.Peer, &req)
+				leader.OnCommit(msg.Peer, &req)
 			case MsgTypeResponse:
 				var res Response
 				if err := binary.Unmarshal(msg.Msg, &res); err != nil {
 					log.Debugf("response msg:%v err:%v", msg, err)
 					continue
 				}
-				go leader.OnResponse(msg.Peer, &res)
+				leader.OnResponse(msg.Peer, &res)
 			}
 		case <-leader.cancelPool:
 			return
@@ -219,22 +217,22 @@ func (leader *Leader) OnCommit(peer consensusTypes.IPeerInfo, commit *Commitment
 
 func (leader *Leader) waitForCommit() bool {
 	leader.setState(WAIT_COMMIT)
-	fmt.Println(leader.waitTime.String())
-	fmt.Println(time.Now())
+	//fmt.Println(leader.waitTime.String())
+	t := time.Now()
 	tm := time.NewTimer(leader.waitTime)
-		select {
-		case <-tm.C:
-			fmt.Println(time.Now())
-			commitNum := leader.getCommitNum()
-			log.WithField("commitNum", commitNum).WithField("producers", len(leader.producers)).Debug("waitForCommit  finish")
-			if commitNum >= leader.minMember {
-				return true
-			}
-			leader.setState(WAIT_COMMIT_IMEOUT)
-			return false
-		case <-leader.cancelWaitCommit:
+	select {
+	case <-tm.C:
+		commitNum := leader.getCommitNum()
+		log.WithField("commitNum", commitNum).WithField("producers", len(leader.producers)).Debug("waitForCommit  finish")
+		log.WithField("start", t).WithField("now", time.Now()).Info("wait for commit timeout")
+		if commitNum >= leader.minMember {
 			return true
 		}
+		leader.setState(WAIT_COMMIT_IMEOUT)
+		return false
+	case <-leader.cancelWaitCommit:
+		return true
+	}
 }
 
 func (leader *Leader) OnResponse(peer consensusTypes.IPeerInfo, response *Response) {
@@ -294,7 +292,7 @@ func (leader *Leader) challenge(msg IConsenMsg) {
 		}
 
 		member := leader.getMemberByPk(pk)
-		if member!=nil && member.IsOnline && !member.IsMe {
+		if member != nil && member.IsOnline && !member.IsMe {
 			log.WithField("Node", member.Peer).WithField("Height", leader.currentHeight).Debug("leader sent challenge message")
 			leader.sender.SendAsync(member.Peer.GetMsgRW(), MsgTypeChallenge, challenge)
 		}
@@ -339,20 +337,20 @@ CANCEL:
 func (leader *Leader) waitForResponse() bool {
 	leader.setState(WAIT_RESPONSE)
 	tm := time.NewTimer(leader.waitTime)
-		select {
-		case <-tm.C:
-			responseNum := leader.getResponseNum()
-			log.WithField("responseNum", responseNum).WithField("liveMembers", len(leader.liveMembers)).Debug("waitForResponse finish")
-			if responseNum == len(leader.sigmaPubKey) {
-				leader.setState(COMPLETED)
-				return true
-			}
-			leader.setState(WAIT_RESPONSE_TIMEOUT)
-			return false
-		case <-leader.cancelWaitChallenge:
+	select {
+	case <-tm.C:
+		responseNum := leader.getResponseNum()
+		log.WithField("responseNum", responseNum).WithField("liveMembers", len(leader.liveMembers)).Debug("waitForResponse finish")
+		if responseNum == len(leader.sigmaPubKey) {
+			leader.setState(COMPLETED)
 			return true
 		}
-	
+		leader.setState(WAIT_RESPONSE_TIMEOUT)
+		return false
+	case <-leader.cancelWaitChallenge:
+		return true
+	}
+
 }
 
 func (leader *Leader) Validate(msg IConsenMsg, r *big.Int, s *big.Int) bool {
@@ -453,8 +451,8 @@ func (leader *Leader) setState(state int) {
 	if state == WAIT_COMMIT_IMEOUT {
 		fmt.Print("")
 	}
-	fmt.Println("oldstatus:"+ strconv.FormatInt(int64(leader.currentState),10))
-	fmt.Println("newstate:"+strconv.FormatInt(int64(state), 10))
+	fmt.Printf("oldstatus:%s, addr:%p\n", strconv.FormatInt(int64(leader.currentState), 10), leader)
+	fmt.Println("newstate:" + strconv.FormatInt(int64(state), 10))
 	leader.currentState = state
 }
 

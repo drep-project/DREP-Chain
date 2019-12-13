@@ -4,24 +4,24 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/drep-project/DREP-Chain/chain/store"
-	"github.com/drep-project/DREP-Chain/crypto"
-	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
-	"io/ioutil"
-	"math/rand"
-	"time"
-	"github.com/drep-project/binary"
 	"github.com/drep-project/DREP-Chain/app"
 	blockMgrService "github.com/drep-project/DREP-Chain/blockmgr"
 	chainService "github.com/drep-project/DREP-Chain/chain"
+	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/common/event"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/database"
 	"github.com/drep-project/DREP-Chain/network/p2p"
 	p2pService "github.com/drep-project/DREP-Chain/network/service"
 	accountService "github.com/drep-project/DREP-Chain/pkgs/accounts/service"
 	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
 	chainTypes "github.com/drep-project/DREP-Chain/types"
+	"github.com/drep-project/binary"
 	"gopkg.in/urfave/cli.v1"
+	"io/ioutil"
+	"math/rand"
+	"time"
 )
 
 var (
@@ -52,8 +52,8 @@ type BftConsensusService struct {
 	//During the process of synchronizing blocks, the miner stopped mining
 	pauseForSync bool
 	start        bool
-	peersInfo    map[string]*consensusTypes.PeerInfo
-	quit         chan struct{}
+	//peersInfo    map[string]*consensusTypes.PeerInfo
+	quit chan struct{}
 }
 
 func (bftConsensusService *BftConsensusService) Name() string {
@@ -116,7 +116,7 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 
 				ipChecked := false
 				for _, producer := range producers {
-					if producer.Node.IP().String() == peer.Node().IP().String() {
+					if producer.Node.ID().String() == peer.Node().ID().String() {
 						ipChecked = true
 						break
 					}
@@ -147,8 +147,6 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 				tm := time.NewTimer(time.Second * 10)
 				defer func() {
 					removePeerFeed.Send(pi)
-					//sub.Unsubscribe()
-
 				}()
 				for {
 					select {

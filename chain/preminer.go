@@ -2,10 +2,10 @@ package chain
 
 import (
 	"encoding/json"
-	"github.com/drep-project/binary"
 	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/types"
+	"github.com/drep-project/binary"
 	"math/big"
 )
 
@@ -22,7 +22,7 @@ func NewPreminerGenesisProcessor() *PreminerGenesisProcessor {
 }
 
 func (NewPreminerGenesisProcessor *PreminerGenesisProcessor) Genesis(context *GenesisContext) error {
-	val, ok := context.Config()["preminer"]
+	val, ok := context.Config()["Preminer"]
 	if ok {
 		preminers := []Preminer{}
 		bytes, _ := val.MarshalJSON()
@@ -39,7 +39,7 @@ func (NewPreminerGenesisProcessor *PreminerGenesisProcessor) Genesis(context *Ge
 		}
 	}
 
-	val, ok = context.Config()["miners"]
+	val, ok = context.Config()["Miners"]
 	if ok {
 		miners := []types.CandidateData{}
 		bytes, _ := val.MarshalJSON()

@@ -10,9 +10,10 @@ var (
 
 type IPeerInfo interface {
 	GetMsgRW() p2p.MsgReadWriter
-	String() string
+	//String() string
 	IP() string
 	Equal(ipeer IPeerInfo) bool
+	ID() string
 }
 
 //业务层peer
@@ -37,10 +38,14 @@ func (pi *PeerInfo) IP() string {
 	return pi.peer.IP()
 }
 
-func (pi *PeerInfo) String() string {
-	return pi.peer.IP()
+//func (pi *PeerInfo) String() string {
+//	return pi.peer.IP()
+//}
+
+func (pi *PeerInfo) ID() string {
+	return pi.peer.ID().String()
 }
 
 func (pi *PeerInfo) Equal(pi2 IPeerInfo) bool {
-	return pi2.IP() == pi.IP()
+	return pi2.ID() == pi.ID()
 }

@@ -321,7 +321,7 @@ func (chainService *ChainService) notifyBlock(block *types.Block, logs []*types.
 		Hash:  *block.Header.Hash(),
 		Logs:  logs,
 	}
-	chainService.NewBlockFeed().Send(&chainEvent)
+	chainService.newBlockFeed.Send(&chainEvent)
 
 	if len(logs) > 0 {
 		chainService.logsFeed.Send(logs)

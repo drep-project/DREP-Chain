@@ -1,9 +1,10 @@
 package types
 
 import (
-	"github.com/drep-project/binary"
+	"fmt"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/sha3"
+	"github.com/drep-project/binary"
 	"math/big"
 )
 
@@ -85,9 +86,14 @@ func (block *Block) AsMessage() []byte {
 
 func BlockFromMessage(bytes []byte) (*Block, error) {
 	block := &Block{}
+	if len(bytes) > 10*1024*1024 {
+		return nil, fmt.Errorf("bytes to len:%d", len(bytes))
+	}
 	err := binary.Unmarshal(bytes, block)
 	if err != nil {
+		fmt.Println("BlockFromMessage err:", err)
 		return nil, err
 	}
+
 	return block, nil
 }

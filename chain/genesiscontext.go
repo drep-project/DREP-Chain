@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/drep-project/DREP-Chain/chain/store"
-	"io/ioutil"
 )
 
 // Process genesis contract
@@ -18,13 +17,9 @@ type GenesisContext struct {
 	store  store.StoreInterface
 }
 
-func NewGenesisContext(gensisPath string, store store.StoreInterface) (*GenesisContext, error) {
-	fileContent, err := ioutil.ReadFile(gensisPath)
-	if err != nil {
-		return nil, err
-	}
+func NewGenesisContext(genesisContent *json.RawMessage, store store.StoreInterface) (*GenesisContext, error) {
 	result := map[string]json.RawMessage{}
-	err = json.Unmarshal(fileContent, &result)
+	err := json.Unmarshal(*genesisContent, &result)
 	if err != nil {
 		fmt.Println(err)
 		return nil, err

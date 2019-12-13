@@ -19,7 +19,7 @@ func (chainService *ChainService) GetGenisiBlock(biosAddress crypto.CommonAddres
 		return nil, err
 	}
 
-	genesisContext, err := NewGenesisContext(chainService.genesisConfig, db)
+	genesisContext, err := NewGenesisContext(&chainService.genesisConfig, db)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func (chainService *ChainService) ProcessGenesisBlock(biosAddr crypto.CommonAddr
 	if err != nil {
 		return nil, err
 	}
-	genesisContext, err := NewGenesisContext(chainService.genesisConfig, chainStore)
+	genesisContext, err := NewGenesisContext(&chainService.genesisConfig, chainStore)
 	if err != nil {
 		return nil, err
 	}

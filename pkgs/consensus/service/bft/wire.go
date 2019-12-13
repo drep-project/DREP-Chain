@@ -2,19 +2,20 @@ package bft
 
 import (
 	"encoding/json"
-	"github.com/drep-project/binary"
+	"fmt"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/pkgs/consensus/types"
+	"github.com/drep-project/binary"
 )
 
 //本模块的消息只能在调用本模块（consensus及对应的子模块）的函数中使用，否则会出错
 //例如MsgTypeCommitment消息，在consensus中定义的，发送和接收此消息必须使用consensus中的函数
 const (
-	MsgTypeSetUp      = 0
-	MsgTypeCommitment = 1
-	MsgTypeResponse   = 2
-	MsgTypeChallenge  = 3
-	MsgTypeFail       = 4
+	MsgTypeSetUp       = 0
+	MsgTypeCommitment  = 1
+	MsgTypeResponse    = 2
+	MsgTypeChallenge   = 3
+	MsgTypeFail        = 4
 	MsgTypeValidateReq = 5
 	MsgTypeValidateRes = 6
 
@@ -110,6 +111,9 @@ func CompletedBlockFromMessage(bytes []byte) (*CompletedBlockMessage, error) {
 	err := binary.Unmarshal(bytes, completedBlockMessage)
 	if err != nil {
 		return nil, err
+	}
+	if completedBlockMessage == nil {
+		return nil, fmt.Errorf("CompletedBlockFromMessage err")
 	}
 	return completedBlockMessage, nil
 }
