@@ -108,7 +108,7 @@ func (chain *ChainApi) GetNonce(addr crypto.CommonAddress) uint64 {
 }
 
 /*
- name: getNonce
+ name: chain_getReputation
  usage: 查询地址的名誉值
  params:
 	1. 待查询地址

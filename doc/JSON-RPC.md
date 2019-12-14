@@ -4,11 +4,11 @@
 用于处理区块链偏上层逻辑
 
 ### 1. blockMgr_sendRawTransaction
-#### 作用：获取交易池中的交易信息.
+#### 作用：发送签名后的交易数据
 > 参数：
- 1. 待查询地址
+ 1. 交易数据
 
-#### 返回值：交易池中所有交易
+#### 返回值：成功返回交易地址，失败返回错误码
 
 #### 示例代码
 ##### 请求：
@@ -46,11 +46,11 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_
 
 
 ### 3. blockMgr_GetTransactionCount
-#### 作用：获取交易池中的交易信息.
+#### 作用：获取地址发送交易的个数
 > 参数：
- 1. 待查询地址
+ 1. 地址
 
-#### 返回值：交易池中所有交易
+#### 返回值：交易个数
 
 #### 示例代码
 ##### 请求：
@@ -177,7 +177,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 5. chain_getNonce
+### 5. chain_chain_getReputation
 #### 作用：查询地址的名誉值
 > 参数：
  1. 待查询地址
@@ -345,7 +345,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 p2p网络接口
 设置查询网络状态
 
-### 1. p2p_getPeers
+### 1. p2p_p2p_getPeers
 #### 作用：获取当前连接的节点
 > 参数：
 
@@ -365,27 +365,7 @@ curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_getPe
 ````
 
 
-### 2. p2p_addPeers
-#### 作用：添加节点
-> 参数：
-
-#### 返回值：nil
-
-#### 示例代码
-##### 请求：
-
-```shell
-"enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555"
-```
-
-##### 响应：
-
-```json
-
-````
-
-
-### 3. p2p_removePeers
+### 2. p2p_p2p_removePeers
 #### 作用：移除节点
 > 参数：
 
@@ -395,7 +375,7 @@ curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_getPe
 ##### 请求：
 
 ```shell
-"enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555"
+curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_removePeers","params":"enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555", "id": 3}' -H "Content-Type:application/json"
 ```
 
 ##### 响应：
