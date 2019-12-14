@@ -1,6 +1,348 @@
 
 #  `JSON-RPC`接口说明文档
-## p2p网络接口
+## 区块
+用于处理区块链偏上层逻辑
+
+### 1. blockMgr_sendRawTransaction
+#### 作用：获取交易池中的交易信息.
+> 参数：
+ 1. 待查询地址
+
+#### 返回值：交易池中所有交易
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_sendRawTransaction","params":["0x40a287b6d30b05313131317a4120dd8c23c40910d038fa43b2f8932d3681cbe5ee3079b6e9de0bea6e8e6b2a867a561aa26e1cd6b62aa0422a043186b593b784bf80845c3fd5a7fbfe62e61d8564"], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":1,"result":"0xf30e858667fa63bc57ae395c3f57ede9bb3ad4969d12f4bce51d900fb5931538"}
+````
+
+
+### 2. blockMgr_GetPoolTransactions
+#### 作用：获取交易池中的交易信息.
+> 参数：
+ 1. 待查询地址
+
+#### 返回值：交易池中所有交易
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_getPoolTransactions","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+
+````
+
+
+### 3. blockMgr_GetTransactionCount
+#### 作用：获取交易池中的交易信息.
+> 参数：
+ 1. 待查询地址
+
+#### 返回值：交易池中所有交易
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_getTransactionCount","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+
+````
+
+链接口
+用于获取区块信息
+
+### 1. chain_getblock
+#### 作用：用于获取区块信息
+> 参数：
+ 1. height  usage: 当前区块高度
+
+#### 返回值：区块明细信息
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getBlock","params":[1], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "Hash": "0xcfa283a5b591da5a15971bf62fffae87e649bcf749776f4c83ffe50e65920f8e",
+    "ChainId": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "Version": 1,
+    "PreviousHash": "0x1717b4b9f740cebeb2659886122a29c0876ed906dd05370319fee4ecf219b1e9",
+    "GasLimit": 180000000,
+    "GasUsed": 0,
+    "Height": 1,
+    "Timestamp": 1559272779,
+    "StateRoot": "0xd7bd5b3af4f2f1fb3d484743052c2e911f9fb7b04131660912244347508f16a9",
+    "TxRoot": "0x",
+    "LeaderAddress": "0x0374bf9c8ea268b5548686685dda4a74fc95903ca7c440e5b187a718b595c1f374",
+    "MinorAddresses": [
+      "0x0374bf9c8ea268b5548686685dda4a74fc95903ca7c440e5b187a718b595c1f374",
+      "0x02f11cfd138eaaaba5f8c0a7f1f2791bdabd0b0c404734dceac820aa9b683bfb1a",
+      "0x03949aad279a32536ce20f0957c9c6ba592532ea70e5f174332bed4c94382354e3",
+      "0x0263bc5628fa7033727d14b5d6714ac7d6a5d34bc5db994a896f54499f12db9b0b"
+    ],
+    "Txs": [
+
+    ]
+  }
+}
+````
+
+
+### 2. chain_getMaxHeight
+#### 作用：用于获取当前最高区块
+> 参数：
+ 1. 无
+
+#### 返回值：当前最高区块高度数值
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getMaxHeight","params":[], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":3,"result":193005}
+````
+
+
+### 3. chain_getBalance
+#### 作用：查询地址余额
+> 参数：
+ 1. 待查询地址
+
+#### 返回值：地址中的账号余额
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getBalance","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":3,"result":9987999999999984000000}
+````
+
+
+### 4. chain_getNonce
+#### 作用：查询地址在链上的nonce
+> 参数：
+ 1. 待查询地址
+
+#### 返回值：链上nonce
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getNonce","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":3,"result":0}
+````
+
+
+### 5. chain_getNonce
+#### 作用：查询地址的名誉值
+> 参数：
+ 1. 待查询地址
+
+#### 返回值：地址对应的名誉值
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getReputation","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":3,"result":1}
+````
+
+
+### 6. chain_getTransactionByBlockHeightAndIndex
+#### 作用：获取区块中特定序列的交易
+> 参数：
+ 1. 区块高度
+ 2. 交易序列
+
+#### 返回值：交易信息
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getTransactionByBlockHeightAndIndex","params":[10000,1], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "Hash": "0xfa5c34114ff459b4c97e7cd268c507c0ccfcfc89d3ccdcf71e96402f9899d040",
+    "From": "0x7923a30bbfbcb998a6534d56b313e68c8e0c594a",
+    "Version": 1,
+    "Nonce": 15632,
+    "Type": 0,
+    "To": "0x7923a30bbfbcb998a6534d56b313e68c8e0c594a",
+    "ChainId": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "Amount": "0x111",
+    "GasPrice": "0x110",
+    "GasLimit": "0x30000",
+    "Timestamp": 1559322808,
+    "Data": null,
+    "Sig": "0x20f25b86c4bf73aa4fa0bcb01e2f5731de3a3917c8861d1ce0574a8d8331aedcf001e678000f6afc95d35a53ef623a2055fce687f85c2fd752dc455ab6db802b1f"
+  }
+}
+````
+
+
+### 7. chain_getAliasByAddress
+#### 作用：根据地址获取地址对应的别名
+> 参数：
+ 1. 待查询地址
+
+#### 返回值：地址别名
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getAliasByAddress","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":3,"result":"tom"}
+````
+
+
+### 8. chain_getAddressByAlias
+#### 作用：根据别名获取别名对应的地址
+> 参数：
+ 1. 待查询地别名
+
+#### 返回值：别名对应的地址
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getAliasByAddress","params":["tom"], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":3,"result":"0x8a8e541ddd1272d53729164c70197221a3c27486"}
+````
+
+
+### 9. chain_getByteCode
+#### 作用：根据地址获取bytecode
+> 参数：
+ 1. 地址
+
+#### 返回值：bytecode
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getByteCode","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":3,"result":"0x00"}
+````
+
+
+### 10. chain_getReceipt
+#### 作用：根据txhash获取receipt信息
+> 参数：
+ 1. txhash
+
+#### 返回值：receipt
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getReceipt","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":3,"result":""}
+````
+
+
+### 11. chain_getLogs
+#### 作用：根据txhash获取交易log信息
+> 参数：
+ 1. txhash
+
+#### 返回值：[]log
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getLogs","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":3,"result":""}
+````
+
+p2p网络接口
 设置查询网络状态
 
 ### 1. p2p_getPeers
@@ -13,7 +355,7 @@
 ##### 请求：
 
 ```shell
-curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_getRawTransaction","params":["0x00001c9b8c8fdb1f53faf02321f76253704123e2b56cce065852bab93e526ae2"], "id": 3}' -H "Content-Type:application/json"
+curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_getPeers","params":"", "id": 3}' -H "Content-Type:application/json"
 ```
 
 ##### 响应：
@@ -23,17 +365,17 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_get
 ````
 
 
-### 2. p2p_addPeers（未实现）
+### 2. p2p_addPeers
 #### 作用：添加节点
 > 参数：
 
-#### 返回值：
+#### 返回值：nil
 
 #### 示例代码
 ##### 请求：
 
 ```shell
-
+"enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555"
 ```
 
 ##### 响应：
@@ -43,7 +385,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_get
 ````
 
 
-### 3. p2p_removePeers（未实现）
+### 3. p2p_removePeers
 #### 作用：移除节点
 > 参数：
 
@@ -53,7 +395,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_get
 ##### 请求：
 
 ```shell
-
+"enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555"
 ```
 
 ##### 响应：
@@ -317,264 +659,6 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_reb
 
 ```json
 {"jsonrpc":"2.0","id":3,"result":null}
-````
-
-区块
-用于处理区块链偏上层逻辑
-
-### 1. blockMgr_sendRawTransaction
-#### 作用：获取交易池中的交易信息.
-> 参数：
- 1. 待查询地址
-
-#### 返回值：交易池中所有交易
-
-#### 示例代码
-##### 请求：
-
-```shell
-curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_sendRawTransaction","params":["0x40a287b6d30b05313131317a4120dd8c23c40910d038fa43b2f8932d3681cbe5ee3079b6e9de0bea6e8e6b2a867a561aa26e1cd6b62aa0422a043186b593b784bf80845c3fd5a7fbfe62e61d8564"], "id": 3}' -H "Content-Type:application/json"
-```
-
-##### 响应：
-
-```json
-{"jsonrpc":"2.0","id":1,"result":"0xf30e858667fa63bc57ae395c3f57ede9bb3ad4969d12f4bce51d900fb5931538"}
-````
-
-
-### 2. blockMgr_GetPoolTransactions
-#### 作用：获取交易池中的交易信息.
-> 参数：
- 1. 待查询地址
-
-#### 返回值：交易池中所有交易
-
-#### 示例代码
-##### 请求：
-
-```shell
-curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_getPoolTransactions","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
-```
-
-##### 响应：
-
-```json
-
-````
-
-链接口
-用于获取区块信息
-
-### 1. chain_getblock
-#### 作用：用于获取区块信息
-> 参数：
- 1. height  usage: 当前区块高度
-
-#### 返回值：区块明细信息
-
-#### 示例代码
-##### 请求：
-
-```shell
-curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getBlock","params":[1], "id": 3}' -H "Content-Type:application/json"
-```
-
-##### 响应：
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 3,
-  "result": {
-    "Hash": "0xcfa283a5b591da5a15971bf62fffae87e649bcf749776f4c83ffe50e65920f8e",
-    "ChainId": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-    "Version": 1,
-    "PreviousHash": "0x1717b4b9f740cebeb2659886122a29c0876ed906dd05370319fee4ecf219b1e9",
-    "GasLimit": 180000000,
-    "GasUsed": 0,
-    "Height": 1,
-    "Timestamp": 1559272779,
-    "StateRoot": "0xd7bd5b3af4f2f1fb3d484743052c2e911f9fb7b04131660912244347508f16a9",
-    "TxRoot": "0x",
-    "LeaderPubKey": "0x0374bf9c8ea268b5548686685dda4a74fc95903ca7c440e5b187a718b595c1f374",
-    "MinorPubKeys": [
-      "0x0374bf9c8ea268b5548686685dda4a74fc95903ca7c440e5b187a718b595c1f374",
-      "0x02f11cfd138eaaaba5f8c0a7f1f2791bdabd0b0c404734dceac820aa9b683bfb1a",
-      "0x03949aad279a32536ce20f0957c9c6ba592532ea70e5f174332bed4c94382354e3",
-      "0x0263bc5628fa7033727d14b5d6714ac7d6a5d34bc5db994a896f54499f12db9b0b"
-    ],
-    "Txs": [
-
-    ]
-  }
-}
-````
-
-
-### 2. chain_getMaxHeight
-#### 作用：用于获取当前最高区块
-> 参数：
- 1. 无
-
-#### 返回值：当前最高区块高度数值
-
-#### 示例代码
-##### 请求：
-
-```shell
-curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getMaxHeight","params":[], "id": 3}' -H "Content-Type:application/json"
-```
-
-##### 响应：
-
-```json
-{"jsonrpc":"2.0","id":3,"result":193005}
-````
-
-
-### 3. chain_getBalance
-#### 作用：查询地址余额
-> 参数：
- 1. 待查询地址
-
-#### 返回值：地址中的账号余额
-
-#### 示例代码
-##### 请求：
-
-```shell
-curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getBalance","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
-```
-
-##### 响应：
-
-```json
-{"jsonrpc":"2.0","id":3,"result":9987999999999984000000}
-````
-
-
-### 4. chain_getNonce
-#### 作用：查询地址在链上的nonce
-> 参数：
- 1. 待查询地址
-
-#### 返回值：链上nonce
-
-#### 示例代码
-##### 请求：
-
-```shell
-curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getNonce","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
-```
-
-##### 响应：
-
-```json
-{"jsonrpc":"2.0","id":3,"result":0}
-````
-
-
-### 5. chain_getNonce
-#### 作用：查询地址的名誉值
-> 参数：
- 1. 待查询地址
-
-#### 返回值：地址对应的名誉值
-
-#### 示例代码
-##### 请求：
-
-```shell
-curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getReputation","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
-```
-
-##### 响应：
-
-```json
-{"jsonrpc":"2.0","id":3,"result":1}
-````
-
-
-### 6. chain_getTransactionByBlockHeightAndIndex
-#### 作用：获取区块中特定序列的交易
-> 参数：
- 1. 区块高度
- 2. 交易序列
-
-#### 返回值：交易信息
-
-#### 示例代码
-##### 请求：
-
-```shell
-curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getTransactionByBlockHeightAndIndex","params":[10000,1], "id": 3}' -H "Content-Type:application/json"
-```
-
-##### 响应：
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 3,
-  "result": {
-    "Hash": "0xfa5c34114ff459b4c97e7cd268c507c0ccfcfc89d3ccdcf71e96402f9899d040",
-    "From": "0x7923a30bbfbcb998a6534d56b313e68c8e0c594a",
-    "Version": 1,
-    "Nonce": 15632,
-    "Type": 0,
-    "To": "0x7923a30bbfbcb998a6534d56b313e68c8e0c594a",
-    "ChainId": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-    "Amount": "0x111",
-    "GasPrice": "0x110",
-    "GasLimit": "0x30000",
-    "Timestamp": 1559322808,
-    "Data": null,
-    "Sig": "0x20f25b86c4bf73aa4fa0bcb01e2f5731de3a3917c8861d1ce0574a8d8331aedcf001e678000f6afc95d35a53ef623a2055fce687f85c2fd752dc455ab6db802b1f"
-  }
-}
-````
-
-
-### 7. chain_getAliasByAddress
-#### 作用：根据地址获取地址对应的别名
-> 参数：
- 1. 待查询地址
-
-#### 返回值：地址别名
-
-#### 示例代码
-##### 请求：
-
-```shell
-curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getAliasByAddress","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
-```
-
-##### 响应：
-
-```json
-{"jsonrpc":"2.0","id":3,"result":"tom"}
-````
-
-
-### 8. chain_getAddressByAlias
-#### 作用：根据别名获取别名对应的地址
-> 参数：
- 1. 待查询地别名
-
-#### 返回值：别名对应的地址
-
-#### 示例代码
-##### 请求：
-
-```shell
-curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getAliasByAddress","params":["tom"], "id": 3}' -H "Content-Type:application/json"
-```
-
-##### 响应：
-
-```json
-{"jsonrpc":"2.0","id":3,"result":"0x8a8e541ddd1272d53729164c70197221a3c27486"}
 ````
 
 账号rpc接口
