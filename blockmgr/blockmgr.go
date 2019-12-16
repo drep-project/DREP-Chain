@@ -106,6 +106,7 @@ type BlockMgr struct {
 	pendingSyncTasks sync.Map //map[*time.Timer]map[crypto.Hash]uint64
 	taskTxsCh        chan tasksTxsSync
 	syncTimerCh      chan *time.Timer
+	state            event.EventType
 
 	//与此模块通信的所有Peer
 	peersInfo map[string]types.PeerInfoInterface
@@ -142,6 +143,7 @@ func NewBlockMgr(config *BlockMgrConfig, homeDir string, cs chain.ChainServiceIn
 	blockMgr.blocksCh = make(chan []*types.Block)
 	blockMgr.allTasks = newHeightSortedMap()
 	//blockMgr.pendingSyncTasks = make(map[*time.Timer]map[crypto.Hash]uint64)
+	blockMgr.state = event.StopSyncBlock
 	blockMgr.syncTimerCh = make(chan *time.Timer, pendingTimerCount)
 	blockMgr.peersInfo = make(map[string]types.PeerInfoInterface)
 	blockMgr.newPeerCh = make(chan *types.PeerInfo, maxLivePeer)
@@ -186,8 +188,8 @@ func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 	blockMgr.headerHashCh = make(chan []*syncHeaderHash)
 	blockMgr.blocksCh = make(chan []*types.Block)
 	blockMgr.allTasks = newHeightSortedMap()
-	//blockMgr.pendingSyncTasks = make(map[*time.Timer]map[crypto.Hash]uint64)
 	blockMgr.syncTimerCh = make(chan *time.Timer, 1)
+	blockMgr.state = event.StopSyncBlock
 	blockMgr.peersInfo = make(map[string]types.PeerInfoInterface)
 	blockMgr.newPeerCh = make(chan *types.PeerInfo, maxLivePeer)
 	blockMgr.taskTxsCh = make(chan tasksTxsSync, maxLivePeer)

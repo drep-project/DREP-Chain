@@ -3,8 +3,8 @@ package event
 type EventType int
 
 const (
-	StartSyncBlock = 1
-	StopSyncBlock  = 2
+	StartSyncBlock EventType = 1
+	StopSyncBlock  EventType = 2
 )
 
 type SyncBlockEvent struct {

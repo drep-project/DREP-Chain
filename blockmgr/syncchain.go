@@ -188,23 +188,28 @@ func (blockMgr *BlockMgr) clearSyncCh() {
 func (blockMgr *BlockMgr) batchReqBlocks(hashs []crypto.Hash, mapHeightHash map[crypto.Hash]uint64, errCh chan error) {
 	req := &types.BlockReq{BlockHashs: hashs}
 
-	var maxHeight uint64
+	var maxHeight uint64 = 0
+	var minHeight uint64 = 0xffffffffffffffff
 	for _, value := range mapHeightHash {
 		if value > maxHeight {
 			maxHeight = value
 		}
+		if value < minHeight {
+			minHeight = value
+		}
 	}
 
-	okPeers := make([]types.PeerInfoInterface, 0, len(blockMgr.peersInfo))
-	for _, pi := range blockMgr.peersInfo {
+	okPeers := make(map[string]types.PeerInfoInterface)
+	for key, pi := range blockMgr.peersInfo {
 		if pi.GetHeight() >= maxHeight {
-			okPeers = append(okPeers, pi)
+			okPeers[key] = pi
 		}
 	}
 
 	for _, pi := range okPeers {
 		blockMgr.syncMut.Lock()
 		//blockMgr.sender.SetIdle(bodyReqPeer.GetMsgRW(), false)
+		log.WithField("len", len(hashs)).WithField("from", minHeight).WithField("to:", maxHeight).WithField("destIp", pi.GetAddr()).Info("req block body")
 		err := blockMgr.P2pServer.Send(pi.GetMsgRW(), types.MsgTypeBlockReq, req)
 		//blockMgr.sender.SetIdle(bodyReqPeer, true)
 		blockMgr.syncMut.Unlock()
@@ -222,6 +227,12 @@ func (blockMgr *BlockMgr) batchReqBlocks(hashs []crypto.Hash, mapHeightHash map[
 func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 	blockMgr.syncBlockEvent.Send(event.SyncBlockEvent{EventType: event.StartSyncBlock})
 	defer blockMgr.syncBlockEvent.Send(event.SyncBlockEvent{EventType: event.StopSyncBlock})
+	if blockMgr.state == event.StartSyncBlock {
+		log.Info("have fetch blocks")
+		return nil
+	}
+
+	blockMgr.state = event.StartSyncBlock
 
 	height := peer.GetHeight()
 	blockMgr.clearSyncCh()
@@ -253,8 +264,8 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 				blockMgr.syncMut.Lock()
 				taskLen := blockMgr.allTasks.Len()
 				blockMgr.syncMut.Unlock()
-				if taskLen >= maxHeaderHashCountReq {
-					time.Sleep(time.Millisecond * 100)
+				if taskLen >= pendingTimerCount {
+					time.Sleep(maxSyncSleepTime)
 					continue
 				}
 
@@ -278,7 +289,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 						blockMgr.syncMut.Unlock()
 					}
 					commonAncestor += uint64(len(tasks))
-					log.WithField("tasks len", blockMgr.allTasks.Len()).WithField("newtasks", len(tasks)).Info("fetchBlocks")
+					log.WithField("tasks len", blockMgr.allTasks.Len()).WithField("newtasks", len(tasks)).Info("get headers")
 				case <-timer.C:
 					errCh <- ErrGetHeaderHashTimeout
 					return
@@ -305,7 +316,8 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 					delete(hashs, *b.Header.Hash())
 					if len(hashs) == 0 {
 						//所有到block都到了，停止超时定时器
-						timer.Stop()
+						//timer.Stop()
+
 						blockMgr.syncTimerCh <- timer
 					}
 
@@ -407,9 +419,11 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 				blockMgr.pendingSyncTasks.Store(reqTimer, headerHashs)
 
 				go func() {
+					defer reqTimer.Stop()
+
 					select {
 					case <-reqTimer.C:
-						//所有到hash加入到allTasks
+						//得到hash加入到allTasks
 						value, ok := blockMgr.pendingSyncTasks.Load(reqTimer)
 						if !ok {
 							errCh <- fmt.Errorf("timer not in pending task, exception")
@@ -418,11 +432,17 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 						hashs := value.(map[crypto.Hash]uint64)
 						for k, v := range hashs {
 							blockMgr.syncMut.Lock()
+
+							k := k
 							blockMgr.allTasks.Put(&syncHeaderHash{headerHash: &k, height: v})
 							blockMgr.syncMut.Unlock()
 						}
 
+						blockMgr.pendingSyncTasks.Delete(reqTimer)
+						fmt.Printf("req block body time out time：%p\n", reqTimer)
+
 					case timer := <-blockMgr.syncTimerCh:
+						//timer.Stop()
 						//请求到block都到了，停止此定时器
 						blockMgr.pendingSyncTasks.Delete(timer)
 					case <-quit:
@@ -438,6 +458,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 	select {
 	case err := <-errCh:
 		close(quit)
+		blockMgr.state = event.StopSyncBlock
 		return err
 	}
 }
