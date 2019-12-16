@@ -383,6 +383,8 @@ func (chainService *ChainService) InitStates() error {
 		node.Status = status
 		chainService.blockIndex.AddNode(node)
 
+		fmt.Println("get head height:", node.Height)
+
 		lastNode = node
 		i++
 		return nil
