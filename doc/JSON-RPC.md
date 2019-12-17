@@ -319,28 +319,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 9. chain_getByteCode
-#### 作用：根据地址获取bytecode
-> 参数：
- 1. 地址
-
-#### 返回值：bytecode
-
-#### 示例代码
-##### 请求：
-
-```shell
-curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getByteCode","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
-```
-
-##### 响应：
-
-```json
-{"jsonrpc":"2.0","id":3,"result":"0x00"}
-````
-
-
-### 10. chain_getReceipt
+### 9. chain_getReceipt
 #### 作用：根据txhash获取receipt信息
 > 参数：
  1. txhash
@@ -361,7 +340,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 11. chain_getLogs
+### 10. chain_getLogs
 #### 作用：根据txhash获取交易log信息
 > 参数：
  1. txhash
@@ -381,6 +360,90 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 {"jsonrpc":"2.0","id":3,"result":""}
 ````
 
+
+### 11. chain_getByteCode
+#### 作用：根据地址获取bytecode
+> 参数：
+ 1. 地址
+
+#### 返回值：bytecode
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getByteCode","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":3,"result":"0x00"}
+````
+
+
+### 12. chain_getVoteCreditDetails
+#### 作用：根据地址获取stake 所有细节信息
+> 参数：
+ 1. 地址
+
+#### 返回值：bytecode
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getVoteCreditDetails","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":3,"result":"{\"0x300fc5a14e578be28c64627c0e7e321771c58cd4\":\"0x3641100\"}"}
+````
+
+
+### 13. chain_GetCancelCreditDetails
+#### 作用：根据地址获取stake 所有细节信息
+> 参数：
+ 1. 地址
+
+#### 返回值：bytecode
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCancelCreditDetails","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":3,"result":"{\"0x300fc5a14e578be28c64627c0e7e321771c58cd4\":\"0x3641100\"}"}
+````
+
+
+### 14. chain_GetCandidateAddrs
+#### 作用：根据地址获取所有候选节点
+> 参数：
+ 1. 地址
+
+#### 返回值：bytecode
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCandidateAddrs","params":[""], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":3,"result":"{\"0x300fc5a14e578be28c64627c0e7e321771c58cd4\":\"0x3641100\"}"}
+````
+
 p2p网络接口
 设置查询网络状态
 
@@ -394,7 +457,7 @@ p2p网络接口
 ##### 请求：
 
 ```shell
-curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_getRawTransaction","params":["0x00001c9b8c8fdb1f53faf02321f76253704123e2b56cce065852bab93e526ae2"], "id": 3}' -H "Content-Type:application/json"
+curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_getPeers","params":"", "id": 3}' -H "Content-Type:application/json"
 ```
 
 ##### 响应：
@@ -404,17 +467,17 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_get
 ````
 
 
-### 2. p2p_addPeers（未实现）
+### 2. p2p_addPeers
 #### 作用：添加节点
 > 参数：
 
-#### 返回值：
+#### 返回值：nil
 
 #### 示例代码
 ##### 请求：
 
 ```shell
-
+"enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555"
 ```
 
 ##### 响应：
@@ -424,7 +487,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_get
 ````
 
 
-### 3. p2p_removePeers（未实现）
+### 3. p2p_removePeers
 #### 作用：移除节点
 > 参数：
 
@@ -434,7 +497,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_get
 ##### 请求：
 
 ```shell
-
+"enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555"
 ```
 
 ##### 响应：
@@ -897,7 +960,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 
 
 ### 10. account_VoteCredit
-#### 作用：转账
+#### 作用：投票
 > 参数：
  1. 发起转账的地址
  2. 接受者的地址
@@ -912,7 +975,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ##### 请求：
 
 ```shell
-curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_voteCredit","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000",""],"id":1}' http://127.0.0.1:15645
+curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_voteCredit","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
 ```
 
 ##### 响应：
@@ -923,7 +986,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 
 
 ### 11. account_CancelVoteCredit
-#### 作用：转账
+#### 作用：
 > 参数：
  1. 发起转账的地址
  2. 接受者的地址
@@ -938,7 +1001,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ##### 请求：
 
 ```shell
-curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_cancelVoteCredit","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000",""],"id":1}' http://127.0.0.1:15645
+curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_cancelVoteCredit","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
 ```
 
 ##### 响应：
@@ -948,7 +1011,59 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 12. account_call
+### 12. account_CandidateCredit
+#### 作用：候选投票
+> 参数：
+ 1. 发起转账的地址
+ 2. 接受者的地址
+ 3. 金额
+ 4. gas价格
+ 5. gas上线
+ 6. 用户pubkey ip等信息
+
+#### 返回值：交易地址
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_candidateCredit","params":["0x0373654ccdb250f2cfcfe64c783a44b9ea85bc47f2f00c480d05082428d277d6d0","0x111","0x110","0x30000","{\"Pubkey\":\"0x020e233ebaed5ade5e48d7ee7a999e173df054321f4ddaebecdb61756f8a43e91c\",\"Node\":\"192.168.31.51:55555\"}"],"id":1}' http://127.0.0.1:15645
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":1,"result":"0x3a3b59f90a21c2fd1b690aa3a2bc06dc2d40eb5bdc26fdd7ecb7e1105af2638e"}
+````
+
+
+### 13. account_CancelCandidateCredit
+#### 作用：取消候选
+> 参数：
+ 1. 发起转账的地址
+ 2. 接受者的地址
+ 3. 金额
+ 4. gas价格
+ 5. gas上线
+ 6. 备注
+
+#### 返回值：交易地址
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_cancelCandidateCredit","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000",""],"id":1}' http://127.0.0.1:15645
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":1,"result":"0x3a3b59f90a21c2fd1b690aa3a2bc06dc2d40eb5bdc26fdd7ecb7e1105af2638e"}
+````
+
+
+### 14. account_call
 #### 作用：调用合约
 > 参数：
  1. 调用者的地址
@@ -974,7 +1089,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 13. account_createCode
+### 15. account_createCode
 #### 作用：部署合约
 > 参数：
  1. 部署合约的地址
@@ -999,7 +1114,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 14. account_dumpPrivkey
+### 16. account_dumpPrivkey
 #### 作用：关闭钱包
 > 参数：
  1. 地址
@@ -1020,7 +1135,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_d
 ````
 
 
-### 15. account_sign
+### 17. account_sign
 #### 作用：关闭钱包
 > 参数：
  1. 地址
@@ -1042,7 +1157,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_s
 ````
 
 
-### 16. account_generateAddresses
+### 18. account_generateAddresses
 #### 作用：生成其他链的地址
 > 参数：
  1. drep地址
@@ -1063,7 +1178,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_g
 ````
 
 
-### 17. account_importKeyStore
+### 19. account_importKeyStore
 #### 作用：导入keystore
 > 参数：
  1. path
@@ -1085,7 +1200,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_i
 ````
 
 
-### 18. account_importPrivkey
+### 20. account_importPrivkey
 #### 作用：导入私钥
 > 参数：
  1. privkey(compress hex)
@@ -1108,27 +1223,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_i
 共识rpc接口
 查询共识节点功能
 
-### 1. consensus_minning
-#### 作用：查询是否在出块状态 (需开启共识模块)
-> 参数：
-
-#### 返回值：true/false
-
-#### 示例代码
-##### 请求：
-
-```shell
-curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"consensus_minning, "params":[], "id": 3}' -H "Content-Type:application/json"
-```
-
-##### 响应：
-
-```json
-{"jsonrpc":"2.0","id":3,"result":false}
-````
-
-
-### 2. consensus_changeWaitTime
+### 1. consensus_changeWaitTime
 #### 作用：修改leader等待时间 (ms)
 > 参数：
  1. 等待时间(ms)
