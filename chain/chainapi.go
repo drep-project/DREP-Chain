@@ -2,7 +2,6 @@ package chain
 
 import (
 	"encoding/json"
-	"github.com/drep-project/binary"
 	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/common/hexutil"
 	"github.com/drep-project/DREP-Chain/common/trie"
@@ -10,6 +9,7 @@ import (
 	"github.com/drep-project/DREP-Chain/crypto/sha3"
 	"github.com/drep-project/DREP-Chain/database/dbinterface"
 	"github.com/drep-project/DREP-Chain/types"
+	"github.com/drep-project/binary"
 	"math/big"
 )
 
@@ -285,10 +285,10 @@ func (chain *ChainApi) GetCancelCreditDetails(addr *crypto.CommonAddress) string
 
 /*
  name: GetCandidateAddrs
- usage: 根据地址获取所有候选节点
+ usage: 获取所有候选节点地址和对应的信任值
  params:
 	1. 地址
- return: bytecode
+ return:  []
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCandidateAddrs","params":[""], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":"{\"0x300fc5a14e578be28c64627c0e7e321771c58cd4\":\"0x3641100\"}"}
@@ -435,7 +435,36 @@ func (trieQuery *TrieQuery) GetCandidateAddrs() string {
 		return ""
 	}
 
-	b, _ := json.Marshal(addrs)
+	type AddrAndCrit struct {
+		addr  *crypto.CommonAddress
+		cridt *big.Int
+	}
+
+	ac := make([]AddrAndCrit, 0)
+	for _, addr := range addrs {
+		addr := addr
+		storage := &types.StakeStorage{}
+		value, _ := trieQuery.trie.TryGet(addr.Bytes())
+		if value == nil {
+			return ""
+		} else {
+			err = binary.Unmarshal(value, storage)
+			if err != nil {
+				return ""
+			}
+		}
+
+		total := new(big.Int)
+		for _, rc := range storage.RC {
+			for _, hv := range rc.Hv {
+				total.Add(total, hv.CreditValue.ToInt())
+			}
+		}
+
+		ac = append(ac, AddrAndCrit{addr: &addr, cridt: total})
+	}
+
+	b, _ := json.Marshal(ac)
 	return string(b)
 }
 
@@ -468,4 +497,3 @@ func (trieQuery *TrieQuery) GetCancelCreditDetails(addr *crypto.CommonAddress) s
 	b, _ := json.Marshal(storage.CC)
 	return string(b)
 }
-
