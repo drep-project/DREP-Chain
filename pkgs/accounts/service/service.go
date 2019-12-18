@@ -48,6 +48,7 @@ type AccountService struct {
 	Config             *accountTypes.Config
 	Wallet             *Wallet
 	apis               []app.API
+	quit               chan struct{}
 }
 
 // Name service name
@@ -108,17 +109,20 @@ func (accountService *AccountService) Init(executeContext *app.ExecuteContext) e
 		return nil
 	}
 
+	accountService.quit = make(chan struct{})
+
 	var err error
 	accountService.Wallet, err = NewWallet(accountService.Config, accountService.Chain.ChainID())
 	if err != nil {
 		return err
 	}
 	if accountService.Config.Password != "" {
-		err = accountService.Wallet.Open(accountService.Config.Password)
+		err = accountService.Wallet.Open(accountService.Config.Password, accountService.quit)
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -133,6 +137,7 @@ func (accountService *AccountService) Stop(executeContext *app.ExecuteContext) e
 	if accountService.Config == nil || accountService.Config.Enable {
 		return nil
 	}
+	close(accountService.quit)
 	return nil
 }
 
@@ -145,7 +150,7 @@ func (accountService *AccountService) CreateWallet(password string) error {
 		fileutil.EnsureDir(accountService.Config.KeyStoreDir)
 	}
 
-	store := accountComponent.NewFileStore(accountService.Config.KeyStoreDir)
+	store := accountComponent.NewFileStore(accountService.Config.KeyStoreDir, accountService.quit)
 	password = string(sha3.Keccak256([]byte(password)))
 	newNode := chainTypes.NewNode(nil, accountService.Chain.GetConfig().ChainId)
 	store.StoreKey(newNode, password)

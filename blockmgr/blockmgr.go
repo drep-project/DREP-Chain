@@ -204,7 +204,6 @@ func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 	blockMgr.headerHashCh = make(chan []*syncHeaderHash)
 	blockMgr.blocksCh = make(chan []*types.Block)
 	blockMgr.allTasks = newHeightSortedMap()
-	//blockMgr.pendingSyncTasks = make(map[*time.Timer]map[crypto.Hash]uint64)
 	blockMgr.syncTimerCh = make(chan *time.Timer, 1)
 	blockMgr.state = event.StopSyncBlock
 	//blockMgr.peersInfo = make(map[string]types.PeerInfoInterface)

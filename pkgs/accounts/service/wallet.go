@@ -9,6 +9,7 @@ import (
 	accountTypes "github.com/drep-project/DREP-Chain/pkgs/accounts/types"
 	"github.com/drep-project/DREP-Chain/types"
 	"github.com/pkg/errors"
+
 	"sync/atomic"
 )
 
@@ -43,7 +44,7 @@ func NewWallet(config *accountTypes.Config, chainId types.ChainIdType) (*Wallet,
 }
 
 // Open wallet to use wallet
-func (wallet *Wallet) Open(password string) error {
+func (wallet *Wallet) Open(password string, quit chan struct{}) error {
 	if wallet.cacheStore != nil {
 		return ErrClosedWallet
 	}
@@ -51,26 +52,30 @@ func (wallet *Wallet) Open(password string) error {
 
 	var store accountsComponent.KeyStore
 	if wallet.config.Type == "dbstore" {
-		store = accountsComponent.NewDbStore(wallet.config.KeyStoreDir)
+		store = accountsComponent.NewDbStore(wallet.config.KeyStoreDir, quit)
 	} else if wallet.config.Type == "memorystore" {
-		store = accountsComponent.NewMemoryStore()
+		store = accountsComponent.NewMemoryStore(quit)
 	} else {
-		store = accountsComponent.NewFileStore(wallet.config.KeyStoreDir)
+		store = accountsComponent.NewFileStore(wallet.config.KeyStoreDir, quit)
 	}
 
-	accountCacheStore, err := accountsComponent.NewCacheStore(store, cryptedPassword)
+	//go func() {
+	accountCacheStore, err := accountsComponent.NewCacheStore(store, cryptedPassword, quit)
 	if err != nil {
-		return err
+		log.WithField("err", err).Info("cache account err")
+		return nil
 	}
 	wallet.cacheStore = accountCacheStore
 	wallet.unLock(password)
 	keys, err := wallet.cacheStore.ExportKey(cryptedPassword)
 	if err != nil {
-		return err
+		log.WithField("err", err).Info("export key err")
 	}
 	if len(keys) == 0 {
 		wallet.NewAccount()
 	}
+	//}()
+
 	return nil
 }
 
@@ -178,7 +183,7 @@ func (wallet *Wallet) Lock() error {
 // UnLock wallet to enable private key
 func (wallet *Wallet) UnLock(password string) error {
 	if wallet.cacheStore == nil {
-		return wallet.Open(password)
+		return wallet.Open(password, nil)
 	} else {
 		return wallet.unLock(password)
 	}
@@ -243,11 +248,14 @@ func (wallet *Wallet) ImportKeyStore(path, password string) ([]*crypto.CommonAdd
 	if err != nil {
 		return nil, err
 	}
-	err = newWallet.Open(password)
+	err = newWallet.Open(password, nil)
 	if err != nil {
 		return nil, err
 	}
 	nodes, err := newWallet.cacheStore.ExportKey(password)
+	if err != nil {
+		return nil, err
+	}
 	addrs := []*crypto.CommonAddress{}
 	for _, node := range nodes {
 		_, err := wallet.cacheStore.GetKey(node.Address, wallet.password)

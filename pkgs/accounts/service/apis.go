@@ -130,7 +130,7 @@ func (accountapi *AccountApi) UnLockWallet(password string) error {
 	 {"jsonrpc":"2.0","id":3,"result":null}
 */
 func (accountapi *AccountApi) OpenWallet(password string) error {
-	return accountapi.Wallet.Open(password)
+	return accountapi.Wallet.Open(password, nil)
 }
 
 /*

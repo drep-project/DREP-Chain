@@ -1,7 +1,6 @@
 package component
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +8,7 @@ import (
 	"github.com/drep-project/DREP-Chain/common/fileutil"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/types"
+	"github.com/drep-project/binary"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
@@ -16,9 +16,10 @@ import (
 type DbStore struct {
 	dbDirPath string
 	db        *leveldb.DB
+	quit      chan struct{}
 }
 
-func NewDbStore(dbStoreDir string) *DbStore {
+func NewDbStore(dbStoreDir string, quit chan struct{}) *DbStore {
 	if !fileutil.IsDirExists(dbStoreDir) {
 		err := os.Mkdir(dbStoreDir, os.ModePerm)
 		if err != nil {
@@ -33,6 +34,7 @@ func NewDbStore(dbStoreDir string) *DbStore {
 	return &DbStore{
 		dbDirPath: dbStoreDir,
 		db:        db,
+		quit:      quit,
 	}
 }
 
@@ -71,7 +73,7 @@ func (dbStore *DbStore) StoreKey(key *types.Node, auth string) error {
 		},
 	}
 	cryptoNode.EncryptData([]byte(auth))
-	content, err := json.Marshal(cryptoNode)
+	content, err := binary.Marshal(cryptoNode)
 	if err != nil {
 		return err
 	}
@@ -84,16 +86,27 @@ func (dbStore *DbStore) ExportKey(auth string) ([]*types.Node, error) {
 	dbStore.db.NewIterator(nil, nil)
 	iter := dbStore.db.NewIterator(nil, nil)
 	persistedNodes := []*types.Node{}
-	for iter.Next() {
-		value := iter.Value()
 
-		node, err := BytesToCryptoNode(value, auth)
-		if err != nil {
-			log.WithField("Msg", err).Error("read key store error ")
-			continue
+	for {
+		select {
+		case <-dbStore.quit:
+			return nil, nil
+		default:
+			if iter.Next() {
+				value := iter.Value()
+
+				node, err := BytesToCryptoNode(value, auth)
+				if err != nil {
+					log.WithField("Msg", err).Error("read key store error ")
+					continue
+				}
+				persistedNodes = append(persistedNodes, node)
+			} else {
+				break
+			}
 		}
-		persistedNodes = append(persistedNodes, node)
 	}
+
 	return persistedNodes, nil
 }
 

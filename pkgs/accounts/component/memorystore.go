@@ -9,10 +9,11 @@ import (
 
 type MemoryStore struct {
 	keys *sync.Map
+	quit chan struct{}
 }
 
-func NewMemoryStore() *MemoryStore {
-	return &MemoryStore{new(sync.Map)}
+func NewMemoryStore(quit chan struct{}) *MemoryStore {
+	return &MemoryStore{keys: new(sync.Map), quit: quit}
 }
 
 func (mstore *MemoryStore) GetKey(addr *crypto.CommonAddress, auth string) (*types.Node, error) {
@@ -34,8 +35,13 @@ func (mstore *MemoryStore) StoreKey(k *types.Node, auth string) error {
 func (mstore *MemoryStore) ExportKey(auth string) ([]*types.Node, error) {
 	nodes := []*types.Node{}
 	mstore.keys.Range(func(key, value interface{}) bool {
-		nodes = append(nodes, copy(value.(*types.Node)))
-		return true
+		select {
+		case <-mstore.quit:
+			return false
+		default:
+			nodes = append(nodes, copy(value.(*types.Node)))
+			return true
+		}
 	})
 	return nodes, nil
 }

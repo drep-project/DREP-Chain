@@ -1,15 +1,16 @@
 package component
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/drep-project/DREP-Chain/common/fileutil"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/types"
+	"github.com/drep-project/binary"
 )
 
 const (
@@ -39,9 +40,10 @@ type FileStore struct {
 	keysDirPath string
 	scryptN     int
 	scryptP     int
+	quit        chan struct{}
 }
 
-func NewFileStore(keyStoreDir string) FileStore {
+func NewFileStore(keyStoreDir string, quit chan struct{}) FileStore {
 	if !fileutil.IsDirExists(keyStoreDir) {
 		err := os.Mkdir(keyStoreDir, os.ModePerm)
 		if err != nil {
@@ -50,6 +52,7 @@ func NewFileStore(keyStoreDir string) FileStore {
 	}
 	return FileStore{
 		keysDirPath: keyStoreDir,
+		quit:        quit,
 	}
 }
 
@@ -89,7 +92,8 @@ func (fs FileStore) StoreKey(key *types.Node, auth string) error {
 		},
 	}
 	cryptoNode.EncryptData([]byte(auth))
-	content, err := json.Marshal(cryptoNode)
+	content, err := binary.Marshal(cryptoNode)
+	//content, err := json.Marshal(cryptoNode)
 	if err != nil {
 		return err
 	}
@@ -99,24 +103,33 @@ func (fs FileStore) StoreKey(key *types.Node, auth string) error {
 // ExportKey export all key in file by password
 func (fs FileStore) ExportKey(auth string) ([]*types.Node, error) {
 	persistedNodes := []*types.Node{}
+
 	err := fileutil.EachChildFile(fs.keysDirPath, func(path string) (bool, error) {
-		contents, err := ioutil.ReadFile(path)
-		if err != nil {
-			log.WithField("Msg", err).Error("read key store error ")
-			return false, err
-		}
+		select {
+		case <-fs.quit:
+			return false, nil
+		default:
+			contents, err := ioutil.ReadFile(path)
+			if err != nil {
+				log.WithField("Msg", err).Error("read key store error ")
+				return false, err
+			}
 
-		node, err := BytesToCryptoNode(contents, auth)
-		if err != nil {
-			return false, err
-		}
+			fmt.Println("e 0:", time.Now().Unix(), time.Now().Nanosecond())
 
-		if err != nil {
-			log.WithField("Msg", err).Error("read key store error ", "Msg", err.Error())
-			return false, err
+			node, err := BytesToCryptoNode(contents, auth)
+			if err != nil {
+				return false, err
+			}
+
+			if err != nil {
+				log.WithField("Msg", err).Error("read key store error ", "Msg", err.Error())
+				return false, err
+			}
+			persistedNodes = append(persistedNodes, node)
+			fmt.Println("e 1:", time.Now().Unix(), time.Now().Nanosecond())
+			return true, nil
 		}
-		persistedNodes = append(persistedNodes, node)
-		return true, nil
 	})
 	if err != nil {
 		return nil, err

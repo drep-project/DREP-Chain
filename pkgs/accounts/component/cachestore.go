@@ -18,7 +18,7 @@ type CacheStore struct {
 // NewCacheStore receive an path and password as argument
 // path refer to  the file that contain all key
 // password used to decrypto content in key file
-func NewCacheStore(keyStore KeyStore, password string) (*CacheStore, error) {
+func NewCacheStore(keyStore KeyStore, password string, quit chan struct{}) (*CacheStore, error) {
 	cacheStore := &CacheStore{
 		store: keyStore,
 	}
