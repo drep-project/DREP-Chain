@@ -153,7 +153,7 @@ func gen(ctx *cli.Context) error {
 			password = nodeItems[0].Password
 		}
 
-		store := accountComponent.NewFileStore(keyStorePath)
+		store := accountComponent.NewFileStore(keyStorePath, nil)
 		cryptoPassowrd := string(sha3.Keccak256([]byte(password)))
 		store.StoreKey(nodes[0], cryptoPassowrd)
 
@@ -196,7 +196,7 @@ func gen(ctx *cli.Context) error {
 				password = nodeItems[i].Password
 			}
 
-			store := accountComponent.NewFileStore(keyStorePath)
+			store := accountComponent.NewFileStore(keyStorePath, nil)
 			cryptoPassowrd := string(sha3.Keccak256([]byte(password)))
 			store.StoreKey(nodes[i], cryptoPassowrd)
 
