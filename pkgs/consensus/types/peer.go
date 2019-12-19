@@ -4,10 +4,6 @@ import (
 	"github.com/drep-project/DREP-Chain/network/p2p"
 )
 
-var (
-	DefaultPort = 55555
-)
-
 type IPeerInfo interface {
 	GetMsgRW() p2p.MsgReadWriter
 	//String() string
