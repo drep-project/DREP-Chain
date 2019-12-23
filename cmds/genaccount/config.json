@@ -1,5 +1,5 @@
 {
-  "miners":[
+  "miners": [
     {
       "name": "211",
       "ip": "192.168.31.211",
@@ -24,10 +24,11 @@
       "port": 44444,
       "password": "123"
     }
-    ],
-  "preminer":[
+  ],
+  "preminer": [
     {
-      "0xaD3dC2D8aedef155eabA42Ab72C1FE480699336c":"0xffffffffffff"
+      "addr": "0xaD3dC2D8aedef155eabA42Ab72C1FE480699336c",
+      "value": 10000000000000000000000000000
     }
   ]
 }
