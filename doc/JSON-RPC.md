@@ -404,7 +404,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 
 
 ### 13. chain_GetCancelCreditDetails
-#### 作用：根据地址获取stake 所有细节信息
+#### 作用：获取所有退票请求的细节
 > 参数：
  1. 地址
 
