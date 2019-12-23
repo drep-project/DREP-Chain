@@ -23,6 +23,7 @@ import (
 	"os"
 	path2 "path"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	p2pTypes "github.com/drep-project/DREP-Chain/network/types"
@@ -74,6 +75,7 @@ func gen(ctx *cli.Context) error {
 	produces := make([]types.CandidateData, 0)
 	for i := 0; i < len(nodeItems); i++ {
 		aNode := getAccount(nodeItems[i].Name)
+
 		nodes = append(nodes, aNode)
 		ip := net.IP{}
 		err := ip.UnmarshalText([]byte(nodeItems[i].Ip))
@@ -152,6 +154,9 @@ func gen(ctx *cli.Context) error {
 			password = nodeItems[0].Password
 		}
 
+		p2pConfig.ListenAddr = "0.0.0.0:" + strconv.Itoa(nodeItems[0].Port)
+		chainConfig.RemotePort = nodeItems[0].Port+1
+
 		store := accountComponent.NewFileStore(keyStorePath)
 		//cryptoPassowrd := string(sha3.Keccak256([]byte(password)))
 		store.StoreKey(nodes[0], password)
@@ -189,6 +194,10 @@ func gen(ctx *cli.Context) error {
 		for i := 0; i < len(nodeItems); i++ {
 			consensusConfig.Bft.MyPk = (*secp256k1.PublicKey)(&standbyKey[i].PublicKey)
 			userDir := path2.Join(path, nodeItems[i].Name)
+			p2pConfig.ListenAddr = "0.0.0.0:" + strconv.Itoa(nodeItems[i].Port)
+			chainConfig.RemotePort = nodeItems[i].Port+1
+
+
 			os.MkdirAll(userDir, os.ModeDir|os.ModePerm)
 			keyStorePath := path2.Join(userDir, "keystore")
 			password := "123"
