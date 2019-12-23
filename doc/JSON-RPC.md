@@ -425,11 +425,11 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 
 
 ### 14. chain_GetCandidateAddrs
-#### 作用：根据地址获取所有候选节点
+#### 作用：获取所有候选节点地址和对应的信任值
 > 参数：
  1. 地址
 
-#### 返回值：bytecode
+#### 返回值：[]
 
 #### 示例代码
 ##### 请求：
@@ -827,8 +827,8 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_c
 ````
 
 
-### 4. account_lockWallet
-#### 作用：锁定钱包（无法发起需要私钥的相关工作）
+### 4. account_lockAccount
+#### 作用：锁定账号
 > 参数：
 
 #### 返回值：无
@@ -837,7 +837,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_c
 ##### 请求：
 
 ```shell
-curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_lockWallet","params":[], "id": 3}' -H "Content-Type:application/json"
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_lockAccount","params":["0x518b3fefa3fb9a72753c6ad10a2b68cc034ec391"], "id": 3}' -H "Content-Type:application/json"
 ```
 
 ##### 响应：
@@ -847,10 +847,10 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_l
 ````
 
 
-### 5. account_lockWallet
-#### 作用：解锁钱包
+### 5. account_account_unlockAccount
+#### 作用：解锁账号
 > 参数：
- 1. 钱包密码
+ 1. 账号地址
 
 #### 返回值：无
 
@@ -858,7 +858,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_l
 ##### 请求：
 
 ```shell
-curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_openWallet","params":["123"], "id": 3}' -H "Content-Type:application/json"
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_unlockAccount","params":["0x518b3fefa3fb9a72753c6ad10a2b68cc034ec391"], "id": 3}' -H "Content-Type:application/json"
 ```
 
 ##### 响应：
