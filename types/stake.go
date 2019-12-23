@@ -38,10 +38,13 @@ type StakeStorage struct {
 	CandidateData []byte //注册候选节点时，需要携带的pubkey/ip等信息
 }
 
-
 type IntersetDetail struct {
 	PrincipalData []HeightValue
-	IntersetData []HeightValue
+	IntersetData  []HeightValue
+}
+
+func (IntersetDetail) Error() string {
+	panic("implement me")
 }
 
 //func NewInterestData() *IntersetDetail {

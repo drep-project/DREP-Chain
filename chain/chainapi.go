@@ -270,7 +270,7 @@ func (chain *ChainApi) GetVoteCreditDetails(addr *crypto.CommonAddress) string {
 
 /*
  name: GetCancelCreditDetails
- usage: 根据地址获取stake 所有细节信息
+ usage: 获取所有退票请求的细节
  params:
 	1. 地址
  return: bytecode

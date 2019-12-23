@@ -8,10 +8,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/drep-project/binary"
 	"github.com/drep-project/DREP-Chain/common/trie"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/database/leveldb"
+	"github.com/drep-project/binary"
 )
 
 //添加 撤销
@@ -90,11 +90,10 @@ func TestCandidateCredit(t *testing.T) {
 	fmt.Println(string(b))
 }
 
-
 func TestBigInt(t *testing.T) {
 	a := new(big.Int).SetUint64(100)
 	b := new(big.Int).SetUint64(96)
-	c := b.Div(a,b)
+	c := b.Div(a, b)
 	fmt.Println(c)
 
 }
@@ -120,15 +119,15 @@ func TestPutBalance(t *testing.T) {
 		t.Fatal(err)
 	}
 	//10天        172800
-	heightLen := 172800*3*12
+	heightLen := 172800 * 3 * 12
 	//todo + -
 	store.stake.VoteCredit(&addr, &backbone, new(big.Int).SetUint64(100), 0)
 	store.stake.CancelVoteCredit(&addr, &backbone, new(big.Int).SetUint64(10), uint64(ChangeCycle*heightLen))
 	//fmt.Println(store.GetBalance(&addr, 0))
 	total := store.GetBalance(&addr, uint64(ChangeCycle*heightLen)+ChangeCycle)
-	interest := total.Sub(total,new(big.Int).SetUint64(10000+10)).Uint64()
-	interestRate:= float64(interest)/float64(10)
-	fmt.Println("interst ratio:",interestRate,"every %s month", 12)
+	interest := total.Sub(total, new(big.Int).SetUint64(10000+10)).Uint64()
+	interestRate := float64(interest) / float64(10)
+	fmt.Println("interst ratio:", interestRate, "every %s month", 12)
 
 	err = store.AddBalance(&addr, ChangeCycle, new(big.Int).SetUint64(20))
 	if err != nil {
@@ -267,13 +266,13 @@ func TestCancelVoteCredit(t *testing.T) {
 	fmt.Println(v)
 	for _, addr := range addrs {
 		voteValue := new(big.Int).SetInt64(50000)
-		err = store.CancelVoteCredit(&addr, &backbone, voteValue, 0)
+		_, err = store.CancelVoteCredit(&addr, &backbone, voteValue, 10)
 		if err != nil {
 			t.Fatal("cancel vote ok")
 		}
 
-		if voteValue.Cmp(store.GetBalance(&addr,ChangeCycle)) != 0 {
-			t.Fatal(voteValue, "!=", store.GetBalance(&addr,ChangeCycle))
+		if voteValue.Cmp(store.GetBalance(&addr, ChangeCycle)) != 0 {
+			t.Fatal(voteValue, "!=", store.GetBalance(&addr, ChangeCycle))
 		}
 	}
 
@@ -285,7 +284,7 @@ func TestCancelVoteCredit(t *testing.T) {
 
 	m := store.GetCreditDetails(&backbone)
 	for k, v := range m {
-		fmt.Println("credit details:",k.String(), v)
+		fmt.Println("credit details:", k.String(), v)
 	}
 
 	for _, addr := range addrs {
