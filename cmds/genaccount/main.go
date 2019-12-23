@@ -11,7 +11,6 @@ import (
 	"github.com/drep-project/DREP-Chain/common"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
-	"github.com/drep-project/DREP-Chain/crypto/sha3"
 	"github.com/drep-project/DREP-Chain/network/p2p/enode"
 	"github.com/drep-project/DREP-Chain/params"
 	"github.com/drep-project/DREP-Chain/pkgs/consensus/service"
