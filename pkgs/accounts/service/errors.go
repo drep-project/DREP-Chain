@@ -10,4 +10,5 @@ var (
 	ErrAlreadyUnLocked = errors.New("wallet is already unlocked")
 	ErrExistKey        = errors.New("privkey is exist")
 	ErrMissingKeystore = errors.New("not found keystore")
+	ErrAccountExist    = errors.New("addr is not exist")
 )

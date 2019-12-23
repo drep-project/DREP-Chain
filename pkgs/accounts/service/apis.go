@@ -36,7 +36,7 @@ type AccountApi struct {
  response:
   {"jsonrpc":"2.0","id":3,"result":["0x3296d3336895b5baaa0eca3df911741bd0681c3f","0x3ebcbe7cb440dd8c52940a2963472380afbb56c5"]}
 */
-func (accountapi *AccountApi) ListAddress() ([]*crypto.CommonAddress, error) {
+func (accountapi *AccountApi) ListAddress() ([]string, error) {
 	if !accountapi.Wallet.IsOpen() {
 		return nil, ErrClosedWallet
 	}
@@ -81,41 +81,41 @@ func (accountapi *AccountApi) CreateWallet(password string) error {
 }
 
 /*
- name: lockWallet
- usage: 锁定钱包（无法发起需要私钥的相关工作）
+ name: lockAccount
+ usage: 锁定账号
  params:
  return: 无
- example:   curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_lockWallet","params":[], "id": 3}' -H "Content-Type:application/json"
+ example:   curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_lockAccount","params":["0x518b3fefa3fb9a72753c6ad10a2b68cc034ec391"], "id": 3}' -H "Content-Type:application/json"
  response:
 	 {"jsonrpc":"2.0","id":3,"result":null}
 */
-func (accountapi *AccountApi) LockWallet() error {
+func (accountapi *AccountApi) LockAccount(addr crypto.CommonAddress) error {
 	if !accountapi.Wallet.IsOpen() {
 		return ErrClosedWallet
 	}
-	if !accountapi.Wallet.IsLock() {
-		return accountapi.Wallet.Lock()
-	}
+
+	return accountapi.Wallet.Lock(&addr)
+
 	return ErrLockedWallet
 }
 
 /*
- name: lockWallet
- usage: 解锁钱包
+ name: account_unlockAccount
+ usage: 解锁账号
  params:
-	1. 钱包密码
+	1. 账号地址
  return: 无
- example:   curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_openWallet","params":["123"], "id": 3}' -H "Content-Type:application/json"
+ example:   curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_unlockAccount","params":["0x518b3fefa3fb9a72753c6ad10a2b68cc034ec391"], "id": 3}' -H "Content-Type:application/json"
  response:
 	 {"jsonrpc":"2.0","id":3,"result":null}
 */
-func (accountapi *AccountApi) UnLockWallet(password string) error {
+func (accountapi *AccountApi) UnlockAccount(addr crypto.CommonAddress) error {
 	if !accountapi.Wallet.IsOpen() {
 		return ErrClosedWallet
 	}
-	if accountapi.Wallet.IsLock() {
-		return accountapi.Wallet.UnLock(password)
-	}
+	//if accountapi.Wallet.IsLock() {
+	return accountapi.Wallet.UnLock(&addr)
+	//}
 	return ErrAlreadyUnLocked
 }
 
@@ -130,7 +130,7 @@ func (accountapi *AccountApi) UnLockWallet(password string) error {
 	 {"jsonrpc":"2.0","id":3,"result":null}
 */
 func (accountapi *AccountApi) OpenWallet(password string) error {
-	return accountapi.Wallet.Open(password, nil)
+	return accountapi.Wallet.Open(password)
 }
 
 /*

@@ -132,7 +132,7 @@ func Test_CacheClearAndReloadKeys(t *testing.T) {
 		}
 	}
 
-	cacheStore.ReloadKeys(password)
+	cacheStore.LoadKeys(password)
 	keys, _ = cacheStore.ExportKey(password)
 	for _, tData := range tests {
 		isFind := false

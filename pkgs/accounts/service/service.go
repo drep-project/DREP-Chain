@@ -117,7 +117,7 @@ func (accountService *AccountService) Init(executeContext *app.ExecuteContext) e
 		return err
 	}
 	if accountService.Config.Password != "" {
-		err = accountService.Wallet.Open(accountService.Config.Password, accountService.quit)
+		err = accountService.Wallet.Open(accountService.Config.Password)
 		if err != nil {
 			return err
 		}
@@ -150,7 +150,7 @@ func (accountService *AccountService) CreateWallet(password string) error {
 		fileutil.EnsureDir(accountService.Config.KeyStoreDir)
 	}
 
-	store := accountComponent.NewFileStore(accountService.Config.KeyStoreDir, accountService.quit)
+	store := accountComponent.NewFileStore(accountService.Config.KeyStoreDir)
 	password = string(sha3.Keccak256([]byte(password)))
 	newNode := chainTypes.NewNode(nil, accountService.Chain.GetConfig().ChainId)
 	store.StoreKey(newNode, password)

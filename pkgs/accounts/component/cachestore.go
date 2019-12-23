@@ -18,15 +18,12 @@ type CacheStore struct {
 // NewCacheStore receive an path and password as argument
 // path refer to  the file that contain all key
 // password used to decrypto content in key file
-func NewCacheStore(keyStore KeyStore, password string, quit chan struct{}) (*CacheStore, error) {
+func NewCacheStore(keyStore KeyStore, password string) (*CacheStore, error) {
 	cacheStore := &CacheStore{
 		store: keyStore,
 	}
-	persistedNodes, err := cacheStore.store.ExportKey(password)
-	if err != nil {
-		return nil, err
-	}
-	cacheStore.nodes = persistedNodes
+
+	cacheStore.nodes = make([]*types.Node, 0)
 	return cacheStore, nil
 }
 
@@ -41,7 +38,12 @@ func (cacheStore *CacheStore) GetKey(addr *crypto.CommonAddress, auth string) (*
 			return node, nil
 		}
 	}
-	return nil, ErrKeyNotFound
+
+	return nil, ErrKeyNotExistOrUnlock
+}
+
+func (cacheStore *CacheStore) ListAddr(auth string) ([]string, error) {
+	return cacheStore.store.ExportAddrs(auth)
 }
 
 // ExportKey export all key in cache by password
@@ -62,29 +64,35 @@ func (cacheStore *CacheStore) StoreKey(k *types.Node, auth string) error {
 	return nil
 }
 
-func (cacheStore *CacheStore) ReloadKeys(auth string) error {
+// add private key to buff
+func (cacheStore *CacheStore) LoadKeys(addr *crypto.CommonAddress, auth string) error {
 	cacheStore.rlock.Lock()
 	defer cacheStore.rlock.Unlock()
 
-	for _, node := range cacheStore.nodes {
-		if node.PrivateKey == nil {
-			key, err := cacheStore.store.GetKey(node.Address, auth)
-			if err != nil {
-				return ErrPassword
-			} else {
-				node.PrivateKey = key.PrivateKey
-			}
+	node, err := cacheStore.store.GetKey(addr, auth)
+	if err != nil {
+		return err
+	}
+
+	for index, node := range cacheStore.nodes {
+		if node.Address.String() == addr.String() {
+			cacheStore.nodes[index] = node
+			return nil
 		}
 	}
+
+	cacheStore.nodes = append(cacheStore.nodes, node)
 	return nil
 }
 
-func (cacheStore *CacheStore) ClearKeys() {
+func (cacheStore *CacheStore) ClearKey(addr *crypto.CommonAddress) {
 	cacheStore.rlock.Lock()
 	defer cacheStore.rlock.Unlock()
 
 	for _, node := range cacheStore.nodes {
-		node.PrivateKey = nil
+		if node.Address.String() == addr.String() {
+			node.PrivateKey = nil
+		}
 	}
 }
 

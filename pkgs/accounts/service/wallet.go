@@ -4,13 +4,10 @@ import (
 	"github.com/drep-project/DREP-Chain/common/fileutil"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
-	"github.com/drep-project/DREP-Chain/crypto/sha3"
 	accountsComponent "github.com/drep-project/DREP-Chain/pkgs/accounts/component"
 	accountTypes "github.com/drep-project/DREP-Chain/pkgs/accounts/types"
 	"github.com/drep-project/DREP-Chain/types"
 	"github.com/pkg/errors"
-
-	"sync/atomic"
 )
 
 const (
@@ -40,48 +37,53 @@ func NewWallet(config *accountTypes.Config, chainId types.ChainIdType) (*Wallet,
 		config:  config,
 		chainId: chainId,
 	}
+	wallet.password = config.Password
 	return wallet, nil
 }
 
 // Open wallet to use wallet
-func (wallet *Wallet) Open(password string, quit chan struct{}) error {
+func (wallet *Wallet) Open(password string) error {
 	if wallet.cacheStore != nil {
 		return ErrClosedWallet
 	}
-	cryptedPassword := wallet.cryptoPassword(password)
+
+	//cryptedPassword := wallet.cryptoPassword(wallet.password)
+	wallet.password = password
 
 	var store accountsComponent.KeyStore
 	if wallet.config.Type == "dbstore" {
-		store = accountsComponent.NewDbStore(wallet.config.KeyStoreDir, quit)
+		store = accountsComponent.NewDbStore(wallet.config.KeyStoreDir)
 	} else if wallet.config.Type == "memorystore" {
-		store = accountsComponent.NewMemoryStore(quit)
+		store = accountsComponent.NewMemoryStore()
 	} else {
-		store = accountsComponent.NewFileStore(wallet.config.KeyStoreDir, quit)
+		store = accountsComponent.NewFileStore(wallet.config.KeyStoreDir)
 	}
 
-	//go func() {
-	accountCacheStore, err := accountsComponent.NewCacheStore(store, cryptedPassword, quit)
+	accountCacheStore, err := accountsComponent.NewCacheStore(store, password)
 	if err != nil {
 		log.WithField("err", err).Info("cache account err")
 		return nil
 	}
 	wallet.cacheStore = accountCacheStore
-	wallet.unLock(password)
-	keys, err := wallet.cacheStore.ExportKey(cryptedPassword)
-	if err != nil {
-		log.WithField("err", err).Info("export key err")
-	}
-	if len(keys) == 0 {
-		wallet.NewAccount()
-	}
-	//}()
+	//wallet.unLock(wallet.config.Password)
+	//keys, err := wallet.cacheStore.ExportKey(cryptedPassword)
+	//if err != nil {
+	//	log.WithField("err", err).Info("export key err")
+	//}
+	//if len(keys) == 0 {
+	//	wallet.NewAccount()
+	//}
 
 	return nil
 }
 
+func (wallet *Wallet) UnlockAccount(addr *crypto.CommonAddress) error {
+	return wallet.cacheStore.LoadKeys(addr, wallet.password)
+}
+
 // Close wallet to disable wallet
 func (wallet *Wallet) Close() {
-	wallet.Lock()
+	//wallet.Lock()
 	wallet.cacheStore = nil
 	wallet.password = ""
 }
@@ -102,6 +104,7 @@ func (wallet *Wallet) GetAccountByAddress(addr *crypto.CommonAddress) (*types.No
 	if err := wallet.checkWallet(RPERMISSION); err != nil {
 		return nil, ErrClosedWallet
 	}
+
 	return wallet.cacheStore.GetKey(addr, wallet.password)
 }
 
@@ -111,23 +114,25 @@ func (wallet *Wallet) GetAccountByPubkey(pubkey *secp256k1.PublicKey) (*types.No
 		return nil, ErrClosedWallet
 	}
 	addr := crypto.PubkeyToAddress(pubkey)
+	if err := wallet.unLock(&addr); err != nil {
+		return nil, ErrAccountExist
+	}
+
 	return wallet.GetAccountByAddress(&addr)
 }
 
 // ListAddress get all address in wallet
-func (wallet *Wallet) ListAddress() ([]*crypto.CommonAddress, error) {
+func (wallet *Wallet) ListAddress() ([]string, error) {
 	if err := wallet.checkWallet(RPERMISSION); err != nil {
 		return nil, ErrClosedWallet
 	}
-	nodes, err := wallet.cacheStore.ExportKey(wallet.password)
+
+	addrs, err := wallet.cacheStore.ListAddr(wallet.password)
 	if err != nil {
 		return nil, err
 	}
-	addreses := []*crypto.CommonAddress{}
-	for _, node := range nodes {
-		addreses = append(addreses, node.Address)
-	}
-	return addreses, nil
+
+	return addrs, nil
 }
 
 // DumpPrivateKey query private key by address
@@ -165,7 +170,8 @@ func (wallet *Wallet) Sign(addr *crypto.CommonAddress, msg []byte) ([]byte, erro
 
 // IsLock query current lock state  0 is locked  1 is unlock
 func (wallet *Wallet) IsLock() bool {
-	return atomic.LoadInt32(&wallet.isLock) == LOCKED
+	//return atomic.LoadInt32(&wallet.isLock) == LOCKED
+	return false
 }
 
 // IsOpen query current wallet open state
@@ -174,25 +180,24 @@ func (wallet *Wallet) IsOpen() bool {
 }
 
 // Lock wallet to disable private key
-func (wallet *Wallet) Lock() error {
-	atomic.StoreInt32(&wallet.isLock, LOCKED)
-	wallet.cacheStore.ClearKeys()
+func (wallet *Wallet) Lock(addr *crypto.CommonAddress) error {
+	//atomic.StoreInt32(&wallet.isLock, LOCKED)
+	wallet.cacheStore.ClearKey(addr)
 	return nil
 }
 
 // UnLock wallet to enable private key
-func (wallet *Wallet) UnLock(password string) error {
+func (wallet *Wallet) UnLock(addr *crypto.CommonAddress) error {
 	if wallet.cacheStore == nil {
-		return wallet.Open(password, nil)
+		return wallet.Open(wallet.password)
 	} else {
-		return wallet.unLock(password)
+		return wallet.unLock(addr)
 	}
 }
 
-func (wallet *Wallet) unLock(password string) error {
-	atomic.StoreInt32(&wallet.isLock, UNLOCKED)
-	wallet.password = wallet.cryptoPassword(password)
-	return wallet.cacheStore.ReloadKeys(wallet.password)
+func (wallet *Wallet) unLock(addr *crypto.CommonAddress) error {
+	//atomic.StoreInt32(&wallet.isLock, UNLOCKED)
+	return wallet.cacheStore.LoadKeys(addr, wallet.password)
 }
 
 func (wallet *Wallet) checkWallet(op int) error {
@@ -207,9 +212,9 @@ func (wallet *Wallet) checkWallet(op int) error {
 	return nil
 }
 
-func (wallet *Wallet) cryptoPassword(password string) string {
-	return string(sha3.Keccak256([]byte(password)))
-}
+//func (wallet *Wallet) cryptoPassword(password string) string {
+//	return string(sha3.Keccak256([]byte(password)))
+//}
 
 func (wallet *Wallet) ImportPrivKey(key *secp256k1.PrivateKey) (*types.Node, error) {
 	if err := wallet.checkWallet(WPERMISSION); err != nil {
@@ -248,7 +253,7 @@ func (wallet *Wallet) ImportKeyStore(path, password string) ([]*crypto.CommonAdd
 	if err != nil {
 		return nil, err
 	}
-	err = newWallet.Open(password, nil)
+	err = newWallet.Open(password)
 	if err != nil {
 		return nil, err
 	}
