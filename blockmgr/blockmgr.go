@@ -111,7 +111,7 @@ type BlockMgr struct {
 
 	//与此模块通信的所有Peer
 	//peersInfo map[string]types.PeerInfoInterface
-	peersInfo sync.Map
+	peersInfo sync.Map //key: node.ID(),value PeerInfo
 
 	newPeerCh chan *types.PeerInfo
 
@@ -178,9 +178,9 @@ func NewBlockMgr(config *BlockMgrConfig, homeDir string, cs chain.ChainServiceIn
 					return ErrEnoughPeer
 				}
 				pi := types.NewPeerInfo(peer, rw)
-				blockMgr.peersInfo.Store(peer.IP(), pi)
+				blockMgr.peersInfo.Store(peer.ID().String(), pi)
 
-				defer blockMgr.peersInfo.Delete(peer.IP()) // delete(blockMgr.peersInfo, peer.IP())
+				defer blockMgr.peersInfo.Delete(peer.ID().String()) // (blockMgr.peersInfo, peer.IP())
 				return blockMgr.receiveMsg(pi, rw)
 			},
 		},
@@ -227,9 +227,9 @@ func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 					return ErrEnoughPeer
 				}
 				pi := types.NewPeerInfo(peer, rw)
-				blockMgr.peersInfo.Store(peer.IP(), pi)
+				blockMgr.peersInfo.Store(peer.ID().String(), pi)
 
-				defer blockMgr.peersInfo.Delete(peer.IP())
+				defer blockMgr.peersInfo.Delete(peer.ID().String())
 				return blockMgr.receiveMsg(pi, rw)
 			},
 		},
