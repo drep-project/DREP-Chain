@@ -67,7 +67,7 @@ func (accountapi *AccountApi) CreateAccount() (*crypto.CommonAddress, error) {
  usage: 创建本地钱包
  params:
 	1. 钱包密码
- return: 无
+ return:  失败返回错误原因，成功不返回任何信息
  example:   curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_createWallet","params":["123"], "id": 3}' -H "Content-Type:application/json"
  response:
 	  {"jsonrpc":"2.0","id":3,"result":null}
@@ -84,7 +84,7 @@ func (accountapi *AccountApi) CreateWallet(password string) error {
  name: lockAccount
  usage: 锁定账号
  params:
- return: 无
+ return:  失败返回错误原因，成功不返回任何信息
  example:   curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_lockAccount","params":["0x518b3fefa3fb9a72753c6ad10a2b68cc034ec391"], "id": 3}' -H "Content-Type:application/json"
  response:
 	 {"jsonrpc":"2.0","id":3,"result":null}
@@ -104,7 +104,7 @@ func (accountapi *AccountApi) LockAccount(addr crypto.CommonAddress) error {
  usage: 解锁账号
  params:
 	1. 账号地址
- return: 无
+ return: 失败返回错误原因，成功不返回任何信息
  example:   curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_unlockAccount","params":["0x518b3fefa3fb9a72753c6ad10a2b68cc034ec391"], "id": 3}' -H "Content-Type:application/json"
  response:
 	 {"jsonrpc":"2.0","id":3,"result":null}
@@ -113,10 +113,8 @@ func (accountapi *AccountApi) UnlockAccount(addr crypto.CommonAddress) error {
 	if !accountapi.Wallet.IsOpen() {
 		return ErrClosedWallet
 	}
-	//if accountapi.Wallet.IsLock() {
+
 	return accountapi.Wallet.UnLock(&addr)
-	//}
-	return ErrAlreadyUnLocked
 }
 
 /*
