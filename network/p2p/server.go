@@ -664,13 +664,7 @@ func (srv *Server) run(dialstate dialer) {
 
 running:
 	for {
-		//for kkk,_ := range peers{
-		//	fmt.Println("11111111:",kkk.String())
-		//}
 		scheduleTasks()
-		//for kkk,_ := range peers{
-		//	fmt.Println("22222222:",kkk.String())
-		//}
 
 		select {
 		case <-srv.quit:
@@ -821,7 +815,7 @@ func (srv *Server) protoHandshakeChecks(peers map[enode.ID]*Peer, inboundCount i
 
 func (srv *Server) encHandshakeChecks(peers map[enode.ID]*Peer, inboundCount int, c *conn) error {
 	switch {
-	case !c.is(trustedConn | staticDialedConn) && len(peers) >= srv.MaxPeers:
+	case !c.is(trustedConn|staticDialedConn) && len(peers) >= srv.MaxPeers:
 		return DiscTooManyPeers
 	case !c.is(trustedConn) && c.is(inboundConn) && inboundCount >= srv.maxInboundConns():
 		return DiscTooManyPeers
@@ -1024,7 +1018,6 @@ func (srv *Server) runPeer(p *Peer) {
 		Type: PeerEventTypeAdd,
 		Peer: p.ID(),
 	})
-
 
 	fmt.Println("send PeerEventTypeAdd 11", p.IP())
 
