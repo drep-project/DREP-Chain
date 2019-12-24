@@ -230,6 +230,12 @@ func (wallet *Wallet) ImportPrivKey(key *secp256k1.PrivateKey) (*types.Node, err
 	if err == nil {
 		return nil, errors.Wrap(ErrExistKey, addr.String())
 	}
+
+	err = wallet.cacheStore.LoadKeys(&addr, wallet.password)
+	if err == nil {
+		return nil, errors.Wrap(ErrExistKey, addr.String())
+	}
+
 	err = wallet.cacheStore.StoreKey(node, wallet.password)
 	if err != nil {
 		return nil, err
