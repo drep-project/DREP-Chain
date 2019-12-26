@@ -25,7 +25,7 @@ func (chainBlockValidator *TemplateBlockValidator) VerifyBody(block *types.Block
 	return nil
 }
 
-func (chainBlockValidator *TemplateBlockValidator) ExecuteBlock(context *chain.BlockExecuteContext) error {
+func (chainBlockValidator *TemplateBlockValidator) ExecuteBlock(context *chain.BlockExecuteContext, blockInterval int) error {
 	context.Receipts = make([]*types.Receipt, context.Block.Data.TxCount)
 	context.Logs = make([]*types.Log, 0)
 	if len(context.Block.Data.TxList) < 0 {
@@ -36,7 +36,12 @@ func (chainBlockValidator *TemplateBlockValidator) ExecuteBlock(context *chain.B
 	finalReceipts := make([]*types.Receipt, 0, len(context.Block.Data.TxList))
 	//time control
 	stopchanel := make(chan struct{}, 1)
-	tm := time.AfterFunc(time.Second*5, func() {
+	//80%time ,use for get tx
+	timeout := 1000 * blockInterval * 8 / 10
+	fmt.Println("executeblock", blockInterval, timeout, time.Millisecond*time.Duration(timeout), time.Now())
+
+	tm := time.AfterFunc(time.Millisecond*time.Duration(timeout), func() {
+		fmt.Println("exec block timeout ", time.Now())
 		stopchanel <- struct{}{}
 	})
 	defer func() {
@@ -69,8 +74,8 @@ SELECT_TX:
 				context.Gp = &backGp
 				return nil
 			} else {
-				from,_ := t.From()
-				log.WithField("err",err).WithField("from", from.String()).WithField("tx nonce",t.Nonce()).Info("route tx")
+				from, _ := t.From()
+				log.WithField("err", err).WithField("from", from.String()).WithField("tx nonce", t.Nonce()).Info("route tx")
 				//skip wrong tx
 				context.TrieStore.RevertState(snap)
 				context.Gp = &backGp
