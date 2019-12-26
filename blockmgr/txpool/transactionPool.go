@@ -15,10 +15,10 @@ import (
 )
 
 const (
-	maxAllTxsCount  = 100000  //交易池所弄容纳的总的交易数量
-	maxTxsOfQueue   = 20      //单个地址对应的乱序队列中，最多容纳交易数目
-	maxTxsOfPending = 1000000 //单个地址对应的有序队列中，最多容纳交易数目
-	expireTimeTx    = 60 * 60 * 24 * 7 //交易在一周内，还没有被打包，则被丢弃
+	maxAllTxsCount  = 100000           //交易池所弄容纳的总的交易数量
+	maxTxsOfQueue   = 20               //单个地址对应的乱序队列中，最多容纳交易数目
+	maxTxsOfPending = 1000000          //单个地址对应的有序队列中，最多容纳交易数目
+	expireTimeTx    = 60 * 60 * 24 * 3 //交易在一周内，还没有被打包，则被丢弃
 	//expireTimeTx = 60 * 60 //交易在一周内，还没有被打包，则被丢弃
 )
 
@@ -282,14 +282,15 @@ func (pool *TransactionPool) addTx(tx *types.Transaction, isLocal bool) error {
 
 	//添加到queue
 	if list, ok := pool.queue[*addr]; ok {
-		//地址对应的队列空间是否已经满 ,删除一些老的tx
+		//Whether the queue space corresponding to the address is full,drop this tx
 		if list.Len() > maxTxsOfQueue {
 			//丢弃老的交易
-			txs := list.Cap(list.Len())
-			for _, delTx := range txs {
-				delete(pool.allTxs, delTx.TxHash().String())
-				pool.allPricedTxs.Remove(delTx)
-			}
+			//txs := list.Cap(list.Len())
+			//for _, delTx := range txs {
+			//	delete(pool.allTxs, delTx.TxHash().String())
+			//	pool.allPricedTxs.Remove(delTx)
+			//}
+			return fmt.Errorf("addr:%s have too many txs(%d)", addr.String(), list.Len())
 		}
 		list.Add(tx)
 	} else {
@@ -371,18 +372,18 @@ func (pool *TransactionPool) GetPending(GasLimit *big.Int) []*types.Transaction 
 
 	//转数据结构
 	hbn := make(map[crypto.CommonAddress]*nonceTxsHeap)
-	func() {
-		for addr, list := range pool.pending {
-			if !list.Empty() {
-				txs := list.Flatten()
-				newList := &nonceTxsHeap{}
-				for _, tx := range txs {
-					newList.Push(tx)
-				}
-				hbn[addr] = newList
+
+	for addr, list := range pool.pending {
+		if !list.Empty() {
+			txs := list.Flatten()
+			newList := &nonceTxsHeap{}
+			for _, tx := range txs {
+				newList.Push(tx)
 			}
+			hbn[addr] = newList
 		}
-	}()
+	}
+
 	pool.mu.Unlock()
 
 	var retrunTxs []*types.Transaction
@@ -501,11 +502,13 @@ func (pool *TransactionPool) adjust(block *types.Block) {
 	}
 
 	if len(addrs) > 0 {
+		pool.mu.Lock()
+		defer pool.mu.Unlock()
 		for addr := range addrMap {
 			// 获取数据库里面的nonce
 			//根据nonce是否被处理，删除对应的交易
 			nonce := pool.chainStore.GetNonce(&addr)
-			pool.mu.Lock()
+
 			//块同步的时候，db中的nonce持续增加，pool.pendingNonce[addr]中的值不能被更新
 			//此处做更新处理
 			if nonce > pool.getTransactionCount(&addr) {
@@ -521,8 +524,7 @@ func (pool *TransactionPool) adjust(block *types.Block) {
 			}
 
 			pool.syncToPending(&addr)
-			pool.mu.Unlock()
-			log.WithField("addr", addr.Hex()).WithField("max tx.nonce", nonce).WithField("txpool tx count", len(pool.allTxs)).Warn("clear txpool")
+			log.WithField("addr", addr.Hex()).WithField("max tx.nonce", nonce).WithField("txpool tx count", len(pool.allTxs)).Trace("clear txpool")
 		}
 	}
 }
