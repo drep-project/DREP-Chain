@@ -95,5 +95,9 @@ func BlockFromMessage(bytes []byte) (*Block, error) {
 		return nil, err
 	}
 
+	if block.Header == nil {
+		fmt.Println("fatal err,block parse err **************************************")
+	}
+
 	return block, nil
 }
