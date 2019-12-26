@@ -7,10 +7,10 @@ import (
 )
 
 type BftConfig struct {
-	MyPk          *secp256k1.PublicKey `json:"mypk"`
-	StartMiner    bool                 `json:"startMiner"`
-	ProducerNum  int	`json:"producerNum"`
-	BlockInterval int64                  `json:"blockInterval"`
+	MyPk           *secp256k1.PublicKey `json:"mypk"`
+	StartMiner     bool                 `json:"startMiner"`
+	ProducerNum    int                  `json:"producerNum"`
+	BlockInterval  int64                `json:"blockInterval"`
 	ChangeInterval int                  `json:"changeInterval"`
 }
 
