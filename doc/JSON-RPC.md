@@ -1115,7 +1115,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 
 
 ### 16. account_dumpPrivkey
-#### 作用：关闭钱包
+#### 作用：倒出私钥
 > 参数：
  1. 地址
 
@@ -1136,7 +1136,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_d
 
 
 ### 17. account_sign
-#### 作用：关闭钱包
+#### 作用：签名交易
 > 参数：
  1. 地址
  2. 消息hash
