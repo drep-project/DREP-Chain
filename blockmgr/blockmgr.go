@@ -62,7 +62,7 @@ type IBlockMgrPool interface {
 
 type IBlockBlockGenerator interface {
 	//generate block template
-	GenerateTemplate(trieStore store.StoreInterface, leaderAddr crypto.CommonAddress) (*types.Block, *big.Int, error)
+	GenerateTemplate(trieStore store.StoreInterface, leaderAddr crypto.CommonAddress, blockInterval int) (*types.Block, *big.Int, error)
 }
 
 type IBlockNotify interface {

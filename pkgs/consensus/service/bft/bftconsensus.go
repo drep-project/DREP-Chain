@@ -2,8 +2,8 @@ package bft
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
-	"github.com/drep-project/DREP-Chain/chain/store"
 	"math"
 	"math/big"
 	"reflect"
@@ -13,11 +13,12 @@ import (
 
 	"github.com/drep-project/DREP-Chain/blockmgr"
 	"github.com/drep-project/DREP-Chain/chain"
+	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/common/event"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/database"
-	"github.com/drep-project/binary"
+	drepbinary "github.com/drep-project/binary"
 
 	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
 	"github.com/drep-project/DREP-Chain/types"
@@ -50,6 +51,7 @@ type BftConsensus struct {
 	removePeerChan chan *consensusTypes.PeerInfo
 
 	producer []*Producer
+	quit     chan struct{}
 }
 
 func NewBftConsensus(
@@ -63,6 +65,12 @@ func NewBftConsensus(
 	removePeerChan := make(chan *consensusTypes.PeerInfo)
 	addPeer.Subscribe(addPeerChan)
 	removePeer.Subscribe(removePeerChan)
+
+	value := make([]byte, 0)
+	buffer := bytes.NewBuffer(value)
+	binary.Write(buffer, binary.BigEndian, config.ChangeInterval)
+	dbService.LevelDb().Put([]byte(store.ChangeInterval), buffer.Bytes())
+
 	return &BftConsensus{
 		BlockGenerator: blockGenerator,
 		ChainService:   chainService,
@@ -75,6 +83,7 @@ func NewBftConsensus(
 		removePeerChan: removePeerChan,
 		memberMsgPool:  make(chan *MsgWrap, 1000),
 		leaderMsgPool:  make(chan *MsgWrap, 1000),
+		quit:           make(chan struct{}),
 	}
 }
 
@@ -101,7 +110,7 @@ func (bftConsensus *BftConsensus) GetProducers(height uint64, topN int) ([]*Prod
 func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Block, error) {
 	bftConsensus.CoinBase = crypto.PubkeyToAddress(privKey.PubKey())
 	bftConsensus.PrivKey = privKey
-	go bftConsensus.processPeers()
+
 	producers, err := bftConsensus.GetProducers(bftConsensus.ChainService.BestChain().Tip().Height, bftConsensus.config.ProducerNum)
 	if err != nil {
 		return nil, err
@@ -143,6 +152,7 @@ func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Blo
 }
 
 func (bftConsensus *BftConsensus) processPeers() {
+
 	for {
 		select {
 		case addPeer := <-bftConsensus.addPeerChan:
@@ -153,6 +163,9 @@ func (bftConsensus *BftConsensus) processPeers() {
 			bftConsensus.peerLock.Lock()
 			delete(bftConsensus.onLinePeer, removePeer.ID())
 			bftConsensus.peerLock.Unlock()
+
+		case <-bftConsensus.quit:
+			return
 		}
 	}
 }
@@ -201,7 +214,6 @@ func (bftConsensus *BftConsensus) collectMemberStatus(producers []*Producer) []*
 		if isMe {
 			IsOnline = true
 		} else {
-			//todo  peer获取到的IP地址和配置的ip地址是否相等（nat后是否相等,从tcp原理来看是相等的）
 			bftConsensus.peerLock.RLock()
 			if pi, ok = bftConsensus.onLinePeer[produce.Node.ID().String()]; ok {
 				IsOnline = true
@@ -269,7 +281,7 @@ func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo, minMiners in
 		val := msg.(*CompletedBlockMessage)
 		multiSig = &val.MultiSignature
 		block.Header.StateRoot = val.StateRoot
-		multiSigBytes, err := binary.Marshal(multiSig)
+		multiSigBytes, err := drepbinary.Marshal(multiSig)
 		if err != nil {
 			log.Error("fail to marshal MultiSig")
 			return err
@@ -306,7 +318,7 @@ func (bftConsensus *BftConsensus) runAsLeader(producers ProducerSet, miners []*M
 		return nil, err
 	}
 	var gasFee *big.Int
-	block, gasFee, err = bftConsensus.BlockGenerator.GenerateTemplate(trieStore, bftConsensus.CoinBase)
+	block, gasFee, err = bftConsensus.BlockGenerator.GenerateTemplate(trieStore, bftConsensus.CoinBase, int(bftConsensus.config.BlockInterval))
 	if err != nil {
 		log.WithField("msg", err).Error("generate block fail")
 		return nil, err
@@ -322,7 +334,7 @@ func (bftConsensus *BftConsensus) runAsLeader(producers ProducerSet, miners []*M
 
 	leader.Reset()
 	multiSig := newMultiSignature(*sig, bftConsensus.curMiner, bitmap)
-	multiSigBytes, err := binary.Marshal(multiSig)
+	multiSigBytes, err := drepbinary.Marshal(multiSig)
 	if err != nil {
 		log.Debugf("fial to marshal MultiSig")
 		return nil, err
@@ -394,7 +406,7 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
 	}
 
 	multiSig := &MultiSignature{}
-	err = binary.Unmarshal(block.Proof.Evidence, multiSig)
+	err = drepbinary.Unmarshal(block.Proof.Evidence, multiSig)
 	if err != nil {
 		return err
 	}
@@ -454,4 +466,8 @@ func (bftConsensus *BftConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, t ui
 
 func (bftConsensus *BftConsensus) ChangeTime(interval time.Duration) {
 	bftConsensus.WaitTime = interval
+}
+
+func (bftConsensus *BftConsensus) Close() {
+	close(bftConsensus.quit)
 }

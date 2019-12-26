@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func (blockMgr *BlockMgr) GenerateTemplate(trieStore store.StoreInterface, leaderAddr crypto.CommonAddress) (*types.Block, *big.Int, error) {
+func (blockMgr *BlockMgr) GenerateTemplate(trieStore store.StoreInterface, leaderAddr crypto.CommonAddress, blockInterval int) (*types.Block, *big.Int, error) {
 	parent, err := blockMgr.ChainService.GetHighestBlock()
 	if err != nil {
 		return nil, nil, err
@@ -47,7 +47,7 @@ func (blockMgr *BlockMgr) GenerateTemplate(trieStore store.StoreInterface, leade
 	context := chain.NewBlockExecuteContext(trieStore, gp, chainStore, block)
 
 	templateValidator := NewTemplateBlockValidator(blockMgr.ChainService)
-	err = templateValidator.ExecuteBlock(context)
+	err = templateValidator.ExecuteBlock(context, blockInterval)
 	if err != nil {
 		return nil, nil, err
 	}

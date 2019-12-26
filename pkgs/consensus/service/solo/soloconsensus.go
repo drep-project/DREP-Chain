@@ -15,6 +15,7 @@ import (
 	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
 	"github.com/drep-project/DREP-Chain/types"
 	"math/big"
+	"time"
 )
 
 type SoloConsensus struct {
@@ -24,18 +25,21 @@ type SoloConsensus struct {
 	blockGenerator blockmgr.IBlockBlockGenerator
 	ChainService   chain.ChainServiceInterface
 	DbService      *database.DatabaseService
+	config         *SoloConfig
 }
 
 func NewSoloConsensus(
 	chainService chain.ChainServiceInterface,
 	blockGenerator blockmgr.IBlockBlockGenerator,
 	myPk *secp256k1.PublicKey,
-	dbService *database.DatabaseService) *SoloConsensus {
+	dbService *database.DatabaseService,
+	config *SoloConfig) *SoloConsensus {
 	return &SoloConsensus{
 		blockGenerator: blockGenerator,
 		ChainService:   chainService,
 		DbService:      dbService,
 		Pubkey:         myPk,
+		config:         config,
 	}
 }
 
@@ -49,27 +53,35 @@ func (soloConsensus *SoloConsensus) Run(privKey *secp256k1.PrivateKey) (*types.B
 	if err != nil {
 		return nil, err
 	}
-	block, gasFee, err := soloConsensus.blockGenerator.GenerateTemplate(trieStore, soloConsensus.CoinBase)
+
+	fmt.Println("run 0", time.Now())
+	block, gasFee, err := soloConsensus.blockGenerator.GenerateTemplate(trieStore, soloConsensus.CoinBase, soloConsensus.config.BlockInterval)
 	if err != nil {
 		return nil, err
 	}
 
+	fmt.Println("run 1", time.Now())
 	sig, err := soloConsensus.PrivKey.Sign(sha3.Keccak256(block.AsSignMessage()))
 	if err != nil {
 		log.Error("sign block error")
 		return nil, errors.New("sign block error")
 	}
+
+	fmt.Println("run 2", time.Now())
 	block.Proof = types.Proof{consensusTypes.Solo, sig.Serialize()}
 	err = AccumulateRewards(soloConsensus.Pubkey, trieStore, gasFee, block.Header.Height)
 	if err != nil {
 		return nil, err
 	}
 
+	fmt.Println("run 3", time.Now())
 	block.Header.StateRoot = trieStore.GetStateRoot()
 	//verify
 	if err := soloConsensus.verify(block); err != nil {
 		return nil, err
 	}
+
+	fmt.Println("run 4", time.Now())
 	return block, nil
 }
 

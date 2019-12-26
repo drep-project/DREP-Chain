@@ -140,22 +140,15 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 				if err != nil {
 					return err
 				}
-				//del peer event
-				//ch := make(chan *p2p.PeerEvent)
-				//sub := bftConsensusService.P2pServer.SubscribeEvents(ch)
-				//control producer validator by timer
+
 				tm := time.NewTimer(time.Second * 10)
 				defer func() {
 					removePeerFeed.Send(pi)
 				}()
 				for {
 					select {
-					//case e := <-ch:
-					//	if e.Type == p2p.PeerEventTypeDrop {
-					//		return errors.New(e.Error)
-					//	}
 					case <-tm.C:
-						fmt.Println("time out******************************")
+						log.Info("bft run ,time out****")
 						return errors.New("timeout: wait validata message")
 
 					default:
@@ -202,7 +195,6 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 
 							if !ok {
 								fmt.Println("MsgTypeValidateRes pubkey err*********")
-								//return fmt.Errorf("MsgTypeValidateRes pubkey err")
 							}
 							continue
 						default:
@@ -253,6 +245,9 @@ func (bftConsensusService *BftConsensusService) Start(executeContext *app.Execut
 		return nil
 	}
 	bftConsensusService.start = true
+
+	go bftConsensusService.BftConsensus.processPeers()
+
 	go func() {
 		select {
 		case <-bftConsensusService.quit:
@@ -299,6 +294,8 @@ func (bftConsensusService *BftConsensusService) Stop(executeContext *app.Execute
 		bftConsensusService.syncBlockEventSub.Unsubscribe()
 	}
 
+	bftConsensusService.BftConsensus.Close()
+
 	return nil
 }
 
@@ -310,6 +307,11 @@ func (bftConsensusService *BftConsensusService) getWaitTime() (time.Time, time.D
 		interval := now.Sub(lastBlockTime)
 		nextBlockInterval := int64(interval/(time.Second*time.Duration(bftConsensusService.Config.BlockInterval))) + 1
 		nextBlockTime := lastBlockTime.Add(time.Second * time.Duration(nextBlockInterval*bftConsensusService.Config.BlockInterval))
+
+		if nextBlockTime.Before(now) {
+			return nextBlockTime, 0
+		}
+
 		return nextBlockTime, nextBlockTime.Sub(now)
 	} else {
 		return targetTime, targetTime.Sub(now)

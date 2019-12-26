@@ -1,6 +1,9 @@
 package solo
 
 import (
+	"bytes"
+	"encoding/binary"
+	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"time"
@@ -74,12 +77,18 @@ func (soloConsensusService *SoloConsensusService) Init(executeContext *app.Execu
 		}
 	}
 
+	value := make([]byte, 0)
+	buffer := bytes.NewBuffer(value)
+	binary.Write(buffer, binary.BigEndian, uint64(soloConsensusService.Config.ChangeInterval))
+	soloConsensusService.DatabaseService.LevelDb().Put([]byte(store.ChangeInterval), buffer.Bytes())
+
 	var engine consensusTypes.IConsensusEngine
 	engine = NewSoloConsensus(
 		soloConsensusService.ChainService,
 		soloConsensusService.BlockGenerator,
 		soloConsensusService.Config.MyPk,
-		soloConsensusService.DatabaseService)
+		soloConsensusService.DatabaseService,
+		soloConsensusService.Config)
 	//consult privkey in wallet
 	accountNode, err := soloConsensusService.WalletService.Wallet.GetAccountByPubkey(soloConsensusService.Config.MyPk)
 	if err != nil {
@@ -174,43 +183,16 @@ func (soloConsensusService *SoloConsensusService) getWaitTime() (time.Time, time
 	// windows = 4320
 
 	lastBlockTime := time.Unix(int64(soloConsensusService.ChainService.BestChain().Tip().TimeStamp), 0)
-	targetTime := lastBlockTime.Add(time.Duration(int(time.Second)*soloConsensusService.Config.BlockInterval))
+	targetTime := lastBlockTime.Add(time.Duration(int(time.Second) * soloConsensusService.Config.BlockInterval))
 	now := time.Now()
 	if targetTime.Before(now) {
-		return now.Add(time.Millisecond * 500), time.Millisecond * 500
+		return now.Add(time.Millisecond * 20), time.Millisecond * 20
 	} else {
 		return targetTime, targetTime.Sub(now)
 	}
-	/*
-		     window := int64(4320)
-		     endBlock := soloConsensusService.DatabaseService.GetHighestBlock().Header
-		     if endBlock.Height < window {
-				 lastBlockTime := time.Unix(soloConsensusService.DatabaseService.GetHighestBlock().Header.Timestamp, 0)
-				 span := time.Now().Sub(lastBlockTime)
-				 if span > blockInterval {
-					 span = 0
-				 } else {
-					 span = blockInterval - span
-				 }
-				 return span
-			 }else{
-			 	//wait for test
-				 startHeight := endBlock.Height - window
-				 if startHeight <0 {
-					 startHeight = int64(0)
-				 }
-				 startBlock :=soloConsensusService.DatabaseService.GetBlock(startHeight).Header
-
-				 xx := window * 10 -(time.Unix(startBlock.Timestamp,0).Sub(time.Unix(endBlock.Timestamp,0))).Seconds()
-
-				 span := time.Unix(startBlock.Timestamp,0).Sub(time.Unix(endBlock.Timestamp,0))  //window time
-				 avgSpan := span.Nanoseconds()/window
-				 return time.Duration(avgSpan) * time.Nanosecond
-			 }
-	*/
 }
 func (soloConsensusService *SoloConsensusService) DefaultConfig() *SoloConfig {
 	return &SoloConfig{
-		BlockInterval: 5,
+		BlockInterval: 7,
 	}
 }

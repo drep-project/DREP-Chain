@@ -1,6 +1,8 @@
 package store
 
 import (
+	"bytes"
+	"encoding/binary"
 	"github.com/drep-project/DREP-Chain/common/trie"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/database"
@@ -11,7 +13,8 @@ import (
 )
 
 const (
-	MODULENAME = "store"
+	MODULENAME     = "store"
+	ChangeInterval = "changeInterval"
 )
 
 var (
@@ -73,8 +76,30 @@ func (s Store) AddCandidateAddr(addr *crypto.CommonAddress) error {
 	return s.stake.AddCandidateAddr(addr)
 }
 
+func (s Store) GetChangeInterval() (uint64, error) {
+	value, err := s.db.trieDb.DiskDB().Get([]byte(ChangeInterval))
+	//value, err := s.db.Get([]byte(ChangeInterval))
+	if err != nil {
+		log.Error("CancelCandidateCredit get change interval ", "err", err)
+		return 0, err
+	}
+	var changeInterval uint64
+	buf := bytes.NewBuffer(value)
+	err = binary.Read(buf, binary.BigEndian, &changeInterval)
+	if err != nil {
+		log.Error("CancelCandidateCredit parse change interval ", "err", err)
+		return 0, err
+	}
+
+	return changeInterval, nil
+
+}
 func (s Store) CancelCandidateCredit(fromAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) (*types.IntersetDetail, error) {
-	return s.stake.CancelCandidateCredit(fromAddr, cancelBalance, height)
+	ci, err := s.GetChangeInterval()
+	if err != nil {
+		return nil, err
+	}
+	return s.stake.CancelCandidateCredit(fromAddr, cancelBalance, height, ci)
 }
 
 func (s Store) GetCandidateData(addr *crypto.CommonAddress) ([]byte, error) {
@@ -110,7 +135,12 @@ func (s Store) AliasExist(alias string) bool {
 }
 
 func (s Store) AddBalance(addr *crypto.CommonAddress, height uint64, amount *big.Int) error {
-	voteCredit, err := s.stake.CancelCreditToBalance(addr, height)
+	ci, err := s.GetChangeInterval()
+	if err != nil {
+		return err
+	}
+
+	voteCredit, err := s.stake.CancelCreditToBalance(addr, height, ci)
 	if err != nil {
 		return err
 	}
@@ -118,7 +148,11 @@ func (s Store) AddBalance(addr *crypto.CommonAddress, height uint64, amount *big
 }
 
 func (s Store) SubBalance(addr *crypto.CommonAddress, height uint64, amount *big.Int) error {
-	voteCredit, err := s.stake.CancelCreditToBalance(addr, height)
+	ci, err := s.GetChangeInterval()
+	if err != nil {
+		return err
+	}
+	voteCredit, err := s.stake.CancelCreditToBalance(addr, height, ci)
 	if err != nil {
 		return err
 	}
@@ -132,19 +166,30 @@ func (s Store) SubBalance(addr *crypto.CommonAddress, height uint64, amount *big
 }
 
 func (s Store) GetBalance(addr *crypto.CommonAddress, height uint64) *big.Int {
-	return new(big.Int).Add(s.stake.GetCancelCreditForBalance(addr, height), s.account.GetBalance(addr))
+	ci, err := s.GetChangeInterval()
+	if err != nil {
+		return nil
+	}
+	return new(big.Int).Add(s.stake.GetCancelCreditForBalance(addr, height, ci), s.account.GetBalance(addr))
 }
 
 func (s Store) PutBalance(addr *crypto.CommonAddress, height uint64, balance *big.Int) error {
-	voteCredit, err := s.stake.CancelCreditToBalance(addr, height)
-	if err != nil {
-		return err
+	if height != 0 {
+		ci, err := s.GetChangeInterval()
+		if err != nil {
+			return err
+		}
+		voteCredit, err := s.stake.CancelCreditToBalance(addr, height, ci)
+		if err != nil {
+			return err
+		}
+
+		err = s.account.AddBalance(addr, voteCredit)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = s.account.AddBalance(addr, voteCredit)
-	if err != nil {
-		return err
-	}
 	return s.account.PutBalance(addr, balance)
 }
 
@@ -177,7 +222,11 @@ func (s Store) AliasSet(addr *crypto.CommonAddress, alias string) (err error) {
 }
 
 func (s Store) CancelVoteCredit(fromAddr, toAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) (*types.IntersetDetail, error) {
-	return s.stake.CancelVoteCredit(fromAddr, toAddr, cancelBalance, height)
+	ci, err := s.GetChangeInterval()
+	if err != nil {
+		return nil, err
+	}
+	return s.stake.CancelVoteCredit(fromAddr, toAddr, cancelBalance, height, ci)
 }
 
 func (s Store) VoteCredit(fromAddr *crypto.CommonAddress, to *crypto.CommonAddress, addBalance *big.Int, height uint64) error {
