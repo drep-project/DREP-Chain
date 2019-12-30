@@ -77,8 +77,7 @@ func (s Store) AddCandidateAddr(addr *crypto.CommonAddress) error {
 }
 
 func (s Store) GetChangeInterval() (uint64, error) {
-	value, err := s.db.trieDb.DiskDB().Get([]byte(ChangeInterval))
-	//value, err := s.db.Get([]byte(ChangeInterval))
+	value, err := s.db.store.Get([]byte(ChangeInterval))
 	if err != nil {
 		log.Error("CancelCandidateCredit get change interval ", "err", err)
 		return 0, err

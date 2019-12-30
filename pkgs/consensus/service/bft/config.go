@@ -11,7 +11,7 @@ type BftConfig struct {
 	StartMiner     bool                 `json:"startMiner"`
 	ProducerNum    int                  `json:"producerNum"`
 	BlockInterval  int64                `json:"blockInterval"`
-	ChangeInterval int                  `json:"changeInterval"`
+	ChangeInterval uint64               `json:"changeInterval"`
 }
 
 type Producer struct {

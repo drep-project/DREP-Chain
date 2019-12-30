@@ -102,37 +102,45 @@ func (leader *Leader) Close() {
 	close(leader.cancelWaitChallenge)
 }
 
-func (leader *Leader) ProcessConsensus(msg IConsenMsg) (error, *secp256k1.Signature, []byte) {
+/*
+
+leader                   member
+setup      ----->
+	       <-----      commit
+challenge  ----->
+           <-----      response
+*/
+func (leader *Leader) ProcessConsensus(msg IConsenMsg, round int) (error, *secp256k1.Signature, []byte) {
 	defer func() {
 		leader.cancelPool <- struct{}{}
 	}()
 
 	leader.setState(INIT)
-	go leader.processP2pMessage()
-	leader.setUp(msg)
+	go leader.processP2pMessage(round)
+	leader.setUp(msg, round)
 	if !leader.waitForCommit() {
 		//send reason and reset
-		leader.fail(ErrWaitCommit.Error())
+		leader.fail(ErrWaitCommit.Error(), round)
 		return ErrWaitCommit, nil, nil
 	}
+	leader.challenge(msg, round)
 
-	leader.challenge(msg)
 	if !leader.waitForResponse() {
 		//send reason and reset
-		leader.fail("waitForResponse fail")
+		leader.fail("waitForResponse fail", round)
 		return ErrWaitResponse, nil, nil
 	}
 	log.Debug("response complete")
 	valid := leader.Validate(msg, leader.sigmaS.R, leader.sigmaS.S)
 	log.WithField("VALID", valid).Debug("vaidate result")
 	if !valid {
-		leader.fail("signature not valid")
+		leader.fail("signature not valid", round)
 		return ErrSignatureNotValid, nil, nil
 	}
 	return nil, &secp256k1.Signature{R: leader.sigmaS.R, S: leader.sigmaS.S}, leader.responseBitmap
 }
 
-func (leader *Leader) processP2pMessage() {
+func (leader *Leader) processP2pMessage(round int) {
 	for {
 		select {
 		case msg := <-leader.msgPool:
@@ -143,6 +151,12 @@ func (leader *Leader) processP2pMessage() {
 					log.Debugf("commit msg:%v err:%v", msg, err)
 					continue
 				}
+
+				if req.Round != round {
+					log.WithField("come round", req.Round).WithField("local round", round).Info("leader process msg req err")
+					continue
+				}
+
 				leader.OnCommit(msg.Peer, &req)
 			case MsgTypeResponse:
 				var res Response
@@ -150,6 +164,11 @@ func (leader *Leader) processP2pMessage() {
 					log.Debugf("response msg:%v err:%v", msg, err)
 					continue
 				}
+				if res.Round != round {
+					log.WithField("come round", res.Round).WithField("local round", round).Info("leader process msg res err")
+					continue
+				}
+
 				leader.OnResponse(msg.Peer, &res)
 			}
 		case <-leader.cancelPool:
@@ -158,9 +177,11 @@ func (leader *Leader) processP2pMessage() {
 	}
 }
 
-func (leader *Leader) setUp(msg IConsenMsg) {
+func (leader *Leader) setUp(msg IConsenMsg, round int) {
 	setup := &Setup{Msg: msg.AsMessage()}
 	setup.Height = leader.currentHeight
+	setup.Magic = SetupMagic
+	setup.Round = round
 	leader.msgHash = sha3.Keccak256(msg.AsSignMessage())
 	var err error
 	var nouncePk *secp256k1.PublicKey
@@ -273,7 +294,7 @@ func (leader *Leader) OnResponse(peer consensusTypes.IPeerInfo, response *Respon
 	}
 }
 
-func (leader *Leader) challenge(msg IConsenMsg) {
+func (leader *Leader) challenge(msg IConsenMsg, Round int) {
 	leader.selfSign(msg)
 	for index, pk := range leader.sigmaPubKey {
 		if index == 0 {
@@ -287,6 +308,8 @@ func (leader *Leader) challenge(msg IConsenMsg) {
 		commitPubkey := schnorr.CombinePubkeys(particateCommitPubkeys)
 		challenge := &Challenge{
 			Height: leader.currentHeight,
+			Magic:  ChallegeMagic,
+			Round:  Round,
 			SigmaQ: commitPubkey,
 			R:      leader.msgHash,
 		}
@@ -315,7 +338,7 @@ func (leader *Leader) selfSign(msg IConsenMsg) error {
 	return nil
 }
 
-func (leader *Leader) fail(msg string) {
+func (leader *Leader) fail(msg string, round int) {
 CANCEL:
 	for {
 		select {
@@ -325,8 +348,9 @@ CANCEL:
 			break CANCEL
 		}
 	}
-	failMsg := &Fail{Reason: msg}
+	failMsg := &Fail{Reason: msg, Magic: FailMagic, Round: round}
 	failMsg.Height = leader.currentHeight
+
 	for _, member := range leader.liveMembers {
 		if member.Peer != nil && !member.IsMe {
 			leader.sender.SendAsync(member.Peer.GetMsgRW(), MsgTypeFail, failMsg)

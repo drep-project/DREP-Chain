@@ -78,23 +78,25 @@ func (member *Member) Reset() {
 	member.cancelPool = make(chan struct{}, 1)
 	member.errorChanel = make(chan error, 1)
 	member.completed = make(chan struct{}, 1)
+
 	member.cancelWaitSetUp = make(chan struct{}, 1)
 	member.timeOutChanel = make(chan struct{}, 1)
 	member.cancelWaitChallenge = make(chan struct{}, 1)
 	member.setState(INIT)
 }
 
-func (member *Member) ProcessConsensus() (IConsenMsg, error) {
+func (member *Member) ProcessConsensus(round int) (IConsenMsg, error) {
 	defer func() {
 		select {
 		case member.cancelPool <- struct{}{}:
 		default:
 		}
 	}()
-	log.WithField("Node", member.leader.Peer).Debug("wait for leader's setup message")
+
+	log.WithField("Node", member.leader.Peer.IP()).Debug("wait for leader's setup message")
 	member.setState(WAIT_SETUP)
 	go member.WaitSetUp()
-	go member.processP2pMessage()
+	go member.processP2pMessage(round)
 
 	select {
 	case err := <-member.errorChanel:
@@ -109,7 +111,8 @@ func (member *Member) ProcessConsensus() (IConsenMsg, error) {
 	}
 
 }
-func (member *Member) processP2pMessage() {
+func (member *Member) processP2pMessage(round int) {
+
 	for {
 		select {
 		case msg := <-member.msgPool:
@@ -120,6 +123,10 @@ func (member *Member) processP2pMessage() {
 					log.Debugf("setup msg:%v err:%v", msg, err)
 					continue
 				}
+				if setup.Round != round {
+					log.WithField("come round", setup.Round).WithField("local round", round).Info("member process setup err")
+					continue
+				}
 				go member.OnSetUp(msg.Peer, &setup)
 			case MsgTypeChallenge:
 				var challenge Challenge
@@ -127,11 +134,19 @@ func (member *Member) processP2pMessage() {
 					log.Debugf("challenge msg:%v err:%v", msg, err)
 					continue
 				}
+				if challenge.Round != round {
+					log.WithField("come round", challenge.Round).WithField("local round", round).Info("member process challege err")
+					continue
+				}
 				go member.OnChallenge(msg.Peer, &challenge)
 			case MsgTypeFail:
 				var fail Fail
 				if err := binary.Unmarshal(msg.Msg, &fail); err != nil {
 					log.Debugf("challenge msg:%v err:%v", msg, err)
+					continue
+				}
+				if fail.Round != round {
+					log.WithField("come round", fail.Round).WithField("local round", round).Info("member process fail err")
 					continue
 				}
 				go member.OnFail(msg.Peer, &fail)
@@ -183,12 +198,12 @@ func (member *Member) OnSetUp(peer consensusTypes.IPeerInfo, setUp *Setup) {
 		var err error
 		member.msg, err = member.convertor(setUp.Msg)
 		if err != nil || member.msg == nil {
-			log.Errorf("convertor msg to block err:%s,height:%v,msg:%s", err.Error(), setUp.Height, setUp.String())
+			log.Errorf("convertor msg to block err:%s,height:%v,magic:0x%x,msg:%s", err.Error(), setUp.Height, setUp.Magic, setUp.String())
 			return
 		}
 
 		member.msgHash = sha3.Keccak256(member.msg.AsSignMessage())
-		member.commit()
+		member.commit(setUp.Round)
 		log.Debug("sent commit message to leader")
 		member.setState(WAIT_CHALLENGE)
 		go member.WaitChallenge()
@@ -262,7 +277,7 @@ func (member *Member) OnFail(peer consensusTypes.IPeerInfo, failMsg *Fail) {
 	member.pushErrorMsg(errors.New(failMsg.Reason))
 }
 
-func (member *Member) commit() {
+func (member *Member) commit(round int) {
 	if err := member.validator(member.msg); err != nil {
 		log.WithField("Reason", err).Error("member check msg fail")
 		member.pushErrorMsg(ErrValidateMsg)
@@ -277,6 +292,8 @@ func (member *Member) commit() {
 		return
 	}
 	commitment := &Commitment{
+		Round: round,
+		Magic: CommitMagic,
 		BpKey: member.prvKey.PubKey(),
 		Q:     (*secp256k1.PublicKey)(nouncePk),
 	}
@@ -294,6 +311,8 @@ func (member *Member) response(challengeMsg *Challenge) {
 		response := &Response{S: sig.Serialize()}
 		response.BpKey = member.prvKey.PubKey()
 		response.Height = member.currentHeight
+		response.Magic = ResponseMagic
+		response.Round = challengeMsg.Round
 		member.p2pServer.SendAsync(member.leader.Peer.GetMsgRW(), MsgTypeResponse, response)
 	} else {
 		log.Error("commit messsage and chanllenge message not matched")

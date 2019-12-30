@@ -26,6 +26,8 @@ import (
 
 const (
 	waitTime = 10 * time.Second
+	round1   = 1
+	round2   = 2
 )
 
 type BftConsensus struct {
@@ -70,6 +72,7 @@ func NewBftConsensus(
 	buffer := bytes.NewBuffer(value)
 	binary.Write(buffer, binary.BigEndian, config.ChangeInterval)
 	dbService.LevelDb().Put([]byte(store.ChangeInterval), buffer.Bytes())
+	fmt.Println("store change interval ********************************")
 
 	return &BftConsensus{
 		BlockGenerator: blockGenerator,
@@ -264,7 +267,7 @@ func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo, minMiners in
 		block = msg.(*types.Block)
 		return bftConsensus.blockVerify(block)
 	}
-	_, err = member.ProcessConsensus()
+	_, err = member.ProcessConsensus(round1)
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +293,7 @@ func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo, minMiners in
 		block.Proof = types.Proof{consensusTypes.Pbft, multiSigBytes}
 		return bftConsensus.verifyBlockContent(block)
 	}
-	_, err = member.ProcessConsensus()
+	_, err = member.ProcessConsensus(round2)
 	if err != nil {
 		return nil, err
 	}
@@ -325,7 +328,7 @@ func (bftConsensus *BftConsensus) runAsLeader(producers ProducerSet, miners []*M
 	}
 
 	log.WithField("Block", block).Trace("node leader is preparing process consensus for round 1")
-	err, sig, bitmap := leader.ProcessConsensus(block)
+	err, sig, bitmap := leader.ProcessConsensus(block, round1)
 	if err != nil {
 		var str = err.Error()
 		log.WithField("msg", str).Error("Error occurs")
@@ -352,7 +355,7 @@ func (bftConsensus *BftConsensus) runAsLeader(producers ProducerSet, miners []*M
 	rwMsg := &CompletedBlockMessage{*multiSig, block.Header.StateRoot}
 
 	log.Trace("node leader is going to process consensus for round 2")
-	err, _, _ = leader.ProcessConsensus(rwMsg)
+	err, _, _ = leader.ProcessConsensus(rwMsg, round2)
 	if err != nil {
 		return nil, err
 	}

@@ -20,6 +20,14 @@ const (
 	MsgTypeValidateRes = 6
 
 	MaxMsgSize = 20 << 20
+
+	SetupMagic    = 0xfefefbfe
+	CommitMagic   = 0xfefefbfd
+	ChallegeMagic = 0xfefefbfc
+	FailMagic     = 0xfefefbfb
+	ResponseMagic = 0xfefefbfa
+	//ValidateReqMagic = 0xfefefbf9
+	//validateResMagic = 0xfefefbf8
 )
 
 var NumberOfMsg = 7
@@ -32,6 +40,8 @@ type MsgWrap struct {
 
 type Setup struct {
 	Height uint64
+	Magic  uint32
+	Round  int
 
 	Msg []byte
 }
@@ -43,6 +53,8 @@ func (setup *Setup) String() string {
 
 type Commitment struct {
 	Height uint64
+	Magic  uint32
+	Round  int
 	BpKey  *secp256k1.PublicKey
 	Q      *secp256k1.PublicKey
 }
@@ -53,8 +65,9 @@ func (commitment *Commitment) String() string {
 }
 
 type Challenge struct {
-	Height uint64
-
+	Height      uint64
+	Magic       uint32
+	Round       int
 	SigmaPubKey *secp256k1.PublicKey
 	SigmaQ      *secp256k1.PublicKey
 	R           []byte
@@ -67,6 +80,8 @@ func (Challenge *Challenge) String() string {
 
 type Response struct {
 	Height uint64
+	Magic  uint32
+	Round  int
 	BpKey  *secp256k1.PublicKey
 	S      []byte
 }
@@ -78,6 +93,8 @@ func (response *Response) String() string {
 
 type Fail struct {
 	Height uint64
+	Magic  uint32
+	Round  int
 
 	Reason string
 }
