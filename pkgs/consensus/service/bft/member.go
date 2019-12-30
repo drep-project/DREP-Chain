@@ -75,7 +75,7 @@ func (member *Member) Reset() {
 	member.msg = nil
 	member.msgHash = nil
 	member.randomPrivakey = nil
-	member.cancelPool = make(chan struct{}, 1)
+	member.cancelPool = make(chan struct{})
 	member.errorChanel = make(chan error, 1)
 	member.completed = make(chan struct{}, 1)
 
@@ -87,10 +87,7 @@ func (member *Member) Reset() {
 
 func (member *Member) ProcessConsensus(round int) (IConsenMsg, error) {
 	defer func() {
-		select {
-		case member.cancelPool <- struct{}{}:
-		default:
-		}
+		member.cancelPool <- struct{}{}
 	}()
 
 	log.WithField("Node", member.leader.Peer.IP()).Debug("wait for leader's setup message")
