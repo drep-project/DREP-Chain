@@ -228,7 +228,11 @@ func (blockMgr *BlockMgr) batchReqBlocks(hashs []crypto.Hash, mapHeightHash map[
 
 func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 	blockMgr.syncBlockEvent.Send(event.SyncBlockEvent{EventType: event.StartSyncBlock})
-	defer blockMgr.syncBlockEvent.Send(event.SyncBlockEvent{EventType: event.StopSyncBlock})
+	defer func() {
+		blockMgr.state = event.StopSyncBlock
+		blockMgr.syncBlockEvent.Send(event.SyncBlockEvent{EventType: event.StopSyncBlock})
+	}()
+
 	if blockMgr.state == event.StartSyncBlock {
 		log.Info("have fetch blocks")
 		return nil
@@ -460,7 +464,6 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 	select {
 	case err := <-errCh:
 		close(quit)
-		blockMgr.state = event.StopSyncBlock
 		return err
 	}
 }
