@@ -189,10 +189,13 @@ func (wallet *Wallet) Lock(addr *crypto.CommonAddress) error {
 // UnLock wallet to enable private key
 func (wallet *Wallet) UnLock(addr *crypto.CommonAddress) error {
 	if wallet.cacheStore == nil {
-		return wallet.Open(wallet.password)
-	} else {
-		return wallet.unLock(addr)
+		err := wallet.Open(wallet.password)
+		if err != nil {
+			return err
+		}
 	}
+
+	return wallet.unLock(addr)
 }
 
 func (wallet *Wallet) unLock(addr *crypto.CommonAddress) error {
