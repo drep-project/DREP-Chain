@@ -2,12 +2,13 @@ package trace
 
 import (
 	"encoding/hex"
-	"github.com/drep-project/binary"
+	"fmt"
 	"github.com/drep-project/DREP-Chain/common"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/bft"
 	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
 	"github.com/drep-project/DREP-Chain/types"
+	"github.com/drep-project/binary"
 	"math/big"
 )
 
@@ -127,6 +128,10 @@ func (rpcBlock *ViewBlock) From(block *types.Block, addresses []crypto.CommonAdd
 		multiSig := &bft.MultiSignature{}
 		binary.Unmarshal(block.Proof.Evidence, multiSig)
 		proof.Evidence = hex.EncodeToString(block.Proof.Evidence)
+		if len(addresses) <= multiSig.Leader {
+			fmt.Printf("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&:%s,%d", addresses, multiSig.Leader)
+			return nil
+		}
 		proof.LeaderAddress = addresses[multiSig.Leader].String()
 		for index, val := range multiSig.Bitmap {
 			if val == 1 {
