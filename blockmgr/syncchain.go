@@ -99,6 +99,7 @@ func (blockMgr *BlockMgr) checkExistHeaderHash(headerHash *crypto.Hash) (bool, u
 
 func (blockMgr *BlockMgr) requestHeaders(peer types.PeerInfoInterface, from, count uint64) error {
 	req := types.HeaderReq{FromHeight: from, ToHeight: from + count - 1}
+	log.WithField("ip", peer.GetAddr()).Info("req header to")
 	return blockMgr.P2pServer.Send(peer.GetMsgRW(), types.MsgTypeHeaderReq, &req)
 }
 
@@ -111,6 +112,7 @@ func (blockMgr *BlockMgr) findAncestor(peer types.PeerInfoInterface) (uint64, er
 	//在发出请求的过程中，其他节点的新的块可能已经同步到本地了,因此可以多获取一些
 	err := blockMgr.requestHeaders(peer, fromHeight, maxHeaderHashCountReq)
 	if err != nil {
+		log.WithField("err", err).WithField("fromeheight", fromHeight).Info("req headers ")
 		return 0, err
 	}
 

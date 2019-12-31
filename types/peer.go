@@ -11,9 +11,8 @@ import (
 )
 
 var (
-	//DefaultPort      = 55555
 	maxCacheBlockNum = 1024
-	maxCacheTxNum    = 4096
+	maxCacheTxNum    = 1024 //Maximum number of cached transactions per account
 )
 
 type PeerInfoInterface interface {
@@ -30,12 +29,12 @@ type PeerInfoInterface interface {
 
 //业务层peerknown blk height:
 type PeerInfo struct {
-	height      uint64                   //Peer当前块高度
-	exchangeTxs map[crypto.Hash]struct{} //与Peer交换的交易记录
-	knownTxs    *sortedBiMap             // 按照NONCE排序
-	knownBlocks *sortedBiMap             // 按照高度排序
-	peer        *p2p.Peer                //p2p层peer
-	rw          p2p.MsgReadWriter        //与peer对应的协议
+	height      uint64                                //Peer当前块高度
+	exchangeTxs map[crypto.Hash]struct{}              //与Peer交换的交易记录
+	knownTxs    map[crypto.CommonAddress]*sortedBiMap // 按照NONCE排序
+	knownBlocks *sortedBiMap                          // 按照高度排序
+	peer        *p2p.Peer                             //p2p层peer
+	rw          p2p.MsgReadWriter                     //与peer对应的协议
 }
 
 func NewPeerInfo(p *p2p.Peer, rw p2p.MsgReadWriter) *PeerInfo {
@@ -43,7 +42,7 @@ func NewPeerInfo(p *p2p.Peer, rw p2p.MsgReadWriter) *PeerInfo {
 		peer:        p,
 		rw:          rw,
 		height:      0,
-		knownTxs:    newValueSortedBiMap(),
+		knownTxs:    make(map[crypto.CommonAddress]*sortedBiMap),
 		knownBlocks: newValueSortedBiMap(),
 	}
 
@@ -70,22 +69,34 @@ func (peer *PeerInfo) GetHeight() uint64 {
 //peer端是否已经知道此tx
 func (peer *PeerInfo) KnownTx(tx *Transaction) bool {
 	hash := tx.TxHash()
-	b := peer.knownTxs.Exist(hash)
-	if b {
-		return b
+	addr, _ := tx.From()
+
+	if sortedTxs, ok := peer.knownTxs[*addr]; ok {
+		if sortedTxs.Exist(hash) {
+			return true
+		}
 	}
+
 	return false
 }
 
 //记录对应的tx，避免多次相互发送
 func (peer *PeerInfo) MarkTx(tx *Transaction) {
 	hash := tx.TxHash()
+	addr, _ := tx.From()
 
-	if peer.knownTxs.Len() > maxCacheTxNum {
-		peer.knownTxs.BatchRemove(1)
+	if sortedTxs, ok := peer.knownTxs[*addr]; ok {
+		if sortedTxs.Len() > maxCacheTxNum {
+			sortedTxs.BatchRemove(1)
+		}
+
+		sortedTxs.Put(hash, tx.Nonce())
+		return
 	}
 
-	peer.knownTxs.Put(hash, tx.Nonce())
+	sortedTxs := newValueSortedBiMap()
+	sortedTxs.Put(hash, tx.Nonce())
+	peer.knownTxs[*addr] = sortedTxs
 }
 
 func (peer *PeerInfo) KnownBlock(blk *Block) bool {
@@ -220,6 +231,7 @@ func (m *sortedBiMap) BatchRemove(count int) int {
 		m.mut.Lock()
 		value := heap.Pop(m.index).(uint64)
 		m.items.DeleteInverse(value)
+
 		m.mut.Unlock()
 	}
 
