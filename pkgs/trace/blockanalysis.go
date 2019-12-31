@@ -49,7 +49,6 @@ func (blockAnalysis *BlockAnalysis) Start(newBlock, detachBlock *event.Feed) err
 			return []crypto.CommonAddress{crypto.PubkeyToAddress(pk)}, nil
 		} else {
 
-
 			trie, err := store.TrieStoreFromStore(blockAnalysis.trieStore, root)
 			if err != nil {
 				return nil, err

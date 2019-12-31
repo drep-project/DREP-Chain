@@ -70,7 +70,9 @@ func (logService *LogService) Init(executeContext *app.ExecuteContext) error {
 		ForceFormatting: true,
 	}
 	logrus.SetOutput(ansicolor.NewAnsiColorWriter(os.Stdout))
-	logrus.SetLevel(logrus.TraceLevel)
+	logrus.SetLevel(logrus.DebugLevel)
+
+	logrus.SetLevel(logrus.Level(logService.Config.LogLevel))
 	mHook := NewMyHook(wirter1, &logrus.JSONFormatter{}, textFormat)
 	lv, err := parserLevel(logService.Config.LogLevel)
 	if err != nil {

@@ -445,7 +445,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 						}
 
 						blockMgr.pendingSyncTasks.Delete(reqTimer)
-						fmt.Printf("req block body time out time：%p\n", reqTimer)
+						log.Errorf("req block body time out time：%p\n", reqTimer)
 
 					case timer := <-blockMgr.syncTimerCh:
 						//timer.Stop()
