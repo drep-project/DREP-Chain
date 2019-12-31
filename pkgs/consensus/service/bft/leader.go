@@ -202,7 +202,7 @@ func (leader *Leader) setUp(msg IConsenMsg, round int) {
 
 	for _, member := range leader.liveMembers {
 		if member.Peer != nil && !member.IsMe {
-			log.WithField("Node", member.Peer.IP()).WithField("Height", setup.Height).Trace("leader sent setup message")
+			log.WithField("Node", member.Peer.IP()).WithField("Height", setup.Height).WithField("size", len(setup.Msg)).Trace("leader sent setup message")
 			leader.sender.SendAsync(member.Peer.GetMsgRW(), MsgTypeSetUp, setup)
 		}
 	}

@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	waitTime = 10 * time.Second
+	waitTime = 15 * time.Second
 	round1   = 1
 	round2   = 2
 )
@@ -72,7 +72,6 @@ func NewBftConsensus(
 	buffer := bytes.NewBuffer(value)
 	binary.Write(buffer, binary.BigEndian, config.ChangeInterval)
 	dbService.LevelDb().Put([]byte(store.ChangeInterval), buffer.Bytes())
-	fmt.Println("store change interval ********************************")
 
 	return &BftConsensus{
 		BlockGenerator: blockGenerator,
@@ -432,9 +431,9 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
 func (bftConsensus *BftConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, t uint64, buf []byte) {
 	switch t {
 	case MsgTypeSetUp:
-		log.WithField("addr", peer.IP()).WithField("code", t).Debug("Receive MsgTypeSetUp msg")
+		log.WithField("addr", peer.IP()).WithField("code", t).WithField("size", len(buf)).Debug("Receive MsgTypeSetUp msg")
 	case MsgTypeChallenge:
-		log.WithField("addr", peer.IP()).WithField("code", t).Debug("Receive MsgTypeChallenge msg")
+		log.WithField("addr", peer.IP()).WithField("code", t).WithField("size", len(buf)).Debug("Receive MsgTypeChallenge msg")
 	case MsgTypeFail:
 		log.WithField("addr", peer.IP()).WithField("code", t).Debug("Receive MsgTypeFail msg")
 	case MsgTypeCommitment:
