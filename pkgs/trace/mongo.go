@@ -2,7 +2,9 @@ package trace
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/bft"
 	"time"
 
 	"github.com/drep-project/DREP-Chain/crypto"
@@ -65,7 +67,11 @@ func (store *MongogDbStore) InsertRecord(block *types.Block) {
 	rpcHeader := RpcBlockHeader{}
 	rpcHeader.FromBlockHeader(block.Header)
 	rpcBlock := &RpcBlock{}
-	producers, _ := store.getProducer(block.Header.StateRoot)
+
+	multiSig := &bft.MultiSignature{}
+	json.Unmarshal(block.Proof.Evidence, multiSig)
+	producers, _ := store.getProducer(block.Header.StateRoot, len(multiSig.Bitmap))
+
 	rpcBlock.From(block, producers)
 	_, err := store.blockCol.InsertOne(ctx, rpcBlock)
 	if err != nil {

@@ -10,7 +10,7 @@ import (
 	"github.com/drep-project/DREP-Chain/types"
 )
 
-type GetProducer func(root []byte) ([]crypto.CommonAddress, error)
+type GetProducer func(root []byte, num int) ([]crypto.CommonAddress, error)
 
 type BlockAnalysis struct {
 	Config           HistoryConfig
@@ -43,7 +43,7 @@ func (blockAnalysis *BlockAnalysis) Start(newBlock, detachBlock *event.Feed) err
 	blockAnalysis.eventNewBlockSub = newBlock.Subscribe(blockAnalysis.newBlockChan)
 	blockAnalysis.detachBlockSub = detachBlock.Subscribe(blockAnalysis.detachBlockChan)
 	var err error
-	getProducer := func(root []byte) ([]crypto.CommonAddress, error) {
+	getProducer := func(root []byte, num int) ([]crypto.CommonAddress, error) {
 		if blockAnalysis.consensusService.Config.ConsensusMode == "solo" {
 			pk := blockAnalysis.consensusService.SoloService.Config.MyPk
 			return []crypto.CommonAddress{crypto.PubkeyToAddress(pk)}, nil
@@ -53,7 +53,7 @@ func (blockAnalysis *BlockAnalysis) Start(newBlock, detachBlock *event.Feed) err
 			if err != nil {
 				return nil, err
 			}
-			producers := bft.GetCandidates(trie, 4)
+			producers := bft.GetCandidates(trie, num)
 			if err != nil {
 				return nil, err
 			}

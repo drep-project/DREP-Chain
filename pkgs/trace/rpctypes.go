@@ -3,7 +3,6 @@ package trace
 import (
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"github.com/drep-project/DREP-Chain/common"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/bft"
@@ -76,11 +75,6 @@ func (rpcBlock *RpcBlock) From(block *types.Block, addresses []crypto.CommonAddr
 		multiSig := &bft.MultiSignature{}
 		json.Unmarshal(block.Proof.Evidence, multiSig)
 		proof.Evidence = hex.EncodeToString(block.Proof.Evidence)
-
-		if len(addresses) <= multiSig.Leader {
-			fmt.Printf("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&:%s,%d", addresses, multiSig.Leader)
-			return nil
-		}
 
 		proof.LeaderAddress = addresses[multiSig.Leader].String()
 		for index, val := range multiSig.Bitmap {
