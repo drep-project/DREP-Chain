@@ -8,7 +8,6 @@ import (
 	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
 	"github.com/drep-project/binary"
 	"math/big"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -475,8 +474,6 @@ func (leader *Leader) setState(state int) {
 	if state == WAIT_COMMIT_IMEOUT {
 		fmt.Print("")
 	}
-	fmt.Printf("oldstatus:%s, addr:%p\n", strconv.FormatInt(int64(leader.currentState), 10), leader)
-	fmt.Println("newstate:" + strconv.FormatInt(int64(state), 10))
 	leader.currentState = state
 }
 

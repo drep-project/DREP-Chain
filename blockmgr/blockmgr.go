@@ -271,7 +271,7 @@ func (blockMgr *BlockMgr) SendTransaction(tx *types.Transaction, islocal bool) e
 	from, err := tx.From()
 	nonce := blockMgr.transactionPool.GetTransactionCount(from)
 	if nonce > tx.Nonce() {
-		return fmt.Errorf("error nounce db nonce:%d != %d", nonce, tx.Nonce())
+		return fmt.Errorf("SendTransaction local nonce:%d != comming tx nonce:%d", nonce, tx.Nonce())
 	}
 	err = blockMgr.verifyTransaction(tx)
 
