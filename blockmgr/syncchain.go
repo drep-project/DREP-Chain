@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"math/rand"
 	"time"
 
 	"github.com/drep-project/DREP-Chain/chain"
@@ -490,6 +491,10 @@ func (blockMgr *BlockMgr) GetBestPeerInfo() types.PeerInfoInterface {
 		if curPeer != nil {
 			if curPeer.GetHeight() < pi.GetHeight() {
 				curPeer = pi
+			} else if curPeer.GetHeight() == pi.GetHeight() {
+				if rand.Intn(2) == 0 {
+					curPeer = pi
+				}
 			}
 		} else {
 			curPeer = pi
