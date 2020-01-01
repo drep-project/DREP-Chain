@@ -4,7 +4,7 @@ const (
 	Wei     = 1
 	GWei    = 1e9
 	Coin    = 1e18
-	Rewards = 30 * Coin //每出一个块，系统奖励的币数目
+	Rewards = 30 //每出一个块，系统奖励的币数目
 
 	AliasGas uint64 = 68 // gas Use when alias a address
 
