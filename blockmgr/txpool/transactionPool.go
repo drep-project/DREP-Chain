@@ -16,8 +16,8 @@ import (
 
 const (
 	maxAllTxsCount  = 100000           //交易池所弄容纳的总的交易数量
-	maxTxsOfQueue   = 20               //单个地址对应的乱序队列中，最多容纳交易数目
-	maxTxsOfPending = 1000000          //单个地址对应的有序队列中，最多容纳交易数目
+	maxTxsOfQueue   = 5                //单个地址对应的乱序队列中，最多容纳交易数目
+	maxTxsOfPending = 20               //单个地址对应的有序队列中，最多容纳交易数目
 	expireTimeTx    = 60 * 60 * 24 * 3 //交易在一周内，还没有被打包，则被丢弃
 	//expireTimeTx = 60 * 60 //交易在一周内，还没有被打包，则被丢弃
 )
