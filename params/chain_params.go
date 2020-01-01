@@ -4,16 +4,16 @@ const (
 	Wei     = 1
 	GWei    = 1e9
 	Coin    = 1e18
-	Rewards = 1000000000000000000 //每出一个块，系统奖励的币数目
+	Rewards = 30 * Coin //每出一个块，系统奖励的币数目
 
 	AliasGas uint64 = 68 // gas Use when alias a address
 
-	GasLimitBoundDivisor uint64 = 64        // The bound divisor of the gas limit, used in update calculations.
-	MinGasLimit          uint64 = 180000000 // Minimum the gas limit may ever be.
-	GenesisGasLimit      uint64 = 180000000 // Gas limit of the Genesis block.
+	GasLimitBoundDivisor uint64 = 64       // The bound divisor of the gas limit, used in update calculations.
+	MinGasLimit          uint64 = 18000000 // Minimum the gas limit may ever be.
+	GenesisGasLimit      uint64 = 18000000 // Gas limit of the Genesis block.
 	//MIN_GAS_IN_BLOCK uint64 = 60000000 / 2
-	MaxGasLimit uint64 = 360000000 // tps 3000 transfer  60000gas per transfer tx
-	MaxSupply   uint64 = 10000000000
+
+	MaxGasLimit uint64 = 70000000 // tps 3000 transfer  60000gas per transfer tx
 
 	MaximumExtraDataSize  uint64 = 32    // Maximum size extra data may be after Genesis.
 	ExpByteGas            uint64 = 10    // Times ceil(log256(exponent)) for the EXP instruction.
