@@ -135,7 +135,12 @@ func AccumulateRewards(pubkey *secp256k1.PublicKey, trieStore store.StoreInterfa
 	if err != nil {
 		return err
 	}
-	err = trieStore.AddBalance(&soloAddr, height, params.CoinFromNumer(1000))
+
+	reward := big.NewInt(params.Rewards)
+	reward.Mul(reward, new(big.Int).SetUint64(params.Coin))
+	fmt.Println(reward)
+
+	err = trieStore.AddBalance(&soloAddr, height, reward)
 	if err != nil {
 		return err
 	}

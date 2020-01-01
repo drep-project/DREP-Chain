@@ -11,26 +11,28 @@ type IRewardCalculator interface {
 }
 
 type RewardCalculator struct {
-	trieStore store.StoreInterface
-	height uint64
-	sig *MultiSignature
-	producers ProducerSet
+	trieStore       store.StoreInterface
+	height          uint64
+	sig             *MultiSignature
+	producers       ProducerSet
 	totalGasBalance *big.Int
 }
 
 func NewRewardCalculator(trieStore store.StoreInterface, sig *MultiSignature, producers ProducerSet, totalGasBalance *big.Int, height uint64) *RewardCalculator {
 	return &RewardCalculator{
-		trieStore:trieStore,
-		sig:sig,
-		producers:producers,
-		totalGasBalance:totalGasBalance,
-		height:height,
+		trieStore:       trieStore,
+		sig:             sig,
+		producers:       producers,
+		totalGasBalance: totalGasBalance,
+		height:          height,
 	}
 }
 
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
 func (calculator *RewardCalculator) AccumulateRewards() error {
-	reward := new(big.Int).SetUint64(uint64(params.Rewards))
+	reward := big.NewInt(params.Rewards)
+	reward.Mul(reward, new(big.Int).SetUint64(params.Coin))
+
 	r := new(big.Int)
 	r = r.Div(reward, new(big.Int).SetInt64(2))
 	r.Add(r, calculator.totalGasBalance)
