@@ -29,6 +29,7 @@ type PeerInfoInterface interface {
 
 //业务层peerknown blk height:
 type PeerInfo struct {
+	lock        sync.Mutex
 	height      uint64                                //Peer当前块高度
 	exchangeTxs map[crypto.Hash]struct{}              //与Peer交换的交易记录
 	knownTxs    map[crypto.CommonAddress]*sortedBiMap // 按照NONCE排序
@@ -71,6 +72,8 @@ func (peer *PeerInfo) KnownTx(tx *Transaction) bool {
 	hash := tx.TxHash()
 	addr, _ := tx.From()
 
+	peer.lock.Lock()
+	defer peer.lock.Unlock()
 	if sortedTxs, ok := peer.knownTxs[*addr]; ok {
 		if sortedTxs.Exist(hash) {
 			return true
@@ -84,12 +87,13 @@ func (peer *PeerInfo) KnownTx(tx *Transaction) bool {
 func (peer *PeerInfo) MarkTx(tx *Transaction) {
 	hash := tx.TxHash()
 	addr, _ := tx.From()
+	peer.lock.Lock()
+	defer peer.lock.Unlock()
 
 	if sortedTxs, ok := peer.knownTxs[*addr]; ok {
 		if sortedTxs.Len() > maxCacheTxNum {
 			sortedTxs.BatchRemove(1)
 		}
-
 		sortedTxs.Put(hash, tx.Nonce())
 		return
 	}
