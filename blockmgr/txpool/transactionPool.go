@@ -217,7 +217,7 @@ func (pool *TransactionPool) addTx(tx *types.Transaction, isLocal bool) error {
 				return errors.New("can't replace old tx, new tx price is too low")
 			}
 
-			log.WithField("nonce", tx.Nonce()).WithField("old price", oldTx.GasPrice()).WithField("new pirce", tx.GasPrice()).Warn("replace")
+			log.WithField("nonce", tx.Nonce()).WithField("old price", oldTx.GasPrice()).WithField("new pirce", tx.GasPrice()).Info("replace")
 
 			delete(pool.allTxs, oldTx.TxHash().String())
 			pool.allPricedTxs.Remove(oldTx)
