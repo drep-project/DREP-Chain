@@ -1,26 +1,26 @@
 package bft
 
 import (
-	"github.com/drep-project/binary"
 	"github.com/drep-project/DREP-Chain/chain"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1/schnorr"
 	"github.com/drep-project/DREP-Chain/crypto/sha3"
 	"github.com/drep-project/DREP-Chain/types"
+	"github.com/drep-project/binary"
 )
 
-type GetProducers func(uint64,int) ([]*Producer, error)
+type GetProducers func(uint64, int) ([]*Producer, error)
 type GetBlock func(hash *crypto.Hash) (*types.Block, error)
 
 type BlockMultiSigValidator struct {
 	getProducers GetProducers
 	getBlock     GetBlock
-	producerNum int
+	producerNum  int
 }
 
-func NewBlockMultiSigValidator(getProducers GetProducers, getBlock GetBlock,producerNum int) *BlockMultiSigValidator {
-	return &BlockMultiSigValidator{getProducers, getBlock,producerNum}
+func NewBlockMultiSigValidator(getProducers GetProducers, getBlock GetBlock, producerNum int) *BlockMultiSigValidator {
+	return &BlockMultiSigValidator{getProducers, getBlock, producerNum}
 }
 
 func (blockMultiSigValidator *BlockMultiSigValidator) VerifyHeader(header, parent *types.BlockHeader) error {
@@ -40,7 +40,7 @@ func (blockMultiSigValidator *BlockMultiSigValidator) VerifyBody(block *types.Bl
 	if err != nil {
 		return err
 	}
-	producers, err := blockMultiSigValidator.getProducers(parentBlock.Header.Height,blockMultiSigValidator.producerNum)
+	producers, err := blockMultiSigValidator.getProducers(parentBlock.Header.Height, blockMultiSigValidator.producerNum)
 	if err != nil {
 		return err
 	}
@@ -74,5 +74,5 @@ func (blockMultiSigValidator *BlockMultiSigValidator) ExecuteBlock(context *chai
 		return nil
 	}
 	calculator := NewRewardCalculator(context.TrieStore, multiSig, producers, context.GasFee, context.Block.Header.Height)
-	return calculator.AccumulateRewards()
+	return calculator.AccumulateRewards(context.Block.Header.Height)
 }

@@ -345,7 +345,7 @@ func (bftConsensus *BftConsensus) runAsLeader(producers ProducerSet, miners []*M
 	//Determine reward points
 	block.Proof = types.Proof{consensusTypes.Pbft, multiSigBytes}
 	calculator := NewRewardCalculator(trieStore, multiSig, producers, gasFee, block.Header.Height)
-	err = calculator.AccumulateRewards()
+	err = calculator.AccumulateRewards(block.Header.Height)
 	if err != nil {
 		return nil, err
 	}

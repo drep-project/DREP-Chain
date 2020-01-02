@@ -3,6 +3,7 @@ package bft
 import (
 	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/params"
+	"math"
 	"math/big"
 )
 
@@ -29,9 +30,13 @@ func NewRewardCalculator(trieStore store.StoreInterface, sig *MultiSignature, pr
 }
 
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
-func (calculator *RewardCalculator) AccumulateRewards() error {
+func (calculator *RewardCalculator) AccumulateRewards(height uint64) error {
 	reward := big.NewInt(params.Rewards)
 	reward.Mul(reward, new(big.Int).SetUint64(params.Coin))
+
+	rate := int64(height / (4 * params.BlockCountOfEveryYear))
+	rate = int64(math.Exp2(float64(rate)))
+	reward.Div(reward, new(big.Int).SetInt64(rate))
 
 	r := new(big.Int)
 	r = r.Div(reward, new(big.Int).SetInt64(2))

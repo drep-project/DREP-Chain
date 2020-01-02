@@ -3,7 +3,6 @@ package bft
 import (
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"github.com/drep-project/DREP-Chain/app"
 	blockMgrService "github.com/drep-project/DREP-Chain/blockmgr"
 	chainService "github.com/drep-project/DREP-Chain/chain"
@@ -183,7 +182,6 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 								return err
 							}
 
-							ok := false
 							for _, producer := range producers {
 								ok := sig.Verify(randomBytes[:], producer.Pubkey)
 								if ok {
@@ -193,9 +191,6 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 								}
 							}
 
-							if !ok {
-								fmt.Println("MsgTypeValidateRes pubkey err*********")
-							}
 							continue
 						default:
 							bftConsensusService.BftConsensus.ReceiveMsg(pi, msg.Code, buf)
