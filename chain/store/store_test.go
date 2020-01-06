@@ -3,6 +3,7 @@ package store
 import (
 	"crypto/rand"
 	"fmt"
+	"github.com/drep-project/DREP-Chain/params"
 	"github.com/drep-project/DREP-Chain/types"
 	"math/big"
 	"os"
@@ -13,6 +14,8 @@ import (
 	"github.com/drep-project/DREP-Chain/database/leveldb"
 	"github.com/drep-project/binary"
 )
+
+var ChangeCycle uint64 = 100
 
 //添加 撤销
 func TestGetVoteCredit(t *testing.T) {
@@ -122,9 +125,9 @@ func TestPutBalance(t *testing.T) {
 	heightLen := 172800 * 3 * 12
 	//todo + -
 	store.stake.VoteCredit(&addr, &backbone, new(big.Int).SetUint64(100), 0)
-	store.stake.CancelVoteCredit(&addr, &backbone, new(big.Int).SetUint64(10), uint64(ChangeCycle*heightLen))
+	store.stake.CancelVoteCredit(&addr, &backbone, new(big.Int).SetUint64(10), uint64(ChangeCycle*uint64(heightLen)), ChangeCycle)
 	//fmt.Println(store.GetBalance(&addr, 0))
-	total := store.GetBalance(&addr, uint64(ChangeCycle*heightLen)+ChangeCycle)
+	total := store.GetBalance(&addr, uint64(ChangeCycle*uint64(heightLen))+ChangeCycle)
 	interest := total.Sub(total, new(big.Int).SetUint64(10000+10)).Uint64()
 	interestRate := float64(interest) / float64(10)
 	fmt.Println("interst ratio:", interestRate, "every %s month", 12)
@@ -134,11 +137,11 @@ func TestPutBalance(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fmt.Println(store.GetBalance(&addr, uint64(ChangeCycle*heightLen)+ChangeCycle))
+	fmt.Println(store.GetBalance(&addr, uint64(ChangeCycle*uint64(heightLen))+ChangeCycle))
 
-	ret := new(big.Int).SetUint64(10000 + 10 + 20).Cmp(store.GetBalance(&addr, uint64(ChangeCycle*heightLen)+ChangeCycle))
+	ret := new(big.Int).SetUint64(10000 + 10 + 20).Cmp(store.GetBalance(&addr, uint64(ChangeCycle*uint64(heightLen))+ChangeCycle))
 	if ret > 0 {
-		t.Fatal("vote not merge to balance", store.GetBalance(&addr, uint64(ChangeCycle*heightLen)+ChangeCycle))
+		t.Fatal("vote not merge to balance", store.GetBalance(&addr, uint64(ChangeCycle*uint64(heightLen))+ChangeCycle))
 	}
 }
 
@@ -300,4 +303,37 @@ func TestCancelVoteCredit(t *testing.T) {
 			t.Fatalf("cancel vote err,%v", b)
 		}
 	}
+}
+
+func Test_getInterset(t *testing.T) {
+	balance := new(big.Int).SetUint64(params.Coin)
+	balance.Mul(balance, new(big.Int).SetUint64(100))
+	//2个月内的
+	interest2 := getInterst(0, 1036800, balance)
+
+	fmt.Println("0-3  month:", interest2)
+	fmt.Println(interest2.Mul(interest2, new(big.Int).SetUint64(6*100)).Div(interest2, balance), "%")
+
+	//3个月利息
+	interest3 := getInterst(0, 1555200, balance)
+
+	fmt.Println("3-6  month:", interest3)
+	fmt.Println(interest3.Mul(interest3, new(big.Int).SetUint64(4*100)).Div(interest3, balance), "%")
+
+	//6个月利息
+	interest6 := getInterst(0, 3110400, balance)
+	fmt.Println("6-12  month:", getInterst(0, 3110400, balance))
+	fmt.Println(interest6.Mul(interest6, new(big.Int).SetUint64(2*100)).Div(interest6, balance), "%")
+	//12个月利息
+
+	interest12 := getInterst(0, 6220800, balance)
+	fmt.Println("12- month:")
+	fmt.Println(interest12)
+	fmt.Println(balance)
+
+	interest12.Mul(interest12, new(big.Int).SetUint64(100))
+
+	fmt.Println(interest12.Div(interest12, balance).String(), "%")
+
+	//fmt.Println(getInterst(0, 1555200, balance))
 }
