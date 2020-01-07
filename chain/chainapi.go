@@ -2,7 +2,6 @@ package chain
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/drep-project/DREP-Chain/chain/store"
 	//"github.com/drep-project/DREP-Chain/common"
 	"github.com/drep-project/DREP-Chain/common/hexutil"
