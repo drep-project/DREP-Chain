@@ -657,7 +657,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_dec
 
 
 ### 4. trace_getSendTransactionByAddr
-#### 作用：根据地址查询该交易发出的交易，支持分页
+#### 作用：根据地址查询该地址发出的交易，支持分页
 > 参数：
  1. 交易地址
  2. 分页号（从1开始）
@@ -700,7 +700,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_get
 
 
 ### 5. trace_getReceiveTransactionByAd
-#### 作用：根据地址查询该交易接受的交易，支持分页
+#### 作用：根据地址查询该地址接受的交易，支持分页
 > 参数：
  1. 交易地址
  2. 分页号（从1开始）
@@ -811,7 +811,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_c
 > 参数：
  1. 钱包密码
 
-#### 返回值：无
+#### 返回值：失败返回错误原因，成功不返回任何信息
 
 #### 示例代码
 ##### 请求：
@@ -831,7 +831,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_c
 #### 作用：锁定账号
 > 参数：
 
-#### 返回值：无
+#### 返回值：失败返回错误原因，成功不返回任何信息
 
 #### 示例代码
 ##### 请求：
@@ -852,7 +852,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_l
 > 参数：
  1. 账号地址
 
-#### 返回值：无
+#### 返回值：失败返回错误原因，成功不返回任何信息
 
 #### 示例代码
 ##### 请求：
@@ -1027,7 +1027,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ##### 请求：
 
 ```shell
-curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_candidateCredit","params":["0x0373654ccdb250f2cfcfe64c783a44b9ea85bc47f2f00c480d05082428d277d6d0","0x111","0x110","0x30000","{\"Pubkey\":\"0x020e233ebaed5ade5e48d7ee7a999e173df054321f4ddaebecdb61756f8a43e91c\",\"Node\":\"192.168.31.51:55555\"}"],"id":1}' http://127.0.0.1:15645
+curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_candidateCredit","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000","{\"Pubkey\":\"0x020e233ebaed5ade5e48d7ee7a999e173df054321f4ddaebecdb61756f8a43e91c\",\"Node\":\"192.168.31.51:55555\"}"],"id":1}' http://127.0.0.1:15645
 ```
 
 ##### 响应：
@@ -1115,7 +1115,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 
 
 ### 16. account_dumpPrivkey
-#### 作用：倒出私钥
+#### 作用：关闭钱包
 > 参数：
  1. 地址
 
@@ -1136,7 +1136,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_d
 
 
 ### 17. account_sign
-#### 作用：签名交易
+#### 作用：关闭钱包
 > 参数：
  1. 地址
  2. 消息hash
