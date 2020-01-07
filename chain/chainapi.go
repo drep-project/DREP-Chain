@@ -2,7 +2,9 @@ package chain
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/drep-project/DREP-Chain/chain/store"
+	//"github.com/drep-project/DREP-Chain/common"
 	"github.com/drep-project/DREP-Chain/common/hexutil"
 	"github.com/drep-project/DREP-Chain/common/trie"
 	"github.com/drep-project/DREP-Chain/crypto"
@@ -472,7 +474,6 @@ func (trieQuery *TrieQuery) GetCancelCreditDetails(addr *crypto.CommonAddress) s
 	key := sha3.Keccak256([]byte(store.StakeStorage + addr.Hex()))
 
 	storage := &types.StakeStorage{}
-
 	value, err := trieQuery.trie.TryGet(key)
 	if err != nil {
 		log.Errorf("get storage err:%v", err)
@@ -485,6 +486,10 @@ func (trieQuery *TrieQuery) GetCancelCreditDetails(addr *crypto.CommonAddress) s
 		if err != nil {
 			return ""
 		}
+	}
+
+	if len(storage.CC) == 0 {
+		return ""
 	}
 
 	//for _, rc := range storage.RC {
