@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/drep-project/DREP-Chain/common"
+	"github.com/drep-project/DREP-Chain/params"
 	"math/big"
 
 	"github.com/drep-project/DREP-Chain/crypto"
@@ -17,8 +18,7 @@ const (
 	CandidateAddrs             = "CandidateAddrs" //参与竞选出块节点的地址集合
 	StakeStorage               = "StakeStorage"   //以地址作为KEY,存储stake相关内容
 	registerPledgeLimit uint64 = 1000000          //候选节点需要抵押币的总数
-	drepUnit            uint64 = 1000000000       //drep币最小单位
-	//ChangeCycle                = 100              //出块节点Change cycle
+	//drepUnit            uint64 =        //drep币最小单位
 	interestRate = 1000000 * 12 //每个存储高度，奖励的利率
 )
 
@@ -476,7 +476,7 @@ func (trieStore *trieStakeStore) CandidateCredit(addresses *crypto.CommonAddress
 		}
 
 		//投给自己，而且数量足够大
-		if totalBalance.Cmp(new(big.Int).Mul(new(big.Int).SetUint64(registerPledgeLimit), new(big.Int).SetUint64(drepUnit))) >= 0 {
+		if totalBalance.Cmp(new(big.Int).Mul(new(big.Int).SetUint64(registerPledgeLimit), new(big.Int).SetUint64(params.Coin))) >= 0 {
 			trieStore.AddCandidateAddr(addresses)
 		}
 	}
@@ -504,7 +504,7 @@ func (trieStore *trieStakeStore) CancelCandidateCredit(fromAddr *crypto.CommonAd
 		return nil, errors.New("cancel candidate credit param err")
 	}
 	return trieStore.cancelCredit(fromAddr, fromAddr, cancelBalance, height, changeInterval, func(leftCredit *big.Int, storage *types.StakeStorage) (*types.StakeStorage, error) {
-		if leftCredit.Cmp(new(big.Int).Mul(new(big.Int).SetUint64(registerPledgeLimit), new(big.Int).SetUint64(drepUnit))) < 0 {
+		if leftCredit.Cmp(new(big.Int).Mul(new(big.Int).SetUint64(registerPledgeLimit), new(big.Int).SetUint64(params.Coin))) < 0 {
 			trieStore.DelCandidateAddr(fromAddr)
 		}
 		return storage, nil

@@ -1,10 +1,10 @@
 package trace
 
 import (
-	"github.com/drep-project/binary"
 	"github.com/drep-project/DREP-Chain/common"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/types"
+	"github.com/drep-project/binary"
 )
 
 /*
@@ -116,7 +116,7 @@ func (traceApi *TraceApi) DecodeTrasnaction(bytes common.Bytes) (*RpcTransaction
 
 /*
  name: getSendTransactionByAddr
- usage: 根据地址查询该交易发出的交易，支持分页
+ usage: 根据地址查询该地址发出的交易，支持分页
  params:
 	1. 交易地址
 	2. 分页号（从1开始）
@@ -152,7 +152,7 @@ func (traceApi *TraceApi) GetSendTransactionByAddr(addr *crypto.CommonAddress, p
 
 /*
  name: getReceiveTransactionByAd
- usage: 根据地址查询该交易接受的交易，支持分页
+ usage: 根据地址查询该地址接受的交易，支持分页
  params:
 	1. 交易地址
 	2. 分页号（从1开始）

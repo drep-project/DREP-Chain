@@ -281,15 +281,15 @@ func (pool *TransactionPool) addTx(tx *types.Transaction, isLocal bool) error {
 
 	//添加到queue
 	if list, ok := pool.queue[*addr]; ok {
-		//Whether the queue space corresponding to the address is full,drop this tx
+		//Whether the queue space corresponding to the address is full,drop old tx
 		if list.Len() > maxTxsOfQueue {
-			//丢弃老的交易
-			//txs := list.Cap(list.Len())
-			//for _, delTx := range txs {
-			//	delete(pool.allTxs, delTx.TxHash().String())
-			//	pool.allPricedTxs.Remove(delTx)
-			//}
-			return fmt.Errorf("addr:%s have too many txs(%d)", addr.String(), list.Len())
+			//Blocking here may be nonce discontinuity, so discard the old transaction, add new transaction, and realize nonce continuity
+			txs := list.Cap(list.Len())
+			for _, delTx := range txs {
+				delete(pool.allTxs, delTx.TxHash().String())
+				pool.allPricedTxs.Remove(delTx)
+				log.WithField("oldtx", delTx.TxHash()).WithField("newTx", tx.TxHash()).Info("old tx been replaced")
+			}
 		}
 		list.Add(tx)
 	} else {
