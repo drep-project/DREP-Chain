@@ -382,7 +382,7 @@ func (accountapi *AccountApi) CreateCode(from crypto.CommonAddress, byteCode com
 
 /*
 	 name: dumpPrivkey
-	 usage: 关闭钱包
+	 usage: 导出地址对应的私钥
 	 params:
 		1.地址
 	 return: 私钥
@@ -403,6 +403,31 @@ func (accountapi *AccountApi) DumpPrivkey(address *crypto.CommonAddress) (*secp2
 		return nil, err
 	}
 	return node.PrivateKey, nil
+}
+
+/*
+	 name: DumpPubkey
+	 usage: 导出地址对应的公钥
+	 params:
+		1.地址
+	 return: 公钥
+	 example:   curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_dumpPubkey","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5"], "id": 3}' -H "Content-Type:application/json"
+	 response:
+		 {"jsonrpc":"2.0","id":3,"result":"0x270f4b122603999d1c07aec97e972a2ddf7bd8b5bfe3543c10814e6a19f13aaf"}
+*/
+func (accountapi *AccountApi) DumpPubkey(address *crypto.CommonAddress) (*secp256k1.PublicKey, error) {
+	if !accountapi.Wallet.IsOpen() {
+		return nil, ErrClosedWallet
+	}
+	if accountapi.Wallet.IsLock() {
+		return nil, ErrLockedWallet
+	}
+
+	node, err := accountapi.Wallet.GetAccountByAddress(address)
+	if err != nil {
+		return nil, err
+	}
+	return node.PrivateKey.PubKey(), nil
 }
 
 /*
