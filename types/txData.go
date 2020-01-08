@@ -4,14 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
-	"net"
-	"regexp"
-	"strconv"
-	"strings"
+	"github.com/drep-project/DREP-Chain/network/p2p/enode"
 )
-
-type P2pNode struct {
-}
 
 //候选节点数据部分信息
 type CandidateData struct {
@@ -20,7 +14,7 @@ type CandidateData struct {
 }
 
 func (cd CandidateData) check() error {
-	if !hostAddrCheck(cd.Node) {
+	if !checkp2pNode(cd.Node) {
 		return fmt.Errorf("addr err:%s", cd.Node)
 	}
 
@@ -45,33 +39,7 @@ func (cd *CandidateData) Unmarshal(data []byte) error {
 	return cd.check()
 }
 
-func hostAddrCheck(addr string) bool {
-	items := strings.Split(addr, ":")
-	if items == nil || len(items) != 2 {
-		return false
-	}
-
-	a := net.ParseIP(items[0])
-	if a == nil {
-		return false
-	}
-
-	match, err := regexp.MatchString("^[0-9]*$", items[1])
-	if err != nil {
-		return false
-	}
-
-	i, err := strconv.Atoi(items[1])
-	if err != nil {
-		return false
-	}
-	if i < 0 || i > 65535 {
-		return false
-	}
-
-	if match == false {
-		return false
-	}
-
-	return true
+func checkp2pNode(node string) bool {
+	n := enode.Node{}
+	return n.UnmarshalText([]byte(node)) == nil
 }
