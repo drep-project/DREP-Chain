@@ -326,7 +326,7 @@ func (accountapi *AccountApi) CancelCandidateCredit(from crypto.CommonAddress, a
 }
 
 /*
- name: call
+` name: account_call
  usage: 调用合约
  params:
 	1. 调用者的地址
@@ -337,7 +337,7 @@ func (accountapi *AccountApi) CancelCandidateCredit(from crypto.CommonAddress, a
 	5. gas上限
  return: 合约地址
  example:
- 	curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_createCode","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x6d4ce63c","0x111","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
+ 	curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_call","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x6d4ce63c","0x111","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
  response:
 	 {"jsonrpc":"2.0","id":1,"result":"0x5d74aba54ace5f01a5f0057f37bfddbbe646ea6de7265b368e2e7d17d9cdeb9c"}
 */
