@@ -260,11 +260,11 @@ func (chain *ChainApi) GetByteCode(addr *crypto.CommonAddress) hexutil.Bytes {
  params:
 	1. 地址
  return: bytecode
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getVoteCreditDetails","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCreditDetails","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
-   {"jsonrpc":"2.0","id":3,"result":"{\"0x300fc5a14e578be28c64627c0e7e321771c58cd4\":\"0x3641100\"}"}
+   {"jsonrpc":"2.0","id":3,"result":"[{\"Addr\":\"0xd05d5f324ada3c418e14cd6b497f2f36d60ba607\",\"HeghtValues\":[{\"CreditHeight\":1329,\"CreditValue\":\"0x11135\"}]}]"}
 */
-func (chain *ChainApi) GetVoteCreditDetails(addr *crypto.CommonAddress) string {
+func (chain *ChainApi) GetCreditDetails(addr *crypto.CommonAddress) string {
 	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
 	return trieQuery.GetVoteCreditDetails(addr)
 }
@@ -402,13 +402,9 @@ func (trieQuery *TrieQuery) GetVoteCreditDetails(addr *crypto.CommonAddress) str
 		}
 	}
 
-	//for _, rc := range storage.RC {
-	//	total := new(big.Int)
-	//	for _, value := range rc.Hv {
-	//		total.Add(total, &value.CreditValue)
-	//	}
-	//	m[rc.Addr] = common.Big(*total)
-	//}
+	if len(storage.RC) == 0 {
+		return ""
+	}
 	b, _ := json.Marshal(storage.RC)
 	return string(b)
 }
@@ -457,7 +453,7 @@ func (trieQuery *TrieQuery) GetCandidateAddrs() string {
 
 		total := new(big.Int)
 		for _, rc := range storage.RC {
-			for _, hv := range rc.Hv {
+			for _, hv := range rc.HeghtValues {
 				total.Add(total, hv.CreditValue.ToInt())
 			}
 		}
@@ -493,7 +489,7 @@ func (trieQuery *TrieQuery) GetCancelCreditDetails(addr *crypto.CommonAddress) s
 
 	//for _, rc := range storage.RC {
 	//	total := new(big.Int)
-	//	for _, value := range rc.Hv {
+	//	for _, value := range rc.HeghtValues {
 	//		total.Add(total, &value.CreditValue)
 	//	}
 	//	m[rc.Addr] = common.Big(*total)
