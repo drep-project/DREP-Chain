@@ -2,7 +2,10 @@ package chain
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/drep-project/DREP-Chain/chain/store"
+	"github.com/drep-project/DREP-Chain/common"
+
 	//"github.com/drep-project/DREP-Chain/common"
 	"github.com/drep-project/DREP-Chain/common/hexutil"
 	"github.com/drep-project/DREP-Chain/common/trie"
@@ -201,7 +204,7 @@ func (chain *ChainApi) GetAliasByAddress(addr *crypto.CommonAddress) string {
  params:
 	1. 待查询地别名
  return: 别名对应的地址
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getAliasByAddress","params":["tom"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getAddressByAlias","params":["tom"], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":"0x8a8e541ddd1272d53729164c70197221a3c27486"}
 */
@@ -433,15 +436,17 @@ func (trieQuery *TrieQuery) GetCandidateAddrs() string {
 	}
 
 	type AddrAndCrit struct {
-		addr  *crypto.CommonAddress
-		cridt *big.Int
+		Addr  *crypto.CommonAddress
+		Cridt *common.Big
 	}
 
 	ac := make([]AddrAndCrit, 0)
 	for _, addr := range addrs {
 		addr := addr
 		storage := &types.StakeStorage{}
-		value, _ := trieQuery.trie.TryGet(addr.Bytes())
+		key := sha3.Keccak256([]byte(store.StakeStorage + addr.Hex()))
+
+		value, _ := trieQuery.trie.TryGet(key)
 		if value == nil {
 			return ""
 		} else {
@@ -458,10 +463,14 @@ func (trieQuery *TrieQuery) GetCandidateAddrs() string {
 			}
 		}
 
-		ac = append(ac, AddrAndCrit{addr: &addr, cridt: total})
+		cb := new(common.Big)
+		cb.SetMathBig(*total)
+
+		ac = append(ac, AddrAndCrit{Addr: &addr, Cridt: cb})
 	}
 
-	b, _ := json.Marshal(ac)
+	b, err := json.Marshal(ac)
+	fmt.Println(string(b), err)
 	return string(b)
 }
 
