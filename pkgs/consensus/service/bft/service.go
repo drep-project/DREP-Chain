@@ -117,11 +117,13 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 				for _, producer := range producers {
 					if producer.Node.ID().String() == peer.Node().ID().String() {
 						ipChecked = true
+						log.WithField("producer id", producer.Node.ID().String()).WithField("ip", producer.Node.IP().String()).Trace("peer in procucers")
 						break
 					}
+					log.WithField("producer id", producer.Node.ID().String()).WithField("ip", producer.Node.IP().String()).Trace("peer not in procucers")
 				}
 				if !ipChecked {
-					log.WithField("IP", peer.Node().IP().String()).
+					log.WithField("IP", peer.Node().IP().String()).WithField("peer node", peer.Node().String()).
 						WithField("PublicKey", hex.EncodeToString(peer.Node().Pubkey().Serialize())).
 						Debug("Receive remove peer")
 					for _, producer := range producers {
