@@ -393,13 +393,13 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ##### 请求：
 
 ```shell
-curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getVoteCreditDetails","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCreditDetails","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
 ```
 
 ##### 响应：
 
 ```json
-{"jsonrpc":"2.0","id":3,"result":"{\"0x300fc5a14e578be28c64627c0e7e321771c58cd4\":\"0x3641100\"}"}
+{"jsonrpc":"2.0","id":3,"result":"[{\"Addr\":\"0xd05d5f324ada3c418e14cd6b497f2f36d60ba607\",\"HeghtValues\":[{\"CreditHeight\":1329,\"CreditValue\":\"0x11135\"}]}]"}
 ````
 
 
@@ -1115,7 +1115,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 
 
 ### 16. account_dumpPrivkey
-#### 作用：关闭钱包
+#### 作用：导出地址对应的私钥
 > 参数：
  1. 地址
 
@@ -1135,7 +1135,28 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_d
 ````
 
 
-### 17. account_sign
+### 17. account_DumpPubkey
+#### 作用：导出地址对应的公钥
+> 参数：
+ 1. 地址
+
+#### 返回值：公钥
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_dumpPubkey","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5"], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":3,"result":"0x270f4b122603999d1c07aec97e972a2ddf7bd8b5bfe3543c10814e6a19f13aaf"}
+````
+
+
+### 18. account_sign
 #### 作用：关闭钱包
 > 参数：
  1. 地址
@@ -1157,7 +1178,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_s
 ````
 
 
-### 18. account_generateAddresses
+### 19. account_generateAddresses
 #### 作用：生成其他链的地址
 > 参数：
  1. drep地址
@@ -1178,7 +1199,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_g
 ````
 
 
-### 19. account_importKeyStore
+### 20. account_importKeyStore
 #### 作用：导入keystore
 > 参数：
  1. path
@@ -1200,7 +1221,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_i
 ````
 
 
-### 20. account_importPrivkey
+### 21. account_importPrivkey
 #### 作用：导入私钥
 > 参数：
  1. privkey(compress hex)
