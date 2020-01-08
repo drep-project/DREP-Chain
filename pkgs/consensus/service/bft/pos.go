@@ -2,11 +2,11 @@ package bft
 
 import (
 	"container/heap"
-	"github.com/drep-project/binary"
 	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/network/p2p/enode"
 	"github.com/drep-project/DREP-Chain/types"
+	"github.com/drep-project/binary"
 	"math/big"
 )
 
@@ -34,14 +34,14 @@ func (h *creditsHeap) Pop() interface{} {
 }
 
 func GetCandidates(store store.StoreInterface, topN int) []*Producer {
-	voteAddrs, err := store.GetCandidateAddrs()
+	candidateAddrs, err := store.GetCandidateAddrs()
 	if err != nil {
 		log.Errorf("get candidates err:%v", err)
 		return nil
 	}
 
 	csh := make(creditsHeap, 0)
-	for _, addr := range voteAddrs {
+	for _, addr := range candidateAddrs {
 		addr := addr
 		totalCredit := store.GetVoteCreditCount(&addr)
 		csh = append(csh, &addrAndCredit{addr: &addr, value: totalCredit})
@@ -49,7 +49,7 @@ func GetCandidates(store store.StoreInterface, topN int) []*Producer {
 
 	heap.Init(&csh)
 
-	candidateAddrs := []*Producer{}
+	producerAddrs := []*Producer{}
 
 	addNum := 0
 	for csh.Len() > 0 {
@@ -68,6 +68,8 @@ func GetCandidates(store store.StoreInterface, topN int) []*Producer {
 			log.WithField("err", err).Info("unmarshal data to candidateData err")
 			continue
 		}
+
+		log.Trace("get candidates info:", cd.Node, string(cd.Pubkey.Serialize()), ac.addr.String())
 		n := &enode.Node{}
 		err = n.UnmarshalText([]byte(cd.Node))
 		if err != nil {
@@ -77,11 +79,11 @@ func GetCandidates(store store.StoreInterface, topN int) []*Producer {
 			Pubkey: cd.Pubkey,
 			Node:   n,
 		}
-		candidateAddrs = append(candidateAddrs, producer)
+		producerAddrs = append(producerAddrs, producer)
 		addNum++
 		if addNum == topN {
-			return candidateAddrs
+			return producerAddrs
 		}
 	}
-	return candidateAddrs
+	return producerAddrs
 }
