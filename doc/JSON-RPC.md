@@ -309,7 +309,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ##### 请求：
 
 ```shell
-curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getAliasByAddress","params":["tom"], "id": 3}' -H "Content-Type:application/json"
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getAddressByAlias","params":["tom"], "id": 3}' -H "Content-Type:application/json"
 ```
 
 ##### 响应：
@@ -451,7 +451,7 @@ p2p网络接口
 #### 作用：获取当前连接的节点
 > 参数：
 
-#### 返回值：交易字节信息
+#### 返回值：和本地建立连接的p2p对端信息
 
 #### 示例代码
 ##### 请求：
@@ -491,7 +491,7 @@ curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_getPe
 #### 作用：移除节点
 > 参数：
 
-#### 返回值：
+#### 返回值：nil
 
 #### 示例代码
 ##### 请求：
@@ -1027,7 +1027,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ##### 请求：
 
 ```shell
-curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_candidateCredit","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000","{\"Pubkey\":\"0x020e233ebaed5ade5e48d7ee7a999e173df054321f4ddaebecdb61756f8a43e91c\",\"Node\":\"192.168.31.51:55555\"}"],"id":1}' http://127.0.0.1:15645
+curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_candidateCredit","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000","{\"Pubkey\":\"0x020e233ebaed5ade5e48d7ee7a999e173df054321f4ddaebecdb61756f8a43e91c\",\"Node\":\"enode://3f05da2475bf09ce20b790d76b42450996bc1d3c113a1848be1960171f9851c0@149.129.172.91:44444\"}"],"id":1}' http://127.0.0.1:15645
 ```
 
 ##### 响应：
@@ -1063,7 +1063,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 14. account_call
+### 14. account_account_call
 #### 作用：调用合约
 > 参数：
  1. 调用者的地址
@@ -1079,7 +1079,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ##### 请求：
 
 ```shell
-curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_createCode","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x6d4ce63c","0x111","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
+curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_call","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x6d4ce63c","0x111","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
 ```
 
 ##### 响应：
