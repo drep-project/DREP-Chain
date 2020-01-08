@@ -175,14 +175,14 @@ func (trieStore *trieStakeStore) VoteCredit(fromAddr, toAddr *crypto.CommonAddre
 		if rc.Addr.String() == fromAddr.String() {
 			found = true
 
-			storage.RC[index].Hv = append(storage.RC[index].Hv, hv)
+			storage.RC[index].HeghtValues = append(storage.RC[index].HeghtValues, hv)
 			break
 		}
 	}
 
 	if !found {
-		rc := types.ReceivedCredit{Addr: *fromAddr, Hv: make([]types.HeightValue, 0, 1)}
-		rc.Hv = append(rc.Hv, hv)
+		rc := types.ReceivedCredit{Addr: *fromAddr, HeghtValues: make([]types.HeightValue, 0, 1)}
+		rc.HeghtValues = append(rc.HeghtValues, hv)
 		storage.RC = append(storage.RC, rc)
 	}
 
@@ -239,43 +239,49 @@ func (trieStore *trieStakeStore) cancelCredit(fromAddr, toAddr *crypto.CommonAdd
 			if rc.Addr.String() == fromAddr.String() {
 				found = true
 
-				for _, vc := range rc.Hv {
+				for _, vc := range rc.HeghtValues {
 					leftCredit.Add(leftCredit, vc.CreditValue.ToInt())
 				}
 
 				cancelBalanceTmp := new(big.Int).Set(cancelBalance)
 				if leftCredit.Cmp(cancelBalance) >= 0 {
 					leftCredit.Sub(leftCredit, cancelBalance)
+					left := 0
+					leftHeightValues := make([]types.HeightValue, 0)
 
-					for hvIndex, vc := range rc.Hv {
-						if cancelBalanceTmp.Cmp(vc.CreditValue.ToInt()) >= 0 {
+					for hvIndex, heightValue := range rc.HeghtValues {
+						if cancelBalanceTmp.Cmp(heightValue.CreditValue.ToInt()) >= 0 {
 
-							interest := getInterst(vc.CreditHeight, height+changeInterval, vc.CreditValue.ToInt())
-							interestData.PrincipalData = append(interestData.PrincipalData, types.HeightValue{vc.CreditHeight, vc.CreditValue})
+							interest := getInterst(heightValue.CreditHeight, height+changeInterval, heightValue.CreditValue.ToInt())
+							interestData.PrincipalData = append(interestData.PrincipalData, types.HeightValue{heightValue.CreditHeight, heightValue.CreditValue})
 							interestData.IntersetData = append(interestData.IntersetData, types.HeightValue{height + changeInterval, common.Big(*interest)})
 
 							cancelBalance.Add(cancelBalance, interest)
-							cancelBalanceTmp.Sub(cancelBalanceTmp, vc.CreditValue.ToInt())
-							rc.Hv = rc.Hv[1:]
+							cancelBalanceTmp.Sub(cancelBalanceTmp, heightValue.CreditValue.ToInt())
 
 							if cancelBalanceTmp.Cmp(new(big.Int).SetUint64(0)) == 0 {
+								leftHeightValues = append(leftHeightValues, rc.HeghtValues[hvIndex+1:]...)
+								rc.HeghtValues = leftHeightValues
 								break
 							}
 
 						} else {
 
-							interest := getInterst(vc.CreditHeight, height+changeInterval, cancelBalance)
-							interestData.PrincipalData = append(interestData.PrincipalData, types.HeightValue{vc.CreditHeight, common.Big(*cancelBalance)})
+							interest := getInterst(heightValue.CreditHeight, height+changeInterval, cancelBalance)
+							interestData.PrincipalData = append(interestData.PrincipalData, types.HeightValue{heightValue.CreditHeight, common.Big(*cancelBalance)})
 							interestData.IntersetData = append(interestData.IntersetData, types.HeightValue{height + changeInterval, common.Big(*interest)})
 
 							cancelBalance.Add(cancelBalance, interest)
 
-							cv := vc.CreditValue.ToInt()
-							rc.Hv[hvIndex].CreditValue = common.Big(*cv.Sub(cv, cancelBalanceTmp))
+							cv := heightValue.CreditValue.ToInt()
+							leftHeightValues = append(leftHeightValues, types.HeightValue{heightValue.CreditHeight, common.Big(*cv.Sub(cv, cancelBalanceTmp))})
+							leftHeightValues = append(leftHeightValues, rc.HeghtValues[hvIndex+1:]...)
+							rc.HeghtValues = leftHeightValues
+							left++
 							break
 						}
 					}
-					if len(rc.Hv) == 0 {
+					if len(rc.HeghtValues) == 0 {
 						storage.RC = append(storage.RC[0:index], storage.RC[index+1:]...)
 					} else {
 						storage.RC[index] = rc
@@ -382,14 +388,18 @@ func (trieStore *trieStakeStore) CancelCreditToBalance(addr *crypto.CommonAddres
 	}
 
 	total := new(big.Int)
-	for index, cc := range storage.CC {
+	left := 0
+	for _, cc := range storage.CC {
 		if height >= cc.CancelCreditHeight+changeInterval {
 			for _, value := range cc.CancelCreditValue {
 				total.Add(total, &value)
 			}
-			storage.CC = append(storage.CC[0:index], storage.CC[index+1:]...)
+		} else {
+			storage.CC[left] = cc
+			left++
 		}
 	}
+	storage.CC = storage.CC[:left]
 
 	err := trieStore.putStakeStorage(addr, storage)
 	if err != nil {
@@ -410,7 +420,7 @@ func (trieStore *trieStakeStore) GetCreditCount(addr *crypto.CommonAddress) *big
 
 	total := new(big.Int)
 	for _, rc := range storage.RC {
-		for _, hv := range rc.Hv {
+		for _, hv := range rc.HeghtValues {
 			total.Add(total, hv.CreditValue.ToInt())
 		}
 	}
@@ -427,7 +437,7 @@ func (trieStore *trieStakeStore) GetCreditDetails(addr *crypto.CommonAddress) ma
 
 	for _, rc := range storage.RC {
 		total := new(big.Int)
-		for _, value := range rc.Hv {
+		for _, value := range rc.HeghtValues {
 			total.Add(total, value.CreditValue.ToInt())
 		}
 		m[rc.Addr] = *total //storage.ReceivedCreditValue[index]
@@ -459,19 +469,19 @@ func (trieStore *trieStakeStore) CandidateCredit(addresses *crypto.CommonAddress
 		found := false
 		for index, rc := range storage.RC {
 			if rc.Addr.String() == addresses.String() {
-				for _, hv := range rc.Hv {
+				for _, hv := range rc.HeghtValues {
 					totalBalance.Add(totalBalance, hv.CreditValue.ToInt())
 				}
 
-				storage.RC[index].Hv = append(storage.RC[index].Hv, hv)
+				storage.RC[index].HeghtValues = append(storage.RC[index].HeghtValues, hv)
 				found = true
 				break
 			}
 		}
 
 		if !found {
-			rc := types.ReceivedCredit{Addr: *addresses, Hv: make([]types.HeightValue, 0, 1)}
-			rc.Hv = append(rc.Hv, hv)
+			rc := types.ReceivedCredit{Addr: *addresses, HeghtValues: make([]types.HeightValue, 0, 1)}
+			rc.HeghtValues = append(rc.HeghtValues, hv)
 			storage.RC = append(storage.RC, rc)
 		}
 

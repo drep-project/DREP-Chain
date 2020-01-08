@@ -13,8 +13,8 @@ type HeightValue struct {
 }
 
 type ReceivedCredit struct {
-	Addr crypto.CommonAddress
-	Hv   []HeightValue
+	Addr        crypto.CommonAddress
+	HeghtValues []HeightValue
 }
 
 type CancelCredit struct {
