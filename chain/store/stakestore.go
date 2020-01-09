@@ -17,9 +17,8 @@ import (
 const (
 	CandidateAddrs             = "CandidateAddrs" //参与竞选出块节点的地址集合
 	StakeStorage               = "StakeStorage"   //以地址作为KEY,存储stake相关内容
-	registerPledgeLimit uint64 = 1000000          //候选节点需要抵押币的总数
-	//drepUnit            uint64 =        //drep币最小单位
-	interestRate = 1000000 * 12 //每个存储高度，奖励的利率
+	registerPledgeLimit uint64 = 1000000          //候选节点需要抵押币的总数,单位1drep
+	interestRate               = 1000000 * 12     //每个存储高度，奖励的利率
 )
 
 type trieStakeStore struct {

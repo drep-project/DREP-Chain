@@ -326,7 +326,7 @@ func (accountapi *AccountApi) CancelCandidateCredit(from crypto.CommonAddress, a
 }
 
 /*
-` name: account_call
+` name: call
  usage: 调用合约
  params:
 	1. 调用者的地址
