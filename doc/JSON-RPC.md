@@ -4,11 +4,11 @@
 用于处理区块链偏上层逻辑
 
 ### 1. blockMgr_sendRawTransaction
-#### 作用：获取交易池中的交易信息.
+#### 作用：发送已签名的交易.
 > 参数：
- 1. 待查询地址
+ 1. 已签名的交易
 
-#### 返回值：交易池中所有交易
+#### 返回值：交易hash
 
 #### 示例代码
 ##### 请求：
@@ -46,7 +46,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_
 
 
 ### 3. blockMgr_GetTransactionCount
-#### 作用：获取交易池中的交易信息.
+#### 作用：获取地址发出的交易总数
 > 参数：
  1. 待查询地址
 
@@ -477,7 +477,7 @@ curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_getPe
 ##### 请求：
 
 ```shell
-"enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555"
+curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_addPeers","params":["enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555"], "id": 3}' -H "Content-Type:application/json"
 ```
 
 ##### 响应：
@@ -497,7 +497,7 @@ curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_getPe
 ##### 请求：
 
 ```shell
-"enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555"
+curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_addPeers","params":["enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555"], "id": 3}' -H "Content-Type:application/json"
 ```
 
 ##### 响应：
