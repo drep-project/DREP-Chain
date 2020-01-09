@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"math"
 	"math/big"
 	"reflect"
 	"strconv"
@@ -127,7 +126,11 @@ func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Blo
 	if !found {
 		return nil, ErrNotMyTurn
 	}
-	minMiners := int(math.Ceil(float64(len(producers)) * 2 / 3))
+
+	minMiners := int(len(producers) * 2 / 3)
+	if len(producers)*2%3 != 0 {
+		minMiners++
+	}
 	miners := bftConsensus.collectMemberStatus(producers)
 	//print miners status
 	str := "-----------------------------------\n"
