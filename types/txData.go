@@ -15,7 +15,7 @@ type CandidateData struct {
 
 func (cd CandidateData) check() error {
 	if !checkp2pNode(cd.Node) {
-		return fmt.Errorf("addr err:%s", cd.Node)
+		return fmt.Errorf("node err:%s", cd.Node)
 	}
 
 	return nil
