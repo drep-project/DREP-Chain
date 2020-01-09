@@ -15,7 +15,6 @@ import (
 	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
 	"github.com/drep-project/DREP-Chain/types"
 	"math/big"
-	"time"
 )
 
 type SoloConsensus struct {
@@ -54,34 +53,29 @@ func (soloConsensus *SoloConsensus) Run(privKey *secp256k1.PrivateKey) (*types.B
 		return nil, err
 	}
 
-	fmt.Println("run 0", time.Now())
 	block, gasFee, err := soloConsensus.blockGenerator.GenerateTemplate(trieStore, soloConsensus.CoinBase, soloConsensus.config.BlockInterval)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Println("run 1", time.Now())
 	sig, err := soloConsensus.PrivKey.Sign(sha3.Keccak256(block.AsSignMessage()))
 	if err != nil {
 		log.Error("sign block error")
 		return nil, errors.New("sign block error")
 	}
 
-	fmt.Println("run 2", time.Now())
 	block.Proof = types.Proof{consensusTypes.Solo, sig.Serialize()}
 	err = AccumulateRewards(soloConsensus.Pubkey, trieStore, gasFee, block.Header.Height)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Println("run 3", time.Now())
 	block.Header.StateRoot = trieStore.GetStateRoot()
 	//verify
 	if err := soloConsensus.verify(block); err != nil {
 		return nil, err
 	}
 
-	fmt.Println("run 4", time.Now())
 	return block, nil
 }
 
@@ -138,7 +132,6 @@ func AccumulateRewards(pubkey *secp256k1.PublicKey, trieStore store.StoreInterfa
 
 	reward := big.NewInt(params.Rewards)
 	reward.Mul(reward, new(big.Int).SetUint64(params.Coin))
-	fmt.Println(reward)
 
 	err = trieStore.AddBalance(&soloAddr, height, reward)
 	if err != nil {
