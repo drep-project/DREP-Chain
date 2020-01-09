@@ -326,6 +326,10 @@ func (srv *Server) AddPeer(node *enode.Node) {
 	}
 }
 
+func (srv *Server) LocalNode() *enode.Node {
+	return srv.localnode.Node()
+}
+
 // RemovePeer disconnects from the given node
 func (srv *Server) RemovePeer(node *enode.Node) {
 	select {
