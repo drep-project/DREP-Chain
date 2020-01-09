@@ -3,6 +3,7 @@ package service
 import (
 	"github.com/drep-project/DREP-Chain/app"
 	"github.com/drep-project/DREP-Chain/network/p2p"
+	"github.com/drep-project/DREP-Chain/network/p2p/enode"
 )
 
 type P2P interface {
@@ -13,5 +14,6 @@ type P2P interface {
 	AddPeer(nodeUrl string) error
 	RemovePeer(url string)
 	AddProtocols(protocols []p2p.Protocol)
+	LocalNode() *enode.Node
 	//SubscribeEvents(ch chan *p2p.PeerEvent) event.Subscription
 }
