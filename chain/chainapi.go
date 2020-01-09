@@ -239,7 +239,12 @@ func (chain *ChainApi) GetReceipt(txHash crypto.Hash) *types.Receipt {
 */
 func (chain *ChainApi) GetLogs(txHash crypto.Hash) []*types.Log {
 	//return chain.chainService.chainStore.GetLogs(txHash)
-	return chain.dbQuery.GetReceipt(txHash).Logs
+	rt := chain.dbQuery.GetReceipt(txHash)
+	if rt != nil {
+		return rt.Logs
+	}
+
+	return nil
 }
 
 /*
@@ -347,6 +352,9 @@ func (trieQuery *TrieQuery) AliasGet(alias string) (*crypto.CommonAddress, error
 	buf, err := trieQuery.Get([]byte(store.AliasPrefix + alias))
 	if err != nil {
 		return nil, err
+	}
+	if buf == nil {
+		return nil, fmt.Errorf("alias :%s not set", alias)
 	}
 	addr := crypto.CommonAddress{}
 	addr.SetBytes(buf)
