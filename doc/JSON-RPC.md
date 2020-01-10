@@ -1063,7 +1063,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 14. account_account_call
+### 14. account_call
 #### 作用：调用合约
 > 参数：
  1. 调用者的地址
