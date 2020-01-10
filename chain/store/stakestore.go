@@ -326,7 +326,6 @@ func (trieStore *trieStakeStore) cancelCredit(fromAddr, toAddr *crypto.CommonAdd
 
 	err := trieStore.putStakeStorage(fromAddr, storage)
 
-	fmt.Println("***********cancelCredit:", interestData)
 	return &interestData, err
 }
 
