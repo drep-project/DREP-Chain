@@ -237,11 +237,22 @@ func (chain *ChainApi) GetReceipt(txHash crypto.Hash) *types.Receipt {
  response:
    {"jsonrpc":"2.0","id":3,"result":""}
 */
-func (chain *ChainApi) GetLogs(txHash crypto.Hash) []*types.Log {
+func (chain *ChainApi) GetLogs(txHash crypto.Hash) []*types.IntersetDetail {
 	//return chain.chainService.chainStore.GetLogs(txHash)
+	ids := make([]*types.IntersetDetail, 0)
 	rt := chain.dbQuery.GetReceipt(txHash)
 	if rt != nil {
-		return rt.Logs
+		for _, log := range rt.Logs {
+			if log.TxType == types.CancelVoteCreditType || log.TxType == types.CancelCandidateType {
+				id := types.IntersetDetail{}
+				err := json.Unmarshal(log.Data, &id)
+				if err == nil {
+					ids = append(ids, &id)
+				}
+			}
+		}
+
+		return ids
 	}
 
 	return nil
