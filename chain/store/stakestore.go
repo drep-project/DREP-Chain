@@ -267,7 +267,7 @@ func (trieStore *trieStakeStore) cancelCredit(fromAddr, toAddr *crypto.CommonAdd
 						} else {
 
 							interest := getInterst(heightValue.CreditHeight, height+changeInterval, cancelBalance)
-							interestData.PrincipalData = append(interestData.PrincipalData, types.HeightValue{heightValue.CreditHeight, common.Big(*cancelBalance)})
+							interestData.PrincipalData = append(interestData.PrincipalData, types.HeightValue{heightValue.CreditHeight, common.Big(*cancelBalanceTmp)})
 							interestData.IntersetData = append(interestData.IntersetData, types.HeightValue{height + changeInterval, common.Big(*interest)})
 
 							cancelBalance.Add(cancelBalance, interest)
