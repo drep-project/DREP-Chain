@@ -15,7 +15,6 @@ import (
 	"github.com/drep-project/DREP-Chain/params"
 	"github.com/drep-project/DREP-Chain/pkgs/consensus/service"
 	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/bft"
-	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/solo"
 	"github.com/drep-project/DREP-Chain/pkgs/log"
 	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
@@ -112,23 +111,23 @@ func gen(ctx *cli.Context) error {
 
 	consensusConfig := &service.ConsensusConfig{}
 
-	if len(nodeItems) == 1 {
-		consensusConfig.ConsensusMode = "solo"
-		consensusConfig.Solo = &solo.SoloConfig{
-			MyPk:          nil,
-			StartMiner:    true,
-			BlockInterval: 5,
-		}
-	} else {
-		consensusConfig.ConsensusMode = "bft"
-		consensusConfig.Bft = &bft.BftConfig{
-			MyPk:           nil,
-			StartMiner:     true,
-			BlockInterval:  5,
-			ProducerNum:    len(nodeItems),
-			ChangeInterval: 100,
-		}
+	//if len(nodeItems) == 1 {
+	//	consensusConfig.ConsensusMode = "solo"
+	//	consensusConfig.Solo = &solo.SoloConfig{
+	//		MyPk:          nil,
+	//		StartMiner:    true,
+	//		BlockInterval: 5,
+	//	}
+	//} else {
+	consensusConfig.ConsensusMode = "bft"
+	consensusConfig.Bft = &bft.BftConfig{
+		MyPk:           nil,
+		StartMiner:     true,
+		BlockInterval:  5,
+		ProducerNum:    len(nodeItems),
+		ChangeInterval: 100,
 	}
+	//}
 
 	chainConfig := chain.ChainConfig{}
 	//chainConfig.RemotePort = 55556
