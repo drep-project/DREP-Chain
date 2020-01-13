@@ -361,7 +361,28 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 11. chain_getByteCode
+### 11. chain_getInterset
+#### 作用：根据txhash获取退质押或者投票利息信息
+> 参数：
+ 1. txhash
+
+#### 返回值：{}
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getInterset","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":3,"result":""}
+````
+
+
+### 12. chain_getByteCode
 #### 作用：根据地址获取bytecode
 > 参数：
  1. 地址
@@ -382,7 +403,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 12. chain_getVoteCreditDetails
+### 13. chain_getVoteCreditDetails
 #### 作用：根据地址获取stake 所有细节信息
 > 参数：
  1. 地址
@@ -403,7 +424,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 13. chain_GetCancelCreditDetails
+### 14. chain_GetCancelCreditDetails
 #### 作用：获取所有退票请求的细节
 > 参数：
  1. 地址
@@ -424,7 +445,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 14. chain_GetCandidateAddrs
+### 15. chain_GetCandidateAddrs
 #### 作用：获取所有候选节点地址和对应的信任值
 > 参数：
  1. 地址
@@ -467,7 +488,7 @@ curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_getPe
 ````
 
 
-### 2. p2p_addPeers
+### 2. p2p_addPeer
 #### 作用：添加节点
 > 参数：
 
@@ -477,7 +498,7 @@ curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_getPe
 ##### 请求：
 
 ```shell
-curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_addPeers","params":["enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555"], "id": 3}' -H "Content-Type:application/json"
+curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_addPeer","params":["enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555"], "id": 3}' -H "Content-Type:application/json"
 ```
 
 ##### 响应：
@@ -487,7 +508,7 @@ curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_addPe
 ````
 
 
-### 3. p2p_removePeers
+### 3. p2p_removePeer
 #### 作用：移除节点
 > 参数：
 
@@ -497,7 +518,7 @@ curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_addPe
 ##### 请求：
 
 ```shell
-curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_addPeers","params":["enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555"], "id": 3}' -H "Content-Type:application/json"
+curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_removePeer","params":["enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555"], "id": 3}' -H "Content-Type:application/json"
 ```
 
 ##### 响应：
@@ -1012,14 +1033,13 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 
 
 ### 12. account_CandidateCredit
-#### 作用：候选投票
+#### 作用：候选节点质押
 > 参数：
- 1. 发起转账的地址
- 2. 接受者的地址
- 3. 金额
- 4. gas价格
- 5. gas上线
- 6. 用户pubkey ip等信息
+ 1. 质押者的地址
+ 2. 质押金额
+ 3. gas价格
+ 4. gas上线
+ 5. 质押者地址对应的pubkey，质押者的P2p信息
 
 #### 返回值：交易地址
 
