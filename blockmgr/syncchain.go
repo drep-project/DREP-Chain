@@ -127,6 +127,7 @@ func (blockMgr *BlockMgr) findAncestor(peer types.PeerInfoInterface) (uint64, er
 				return h, nil
 			}
 		}
+		return 0, ErrNoCommonAncesstor
 	case <-timeout:
 		return 0, ErrFindAncesstorTimeout
 	}
@@ -364,7 +365,6 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 					if err != nil {
 						switch err {
 						case chain.ErrBlockExsist, chain.ErrOrphanBlockExsist:
-							fmt.Println("process block err:", err, b.Header.Height)
 							//删除块高度对应的任务
 							delHash(b)
 							continue
