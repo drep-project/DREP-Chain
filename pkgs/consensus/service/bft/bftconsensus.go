@@ -17,10 +17,10 @@ import (
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/database"
-	drepbinary "github.com/drep-project/binary"
-
+	p2pService "github.com/drep-project/DREP-Chain/network/service"
 	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
 	"github.com/drep-project/DREP-Chain/types"
+	drepbinary "github.com/drep-project/binary"
 )
 
 const (
@@ -101,6 +101,7 @@ func (bftConsensus *BftConsensus) GetProducers(height uint64, topN int) ([]*Prod
 			return nil, err
 		}
 		producers := GetCandidates(trie, topN)
+
 		bftConsensus.producer = producers
 		return producers, nil
 	} else {
@@ -118,6 +119,7 @@ func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Blo
 	}
 	found := false
 	for _, p := range producers {
+		log.WithField("node", p.Node.String()).Trace("get producers")
 		if bytes.Equal(p.Pubkey.Serialize(), bftConsensus.config.MyPk.Serialize()) {
 			found = true
 			break
@@ -475,4 +477,43 @@ func (bftConsensus *BftConsensus) ChangeTime(interval time.Duration) {
 
 func (bftConsensus *BftConsensus) Close() {
 	close(bftConsensus.quit)
+}
+
+func (bftConsensus *BftConsensus) prepareForMining(p2p p2pService.P2P) {
+	for {
+		timer := time.NewTicker(time.Second * time.Duration(bftConsensus.config.BlockInterval))
+		defer timer.Stop()
+
+		select {
+		case <-timer.C:
+			//Get as many candidate nodes as possible, establish connection with other candidate nodes in advance, and prepare for the next block
+			producers, err := bftConsensus.GetProducers(bftConsensus.ChainService.BestChain().Tip().Height, bftConsensus.config.ProducerNum*3/2)
+			if err != nil {
+				log.WithField("err", err).Info("PrepareForMiner get producer err")
+			}
+
+			tempProduces := make([]*Producer, len(producers))
+			copy(tempProduces, producers)
+			//自己在候选中
+			found := false
+			for index, p := range tempProduces {
+				if bytes.Equal(p.Pubkey.Serialize(), bftConsensus.config.MyPk.Serialize()) {
+					found = true
+					producers = append(tempProduces[:index], tempProduces[index+1:]...)
+					break
+				}
+			}
+
+			if found {
+				for _, p := range tempProduces {
+					if _, ok := bftConsensus.onLinePeer[p.Node.ID().String()]; !ok {
+						p2p.AddPeer(p.Node.String())
+					}
+				}
+			}
+
+		case <-bftConsensus.quit:
+			return
+		}
+	}
 }

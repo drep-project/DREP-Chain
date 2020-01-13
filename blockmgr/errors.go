@@ -21,4 +21,5 @@ var (
 	ErrExceedGasLimit        = errors.New("gas limit in tx has exceed block limit")
 	ErrBalance               = errors.New("not enough balance")
 	ErrNotSupportRenameAlias = errors.New("not suppport rename alias")
+	ErrNoCommonAncesstor     = errors.New("no common ancesstor")
 )

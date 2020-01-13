@@ -239,7 +239,37 @@ func (chain *ChainApi) GetReceipt(txHash crypto.Hash) *types.Receipt {
  response:
    {"jsonrpc":"2.0","id":3,"result":""}
 */
-func (chain *ChainApi) GetLogs(txHash crypto.Hash) []*types.IntersetDetail {
+func (chain *ChainApi) GetLogs(txHash crypto.Hash) []*types.Log {
+	//return chain.chainService.chainStore.GetLogs(txHash)
+	rt := chain.dbQuery.GetReceipt(txHash)
+	if rt != nil {
+		//for _, log := range rt.Logs {
+		//	if log.TxType == types.CancelVoteCreditType || log.TxType == types.CancelCandidateType {
+		//		id := types.IntersetDetail{}
+		//		err := json.Unmarshal(log.Data, &id)
+		//		if err == nil {
+		//			ids = append(ids, &id)
+		//		}
+		//	}
+		//}
+
+		return rt.Logs
+	}
+
+	return nil
+}
+
+/*
+ name: getInterset
+ usage: 根据txhash获取退质押或者投票利息信息
+ params:
+	1. txhash
+ return: {}
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getInterset","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
+ response:
+   {"jsonrpc":"2.0","id":3,"result":""}
+*/
+func (chain *ChainApi) GetInterset(txHash crypto.Hash) []*types.IntersetDetail {
 	//return chain.chainService.chainStore.GetLogs(txHash)
 	ids := make([]*types.IntersetDetail, 0)
 	rt := chain.dbQuery.GetReceipt(txHash)

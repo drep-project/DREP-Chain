@@ -1,8 +1,7 @@
 package bft
 
 import (
-	"encoding/hex"
-	"errors"
+	"fmt"
 	"github.com/drep-project/DREP-Chain/app"
 	blockMgrService "github.com/drep-project/DREP-Chain/blockmgr"
 	chainService "github.com/drep-project/DREP-Chain/chain"
@@ -16,10 +15,8 @@ import (
 	accountService "github.com/drep-project/DREP-Chain/pkgs/accounts/service"
 	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
 	chainTypes "github.com/drep-project/DREP-Chain/types"
-	"github.com/drep-project/binary"
 	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
-	"math/rand"
 	"time"
 )
 
@@ -51,8 +48,7 @@ type BftConsensusService struct {
 	//During the process of synchronizing blocks, the miner stopped mining
 	pauseForSync bool
 	start        bool
-	//peersInfo    map[string]*consensusTypes.PeerInfo
-	quit chan struct{}
+	quit         chan struct{}
 }
 
 func (bftConsensusService *BftConsensusService) Name() string {
@@ -86,9 +82,10 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 
 	bftConsensusService.ChainService.AddBlockValidator(&BlockMultiSigValidator{bftConsensusService.BftConsensus.GetProducers, bftConsensusService.ChainService.GetBlockByHash, bftConsensusService.Config.ProducerNum})
 	bftConsensusService.ChainService.AddGenesisProcess(NewMinerGenesisProcessor())
-	if !bftConsensusService.Config.StartMiner {
-		return nil
-	} else {
+	//if !bftConsensusService.Config.StartMiner {
+	//	return nil
+	//} else
+	{
 		if bftConsensusService.WalletService.Wallet == nil {
 			return ErrWalletNotOpen
 		}
@@ -106,98 +103,26 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 			Name:   "bftConsensusService",
 			Length: NumberOfMsg,
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
-
-				producers, err := bftConsensusService.GetProducers(bftConsensusService.ChainService.BestChain().Tip().Height, bftConsensusService.Config.ProducerNum*2)
-				if err != nil {
-					log.WithField("err", err).Info("fail to get producers")
-					return err
-				}
-
-				ipChecked := false
-				for _, producer := range producers {
-					if producer.Node.ID().String() == peer.Node().ID().String() {
-						ipChecked = true
-						log.WithField("producer id", producer.Node.ID().String()).WithField("ip", producer.Node.IP().String()).Trace("peer in procucers")
-						break
-					}
-					log.WithField("producer id", producer.Node.ID().String()).WithField("ip", producer.Node.IP().String()).Trace("peer not in procucers")
-				}
-				if !ipChecked {
-					log.WithField("IP", peer.Node().IP().String()).WithField("peer node", peer.Node().String()).
-						WithField("PublicKey", hex.EncodeToString(peer.Node().Pubkey().Serialize())).
-						Debug("Receive remove peer")
-					for _, producer := range producers {
-						log.WithField("IP", producer.Node.IP().String()).
-							WithField("PublicKey", hex.EncodeToString(producer.Node.Pubkey().Serialize())).
-							Debug("Exit Candidate peer")
-					}
-					return ErrBpNotInList
-				}
+				log.WithField("newpeer ip", peer.IP()).Info("consensuse protocol")
 				pi := consensusTypes.NewPeerInfo(peer, rw)
-				//send verify message
-				randomBytes := [32]byte{}
-				rand.Read(randomBytes[:])
-				err = bftConsensusService.P2pServer.Send(rw, MsgTypeValidateReq, randomBytes)
-				if err != nil {
-					return err
-				}
 
-				tm := time.NewTimer(time.Second * 10)
+				addPeerFeed.Send(pi)
 				defer func() {
 					removePeerFeed.Send(pi)
+					fmt.Println("consensuse protocol ,remove peer, ip", peer.IP())
 				}()
 				for {
-					select {
-					case <-tm.C:
-						log.Info("bft run ,time out****")
-						return errors.New("timeout: wait validata message")
-
-					default:
-						msg, err := rw.ReadMsg()
-						if err != nil {
-							log.WithField("Reason", err).WithField("Ip", pi.IP()).Error("consensus receive msg")
-							return err
-						}
-						buf, err := ioutil.ReadAll(msg.Payload)
-						if err != nil {
-							return err
-						}
-
-						switch msg.Code {
-						//	case bftConsensusService.P2pServer
-						case MsgTypeValidateReq:
-							if err != nil {
-								return err
-							}
-							sig, err := accountNode.PrivateKey.Sign(buf)
-							if err != nil {
-								return err
-							}
-							err = bftConsensusService.P2pServer.Send(rw, MsgTypeValidateRes, sig)
-							if err != nil {
-								return err
-							}
-						case MsgTypeValidateRes:
-							sig := &secp256k1.Signature{}
-							err := binary.Unmarshal(buf, sig)
-							if err != nil {
-								return err
-							}
-
-							for _, producer := range producers {
-								ok := sig.Verify(randomBytes[:], producer.Pubkey)
-								if ok {
-									addPeerFeed.Send(pi)
-									tm.Stop()
-									break
-								}
-							}
-
-							continue
-						default:
-							bftConsensusService.BftConsensus.ReceiveMsg(pi, msg.Code, buf)
-						}
+					msg, err := rw.ReadMsg()
+					if err != nil {
+						log.WithField("Reason", err).WithField("Ip", pi.IP()).Error("consensus receive msg")
+						return err
 					}
+					buf, err := ioutil.ReadAll(msg.Payload)
+					if err != nil {
+						return err
+					}
+
+					bftConsensusService.BftConsensus.ReceiveMsg(pi, msg.Code, buf)
 				}
 			},
 		},
@@ -238,12 +163,13 @@ func (bftConsensusService *BftConsensusService) handlerEvent() {
 }
 
 func (bftConsensusService *BftConsensusService) Start(executeContext *app.ExecuteContext) error {
-	if !bftConsensusService.Config.StartMiner {
-		return nil
-	}
+	//if !bftConsensusService.Config.StartMiner {
+	//	return nil
+	//}
 	bftConsensusService.start = true
 
 	go bftConsensusService.BftConsensus.processPeers()
+	go bftConsensusService.BftConsensus.prepareForMining(bftConsensusService.P2pServer)
 
 	go func() {
 		select {
@@ -279,7 +205,7 @@ func (bftConsensusService *BftConsensusService) Start(executeContext *app.Execut
 }
 
 func (bftConsensusService *BftConsensusService) Stop(executeContext *app.ExecuteContext) error {
-	if bftConsensusService.Config == nil || !bftConsensusService.Config.StartMiner {
+	if bftConsensusService.Config == nil { //|| !bftConsensusService.Config.StartMiner
 		return nil
 	}
 
