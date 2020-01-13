@@ -31,27 +31,27 @@ func (p2pApis *P2PApi) GetPeers() []string {
 }
 
 /*
- name: addPeers
+ name: addPeer
  usage: 添加节点
  params: enode://publickey@ip:p2p端口
  return:nil
- example:  curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_addPeers","params":["enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555"], "id": 3}' -H "Content-Type:application/json"
+ example:  curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_addPeer","params":["enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555"], "id": 3}' -H "Content-Type:application/json"
  response:
 
 */
-func (p2pApis *P2PApi) AddPeers(addr string) {
+func (p2pApis *P2PApi) AddPeer(addr string) {
 	p2pApis.p2pService.AddPeer(addr)
 }
 
 /*
- name: removePeers
+ name: removePeer
  usage: 移除节点
  params:enode://publickey@ip:p2p端口
  return:nil
- example: curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_addPeers","params":["enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_removePeer","params":["enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555"], "id": 3}' -H "Content-Type:application/json"
  response:
 */
-func (p2pApis *P2PApi) RemovePeers(addr string) {
+func (p2pApis *P2PApi) RemovePeer(addr string) {
 	p2pApis.p2pService.RemovePeer(addr)
 }
 
