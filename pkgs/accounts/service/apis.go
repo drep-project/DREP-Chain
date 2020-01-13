@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"github.com/drep-project/DREP-Chain/pkgs/accounts/addrgenerator"
@@ -280,6 +281,16 @@ func (accountapi *AccountApi) CancelVoteCredit(from crypto.CommonAddress, to cry
 	 {"jsonrpc":"2.0","id":1,"result":"0x3a3b59f90a21c2fd1b690aa3a2bc06dc2d40eb5bdc26fdd7ecb7e1105af2638e"}
 */
 func (accountapi *AccountApi) CandidateCredit(from crypto.CommonAddress, amount, gasprice, gaslimit *common.Big, data string) (string, error) {
+	cd := types.CandidateData{}
+	err := cd.Unmarshal([]byte(data))
+	if err != nil {
+		return "", err
+	}
+
+	if !bytes.Equal(crypto.PubkeyToAddress(cd.Pubkey).Bytes(), from.Bytes()) {
+		return "", nil
+	}
+
 	nonce := accountapi.poolQuery.GetTransactionCount(&from)
 	tx := types.NewCandidateTransaction((*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce, []byte(data))
 	sig, err := accountapi.Wallet.Sign(&from, tx.TxHash().Bytes())
