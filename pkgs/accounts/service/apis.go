@@ -267,14 +267,13 @@ func (accountapi *AccountApi) CancelVoteCredit(from crypto.CommonAddress, to cry
 
 /*
  name: CandidateCredit
- usage: 候选投票
+ usage: 候选节点质押
  params:
-	1. 发起转账的地址
-	2. 接受者的地址
-	3. 金额
-	4. gas价格
-	5. gas上线
-	6. 用户pubkey ip等信息
+	1. 质押者的地址
+	2. 质押金额
+	3. gas价格
+	4. gas上线
+	5. 质押者地址对应的pubkey，质押者的P2p信息
  return: 交易地址
  example:   curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_candidateCredit","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000","{\"Pubkey\":\"0x020e233ebaed5ade5e48d7ee7a999e173df054321f4ddaebecdb61756f8a43e91c\",\"Node\":\"enode://3f05da2475bf09ce20b790d76b42450996bc1d3c113a1848be1960171f9851c0@149.129.172.91:44444\"}"],"id":1}' http://127.0.0.1:15645
  response:
