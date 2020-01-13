@@ -108,9 +108,11 @@ func (chain *ChainApi) GetMaxHeight() uint64 {
  response:
    {"jsonrpc":"2.0","id":3,"result":9987999999999984000000}
 */
-func (chain *ChainApi) GetBalance(addr crypto.CommonAddress) *big.Int {
+func (chain *ChainApi) GetBalance(addr crypto.CommonAddress) string {
 	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
-	return trieQuery.GetBalance(&addr)
+	big := trieQuery.GetBalance(&addr)
+
+	return big.String()
 }
 
 /*
@@ -455,8 +457,8 @@ func (trieQuery *TrieQuery) GetCandidateAddrs() string {
 	}
 
 	type AddrAndCrit struct {
-		Addr  *crypto.CommonAddress
-		Cridt *common.Big
+		Addr   *crypto.CommonAddress
+		Credit *common.Big
 	}
 
 	ac := make([]AddrAndCrit, 0)
@@ -485,11 +487,10 @@ func (trieQuery *TrieQuery) GetCandidateAddrs() string {
 		cb := new(common.Big)
 		cb.SetMathBig(*total)
 
-		ac = append(ac, AddrAndCrit{Addr: &addr, Cridt: cb})
+		ac = append(ac, AddrAndCrit{Addr: &addr, Credit: cb})
 	}
 
 	b, err := json.Marshal(ac)
-	fmt.Println(string(b), err)
 	return string(b)
 }
 
