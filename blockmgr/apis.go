@@ -1,7 +1,6 @@
 package blockmgr
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/drep-project/DREP-Chain/common"
@@ -32,7 +31,7 @@ type BlockMgrApi struct {
 	{"jsonrpc":"2.0","id":1,"result":"0xf30e858667fa63bc57ae395c3f57ede9bb3ad4969d12f4bce51d900fb5931538"}
 */
 func (blockMgrApi *BlockMgrApi) SendRawTransaction(txbytes common.Bytes) (string, error) {
-	fmt.Println(string(txbytes))
+
 	tx := &types.Transaction{}
 	err := binary.Unmarshal(txbytes, tx)
 	if err != nil {
