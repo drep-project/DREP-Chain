@@ -69,7 +69,7 @@ func GetCandidates(store store.StoreInterface, topN int) []*Producer {
 			continue
 		}
 
-		log.Trace("get candidates info:", cd.Node, cd.Pubkey, ac.addr.String())
+		log.Trace("get candidates info:", cd.Node)
 		n := &enode.Node{}
 		err = n.UnmarshalText([]byte(cd.Node))
 		if err != nil {

@@ -109,8 +109,11 @@ func (chain *ChainApi) GetMaxHeight() uint64 {
    {"jsonrpc":"2.0","id":3,"result":9987999999999984000000}
 */
 func (chain *ChainApi) GetBalance(addr crypto.CommonAddress) string {
-	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
-	big := trieQuery.GetBalance(&addr)
+	store, err := store.TrieStoreFromStore(chain.store, chain.chainView.Tip().StateRoot)
+	if err != nil {
+		return ""
+	}
+	big := store.GetBalance(&addr, chain.chainView.tip().Height)
 
 	return big.String()
 }
