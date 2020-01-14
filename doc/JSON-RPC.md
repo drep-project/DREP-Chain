@@ -1284,3 +1284,24 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"consensus
 {"jsonrpc":"2.0","id":3,"result":null}
 ````
 
+
+### 2. consensus_getMiners()
+#### 作用：获取当前出块节点
+> 参数：
+
+#### 返回值：出块节点信息
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"consensus_getMiners","params":[""], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":3,"result":['0x02c682c9f503465a27d1941d1a25547b5ea879a7145056283599a33869982513df', '0x036a09f9012cb3f73c11ceb2aae4242265c2aa35ebec20dbc28a78712802f457db']
+}
+````
+
