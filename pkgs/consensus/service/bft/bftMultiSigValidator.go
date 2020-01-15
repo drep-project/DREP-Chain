@@ -1,6 +1,7 @@
 package bft
 
 import (
+	"fmt"
 	"github.com/drep-project/DREP-Chain/chain"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
@@ -44,6 +45,11 @@ func (blockMultiSigValidator *BlockMultiSigValidator) VerifyBody(block *types.Bl
 	if err != nil {
 		return err
 	}
+
+	if blockMultiSigValidator.producerNum != len(multiSig.Bitmap) {
+		return fmt.Errorf("producer num:%d != multisig num:%d", blockMultiSigValidator.producerNum, len(multiSig.Bitmap))
+	}
+
 	for index, val := range multiSig.Bitmap {
 		if val == 1 {
 			producer := producers[index]
