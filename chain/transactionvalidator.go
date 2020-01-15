@@ -136,10 +136,10 @@ func (context *ExecuteTransactionContext) PreCheck() error {
 	// Make sure this transaction's nonce is correct.
 	nonce := context.trieStore.GetNonce(context.from)
 	if nonce < context.tx.Nonce() {
-		log.WithField("db nonce", nonce).WithField("tx nonce", context.tx.Nonce()).WithField("from",context.from.String()).Info("state precheck too hight")
+		log.WithField("db nonce", nonce).WithField("tx nonce", context.tx.Nonce()).WithField("from", context.from.String()).Info("state precheck too hight")
 		return ErrNonceTooHigh
 	} else if nonce > context.tx.Nonce() {
-		log.WithField("db nonce", nonce).WithField("tx nonce", context.tx.Nonce()).WithField("from",context.from.String()).Info("state precheck too low")
+		log.WithField("db nonce", nonce).WithField("tx nonce", context.tx.Nonce()).WithField("from", context.from.String()).Info("state precheck too low")
 		return ErrNonceTooLow
 	}
 	return context.buyGas()
