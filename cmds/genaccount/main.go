@@ -293,7 +293,7 @@ func parserConfig(cfgPath string) (*GenesisConfig, error) {
 	}
 	cfg := &GenesisConfig{}
 	err = json.Unmarshal([]byte(content), &cfg)
-	fmt.Println(cfg.Preminer[0].Value)
+	//fmt.Println(cfg.Preminer[0].Value)
 	if err != nil {
 		return nil, err
 	}
