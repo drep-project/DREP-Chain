@@ -922,7 +922,6 @@ func opSuicide(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memo
 // make log instruction function
 func makeLog(size int) executionFunc {
 	return func(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-		//topics := make([]Hash, size)
 		topics := make([]crypto.Hash, size)
 		mStart, mSize := stack.pop(), stack.pop()
 		for i := 0; i < size; i++ {
