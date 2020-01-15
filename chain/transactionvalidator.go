@@ -8,7 +8,7 @@ import (
 )
 
 type ITransactionValidator interface {
-	ExecuteTransaction(context *ExecuteTransactionContext) ([]byte, bool, []*types.Log, error)
+	ExecuteTransaction(context *ExecuteTransactionContext) *types.ExecuteTransactionResult
 }
 
 type ITransactionSelector interface {

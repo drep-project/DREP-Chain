@@ -1,12 +1,12 @@
 package types
 
 import (
-	"github.com/drep-project/binary"
 	"github.com/drep-project/DREP-Chain/common"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/crypto/sha3"
 	"github.com/drep-project/DREP-Chain/params"
+	"github.com/drep-project/binary"
 	"math"
 	"math/big"
 	"sync/atomic"
@@ -281,7 +281,6 @@ func NewCandidateTransaction(amount, gasPrice, gasLimit *big.Int, nonce uint64, 
 	return &Transaction{Data: txData}
 }
 
-
 func NewCancleCandidateTransaction(amount, gasPrice, gasLimit *big.Int, nonce uint64) *Transaction {
 	txData := TransactionData{
 		Version:   common.Version,
@@ -293,4 +292,12 @@ func NewCancleCandidateTransaction(amount, gasPrice, gasLimit *big.Int, nonce ui
 		Timestamp: int64(time.Now().Unix()),
 	}
 	return &Transaction{Data: txData}
+}
+
+type ExecuteTransactionResult struct {
+	TxResult              []byte               //Transaction execution results
+	ContractTxExecuteFail bool                 //contract transaction execution results
+	ContractTxLog         []*Log               //contract transaction execution logs
+	Txerror               error                //transaction execution fail info
+	ContractAddr          crypto.CommonAddress //create new contract address
 }

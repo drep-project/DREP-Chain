@@ -16,7 +16,7 @@ import (
 
 type BlockValidators []IBlockValidator
 
-func(blockValidators BlockValidators) SelectByType(t reflect.Type) IBlockValidator {
+func (blockValidators BlockValidators) SelectByType(t reflect.Type) IBlockValidator {
 	for _, validator := range blockValidators {
 		if t == reflect.TypeOf(validator).Elem() {
 			return validator
@@ -192,8 +192,8 @@ func (chainBlockValidator *ChainBlockValidator) RouteTransaction(context *BlockE
 	for selector, txValidator := range chainBlockValidator.chain.transactionValidator {
 		if selector.Select(tx) {
 			exit = true
-			_, failed, logs, err := txValidator.ExecuteTransaction(txContext)
-			if err != nil {
+			etr := txValidator.ExecuteTransaction(txContext)
+			if etr.Txerror != nil {
 				return nil, 0, err
 			}
 			err = txContext.RefundCoin()
@@ -204,7 +204,7 @@ func (chainBlockValidator *ChainBlockValidator) RouteTransaction(context *BlockE
 			// Create a new receipt for the transaction, storing the intermediate root and gasRemained used by the tx
 			// based on the eip phase, we're passing whether the root touch-delete accounts.
 			//crypto.ZeroHash[:]
-			receipt := types.NewReceipt(crypto.ZeroHash[:], failed, txContext.GasUsed())
+			receipt := types.NewReceipt(crypto.ZeroHash[:], etr.ContractTxExecuteFail, txContext.GasUsed())
 			receipt.TxHash = *tx.TxHash()
 			receipt.GasUsed = txContext.GasUsed()
 			// if the transaction created a contract, store the creation address in the receipt.
@@ -213,7 +213,7 @@ func (chainBlockValidator *ChainBlockValidator) RouteTransaction(context *BlockE
 				fmt.Println(receipt.ContractAddress)
 			}
 			// Set the receipt logs and create a bloom for filtering
-			receipt.Logs = logs
+			receipt.Logs = etr.ContractTxLog
 			receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
 			//receipt.BlockHash = *header.Hash()
 			receipt.BlockNumber = context.Block.Header.Height

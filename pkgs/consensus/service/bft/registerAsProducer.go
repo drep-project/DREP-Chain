@@ -2,11 +2,11 @@ package bft
 
 import (
 	"errors"
-	"github.com/drep-project/binary"
 	"github.com/drep-project/DREP-Chain/chain"
 	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/types"
+	"github.com/drep-project/binary"
 )
 
 var (
@@ -25,21 +25,25 @@ func (registerAsProducerTransactionSelector *RegisterAsProducerTransactionSelect
 type RegisterAsProducerTransactionExecutor struct {
 }
 
-func (registerAsProducerTransactionExecutor *RegisterAsProducerTransactionExecutor) ExecuteTransaction(context *chain.ExecuteTransactionContext) ([]byte, bool, []*types.Log, error) {
+func (registerAsProducerTransactionExecutor *RegisterAsProducerTransactionExecutor) ExecuteTransaction(context *chain.ExecuteTransactionContext) *types.ExecuteTransactionResult {
+	etr := &types.ExecuteTransactionResult{}
 	from := context.From()
 	data := context.Data()
 	newProducer := &Producer{}
 	err := binary.Unmarshal(data, newProducer)
 	if err == nil {
-		return nil, false, nil, err
+		etr.Txerror = err
+		return etr
 	}
 	if *from == crypto.PubkeyToAddress(newProducer.Pubkey) {
-		return nil, false, nil, errors.New("only register himself")
+		etr.Txerror = errors.New("only register himself")
+		return etr
 	}
 	op := ConsensusOp{context.TrieStore()}
 	oldProducers, err := op.GetProducer()
 	if err == nil {
-		return nil, false, nil, err
+		etr.Txerror = err
+		return etr
 	}
 
 	exit := false
@@ -56,9 +60,10 @@ func (registerAsProducerTransactionExecutor *RegisterAsProducerTransactionExecut
 
 	err = op.SaveProducer(oldProducers)
 	if err == nil {
-		return nil, false, nil, err
+		etr.Txerror = err
+		return etr
 	}
-	return nil, true, nil, nil
+	return etr
 }
 
 type ConsensusOp struct {

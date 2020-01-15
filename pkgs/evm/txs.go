@@ -25,10 +25,11 @@ type EvmDeployTransactionExecutor struct {
 	vm *EvmService
 }
 
-func (vmDeployTransactionExecutor *EvmDeployTransactionExecutor) ExecuteTransaction(context *chain.ExecuteTransactionContext) ([]byte, bool, []*types.Log, error) {
+func (vmDeployTransactionExecutor *EvmDeployTransactionExecutor) ExecuteTransaction(context *chain.ExecuteTransactionContext) *types.ExecuteTransactionResult {
+
 	state := vm.NewState(context.TrieStore(), context.Header().Height)
 
-	ret, gas, failed, err := vmDeployTransactionExecutor.vm.Eval(
+	ret, gas, addr, failed, err := vmDeployTransactionExecutor.vm.Eval(
 		state,
 		context.Tx(),
 		context.Header(),
@@ -44,10 +45,11 @@ func (vmDeployTransactionExecutor *EvmDeployTransactionExecutor) ExecuteTransact
 	context.RefundGas(refund)
 
 	logs := state.GetLogs(context.Tx().TxHash())
-	for _,log := range logs {
+	for _, log := range logs {
 		log.TxType = context.Tx().Type()
 	}
-	return ret, failed, logs, err
+
+	return &types.ExecuteTransactionResult{TxResult: ret, ContractTxExecuteFail: failed, ContractTxLog: logs, Txerror: err, ContractAddr: addr}
 }
 
 // ***********CALL**************//

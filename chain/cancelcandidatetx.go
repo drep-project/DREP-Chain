@@ -22,14 +22,16 @@ var (
 type CancelCandidateTransactionProcessor struct {
 }
 
-func (processor *CancelCandidateTransactionProcessor) ExecuteTransaction(context *ExecuteTransactionContext) ([]byte, bool, []*types.Log, error) {
+func (processor *CancelCandidateTransactionProcessor) ExecuteTransaction(context *ExecuteTransactionContext) *types.ExecuteTransactionResult {
+	etr := &types.ExecuteTransactionResult{}
 	from := context.From()
 	tx := context.Tx()
 	stakeStore := context.TrieStore()
 
 	detail, err := stakeStore.CancelCandidateCredit(from, tx.Amount(), context.header.Height)
 	if err != nil {
-		return nil, false, nil, err
+		etr.Txerror = err
+		return etr
 	}
 
 	logs := make([]*types.Log, 0, 1)
@@ -40,8 +42,9 @@ func (processor *CancelCandidateTransactionProcessor) ExecuteTransaction(context
 
 	err = stakeStore.PutNonce(from, tx.Nonce()+1)
 	if err != nil {
-		return nil, false, nil, err
+		etr.Txerror = err
+		return etr
 	}
 
-	return nil, true, logs, err
+	return etr
 }

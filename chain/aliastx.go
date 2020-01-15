@@ -30,21 +30,25 @@ type AliasTransactionProcessor struct {
 //9 10000 40
 //10 5000 20
 //11 2500 10
-func (aliasTransactionProcessor *AliasTransactionProcessor) ExecuteTransaction(context *ExecuteTransactionContext) ([]byte, bool, []*types.Log, error) {
+func (aliasTransactionProcessor *AliasTransactionProcessor) ExecuteTransaction(context *ExecuteTransactionContext) *types.ExecuteTransactionResult {
+	etr := types.ExecuteTransactionResult{}
 	from := context.From()
 	store := context.TrieStore()
 	tx := context.Tx()
 	alias := tx.GetData()
 	if err := CheckAlias(alias); err != nil {
-		return nil, false, nil, err
+		etr.Txerror = err
+		return &etr
 	}
 	err := store.AliasSet(from, string(alias))
 	if err != nil {
-		return nil, false, nil, err
+		etr.Txerror = err
+		return &etr
 	}
 	err = context.UseGas(params.AliasGas * uint64(len(alias)))
 	if err != nil {
-		return nil, false, nil, err
+		etr.Txerror = err
+		return &etr
 	}
 	// extra price
 	type LenPriceCacler struct {
@@ -131,25 +135,29 @@ func (aliasTransactionProcessor *AliasTransactionProcessor) ExecuteTransaction(c
 	originBalance := store.GetBalance(from, context.header.Height)
 	leftBalance := originBalance.Sub(originBalance, drepFee)
 	if leftBalance.Sign() < 0 {
-		return nil, false, nil, ErrBalance
+		etr.Txerror = ErrBalance
+		return &etr
 	}
 	err = store.PutBalance(from, context.header.Height, leftBalance)
 	if err != nil {
-		return nil, false, nil, err
+		etr.Txerror = err
+		return &etr
 	}
 	// put alias fee to hole address
 	zeroAddressBalance := store.GetBalance(&params.HoleAddress, context.header.Height)
 	zeroAddressBalance = zeroAddressBalance.Add(zeroAddressBalance, drepFee)
 	err = store.PutBalance(&params.HoleAddress, context.header.Height, zeroAddressBalance)
 	if err != nil {
-		return nil, false, nil, err
+		etr.Txerror = err
+		return &etr
 	}
 	err = store.PutNonce(from, tx.Nonce()+1)
 	if err != nil {
-		return nil, false, nil, err
+		etr.Txerror = err
+		return &etr
 	}
 
-	return nil, true, nil, err
+	return &etr
 }
 
 func CheckAlias(alias []byte) error {

@@ -112,8 +112,8 @@ func (chainBlockValidator *TemplateBlockValidator) RouteTransaction(context *cha
 	for selector, txValidator := range chainBlockValidator.chain.TransactionValidators() {
 		if selector.Select(tx) {
 			exit = true
-			_, failed, logs, err := txValidator.ExecuteTransaction(txContext)
-			if err != nil {
+			ret := txValidator.ExecuteTransaction(txContext)
+			if ret.Txerror != nil {
 				return nil, 0, err
 			}
 			err = txContext.RefundCoin()
@@ -122,7 +122,7 @@ func (chainBlockValidator *TemplateBlockValidator) RouteTransaction(context *cha
 			}
 			// Create a new receipt for the transaction, storing the intermediate root and gasRemained used by the tx
 			// based on the eip phase, we're passing whether the root touch-delete accounts.
-			receipt := types.NewReceipt(crypto.ZeroHash[:], failed, txContext.GasUsed())
+			receipt := types.NewReceipt(crypto.ZeroHash[:], ret.ContractTxExecuteFail, txContext.GasUsed())
 			receipt.TxHash = *tx.TxHash()
 			receipt.GasUsed = txContext.GasUsed()
 			// if the transaction created a contract, store the creation address in the receipt.
@@ -131,7 +131,7 @@ func (chainBlockValidator *TemplateBlockValidator) RouteTransaction(context *cha
 				fmt.Println(receipt.ContractAddress)
 			}
 			// Set the receipt logs and create a bloom for filtering
-			receipt.Logs = logs
+			receipt.Logs = ret.ContractTxLog
 			receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
 			//receipt.BlockHash = *header.Hash()
 			receipt.BlockNumber = context.Block.Header.Height

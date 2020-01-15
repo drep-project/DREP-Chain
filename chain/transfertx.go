@@ -17,7 +17,8 @@ var (
 type TransferTransactionProcessor struct {
 }
 
-func (transferTransactionProcessor *TransferTransactionProcessor) ExecuteTransaction(context *ExecuteTransactionContext) ([]byte, bool, []*types.Log, error) {
+func (transferTransactionProcessor *TransferTransactionProcessor) ExecuteTransaction(context *ExecuteTransactionContext) *types.ExecuteTransactionResult {
+	etr := &types.ExecuteTransactionResult{}
 	from := context.From()
 	store := context.TrieStore() // GetBalance
 	tx := context.Tx()
@@ -25,22 +26,26 @@ func (transferTransactionProcessor *TransferTransactionProcessor) ExecuteTransac
 	toBalance := store.GetBalance(tx.To(), context.header.Height)
 	leftBalance := originBalance.Sub(originBalance, tx.Amount())
 	if leftBalance.Sign() < 0 {
-		return nil, false, nil, ErrBalance
+		etr.Txerror = ErrBalance
+		return etr
 	}
 	addBalance := toBalance.Add(toBalance, tx.Amount())
 	err := store.PutBalance(from, context.header.Height, leftBalance)
 	if err != nil {
-		return nil, false, nil, err
+		etr.Txerror = err
+		return etr
 	}
 
 	err = store.PutBalance(tx.To(), context.header.Height, addBalance)
 	if err != nil {
-		return nil, false, nil, err
+		etr.Txerror = err
+		return etr
 	}
 
 	err = store.PutNonce(from, tx.Nonce()+1)
 	if err != nil {
-		return nil, false, nil, err
+		etr.Txerror = err
+		return etr
 	}
-	return nil, true, nil, nil
+	return etr
 }
