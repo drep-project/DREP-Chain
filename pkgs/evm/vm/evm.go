@@ -374,7 +374,6 @@ func (evm *EVM) CreateContractCode(caller crypto.CommonAddress, codeAndHash *cod
 	if evm.vmConfig.LogConfig.Debug && evm.depth == 0 {
 		//evm.vmConfig.Tracer.CaptureStart(caller, address, true, codeAndHash.code, gas, value)
 	}
-	//start := time.Now()
 
 	ret, err := run(evm, contract, nil, false)
 
