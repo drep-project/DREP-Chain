@@ -91,13 +91,6 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 		}
 	}
 
-	//consult privkey in wallet
-	accountNode, err := bftConsensusService.WalletService.Wallet.GetAccountByPubkey(bftConsensusService.Config.MyPk)
-	if err != nil {
-		log.WithField("init err", err).WithField("addr", crypto.PubkeyToAddress(bftConsensusService.Config.MyPk).String()).Error("privkey of MyPk in Config is not in local wallet")
-		return err
-	}
-	bftConsensusService.Miner = accountNode.PrivateKey
 	bftConsensusService.P2pServer.AddProtocols([]p2p.Protocol{
 		p2p.Protocol{
 			Name:   "bftConsensusService",
@@ -177,6 +170,17 @@ func (bftConsensusService *BftConsensusService) Start(executeContext *app.Execut
 			return
 		default:
 			for {
+				//consult privkey in wallet
+				if bftConsensusService.Miner == nil {
+					accountNode, err := bftConsensusService.WalletService.Wallet.GetAccountByPubkey(bftConsensusService.Config.MyPk)
+					if err != nil {
+						log.WithField("err", err).WithField("addr", crypto.PubkeyToAddress(bftConsensusService.Config.MyPk).String()).Warn("privkey of MyPk in Config is not in local wallet")
+						time.Sleep(time.Second * time.Duration(bftConsensusService.Config.BlockInterval))
+						continue
+					}
+					bftConsensusService.Miner = accountNode.PrivateKey
+				}
+
 				if bftConsensusService.pauseForSync {
 					time.Sleep(time.Millisecond * 500)
 					continue
