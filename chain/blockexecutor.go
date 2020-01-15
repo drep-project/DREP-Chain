@@ -207,6 +207,7 @@ func (chainBlockValidator *ChainBlockValidator) RouteTransaction(context *BlockE
 			receipt := types.NewReceipt(crypto.ZeroHash[:], etr.ContractTxExecuteFail, txContext.GasUsed())
 			receipt.TxHash = *tx.TxHash()
 			receipt.GasUsed = txContext.GasUsed()
+			receipt.ContractAddress = etr.ContractAddr
 			// if the transaction created a contract, store the creation address in the receipt.
 			if tx.To() == nil || tx.To().IsEmpty() {
 				receipt.ContractAddress = crypto.CreateAddress(*from, tx.Nonce())
