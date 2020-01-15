@@ -26,7 +26,6 @@ type EvmDeployTransactionExecutor struct {
 }
 
 func (vmDeployTransactionExecutor *EvmDeployTransactionExecutor) ExecuteTransaction(context *chain.ExecuteTransactionContext) *types.ExecuteTransactionResult {
-
 	state := vm.NewState(context.TrieStore(), context.Header().Height)
 
 	ret, gas, addr, failed, err := vmDeployTransactionExecutor.vm.Eval(
