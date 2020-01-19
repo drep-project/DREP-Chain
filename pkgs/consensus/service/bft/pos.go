@@ -33,7 +33,7 @@ func (h *creditsHeap) Pop() interface{} {
 	return x
 }
 
-func GetCandidates(store store.StoreInterface, topN int) []*Producer {
+func GetCandidates(store store.StoreInterface, topN int) []Producer {
 	candidateAddrs, err := store.GetCandidateAddrs()
 	if err != nil {
 		log.Errorf("get candidates err:%v", err)
@@ -49,7 +49,7 @@ func GetCandidates(store store.StoreInterface, topN int) []*Producer {
 
 	heap.Init(&csh)
 
-	producerAddrs := []*Producer{}
+	producerAddrs := []Producer{}
 
 	addNum := 0
 	for csh.Len() > 0 {
@@ -75,7 +75,7 @@ func GetCandidates(store store.StoreInterface, topN int) []*Producer {
 		if err != nil {
 			continue
 		}
-		producer := &Producer{
+		producer := Producer{
 			Pubkey: cd.Pubkey,
 			Node:   n,
 		}
