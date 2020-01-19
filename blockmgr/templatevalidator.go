@@ -51,6 +51,7 @@ func (chainBlockValidator *TemplateBlockValidator) ExecuteBlock(context *chain.B
 		context.Block.Header.GasUsed = *context.GasUsed
 		context.Block.Header.TxRoot = chainBlockValidator.chain.DeriveMerkleRoot(finalTxs)
 		context.Block.Header.ReceiptRoot = chainBlockValidator.chain.DeriveReceiptRoot(finalReceipts)
+		context.Block.Header.Bloom = types.CreateBloom(finalReceipts)
 	}()
 SELECT_TX:
 	for _, t := range context.Block.Data.TxList {
