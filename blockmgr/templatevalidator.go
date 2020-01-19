@@ -115,7 +115,7 @@ func (chainBlockValidator *TemplateBlockValidator) RouteTransaction(context *cha
 			exit = true
 			ret := txValidator.ExecuteTransaction(txContext)
 			if ret.Txerror != nil {
-				return nil, 0, err
+				return nil, 0, ret.Txerror
 			}
 			err = txContext.RefundCoin()
 			if err != nil {
