@@ -23,7 +23,7 @@ func (producer *Producer) Address() crypto.CommonAddress {
 	return crypto.PubkeyToAddress(producer.Pubkey)
 }
 
-type ProducerSet []*Producer
+type ProducerSet []Producer
 
 func (produceSet *ProducerSet) IsLocalIP(ip string) bool {
 	for _, bp := range *produceSet {
