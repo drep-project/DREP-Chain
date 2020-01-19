@@ -33,6 +33,10 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		}()
 	}
 
+	if contract.Value.Uint64() != 0 {
+		return nil, fmt.Errorf("contract value must be 0")
+	}
+
 	// Increment the call depth which is restricted to 1024
 	in.EVM.depth++
 	defer func() { in.EVM.depth-- }()
@@ -93,8 +97,9 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		}
 		// Get the operation from the jump table and validate the stack to ensure there are
 		// enough stack items available to perform the operation.
+
 		op = contract.GetOp(pc)
-		fmt.Println(opCodeToString[op])
+		fmt.Println(int(op), opCodeToString[op])
 		operation := in.JumpTable[op]
 		if !operation.valid {
 			return nil, fmt.Errorf("invalid opcode 0x%x", int(op))
