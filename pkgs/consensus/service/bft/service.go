@@ -156,9 +156,6 @@ func (bftConsensusService *BftConsensusService) handlerEvent() {
 }
 
 func (bftConsensusService *BftConsensusService) Start(executeContext *app.ExecuteContext) error {
-	//if !bftConsensusService.Config.StartMiner {
-	//	return nil
-	//}
 	bftConsensusService.start = true
 
 	go bftConsensusService.BftConsensus.processPeers()
@@ -245,7 +242,7 @@ func (bftConsensusService *BftConsensusService) getWaitTime() (time.Time, time.D
 	}
 }
 
-func (bftConsensusService *BftConsensusService) GetProducers(height uint64, topN int) ([]*Producer, error) {
+func (bftConsensusService *BftConsensusService) GetProducers(height uint64, topN int) ([]Producer, error) {
 	block, err := bftConsensusService.ChainService.GetBlockByHeight(height)
 	if err != nil {
 		return nil, err
