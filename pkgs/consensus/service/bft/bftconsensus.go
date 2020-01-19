@@ -51,7 +51,7 @@ type BftConsensus struct {
 	addPeerChan    chan *consensusTypes.PeerInfo
 	removePeerChan chan *consensusTypes.PeerInfo
 
-	producer []*Producer
+	producer []Producer
 	quit     chan struct{}
 }
 
@@ -88,7 +88,7 @@ func NewBftConsensus(
 	}
 }
 
-func (bftConsensus *BftConsensus) GetProducers(height uint64, topN int) ([]*Producer, error) {
+func (bftConsensus *BftConsensus) GetProducers(height uint64, topN int) ([]Producer, error) {
 	newEpoch := height % uint64(bftConsensus.config.ChangeInterval)
 	if bftConsensus.producer == nil || newEpoch == 0 {
 		height = height - newEpoch
@@ -118,8 +118,13 @@ func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Blo
 		return nil, err
 	}
 	found := false
+
+	log.Info(" bftConsensus.config.ProducerNum:", bftConsensus.config.ProducerNum)
 	for _, p := range producers {
 		log.WithField("node", p.Node.String()).Trace("get producers")
+	}
+
+	for _, p := range producers {
 		if bytes.Equal(p.Pubkey.Serialize(), bftConsensus.config.MyPk.Serialize()) {
 			found = true
 			break
@@ -209,7 +214,7 @@ func (bftConsensus *BftConsensus) moveToNextMiner(produceInfos []*MemberInfo) (b
 	}
 }
 
-func (bftConsensus *BftConsensus) collectMemberStatus(producers []*Producer) []*MemberInfo {
+func (bftConsensus *BftConsensus) collectMemberStatus(producers []Producer) []*MemberInfo {
 	produceInfos := make([]*MemberInfo, 0, len(producers))
 	for _, produce := range producers {
 		var (
@@ -492,7 +497,7 @@ func (bftConsensus *BftConsensus) prepareForMining(p2p p2pService.P2P) {
 				log.WithField("err", err).Info("PrepareForMiner get producer err")
 			}
 
-			tempProduces := make([]*Producer, len(producers))
+			tempProduces := make([]Producer, len(producers))
 			copy(tempProduces, producers)
 			//自己在候选中
 			found := false
