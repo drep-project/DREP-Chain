@@ -152,17 +152,20 @@ func (chainBlockValidator *ChainBlockValidator) ExecuteBlock(context *BlockExecu
 	if newReceiptRoot != context.Block.Header.ReceiptRoot {
 		return ErrReceiptRoot
 	}
-	err := context.DbStore.PutReceipts(*context.Block.Header.Hash(), context.Receipts)
-	if err != nil {
-		return err
-	}
+
 	for _, receipt := range context.Receipts {
+		receipt.BlockHash = *context.Block.Header.Hash()
 		receipt.PostState = newReceiptRoot[:]
-		err = context.DbStore.PutReceipt(receipt.TxHash, receipt)
+		err := context.DbStore.PutReceipt(receipt.TxHash, receipt)
 		if err != nil {
 			return err
 		}
 	}
+	err := context.DbStore.PutReceipts(*context.Block.Header.Hash(), context.Receipts)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
