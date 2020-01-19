@@ -9,6 +9,7 @@ import (
 	"github.com/drep-project/DREP-Chain/types"
 	"github.com/drep-project/binary"
 	"math/big"
+	"strconv"
 )
 
 type ViewTransaction struct {
@@ -82,9 +83,10 @@ func (viewBlockHeader *ViewBlockHeader) From(block *types.Block) *ViewBlockHeade
 
 func (rpcTransaction *ViewTransaction) FromTx(tx *types.Transaction) *ViewTransaction {
 	from, _ := tx.From()
-	rpcTransaction.Id = tx.TxHash().String()
+	rpcTransaction.Id = strconv.FormatInt(tx.Data.Timestamp, 10) + tx.TxHash().String()
 	rpcTransaction.Hash = tx.TxHash().String()
 	rpcTransaction.Version = tx.Data.Version
+
 	rpcTransaction.Nonce = tx.Data.Nonce
 	rpcTransaction.Type = int(tx.Data.Type)
 	rpcTransaction.To = tx.Data.To.String()
