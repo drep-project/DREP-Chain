@@ -1,9 +1,13 @@
 package evm
 
 import (
+	"bytes"
+	"encoding/binary"
+	"fmt"
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/DREP-Chain/app"
 	"github.com/drep-project/DREP-Chain/chain"
+	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/database"
 	"github.com/drep-project/DREP-Chain/pkgs/evm/vm"
@@ -67,6 +71,33 @@ func (evmService *EvmService) Stop(executeContext *app.ExecuteContext) error {
 
 func (evmService *EvmService) Receive(context actor.Context) {}
 
+func (evmService *EvmService) Call(database store.StoreInterface, tx *types.Transaction, header *types.BlockHeader) (ret []byte, err error) {
+	state := vm.NewState(database, header.Height)
+	sender, err := tx.From()
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a new context to be used in the EVM environment
+	context := NewEVMContext(tx, header, sender)
+	// Create a new environment which holds all relevant information
+	// about the transaction and calling mechanisms.
+	vmenv := vm.NewEVM(context, state, evmService.Config)
+
+	ret, _, vmerr := vmenv.Call(*sender, *tx.To(), vmenv.ChainId, tx.Data.Data, tx.Gas(), tx.Amount())
+	if vmerr != nil {
+		dlog.Debug("call VM returned with error", "err", vmerr)
+		return nil, vmerr
+	}
+
+	bin_buf := bytes.NewBuffer(ret)
+	var x int32
+	binary.Read(bin_buf, binary.BigEndian, &x)
+	fmt.Println(x)
+
+	return ret, nil
+}
+
 func (evmService *EvmService) Eval(state vm.VMState, tx *types.Transaction, header *types.BlockHeader, bc ChainContext, gas uint64, value *big.Int) (ret []byte, gasUsed uint64, contractAddr crypto.CommonAddress, failed bool, err error) {
 	sender, err := tx.From()
 	if err != nil {
@@ -75,7 +106,7 @@ func (evmService *EvmService) Eval(state vm.VMState, tx *types.Transaction, head
 	contractCreation := tx.To() == nil || tx.To().IsEmpty()
 
 	// Create a new context to be used in the EVM environment
-	context := NewEVMContext(tx, header, sender, bc)
+	context := NewEVMContext(tx, header, sender)
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(context, state, evmService.Config)
@@ -101,6 +132,11 @@ func (evmService *EvmService) Eval(state vm.VMState, tx *types.Transaction, head
 			return nil, uint64(0), crypto.CommonAddress{}, false, vmerr
 		}
 	}
+
+	bin_buf := bytes.NewBuffer(ret)
+	var x int32
+	binary.Read(bin_buf, binary.BigEndian, &x)
+	fmt.Println(x)
 
 	return ret, gas, contractAddr, vmerr != nil, err
 }

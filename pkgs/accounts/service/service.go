@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/drep-project/DREP-Chain/pkgs/evm"
 	"path/filepath"
 
 	"github.com/drep-project/DREP-Chain/app"
@@ -41,6 +42,7 @@ var (
 
 // AccountService
 type AccountService struct {
+	EvmService         *evm.EvmService             `service:"vm"`
 	DatabaseService    *database.DatabaseService   `service:"database"`
 	Chain              chain.ChainServiceInterface `service:"chain"`
 	PoolQuery          blockmgr.IBlockMgrPool      `service:"blockmgr"`
@@ -63,6 +65,7 @@ func (accountService *AccountService) Api() []app.API {
 			Namespace: "account",
 			Version:   "1.0",
 			Service: &AccountApi{
+				EvmService:         accountService.EvmService,
 				Wallet:             accountService.Wallet,
 				messageBroadCastor: accountService.MessageBroadCastor,
 				poolQuery:          accountService.PoolQuery,

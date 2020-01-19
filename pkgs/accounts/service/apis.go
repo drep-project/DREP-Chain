@@ -4,15 +4,17 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/drep-project/DREP-Chain/pkgs/accounts/addrgenerator"
+	"github.com/drep-project/DREP-Chain/chain/store"
+	"github.com/drep-project/DREP-Chain/params"
 	"math/big"
 
 	"github.com/drep-project/DREP-Chain/blockmgr"
-
 	"github.com/drep-project/DREP-Chain/common"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/database"
+	"github.com/drep-project/DREP-Chain/pkgs/accounts/addrgenerator"
+	"github.com/drep-project/DREP-Chain/pkgs/evm"
 	"github.com/drep-project/DREP-Chain/types"
 )
 
@@ -22,6 +24,7 @@ usage: 地址管理及发起简单交易
 prefix:account
 */
 type AccountApi struct {
+	EvmService         *evm.EvmService
 	Wallet             *Wallet
 	accountService     *AccountService
 	poolQuery          blockmgr.IBlockMgrPool
@@ -336,7 +339,41 @@ func (accountapi *AccountApi) CancelCandidateCredit(from crypto.CommonAddress, a
 }
 
 /*
-` name: call
+ name: readCall
+ usage: 调用合约
+ params:
+	1. 合约地址
+	2. 合约接口
+ return: 查询结果
+ example:
+	curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_readCall","params":["0xec61c03f719a5c214f60719c3f36bb362a202125","0xecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c"],"id":1}' http://127.0.0.1:15645
+ response:
+	 {"jsonrpc":"2.0","id":1,"result":""}
+*/
+func (accountapi *AccountApi) ReadCall(from, to crypto.CommonAddress, input common.Bytes) (string, error) {
+	header := accountapi.EvmService.Chain.GetCurrentHeader()
+	tx := types.NewTransaction(to, new(big.Int).SetUint64(0), &big.Int{}, new(big.Int).SetUint64(params.MinGasLimit), 0)
+	tx.Data.Data = input
+
+	sig, err := accountapi.Wallet.Sign(&from, tx.TxHash().Bytes())
+	if err != nil {
+		return "", err
+	}
+	tx.Sig = sig
+
+	trieStore, err := store.TrieStoreFromStore(accountapi.databaseService.LevelDb(), header.StateRoot)
+	if err != nil {
+		return "", err
+	}
+
+	ret, err := accountapi.EvmService.Call(trieStore, tx, header)
+	fmt.Println(string(ret))
+
+	return string(ret), err
+}
+
+/*
+ name: call
  usage: 调用合约
  params:
 	1. 调用者的地址
@@ -345,9 +382,9 @@ func (accountapi *AccountApi) CancelCandidateCredit(from crypto.CommonAddress, a
 	4. 金额
 	4. gas价格
 	5. gas上限
- return: 合约地址
+ return: 交易hash
  example:
- 	curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_call","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x6d4ce63c","0x111","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
+	curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_call","params":["0xec61c03f719a5c214f60719c3f36bb362a202125","0xecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c","0x111","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
  response:
 	 {"jsonrpc":"2.0","id":1,"result":"0x5d74aba54ace5f01a5f0057f37bfddbbe646ea6de7265b368e2e7d17d9cdeb9c"}
 */
@@ -386,7 +423,10 @@ func (accountapi *AccountApi) CreateCode(from crypto.CommonAddress, byteCode com
 		return "", err
 	}
 	t.Sig = sig
-	accountapi.messageBroadCastor.SendTransaction(t, true)
+	err = accountapi.messageBroadCastor.SendTransaction(t, true)
+	if err != nil {
+		return "", err
+	}
 	return t.TxHash().String(), nil
 }
 
