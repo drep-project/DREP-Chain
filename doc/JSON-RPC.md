@@ -1083,23 +1083,44 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 14. account_call
+### 14. account_readCall
 #### 作用：调用合约
 > 参数：
- 1. 调用者的地址
- 2. 合约地址
- 3. 代码
- 4. 金额
- 5. gas价格
- 6. gas上限
+ 1. 合约地址
+ 2. 合约接口
 
-#### 返回值：合约地址
+#### 返回值：查询结果
 
 #### 示例代码
 ##### 请求：
 
 ```shell
-curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_call","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x6d4ce63c","0x111","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
+curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_readCall","params":["0xec61c03f719a5c214f60719c3f36bb362a202125","0xecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c"],"id":1}' http://127.0.0.1:15645
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":1,"result":""}
+````
+
+
+### 15. account_call
+#### 作用：调用合约
+> 参数：
+ 1. 调用者的地址
+ 2. 合约地址
+ 3. 代码
+ 4. gas价格
+ 5. gas上限
+
+#### 返回值：交易hash
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_call","params":["0xec61c03f719a5c214f60719c3f36bb362a202125","0xecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
 ```
 
 ##### 响应：
@@ -1109,7 +1130,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 15. account_createCode
+### 16. account_createCode
 #### 作用：部署合约
 > 参数：
  1. 部署合约的地址
@@ -1134,7 +1155,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 16. account_dumpPrivkey
+### 17. account_dumpPrivkey
 #### 作用：导出地址对应的私钥
 > 参数：
  1. 地址
@@ -1155,7 +1176,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_d
 ````
 
 
-### 17. account_DumpPubkey
+### 18. account_DumpPubkey
 #### 作用：导出地址对应的公钥
 > 参数：
  1. 地址
@@ -1176,7 +1197,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_d
 ````
 
 
-### 18. account_sign
+### 19. account_sign
 #### 作用：关闭钱包
 > 参数：
  1. 地址
@@ -1198,7 +1219,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_s
 ````
 
 
-### 19. account_generateAddresses
+### 20. account_generateAddresses
 #### 作用：生成其他链的地址
 > 参数：
  1. drep地址
@@ -1219,7 +1240,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_g
 ````
 
 
-### 20. account_importKeyStore
+### 21. account_importKeyStore
 #### 作用：导入keystore
 > 参数：
  1. path
@@ -1241,7 +1262,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_i
 ````
 
 
-### 21. account_importPrivkey
+### 22. account_importPrivkey
 #### 作用：导入私钥
 > 参数：
  1. privkey(compress hex)
