@@ -379,18 +379,17 @@ func (accountapi *AccountApi) ReadCall(from, to crypto.CommonAddress, input comm
 	1. 调用者的地址
 	2. 合约地址
 	3. 代码
-	4. 金额
-	4. gas价格
-	5. gas上限
+	3. gas价格
+	4. gas上限
  return: 交易hash
  example:
-	curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_call","params":["0xec61c03f719a5c214f60719c3f36bb362a202125","0xecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c","0x111","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
+	curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_call","params":["0xec61c03f719a5c214f60719c3f36bb362a202125","0xecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
  response:
 	 {"jsonrpc":"2.0","id":1,"result":"0x5d74aba54ace5f01a5f0057f37bfddbbe646ea6de7265b368e2e7d17d9cdeb9c"}
 */
-func (accountapi *AccountApi) Call(from crypto.CommonAddress, to crypto.CommonAddress, input common.Bytes, amount, gasprice, gaslimit *common.Big) (string, error) {
+func (accountapi *AccountApi) Call(from crypto.CommonAddress, to crypto.CommonAddress, input common.Bytes, gasprice, gaslimit *common.Big) (string, error) {
 	nonce := accountapi.poolQuery.GetTransactionCount(&from)
-	t := types.NewCallContractTransaction(to, input, (*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
+	t := types.NewCallContractTransaction(to, input, &big.Int{}, (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
 	sig, err := accountapi.Wallet.Sign(&from, t.TxHash().Bytes())
 	if err != nil {
 		return "", err

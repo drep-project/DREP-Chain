@@ -1,9 +1,6 @@
 package evm
 
 import (
-	"bytes"
-	"encoding/binary"
-	"fmt"
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/DREP-Chain/app"
 	"github.com/drep-project/DREP-Chain/chain"
@@ -89,12 +86,6 @@ func (evmService *EvmService) Call(database store.StoreInterface, tx *types.Tran
 		dlog.Debug("call VM returned with error", "err", vmerr)
 		return nil, vmerr
 	}
-
-	bin_buf := bytes.NewBuffer(ret)
-	var x int32
-	binary.Read(bin_buf, binary.BigEndian, &x)
-	fmt.Println(x)
-
 	return ret, nil
 }
 
@@ -132,11 +123,6 @@ func (evmService *EvmService) Eval(state vm.VMState, tx *types.Transaction, head
 			return nil, uint64(0), crypto.CommonAddress{}, false, vmerr
 		}
 	}
-
-	bin_buf := bytes.NewBuffer(ret)
-	var x int32
-	binary.Read(bin_buf, binary.BigEndian, &x)
-	fmt.Println(x)
 
 	return ret, gas, contractAddr, vmerr != nil, err
 }
