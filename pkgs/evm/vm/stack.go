@@ -68,9 +68,13 @@ func (st *Stack) require(n int) error {
 // Print dumps the content of the stack
 func (st *Stack) Print() {
 	fmt.Println("### stack ###")
-	if len(st.data) > 0 {
-		for i, val := range st.data {
-			fmt.Printf("%-3d  %v\n", i, val)
+	l := len(st.data)
+	i := 0
+	if l > 0 {
+		for l > 0 {
+			fmt.Printf("%-3d  %x\n", i, st.data[l-1])
+			i++
+			l--
 		}
 	} else {
 		fmt.Println("-- empty --")

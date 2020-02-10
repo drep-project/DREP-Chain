@@ -2,7 +2,7 @@ package vm
 
 import (
 	"fmt"
-	"github.com/drep-project/DREP-Chain/common"
+	"github.com/drep-project/DREP-Chain/common/math"
 	"math/big"
 )
 
@@ -47,7 +47,7 @@ func (m *Memory) Set32(offset uint64, val *big.Int) {
 	// Zero the memory area
 	copy(m.store[offset:offset+32], []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 	// Fill in relevant bits
-	common.ReadBits(val, m.store[offset:offset+32])
+	math.ReadBits(val, m.store[offset:offset+32])
 }
 
 // Resize resizes the memory to size
