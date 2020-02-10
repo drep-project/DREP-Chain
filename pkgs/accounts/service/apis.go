@@ -339,18 +339,18 @@ func (accountapi *AccountApi) CancelCandidateCredit(from crypto.CommonAddress, a
 }
 
 /*
- name: readCall
- usage: 调用合约
+ name: readContract
+ usage: 读取智能合约（无数据被修改）
  params:
 	1. 合约地址
 	2. 合约接口
  return: 查询结果
  example:
-	curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_readCall","params":["0xec61c03f719a5c214f60719c3f36bb362a202125","0xecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c"],"id":1}' http://127.0.0.1:15645
+	curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_readContract","params":["0xec61c03f719a5c214f60719c3f36bb362a202125","0xecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c"],"id":1}' http://127.0.0.1:15645
  response:
 	 {"jsonrpc":"2.0","id":1,"result":""}
 */
-func (accountapi *AccountApi) ReadCall(from, to crypto.CommonAddress, input common.Bytes) (string, error) {
+func (accountapi *AccountApi) ReadContract(from, to crypto.CommonAddress, input common.Bytes) (string, error) {
 	header := accountapi.EvmService.Chain.GetCurrentHeader()
 	tx := types.NewTransaction(to, new(big.Int).SetUint64(0), &big.Int{}, new(big.Int).SetUint64(params.MinGasLimit), 0)
 	tx.Data.Data = input
@@ -369,12 +369,14 @@ func (accountapi *AccountApi) ReadCall(from, to crypto.CommonAddress, input comm
 	ret, err := accountapi.EvmService.Call(trieStore, tx, header)
 	fmt.Println(string(ret))
 
+	fmt.Println(new(big.Int).SetBytes(ret))
+
 	return string(ret), err
 }
 
 /*
- name: call
- usage: 调用合约
+ name: executeContract
+ usage: 执行智能合约（导致数据被修改）
  params:
 	1. 调用者的地址
 	2. 合约地址
@@ -383,11 +385,11 @@ func (accountapi *AccountApi) ReadCall(from, to crypto.CommonAddress, input comm
 	4. gas上限
  return: 交易hash
  example:
-	curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_call","params":["0xec61c03f719a5c214f60719c3f36bb362a202125","0xecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
+	curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_executeContract","params":["0xec61c03f719a5c214f60719c3f36bb362a202125","0xecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
  response:
 	 {"jsonrpc":"2.0","id":1,"result":"0x5d74aba54ace5f01a5f0057f37bfddbbe646ea6de7265b368e2e7d17d9cdeb9c"}
 */
-func (accountapi *AccountApi) Call(from crypto.CommonAddress, to crypto.CommonAddress, input common.Bytes, gasprice, gaslimit *common.Big) (string, error) {
+func (accountapi *AccountApi) ExecuteContract(from crypto.CommonAddress, to crypto.CommonAddress, input common.Bytes, gasprice, gaslimit *common.Big) (string, error) {
 	nonce := accountapi.poolQuery.GetTransactionCount(&from)
 	t := types.NewCallContractTransaction(to, input, &big.Int{}, (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
 	sig, err := accountapi.Wallet.Sign(&from, t.TxHash().Bytes())
