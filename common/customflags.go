@@ -21,6 +21,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/drep-project/DREP-Chain/common/math"
 	"math/big"
 	"os"
 	"os/user"
@@ -149,7 +150,7 @@ func (b *bigValue) String() string {
 }
 
 func (b *bigValue) Set(s string) error {
-	int, ok := ParseBig256(s)
+	int, ok := math.ParseBig256(s)
 	if !ok {
 		return errors.New("invalid integer syntax")
 	}
