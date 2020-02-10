@@ -1083,8 +1083,8 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 14. account_readCall
-#### 作用：调用合约
+### 14. account_readContract
+#### 作用：读取智能合约（无数据被修改）
 > 参数：
  1. 合约地址
  2. 合约接口
@@ -1095,7 +1095,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ##### 请求：
 
 ```shell
-curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_readCall","params":["0xec61c03f719a5c214f60719c3f36bb362a202125","0xecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c"],"id":1}' http://127.0.0.1:15645
+curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_readContract","params":["0xec61c03f719a5c214f60719c3f36bb362a202125","0xecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c"],"id":1}' http://127.0.0.1:15645
 ```
 
 ##### 响应：
@@ -1105,8 +1105,8 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 15. account_call
-#### 作用：调用合约
+### 15. account_executeContract
+#### 作用：执行智能合约（导致数据被修改）
 > 参数：
  1. 调用者的地址
  2. 合约地址
@@ -1120,7 +1120,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ##### 请求：
 
 ```shell
-curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_call","params":["0xec61c03f719a5c214f60719c3f36bb362a202125","0xecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
+curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_executeContract","params":["0xec61c03f719a5c214f60719c3f36bb362a202125","0xecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
 ```
 
 ##### 响应：
