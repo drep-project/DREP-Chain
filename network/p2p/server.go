@@ -712,10 +712,6 @@ running:
 		case op := <-srv.peerOp:
 			// This channel is used by Peers and PeerCount.
 			op(peers)
-			fmt.Println("peerOp:")
-			for kkk, _ := range peers {
-				fmt.Println(kkk.String())
-			}
 			srv.peerOpDone <- struct{}{}
 		case t := <-taskdone:
 			// A task got done. Tell dialstate about it so it
