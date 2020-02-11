@@ -350,28 +350,28 @@ func (accountapi *AccountApi) CancelCandidateCredit(from crypto.CommonAddress, a
  response:
 	 {"jsonrpc":"2.0","id":1,"result":""}
 */
-func (accountapi *AccountApi) ReadContract(from, to crypto.CommonAddress, input common.Bytes) (string, error) {
+func (accountapi *AccountApi) ReadContract(from, to crypto.CommonAddress, input common.Bytes) (common.Bytes, error) {
 	header := accountapi.EvmService.Chain.GetCurrentHeader()
 	tx := types.NewTransaction(to, new(big.Int).SetUint64(0), &big.Int{}, new(big.Int).SetUint64(params.MinGasLimit), 0)
 	tx.Data.Data = input
 
 	sig, err := accountapi.Wallet.Sign(&from, tx.TxHash().Bytes())
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	tx.Sig = sig
 
 	trieStore, err := store.TrieStoreFromStore(accountapi.databaseService.LevelDb(), header.StateRoot)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	ret, err := accountapi.EvmService.Call(trieStore, tx, header)
-	fmt.Println(string(ret))
-
+	fmt.Println(string(common.Bytes(ret)))
 	fmt.Println(new(big.Int).SetBytes(ret))
+	fmt.Println(common.Bytes(ret))
 
-	return string(ret), err
+	return common.Bytes(ret), err
 }
 
 /*
