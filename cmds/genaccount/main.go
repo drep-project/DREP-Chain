@@ -68,7 +68,7 @@ func gen(ctx *cli.Context) error {
 		path = appPath
 	}
 	nodeItems := cfg.Miners
-	bootsNodes := []*enode.Node{}
+	trustNodes := []*enode.Node{}
 	standbyKey := []*secp256k1.PrivateKey{}
 	nodes := []*types.Node{}
 	produces := make([]types.CandidateData, 0)
@@ -85,7 +85,7 @@ func gen(ctx *cli.Context) error {
 		nodePrivateKey := GeneratePrivateKey(instanceDir)
 		fmt.Println(crypto.PubkeyToAddress(nodePrivateKey.PubKey()).String(), hex.EncodeToString(nodePrivateKey.Serialize()))
 		node := enode.NewV4(nodePrivateKey.PubKey(), ip, nodeItems[i].Port, nodeItems[i].Port)
-		bootsNodes = append(bootsNodes, node)
+		trustNodes = append(trustNodes, node)
 
 		standbyKey = append(standbyKey, aNode.PrivateKey)
 		produces = append(produces, types.CandidateData{
@@ -105,8 +105,9 @@ func gen(ctx *cli.Context) error {
 	p2pConfig.NoDiscovery = false
 	p2pConfig.DiscoveryV5 = true
 	p2pConfig.Name = "drepnode"
-	p2pConfig.ProduceNodes = bootsNodes
-	p2pConfig.StaticNodes = bootsNodes
+	//p2pConfig.ProduceNodes = trustNodes
+	p2pConfig.StaticNodes = trustNodes
+	//p2pConfig.BootstrapNodes = trustNodes
 	//p2pConfig.ListenAddr = "0.0.0.0:55555"
 
 	consensusConfig := &service.ConsensusConfig{}
