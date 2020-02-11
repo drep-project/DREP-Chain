@@ -102,6 +102,12 @@ func (bftConsensus *BftConsensus) GetProducers(height uint64, topN int) ([]Produ
 		}
 		producers := GetCandidates(trie, topN)
 
+		if len(producers) != topN {
+			bftConsensus.producer = nil
+			log.WithField("len(producers", len(producers)).WithField("tonN", topN).Info("get producers err********")
+			return nil, fmt.Errorf("get producers err")
+		}
+
 		bftConsensus.producer = producers
 		return producers, nil
 	} else {
@@ -113,13 +119,13 @@ func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Blo
 	bftConsensus.CoinBase = crypto.PubkeyToAddress(privKey.PubKey())
 	bftConsensus.PrivKey = privKey
 
-	producers, err := bftConsensus.GetProducers(bftConsensus.ChainService.BestChain().Tip().Height, bftConsensus.config.ProducerNum)
+	producers, err := bftConsensus.GetProducers(bftConsensus.ChainService.BestChain().Height(), bftConsensus.config.ProducerNum)
 	if err != nil {
 		return nil, err
 	}
 	found := false
 
-	log.Info(" bftConsensus.config.ProducerNum:", bftConsensus.config.ProducerNum)
+	log.Info(" bftConsensus.config.ProducerNum:", bftConsensus.config.ProducerNum, bftConsensus.ChainService.BestChain().Height())
 	for _, p := range producers {
 		log.WithField("node", p.Node.String()).Trace("get producers")
 	}
