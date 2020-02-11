@@ -45,6 +45,7 @@ func GetCandidates(store store.StoreInterface, topN int) []Producer {
 		addr := addr
 		totalCredit := store.GetVoteCreditCount(&addr)
 		csh = append(csh, &addrAndCredit{addr: &addr, value: totalCredit})
+		log.WithField("addr", addr).WithField("credit", totalCredit).Info("getCandidates")
 	}
 
 	heap.Init(&csh)
