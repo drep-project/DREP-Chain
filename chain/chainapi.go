@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/common"
+	"github.com/drep-project/DREP-Chain/params"
 
 	//"github.com/drep-project/DREP-Chain/common"
 	"github.com/drep-project/DREP-Chain/common/hexutil"
@@ -96,6 +97,29 @@ func (chain *ChainApi) GetBlock(height uint64) (*types.Block, error) {
 */
 func (chain *ChainApi) GetMaxHeight() uint64 {
 	return chain.chainView.Tip().Height
+}
+
+/*
+ name: getBlockGasInfo
+ usage: 获取gas相关信息
+ params:
+	1. 无
+ return: 系统需要的gas最小值、最大值；和当前块被设置的最大gas值
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getBlockGasInfo","params":[], "id": 3}' -H "Content-Type:application/json"
+ response:
+   {"jsonrpc":"2.0","id":3,"result":193005}
+*/
+func (chain *ChainApi) GetBlockGasInfo() (minGas, maxGas int, currentGas uint64) {
+	height := chain.chainView.Tip().Height
+	node := chain.chainView.NodeByHeight(height)
+	if node == nil {
+		return 0, 0, 0
+	}
+	block, err := chain.dbQuery.GetBlock(node.Hash)
+	if err != nil {
+		return 0, 0, 0
+	}
+	return int(params.MinGasLimit), int(params.MaxGasLimit), block.GasLimit()
 }
 
 /*

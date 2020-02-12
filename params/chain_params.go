@@ -9,16 +9,15 @@ const (
 
 	AliasGas uint64 = 68 // gas Use when alias a address
 
-	GasLimitBoundDivisor uint64 = 64       // The bound divisor of the gas limit, used in update calculations.
-	MinGasLimit          uint64 = 18000000 // Minimum the gas limit may ever be.
-	GenesisGasLimit      uint64 = 18000000 // Gas limit of the Genesis block.
+	//GasLimitBoundDivisor uint64 = 64       // The bound divisor of the gas limit, used in update calculations.
+	MinGasLimit     uint64 = 18000000 // Minimum the gas limit may ever be.
+	GenesisGasLimit uint64 = 18000000 // Gas limit of the Genesis block.
+	MaxGasLimit     uint64 = 70000000 // tps 3000 transfer  60000gas per transfer tx
 	//MIN_GAS_IN_BLOCK uint64 = 60000000 / 2
 
-	MaxGasLimit uint64 = 70000000 // tps 3000 transfer  60000gas per transfer tx
-
-	MaximumExtraDataSize  uint64 = 32    // Maximum size extra data may be after Genesis.
-	ExpByteGas            uint64 = 10    // Times ceil(log256(exponent)) for the EXP instruction.
-	SloadGas              uint64 = 50    // Mullied by the number of 32-byte words that are copied (round up) for any *COPY operation and added.
+	//MaximumExtraDataSize  uint64 = 32    // Maximum size extra data may be after Genesis.
+	//ExpByteGas            uint64 = 10    // Times ceil(log256(exponent)) for the EXP instruction.
+	//SloadGas              uint64 = 50    // Mullied by the number of 32-byte words that are copied (round up) for any *COPY operation and added.
 	CallValueTransferGas  uint64 = 9000  // Paid for CALL when the value transfer is non-zero.
 	CallNewAccountGas     uint64 = 25000 // Paid for CALL when the destination address didn't exist prior.
 	TxGas                 uint64 = 21000 // Per transaction not creating a contract. NOTE: Not payable on data of calls between transactions.

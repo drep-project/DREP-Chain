@@ -45,6 +45,15 @@ func (blockMgrApi *BlockMgrApi) SendRawTransaction(txbytes common.Bytes) (string
 	return tx.TxHash().String(), err
 }
 
+/*
+ name: gasPrice
+ usage: 获取系统的给出的gasprice建议值
+ params:
+	1. 待查询地址
+ return: 价格和是否错误信息
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_gasPrice","params":[], "id": 3}' -H "Content-Type:application/json"
+ response:
+*/
 func (blockMgrApi *BlockMgrApi) GasPrice() (*big.Int, error) {
 	return blockMgrApi.blockMgr.gpo.SuggestPrice()
 }
