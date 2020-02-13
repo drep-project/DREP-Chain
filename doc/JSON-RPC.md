@@ -24,7 +24,28 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_
 ````
 
 
-### 2. blockMgr_GetPoolTransactions
+### 2. blockMgr_gasPrice
+#### 作用：获取系统的给出的gasprice建议值
+> 参数：
+ 1. 待查询地址
+
+#### 返回值：价格和是否错误信息
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_gasPrice","params":[], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+
+````
+
+
+### 3. blockMgr_GetPoolTransactions
 #### 作用：获取交易池中的交易信息.
 > 参数：
  1. 待查询地址
@@ -45,7 +66,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_
 ````
 
 
-### 3. blockMgr_GetTransactionCount
+### 4. blockMgr_GetTransactionCount
 #### 作用：获取地址发出的交易总数
 > 参数：
  1. 待查询地址
@@ -66,7 +87,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_
 ````
 
 
-### 4. blockMgr_GetTxInPool
+### 5. blockMgr_GetTxInPool
 #### 作用：查询交易是否在交易池，如果在，返回交易
 > 参数：
  1. 发起转账的地址
@@ -174,7 +195,28 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 3. chain_getBalance
+### 3. chain_getBlockGasInfo
+#### 作用：获取gas相关信息
+> 参数：
+ 1. 无
+
+#### 返回值：系统需要的gas最小值、最大值；和当前块被设置的最大gas值
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getBlockGasInfo","params":[], "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":3,"result":193005}
+````
+
+
+### 4. chain_getBalance
 #### 作用：查询地址余额
 > 参数：
  1. 待查询地址
@@ -195,7 +237,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 4. chain_getNonce
+### 5. chain_getNonce
 #### 作用：查询地址在链上的nonce
 > 参数：
  1. 待查询地址
@@ -216,7 +258,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 5. chain_getNonce
+### 6. chain_getNonce
 #### 作用：查询地址的名誉值
 > 参数：
  1. 待查询地址
@@ -237,7 +279,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 6. chain_getTransactionByBlockHeightAndIndex
+### 7. chain_getTransactionByBlockHeightAndIndex
 #### 作用：获取区块中特定序列的交易
 > 参数：
  1. 区块高度
@@ -277,7 +319,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 7. chain_getAliasByAddress
+### 8. chain_getAliasByAddress
 #### 作用：根据地址获取地址对应的别名
 > 参数：
  1. 待查询地址
@@ -298,7 +340,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 8. chain_getAddressByAlias
+### 9. chain_getAddressByAlias
 #### 作用：根据别名获取别名对应的地址
 > 参数：
  1. 待查询地别名
@@ -319,7 +361,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 9. chain_getReceipt
+### 10. chain_getReceipt
 #### 作用：根据txhash获取receipt信息
 > 参数：
  1. txhash
@@ -340,7 +382,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 10. chain_getLogs
+### 11. chain_getLogs
 #### 作用：根据txhash获取交易log信息
 > 参数：
  1. txhash
@@ -361,7 +403,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 11. chain_getInterset
+### 12. chain_getInterset
 #### 作用：根据txhash获取退质押或者投票利息信息
 > 参数：
  1. txhash
@@ -382,7 +424,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 12. chain_getByteCode
+### 13. chain_getByteCode
 #### 作用：根据地址获取bytecode
 > 参数：
  1. 地址
@@ -403,7 +445,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 13. chain_getVoteCreditDetails
+### 14. chain_getVoteCreditDetails
 #### 作用：根据地址获取stake 所有细节信息
 > 参数：
  1. 地址
@@ -424,7 +466,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 14. chain_GetCancelCreditDetails
+### 15. chain_GetCancelCreditDetails
 #### 作用：获取所有退票请求的细节
 > 参数：
  1. 地址
@@ -445,7 +487,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 15. chain_GetCandidateAddrs
+### 16. chain_GetCandidateAddrs
 #### 作用：获取所有候选节点地址和对应的信任值
 > 参数：
  1. 地址
