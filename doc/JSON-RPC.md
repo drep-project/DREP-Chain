@@ -507,6 +507,46 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 {"jsonrpc":"2.0","id":3,"result":"{\"0x300fc5a14e578be28c64627c0e7e321771c58cd4\":\"0x3641100\"}"}
 ````
 
+
+### 17. chain_getInterestRate
+#### 作用：获取3个月内、3-6个月、6-12个月、12个月以上的利率
+> 参数：
+
+#### 返回值：年华后三个月利息, 年华后六个月利息, 一年期利息, 一年以上期利息
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getInterestRate","params":"", "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":3,"result":"{\"ThreeMonthRate\":4,\"SixMonthRate\":12,\"OneYearRate\":25,\"MoreOneYearRate\":51}"}
+````
+
+
+### 18. chain_getChangeCycle
+#### 作用：获取出块节点换届周期
+> 参数：
+
+#### 返回值：换届周期
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getChangeCycle","params":"", "id": 3}' -H "Content-Type:application/json"
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":3,"result":"{100}"}
+````
+
 p2p网络接口
 设置查询网络状态
 
