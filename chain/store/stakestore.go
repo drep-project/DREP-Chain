@@ -19,6 +19,10 @@ const (
 	StakeStorage               = "StakeStorage"   //以地址作为KEY,存储stake相关内容
 	registerPledgeLimit uint64 = 1000000          //候选节点需要抵押币的总数,单位1drep
 	interestRate               = 1000000 * 12     //每个存储高度，奖励的利率
+
+	threeMonthHeight = 1555200 //小于3个月出块高度
+	sixMonthHeight   = 3110400 //6个月出块高度
+	oneYearHeight    = 6220800 //12个月出块高度
 )
 
 type trieStakeStore struct {
@@ -188,24 +192,15 @@ func (trieStore *trieStakeStore) VoteCredit(fromAddr, toAddr *crypto.CommonAddre
 	return trieStore.putStakeStorage(toAddr, storage)
 }
 
+//每个档次利率减半
 func getInterst(startHeight, endHeight uint64, value *big.Int) *big.Int {
 	var rate uint64 = 0
 	diff := endHeight - startHeight
-	//if diff < 1555200 { //小于3个月
-	//	rate = interestRate * 8
-	//} else if diff < 3110400 { //3-6个月
-	//	rate = interestRate * 4
-	//} else if diff < 6220800 { //6 - 12个月
-	//	rate = interestRate * 2
-	//} else { //大于12个月
-	//	rate = interestRate
-	//}
-
-	if diff < 3600 { //小于3个月
+	if diff < 1555200 { //小于3个月
 		rate = interestRate * 8
-	} else if diff < 7200 { //3-6个月
+	} else if diff < 3110400 { //3-6个月
 		rate = interestRate * 4
-	} else if diff < 10800 { //6 - 12个月
+	} else if diff < 6220800 { //6 - 12个月
 		rate = interestRate * 2
 	} else { //大于12个月
 		rate = interestRate

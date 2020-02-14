@@ -3,16 +3,15 @@ package chain
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/common"
-	"github.com/drep-project/DREP-Chain/params"
-
-	//"github.com/drep-project/DREP-Chain/common"
 	"github.com/drep-project/DREP-Chain/common/hexutil"
 	"github.com/drep-project/DREP-Chain/common/trie"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/sha3"
 	"github.com/drep-project/DREP-Chain/database/dbinterface"
+	"github.com/drep-project/DREP-Chain/params"
 	"github.com/drep-project/DREP-Chain/types"
 	"github.com/drep-project/binary"
 	"math/big"
@@ -109,17 +108,31 @@ func (chain *ChainApi) GetMaxHeight() uint64 {
  response:
    {"jsonrpc":"2.0","id":3,"result":193005}
 */
-func (chain *ChainApi) GetBlockGasInfo() (minGas, maxGas int, currentGas uint64) {
+func (chain *ChainApi) GetBlockGasInfo() string {
 	height := chain.chainView.Tip().Height
 	node := chain.chainView.NodeByHeight(height)
 	if node == nil {
-		return 0, 0, 0
+		return ""
 	}
 	block, err := chain.dbQuery.GetBlock(node.Hash)
 	if err != nil {
-		return 0, 0, 0
+		return ""
 	}
-	return int(params.MinGasLimit), int(params.MaxGasLimit), block.GasLimit()
+
+	type gasInfo struct {
+		MinGas          int
+		MaxGas          int
+		CurrentBlockGas int
+	}
+	gi := gasInfo{
+		MinGas:          int(params.MinGasLimit),
+		MaxGas:          int(params.MaxGasLimit),
+		CurrentBlockGas: int(block.GasLimit()),
+	}
+
+	ret, _ := json.Marshal(&gi)
+
+	return string(ret)
 }
 
 /*
@@ -375,6 +388,61 @@ func (chain *ChainApi) GetCancelCreditDetails(addr *crypto.CommonAddress) string
 func (chain *ChainApi) GetCandidateAddrs() string {
 	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
 	return trieQuery.GetCandidateAddrs()
+}
+
+/*
+ name: getInterestRate
+ usage: 获取3个月内、3-6个月、6-12个月、12个月以上的利率
+ params:
+	无
+ return:  年华后三个月利息, 年华后六个月利息, 一年期利息, 一年以上期利息
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getInterestRate","params":"", "id": 3}' -H "Content-Type:application/json"
+ response:
+   {"jsonrpc":"2.0","id":3,"result":"{\"ThreeMonthRate\":4,\"SixMonthRate\":12,\"OneYearRate\":25,\"MoreOneYearRate\":51}"}
+*/
+func (chain *ChainApi) GetInterestRate() (string, error) {
+
+	threeMonth, sixMonth, oneYear, moreOneYear := store.GetInterestRate()
+
+	type InterestRateInfo struct {
+		ThreeMonthRate  uint64
+		SixMonthRate    uint64
+		OneYearRate     uint64
+		MoreOneYearRate uint64
+	}
+
+	iri := InterestRateInfo{
+		ThreeMonthRate:  threeMonth,
+		SixMonthRate:    sixMonth,
+		OneYearRate:     oneYear,
+		MoreOneYearRate: moreOneYear,
+	}
+
+	fmt.Println(threeMonth, sixMonth, oneYear, moreOneYear)
+
+	ret, err := json.Marshal(&iri)
+
+	return string(ret), err
+}
+
+/*
+ name: getChangeCycle
+ usage: 获取出块节点换届周期
+ params:
+	无
+ return:  换届周期
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getChangeCycle","params":"", "id": 3}' -H "Content-Type:application/json"
+ response:
+   {"jsonrpc":"2.0","id":3,"result":"{100}"}
+*/
+func (chain *ChainApi) GetChangeCycle() (int, error) {
+	store, err := store.TrieStoreFromStore(chain.store, chain.chainView.Tip().StateRoot)
+	if err != nil {
+		return 0, err
+	}
+
+	changeInterval, err := store.GetChangeInterval()
+	return int(changeInterval), err
 }
 
 type TrieQuery struct {
