@@ -375,9 +375,7 @@ func (srv *Server) Self() *enode.Node {
 // Stop terminates the server and all active peer connections.
 // It blocks until all active connections have been closed.
 func (srv *Server) Stop() {
-	//if srv.lock == nil {
-	//	return
-	//}
+
 	srv.lock.Lock()
 	if !srv.running {
 		srv.lock.Unlock()
@@ -388,6 +386,7 @@ func (srv *Server) Stop() {
 		// this unblocks listener Accept
 		srv.listener.Close()
 	}
+
 	close(srv.quit)
 	srv.lock.Unlock()
 	srv.loopWG.Wait()
@@ -1027,6 +1026,8 @@ func (srv *Server) runPeer(p *Peer) {
 		Peer:  p.ID(),
 		Error: err.Error(),
 	})
+
+	fmt.Println("remove peer ip:", p.String(), p.Name())
 
 	// Note: run waits for existing peers to be sent on srv.delpeer
 	// before returning, so this send should not select on srv.quit.
