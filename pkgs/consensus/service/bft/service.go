@@ -101,21 +101,32 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 
 				addPeerFeed.Send(pi)
 				defer func() {
-					removePeerFeed.Send(pi)
-					fmt.Println("consensuse protocol ,remove peer, ip", peer.IP())
+					select {
+					case <-bftConsensusService.quit:
+						fmt.Println("consensuse protocol ,remove peer, ip", peer.IP())
+					default:
+						removePeerFeed.Send(pi)
+						fmt.Println("consensuse protocol,not send event ,remove peer, ip", peer.IP())
+					}
 				}()
 				for {
-					msg, err := rw.ReadMsg()
-					if err != nil {
-						log.WithField("Reason", err).WithField("Ip", pi.IP()).Error("consensus receive msg")
-						return err
-					}
-					buf, err := ioutil.ReadAll(msg.Payload)
-					if err != nil {
-						return err
-					}
+					select {
+					case <-bftConsensusService.quit:
+						return fmt.Errorf("bft consensus service been stop")
+					default:
 
-					bftConsensusService.BftConsensus.ReceiveMsg(pi, msg.Code, buf)
+						msg, err := rw.ReadMsg()
+						if err != nil {
+							log.WithField("Reason", err).WithField("Ip", pi.IP()).Error("consensus receive msg")
+							return err
+						}
+						buf, err := ioutil.ReadAll(msg.Payload)
+						if err != nil {
+							return err
+						}
+
+						bftConsensusService.BftConsensus.ReceiveMsg(pi, msg.Code, buf)
+					}
 				}
 			},
 		},
