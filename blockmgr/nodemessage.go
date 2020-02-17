@@ -56,7 +56,7 @@ func (blockMgr *BlockMgr) dealMsg(peer *types.PeerInfo, rw p2p.MsgReadWriter) er
 	for {
 		msg, err := rw.ReadMsg()
 		if err != nil {
-			log.WithField("Reason", err).Info("receive blockMgr msg fail")
+			log.WithField("Reason", err).WithField("ip", peer.GetAddr()).Info("receive blockMgr msg fail")
 			return err
 		}
 
