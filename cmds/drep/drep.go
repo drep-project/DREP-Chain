@@ -62,5 +62,7 @@ func main() {
 	if err := drepApp.Run(); err != nil {
 		fmt.Println(err)
 	}
+
+	log.Println("drep run over *****************")
 	return
 }
