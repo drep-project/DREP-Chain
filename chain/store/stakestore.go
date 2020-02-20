@@ -1,7 +1,6 @@
 package store
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/drep-project/DREP-Chain/common"
@@ -484,7 +483,7 @@ func (trieStore *trieStakeStore) CandidateCredit(addresses *crypto.CommonAddress
 		}
 	}
 	candidataDate := &types.CandidateData{}
-	err := json.Unmarshal(data, candidataDate)
+	err := candidataDate.Unmarshal(data)
 	if err != nil {
 		return err
 	}
