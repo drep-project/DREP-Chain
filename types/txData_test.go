@@ -8,15 +8,15 @@ import (
 	"testing"
 )
 
-func TestCandidateMarshal(t *testing.T)  {
+func TestCandidateMarshal(t *testing.T) {
 	p, _ := crypto.GenerateKey(rand.Reader)
 
 	cd := &CandidateData{
 		Pubkey: p.PubKey(),
-		Node:   "192.168.31.51:55555",
+		Node:   "enode://e77d64fecbb1c7e78231507fdd58c963cdc1e0ed0bec29b5a65de32b992d596f@149.129.172.91:44444",
 	}
 
-	b,err := cd.Marshal()
+	b, err := cd.Marshal()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -25,7 +25,7 @@ func TestCandidateMarshal(t *testing.T)  {
 
 	cb := common.Bytes(b)
 
-	cbb, _:= cb.MarshalText()
+	cbb, _ := cb.MarshalText()
 	fmt.Println(string(cbb))
 
 	cd2 := &CandidateData{}
