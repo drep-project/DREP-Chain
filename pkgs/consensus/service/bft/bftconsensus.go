@@ -102,10 +102,11 @@ func (bftConsensus *BftConsensus) GetProducers(height uint64, topN int) ([]Produ
 		}
 		producers := GetCandidates(trie, topN)
 
-		if len(producers) != topN {
+		if len(producers) > topN {
 			bftConsensus.producer = nil
-			log.WithField("len(producers", len(producers)).WithField("tonN", topN).Info("get producers err********")
-			return nil, fmt.Errorf("get producers err")
+			log.WithField("len(producers)", len(producers)).WithField("tonN", topN).Error("get producers err********")
+			panic("getProducers  ................ err")
+			//return nil, fmt.Errorf("get producers err")
 		}
 
 		bftConsensus.producer = producers
