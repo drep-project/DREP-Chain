@@ -2,13 +2,13 @@ package trace
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/bft"
 	"time"
 
 	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/bft"
 	"github.com/drep-project/DREP-Chain/types"
+	drepbinary "github.com/drep-project/binary"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -69,11 +69,20 @@ func (store *MongogDbStore) InsertRecord(block *types.Block) {
 	rpcBlock := &RpcBlock{}
 
 	multiSig := &bft.MultiSignature{}
-	json.Unmarshal(block.Proof.Evidence, multiSig)
+	err := drepbinary.Unmarshal(block.Proof.Evidence, multiSig)
+	if err != nil {
+		log.Errorf("umarshal err:%s", err.Error())
+		panic("unmarshal err")
+	}
 	producers, _ := store.getProducer(block.Header.StateRoot, len(multiSig.Bitmap))
+	log.WithField("producers len", len(producers)).WithField("bitmap len", len(multiSig.Bitmap)).Info("insert record........")
+
+	if len(producers) == 0 {
+		panic("insert Record ,producer must not be 0")
+	}
 
 	rpcBlock.From(block, producers)
-	_, err := store.blockCol.InsertOne(ctx, rpcBlock)
+	_, err = store.blockCol.InsertOne(ctx, rpcBlock)
 	if err != nil {
 		fmt.Println(err)
 	}

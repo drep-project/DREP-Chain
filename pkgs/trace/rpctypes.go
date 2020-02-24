@@ -2,12 +2,12 @@ package trace
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"github.com/drep-project/DREP-Chain/common"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/bft"
 	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
 	"github.com/drep-project/DREP-Chain/types"
+	drepbinary "github.com/drep-project/binary"
 	"math/big"
 )
 
@@ -73,7 +73,7 @@ func (rpcBlock *RpcBlock) From(block *types.Block, addresses []crypto.CommonAddr
 	} else if block.Proof.Type == consensusTypes.Pbft {
 		proof := NewPbftProof()
 		multiSig := &bft.MultiSignature{}
-		json.Unmarshal(block.Proof.Evidence, multiSig)
+		drepbinary.Unmarshal(block.Proof.Evidence, multiSig)
 		proof.Evidence = hex.EncodeToString(block.Proof.Evidence)
 
 		proof.LeaderAddress = addresses[multiSig.Leader].String()

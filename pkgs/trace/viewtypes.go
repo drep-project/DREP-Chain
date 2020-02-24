@@ -130,6 +130,7 @@ func (rpcBlock *ViewBlock) From(block *types.Block, addresses []crypto.CommonAdd
 		binary.Unmarshal(block.Proof.Evidence, multiSig)
 		proof.Evidence = hex.EncodeToString(block.Proof.Evidence)
 		proof.LeaderAddress = addresses[multiSig.Leader].String()
+
 		for index, val := range multiSig.Bitmap {
 			if val == 1 {
 				proof.MinorAddresses = append(proof.MinorAddresses, addresses[index].String())
