@@ -92,28 +92,26 @@ func (bftConsensus *BftConsensus) GetProducers(height uint64, topN int) ([]Produ
 	newEpoch := height % uint64(bftConsensus.config.ChangeInterval)
 	if bftConsensus.producer == nil || newEpoch == 0 {
 		height = height - newEpoch
-		block, err := bftConsensus.ChainService.GetBlockByHeight(height)
-		if err != nil {
-			return nil, err
-		}
-		trie, err := store.TrieStoreFromStore(bftConsensus.DbService.LevelDb(), block.Header.StateRoot)
-		if err != nil {
-			return nil, err
-		}
-		producers := GetCandidates(trie, topN)
 
-		if len(producers) > topN {
-			bftConsensus.producer = nil
-			log.WithField("len(producers)", len(producers)).WithField("tonN", topN).Error("get producers err********")
-			panic("getProducers  ................ err")
-			//return nil, fmt.Errorf("get producers err")
-		}
-
+		producers, err := bftConsensus.loadProducers(height, topN)
 		bftConsensus.producer = producers
-		return producers, nil
+		return producers, err
 	} else {
 		return bftConsensus.producer, nil
 	}
+}
+
+func (bftConsensus *BftConsensus) loadProducers(height uint64, topN int) ([]Producer, error) {
+	block, err := bftConsensus.ChainService.GetBlockByHeight(height)
+	if err != nil {
+		return nil, err
+	}
+	trie, err := store.TrieStoreFromStore(bftConsensus.DbService.LevelDb(), block.Header.StateRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	return GetCandidates(trie, topN), nil
 }
 
 func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Block, error) {
@@ -306,7 +304,7 @@ func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo, minMiners in
 			return err
 		}
 		log.WithField("bitmap", multiSig.Bitmap).Info("member receive participant bitmap")
-		block.Proof = types.Proof{consensusTypes.Pbft, multiSigBytes}
+		block.Proof = types.Proof{Type: consensusTypes.Pbft, Evidence: multiSigBytes}
 		return bftConsensus.verifyBlockContent(block)
 	}
 	_, err = member.ProcessConsensus(round2)
@@ -360,7 +358,7 @@ func (bftConsensus *BftConsensus) runAsLeader(producers ProducerSet, miners []*M
 	}
 	log.WithField("bitmap", multiSig.Bitmap).Info("participant bitmap")
 	//Determine reward points
-	block.Proof = types.Proof{consensusTypes.Pbft, multiSigBytes}
+	block.Proof = types.Proof{Type: consensusTypes.Pbft, Evidence: multiSigBytes}
 	calculator := NewRewardCalculator(trieStore, multiSig, producers, gasFee, block.Header.Height)
 	err = calculator.AccumulateRewards(block.Header.Height)
 	if err != nil {
@@ -499,7 +497,7 @@ func (bftConsensus *BftConsensus) prepareForMining(p2p p2pService.P2P) {
 		select {
 		case <-timer.C:
 			//Get as many candidate nodes as possible, establish connection with other candidate nodes in advance, and prepare for the next block
-			producers, err := bftConsensus.GetProducers(bftConsensus.ChainService.BestChain().Tip().Height, bftConsensus.config.ProducerNum*3/2)
+			producers, err := bftConsensus.loadProducers(bftConsensus.ChainService.BestChain().Tip().Height, bftConsensus.config.ProducerNum*3/2)
 			if err != nil {
 				log.WithField("err", err).Info("PrepareForMiner get producer err")
 			}

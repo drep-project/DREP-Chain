@@ -8,21 +8,22 @@ import (
 	"github.com/drep-project/DREP-Chain/types"
 	"github.com/drep-project/binary"
 	"math/big"
+	"sort"
 )
 
-type addrAndCredit struct {
-	addr  *crypto.CommonAddress
-	value *big.Int
+type addrsAndCredit struct {
+	addrs []string //值相同的地址放到一个切片中
+	value *big.Int //地址对应的信誉值
 }
 
-type creditsHeap []*addrAndCredit
+type creditsHeap []*addrsAndCredit
 
 func (h creditsHeap) Len() int           { return len(h) }
 func (h creditsHeap) Less(i, j int) bool { return h[i].value.Cmp(h[j].value) > 0 }
 func (h creditsHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
 
 func (h *creditsHeap) Push(x interface{}) {
-	*h = append(*h, x.(*addrAndCredit))
+	*h = append(*h, x.(*addrsAndCredit))
 }
 
 func (h *creditsHeap) Pop() interface{} {
@@ -35,55 +36,74 @@ func (h *creditsHeap) Pop() interface{} {
 
 func GetCandidates(store store.StoreInterface, topN int) []Producer {
 	candidateAddrs, err := store.GetCandidateAddrs()
-	if err != nil {
-		log.Errorf("get candidates err:%v", err)
+	if err != nil || topN <= 0 {
+		log.Errorf("topN:%d, get candidates err:%v", topN, err)
 		return nil
 	}
 
-	csh := make(creditsHeap, 0)
+	//key for credit; value for addrs slice
+	mapAddrs := make(map[string][]string)
 	for _, addr := range candidateAddrs {
-		addr := addr
-		totalCredit := store.GetVoteCreditCount(&addr)
-		csh = append(csh, &addrAndCredit{addr: &addr, value: totalCredit})
-		log.WithField("addr", addr.String()).WithField("credit", totalCredit).Info("getCandidates")
+		addrStr := addr.String()
+		totalCredit := store.GetVoteCreditCount(&addr).String()
+		if addrs, ok := mapAddrs[totalCredit]; ok {
+			addrs = append(addrs, addrStr)
+			mapAddrs[totalCredit] = addrs
+		} else {
+			addrs := make([]string, 0)
+			addrs = append(addrs, addrStr)
+			mapAddrs[totalCredit] = addrs
+		}
+
+		log.WithField("addrs", addr.String()).WithField("credit", totalCredit).Trace("getCandidates")
 	}
 
+	csh := make(creditsHeap, 0)
+	for k, v := range mapAddrs {
+		ac := addrsAndCredit{}
+		//排序addr
+		sort.Strings(v)
+		ac.addrs = v
+		ac.value, _ = new(big.Int).SetString(k, 10)
+		csh.Push(&ac)
+	}
 	heap.Init(&csh)
 
 	producerAddrs := []Producer{}
-
 	addNum := 0
 	for csh.Len() > 0 {
-		v := heap.Pop(&csh)
-		ac := v.(*addrAndCredit)
+		ac := heap.Pop(&csh).(*addrsAndCredit)
+		for _, strAddr := range ac.addrs {
+			addr := crypto.HexToAddress(strAddr)
+			data, err := store.GetCandidateData(&addr)
+			if err != nil {
+				log.WithField("err", err).Info("get candidate data err")
+				continue
+			}
 
-		data, err := store.GetCandidateData(ac.addr)
-		if err != nil {
-			log.WithField("err", err).Info("get candidate data err")
-			continue
-		}
+			cd := &types.CandidateData{}
+			err = binary.Unmarshal(data, cd)
+			if err != nil {
+				log.WithField("err", err).Info("unmarshal data to candidateData err")
+				continue
+			}
 
-		cd := &types.CandidateData{}
-		err = binary.Unmarshal(data, cd)
-		if err != nil {
-			log.WithField("err", err).Info("unmarshal data to candidateData err")
-			continue
-		}
-
-		log.Trace("get candidates info:", cd.Node)
-		n := &enode.Node{}
-		err = n.UnmarshalText([]byte(cd.Node))
-		if err != nil {
-			continue
-		}
-		producer := Producer{
-			Pubkey: cd.Pubkey,
-			Node:   n,
-		}
-		producerAddrs = append(producerAddrs, producer)
-		addNum++
-		if addNum == topN {
-			return producerAddrs
+			n := &enode.Node{}
+			err = n.UnmarshalText([]byte(cd.Node))
+			if err != nil {
+				log.Errorf("get candidates err:", err.Error(), cd.Node)
+				continue
+			}
+			log.Trace("get candidates info:", cd.Node)
+			producer := Producer{
+				Pubkey: cd.Pubkey,
+				Node:   n,
+			}
+			producerAddrs = append(producerAddrs, producer)
+			addNum++
+			if addNum >= topN {
+				return producerAddrs
+			}
 		}
 	}
 	return producerAddrs
