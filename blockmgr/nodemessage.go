@@ -85,7 +85,8 @@ func (blockMgr *BlockMgr) dealMsg(peer *types.PeerInfo, rw p2p.MsgReadWriter) er
 
 			// TODO backup nodes should not add
 			for _, tx := range txs {
-				log.WithField("transaction", tx.Nonce()).Trace("comming transaction")
+				from, _ := tx.From()
+				log.WithField("transaction", tx.Nonce()).WithField("from", from.String()).Trace("comming transaction")
 				tx := tx
 				peer.MarkTx(tx)
 				blockMgr.SendTransaction(tx, false)
