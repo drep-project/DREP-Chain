@@ -319,6 +319,8 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 	go func() {
 		delHash := func(b *types.Block) {
 			blockMgr.pendingSyncTasks.Range(func(key, value interface{}) bool {
+				blockMgr.syncMut.Lock()
+				defer blockMgr.syncMut.Unlock()
 				hashs := value.(map[crypto.Hash]uint64)
 				timer := key.(*time.Timer)
 
@@ -340,7 +342,10 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 		checkExist := func(h crypto.Hash) bool {
 			found := false
 			blockMgr.pendingSyncTasks.Range(func(key, value interface{}) bool {
+				blockMgr.syncMut.Lock()
+				defer blockMgr.syncMut.Unlock()
 				hashs := value.(map[crypto.Hash]uint64)
+
 				if _, ok := hashs[h]; ok {
 					found = true
 					return false
