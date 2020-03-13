@@ -1038,7 +1038,34 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 9. account_setAlias
+### 9. account_transferWithNonce
+#### 作用：转账
+> 参数：
+ 1. 发起转账的地址
+ 2. 接受者的地址
+ 3. 金额
+ 4. gas价格
+ 5. gas上限
+ 6. 备注
+ 7. nonce
+
+#### 返回值：交易地址
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_transferWithNonce","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000","",1],"id":1}' http://127.0.0.1:15645
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":1,"result":"0x3a3b59f90a21c2fd1b690aa3a2bc06dc2d40eb5bdc26fdd7ecb7e1105af2638e"}
+````
+
+
+### 10. account_setAlias
 #### 作用：设置别名
 > 参数：
  1. 带设置别名的地址
@@ -1062,7 +1089,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 10. account_VoteCredit
+### 11. account_VoteCredit
 #### 作用：投票
 > 参数：
  1. 发起转账的地址
@@ -1088,7 +1115,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 11. account_CancelVoteCredit
+### 12. account_CancelVoteCredit
 #### 作用：
 > 参数：
  1. 发起转账的地址
@@ -1114,7 +1141,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 12. account_CandidateCredit
+### 13. account_CandidateCredit
 #### 作用：候选节点质押
 > 参数：
  1. 质押者的地址
@@ -1139,7 +1166,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 13. account_CancelCandidateCredit
+### 14. account_CancelCandidateCredit
 #### 作用：取消候选
 > 参数：
  1. 发起转账的地址
@@ -1165,7 +1192,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 14. account_readContract
+### 15. account_readContract
 #### 作用：读取智能合约（无数据被修改）
 > 参数：
  1. 合约地址
@@ -1187,7 +1214,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 15. account_executeContract
+### 16. account_executeContract
 #### 作用：执行智能合约（导致数据被修改）
 > 参数：
  1. 调用者的地址
@@ -1212,7 +1239,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 16. account_createCode
+### 17. account_createCode
 #### 作用：部署合约
 > 参数：
  1. 部署合约的地址
@@ -1237,7 +1264,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 17. account_dumpPrivkey
+### 18. account_dumpPrivkey
 #### 作用：导出地址对应的私钥
 > 参数：
  1. 地址
@@ -1258,7 +1285,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_d
 ````
 
 
-### 18. account_DumpPubkey
+### 19. account_DumpPubkey
 #### 作用：导出地址对应的公钥
 > 参数：
  1. 地址
@@ -1279,7 +1306,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_d
 ````
 
 
-### 19. account_sign
+### 20. account_sign
 #### 作用：关闭钱包
 > 参数：
  1. 地址
@@ -1301,7 +1328,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_s
 ````
 
 
-### 20. account_generateAddresses
+### 21. account_generateAddresses
 #### 作用：生成其他链的地址
 > 参数：
  1. drep地址
@@ -1322,7 +1349,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_g
 ````
 
 
-### 21. account_importKeyStore
+### 22. account_importKeyStore
 #### 作用：导入keystore
 > 参数：
  1. path
@@ -1344,7 +1371,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_i
 ````
 
 
-### 22. account_importPrivkey
+### 23. account_importPrivkey
 #### 作用：导入私钥
 > 参数：
  1. privkey(compress hex)
