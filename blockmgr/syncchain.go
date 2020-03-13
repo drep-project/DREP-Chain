@@ -212,6 +212,8 @@ func (blockMgr *BlockMgr) batchReqBlocks(hashs []crypto.Hash, mapHeightHash map[
 		return true
 	})
 
+	//todo 性能探测
+
 	for _, pi := range okPeers {
 		blockMgr.syncMut.Lock()
 		//blockMgr.sender.SetIdle(bodyReqPeer.GetMsgRW(), false)

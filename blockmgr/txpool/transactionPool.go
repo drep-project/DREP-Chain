@@ -229,6 +229,12 @@ func (pool *TransactionPool) addTx(tx *types.Transaction, isLocal bool) error {
 		}
 	}
 
+	from, err := tx.From()
+	nonce := pool.getTransactionCount(from)
+	if nonce > tx.Nonce() {
+		return fmt.Errorf("SendTransaction local nonce:%d , comming tx nonce:%d too small", nonce, tx.Nonce())
+	}
+
 	//新的一个交易到来，先看看pool是否满；满的话，删除一些价格较低的tx
 	miniPrice := new(big.Int)
 	if len(pool.allTxs) >= maxAllTxsCount {

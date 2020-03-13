@@ -1,7 +1,6 @@
 package blockmgr
 
 import (
-	"fmt"
 	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/common/trie"
 	"math/big"
@@ -268,12 +267,12 @@ func (blockMgr *BlockMgr) GetTransactionCount(addr *crypto.CommonAddress) uint64
 }
 
 func (blockMgr *BlockMgr) SendTransaction(tx *types.Transaction, islocal bool) error {
-	from, err := tx.From()
-	nonce := blockMgr.transactionPool.GetTransactionCount(from)
-	if nonce > tx.Nonce() {
-		return fmt.Errorf("SendTransaction local nonce:%d != comming tx nonce:%d", nonce, tx.Nonce())
-	}
-	err = blockMgr.verifyTransaction(tx)
+	//from, err := tx.From()
+	//nonce := blockMgr.transactionPool.GetTransactionCount(from)
+	//if nonce > tx.Nonce() {
+	//	return fmt.Errorf("SendTransaction local nonce:%d != comming tx nonce:%d", nonce, tx.Nonce())
+	//}
+	err := blockMgr.verifyTransaction(tx)
 
 	if err != nil {
 		return err
