@@ -89,7 +89,7 @@ func (evmService *EvmService) Call(database store.StoreInterface, tx *types.Tran
 	return ret, nil
 }
 
-func (evmService *EvmService) Eval(state vm.VMState, tx *types.Transaction, header *types.BlockHeader, bc ChainContext, gas uint64, value *big.Int) (ret []byte, gasUsed uint64, contractAddr crypto.CommonAddress, failed bool, err error) {
+func (evmService *EvmService) Eval(state vm.VMState, tx *types.Transaction, header *types.BlockHeader, gas uint64, value *big.Int) (ret []byte, gasUsed uint64, contractAddr crypto.CommonAddress, failed bool, err error) {
 	sender, err := tx.From()
 	if err != nil {
 		return nil, uint64(0), crypto.CommonAddress{}, false, err
