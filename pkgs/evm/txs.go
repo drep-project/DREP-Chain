@@ -32,7 +32,7 @@ func (vmDeployTransactionExecutor *EvmDeployTransactionExecutor) ExecuteTransact
 		state,
 		context.Tx(),
 		context.Header(),
-		vmDeployTransactionExecutor.vm.Chain,
+		//vmDeployTransactionExecutor.vm.Chain,
 		context.GasRemained(),
 		context.Value())
 	context.UseGas(gas)
