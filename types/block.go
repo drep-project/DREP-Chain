@@ -96,7 +96,10 @@ func BlockFromMessage(bytes []byte) (*Block, error) {
 	}
 
 	if block.Header == nil {
+		fmt.Println("header len :", len(bytes))
 		fmt.Println("fatal err,block parse err **************************************")
+		//panic("header is nil")
+		return nil, fmt.Errorf("unmarshal err")
 	}
 
 	return block, nil
