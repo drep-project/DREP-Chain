@@ -17,7 +17,6 @@
 package vm
 
 import (
-	"fmt"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/params"
 	"github.com/drep-project/DREP-Chain/types"
@@ -414,7 +413,7 @@ func (evm *EVM) CreateContractCode(caller crypto.CommonAddress, codeAndHash *cod
 // Create creates a new contract using code as deployment code.
 func (evm *EVM) Create(caller crypto.CommonAddress, code []byte, gas uint64, value *big.Int) (ret []byte, contractAddr crypto.CommonAddress, leftOverGas uint64, err error) {
 	contractAddr = crypto.CreateAddress(caller, evm.State.GetNonce(&caller))
-	fmt.Println("new contractAddr:", contractAddr.Hex())
+
 	return evm.CreateContractCode(caller, &codeAndHash{code: code}, gas, value, contractAddr)
 }
 
