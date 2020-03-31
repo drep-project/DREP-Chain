@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/params"
+	"github.com/drep-project/DREP-Chain/pkgs/evm/vm"
 	"math/big"
 
 	"github.com/drep-project/DREP-Chain/blockmgr"
@@ -157,13 +158,17 @@ func (accountapi *AccountApi) CloseWallet() {
 	3. 金额
 	4. gas价格
 	5. gas上限
-	6. 备注
+	6. 备注/data
  return: 交易地址
  example:   curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_transfer","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000",""],"id":1}' http://127.0.0.1:15645
  response:
 	 {"jsonrpc":"2.0","id":1,"result":"0x3a3b59f90a21c2fd1b690aa3a2bc06dc2d40eb5bdc26fdd7ecb7e1105af2638e"}
 */
 func (accountapi *AccountApi) Transfer(from crypto.CommonAddress, to crypto.CommonAddress, amount, gasprice, gaslimit *common.Big, data common.Bytes) (string, error) {
+	if gasprice.ToInt().Uint64() < blockmgr.DefaultGasPrice {
+		gasprice.SetMathBig(*new(big.Int).SetUint64(blockmgr.DefaultGasPrice))
+	}
+
 	nonce := accountapi.poolQuery.GetTransactionCount(&from)
 	tx := types.NewTransaction(to, (*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
 	sig, err := accountapi.Wallet.Sign(&from, tx.TxHash().Bytes())
@@ -403,6 +408,64 @@ func (accountapi *AccountApi) ReadContract(from, to crypto.CommonAddress, input 
 	fmt.Println(common.Bytes(ret))
 
 	return common.Bytes(ret), err
+}
+
+/*
+ name: estimateGas
+ usage: 估算交易需要多少gas
+ params:
+	1. 发起转账的地址
+	2. 金额
+	3. 备注/data
+	4. 接受者的地址
+ return: 评估结果，失败返回错误
+ example:
+	curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_estimateGas","params":["0xec61c03f719a5c214f60719c3f36bb362a202125","0xecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
+ response:
+	 {"jsonrpc":"2.0","id":1,"result":"0x5d74aba54ace5f01a5f0057f37bfddbbe646ea6de7265b368e2e7d17d9cdeb9c"}
+*/
+func (accountapi *AccountApi) EstimateGas(from crypto.CommonAddress, amount *common.Big, data common.Bytes, to *crypto.CommonAddress) (uint64, error) {
+	if amount.ToInt().Uint64() != 0 {
+		return params.MinGasLimit, nil
+	}
+
+	header := accountapi.EvmService.Chain.GetCurrentHeader()
+	tx := types.NewTransaction(*to, amount.ToInt(), new(big.Int).SetUint64(blockmgr.DefaultGasPrice), new(big.Int).SetUint64(params.MinGasLimit), 0)
+	tx.Data.Data = data
+
+	sig, err := accountapi.Wallet.Sign(&from, tx.TxHash().Bytes())
+	if err != nil {
+		return 0, err
+	}
+	tx.Sig = sig
+
+	trieStore, err := store.TrieStoreFromStore(accountapi.databaseService.LevelDb(), header.StateRoot)
+	if err != nil {
+		return 0, err
+	}
+
+	state := vm.NewState(trieStore, header.Height)
+
+	gl := new(big.Int).SetUint64(params.MinGasLimit)
+	var (
+		fail bool
+	)
+
+	for {
+		_, _, _, fail, err = accountapi.EvmService.Eval(state, tx, header, gl.Uint64(), amount.ToInt())
+		if err != nil || fail {
+			if err == vm.ErrCodeStoreOutOfGas || err == vm.ErrOutOfGas {
+				gl = gl.Add(gl, new(big.Int).SetUint64(1))
+			} else {
+				return 0, fmt.Errorf("err:%v or fail:%v", err, fail)
+			}
+		} else {
+			tx.Data.GasLimit = *(*common.Big)(gl)
+			return tx.Data.GasLimit.ToInt().Uint64(), err
+		}
+	}
+
+	return 0, err
 }
 
 /*
