@@ -1221,7 +1221,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
  1. 发起转账的地址
  2. 金额
  3. 备注/data
- 4. 接受者的地址
+ 4. 接收者的地址
 
 #### 返回值：评估结果，失败返回错误
 
