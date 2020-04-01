@@ -1020,7 +1020,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_c
  3. 金额
  4. gas价格
  5. gas上限
- 6. 备注
+ 6. 备注/data
 
 #### 返回值：交易地址
 
@@ -1195,8 +1195,9 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ### 15. account_readContract
 #### 作用：读取智能合约（无数据被修改）
 > 参数：
- 1. 合约地址
- 2. 合约接口
+ 1. 发交易的账户地址
+ 2. 合约地址
+ 3. 合约接口
 
 #### 返回值：查询结果
 
@@ -1214,7 +1215,31 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 16. account_executeContract
+### 16. account_estimateGas
+#### 作用：估算交易需要多少gas
+> 参数：
+ 1. 发起转账的地址
+ 2. 金额
+ 3. 备注/data
+ 4. 接受者的地址
+
+#### 返回值：评估结果，失败返回错误
+
+#### 示例代码
+##### 请求：
+
+```shell
+curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_estimateGas","params":["0xec61c03f719a5c214f60719c3f36bb362a202125","0xecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
+```
+
+##### 响应：
+
+```json
+{"jsonrpc":"2.0","id":1,"result":"0x5d74aba54ace5f01a5f0057f37bfddbbe646ea6de7265b368e2e7d17d9cdeb9c"}
+````
+
+
+### 17. account_executeContract
 #### 作用：执行智能合约（导致数据被修改）
 > 参数：
  1. 调用者的地址
@@ -1239,7 +1264,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 17. account_createCode
+### 18. account_createCode
 #### 作用：部署合约
 > 参数：
  1. 部署合约的地址
@@ -1264,7 +1289,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 18. account_dumpPrivkey
+### 19. account_dumpPrivkey
 #### 作用：导出地址对应的私钥
 > 参数：
  1. 地址
@@ -1285,7 +1310,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_d
 ````
 
 
-### 19. account_DumpPubkey
+### 20. account_DumpPubkey
 #### 作用：导出地址对应的公钥
 > 参数：
  1. 地址
@@ -1306,7 +1331,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_d
 ````
 
 
-### 20. account_sign
+### 21. account_sign
 #### 作用：关闭钱包
 > 参数：
  1. 地址
@@ -1328,7 +1353,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_s
 ````
 
 
-### 21. account_generateAddresses
+### 22. account_generateAddresses
 #### 作用：生成其他链的地址
 > 参数：
  1. drep地址
@@ -1349,7 +1374,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_g
 ````
 
 
-### 22. account_importKeyStore
+### 23. account_importKeyStore
 #### 作用：导入keystore
 > 参数：
  1. path
@@ -1371,7 +1396,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_i
 ````
 
 
-### 23. account_importPrivkey
+### 24. account_importPrivkey
 #### 作用：导入私钥
 > 参数：
  1. privkey(compress hex)
