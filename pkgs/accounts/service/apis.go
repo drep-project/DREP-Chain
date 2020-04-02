@@ -378,8 +378,9 @@ func (accountapi *AccountApi) CancelCandidateCredit(from crypto.CommonAddress, a
  name: readContract
  usage: 读取智能合约（无数据被修改）
  params:
-	1. 合约地址
-	2. 合约接口
+    1. 发交易的账户地址
+	2. 合约地址
+	3. 合约接口
  return: 查询结果
  example:
 	curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_readContract","params":["0xec61c03f719a5c214f60719c3f36bb362a202125","0xecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c"],"id":1}' http://127.0.0.1:15645
@@ -417,7 +418,7 @@ func (accountapi *AccountApi) ReadContract(from, to crypto.CommonAddress, input 
 	1. 发起转账的地址
 	2. 金额
 	3. 备注/data
-	4. 接受者的地址
+	4. 接收者的地址
  return: 评估结果，失败返回错误
  example:
 	curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_estimateGas","params":["0xec61c03f719a5c214f60719c3f36bb362a202125","0xecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
