@@ -99,7 +99,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		// enough stack items available to perform the operation.
 
 		op = contract.GetOp(pc)
-		fmt.Println(int(op), opCodeToString[op])
+		//fmt.Println(int(op), opCodeToString[op])
 		operation := in.JumpTable[op]
 		if !operation.valid {
 			return nil, fmt.Errorf("invalid opcode 0x%x", int(op))
@@ -143,10 +143,6 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		// execute the operation
 		res, err = operation.execute(&pc, in, contract, mem, stack)
 		//stack.Print()
-		//fmt.Println()
-		//fmt.Println("-------------------------------------------------")
-		//mem.Print()
-		//fmt.Println("==================================================")
 
 		// if the operation clears the return data (e.g. it has returning data)
 		// set the last return to the result of the operation.
