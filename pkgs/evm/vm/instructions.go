@@ -645,9 +645,6 @@ func opSload(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory
 	}
 	loc.SetBytes(b)
 
-	fmt.Println("opSload 0:", modifiedLoc.Text(16))
-	fmt.Println("opSload 1:", loc.Text(16))
-
 	return nil, nil
 }
 
