@@ -79,7 +79,7 @@ type topicTable struct {
 
 func newTopicTable(db *nodeDB, self *Node) *topicTable {
 	if printTestImgLogs {
-		fmt.Printf("*N %016x\n", self.sha[:8])
+		//fmt.Printf("*N %016x\n", self.sha[:8])
 	}
 	return &topicTable{
 		db:     db,
