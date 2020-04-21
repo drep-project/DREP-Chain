@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
-	"math/rand"
 	"time"
 
 	"github.com/drep-project/DREP-Chain/chain"
@@ -101,6 +100,7 @@ func (blockMgr *BlockMgr) checkExistHeaderHash(headerHash *crypto.Hash) (bool, u
 func (blockMgr *BlockMgr) requestHeaders(peer types.PeerInfoInterface, from, count uint64) error {
 	req := types.HeaderReq{FromHeight: from, ToHeight: from + count - 1}
 	log.WithField("ip", peer.GetAddr()).Info("req header to")
+	peer.SetReqTime(time.Now())
 	return blockMgr.P2pServer.Send(peer.GetMsgRW(), types.MsgTypeHeaderReq, &req)
 }
 
@@ -203,23 +203,12 @@ func (blockMgr *BlockMgr) batchReqBlocks(hashs []crypto.Hash, mapHeightHash map[
 		}
 	}
 
-	okPeers := make([]types.PeerInfoInterface, 0, getPeersCount(blockMgr.peersInfo))
-	blockMgr.peersInfo.Range(func(key, value interface{}) bool {
-		peer := value.(types.PeerInfoInterface)
-		if peer.GetHeight() >= maxHeight {
-			okPeers = append(okPeers, peer)
-		}
-		return true
-	})
-
-	//todo 性能探测
-
-	for _, pi := range okPeers {
+	bestPeer := blockMgr.GetBestPeerInfo()
+	if bestPeer != nil {
 		blockMgr.syncMut.Lock()
-		//blockMgr.sender.SetIdle(bodyReqPeer.GetMsgRW(), false)
-		log.WithField("len", len(hashs)).WithField("from", minHeight).WithField("to:", maxHeight).WithField("destIp", pi.GetAddr()).Info("req block body")
-		err := blockMgr.P2pServer.Send(pi.GetMsgRW(), types.MsgTypeBlockReq, req)
-		//blockMgr.sender.SetIdle(bodyReqPeer, true)
+		log.WithField("len", len(hashs)).WithField("from", minHeight).WithField("to:", maxHeight).WithField("destIp", bestPeer.GetAddr()).Info("req block body")
+		err := blockMgr.P2pServer.Send(bestPeer.GetMsgRW(), types.MsgTypeBlockReq, req)
+		bestPeer.SetReqTime(time.Now())
 		blockMgr.syncMut.Unlock()
 
 		if err == nil {
@@ -228,7 +217,6 @@ func (blockMgr *BlockMgr) batchReqBlocks(hashs []crypto.Hash, mapHeightHash map[
 	}
 
 	errCh <- fmt.Errorf("p2p no peers")
-
 	return
 }
 
@@ -282,10 +270,8 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 				}
 
 				blockMgr.syncMut.Lock()
-				//blockMgr.sender.SetIdle(peer, false)
 				err := blockMgr.requestHeaders(peer, commonAncestor, maxHeaderHashCountReq)
 				log.WithField("commonAncestor", commonAncestor).Info("req header")
-				//blockMgr.sender.SetIdle(peer, true)
 				blockMgr.syncMut.Unlock()
 				if err != nil {
 					errCh <- err
@@ -492,24 +478,45 @@ func (blockMgr *BlockMgr) handleReqPeerState(peer *types.PeerInfo, peerState *ty
 }
 
 func (blockMgr *BlockMgr) GetBestPeerInfo() types.PeerInfoInterface {
-	var curPeer types.PeerInfoInterface
+
+	var okPeers []types.PeerInfoInterface
+	var tmpPeer types.PeerInfoInterface
+	//高度探测
 	blockMgr.peersInfo.Range(func(key, value interface{}) bool {
 		pi := value.(types.PeerInfoInterface)
-		if curPeer != nil {
-			if curPeer.GetHeight() < pi.GetHeight() {
-				curPeer = pi
-			} else if curPeer.GetHeight() == pi.GetHeight() {
-				if rand.Intn(2) == 0 {
-					curPeer = pi
-				}
+		if tmpPeer != nil {
+			if tmpPeer.GetHeight() < pi.GetHeight() {
+				okPeers = make([]types.PeerInfoInterface, 0, getPeersCount(blockMgr.peersInfo))
+				tmpPeer = pi
+			} else if pi.GetHeight() == tmpPeer.GetHeight() {
+				okPeers = append(okPeers, pi)
 			}
 		} else {
-			curPeer = pi
+			tmpPeer = pi
 		}
 		return true
 	})
 
-	return curPeer
+	if tmpPeer != nil {
+		okPeers = append(okPeers, tmpPeer)
+	}
+
+	// 性能探测
+	var bestPeer types.PeerInfoInterface
+	for i, pi := range okPeers {
+		if bestPeer == nil {
+			bestPeer = pi
+		} else if int64(pi.AverageRtt()) < int64(bestPeer.AverageRtt()) {
+			bestPeer = okPeers[i]
+		}
+		fmt.Println("get best peer:", bestPeer.AverageRtt(), bestPeer.GetAddr())
+	}
+
+	if bestPeer != nil {
+		fmt.Println("**********************bestPeer:", bestPeer.GetAddr())
+	}
+
+	return bestPeer
 }
 
 func (blockMgr *BlockMgr) checkHeaderChain(chain []types.BlockHeader) error {

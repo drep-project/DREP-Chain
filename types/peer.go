@@ -4,6 +4,7 @@ import (
 	"container/heap"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"sync"
+	"time"
 
 	//"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/network/p2p"
@@ -25,7 +26,13 @@ type PeerInfoInterface interface {
 	MarkTx(tx *Transaction)
 	KnownBlock(blk *Block) bool
 	MarkBlock(blk *Block)
+
+	SetReqTime(t time.Time)
+	CalcAverageRtt()
+	AverageRtt() time.Duration
 }
+
+var _ PeerInfoInterface = &PeerInfo{}
 
 //业务层peerknown blk height:
 type PeerInfo struct {
@@ -36,6 +43,8 @@ type PeerInfo struct {
 	knownBlocks *sortedBiMap                          // 按照高度排序
 	peer        *p2p.Peer                             //p2p层peer
 	rw          p2p.MsgReadWriter                     //与peer对应的协议
+	reqTime     *time.Time                            //向一个peer发送请求时的系统时间
+	averageRtt  time.Duration                         //本地和peer之间，请求的时间估计值
 }
 
 func NewPeerInfo(p *p2p.Peer, rw p2p.MsgReadWriter) *PeerInfo {
@@ -45,9 +54,28 @@ func NewPeerInfo(p *p2p.Peer, rw p2p.MsgReadWriter) *PeerInfo {
 		height:      0,
 		knownTxs:    make(map[crypto.CommonAddress]*sortedBiMap),
 		knownBlocks: newValueSortedBiMap(),
+		reqTime:     nil,
+		averageRtt:  0,
 	}
 
 	return peer
+}
+
+func (peer *PeerInfo) SetReqTime(t time.Time) {
+	peer.reqTime = &t
+}
+
+func (peer *PeerInfo) CalcAverageRtt() {
+	duration := time.Since(*peer.reqTime)
+	if peer.averageRtt == 0 {
+		peer.averageRtt = duration
+	} else {
+		peer.averageRtt = (peer.averageRtt + duration) / 2
+	}
+}
+
+func (peer *PeerInfo) AverageRtt() time.Duration {
+	return peer.averageRtt
 }
 
 func (peer *PeerInfo) GetAddr() string {

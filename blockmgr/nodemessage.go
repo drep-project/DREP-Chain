@@ -76,7 +76,7 @@ func (blockMgr *BlockMgr) dealMsg(peer *types.PeerInfo, rw p2p.MsgReadWriter) er
 			if err := msg.Decode(&resp); err != nil {
 				return errors.Wrapf(ErrDecodeMsg, "BlockResp msg:%v err:%v", msg, err)
 			}
-			go blockMgr.HandleBlockRespMsg(&resp)
+			go blockMgr.HandleBlockRespMsg(peer, &resp)
 		case types.MsgTypeTransaction:
 			var txs []*types.Transaction
 			if err := msg.Decode(&txs); err != nil {
@@ -135,13 +135,12 @@ func (blockMgr *BlockMgr) dealMsg(peer *types.PeerInfo, rw p2p.MsgReadWriter) er
 			}
 			go blockMgr.handleHeaderRsp(peer, &resp)
 		}
-
 	}
 
 	return nil
 }
 
-func (blockMgr *BlockMgr) handleHeaderReq(peer *types.PeerInfo, req *types.HeaderReq) {
+func (blockMgr *BlockMgr) handleHeaderReq(peer types.PeerInfoInterface, req *types.HeaderReq) {
 	headers := make([]types.BlockHeader, 0, req.ToHeight-req.FromHeight+1)
 	for i := req.FromHeight; i <= req.ToHeight; i++ {
 		node := blockMgr.ChainService.BestChain().NodeByHeight(uint64(i))
@@ -154,7 +153,8 @@ func (blockMgr *BlockMgr) handleHeaderReq(peer *types.PeerInfo, req *types.Heade
 	blockMgr.P2pServer.Send(peer.GetMsgRW(), uint64(types.MsgTypeHeaderRsp), types.HeaderRsp{Headers: headers})
 }
 
-func (blockMgr *BlockMgr) handleHeaderRsp(peer *types.PeerInfo, rsp *types.HeaderRsp) {
+func (blockMgr *BlockMgr) handleHeaderRsp(peer types.PeerInfoInterface, rsp *types.HeaderRsp) {
+	peer.CalcAverageRtt()
 	headerHashs := make([]*syncHeaderHash, 0, len(rsp.Headers))
 	for _, h := range rsp.Headers {
 		headerHashs = append(headerHashs, &syncHeaderHash{headerHash: h.Hash(), height: h.Height})
@@ -177,7 +177,7 @@ func (blockMgr *BlockMgr) handleHeaderRsp(peer *types.PeerInfo, rsp *types.Heade
 	blockMgr.headerHashCh <- headerHashs
 }
 
-func (blockMgr *BlockMgr) HandleBlockReqMsg(peer *types.PeerInfo, req *types.BlockReq) {
+func (blockMgr *BlockMgr) HandleBlockReqMsg(peer types.PeerInfoInterface, req *types.BlockReq) {
 	log.WithField("num:", len(req.BlockHashs)).Info("sync req block")
 	zero := crypto.Hash{}
 	startHeight := uint64(0)
@@ -229,6 +229,7 @@ func (blockMgr *BlockMgr) HandleBlockReqMsg(peer *types.PeerInfo, req *types.Blo
 	}
 }
 
-func (blockMgr *BlockMgr) HandleBlockRespMsg(rsp *types.BlockResp) {
+func (blockMgr *BlockMgr) HandleBlockRespMsg(peer types.PeerInfoInterface, rsp *types.BlockResp) {
+	peer.CalcAverageRtt()
 	blockMgr.blocksCh <- rsp.Blocks
 }
