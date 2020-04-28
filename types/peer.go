@@ -70,11 +70,14 @@ func (peer *PeerInfo) CalcAverageRtt() {
 	if peer.averageRtt == 0 {
 		peer.averageRtt = duration
 	} else {
-		peer.averageRtt = (peer.averageRtt + duration) / 2
+		peer.averageRtt = peer.averageRtt*95/100 + duration*5/100
 	}
 }
 
 func (peer *PeerInfo) AverageRtt() time.Duration {
+	if peer.reqTime != nil && time.Since(*peer.reqTime) > time.Duration(time.Minute*3) {
+		peer.averageRtt = 0
+	}
 	return peer.averageRtt
 }
 

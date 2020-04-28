@@ -484,22 +484,24 @@ func (blockMgr *BlockMgr) GetBestPeerInfo() types.PeerInfoInterface {
 	//高度探测
 	blockMgr.peersInfo.Range(func(key, value interface{}) bool {
 		pi := value.(types.PeerInfoInterface)
+		tmpValue, _ := blockMgr.peersInfo.Load(key)
 		if tmpPeer != nil {
 			if tmpPeer.GetHeight() < pi.GetHeight() {
-				okPeers = make([]types.PeerInfoInterface, 0, getPeersCount(blockMgr.peersInfo))
-				tmpPeer = pi
+				tmpPeer = tmpValue.(types.PeerInfoInterface)
+				okPeers = okPeers[:0]
+				okPeers = append(okPeers, tmpValue.(types.PeerInfoInterface))
 			} else if pi.GetHeight() == tmpPeer.GetHeight() {
-				okPeers = append(okPeers, pi)
+				tmpValue, _ = blockMgr.peersInfo.Load(key)
+				okPeers = append(okPeers, tmpValue.(types.PeerInfoInterface))
 			}
+
 		} else {
-			tmpPeer = pi
+			okPeers = make([]types.PeerInfoInterface, 0, getPeersCount(blockMgr.peersInfo))
+			tmpPeer = tmpValue.(types.PeerInfoInterface)
+			okPeers = append(okPeers, tmpValue.(types.PeerInfoInterface))
 		}
 		return true
 	})
-
-	if tmpPeer != nil {
-		okPeers = append(okPeers, tmpPeer)
-	}
 
 	// 性能探测
 	var bestPeer types.PeerInfoInterface
@@ -509,11 +511,7 @@ func (blockMgr *BlockMgr) GetBestPeerInfo() types.PeerInfoInterface {
 		} else if int64(pi.AverageRtt()) < int64(bestPeer.AverageRtt()) {
 			bestPeer = okPeers[i]
 		}
-		fmt.Println("get best peer:", bestPeer.AverageRtt(), bestPeer.GetAddr())
-	}
-
-	if bestPeer != nil {
-		fmt.Println("**********************bestPeer:", bestPeer.GetAddr())
+		log.Trace("get best peer:", pi.AverageRtt(), pi.GetAddr())
 	}
 
 	return bestPeer
