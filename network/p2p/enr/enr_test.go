@@ -47,7 +47,7 @@ func TestGetSetID(t *testing.T) {
 	assert.Equal(t, id, id2)
 }
 
-// TestGetSetIP4 tests encoding/decoding and setting/getting of the IP key.
+// TestGetSetIP4 tests encoding/decoding and setting/getting of the Node key.
 func TestGetSetIP4(t *testing.T) {
 	ip := IP{192, 168, 0, 3}
 	var r Record
@@ -58,7 +58,7 @@ func TestGetSetIP4(t *testing.T) {
 	assert.Equal(t, ip, ip2)
 }
 
-// TestGetSetIP6 tests encoding/decoding and setting/getting of the IP key.
+// TestGetSetIP6 tests encoding/decoding and setting/getting of the Node key.
 func TestGetSetIP6(t *testing.T) {
 	ip := IP{0x20, 0x01, 0x48, 0x60, 0, 0, 0x20, 0x01, 0, 0, 0, 0, 0, 0, 0x00, 0x68}
 	var r Record

@@ -99,7 +99,6 @@ func (hook *ModuleHook) SetModulesLevel(moduleLevel ...interface{}) error {
 				if err != nil {
 					return err
 				}
-				return err
 			} else {
 				lv = log.Level(lvInt)
 			}

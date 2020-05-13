@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/bft"
 	"github.com/drep-project/DREP-Chain/types"
+	drepbinary "github.com/drep-project/binary"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -14,23 +16,25 @@ import (
 
 // MongogDbStore used to save tx in mongo db, db name is "drep", col name is "tx"
 type MongogDbStore struct {
-	url       string
-	producers []crypto.CommonAddress
-	client    *mongo.Client
-	db        *mongo.Database
-	txCol     *mongo.Collection
-	blockCol  *mongo.Collection
-	headerCol *mongo.Collection
+	url           string
+	consensusMode string
+	client        *mongo.Client
+	getProducer   GetProducer
+	db            *mongo.Database
+	txCol         *mongo.Collection
+	blockCol      *mongo.Collection
+	headerCol     *mongo.Collection
 
 	viewTxCol     *mongo.Collection
 	viewBlockCol  *mongo.Collection
 	viewHeaderCol *mongo.Collection
 }
 
-// NewMongogDbStore open a new db from url, if db not exist, auto create
-func NewMongogDbStore(url string, producers []crypto.CommonAddress, dbName string) (*MongogDbStore, error) {
+// NewMongoDbStore open a new db from url, if db not exist, auto create
+func NewMongoDbStore(url string, getProducer GetProducer, consensusMode string, dbName string) (*MongogDbStore, error) {
 	store := &MongogDbStore{
-		url: url,
+		url:           url,
+		consensusMode: consensusMode,
 	}
 	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
 	var err error
@@ -44,7 +48,8 @@ func NewMongogDbStore(url string, producers []crypto.CommonAddress, dbName strin
 	if err != nil {
 		return nil, err
 	}
-	store.producers = producers
+
+	store.getProducer = getProducer
 	store.db = store.client.Database(dbName)
 	store.txCol = store.db.Collection("tx")
 	store.blockCol = store.db.Collection("block")
@@ -62,15 +67,29 @@ func (store *MongogDbStore) InsertRecord(block *types.Block) {
 	rpcHeader := RpcBlockHeader{}
 	rpcHeader.FromBlockHeader(block.Header)
 	rpcBlock := &RpcBlock{}
-	rpcBlock.From(block, store.producers)
-	_, err := store.blockCol.InsertOne(ctx, rpcBlock)
+
+	multiSig := &bft.MultiSignature{}
+	err := drepbinary.Unmarshal(block.Proof.Evidence, multiSig)
+	if err != nil {
+		log.Errorf("umarshal err:%s", err.Error())
+		panic("unmarshal err")
+	}
+	producers, _ := store.getProducer(block.Header.StateRoot, len(multiSig.Bitmap))
+	log.WithField("producers len", len(producers)).WithField("bitmap len", len(multiSig.Bitmap)).Info("insert record........")
+
+	if len(producers) == 0 {
+		panic("insert Record ,producer must not be 0")
+	}
+
+	rpcBlock.From(block, producers)
+	_, err = store.blockCol.InsertOne(ctx, rpcBlock)
 	if err != nil {
 		fmt.Println(err)
 	}
 	store.headerCol.InsertOne(ctx, rpcHeader)
 
 	viewBlock := ViewBlock{}
-	viewBlock.From(block, store.producers)
+	viewBlock.From(block, producers)
 	store.viewBlockCol.InsertOne(ctx, viewBlock)
 
 	viewHeader := ViewBlockHeader{}

@@ -1,11 +1,12 @@
 package bft
 
 import (
-	"github.com/drep-project/binary"
+	"fmt"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1/schnorr"
 	"github.com/drep-project/DREP-Chain/crypto/sha3"
 	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
+	"github.com/drep-project/binary"
 	"math/big"
 	"sync"
 	"time"
@@ -76,6 +77,7 @@ func NewLeader(privkey *secp256k1.PrivateKey, p2pServer Sender, waitTime time.Du
 			l.liveMembers = append(l.liveMembers, producer)
 		}
 	}
+	l.cancelPool = make(chan struct{})
 	l.Reset()
 	return l
 }
@@ -90,44 +92,54 @@ func (leader *Leader) Reset() {
 	leader.commitBitmap = make([]byte, length)
 	leader.responseBitmap = make([]byte, length)
 
-	leader.cancelPool = make(chan struct{}, 1)
-	leader.cancelWaitCommit = make(chan struct{}, 1)
-	leader.cancelWaitChallenge = make(chan struct{}, 1)
+	leader.cancelWaitCommit = make(chan struct{})
+	leader.cancelWaitChallenge = make(chan struct{})
 }
 
-func (leader *Leader) ProcessConsensus(msg IConsenMsg) (error, *secp256k1.Signature, []byte) {
+func (leader *Leader) Close() {
+	close(leader.cancelWaitCommit)
+	close(leader.cancelWaitChallenge)
+}
+
+/*
+
+leader                   member
+setup      ----->
+	       <-----      commit
+challenge  ----->
+           <-----      response
+*/
+func (leader *Leader) ProcessConsensus(msg IConsenMsg, round int) (error, *secp256k1.Signature, []byte) {
 	defer func() {
-		select {
-		case leader.cancelPool <- struct{}{}:
-		default:
-		}
+		leader.cancelPool <- struct{}{}
 	}()
+
 	leader.setState(INIT)
-	go leader.processP2pMessage()
-	leader.setUp(msg)
+	go leader.processP2pMessage(round)
+	leader.setUp(msg, round)
 	if !leader.waitForCommit() {
 		//send reason and reset
-		leader.fail(ErrWaitCommit.Error())
+		leader.fail(ErrWaitCommit.Error(), round)
 		return ErrWaitCommit, nil, nil
 	}
+	leader.challenge(msg, round)
 
-	leader.challenge(msg)
 	if !leader.waitForResponse() {
 		//send reason and reset
-		leader.fail("waitForResponse fail")
+		leader.fail("waitForResponse fail", round)
 		return ErrWaitResponse, nil, nil
 	}
 	log.Debug("response complete")
 	valid := leader.Validate(msg, leader.sigmaS.R, leader.sigmaS.S)
 	log.WithField("VALID", valid).Debug("vaidate result")
 	if !valid {
-		leader.fail("signature not valid")
+		leader.fail("signature not valid", round)
 		return ErrSignatureNotValid, nil, nil
 	}
 	return nil, &secp256k1.Signature{R: leader.sigmaS.R, S: leader.sigmaS.S}, leader.responseBitmap
 }
 
-func (leader *Leader) processP2pMessage() {
+func (leader *Leader) processP2pMessage(round int) {
 	for {
 		select {
 		case msg := <-leader.msgPool:
@@ -138,14 +150,25 @@ func (leader *Leader) processP2pMessage() {
 					log.Debugf("commit msg:%v err:%v", msg, err)
 					continue
 				}
-				go leader.OnCommit(msg.Peer, &req)
+
+				if req.Round != round {
+					log.WithField("come round", req.Round).WithField("local round", round).Info("leader process msg req err")
+					continue
+				}
+
+				leader.OnCommit(msg.Peer, &req)
 			case MsgTypeResponse:
 				var res Response
 				if err := binary.Unmarshal(msg.Msg, &res); err != nil {
 					log.Debugf("response msg:%v err:%v", msg, err)
 					continue
 				}
-				go leader.OnResponse(msg.Peer, &res)
+				if res.Round != round {
+					log.WithField("come round", res.Round).WithField("local round", round).Info("leader process msg res err")
+					continue
+				}
+
+				leader.OnResponse(msg.Peer, &res)
 			}
 		case <-leader.cancelPool:
 			return
@@ -153,9 +176,11 @@ func (leader *Leader) processP2pMessage() {
 	}
 }
 
-func (leader *Leader) setUp(msg IConsenMsg) {
+func (leader *Leader) setUp(msg IConsenMsg, round int) {
 	setup := &Setup{Msg: msg.AsMessage()}
 	setup.Height = leader.currentHeight
+	setup.Magic = SetupMagic
+	setup.Round = round
 	leader.msgHash = sha3.Keccak256(msg.AsSignMessage())
 	var err error
 	var nouncePk *secp256k1.PublicKey
@@ -176,7 +201,7 @@ func (leader *Leader) setUp(msg IConsenMsg) {
 
 	for _, member := range leader.liveMembers {
 		if member.Peer != nil && !member.IsMe {
-			log.WithField("IP", member.Peer).WithField("Height", setup.Height).Trace("leader sent setup message")
+			log.WithField("Node", member.Peer.IP()).WithField("Height", setup.Height).WithField("size", len(setup.Msg)).Trace("leader sent setup message")
 			leader.sender.SendAsync(member.Peer.GetMsgRW(), MsgTypeSetUp, setup)
 		}
 	}
@@ -212,19 +237,21 @@ func (leader *Leader) OnCommit(peer consensusTypes.IPeerInfo, commit *Commitment
 
 func (leader *Leader) waitForCommit() bool {
 	leader.setState(WAIT_COMMIT)
-	for {
-		select {
-		case <-time.After(leader.waitTime):
-			commitNum := leader.getCommitNum()
-			log.WithField("commitNum", commitNum).WithField("producers", len(leader.producers)).Debug("waitForCommit  finish")
-			if commitNum >= leader.minMember {
-				return true
-			}
-			leader.setState(WAIT_COMMIT_IMEOUT)
-			return false
-		case <-leader.cancelWaitCommit:
+	//fmt.Println(leader.waitTime.String())
+	t := time.Now()
+	tm := time.NewTimer(leader.waitTime)
+	select {
+	case <-tm.C:
+		commitNum := leader.getCommitNum()
+		log.WithField("commitNum", commitNum).WithField("producers", len(leader.producers)).Debug("waitForCommit  finish")
+		log.WithField("start", t).WithField("now", time.Now()).Info("wait for commit timeout")
+		if commitNum >= leader.minMember {
 			return true
 		}
+		leader.setState(WAIT_COMMIT_IMEOUT)
+		return false
+	case <-leader.cancelWaitCommit:
+		return true
 	}
 }
 
@@ -266,7 +293,7 @@ func (leader *Leader) OnResponse(peer consensusTypes.IPeerInfo, response *Respon
 	}
 }
 
-func (leader *Leader) challenge(msg IConsenMsg) {
+func (leader *Leader) challenge(msg IConsenMsg, Round int) {
 	leader.selfSign(msg)
 	for index, pk := range leader.sigmaPubKey {
 		if index == 0 {
@@ -280,13 +307,15 @@ func (leader *Leader) challenge(msg IConsenMsg) {
 		commitPubkey := schnorr.CombinePubkeys(particateCommitPubkeys)
 		challenge := &Challenge{
 			Height: leader.currentHeight,
+			Magic:  ChallegeMagic,
+			Round:  Round,
 			SigmaQ: commitPubkey,
 			R:      leader.msgHash,
 		}
 
 		member := leader.getMemberByPk(pk)
-		if member.IsOnline && !member.IsMe {
-			log.WithField("IP", member.Peer).WithField("Height", leader.currentHeight).Debug("leader sent challenge message")
+		if member != nil && member.IsOnline && !member.IsMe {
+			log.WithField("Node", member.Peer.IP()).WithField("Height", leader.currentHeight).Debug("leader sent challenge message")
 			leader.sender.SendAsync(member.Peer.GetMsgRW(), MsgTypeChallenge, challenge)
 		}
 	}
@@ -308,7 +337,7 @@ func (leader *Leader) selfSign(msg IConsenMsg) error {
 	return nil
 }
 
-func (leader *Leader) fail(msg string) {
+func (leader *Leader) fail(msg string, round int) {
 CANCEL:
 	for {
 		select {
@@ -318,8 +347,9 @@ CANCEL:
 			break CANCEL
 		}
 	}
-	failMsg := &Fail{Reason: msg}
+	failMsg := &Fail{Reason: msg, Magic: FailMagic, Round: round}
 	failMsg.Height = leader.currentHeight
+
 	for _, member := range leader.liveMembers {
 		if member.Peer != nil && !member.IsMe {
 			leader.sender.SendAsync(member.Peer.GetMsgRW(), MsgTypeFail, failMsg)
@@ -329,21 +359,21 @@ CANCEL:
 
 func (leader *Leader) waitForResponse() bool {
 	leader.setState(WAIT_RESPONSE)
-	for {
-		select {
-		case <-time.After(leader.waitTime):
-			responseNum := leader.getResponseNum()
-			log.WithField("responseNum", responseNum).WithField("liveMembers", len(leader.liveMembers)).Debug("waitForResponse finish")
-			if responseNum == len(leader.sigmaPubKey) {
-				leader.setState(COMPLETED)
-				return true
-			}
-			leader.setState(WAIT_RESPONSE_TIMEOUT)
-			return false
-		case <-leader.cancelWaitChallenge:
+	tm := time.NewTimer(leader.waitTime)
+	select {
+	case <-tm.C:
+		responseNum := leader.getResponseNum()
+		log.WithField("responseNum", responseNum).WithField("liveMembers", len(leader.liveMembers)).Debug("waitForResponse finish")
+		if responseNum == len(leader.sigmaPubKey) {
+			leader.setState(COMPLETED)
 			return true
 		}
+		leader.setState(WAIT_RESPONSE_TIMEOUT)
+		return false
+	case <-leader.cancelWaitChallenge:
+		return true
 	}
+
 }
 
 func (leader *Leader) Validate(msg IConsenMsg, r *big.Int, s *big.Int) bool {
@@ -441,6 +471,9 @@ func (leader *Leader) setState(state int) {
 	leader.stateLock.Lock()
 	defer leader.stateLock.Unlock()
 
+	if state == WAIT_COMMIT_IMEOUT {
+		fmt.Print("")
+	}
 	leader.currentState = state
 }
 

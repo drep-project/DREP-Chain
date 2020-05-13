@@ -2,16 +2,18 @@ package trace
 
 import (
 	"encoding/hex"
-	"github.com/drep-project/binary"
 	"github.com/drep-project/DREP-Chain/common"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/bft"
-	types2 "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
+	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
 	"github.com/drep-project/DREP-Chain/types"
+	"github.com/drep-project/binary"
 	"math/big"
+	"strconv"
 )
 
 type ViewTransaction struct {
+	Id        string `bson:"_id"`
 	Hash      string
 	From      string
 	Version   int32
@@ -29,6 +31,7 @@ type ViewTransaction struct {
 }
 
 type ViewBlock struct {
+	Id           string `bson:"_id"`
 	Hash         string
 	ChainId      types.ChainIdType
 	Version      int32
@@ -44,6 +47,7 @@ type ViewBlock struct {
 }
 
 type ViewBlockHeader struct {
+	Id           string `bson:"_id"`
 	ChainId      types.ChainIdType
 	Version      int32
 	PreviousHash string
@@ -63,6 +67,7 @@ func (viewBlockHeader *ViewBlockHeader) From(block *types.Block) *ViewBlockHeade
 		txs[i].Height = block.Header.Height
 	}
 
+	viewBlockHeader.Id = block.Header.Hash().String()
 	viewBlockHeader.Hash = block.Header.Hash().String()
 	viewBlockHeader.ChainId = block.Header.ChainId
 	viewBlockHeader.Version = block.Header.Version
@@ -78,8 +83,10 @@ func (viewBlockHeader *ViewBlockHeader) From(block *types.Block) *ViewBlockHeade
 
 func (rpcTransaction *ViewTransaction) FromTx(tx *types.Transaction) *ViewTransaction {
 	from, _ := tx.From()
+	rpcTransaction.Id = strconv.FormatInt(tx.Data.Timestamp, 10) + tx.TxHash().String()
 	rpcTransaction.Hash = tx.TxHash().String()
 	rpcTransaction.Version = tx.Data.Version
+
 	rpcTransaction.Nonce = tx.Data.Nonce
 	rpcTransaction.Type = int(tx.Data.Type)
 	rpcTransaction.To = tx.Data.To.String()
@@ -103,7 +110,7 @@ func (rpcBlock *ViewBlock) From(block *types.Block, addresses []crypto.CommonAdd
 		txs[i] = new(ViewTransaction).FromTx(tx)
 		txs[i].Height = block.Header.Height
 	}
-
+	rpcBlock.Id = block.Header.Hash().String()
 	rpcBlock.Hash = block.Header.Hash().String()
 	rpcBlock.ChainId = block.Header.ChainId
 	rpcBlock.Version = block.Header.Version
@@ -115,14 +122,15 @@ func (rpcBlock *ViewBlock) From(block *types.Block, addresses []crypto.CommonAdd
 	rpcBlock.StateRoot = common.Encode(block.Header.StateRoot)
 	rpcBlock.TxRoot = common.Encode(block.Header.TxRoot)
 
-	if block.Proof.Type == types2.Solo {
+	if block.Proof.Type == consensusTypes.Solo {
 		rpcBlock.Proof = block.Proof
-	} else if block.Proof.Type == types2.Pbft {
+	} else if block.Proof.Type == consensusTypes.Pbft {
 		proof := NewPbftProof()
 		multiSig := &bft.MultiSignature{}
 		binary.Unmarshal(block.Proof.Evidence, multiSig)
 		proof.Evidence = hex.EncodeToString(block.Proof.Evidence)
 		proof.LeaderAddress = addresses[multiSig.Leader].String()
+
 		for index, val := range multiSig.Bitmap {
 			if val == 1 {
 				proof.MinorAddresses = append(proof.MinorAddresses, addresses[index].String())

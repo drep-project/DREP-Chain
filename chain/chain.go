@@ -1,7 +1,9 @@
 package chain
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/drep-project/DREP-Chain/chain/store"
 	"math/big"
 	"sync"
 
@@ -9,13 +11,12 @@ import (
 	"github.com/drep-project/DREP-Chain/params"
 	"gopkg.in/urfave/cli.v1"
 
-	"github.com/drep-project/binary"
 	"github.com/drep-project/DREP-Chain/common"
 	"github.com/drep-project/DREP-Chain/common/event"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/sha3"
 	"github.com/drep-project/DREP-Chain/database"
-	"github.com/drep-project/DREP-Chain/pkgs/evm"
+	"github.com/drep-project/binary"
 
 	rpc2 "github.com/drep-project/DREP-Chain/pkgs/rpc"
 	"github.com/drep-project/DREP-Chain/types"
@@ -42,7 +43,6 @@ type ChainServiceInterface interface {
 	//DefaultChainConfig
 	GetBlockHeaderByHash(hash *crypto.Hash) (*types.BlockHeader, error)
 	GetBlockHeaderByHeight(number uint64) (*types.BlockHeader, error)
-	GetBlocksFrom(start, size uint64) ([]*types.Block, error)
 
 	GetHeader(hash crypto.Hash, number uint64) *types.BlockHeader
 	GetCurrentHeader() *types.BlockHeader
@@ -55,11 +55,12 @@ type ChainServiceInterface interface {
 	GetLogsFeed() *event.Feed
 	GetRMLogsFeed() *event.Feed
 	BlockExists(blockHash *crypto.Hash) bool
-	TransactionValidator() ITransactionValidator
-	GetDatabaseService() *database.DatabaseService
 	Index() *BlockIndex
-	BlockValidator() []IBlockValidator
+	BlockValidator() BlockValidators
 	AddBlockValidator(validator IBlockValidator)
+	TransactionValidators() map[ITransactionSelector]ITransactionValidator
+	AddTransactionValidator(selector ITransactionSelector, validator ITransactionValidator)
+	AddGenesisProcess(validator IGenesisProcess)
 	GetConfig() *ChainConfig
 	DetachBlockFeed() *event.Feed
 }
@@ -70,10 +71,7 @@ var cs ChainServiceInterface = &ChainService{}
 type ChainService struct {
 	RpcService      *rpc2.RpcService          `service:"rpc"`
 	DatabaseService *database.DatabaseService `service:"database"`
-	VmService       evm.Vm                    `service:"vm"`
 	apis            []app.API
-
-	stateProcessor *StateProcessor
 
 	chainId types.ChainIdType
 
@@ -99,154 +97,117 @@ type ChainService struct {
 	logsFeed        event.Feed
 	rmLogsFeed      event.Feed
 
-	blockValidator       []IBlockValidator
-	transactionValidator ITransactionValidator
+	blockValidator       BlockValidators
+	transactionValidator map[ITransactionSelector]ITransactionValidator
+	genesisProcess       []IGenesisProcess
+	chainStore           *ChainStore
+	genesisConfig        json.RawMessage
 }
 
 type ChainState struct {
 	types.BestState
-	db *database.Database
+	db *store.StoreInterface
 }
 
-func (chainService *ChainService) GetDatabaseService() *database.DatabaseService {
-	return chainService.DatabaseService
-}
-
-func (chainService *ChainService) DetachBlockFeed() *event.Feed {
-	return &chainService.detachBlockFeed
-
-}
-
-func (chainService *ChainService) GetConfig() *ChainConfig {
-	return chainService.Config
-}
-
-func (chainService *ChainService) BlockValidator() []IBlockValidator {
-	return chainService.blockValidator
-}
-
-func (chainService *ChainService) AddBlockValidator(validator IBlockValidator) {
-	chainService.blockValidator = append(chainService.blockValidator, validator)
-}
-
-func (chainService *ChainService) Index() *BlockIndex {
-	return chainService.blockIndex
-}
-
-func (chainService *ChainService) TransactionValidator() ITransactionValidator {
-	return chainService.transactionValidator
-}
-
-func (chainService *ChainService) NewBlockFeed() *event.Feed {
-	return &chainService.newBlockFeed
-}
-
-func (chainService *ChainService) GetLogsFeed() *event.Feed {
-	return &chainService.logsFeed
-}
-
-func (chainService *ChainService) GetRMLogsFeed() *event.Feed {
-	return &chainService.rmLogsFeed
-}
-
-func (chainService *ChainService) BestChain() *ChainView {
-	return chainService.bestChain
-}
-
-func (chainService *ChainService) ChainID() types.ChainIdType {
-	return chainService.chainId
-}
-
-func (chainService *ChainService) Name() string {
-	return MODULENAME
-}
-
-func (chainService *ChainService) Api() []app.API {
-	return chainService.apis
-}
-
-func (chainService *ChainService) CommandFlags() ([]cli.Command, []cli.Flag) {
-	return nil, []cli.Flag{}
-}
-
-func NewChainService(config *ChainConfig, ds *database.DatabaseService) *ChainService {
-	chainService := &ChainService{}
-	chainService.Config = config
-	var err error
-	chainService.blockIndex = NewBlockIndex()
-	chainService.bestChain = NewChainView(nil)
-	chainService.orphans = make(map[crypto.Hash]*types.OrphanBlock)
-	chainService.prevOrphans = make(map[crypto.Hash][]*types.OrphanBlock)
-	chainService.stateProcessor = NewStateProcessor(chainService)
-	chainService.transactionValidator = NewTransactionValidator(chainService)
-	chainService.blockValidator = []IBlockValidator{NewChainBlockValidator(chainService, chainService.transactionValidator)}
-	chainService.DatabaseService = ds
-	//chainService.blockDb = chainService.DatabaseService.BeginTransaction()
-	chainService.genesisBlock = chainService.GetGenisiBlock(chainService.Config.GenesisAddr)
-	hash := chainService.genesisBlock.Header.Hash()
-	if !chainService.DatabaseService.HasBlock(hash) {
-		chainService.genesisBlock, err = chainService.ProcessGenesisBlock(chainService.Config.GenesisAddr)
-		err = chainService.createChainState()
-		if err != nil {
-			return nil
-		}
-	}
-
-	err = chainService.InitStates()
-	if err != nil {
-		return nil
-	}
-
-	chainService.apis = []app.API{
-		app.API{
-			Namespace: MODULENAME,
-			Version:   "1.0",
-			Service: &ChainApi{
-				chainService: chainService,
-				dbService:    chainService.DatabaseService,
-			},
-			Public: true,
-		},
-	}
-	return chainService
-}
+//func NewChainService(config *ChainConfig, ds *database.DatabaseService) *ChainService {
+//	var err error
+//	chainService := &ChainService{}
+//	chainService.Config = config
+//	chainService.blockIndex = NewBlockIndex()
+//	chainService.bestChain = NewChainView(nil)
+//	chainService.orphans = make(map[crypto.Hash]*types.OrphanBlock)
+//	chainService.prevOrphans = make(map[crypto.Hash][]*types.OrphanBlock)
+//	chainService.chainStore = &ChainStore{ds.LevelDb()}
+//
+//	chainService.transactionValidator = map[ITransactionSelector]ITransactionValidator{
+//		&TransferTxSelector{}: &TransferTransactionProcessor{},
+//		&AliasTxSelector{}:    &AliasTransactionProcessor{},
+//	}
+//	chainService.blockValidator = []IBlockValidator{NewChainBlockValidator(chainService)}
+//	chainService.genesisProcess = []IGenesisProcess{NewPreminerGenesisProcessor()}
+//
+//	chainService.genesisBlock, err = chainService.GetGenisiBlock(chainService.Config.GenesisAddr)
+//	if err != nil {
+//		return nil
+//	}
+//	hash := chainService.genesisBlock.Header.Hash()
+//	if !chainService.chainStore.HasBlock(hash) {
+//		chainService.genesisBlock, err = chainService.ProcessGenesisBlock(chainService.Config.GenesisAddr)
+//		err = chainService.createChainState()
+//		if err != nil {
+//			return nil
+//		}
+//	}
+//
+//	err = chainService.InitStates()
+//	if err != nil {
+//		return nil
+//	}
+//
+//	chainService.apis = []app.API{
+//		{
+//			Namespace: MODULENAME,
+//			Version:   "1.0",
+//			Service:   NewChainApi(chainService.DatabaseService.LevelDb(), chainService.BestChain(), chainService.chainStore),
+//			Public:    true,
+//		},
+//	}
+//	return chainService
+//}
 
 func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error {
 	chainService.blockIndex = NewBlockIndex()
 	chainService.bestChain = NewChainView(nil)
+	chainService.chainStore = &ChainStore{chainService.DatabaseService.LevelDb()}
 	chainService.orphans = make(map[crypto.Hash]*types.OrphanBlock)
 	chainService.prevOrphans = make(map[crypto.Hash][]*types.OrphanBlock)
-	chainService.stateProcessor = NewStateProcessor(chainService)
-	chainService.transactionValidator = NewTransactionValidator(chainService)
-	chainService.blockValidator = []IBlockValidator{NewChainBlockValidator(chainService, chainService.transactionValidator)}
+
+	chainService.blockValidator = []IBlockValidator{NewChainBlockValidator(chainService)}
+	chainService.genesisProcess = []IGenesisProcess{NewPreminerGenesisProcessor()}
+	chainService.transactionValidator = map[ITransactionSelector]ITransactionValidator{
+		&TransferTxSelector{}:        &TransferTransactionProcessor{},
+		&AliasTxSelector{}:           &AliasTransactionProcessor{},
+		&StakeTxSelector{}:           &StakeTransactionProcessor{},
+		&CancelVoteTxSelector{}:      &CancelVoteTransactionProcessor{},
+		&CandidateTxSelector{}:       &CandidateTransactionProcessor{},
+		&CancelCandidateTxSelector{}: &CancelCandidateTransactionProcessor{},
+	}
 
 	var err error
-	chainService.genesisBlock = chainService.GetGenisiBlock(chainService.Config.GenesisAddr)
+	//chainService.genesisConfig = path.Join(executeContext.CommonConfig.HomeDir, "genesis.json")
+	chainService.genesisConfig = executeContext.PhaseConfig["genesis"]
+	if chainService.genesisConfig == nil {
+		return fmt.Errorf("no genesis config,please check config.json")
+	}
+
+	chainService.genesisBlock, err = chainService.GetGenisiBlock(chainService.Config.GenesisAddr)
+	if err != nil {
+		return err
+	}
 	hash := chainService.genesisBlock.Header.Hash()
-	if !chainService.DatabaseService.HasBlock(hash) {
+	if !chainService.chainStore.HasBlock(hash) {
 		chainService.genesisBlock, err = chainService.ProcessGenesisBlock(chainService.Config.GenesisAddr)
 		err = chainService.createChainState()
 		if err != nil {
 			log.Error("createChainState err", err)
 			return err
 		}
+		_, err = store.TrieStoreFromStore(chainService.DatabaseService.LevelDb(), chainService.genesisBlock.Header.StateRoot)
+		if err != nil {
+			return err
+		}
 	}
-
 	err = chainService.InitStates()
 	if err != nil {
 		log.Error("InitStates err:", err)
 		return err
 	}
-
 	chainService.apis = []app.API{
-		app.API{
+		{
 			Namespace: MODULENAME,
 			Version:   "1.0",
-			Service: &ChainApi{
-				chainService: chainService,
-				dbService:    chainService.DatabaseService,
-			},
-			Public: true,
+			Service:   NewChainApi(chainService.DatabaseService.LevelDb(), chainService.BestChain(), chainService.chainStore),
+			Public:    true,
 		},
 	}
 	return nil
@@ -268,28 +229,12 @@ func (chainService *ChainService) RootChain() types.ChainIdType {
 	return RootChain
 }
 
-func (chainService *ChainService) GetBlocksFrom(start, size uint64) ([]*types.Block, error) {
-	blocks := []*types.Block{}
-	for i := start; i < start+size; i++ {
-		node := chainService.bestChain.NodeByHeight(i)
-		if node == nil {
-			continue
-		}
-		block, err := chainService.DatabaseService.GetBlock(node.Hash)
-		if err != nil {
-			return nil, err
-		}
-		blocks = append(blocks, block)
-	}
-	return blocks, nil
-}
-
 func (chainService *ChainService) GetCurrentHeader() *types.BlockHeader {
 	heighestBlockBode := chainService.bestChain.Tip()
 	if heighestBlockBode == nil {
 		return nil
 	}
-	block, err := chainService.DatabaseService.GetBlock(heighestBlockBode.Hash)
+	block, err := chainService.chainStore.GetBlock(heighestBlockBode.Hash)
 	if err != nil {
 		return nil
 	}
@@ -301,7 +246,7 @@ func (chainService *ChainService) GetHighestBlock() (*types.Block, error) {
 	if heighestBlockBode == nil {
 		return nil, fmt.Errorf("chain not init")
 	}
-	block, err := chainService.DatabaseService.GetBlock(heighestBlockBode.Hash)
+	block, err := chainService.chainStore.GetBlock(heighestBlockBode.Hash)
 	if err != nil {
 		return nil, err
 	}
@@ -309,7 +254,7 @@ func (chainService *ChainService) GetHighestBlock() (*types.Block, error) {
 }
 
 func (chainService *ChainService) GetBlockByHash(hash *crypto.Hash) (*types.Block, error) {
-	block, err := chainService.DatabaseService.GetBlock(hash)
+	block, err := chainService.chainStore.GetBlock(hash)
 	if err != nil {
 		return nil, err
 	}
@@ -389,18 +334,90 @@ func (chainService *ChainService) createChainState() error {
 	chainService.blockIndex.AddNode(node)
 
 	// Save the genesis block to the block index database.
-	err := chainService.DatabaseService.PutBlockNode(node)
+	err := chainService.chainStore.PutBlockNode(node)
 	if err != nil {
 		return err
 	}
 
-	err = chainService.DatabaseService.PutBlock(chainService.genesisBlock)
+	err = chainService.chainStore.PutBlock(chainService.genesisBlock)
 	if err != nil {
 		return err
 	} else {
 		return nil
 	}
 }
+
+//GETTER
+
+func (chainService *ChainService) GetDatabaseService() *database.DatabaseService {
+	return chainService.DatabaseService
+}
+
+func (chainService *ChainService) DetachBlockFeed() *event.Feed {
+	return &chainService.detachBlockFeed
+}
+
+func (chainService *ChainService) GetConfig() *ChainConfig {
+	return chainService.Config
+}
+
+func (chainService *ChainService) BlockValidator() BlockValidators {
+	return chainService.blockValidator
+}
+
+func (chainService *ChainService) TransactionValidators() map[ITransactionSelector]ITransactionValidator {
+	return chainService.transactionValidator
+}
+
+func (chainService *ChainService) AddBlockValidator(validator IBlockValidator) {
+	chainService.blockValidator = append(chainService.blockValidator, validator)
+}
+
+func (chainService *ChainService) AddTransactionValidator(selector ITransactionSelector, validator ITransactionValidator) {
+	chainService.transactionValidator[selector] = validator
+}
+
+func (chainService *ChainService) AddGenesisProcess(validator IGenesisProcess) {
+	chainService.genesisProcess = append(chainService.genesisProcess, validator)
+}
+
+func (chainService *ChainService) Index() *BlockIndex {
+	return chainService.blockIndex
+}
+
+func (chainService *ChainService) NewBlockFeed() *event.Feed {
+	return &chainService.newBlockFeed
+}
+
+func (chainService *ChainService) GetLogsFeed() *event.Feed {
+	return &chainService.logsFeed
+}
+
+func (chainService *ChainService) GetRMLogsFeed() *event.Feed {
+	return &chainService.rmLogsFeed
+}
+
+func (chainService *ChainService) BestChain() *ChainView {
+	return chainService.bestChain
+}
+
+func (chainService *ChainService) ChainID() types.ChainIdType {
+	return chainService.chainId
+}
+
+func (chainService *ChainService) Name() string {
+	return MODULENAME
+}
+
+func (chainService *ChainService) Api() []app.API {
+	return chainService.apis
+}
+
+func (chainService *ChainService) CommandFlags() ([]cli.Command, []cli.Flag) {
+	return nil, []cli.Flag{}
+}
+
+// Config
 func (chainService *ChainService) DefaultConfig() *ChainConfig {
 	return DefaultChainConfig
 }

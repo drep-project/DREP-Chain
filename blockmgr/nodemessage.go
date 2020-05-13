@@ -50,11 +50,13 @@ func (blockMgr *BlockMgr) receiveMsg(peer *types.PeerInfo, rw p2p.MsgReadWriter)
 }
 
 func (blockMgr *BlockMgr) dealMsg(peer *types.PeerInfo, rw p2p.MsgReadWriter) error {
+
 	log.WithField("peer addr:", peer.GetAddr()).Info("new peer receive")
+
 	for {
 		msg, err := rw.ReadMsg()
 		if err != nil {
-			log.WithField("Reason", err).Info("receive blockMgr msg fail")
+			log.WithField("Reason", err).WithField("ip", peer.GetAddr()).Info("receive blockMgr msg fail")
 			return err
 		}
 
@@ -74,7 +76,7 @@ func (blockMgr *BlockMgr) dealMsg(peer *types.PeerInfo, rw p2p.MsgReadWriter) er
 			if err := msg.Decode(&resp); err != nil {
 				return errors.Wrapf(ErrDecodeMsg, "BlockResp msg:%v err:%v", msg, err)
 			}
-			go blockMgr.HandleBlockRespMsg(&resp)
+			go blockMgr.HandleBlockRespMsg(peer, &resp)
 		case types.MsgTypeTransaction:
 			var txs []*types.Transaction
 			if err := msg.Decode(&txs); err != nil {
@@ -83,7 +85,8 @@ func (blockMgr *BlockMgr) dealMsg(peer *types.PeerInfo, rw p2p.MsgReadWriter) er
 
 			// TODO backup nodes should not add
 			for _, tx := range txs {
-				//log.WithField("transaction", tx.Nonce()).Trace("comming transaction")
+				from, _ := tx.From()
+				log.WithField("transaction", tx.Nonce()).WithField("from", from.String()).Trace("comming transaction")
 				tx := tx
 				peer.MarkTx(tx)
 				blockMgr.SendTransaction(tx, false)
@@ -137,7 +140,7 @@ func (blockMgr *BlockMgr) dealMsg(peer *types.PeerInfo, rw p2p.MsgReadWriter) er
 	return nil
 }
 
-func (blockMgr *BlockMgr) handleHeaderReq(peer *types.PeerInfo, req *types.HeaderReq) {
+func (blockMgr *BlockMgr) handleHeaderReq(peer types.PeerInfoInterface, req *types.HeaderReq) {
 	headers := make([]types.BlockHeader, 0, req.ToHeight-req.FromHeight+1)
 	for i := req.FromHeight; i <= req.ToHeight; i++ {
 		node := blockMgr.ChainService.BestChain().NodeByHeight(uint64(i))
@@ -150,7 +153,8 @@ func (blockMgr *BlockMgr) handleHeaderReq(peer *types.PeerInfo, req *types.Heade
 	blockMgr.P2pServer.Send(peer.GetMsgRW(), uint64(types.MsgTypeHeaderRsp), types.HeaderRsp{Headers: headers})
 }
 
-func (blockMgr *BlockMgr) handleHeaderRsp(peer *types.PeerInfo, rsp *types.HeaderRsp) {
+func (blockMgr *BlockMgr) handleHeaderRsp(peer types.PeerInfoInterface, rsp *types.HeaderRsp) {
+	peer.CalcAverageRtt()
 	headerHashs := make([]*syncHeaderHash, 0, len(rsp.Headers))
 	for _, h := range rsp.Headers {
 		headerHashs = append(headerHashs, &syncHeaderHash{headerHash: h.Hash(), height: h.Height})
@@ -173,7 +177,7 @@ func (blockMgr *BlockMgr) handleHeaderRsp(peer *types.PeerInfo, rsp *types.Heade
 	blockMgr.headerHashCh <- headerHashs
 }
 
-func (blockMgr *BlockMgr) HandleBlockReqMsg(peer *types.PeerInfo, req *types.BlockReq) {
+func (blockMgr *BlockMgr) HandleBlockReqMsg(peer types.PeerInfoInterface, req *types.BlockReq) {
 	log.WithField("num:", len(req.BlockHashs)).Info("sync req block")
 	zero := crypto.Hash{}
 	startHeight := uint64(0)
@@ -190,7 +194,7 @@ func (blockMgr *BlockMgr) HandleBlockReqMsg(peer *types.PeerInfo, req *types.Blo
 	}
 
 	if endHash != zero {
-		block, err := blockMgr.DatabaseService.GetBlock(&endHash)
+		block, err := blockMgr.chainStore.GetBlock(&endHash)
 		if err != nil {
 			return
 		}
@@ -209,7 +213,7 @@ func (blockMgr *BlockMgr) HandleBlockReqMsg(peer *types.PeerInfo, req *types.Blo
 		}
 
 		node := blockMgr.ChainService.BestChain().NodeByHeight(i)
-		block, err := blockMgr.DatabaseService.GetBlock(node.Hash)
+		block, err := blockMgr.chainStore.GetBlock(node.Hash)
 		if err != nil {
 			return
 		}
@@ -225,6 +229,7 @@ func (blockMgr *BlockMgr) HandleBlockReqMsg(peer *types.PeerInfo, req *types.Blo
 	}
 }
 
-func (blockMgr *BlockMgr) HandleBlockRespMsg(rsp *types.BlockResp) {
+func (blockMgr *BlockMgr) HandleBlockRespMsg(peer types.PeerInfoInterface, rsp *types.BlockResp) {
+	peer.CalcAverageRtt()
 	blockMgr.blocksCh <- rsp.Blocks
 }

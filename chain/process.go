@@ -5,10 +5,10 @@ import (
 	"container/list"
 	"encoding/hex"
 	"fmt"
+	"github.com/drep-project/DREP-Chain/chain/store"
 	"math/big"
 
 	"github.com/drep-project/DREP-Chain/crypto"
-	"github.com/drep-project/DREP-Chain/database"
 	"github.com/drep-project/DREP-Chain/params"
 	"github.com/drep-project/DREP-Chain/types"
 	"github.com/pkg/errors"
@@ -97,9 +97,7 @@ func (chainService *ChainService) AcceptBlock(block *types.Block) (inMainChain b
 
 }
 
-//TODO cannot find chain tip  对外通知区块失败会产生这个错误  区块未保存 header已经保存
 func (chainService *ChainService) acceptBlock(block *types.Block) (inMainChain bool, err error) {
-	db := chainService.DatabaseService.BeginTransaction(true)
 	prevNode := chainService.blockIndex.LookupNode(&block.Header.PreviousHash)
 	preBlock := prevNode.Header()
 	for _, blockValidator := range chainService.BlockValidator() {
@@ -114,7 +112,7 @@ func (chainService *ChainService) acceptBlock(block *types.Block) (inMainChain b
 	}
 
 	//store block
-	err = chainService.DatabaseService.PutBlock(block)
+	err = chainService.chainStore.PutBlock(block)
 	if err != nil {
 		return false, err
 	}
@@ -123,22 +121,27 @@ func (chainService *ChainService) acceptBlock(block *types.Block) (inMainChain b
 	newNode.Status = types.StatusDataStored
 
 	chainService.blockIndex.AddNode(newNode)
-	err = chainService.blockIndex.FlushToDB(chainService.DatabaseService.PutBlockNode)
+	err = chainService.blockIndex.FlushToDB(chainService.chainStore.PutBlockNode)
+	if err != nil {
+		return false, err
+	}
+	trieStore, err := store.TrieStoreFromStore(chainService.DatabaseService.LevelDb(), prevNode.StateRoot)
 	if err != nil {
 		return false, err
 	}
 
 	if block.Header.PreviousHash.IsEqual(chainService.BestChain().Tip().Hash) {
-		context, err := chainService.connectBlock(db, block, newNode)
+		context, err := chainService.connectBlock(trieStore, block, newNode)
 		if err != nil {
 			return false, err
 		}
 
-		chainService.markState(newNode)
+		chainService.markState(trieStore, newNode)
 		//SetTip has save tip but block not saving
 		chainService.notifyBlock(block, context.Logs)
 		return true, nil
 	}
+
 	if block.Header.Height <= chainService.BestChain().Tip().Height {
 		// store but but not reorg
 		log.Debug("block store and validate true but not reorgnize")
@@ -149,32 +152,27 @@ func (chainService *ChainService) acceptBlock(block *types.Block) (inMainChain b
 
 	// Reorganize the chain.
 	log.WithField("hash", newNode.Hash).Info("REORGANIZE: Block is causing a reorganize.")
-	err = chainService.reorganizeChain(db, detachNodes, attachNodes)
+	err = chainService.reorganizeChain(trieStore, detachNodes, attachNodes)
 
 	// Either getReorganizeNodes or reorganizeChain could have made unsaved
 	// changes to the block index, so flush regardless of whether there was an
 	// error. The index would only be dirty if the block failed to connect, so
 	// we can ignore any errors writing.
-	if writeErr := chainService.blockIndex.FlushToDB(chainService.DatabaseService.PutBlockNode); writeErr != nil {
+	if writeErr := chainService.blockIndex.FlushToDB(chainService.chainStore.PutBlockNode); writeErr != nil {
 		log.WithField("Reason", writeErr).Warn("Error flushing block index changes to disk")
 	}
+
 	return err == nil, err
 }
 
-func (chainService *ChainService) connectBlock(db *database.Database, block *types.Block, newNode *types.BlockNode) (context *BlockExecuteContext, err error) {
+func (chainService *ChainService) connectBlock(trieStore store.StoreInterface, block *types.Block, newNode *types.BlockNode) (context *BlockExecuteContext, err error) {
 	gp := new(GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
-	context = &BlockExecuteContext{
-		Db:      db,
-		Block:   block,
-		Gp:      gp,
-		GasUsed: new(big.Int),
-		GasFee:  new(big.Int),
-	}
+	context = NewBlockExecuteContext(trieStore, gp, chainService.chainStore, block)
 	for _, blockValidator := range chainService.BlockValidator() {
 		err := blockValidator.ExecuteBlock(context)
 		if err != nil {
-			break
+			return context, err
 		}
 		//logs = append(logs,allLogs...)
 	}
@@ -184,11 +182,13 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *typ
 		chainService.flushIndexState()
 		return context, err
 	}
+
+	trieStore.Commit()
+
 	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
-		db.Commit()
-		oldStateRoot := db.GetStateRoot()
+		oldStateRoot := trieStore.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, oldStateRoot) {
-			if !db.RecoverTrie(chainService.bestChain.tip().StateRoot) {
+			if !trieStore.RecoverTrie(chainService.bestChain.tip().StateRoot) {
 				log.Fatal("root not equal and recover trie err")
 			}
 			err = errors.Wrapf(ErrNotMathcedStateRoot, "%s not matched %s", hex.EncodeToString(block.Header.StateRoot), hex.EncodeToString(oldStateRoot))
@@ -217,7 +217,7 @@ func (chainService *ChainService) connectBlock(db *database.Database, block *typ
 }
 
 func (chainService *ChainService) flushIndexState() {
-	if writeErr := chainService.blockIndex.FlushToDB(chainService.DatabaseService.PutBlockNode); writeErr != nil {
+	if writeErr := chainService.blockIndex.FlushToDB(chainService.chainStore.PutBlockNode); writeErr != nil {
 		log.WithField("Reason", writeErr).Warn("Error flushing block index changes to disk")
 	}
 }
@@ -270,7 +270,7 @@ func (chainService *ChainService) getReorganizeNodes(node *types.BlockNode) (*li
 	return detachNodes, attachNodes
 }
 
-func (chainService *ChainService) reorganizeChain(db *database.Database, detachNodes, attachNodes *list.List) error {
+func (chainService *ChainService) reorganizeChain(db store.StoreInterface, detachNodes, attachNodes *list.List) error {
 	if detachNodes.Len() == 0 && attachNodes.Len() == 0 {
 		return nil
 	}
@@ -278,13 +278,14 @@ func (chainService *ChainService) reorganizeChain(db *database.Database, detachN
 		elem := detachNodes.Back()
 		lastBlock := elem.Value.(*types.BlockNode)
 		height := lastBlock.Height - 1
-		db.Rollback2Block(height, lastBlock.Hash)
+		//Consider rollback
+		//	db.Rollback2Block(height, lastBlock.Hash)
 		log.WithField("Height", height).Info("REORGANIZE:RollBack state root")
-		chainService.markState(lastBlock.Parent)
+		chainService.markState(db, lastBlock.Parent)
 		elem = detachNodes.Front()
 		for elem != nil {
 			blockNode := elem.Value.(*types.BlockNode)
-			block, err := chainService.DatabaseService.GetBlock(blockNode.Hash)
+			block, err := chainService.chainStore.GetBlock(blockNode.Hash)
 			if err != nil {
 				return err
 			}
@@ -297,7 +298,7 @@ func (chainService *ChainService) reorganizeChain(db *database.Database, detachN
 		elem := attachNodes.Front()
 		for elem != nil { //
 			blockNode := elem.Value.(*types.BlockNode)
-			block, err := chainService.DatabaseService.GetBlock(blockNode.Hash)
+			block, err := chainService.chainStore.GetBlock(blockNode.Hash)
 			if err != nil {
 				return err
 			}
@@ -305,7 +306,7 @@ func (chainService *ChainService) reorganizeChain(db *database.Database, detachN
 			if err != nil {
 				return err
 			}
-			chainService.markState(blockNode)
+			chainService.markState(db, blockNode)
 			chainService.notifyBlock(block, context.Logs)
 			log.WithField("Height", blockNode.Height).WithField("Hash", blockNode.Hash).Info("REORGANIZE:Append New Block")
 			elem = elem.Next()
@@ -320,7 +321,7 @@ func (chainService *ChainService) notifyBlock(block *types.Block, logs []*types.
 		Hash:  *block.Header.Hash(),
 		Logs:  logs,
 	}
-	chainService.NewBlockFeed().Send(&chainEvent)
+	chainService.newBlockFeed.Send(&chainEvent)
 
 	if len(logs) > 0 {
 		chainService.logsFeed.Send(logs)
@@ -331,7 +332,7 @@ func (chainService *ChainService) notifyDetachBlock(block *types.Block) {
 	chainService.DetachBlockFeed().Send(block)
 
 	rmLogs := make([]*types.Log, 0)
-	receipts := chainService.DatabaseService.GetReceipts(*block.Header.Hash())
+	receipts := chainService.chainStore.GetReceipts(*block.Header.Hash())
 	for _, receipt := range receipts {
 		for _, log := range receipt.Logs {
 			l := *log
@@ -342,19 +343,19 @@ func (chainService *ChainService) notifyDetachBlock(block *types.Block) {
 	chainService.rmLogsFeed.Send(types.RemovedLogsEvent{Logs: rmLogs})
 }
 
-func (chainService *ChainService) markState(blockNode *types.BlockNode) {
+func (chainService *ChainService) markState(db store.StoreInterface, blockNode *types.BlockNode) {
+	db.Commit()
+	db.TrieDB().Commit(crypto.Bytes2Hash(blockNode.StateRoot), true)
 	chainService.BestChain().SetTip(blockNode)
-	triedb := chainService.DatabaseService.GetTriedDB()
-	triedb.Commit(crypto.Bytes2Hash(blockNode.StateRoot), true)
 }
 
 //TODO improves the performan
 func (chainService *ChainService) InitStates() error {
-	blockCount := chainService.DatabaseService.BlockNodeCount()
+	blockCount := chainService.chainStore.BlockNodeCount()
 	blockNodes := make([]types.BlockNode, blockCount)
 	var i int32
 	var lastNode *types.BlockNode
-	err := chainService.DatabaseService.BlockNodeIterator(func(header *types.BlockHeader, status types.BlockStatus) error {
+	err := chainService.chainStore.BlockNodeIterator(func(header *types.BlockHeader, status types.BlockStatus) error {
 		// Determine the parent block node. Since we iterate block headers
 		// in order of height, if the blocks are mostly linear there is a
 		// very good chance the previous header processed is the parent.
@@ -383,8 +384,6 @@ func (chainService *ChainService) InitStates() error {
 		node.Status = status
 		chainService.blockIndex.AddNode(node)
 
-		fmt.Println("recover block head height:", node.Height)
-
 		lastNode = node
 		i++
 		return nil
@@ -397,14 +396,16 @@ func (chainService *ChainService) InitStates() error {
 	tip := lastNode
 	for {
 		if tip.Height != 0 {
-			if chainService.DatabaseService.RecoverTrie(tip.StateRoot) {
+			_, err := store.TrieStoreFromStore(chainService.DatabaseService.LevelDb(), lastNode.StateRoot)
+			if err == nil {
+
 				break
 			}
 
 			// commit fail and repaire here
 			//delete dirty data , and rollback state to journalHeight
 			//去除磁盘中的nodeblock、block信息；回退区块号及相关的操作日志序列号
-			err, _ := chainService.DatabaseService.Rollback2Block(tip.Height, tip.Hash)
+			err, _ = chainService.chainStore.RollBack(tip.Height, tip.Hash)
 			if err != nil {
 				log.WithField("height", tip.Height).Error("rollback2block err")
 				return err
@@ -413,11 +414,12 @@ func (chainService *ChainService) InitStates() error {
 			//去除内存中节点信息
 			chainService.blockIndex.ClearNode(tip)
 		} else {
-			if chainService.DatabaseService.RecoverTrie(tip.StateRoot) {
+			_, err := store.TrieStoreFromStore(chainService.DatabaseService.LevelDb(), lastNode.StateRoot)
+			if err == nil {
 				break
-			} else {
-				return fmt.Errorf("recover tire from old data err")
 			}
+
+			return fmt.Errorf("recover tire from old data err")
 		}
 
 		tip = tip.Ancestor(tip.Height - 1)
@@ -427,7 +429,7 @@ func (chainService *ChainService) InitStates() error {
 	chainService.BestChain().SetTip(tip)
 
 	// Load the raw block bytes for the best block.
-	if !chainService.DatabaseService.HasBlock(tip.Hash) {
+	if !chainService.chainStore.HasBlock(tip.Hash) {
 		return errors.Wrapf(ErrBlockNotFound, "cannot find block %s in block index", tip.Hash)
 	}
 
@@ -449,7 +451,7 @@ func (chainService *ChainService) InitStates() error {
 	// As we might have updated the index after it was loaded, we'll
 	// attempt to flush the index to the DB. This will only result in a
 	// write if the elements are dirty, so it'll usually be a noop.
-	return chainService.blockIndex.FlushToDB(chainService.DatabaseService.PutBlockNode)
+	return chainService.blockIndex.FlushToDB(chainService.chainStore.PutBlockNode)
 }
 
 //180000000/360
@@ -464,7 +466,7 @@ func (chainService *ChainService) CalcGasLimit(parent *types.BlockHeader, gasFlo
 	if limit < params.MinGasLimit {
 		limit = params.MinGasLimit
 	}
-	// If we're outside our allowed gas range, we try to hone towards them
+	// If we're outside our allowed gasRemained range, we try to hone towards them
 	if limit < gasFloor {
 		limit = gasFloor
 	} else if limit > gasCeil {

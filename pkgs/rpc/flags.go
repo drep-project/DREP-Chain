@@ -13,7 +13,7 @@ var (
 	// RPC settings
 	HTTPEnabledFlag = cli.BoolFlag{
 		Name:  "http",
-		Usage: "Enable the HTTP-RPC server",
+		Usage: "StartMiner the HTTP-RPC server",
 	}
 	HTTPListenAddrFlag = cli.StringFlag{
 		Name:  "httpaddr",
@@ -50,7 +50,7 @@ var (
 	}
 	WSEnabledFlag = cli.BoolFlag{
 		Name:  "ws",
-		Usage: "Enable the WS-RPC server",
+		Usage: "StartMiner the WS-RPC server",
 	}
 	WSListenAddrFlag = cli.StringFlag{
 		Name:  "wsaddr",
@@ -75,7 +75,7 @@ var (
 	// RPC settings
 	RESTEnabledFlag = cli.BoolFlag{
 		Name:  "rest",
-		Usage: "Enable the REST-RPC server",
+		Usage: "StartMiner the REST-RPC server",
 	}
 	RESTListenAddrFlag = cli.StringFlag{
 		Name:  "restaddr",

@@ -76,8 +76,8 @@ type FilterService struct {
 	ChainIndexerService chain_indexer.ChainIndexerServiceInterface `service:"chain_indexer"`
 	Config              *FilterConfig
 
-	apis []app.API
-
+	apis          []app.API
+	chainStore    *chain.ChainStore
 	bloomRequests chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
 	mux           *event.TypeMux
 	events        *EventSystem
@@ -122,7 +122,7 @@ func (service *FilterService) Init(executeContext *app.ExecuteContext) error {
 	service.events = NewEventSystem(service.mux, service, false)
 	service.filters = make(map[ID]*filter)
 	service.bloomRequests = make(chan chan *bloombits.Retrieval)
-
+	service.chainStore = &chain.ChainStore{service.DatabaseService.LevelDb()}
 	service.apis = []app.API{
 		app.API{
 			Namespace: MODULENAME,
@@ -169,7 +169,7 @@ func (service *FilterService) startBloomHandlers(sectionSize uint64) {
 						head = *blockHeader.Hash()
 					}
 
-					if compVector, err := service.ChainIndexerService.ReadBloomBits(task.Bit, section, head); err == nil {
+					if compVector, err := service.ChainIndexerService.GetIndexerStore().ReadBloomBits(task.Bit, section, head); err == nil {
 						if blob, err := bitutil.DecompressBytes(compVector, int(sectionSize/8)); err == nil {
 							task.Bitsets[i] = blob
 						} else {
@@ -475,11 +475,11 @@ func (service *FilterService) HeaderByHash(ctx context.Context, blockHash crypto
 }
 
 func (service *FilterService) GetReceipts(ctx context.Context, blockHash crypto.Hash) (types.Receipts, error) {
-	return service.DatabaseService.GetReceipts(blockHash), nil
+	return service.chainStore.GetReceipts(blockHash), nil
 }
 
 func (service *FilterService) GetLogsByHash(ctx context.Context, blockHash crypto.Hash) ([][]*types.Log, error) {
-	receipts := service.DatabaseService.GetReceipts(blockHash)
+	receipts := service.chainStore.GetReceipts(blockHash)
 	if receipts == nil {
 		return nil, nil
 	}

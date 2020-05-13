@@ -31,7 +31,7 @@ type ChainContext interface {
 }
 
 // NewEVMContext creates a new context for use in the EVM.
-func NewEVMContext(msg *types.Transaction, header *types.BlockHeader, sender *crypto.CommonAddress, chain ChainContext) vm.Context {
+func NewEVMContext(msg *types.Transaction, header *types.BlockHeader, sender *crypto.CommonAddress) vm.Context {
 	return vm.Context{
 		CanTransfer: CanTransfer,
 		Transfer:    Transfer,
@@ -75,7 +75,7 @@ func CanTransfer(db vm.VMState, addr crypto.CommonAddress, amount *big.Int) bool
 	return db.GetBalance(&addr).Cmp(amount) >= 0
 }
 
-// Transfer subtracts amount from sender and adds amount to recipient using the given Db
+// Transfer subtracts amount from sender and adds amount to recipient using the given TrieStore
 func Transfer(db vm.VMState, sender, to crypto.CommonAddress, amount *big.Int) {
 	db.SubBalance(&sender, amount)
 	db.AddBalance(&to, amount)

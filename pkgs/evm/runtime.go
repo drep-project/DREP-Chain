@@ -2,11 +2,14 @@ package evm
 
 import (
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/drep-project/dlog"
 	"github.com/drep-project/DREP-Chain/app"
+	"github.com/drep-project/DREP-Chain/chain"
+	"github.com/drep-project/DREP-Chain/chain/store"
+	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/database"
 	"github.com/drep-project/DREP-Chain/pkgs/evm/vm"
 	"github.com/drep-project/DREP-Chain/types"
+	"github.com/drep-project/dlog"
 	"gopkg.in/urfave/cli.v1"
 	"math/big"
 )
@@ -25,7 +28,8 @@ var (
 
 type EvmService struct {
 	Config          *vm.VMConfig
-	DatabaseService *database.DatabaseService `service:"database"`
+	Chain           chain.ChainServiceInterface `service:"chain"`
+	DatabaseService *database.DatabaseService   `service:"database"`
 }
 
 func (evmService *EvmService) Name() string {
@@ -50,6 +54,7 @@ func (evmService *EvmService) Init(executeContext *app.ExecuteContext) error {
 	if err != nil {
 		return err
 	}
+	evmService.Chain.AddTransactionValidator(&EvmDeployTransactionSelector{}, &EvmDeployTransactionExecutor{evmService})
 	return nil
 }
 
@@ -63,15 +68,36 @@ func (evmService *EvmService) Stop(executeContext *app.ExecuteContext) error {
 
 func (evmService *EvmService) Receive(context actor.Context) {}
 
-func (evmService *EvmService) Eval(state vm.VMState, tx *types.Transaction, header *types.BlockHeader, bc ChainContext, gas uint64, value *big.Int) (ret []byte, gasUsed uint64, failed bool, err error) {
+func (evmService *EvmService) Call(database store.StoreInterface, tx *types.Transaction, header *types.BlockHeader) (ret []byte, err error) {
+	state := vm.NewState(database, header.Height)
 	sender, err := tx.From()
 	if err != nil {
-		return nil, uint64(0), false, err
+		return nil, err
+	}
+
+	// Create a new context to be used in the EVM environment
+	context := NewEVMContext(tx, header, sender)
+	// Create a new environment which holds all relevant information
+	// about the transaction and calling mechanisms.
+	vmenv := vm.NewEVM(context, state, evmService.Config)
+
+	ret, _, vmerr := vmenv.Call(*sender, *tx.To(), vmenv.ChainId, tx.Data.Data, tx.Gas(), tx.Amount())
+	if vmerr != nil {
+		dlog.Debug("call VM returned with error", "err", vmerr)
+		return nil, vmerr
+	}
+	return ret, nil
+}
+
+func (evmService *EvmService) Eval(state vm.VMState, tx *types.Transaction, header *types.BlockHeader, gas uint64, value *big.Int) (ret []byte, gasUsed uint64, contractAddr crypto.CommonAddress, failed bool, err error) {
+	sender, err := tx.From()
+	if err != nil {
+		return nil, uint64(0), crypto.CommonAddress{}, false, err
 	}
 	contractCreation := tx.To() == nil || tx.To().IsEmpty()
 
 	// Create a new context to be used in the EVM environment
-	context := NewEVMContext(tx, header, sender, bc)
+	context := NewEVMContext(tx, header, sender)
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(context, state, evmService.Config)
@@ -82,7 +108,7 @@ func (evmService *EvmService) Eval(state vm.VMState, tx *types.Transaction, head
 		vmerr error
 	)
 	if contractCreation {
-		ret, _, gas, vmerr = vmenv.Create(*sender, tx.Data.Data, gas, value)
+		ret, contractAddr, gas, vmerr = vmenv.Create(*sender, tx.Data.Data, gas, value)
 	} else {
 		// Increment the nonce for the next transaction
 		state.SetNonce(sender, state.GetNonce(sender)+1)
@@ -94,11 +120,13 @@ func (evmService *EvmService) Eval(state vm.VMState, tx *types.Transaction, head
 		// sufficient balance to make the transfer happen. The first
 		// balance transfer may never fail.
 		if vmerr == vm.ErrInsufficientBalance {
-			return nil, uint64(0), false, vmerr
+			return nil, uint64(0), crypto.CommonAddress{}, false, vmerr
 		}
 	}
-	return ret, gas, vmerr != nil, err
+
+	return ret, gas, contractAddr, vmerr != nil, err
 }
+
 func (evmService *EvmService) DefaultConfig() *vm.VMConfig {
 	return DefaultEvmConfig
 }

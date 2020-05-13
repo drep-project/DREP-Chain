@@ -5,12 +5,13 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"encoding/json"
 	"fmt"
+
 	crypto2 "github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/crypto/sha3"
 	"github.com/drep-project/DREP-Chain/types"
+	"github.com/drep-project/binary"
 	"github.com/ethereum/go-ethereum/crypto"
 	"golang.org/x/crypto/scrypt"
 	"io"
@@ -77,6 +78,7 @@ func DecryptData(cryptoNode CryptedNode, auth string) ([]byte, error) {
 	if cryptoNode.Cipher != "aes-128-ctr" {
 		return nil, fmt.Errorf("Cipher not supported: %v", cryptoNode.Cipher)
 	}
+
 	derivedKey, err := getKDFKey(cryptoNode, auth)
 	if err != nil {
 		return nil, err
@@ -91,6 +93,7 @@ func DecryptData(cryptoNode CryptedNode, auth string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return plainText, err
 }
 
@@ -118,17 +121,14 @@ func BytesToCryptoNode(data []byte, auth string) (node *types.Node, errRef error
 			errRef = ErrDecryptFail
 		}
 	}()
+
 	cryptoNode := new(CryptedNode)
-	if err := json.Unmarshal(data, cryptoNode); err != nil {
+
+	err := binary.Unmarshal(data, cryptoNode)
+	if err != nil {
 		return nil, err
 	}
 
-	/*
-		node2, errRef := EncryptData(data, []byte(auth),StandardScryptN, StandardScryptP)
-		if errRef != nil {
-			return
-		}
-	*/
 	privD, errRef := DecryptData(*cryptoNode, auth)
 	priv, pub := secp256k1.PrivKeyFromScalar(privD)
 	addr := crypto2.PubkeyToAddress(pub)

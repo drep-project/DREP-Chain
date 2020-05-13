@@ -4,6 +4,7 @@ import (
 	"container/heap"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"sync"
+	"time"
 
 	//"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/network/p2p"
@@ -11,9 +12,8 @@ import (
 )
 
 var (
-	//DefaultPort      = 55555
 	maxCacheBlockNum = 1024
-	maxCacheTxNum    = 4096
+	maxCacheTxNum    = 1024 //Maximum number of cached transactions per account
 )
 
 type PeerInfoInterface interface {
@@ -26,16 +26,25 @@ type PeerInfoInterface interface {
 	MarkTx(tx *Transaction)
 	KnownBlock(blk *Block) bool
 	MarkBlock(blk *Block)
+
+	SetReqTime(t time.Time)
+	CalcAverageRtt()
+	AverageRtt() time.Duration
 }
+
+var _ PeerInfoInterface = &PeerInfo{}
 
 //业务层peerknown blk height:
 type PeerInfo struct {
-	height      uint64                   //Peer当前块高度
-	exchangeTxs map[crypto.Hash]struct{} //与Peer交换的交易记录
-	knownTxs    *sortedBiMap             // 按照NONCE排序
-	knownBlocks *sortedBiMap             // 按照高度排序
-	peer        *p2p.Peer                //p2p层peer
-	rw          p2p.MsgReadWriter        //与peer对应的协议
+	lock        sync.Mutex
+	height      uint64                                //Peer当前块高度
+	exchangeTxs map[crypto.Hash]struct{}              //与Peer交换的交易记录
+	knownTxs    map[crypto.CommonAddress]*sortedBiMap // 按照NONCE排序
+	knownBlocks *sortedBiMap                          // 按照高度排序
+	peer        *p2p.Peer                             //p2p层peer
+	rw          p2p.MsgReadWriter                     //与peer对应的协议
+	reqTime     *time.Time                            //向一个peer发送请求时的系统时间
+	averageRtt  time.Duration                         //本地和peer之间，请求的时间估计值
 }
 
 func NewPeerInfo(p *p2p.Peer, rw p2p.MsgReadWriter) *PeerInfo {
@@ -43,11 +52,33 @@ func NewPeerInfo(p *p2p.Peer, rw p2p.MsgReadWriter) *PeerInfo {
 		peer:        p,
 		rw:          rw,
 		height:      0,
-		knownTxs:    newValueSortedBiMap(),
+		knownTxs:    make(map[crypto.CommonAddress]*sortedBiMap),
 		knownBlocks: newValueSortedBiMap(),
+		reqTime:     nil,
+		averageRtt:  0,
 	}
 
 	return peer
+}
+
+func (peer *PeerInfo) SetReqTime(t time.Time) {
+	peer.reqTime = &t
+}
+
+func (peer *PeerInfo) CalcAverageRtt() {
+	duration := time.Since(*peer.reqTime)
+	if peer.averageRtt == 0 {
+		peer.averageRtt = duration
+	} else {
+		peer.averageRtt = peer.averageRtt*95/100 + duration*5/100
+	}
+}
+
+func (peer *PeerInfo) AverageRtt() time.Duration {
+	if peer.reqTime != nil && time.Since(*peer.reqTime) > time.Duration(time.Minute*3) {
+		peer.averageRtt = 0
+	}
+	return peer.averageRtt
 }
 
 func (peer *PeerInfo) GetAddr() string {
@@ -70,22 +101,37 @@ func (peer *PeerInfo) GetHeight() uint64 {
 //peer端是否已经知道此tx
 func (peer *PeerInfo) KnownTx(tx *Transaction) bool {
 	hash := tx.TxHash()
-	b := peer.knownTxs.Exist(hash)
-	if b {
-		return b
+	addr, _ := tx.From()
+
+	peer.lock.Lock()
+	defer peer.lock.Unlock()
+	if sortedTxs, ok := peer.knownTxs[*addr]; ok {
+		if sortedTxs.Exist(hash) {
+			return true
+		}
 	}
+
 	return false
 }
 
 //记录对应的tx，避免多次相互发送
 func (peer *PeerInfo) MarkTx(tx *Transaction) {
 	hash := tx.TxHash()
+	addr, _ := tx.From()
+	peer.lock.Lock()
+	defer peer.lock.Unlock()
 
-	if peer.knownTxs.Len() > maxCacheTxNum {
-		peer.knownTxs.BatchRemove(1)
+	if sortedTxs, ok := peer.knownTxs[*addr]; ok {
+		if sortedTxs.Len() > maxCacheTxNum {
+			sortedTxs.BatchRemove(1)
+		}
+		sortedTxs.Put(hash, tx.Nonce())
+		return
 	}
 
-	peer.knownTxs.Put(hash, tx.Nonce())
+	sortedTxs := newValueSortedBiMap()
+	sortedTxs.Put(hash, tx.Nonce())
+	peer.knownTxs[*addr] = sortedTxs
 }
 
 func (peer *PeerInfo) KnownBlock(blk *Block) bool {
@@ -220,6 +266,7 @@ func (m *sortedBiMap) BatchRemove(count int) int {
 		m.mut.Lock()
 		value := heap.Pop(m.index).(uint64)
 		m.items.DeleteInverse(value)
+
 		m.mut.Unlock()
 	}
 

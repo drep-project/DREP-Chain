@@ -33,7 +33,7 @@ func TestNewTransactions(t *testing.T) {
 	path = filepath.Join(os.TempDir(), fmt.Sprintf("./jounal/txs"))
 	txPool = NewTransactionPool(diskDb, path)
 	if txPool == nil {
-		t.Error("init database service err")
+		t.Error("init chainStore service err")
 	}
 
 	txPool.Start(&feed)
@@ -44,13 +44,12 @@ func addTx(t *testing.T, num uint64) error {
 
 	addr := crypto.PubKey2Address(privKey.PubKey())
 	fmt.Println(string(addr.Hex()))
-	txPool.database.BeginTransaction()
+	txPool.chainStore.BeginTransaction()
 
 	var amount uint64 = 0xefffffffffffffff
-	txPool.database.PutBalance(&addr, new(big.Int).SetUint64(amount))
-	txPool.database.Commit(false)
+	txPool.chainStore.PutBalance(&addr, new(big.Int).SetUint64(amount))
 
-	nonce := txPool.database.GetNonce(&addr)
+	nonce := txPool.chainStore.GetNonce(&addr)
 	for i := 0; uint64(i) < num; i++ {
 		tx := types.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(100), new(big.Int).SetInt64(100), nonce+uint64(i))
 
@@ -142,8 +141,7 @@ func TestGetPendingTxs(t *testing.T) {
 					nonce = tx.Nonce()
 				}
 				fmt.Println("recv nonce:", nonce)
-				txPool.database.BeginTransaction()
-				txPool.database.Commit(false)
+				txPool.chainStore.BeginTransaction()
 
 				feed.Send(addrs)
 				time.Sleep(time.Second * 1)
@@ -158,13 +156,12 @@ func TestReplace(t *testing.T) {
 
 	privKey, _ := crypto.GenerateKey(rand.Reader)
 	addr := crypto.PubKey2Address(privKey.PubKey())
-	txPool.database.BeginTransaction()
+	txPool.chainStore.BeginTransaction()
 
 	var amount uint64 = 0xefffffffffffffff
-	txPool.database.PutBalance(&addr, new(big.Int).SetUint64(amount))
-	txPool.database.Commit(false)
+	txPool.chainStore.PutBalance(&addr, new(big.Int).SetUint64(amount))
 
-	nonce := txPool.database.GetNonce(&addr)
+	nonce := txPool.chainStore.GetNonce(&addr)
 	for i := 0; uint64(i) < maxTxsOfPending; i++ {
 		tx := types.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(int64(100+i)), new(big.Int).SetInt64(100), nonce+uint64(i))
 		sig, err := secp256k1.SignCompact(privKey, tx.TxHash().Bytes(), true)
@@ -218,11 +215,10 @@ func TestDelTx(t *testing.T) {
 
 	privKey, _ := crypto.GenerateKey(rand.Reader)
 	addr := crypto.PubKey2Address(privKey.PubKey())
-	txPool.database.BeginTransaction()
+	txPool.chainStore.BeginTransaction()
 
 	var amount uint64 = 0xefffffffffffffff
-	txPool.database.PutBalance(&addr, new(big.Int).SetUint64(amount))
-	txPool.database.Commit(false)
+	txPool.chainStore.PutBalance(&addr, new(big.Int).SetUint64(amount))
 
 	nonce := txPool.getTransactionCount(&addr)
 	for i := 0; uint64(i) < maxTxsOfQueue+maxTxsOfPending; i++ {

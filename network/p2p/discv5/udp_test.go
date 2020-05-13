@@ -55,7 +55,7 @@ var (
 // 		pipe:       newpipe(),
 // 		localkey:   newkey(),
 // 		remotekey:  newkey(),
-// 		remoteaddr: &net.UDPAddr{IP: net.IP{1, 2, 3, 4}, Port: 30303},
+// 		remoteaddr: &net.UDPAddr{Node: net.Node{1, 2, 3, 4}, Port: 30303},
 // 	}
 // 	test.table, test.udp, _ = newUDP(test.localkey, test.pipe, nil, "")
 // 	return test
@@ -133,7 +133,7 @@ var (
 // 	// findnode won't be accepted otherwise.
 // 	test.table.db.updateNode(NewNode(
 // 		PubkeyID(&test.remotekey.PublicKey),
-// 		test.remoteaddr.IP,
+// 		test.remoteaddr.Node,
 // 		uint16(test.remoteaddr.Port),
 // 		99,
 // 	))
@@ -225,7 +225,7 @@ var (
 // 		}
 // 		wantTo := rpcEndpoint{
 // 			// The mirrored UDP address is the UDP packet sender
-// 			IP: test.remoteaddr.IP, UDP: uint16(test.remoteaddr.Port),
+// 			Node: test.remoteaddr.Node, UDP: uint16(test.remoteaddr.Port),
 // 			// The mirrored TCP port is the one from the ping packet
 // 			TCP: testRemote.TCP,
 // 		}
@@ -241,7 +241,7 @@ var (
 // 		}
 // 		wantTo := rpcEndpoint{
 // 			// The mirrored UDP address is the UDP packet sender.
-// 			IP: test.remoteaddr.IP, UDP: uint16(test.remoteaddr.Port),
+// 			Node: test.remoteaddr.Node, UDP: uint16(test.remoteaddr.Port),
 // 			TCP: 0,
 // 		}
 // 		if !reflect.DeepEqual(p.To, wantTo) {
@@ -259,8 +259,8 @@ var (
 // 		if n.ID != rid {
 // 			t.Errorf("node has wrong ID: got %v, want %v", n.ID, rid)
 // 		}
-// 		if !bytes.Equal(n.IP, test.remoteaddr.IP) {
-// 			t.Errorf("node has wrong IP: got %v, want: %v", n.IP, test.remoteaddr.IP)
+// 		if !bytes.Equal(n.Node, test.remoteaddr.Node) {
+// 			t.Errorf("node has wrong Node: got %v, want: %v", n.Node, test.remoteaddr.Node)
 // 		}
 // 		if int(n.UDP) != test.remoteaddr.Port {
 // 			t.Errorf("node has wrong UDP port: got %v, want: %v", n.UDP, test.remoteaddr.Port)

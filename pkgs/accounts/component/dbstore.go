@@ -1,7 +1,6 @@
 package component
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +8,7 @@ import (
 	"github.com/drep-project/DREP-Chain/common/fileutil"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/types"
+	"github.com/drep-project/binary"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
@@ -34,6 +34,24 @@ func NewDbStore(dbStoreDir string) *DbStore {
 		dbDirPath: dbStoreDir,
 		db:        db,
 	}
+}
+
+func (dbStore *DbStore) ExportAddrs(auth string) ([]string, error) {
+	dbStore.db.NewIterator(nil, nil)
+	iter := dbStore.db.NewIterator(nil, nil)
+	addrs := make([]string, 0)
+
+	for iter.Next() {
+		value := iter.Value()
+		node, err := BytesToCryptoNode(value, auth)
+		if err != nil {
+			log.WithField("Msg", err).Error("read key store error ")
+			continue
+		}
+		addrs = append(addrs, node.Address.String())
+	}
+
+	return addrs, nil
 }
 
 // GetKey read key in db
@@ -71,7 +89,7 @@ func (dbStore *DbStore) StoreKey(key *types.Node, auth string) error {
 		},
 	}
 	cryptoNode.EncryptData([]byte(auth))
-	content, err := json.Marshal(cryptoNode)
+	content, err := binary.Marshal(cryptoNode)
 	if err != nil {
 		return err
 	}
@@ -84,9 +102,9 @@ func (dbStore *DbStore) ExportKey(auth string) ([]*types.Node, error) {
 	dbStore.db.NewIterator(nil, nil)
 	iter := dbStore.db.NewIterator(nil, nil)
 	persistedNodes := []*types.Node{}
+
 	for iter.Next() {
 		value := iter.Value()
-
 		node, err := BytesToCryptoNode(value, auth)
 		if err != nil {
 			log.WithField("Msg", err).Error("read key store error ")
@@ -94,6 +112,7 @@ func (dbStore *DbStore) ExportKey(auth string) ([]*types.Node, error) {
 		}
 		persistedNodes = append(persistedNodes, node)
 	}
+
 	return persistedNodes, nil
 }
 

@@ -10,9 +10,6 @@ var (
 )
 var (
 	HoleAddress = crypto.HexToAddress(HoleAddressStr)
-	Preminer    = map[crypto.CommonAddress]*big.Int{
-		crypto.HexToAddress("0xaD3dC2D8aedef155eabA42Ab72C1FE480699336c"): CoinFromNumer(10000000000),
-	}
 )
 
 func CoinFromNumer(number int64) *big.Int {

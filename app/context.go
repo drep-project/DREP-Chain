@@ -2,9 +2,11 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/asaskevich/EventBus"
 	"github.com/pkg/errors"
 	"gopkg.in/urfave/cli.v1"
+	"reflect"
 )
 
 var (
@@ -51,18 +53,6 @@ type API struct {
 	Public    bool        // indication if the methods must be considered safe for public use
 }
 
-// Services can customize their own configuration, command parameters, interfaces, services
-type Service interface {
-	Name() string                              // service  name must be unique
-	Api() []API                                // Interfaces required for services
-	CommandFlags() ([]cli.Command, []cli.Flag) // flags required for services
-	//P2pMessages() map[int]interface{}
-	//Receive(context actor.Context)
-	Init(executeContext *ExecuteContext) error
-	Start(executeContext *ExecuteContext) error
-	Stop(executeContext *ExecuteContext) error
-}
-
 // ExecuteContext centralizes all the data and global parameters of application execution,
 // and each service can read the part it needs.
 type ExecuteContext struct {
@@ -78,11 +68,6 @@ type ExecuteContext struct {
 	Quit      chan struct{}
 }
 
-// AddService add a service to context, The application then initializes and starts the service.
-func (econtext *ExecuteContext) AddService(service Service) {
-	econtext.Services = append(econtext.Services, service)
-}
-
 // GetService In addition, there is a dependency relationship between services.
 // This method is used to find the dependency services you need in the context.
 func (econtext *ExecuteContext) GetService(name string) Service {
@@ -94,6 +79,51 @@ func (econtext *ExecuteContext) GetService(name string) Service {
 	return nil
 }
 
+func (econtext *ExecuteContext) replaceService(replaceService, serviceValue Service) {
+	preAddServices := econtext.Services
+	for index, service := range preAddServices {
+		if service == replaceService {
+			econtext.Services = []Service{}
+			preService := preAddServices[0:index]
+			suffService := preAddServices[index:]
+			econtext.Services = append(econtext.Services, preService...)
+			econtext.Services = append(econtext.Services, serviceValue)
+			econtext.Services = append(econtext.Services, suffService...)
+			break
+		}
+	}
+}
+
+// addServiceType add a service and iterator all service that has added in and fields in current service,
+// if exist , set set service in the field
+func (econtext *ExecuteContext) addService(serviceValue reflect.Value) {
+	econtext.Services = append(econtext.Services, serviceValue.Interface().(Service))
+}
+
+func (econtext *ExecuteContext) resolveService(service Service) {
+	serviceValue := reflect.ValueOf(service)
+	serviceType := reflect.TypeOf(service)
+	serviceNumFields := serviceType.Elem().NumField()
+	for i := 0; i < serviceNumFields; i++ {
+		serviceTypeField := serviceType.Elem().Field(i)
+		refServiceName := GetServiceTag(serviceTypeField)
+		if refServiceName != "" {
+			preAddServices := econtext.Services
+			hasService := false
+			for _, addedService := range preAddServices {
+				if addedService.Name() == refServiceName {
+					serviceValue.Elem().Field(i).Set(reflect.ValueOf(addedService))
+					hasService = true
+				}
+			}
+
+			if !hasService {
+				fmt.Println(fmt.Sprintf("service not exist %s require %s", serviceValue.Interface().(Service).Name(), refServiceName))
+			}
+		}
+	}
+}
+
 //	GetConfig Configuration is divided into several segments,
 //	each service only needs to obtain its own configuration data,
 //	and the parsing process is also controlled by each service itself.
@@ -101,6 +131,31 @@ func (econtext *ExecuteContext) GetConfig(phaseName string) json.RawMessage {
 	phaseConfig, ok := econtext.PhaseConfig[phaseName]
 	if ok {
 		return phaseConfig
+	} else {
+		return nil
+	}
+}
+
+func (econtext *ExecuteContext) FlatConfig(phaseName string) error {
+	phaseConfig, ok := econtext.PhaseConfig[phaseName]
+	if ok {
+		subConfig := make(map[string]json.RawMessage)
+		subJson, err := phaseConfig.MarshalJSON()
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(subJson, &subConfig)
+		if err != nil {
+			return err
+		}
+
+		for key, val := range subConfig {
+			subConfigItem, _ := val.MarshalJSON()
+			if subConfigItem[0] == '{' {
+				econtext.PhaseConfig[key] = val
+			}
+		}
+		return nil
 	} else {
 		return nil
 	}

@@ -4,18 +4,17 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"math/big"
-
 	"github.com/drep-project/DREP-Chain/blockmgr"
 	"github.com/drep-project/DREP-Chain/chain"
+	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/crypto/sha3"
 	"github.com/drep-project/DREP-Chain/database"
-	"github.com/drep-project/DREP-Chain/network/p2p"
 	"github.com/drep-project/DREP-Chain/params"
 	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
 	"github.com/drep-project/DREP-Chain/types"
+	"math/big"
 )
 
 type SoloConsensus struct {
@@ -25,18 +24,21 @@ type SoloConsensus struct {
 	blockGenerator blockmgr.IBlockBlockGenerator
 	ChainService   chain.ChainServiceInterface
 	DbService      *database.DatabaseService
+	config         *SoloConfig
 }
 
 func NewSoloConsensus(
 	chainService chain.ChainServiceInterface,
 	blockGenerator blockmgr.IBlockBlockGenerator,
-	producer consensusTypes.Producer,
-	dbService *database.DatabaseService) *SoloConsensus {
+	myPk *secp256k1.PublicKey,
+	dbService *database.DatabaseService,
+	config *SoloConfig) *SoloConsensus {
 	return &SoloConsensus{
 		blockGenerator: blockGenerator,
 		ChainService:   chainService,
 		DbService:      dbService,
-		Pubkey:         producer.Pubkey,
+		Pubkey:         myPk,
+		config:         config,
 	}
 }
 
@@ -46,53 +48,65 @@ func (soloConsensus *SoloConsensus) Run(privKey *secp256k1.PrivateKey) (*types.B
 	//区块生成 共识 奖励 验证 完成
 	log.Trace("node leader finishes process consensus")
 
-	db := soloConsensus.DbService.BeginTransaction(false)
-	block, gasFee, err := soloConsensus.blockGenerator.GenerateTemplate(db, soloConsensus.CoinBase)
+	trieStore, err := store.TrieStoreFromStore(soloConsensus.DbService.LevelDb(), soloConsensus.ChainService.BestChain().Tip().StateRoot)
 	if err != nil {
 		return nil, err
 	}
+
+	block, gasFee, err := soloConsensus.blockGenerator.GenerateTemplate(trieStore, soloConsensus.CoinBase, soloConsensus.config.BlockInterval)
+	if err != nil {
+		return nil, err
+	}
+
 	sig, err := soloConsensus.PrivKey.Sign(sha3.Keccak256(block.AsSignMessage()))
 	if err != nil {
 		log.Error("sign block error")
 		return nil, errors.New("sign block error")
 	}
+
 	block.Proof = types.Proof{consensusTypes.Solo, sig.Serialize()}
-	err = AccumulateRewards(soloConsensus.Pubkey, db, gasFee)
+	err = AccumulateRewards(soloConsensus.Pubkey, trieStore, gasFee, block.Header.Height)
 	if err != nil {
 		return nil, err
 	}
-	db.Commit()
-	block.Header.StateRoot = db.GetStateRoot()
+
+	block.Header.StateRoot = trieStore.GetStateRoot()
 	//verify
 	if err := soloConsensus.verify(block); err != nil {
 		return nil, err
 	}
+
 	return block, nil
 }
 
 func (soloConsensus *SoloConsensus) verify(block *types.Block) error {
-	db := soloConsensus.DbService.BeginTransaction(false)
+	parent, err := soloConsensus.ChainService.GetBlockHeaderByHeight(block.Header.Height - 1)
+	if err != nil {
+		return err
+	}
+
+	dbstore := &chain.ChainStore{soloConsensus.DbService.LevelDb()}
+	trieStore, err := store.TrieStoreFromStore(soloConsensus.DbService.LevelDb(), parent.StateRoot)
+	if err != nil {
+		return err
+	}
 	gp := new(chain.GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
-	context := &chain.BlockExecuteContext{
-		Db:      db,
-		Block:   block,
-		Gp:      gp,
-		GasUsed: new(big.Int),
-		GasFee:  new(big.Int),
-	}
-	for _, validator := range soloConsensus.ChainService.BlockValidator() {
-		err := validator.ExecuteBlock(context)
+
+	context := chain.NewBlockExecuteContext(trieStore, gp, dbstore, block)
+	validators := soloConsensus.ChainService.BlockValidator()
+	for _, validator := range validators {
+		err = validator.ExecuteBlock(context)
 		if err != nil {
 			log.WithField("ExecuteBlock", err).Debug("multySigVerify")
 			return err
 		}
 	}
-	db.Commit()
+	stateRoot := trieStore.GetStateRoot()
+
 	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
-		stateRoot := db.GetStateRoot()
 		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
-			if !db.RecoverTrie(soloConsensus.ChainService.GetCurrentHeader().StateRoot) {
+			if !trieStore.RecoverTrie(soloConsensus.ChainService.GetCurrentHeader().StateRoot) {
 				log.Fatal("root not equal and recover trie err")
 			}
 			log.Error("rootcmd root !=")
@@ -105,14 +119,23 @@ func (soloConsensus *SoloConsensus) verify(block *types.Block) error {
 	return nil
 }
 
-func (soloConsensus *SoloConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, rw p2p.MsgReadWriter) error {
-	return nil
+func (soloConsensus *SoloConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, t uint64, buf []byte) {
 }
 
 // AccumulateRewards credits,The leader gets half of the reward and other ,Other participants get the average of the other half
-func AccumulateRewards(pk *secp256k1.PublicKey, db *database.Database, totalGasBalance *big.Int) error {
-	soloAddr := crypto.PubkeyToAddress(pk)
-	db.AddBalance(&soloAddr, totalGasBalance)
-	db.AddBalance(&soloAddr, params.CoinFromNumer(1000))
+func AccumulateRewards(pubkey *secp256k1.PublicKey, trieStore store.StoreInterface, totalGasBalance *big.Int, height uint64) error {
+	soloAddr := crypto.PubkeyToAddress(pubkey)
+	err := trieStore.AddBalance(&soloAddr, height, totalGasBalance)
+	if err != nil {
+		return err
+	}
+
+	reward := big.NewInt(params.Rewards)
+	reward.Mul(reward, new(big.Int).SetUint64(params.Coin))
+
+	err = trieStore.AddBalance(&soloAddr, height, reward)
+	if err != nil {
+		return err
+	}
 	return nil
 }

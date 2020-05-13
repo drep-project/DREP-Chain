@@ -1,6 +1,9 @@
 package service
 
 import (
+	"github.com/drep-project/DREP-Chain/pkgs/evm"
+	"path/filepath"
+
 	"github.com/drep-project/DREP-Chain/app"
 	"github.com/drep-project/DREP-Chain/blockmgr"
 	"github.com/drep-project/DREP-Chain/chain"
@@ -12,7 +15,6 @@ import (
 	accountTypes "github.com/drep-project/DREP-Chain/pkgs/accounts/types"
 	chainTypes "github.com/drep-project/DREP-Chain/types"
 	"gopkg.in/urfave/cli.v1"
-	"path/filepath"
 )
 
 var (
@@ -32,14 +34,15 @@ var (
 	}
 
 	DefaultConfig = &accountTypes.Config{
-		Enable: true,
-		Type:   "filestore",
-		//KeyStoreDir: "keystore",
+		Enable:      true,
+		Type:        "filestore",
+		KeyStoreDir: "keystore",
 	}
 )
 
 // AccountService
 type AccountService struct {
+	EvmService         *evm.EvmService             `service:"vm"`
 	DatabaseService    *database.DatabaseService   `service:"database"`
 	Chain              chain.ChainServiceInterface `service:"chain"`
 	PoolQuery          blockmgr.IBlockMgrPool      `service:"blockmgr"`
@@ -47,6 +50,7 @@ type AccountService struct {
 	Config             *accountTypes.Config
 	Wallet             *Wallet
 	apis               []app.API
+	quit               chan struct{}
 }
 
 // Name service name
@@ -61,6 +65,7 @@ func (accountService *AccountService) Api() []app.API {
 			Namespace: "account",
 			Version:   "1.0",
 			Service: &AccountApi{
+				EvmService:         accountService.EvmService,
 				Wallet:             accountService.Wallet,
 				messageBroadCastor: accountService.MessageBroadCastor,
 				poolQuery:          accountService.PoolQuery,
@@ -107,6 +112,8 @@ func (accountService *AccountService) Init(executeContext *app.ExecuteContext) e
 		return nil
 	}
 
+	accountService.quit = make(chan struct{})
+
 	var err error
 	accountService.Wallet, err = NewWallet(accountService.Config, accountService.Chain.ChainID())
 	if err != nil {
@@ -118,6 +125,7 @@ func (accountService *AccountService) Init(executeContext *app.ExecuteContext) e
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -129,9 +137,10 @@ func (accountService *AccountService) Start(executeContext *app.ExecuteContext) 
 }
 
 func (accountService *AccountService) Stop(executeContext *app.ExecuteContext) error {
-	if accountService.Config.Enable {
+	if accountService.Config == nil || accountService.Config.Enable {
 		return nil
 	}
+	close(accountService.quit)
 	return nil
 }
 

@@ -21,7 +21,7 @@ var (
 	// General settings
 	ConfigFileFlag = cli.StringFlag{
 		Name:  "config",
-		Usage: "TODO add config description",
+		Usage: "add config description",
 	}
 
 	HomeDirFlag = common.DirectoryFlag{
@@ -56,14 +56,8 @@ func NewApp() *DrepApp {
 	}
 }
 
-// AddService add a server into context
-func (mApp DrepApp) addServiceInstance(service Service) {
-	mApp.Context.AddService(service)
-}
-
 // AddServiceType add many services
-func (mApp DrepApp) AddServices(serviceInstances ...interface{}) error {
-	nilService := reflect.TypeOf((*Service)(nil)).Elem()
+func (mApp DrepApp) IncludeServices(serviceInstances ...interface{}) error {
 
 	for _, serviceInstance := range serviceInstances {
 		serviceType := reflect.TypeOf(serviceInstance)
@@ -71,43 +65,12 @@ func (mApp DrepApp) AddServices(serviceInstances ...interface{}) error {
 			serviceType = serviceType.Elem()
 		}
 		serviceVal := reflect.New(serviceType)
-		if !serviceVal.Type().Implements(nilService) {
+		if !serviceVal.Type().Implements(TServiceService) {
 			return ErrNotMatchedService
 		}
-		mApp.addService(serviceVal)
+		mApp.Context.addService(serviceVal)
 	}
 	return nil
-}
-
-// addServiceType add a service and iterator all service that has added in and fields in current service,
-// if exist , set set service in the field
-func (mApp DrepApp) addService(serviceValue reflect.Value) {
-	serviceType := serviceValue.Type()
-	serviceNumFields := serviceType.Elem().NumField()
-	for i := 0; i < serviceNumFields; i++ {
-		serviceTypeField := serviceType.Elem().Field(i)
-		refServiceName := GetServiceTag(serviceTypeField)
-		if refServiceName != "" {
-			preAddServices := mApp.Context.Services
-			hasService := false
-			for _, addedService := range preAddServices {
-
-				if addedService.Name() == refServiceName {
-					//TODO the filed to be set must be set public field, but it wiil be better to set it as a private field ,
-					//TODO There are still some technical difficulties that need to be overcome.
-					//TODO UnsafePointer may help
-					serviceValue.Elem().Field(i).Set(reflect.ValueOf(addedService))
-					hasService = true
-				}
-			}
-
-			if !hasService {
-				fmt.Println(fmt.Sprintf("service not exist %s require %s", serviceValue.Interface().(Service).Name(), refServiceName))
-				//dlog.Debug("service not exist",  "Service", addedService.Name() ,"RefService", refServiceName)
-			}
-		}
-	}
-	mApp.addServiceInstance(serviceValue.Interface().(Service))
 }
 
 // GetServiceTag read service tag name to match service that has added in
@@ -171,35 +134,47 @@ func (mApp *DrepApp) action(ctx *cli.Context) error {
 			}
 		}
 	}()
-	mApp.Context.Cli = ctx //NOTE this set is for different commmands-
-	for _, service := range mApp.Context.Services {
-		//config
-		serviceValue := reflect.ValueOf(service)
-		serviceType := serviceValue.Type()
-		var config reflect.Value
-		fieldValue := reflect.ValueOf(service).Elem().FieldByName("Config")
-		if hasMethod(serviceType, "DefaultConfig") {
-			defaultConfigVal := serviceValue.MethodByName("DefaultConfig").Call([]reflect.Value{})
-			if len(defaultConfigVal) > 0 && !defaultConfigVal[0].IsNil() {
-				config = defaultConfigVal[0]
-			} else {
-				t := fieldValue.Type()
-				config = reflect.New(t.Elem())
-			}
-		} else {
-			t := fieldValue.Type()
-			config = reflect.New(t.Elem())
-		}
-		fieldValue.Set(config)
-		//flag
-		err := mApp.Context.UnmashalConfig(service.Name(), fieldValue.Interface())
+	mApp.Context.Cli = ctx //NOTE this set is for different commmands-\\
+	endIndex := len(mApp.Context.Services)
+	for i := 0; i < endIndex; i++ {
+		service := mApp.Context.Services[i]
+		err := mApp.parserConfig(service)
 		if err != nil {
-			fmt.Println("unmashalConfig", service.Name(), err)
 			return err
 		}
+		mApp.Context.resolveService(service)
 		err = service.Init(mApp.Context)
 		if err != nil {
 			return err
+		}
+
+		fmt.Println("*****:", reflect.TypeOf(service))
+
+		if reflect.TypeOf(service).Implements(TOrService) {
+			//flate config
+			err = mApp.Context.FlatConfig(service.Name())
+			if err != nil {
+				return err
+			}
+			//select service
+			embedService := service.(OrService).SelectService()
+			if embedService == nil {
+				continue
+			}
+			mApp.Context.replaceService(service, embedService)
+			//parser subservice config
+			err = mApp.parserConfig(embedService)
+			if err != nil {
+				return err
+			}
+			mApp.Context.resolveService(embedService)
+			//init subservice
+			err = embedService.Init(mApp.Context)
+			if err != nil {
+				return err
+			}
+			i++
+			endIndex++
 		}
 	}
 
@@ -216,6 +191,31 @@ func (mApp *DrepApp) action(ctx *cli.Context) error {
 	case <-mApp.Context.Quit:
 	}
 	return nil
+}
+func (mApp *DrepApp) parserConfig(service Service) error {
+	//config
+	serviceValue := reflect.ValueOf(service)
+	serviceType := serviceValue.Type()
+	var config reflect.Value
+	fieldValue := reflect.ValueOf(service).Elem().FieldByName("Config")
+	if hasMethod(serviceType, "DefaultConfig") {
+		defaultConfigVal := serviceValue.MethodByName("DefaultConfig").Call([]reflect.Value{})
+		if len(defaultConfigVal) > 0 && !defaultConfigVal[0].IsNil() {
+			config = defaultConfigVal[0]
+		} else {
+			t := fieldValue.Type()
+			config = reflect.New(t.Elem())
+		}
+	} else {
+		t := fieldValue.Type()
+		if t.Kind() == reflect.Ptr {
+			config = reflect.New(t.Elem())
+		} else {
+			config = reflect.New(t).Elem()
+		}
+	}
+	fieldValue.Set(config)
+	return mApp.Context.UnmashalConfig(service.Name(), fieldValue.Interface())
 }
 
 //  read global config before main process
@@ -257,7 +257,7 @@ func loadConfigFile(ctx *cli.Context, homeDir string) (map[string]json.RawMessag
 
 	if ctx.GlobalIsSet(ConfigFileFlag.Name) {
 		file := ctx.GlobalString(ConfigFileFlag.Name)
-		if fileutil.IsFileExists(file) {
+		if !fileutil.IsFileExists(file) {
 			//report error when user specify
 			return nil, ErrConfigiNotFound
 		}
@@ -285,7 +285,6 @@ func loadConfigFile(ctx *cli.Context, homeDir string) (map[string]json.RawMessag
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(string(content))
 	jsonPhase := map[string]json.RawMessage{}
 	err = json.Unmarshal(content, &jsonPhase)
 	if err != nil {

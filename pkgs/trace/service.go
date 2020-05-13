@@ -1,13 +1,13 @@
 package trace
 
 import (
-	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/database"
+	consensusService "github.com/drep-project/DREP-Chain/pkgs/consensus/service"
 	"path"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/DREP-Chain/app"
 	chainService "github.com/drep-project/DREP-Chain/chain"
-	consensusService "github.com/drep-project/DREP-Chain/pkgs/consensus/service"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -22,7 +22,7 @@ var (
 		Name:  "enableTrace",
 		Usage: "is  trace enable flag",
 	}
-	DefaultDbName = "drep"
+	DefaultDbName = "dump-drep"
 )
 
 // HistoryService use to record tx data for query
@@ -33,6 +33,7 @@ type TraceService struct {
 	Config           *HistoryConfig
 	ChainService     chainService.ChainServiceInterface `service:"chain"`
 	ConsensusService *consensusService.ConsensusService `service:"consensus"`
+	DatabaseService  *database.DatabaseService          `service:"database"`
 	apis             []app.API
 	blockAnalysis    *BlockAnalysis
 }
@@ -71,11 +72,7 @@ func (traceService *TraceService) Init(executeContext *app.ExecuteContext) error
 	if !traceService.Config.Enable {
 		return nil
 	}
-	bpAddrs := []crypto.CommonAddress{}
-	for _, bp2 := range traceService.ConsensusService.Config.Producers {
-		bpAddrs = append(bpAddrs, bp2.Address())
-	}
-	traceService.blockAnalysis = NewBlockAnalysis(*traceService.Config, bpAddrs, traceService.ChainService.GetBlockByHeight)
+	traceService.blockAnalysis = NewBlockAnalysis(*traceService.Config, traceService.ConsensusService, traceService.DatabaseService.LevelDb(), traceService.ChainService.GetBlockByHeight)
 
 	traceService.apis = []app.API{
 		app.API{

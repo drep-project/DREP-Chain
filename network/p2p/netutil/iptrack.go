@@ -22,7 +22,7 @@ import (
 	"github.com/drep-project/DREP-Chain/common/mclock"
 )
 
-// IPTracker predicts the external endpoint, i.e. IP address and port, of the local host
+// IPTracker predicts the external endpoint, i.e. Node address and port, of the local host
 // based on statements made by other hosts.
 type IPTracker struct {
 	window          time.Duration
@@ -40,7 +40,7 @@ type ipStatement struct {
 	time     mclock.AbsTime
 }
 
-// NewIPTracker creates an IP tracker.
+// NewIPTracker creates an Node tracker.
 //
 // The window parameters configure the amount of past network events which are kept. The
 // minStatements parameter enforces a minimum number of statements which must be recorded

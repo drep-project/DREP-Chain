@@ -56,7 +56,7 @@ func TestAutoDiscRace(t *testing.T) {
 			}
 			wantIP := net.IP{33, 44, 55, 66}
 			if !rval.ip.Equal(wantIP) {
-				t.Errorf("result %d: got IP %v, want %v", i, rval.ip, wantIP)
+				t.Errorf("result %d: got Node %v, want %v", i, rval.ip, wantIP)
 			}
 		}
 	}

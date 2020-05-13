@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"github.com/drep-project/DREP-Chain/common/math"
 	"math/big"
 )
 
@@ -43,8 +44,8 @@ func AllZero(b []byte) bool {
 func GetDataBig(data []byte, start *big.Int, size *big.Int) []byte {
 	dlen := big.NewInt(int64(len(data)))
 
-	s := BigMin(start, dlen)
-	e := BigMin(new(big.Int).Add(s, size), dlen)
+	s := math.BigMin(start, dlen)
+	e := math.BigMin(new(big.Int).Add(s, size), dlen)
 	return RightPadBytes(data[s.Uint64():e.Uint64()], int(size.Uint64()))
 }
 

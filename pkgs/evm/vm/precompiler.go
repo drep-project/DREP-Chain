@@ -2,6 +2,7 @@ package vm
 
 import (
 	"errors"
+	"github.com/drep-project/DREP-Chain/common/math"
 	"github.com/drep-project/DREP-Chain/params"
 	"math/big"
 
@@ -156,7 +157,7 @@ func (c *bigModExp) RequiredGas(input []byte) uint64 {
 	adjExpLen.Add(adjExpLen, big.NewInt(int64(msb)))
 
 	// Calculate the gas cost of the operation
-	gas := new(big.Int).Set(common.BigMax(modLen, baseLen))
+	gas := new(big.Int).Set(math.BigMax(modLen, baseLen))
 	switch {
 	case gas.Cmp(big64) <= 0:
 		gas.Mul(gas, gas)
@@ -171,7 +172,7 @@ func (c *bigModExp) RequiredGas(input []byte) uint64 {
 			new(big.Int).Sub(new(big.Int).Mul(big480, gas), big199680),
 		)
 	}
-	gas.Mul(gas, common.BigMax(adjExpLen, big1))
+	gas.Mul(gas, math.BigMax(adjExpLen, big1))
 	gas.Div(gas, new(big.Int).SetUint64(params.ModExpQuadCoeffDiv))
 
 	if gas.BitLen() > 64 {

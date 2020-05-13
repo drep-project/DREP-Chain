@@ -5,8 +5,8 @@ import (
 )
 
 const (
-	maxHeaderHashCountReq = 255 //最多一次请求的头部hash个数
-	maxBlockCountReq      = 16  //最多一次请求的头部hash个数
+	maxHeaderHashCountReq = 48  //最多一次请求的头部hash个数
+	maxBlockCountReq      = 8   //最多一次请求的头部hash个数
 	maxSyncSleepTime      = 200 //同步的过程中，每个周期休息200毫秒
 	maxNetworkTimeout     = 30  //最大网络超时时间
 	maxLivePeer           = 20

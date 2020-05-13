@@ -45,7 +45,7 @@ func (nullTransport) Close()                                                {}
 // 		transport := newPingRecorder()
 // 		tab, _ := newTable(transport, NodeID{}, &net.UDPAddr{})
 // 		defer tab.Close()
-// 		pingSender := NewNode(MustHexID("a502af0f59b2aab7746995408c79e9ca312d2793cc997e44fc55eda62f0150bbb8c59a6f9269ba3a081518b62699ee807c7c19c20125ddfccca872608af9e370"), net.IP{}, 99, 99)
+// 		pingSender := NewNode(MustHexID("a502af0f59b2aab7746995408c79e9ca312d2793cc997e44fc55eda62f0150bbb8c59a6f9269ba3a081518b62699ee807c7c19c20125ddfccca872608af9e370"), net.Node{}, 99, 99)
 //
 // 		// fill up the sender's bucket.
 // 		last := fillBucket(tab, 253)

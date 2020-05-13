@@ -1,17 +1,27 @@
 package bft
 
 import (
-	"github.com/drep-project/binary"
+	"fmt"
 	"github.com/drep-project/DREP-Chain/chain"
+	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1/schnorr"
 	"github.com/drep-project/DREP-Chain/crypto/sha3"
-	types2 "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
 	"github.com/drep-project/DREP-Chain/types"
+	"github.com/drep-project/binary"
 )
 
+type GetProducers func(uint64, int) ([]Producer, error)
+type GetBlock func(hash *crypto.Hash) (*types.Block, error)
+
 type BlockMultiSigValidator struct {
-	Producers types2.ProducerSet
+	getProducers GetProducers
+	getBlock     GetBlock
+	producerNum  int
+}
+
+func NewBlockMultiSigValidator(getProducers GetProducers, getBlock GetBlock, producerNum int) *BlockMultiSigValidator {
+	return &BlockMultiSigValidator{getProducers, getBlock, producerNum}
 }
 
 func (blockMultiSigValidator *BlockMultiSigValidator) VerifyHeader(header, parent *types.BlockHeader) error {
@@ -27,15 +37,22 @@ func (blockMultiSigValidator *BlockMultiSigValidator) VerifyBody(block *types.Bl
 	if err != nil {
 		return err
 	}
+	parentBlock, err := blockMultiSigValidator.getBlock(&block.Header.PreviousHash)
+	if err != nil {
+		return err
+	}
+	producers, err := blockMultiSigValidator.getProducers(parentBlock.Header.Height, blockMultiSigValidator.producerNum)
+	if err != nil {
+		return err
+	}
 
-	//Non outgoing node, only accept incoming block
-	if len(blockMultiSigValidator.Producers) == 0 {
-		return nil
+	if blockMultiSigValidator.producerNum != len(multiSig.Bitmap) {
+		return fmt.Errorf("producer num:%d != multisig num:%d", blockMultiSigValidator.producerNum, len(multiSig.Bitmap))
 	}
 
 	for index, val := range multiSig.Bitmap {
 		if val == 1 {
-			producer := blockMultiSigValidator.Producers[index]
+			producer := producers[index]
 			participators = append(participators, producer.Pubkey)
 		}
 	}
@@ -50,10 +67,18 @@ func (blockMultiSigValidator *BlockMultiSigValidator) VerifyBody(block *types.Bl
 
 func (blockMultiSigValidator *BlockMultiSigValidator) ExecuteBlock(context *chain.BlockExecuteContext) error {
 	multiSig := &MultiSignature{}
-	err := binary.Unmarshal(context.Block.Proof.Evidence, multiSig)
+	parentBlock, err := blockMultiSigValidator.getBlock(&context.Block.Header.PreviousHash)
+	if err != nil {
+		return err
+	}
+	producers, err := blockMultiSigValidator.getProducers(parentBlock.Header.Height, blockMultiSigValidator.producerNum)
+	if err != nil {
+		return err
+	}
+	err = binary.Unmarshal(context.Block.Proof.Evidence, multiSig)
 	if err != nil {
 		return nil
 	}
-	AccumulateRewards(context.Db, multiSig, blockMultiSigValidator.Producers, context.GasFee)
-	return nil
+	calculator := NewRewardCalculator(context.TrieStore, multiSig, producers, context.GasFee, context.Block.Header.Height)
+	return calculator.AccumulateRewards(context.Block.Header.Height)
 }

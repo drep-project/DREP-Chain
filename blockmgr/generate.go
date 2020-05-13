@@ -1,19 +1,17 @@
 package blockmgr
 
 import (
-	"fmt"
-	"math/big"
-	"time"
-
 	"github.com/drep-project/DREP-Chain/chain"
+	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/common"
 	"github.com/drep-project/DREP-Chain/crypto"
-	"github.com/drep-project/DREP-Chain/database"
 	"github.com/drep-project/DREP-Chain/params"
 	"github.com/drep-project/DREP-Chain/types"
+	"math/big"
+	"time"
 )
 
-func (blockMgr *BlockMgr) GenerateTemplate(db *database.Database, leaderAddr crypto.CommonAddress) (*types.Block, *big.Int, error) {
+func (blockMgr *BlockMgr) GenerateTemplate(trieStore store.StoreInterface, leaderAddr crypto.CommonAddress, blockInterval int) (*types.Block, *big.Int, error) {
 	parent, err := blockMgr.ChainService.GetHighestBlock()
 	if err != nil {
 		return nil, nil, err
@@ -35,60 +33,23 @@ func (blockMgr *BlockMgr) GenerateTemplate(db *database.Database, leaderAddr cry
 		TxRoot:       []byte{},
 	}
 
-	finalTxs := make([]*types.Transaction, 0, len(txs))
-	finalReceipts := make([]*types.Receipt, 0, len(txs))
-
-	gasUsed := new(big.Int)
-	gasFee := new(big.Int)
-	gp := new(chain.GasPool).AddGas(blockHeader.GasLimit.Uint64())
-	stopchanel := make(chan struct{}, 1)
-	tm := time.AfterFunc(time.Second*5, func() {
-		stopchanel <- struct{}{}
-	})
-
-SELECT_TX:
-	for _, t := range txs {
-		snap := db.CopyState()
-		fmt.Println(gp)
-		newGp := *gp
-		select {
-		case <-stopchanel:
-			break SELECT_TX
-		default:
-			receipt, txGasUsed, txGasFee, err := blockMgr.ChainService.TransactionValidator().ExecuteTransaction(db, t, &newGp, blockHeader)
-			if err == nil {
-				finalTxs = append(finalTxs, t)
-				finalReceipts = append(finalReceipts, receipt)
-				gasUsed.Add(gasUsed, txGasUsed)
-				gasFee.Add(gasFee, txGasFee)
-				gp = &newGp // use new gp and new state if success
-			} else {
-				//revert old state and use old gp if fail
-				db.RevertState(snap)
-				if err.Error() == ErrReachGasLimit.Error() {
-					break SELECT_TX
-				} else {
-					log.WithField("Reason", err).Warn("generate block fail")
-					continue
-				}
-			}
-		}
-	}
-	tm.Stop()
-	blockHeader.GasUsed = *new(big.Int).SetUint64(gasUsed.Uint64())
-	blockHeader.TxRoot = blockMgr.ChainService.DeriveMerkleRoot(finalTxs)
-	blockHeader.ReceiptRoot = blockMgr.ChainService.DeriveReceiptRoot(finalReceipts)
-
-	if len(finalReceipts) != 0 {
-		blockHeader.Bloom = types.CreateBloom(finalReceipts)
-	}
-
 	block := &types.Block{
 		Header: blockHeader,
 		Data: &types.BlockData{
-			TxCount: uint64(len(finalTxs)),
-			TxList:  finalTxs,
+			TxCount: uint64(len(txs)),
+			TxList:  txs,
 		},
 	}
-	return block, gasFee, nil
+
+	gp := new(chain.GasPool).AddGas(newGasLimit.Uint64())
+	//process transaction
+	chainStore := &chain.ChainStore{blockMgr.DatabaseService.LevelDb()}
+	context := chain.NewBlockExecuteContext(trieStore, gp, chainStore, block)
+
+	templateValidator := NewTemplateBlockValidator(blockMgr.ChainService)
+	err = templateValidator.ExecuteBlock(context, blockInterval)
+	if err != nil {
+		return nil, nil, err
+	}
+	return context.Block, context.GasFee, nil
 }

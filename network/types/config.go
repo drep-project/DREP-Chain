@@ -74,9 +74,9 @@ type Config struct {
 	// allowed to connect, even above the peer limit.
 	TrustedNodes []*enode.Node
 
-	// Connectivity can be restricted to certain IP networks.
+	// Connectivity can be restricted to certain Node networks.
 	// If this option is set to a non-nil value, only hosts which match one of the
-	// IP networks contained in the list are considered.
+	// Node networks contained in the list are considered.
 	NetRestrict *netutil.Netlist `toml:",omitempty"`
 
 	// NodeDatabase is the path to the database containing the previously seen

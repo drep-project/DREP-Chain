@@ -2,12 +2,12 @@ package bft
 
 import (
 	"fmt"
-	"github.com/drep-project/binary"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1/schnorr"
 	"github.com/drep-project/DREP-Chain/crypto/sha3"
 	"github.com/drep-project/DREP-Chain/network/p2p"
 	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
+	"github.com/drep-project/binary"
 	"github.com/sirupsen/logrus"
 	"math"
 	"os"
@@ -57,8 +57,12 @@ func (writeIo *writeIo) WriteMsg(msg p2p.Msg) error {
 }
 
 type testPeer struct {
-	consensusTypes.Producer
+	Producer
 	client *testBFT
+}
+
+func (testPeer testPeer) ID() string {
+	panic("implement me")
 }
 
 func (testPeer *testPeer) GetMsgRW() p2p.MsgReadWriter {
@@ -66,15 +70,15 @@ func (testPeer *testPeer) GetMsgRW() p2p.MsgReadWriter {
 }
 
 func (testPeer *testPeer) String() string {
-	return testPeer.Producer.IP
+	return testPeer.Producer.Node.String()
 }
 
 func (testPeer *testPeer) IP() string {
-	return testPeer.Producer.IP
+	return testPeer.Producer.Node.String()
 }
 
 func (testPeer *testPeer) Equal(ipeer consensusTypes.IPeerInfo) bool {
-	return testPeer.Producer.IP == ipeer.IP()
+	return testPeer.Producer.Node.String() == ipeer.ID()
 }
 
 type dummyConsensusMsg struct {
@@ -102,12 +106,12 @@ type testBFT struct {
 
 	leader    *Leader
 	member    *Member
-	Producers consensusTypes.ProducerSet
+	Producers ProducerSet
 }
 
 func newTestBFT(
 	privKey *secp256k1.PrivateKey,
-	producer consensusTypes.ProducerSet,
+	producer ProducerSet,
 	sender Sender,
 	ip string,
 	peersInfo map[string]consensusTypes.IPeerInfo) *testBFT {
@@ -181,14 +185,13 @@ func (testbft *testBFT) collectMemberStatus() []*MemberInfo {
 		if isMe {
 			IsOnline = true
 		} else {
-			//todo  peer获取到的IP地址和配置的ip地址是否相等（nat后是否相等,从tcp原理来看是相等的）
-			if pi, ok = testbft.onLinePeer[produce.IP]; ok {
+			if pi, ok = testbft.onLinePeer[produce.Node.String()]; ok {
 				IsOnline = true
 			}
 		}
 
 		produceInfos = append(produceInfos, &MemberInfo{
-			Producer: &consensusTypes.Producer{Pubkey: produce.Pubkey, IP: produce.IP},
+			Producer: &Producer{Pubkey: produce.Pubkey, Node: produce.Node},
 			Peer:     pi,
 			IsMe:     isMe,
 			IsOnline: IsOnline,
@@ -206,7 +209,7 @@ type bftResult struct {
 
 func (testbft *testBFT) runAsLeader(miners []*MemberInfo) *bftResult {
 	testbft.leader = NewLeader(testbft.PrivKey, testbft.sender, testbft.WaitTime, miners, testbft.minMiners, testbft.curentHeight, testbft.leaderMsgPool)
-	err, sig, bitmap := testbft.leader.ProcessConsensus(&dummyConsensusMsg{})
+	err, sig, bitmap := testbft.leader.ProcessConsensus(&dummyConsensusMsg{}, 0)
 	return &bftResult{bitmap, &dummyConsensusMsg{}, sig, err}
 }
 
@@ -218,7 +221,7 @@ func (testbft *testBFT) runAsMember(miners []*MemberInfo) *bftResult {
 	testbft.member.validator = func(msg IConsenMsg) error {
 		return nil
 	}
-	msg, err := testbft.member.ProcessConsensus()
+	msg, err := testbft.member.ProcessConsensus(0)
 	return &bftResult{
 		err: err,
 		msg: msg,
@@ -249,7 +252,7 @@ func (testbft *testBFT) ChangeTime(interval time.Duration) {
 
 func TestBFT(t *testing.T) {
 	keystore := make([]*secp256k1.PrivateKey, 4)
-	produces := make([]consensusTypes.Producer, 4)
+	produces := make(ProducerSet, 4)
 	onlinePeers := make(map[string]consensusTypes.IPeerInfo)
 	bftClients := make([]*testBFT, 4)
 	for i := 0; i < 4; i++ {
@@ -258,12 +261,12 @@ func TestBFT(t *testing.T) {
 			i--
 			continue
 		}
-		p := consensusTypes.Producer{priv.PubKey(), strconv.Itoa(i)}
+		p := Producer{}
 		produces[i] = p
 		keystore[i] = priv
 
-		sendor := &testSendor{onlinePeers, bftClients, p.IP}
-		bftClient := newTestBFT(keystore[i], produces, sendor, p.IP, onlinePeers)
+		sendor := &testSendor{onlinePeers, bftClients, ""}
+		bftClient := newTestBFT(keystore[i], produces, sendor, "", onlinePeers)
 		bftClients[i] = bftClient
 		onlinePeers[strconv.Itoa(i)] = &testPeer{p, bftClient}
 	}
@@ -300,7 +303,7 @@ func TestBFT(t *testing.T) {
 
 func TestBFTTimeOut(t *testing.T) {
 	keystore := make([]*secp256k1.PrivateKey, 4)
-	produces := make([]consensusTypes.Producer, 4)
+	produces := make(ProducerSet, 4)
 	onlinePeers := make(map[string]consensusTypes.IPeerInfo)
 	bftClients := make([]*testBFT, 4)
 	for i := 0; i < 4; i++ {
@@ -309,12 +312,12 @@ func TestBFTTimeOut(t *testing.T) {
 			i--
 			continue
 		}
-		p := consensusTypes.Producer{priv.PubKey(), strconv.Itoa(i)}
+		p := Producer{priv.PubKey(), nil}
 		produces[i] = p
 		keystore[i] = priv
 
-		sendor := &testSendor{onlinePeers, bftClients, p.IP}
-		bftClient := newTestBFT(keystore[i], produces, sendor, p.IP, onlinePeers)
+		sendor := &testSendor{onlinePeers, bftClients, ""}
+		bftClient := newTestBFT(keystore[i], produces, sendor, "", onlinePeers)
 		bftClients[i] = bftClient
 		if i < 2 {
 			onlinePeers[strconv.Itoa(i)] = &testPeer{p, bftClient}

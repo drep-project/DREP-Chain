@@ -31,8 +31,8 @@ type ChainIndexerChain interface {
 type ChainIndexerServiceInterface interface {
 	app.Service
 	BloomStatus() (uint64, uint64)
-	ReadBloomBits(bit uint, section uint64, head crypto.Hash) ([]byte, error)
 	GetConfig() *ChainIndexerConfig
+	GetIndexerStore() *ChainIndexerStore
 }
 
 var _ ChainIndexerServiceInterface = &ChainIndexerService{}
@@ -42,6 +42,7 @@ type ChainIndexerService struct {
 	ChainService    chain.ChainServiceInterface `service:"chain"`
 	Config          *ChainIndexerConfig
 
+	db             *ChainIndexerStore
 	storedSections uint64 // Number of sections successfully indexed into the database
 	knownSections  uint64 // Number of sections known to be complete (block wise)
 
@@ -84,7 +85,8 @@ func (chainIndexer *ChainIndexerService) Init(executeContext *app.ExecuteContext
 	chainIndexer.update = make(chan struct{}, 1)
 	chainIndexer.quit = make(chan chan error)
 	chainIndexer.ctx, chainIndexer.ctxCancel = context.WithCancel(context.Background())
-	chainIndexer.storedSections = chainIndexer.getStoredSections()
+	chainIndexer.db = NewChainIndexerStore(chainIndexer.DatabaseService.LevelDb())
+	chainIndexer.storedSections = chainIndexer.db.getStoredSections()
 
 	go chainIndexer.updateLoop()
 
@@ -101,6 +103,9 @@ func (chainIndexer *ChainIndexerService) Start(executeContext *app.ExecuteContex
 }
 
 func (chainIndexer *ChainIndexerService) Stop(executeContext *app.ExecuteContext) error {
+	if chainIndexer.Config == nil || chainIndexer.Config.Enable {
+		return nil
+	}
 	var errs []error
 	chainIndexer.ctxCancel()
 
@@ -164,7 +169,7 @@ func (chainIndexer *ChainIndexerService) updateLoop() {
 				section := chainIndexer.storedSections
 				var oldHead crypto.Hash
 				if section > 0 {
-					oldHead = chainIndexer.getSectionHead(section - 1)
+					oldHead = chainIndexer.db.getSectionHead(section - 1)
 				}
 				// Process the newly defined section in the background
 				chainIndexer.lock.Unlock()
@@ -181,8 +186,8 @@ func (chainIndexer *ChainIndexerService) updateLoop() {
 				chainIndexer.lock.Lock()
 
 				// If processing succeeded and no reorgs occurred, mark the section completed
-				if err == nil && (section == 0 || oldHead == chainIndexer.getSectionHead(section-1)) {
-					chainIndexer.setSectionHead(section, newHead)
+				if err == nil && (section == 0 || oldHead == chainIndexer.db.getSectionHead(section-1)) {
+					chainIndexer.db.setSectionHead(section, newHead)
 					chainIndexer.setValidStoredSections(section + 1)
 					if chainIndexer.storedSections == chainIndexer.knownSections && updating {
 						updating = false
@@ -252,7 +257,7 @@ func (chainIndexer *ChainIndexerService) eventLoop(currentHeader *types.BlockHea
 				}
 
 				if hash != prevHash {
-					if h := chainIndexer.DatabaseService.FindCommonAncestor(prevHeader, header); h != nil {
+					if h := chainIndexer.db.FindCommonAncestor(prevHeader, header); h != nil {
 						chainIndexer.newHead(h.Height, true)
 					}
 				}
@@ -316,7 +321,7 @@ func (chainIndexer *ChainIndexerService) verifyLastHead() {
 			hash = *blockHeader.Hash()
 		}
 
-		if chainIndexer.getSectionHead(chainIndexer.storedSections-1) == hash {
+		if chainIndexer.db.getSectionHead(chainIndexer.storedSections-1) == hash {
 			return
 		}
 		chainIndexer.setValidStoredSections(chainIndexer.storedSections - 1)
@@ -379,7 +384,7 @@ func (chainIndexer *ChainIndexerService) process(ctx context.Context, header *ty
 
 // 完成bloom部分和把它写进数据库。
 func (chainIndexer *ChainIndexerService) commit() error {
-	batch := chainIndexer.DatabaseService.NewBatch()
+	batch := chainIndexer.db.NewBatch()
 	for i := 0; i < types.BloomBitLength; i++ {
 		bits, err := chainIndexer.gen.Bitset(uint(i))
 		if err != nil {
@@ -392,10 +397,42 @@ func (chainIndexer *ChainIndexerService) commit() error {
 	return batch.Write()
 }
 
+// setValidStoredSections writes the number of valid sections to the index database
+func (chainIndexer *ChainIndexerService) setValidStoredSections(sections uint64) {
+	// Set the current number of valid sections in the database
+	chainIndexer.db.setStoredSections(sections)
+
+	// Remove any reorged sections, caching the valids in the mean time
+	for chainIndexer.storedSections > sections {
+		chainIndexer.storedSections--
+		chainIndexer.db.deleteSectionHead(chainIndexer.storedSections)
+	}
+	chainIndexer.storedSections = sections // needed if new > old
+}
+
+// Sections returns the number of processed sections maintained by the indexer
+// and also the information about the last header indexed for potential canonical
+// verifications.
+func (chainIndexer *ChainIndexerService) Sections() (uint64, uint64, crypto.Hash) {
+	chainIndexer.lock.Lock()
+	defer chainIndexer.lock.Unlock()
+
+	chainIndexer.verifyLastHead()
+	return chainIndexer.storedSections, chainIndexer.storedSections*chainIndexer.Config.SectionSize - 1, chainIndexer.db.getSectionHead(chainIndexer.storedSections - 1)
+}
+
+func (chainIndexer *ChainIndexerService) BloomStatus() (uint64, uint64) {
+	sections, _, _ := chainIndexer.Sections()
+	return chainIndexer.Config.SectionSize, sections
+}
+
 func (chainIndexer *ChainIndexerService) GetConfig() *ChainIndexerConfig {
 	return chainIndexer.Config
 }
 
+func (chainIndexer *ChainIndexerService) GetIndexerStore() *ChainIndexerStore {
+	return chainIndexer.db
+}
 func (chainIndexer *ChainIndexerService) DefaultConfig() *ChainIndexerConfig {
 	return DefaultConfig
 }

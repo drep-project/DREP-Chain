@@ -11,8 +11,17 @@ type MemoryStore struct {
 	keys *sync.Map
 }
 
+func (mstore *MemoryStore) ExportAddrs(auth string) ([]string, error) {
+	addrs := make([]string, 0)
+	mstore.keys.Range(func(key, value interface{}) bool {
+		addrs = append(addrs, value.(types.Node).Address.String())
+		return true
+	})
+	return addrs, nil
+}
+
 func NewMemoryStore() *MemoryStore {
-	return &MemoryStore{new(sync.Map)}
+	return &MemoryStore{keys: new(sync.Map)}
 }
 
 func (mstore *MemoryStore) GetKey(addr *crypto.CommonAddress, auth string) (*types.Node, error) {

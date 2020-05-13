@@ -65,7 +65,7 @@ func init() {
 	special6.Add("2002::/16")
 }
 
-// Netlist is a list of IP networks.
+// Netlist is a list of Node networks.
 type Netlist []net.IPNet
 
 // ParseNetlist parses a comma-separated list of CIDR masks.
@@ -122,7 +122,7 @@ func (l *Netlist) Add(cidr string) {
 	*l = append(*l, *n)
 }
 
-// Contains reports whether the given IP is contained in the list.
+// Contains reports whether the given Node is contained in the list.
 func (l *Netlist) Contains(ip net.IP) bool {
 	if l == nil {
 		return false
@@ -135,7 +135,7 @@ func (l *Netlist) Contains(ip net.IP) bool {
 	return false
 }
 
-// IsLAN reports whether an IP is a local network address.
+// IsLAN reports whether an Node is a local network address.
 func IsLAN(ip net.IP) bool {
 	if ip.IsLoopback() {
 		return true
@@ -146,7 +146,7 @@ func IsLAN(ip net.IP) bool {
 	return lan6.Contains(ip)
 }
 
-// IsSpecialNetwork reports whether an IP is located in a special-use network range
+// IsSpecialNetwork reports whether an Node is located in a special-use network range
 // This includes broadcast, multicast and documentation addresses.
 func IsSpecialNetwork(ip net.IP) bool {
 	if ip.IsMulticast() {
@@ -159,14 +159,14 @@ func IsSpecialNetwork(ip net.IP) bool {
 }
 
 var (
-	errInvalid     = errors.New("invalid IP")
+	errInvalid     = errors.New("invalid Node")
 	errUnspecified = errors.New("zero address")
 	errSpecial     = errors.New("special network")
 	errLoopback    = errors.New("loopback address from non-loopback host")
 	errLAN         = errors.New("LAN address from WAN host")
 )
 
-// CheckRelayIP reports whether an IP relayed from the given sender IP
+// CheckRelayIP reports whether an Node relayed from the given sender Node
 // is a valid connection target.
 //
 // There are four rules:
@@ -193,7 +193,7 @@ func CheckRelayIP(sender, addr net.IP) error {
 	return nil
 }
 
-// SameNet reports whether two IP addresses have an equal prefix of the given bit length.
+// SameNet reports whether two Node addresses have an equal prefix of the given bit length.
 func SameNet(bits uint, ip, other net.IP) bool {
 	ip4, other4 := ip.To4(), other.To4()
 	switch {
@@ -225,7 +225,7 @@ type DistinctNetSet struct {
 	buf     net.IP
 }
 
-// Add adds an IP address to the set. It returns false (and doesn't add the IP) if the
+// Add adds an Node address to the set. It returns false (and doesn't add the Node) if the
 // number of existing IPs in the defined range exceeds the limit.
 func (s *DistinctNetSet) Add(ip net.IP) bool {
 	key := s.key(ip)
@@ -237,7 +237,7 @@ func (s *DistinctNetSet) Add(ip net.IP) bool {
 	return false
 }
 
-// Remove removes an IP from the set.
+// Remove removes an Node from the set.
 func (s *DistinctNetSet) Remove(ip net.IP) {
 	key := s.key(ip)
 	if n, ok := s.members[string(key)]; ok {
@@ -249,7 +249,7 @@ func (s *DistinctNetSet) Remove(ip net.IP) {
 	}
 }
 
-// Contains whether the given IP is contained in the set.
+// Contains whether the given Node is contained in the set.
 func (s DistinctNetSet) Contains(ip net.IP) bool {
 	key := s.key(ip)
 	_, ok := s.members[string(key)]
@@ -268,7 +268,7 @@ func (s DistinctNetSet) Len() int {
 // key encodes the map key for an address into a temporary buffer.
 //
 // The first byte of key is '4' or '6' to distinguish IPv4/IPv6 address types.
-// The remainder of the key is the IP, truncated to the number of bits.
+// The remainder of the key is the Node, truncated to the number of bits.
 func (s *DistinctNetSet) key(ip net.IP) net.IP {
 	// Lazily initialize storage.
 	if s.members == nil {

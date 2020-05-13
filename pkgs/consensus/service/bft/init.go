@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	MODULENAME = "consensus"
+	MODULENAME = "bft"
 )
 
 var (

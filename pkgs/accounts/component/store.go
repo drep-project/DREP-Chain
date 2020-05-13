@@ -14,4 +14,7 @@ type KeyStore interface {
 	ExportKey(auth string) ([]*types.Node, error)
 	// Joins filename with the key directory unless it is already absolute.
 	JoinPath(filename string) string
+
+	//export all addresses
+	ExportAddrs(auth string) ([]string, error)
 }

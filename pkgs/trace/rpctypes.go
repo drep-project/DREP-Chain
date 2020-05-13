@@ -2,12 +2,12 @@ package trace
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"github.com/drep-project/DREP-Chain/common"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/bft"
-	types2 "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
+	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
 	"github.com/drep-project/DREP-Chain/types"
+	drepbinary "github.com/drep-project/binary"
 	"math/big"
 )
 
@@ -50,6 +50,7 @@ func (rpcTx *RpcTransaction) ToTx() *types.Transaction {
 }
 
 func (rpcBlock *RpcBlock) From(block *types.Block, addresses []crypto.CommonAddress) *RpcBlock {
+
 	txs := make([]*RpcTransaction, len(block.Data.TxList))
 	for i, tx := range block.Data.TxList {
 		txs[i] = new(RpcTransaction).FromTx(tx)
@@ -67,13 +68,14 @@ func (rpcBlock *RpcBlock) From(block *types.Block, addresses []crypto.CommonAddr
 	rpcBlock.TxRoot = block.Header.TxRoot
 	rpcBlock.Txs = txs
 
-	if block.Proof.Type == types2.Solo {
+	if block.Proof.Type == consensusTypes.Solo {
 		rpcBlock.Proof = block.Proof
-	} else if block.Proof.Type == types2.Pbft {
+	} else if block.Proof.Type == consensusTypes.Pbft {
 		proof := NewPbftProof()
 		multiSig := &bft.MultiSignature{}
-		json.Unmarshal(block.Proof.Evidence, multiSig)
+		drepbinary.Unmarshal(block.Proof.Evidence, multiSig)
 		proof.Evidence = hex.EncodeToString(block.Proof.Evidence)
+
 		proof.LeaderAddress = addresses[multiSig.Leader].String()
 		for index, val := range multiSig.Bitmap {
 			if val == 1 {
@@ -94,7 +96,7 @@ type PbftProof struct {
 
 func NewPbftProof() *PbftProof {
 	return &PbftProof{
-		Type:           types2.Pbft,
+		Type:           consensusTypes.Pbft,
 		MinorAddresses: []string{},
 	}
 }

@@ -21,13 +21,13 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"net"
 	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/drep-project/binary"
 	"github.com/drep-project/DREP-Chain/common"
 	"github.com/drep-project/DREP-Chain/common/event"
 	"github.com/drep-project/DREP-Chain/common/mclock"
@@ -39,6 +39,7 @@ import (
 	"github.com/drep-project/DREP-Chain/network/p2p/enr"
 	"github.com/drep-project/DREP-Chain/network/p2p/nat"
 	"github.com/drep-project/DREP-Chain/network/p2p/netutil"
+	"github.com/drep-project/binary"
 	"github.com/sirupsen/logrus"
 )
 
@@ -108,9 +109,9 @@ type Config struct {
 	// allowed to connect, even above the peer limit.
 	ProduceNodes []*enode.Node
 
-	// Connectivity can be restricted to certain IP networks.
+	// Connectivity can be restricted to certain Node networks.
 	// If this option is set to a non-nil value, only hosts which match one of the
-	// IP networks contained in the list are considered.
+	// Node networks contained in the list are considered.
 	NetRestrict *netutil.Netlist `json:",omitempty"`
 
 	// NodeDatabase is the path to the database containing the previously seen
@@ -294,6 +295,7 @@ func (srv *Server) Peers() []*Peer {
 	// environments.
 	case srv.peerOp <- func(peers map[enode.ID]*Peer) {
 		for _, p := range peers {
+			fmt.Println("peer ip :", p.IP())
 			ps = append(ps, p)
 		}
 	}:
@@ -322,6 +324,10 @@ func (srv *Server) AddPeer(node *enode.Node) {
 	case srv.addstatic <- node:
 	case <-srv.quit:
 	}
+}
+
+func (srv *Server) LocalNode() *enode.Node {
+	return srv.localnode.Node()
 }
 
 // RemovePeer disconnects from the given node
@@ -369,9 +375,7 @@ func (srv *Server) Self() *enode.Node {
 // Stop terminates the server and all active peer connections.
 // It blocks until all active connections have been closed.
 func (srv *Server) Stop() {
-	//if srv.lock == nil {
-	//	return
-	//}
+
 	srv.lock.Lock()
 	if !srv.running {
 		srv.lock.Unlock()
@@ -382,6 +386,7 @@ func (srv *Server) Stop() {
 		// this unblocks listener Accept
 		srv.listener.Close()
 	}
+
 	close(srv.quit)
 	srv.lock.Unlock()
 	srv.loopWG.Wait()
@@ -499,11 +504,11 @@ func (srv *Server) setupLocalNode() error {
 	case nil:
 		// No NAT interface, do nothing.
 	case nat.ExtIP:
-		// ExtIP doesn't block, set the IP right away.
+		// ExtIP doesn't block, set the Node right away.
 		ip, _ := srv.NAT.ExternalIP()
 		srv.localnode.SetStaticIP(ip)
 	default:
-		// Ask the router about the IP. This takes a while and blocks startup,
+		// Ask the router about the Node. This takes a while and blocks startup,
 		// do it in the background.
 		srv.loopWG.Add(1)
 		go func() {
@@ -763,8 +768,11 @@ running:
 				WithField("req", pd.requested).
 				WithField("err", pd.err).
 				WithField("ip", pd.Peer.IP()).
+				WithField("id", pd.ID().String()).
 				Info("Removing p2p peer")
+
 			delete(peers, pd.ID())
+
 			if pd.Inbound() {
 				inboundCount--
 			}
@@ -811,6 +819,8 @@ func (srv *Server) encHandshakeChecks(peers map[enode.ID]*Peer, inboundCount int
 	case !c.is(trustedConn) && c.is(inboundConn) && inboundCount >= srv.maxInboundConns():
 		return DiscTooManyPeers
 	case peers[c.peerNode.ID()] != nil:
+		p := peers[c.peerNode.ID()]
+		log.WithField("old peer ip", p.IP()).Info("encHandshakeChecks err")
 		return DiscAlreadyConnected
 	case c.peerNode.ID() == srv.localnode.ID():
 		return DiscSelf
@@ -1017,6 +1027,8 @@ func (srv *Server) runPeer(p *Peer) {
 		Error: err.Error(),
 	})
 
+	fmt.Println("remove peer ip:", p.String(), p.Name())
+
 	// Note: run waits for existing peers to be sent on srv.delpeer
 	// before returning, so this send should not select on srv.quit.
 	srv.delpeer <- peerDrop{p, err, remoteRequested}
@@ -1028,7 +1040,7 @@ type NodeInfo struct {
 	Name  string `json:"name"`  // Name of the node, including client type, version, OS, custom data
 	Enode string `json:"enode"` // Enode URL for adding this peer from remote peers
 	ENR   string `json:"enr"`   // Ethereum Node Record
-	IP    string `json:"ip"`    // IP address of the node
+	IP    string `json:"ip"`    // Node address of the node
 	Ports struct {
 		Discovery int `json:"discovery"` // UDP listening port for discovery protocol
 		Listener  int `json:"listener"`  // TCP listening port for RLPx

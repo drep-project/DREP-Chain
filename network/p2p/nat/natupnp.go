@@ -50,7 +50,7 @@ func (n *upnp) ExternalIP() (addr net.IP, err error) {
 	}
 	ip := net.ParseIP(ipString)
 	if ip == nil {
-		return nil, errors.New("bad IP in response")
+		return nil, errors.New("bad Node in response")
 	}
 	return ip, nil
 }

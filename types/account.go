@@ -68,7 +68,7 @@ type Storage struct {
 	BalanceMap map[string]big.Int
 }
 
-func NewStorage() *Storage {
+func newStorage() *Storage {
 	storage := &Storage{}
 	storage.Nonce = 0
 	return storage
@@ -89,13 +89,9 @@ func (s *Storage) Empty() bool {
 }
 
 func NewNormalAccount(parent *Node, chainId ChainIdType) (*Account, error) {
-	/*IsRoot := chainId == RootChain
-	if !IsRoot && parent == nil {
-		return nil, errors.New("missing parent account")
-	}*/
 	node := NewNode(parent, chainId)
 	address := node.Address
-	storage := NewStorage()
+	storage := newStorage()
 	account := &Account{
 		Address: address,
 		Node:    node,
@@ -105,7 +101,7 @@ func NewNormalAccount(parent *Node, chainId ChainIdType) (*Account, error) {
 }
 
 func NewContractAccount(address crypto.CommonAddress) (*Account, error) {
-	storage := NewStorage()
+	storage := newStorage()
 	account := &Account{
 		Address: &address,
 		Node:    &Node{},

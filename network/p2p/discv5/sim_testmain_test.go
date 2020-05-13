@@ -25,7 +25,7 @@ import (
 	"unsafe"
 )
 
-// Enable fake time mode in the runtime, like on the go playground.
+// StartMiner fake time mode in the runtime, like on the go playground.
 // There is a slight chance that this won't work because some go code
 // might have executed before the variable is set.
 

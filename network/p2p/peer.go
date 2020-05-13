@@ -249,6 +249,8 @@ loop:
 	close(p.closed)
 	p.rw.close(reason)
 	p.wg.Wait()
+
+	log.WithField("err",err).WithField("ip",p.IP()).Error("runProtocols out")
 	return remoteRequested, err
 }
 
@@ -261,7 +263,6 @@ func (p *Peer) pingLoop() {
 		case <-ping.C:
 			if err := SendItems(p.rw, pingMsg); err != nil {
 				p.protoErr <- err
-				log.WithField("err", err).Info("ping msg err")
 				return
 			}
 			ping.Reset(pingInterval)
@@ -306,7 +307,7 @@ func (p *Peer) handle(msg Msg) error {
 		if err != nil {
 			return fmt.Errorf("dismsg unmarshal msg err:%v", err)
 		}
-		p.log.WithField("peer ip", p.IP()).WithField("err", err).Info("dis connect from peer")
+		p.log.WithField("peer ip", p.IP()).WithField("err", reason[0]).Info("dis connect from peer")
 		return reason[0]
 	case msg.Code < baseProtocolLength:
 		// ignore other base protocol messages
@@ -385,7 +386,7 @@ func (p *Peer) startProtocols(writeStart <-chan struct{}, writeErr chan<- error)
 				p.log.Info(fmt.Sprintf("may be not support Protocols %s/%d returned", proto.Name, proto.Version))
 				err = errProtocolReturned
 			} else if err != io.EOF {
-				p.log.Info(fmt.Sprintf("Protocol %s/%d failed", proto.Name, proto.Version), "err", err)
+				p.log.Info(fmt.Sprintf("err Protocol: %s/%d failed", proto.Name, proto.Version), "err", err)
 			}
 			p.protoErr <- err
 			p.wg.Done()

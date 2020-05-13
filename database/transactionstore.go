@@ -1,26 +1,22 @@
 package database
 
 import (
+	"github.com/drep-project/DREP-Chain/common/trie"
 	"sync"
-
-	"github.com/drep-project/DREP-Chain/database/drepdb"
-	"github.com/drep-project/DREP-Chain/database/trie"
 )
 
 type TransactionStore struct {
-	diskDB  drepdb.KeyValueStore //本对象内，仅仅作为存储操作日志
-	dirties *sync.Map            //数据属于storage的缓存
+	dirties *sync.Map //数据属于storage的缓存
 	trie    *trie.SecureTrie
 }
-
+type SnapShot dirtiesKV
 type dirtiesKV struct {
 	storageDirties *sync.Map //数据属于storage的缓存
 	//otherDirties   *sync.Map //数据与stroage没有关系的，其他kv对的缓存
 }
 
-func NewTransactionStore(trie *trie.SecureTrie, diskDB drepdb.KeyValueStore) *TransactionStore {
+func NewTransactionStore(trie *trie.SecureTrie) *TransactionStore {
 	return &TransactionStore{
-		diskDB:  diskDB,
 		dirties: new(sync.Map),
 		trie:    trie,
 	}
@@ -73,8 +69,8 @@ func (tDb *TransactionStore) Flush() {
 	})
 }
 
-func (tDb *TransactionStore) RevertState(dirties *sync.Map) {
-	tDb.dirties = dirties
+func (tDb *TransactionStore) RevertState(snapShot *SnapShot) {
+	tDb.dirties = snapShot.storageDirties
 }
 
 func (tDb *TransactionStore) CopyState() *SnapShot {

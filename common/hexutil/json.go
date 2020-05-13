@@ -38,6 +38,9 @@ type Bytes []byte
 
 // MarshalText implements encoding.TextMarshaler
 func (b Bytes) MarshalText() ([]byte, error) {
+	if len(b) == 0 {
+		return nil, nil
+	}
 	result := make([]byte, len(b)*2+2)
 	copy(result, `0x`)
 	hex.Encode(result[2:], b)

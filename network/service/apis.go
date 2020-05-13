@@ -1,5 +1,7 @@
 package service
 
+import "github.com/drep-project/DREP-Chain/network/p2p/enode"
+
 /*
 name: p2p网络接口
 usage: 设置查询网络状态
@@ -10,10 +12,10 @@ type P2PApi struct {
 }
 
 /*
- name: p2p_getPeers
+ name: getPeers
  usage: 获取当前连接的节点
  params:
- return: 交易字节信息
+ return: 和本地建立连接的p2p对端信息
  example:  curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_getPeers","params":"", "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":[{},{},{},{}]}
@@ -29,26 +31,39 @@ func (p2pApis *P2PApi) GetPeers() []string {
 }
 
 /*
- name: p2p_addPeers
+ name: addPeer
  usage: 添加节点
  params: enode://publickey@ip:p2p端口
  return:nil
- example: curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_addPeers","params":"enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555", "id": 3}' -H "Content-Type:application/json"
-  response:
-*/
+ example:  curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_addPeer","params":["enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555"], "id": 3}' -H "Content-Type:application/json"
+ response:
 
-func (p2pApis *P2PApi) AddPeers(addr string) {
+*/
+func (p2pApis *P2PApi) AddPeer(addr string) {
 	p2pApis.p2pService.AddPeer(addr)
 }
 
 /*
- name: p2p_removePeers
+ name: removePeer
  usage: 移除节点
  params:enode://publickey@ip:p2p端口
- return:
- example: curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_removePeers","params":"enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555", "id": 3}' -H "Content-Type:application/json"
+ return:nil
+ example: curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_removePeer","params":["enode://e1b2f83b7b0f5845cc74ca12bb40152e520842bbd0597b7770cb459bd40f109178811ebddd6d640100cdb9b661a3a43a9811d9fdc63770032a3f2524257fb62d@192.168.74.1:55555"], "id": 3}' -H "Content-Type:application/json"
  response:
 */
-func (p2pApis *P2PApi) RemovePeers(addr string) {
+func (p2pApis *P2PApi) RemovePeer(addr string) {
 	p2pApis.p2pService.RemovePeer(addr)
+}
+
+/*
+ name: LocalNode
+ usage: 需要获取本地的enode，用于P2p链接
+ params:""
+ return: 本地节点的enode
+ example: curl http://127.0.0.1:15645 -X POST --data '{"jsonrpc":"2.0","method":"p2p_localNode","params":"", "id": 3}' -H "Content-Type:application/json"
+ response:
+*/
+
+func (p2pApis *P2PApi) LocalNode() *enode.Node {
+	return p2pApis.p2pService.LocalNode()
 }

@@ -3,6 +3,8 @@ package bft
 import "errors"
 
 var (
+	ErrSignBlock          = errors.New("sign block error")
+	ErrWalletNotOpen      = errors.New("wallet is close")
 	ErrBpConfig           = errors.New("the pubkey config not in bp nodes")
 	ErrBFTNotReady        = errors.New("BFT node not ready")
 	ErrBpNotInList        = errors.New("bp node not in local list")
@@ -17,7 +19,8 @@ var (
 	ErrStatus             = errors.New("error status")
 	ErrLeaderMistake      = errors.New("setUp: mistake leader")
 	ErrValidateMsg        = errors.New("validate message error")
-	ErrGenerateNouncePriv = errors.New("Generate nounce fail")
+	ErrGenerateNouncePriv = errors.New("generate nounce fail")
 	ErrMsgSize            = errors.New("err msg size")
-	ErrGasUsed            = errors.New("GasUsed not match gasUsed in blockheader")
+	ErrGasUsed            = errors.New("gasUsed not match gasUsed in blockheader")
+	ErrNotMyTurn		  = errors.New("not my turn")
 )

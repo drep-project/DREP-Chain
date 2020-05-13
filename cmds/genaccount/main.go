@@ -11,9 +11,10 @@ import (
 	"github.com/drep-project/DREP-Chain/common"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
-	"github.com/drep-project/DREP-Chain/crypto/sha3"
 	"github.com/drep-project/DREP-Chain/network/p2p/enode"
 	"github.com/drep-project/DREP-Chain/params"
+	"github.com/drep-project/DREP-Chain/pkgs/consensus/service"
+	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/bft"
 	"github.com/drep-project/DREP-Chain/pkgs/log"
 	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
@@ -21,13 +22,13 @@ import (
 	"os"
 	path2 "path"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	p2pTypes "github.com/drep-project/DREP-Chain/network/types"
 	accountComponent "github.com/drep-project/DREP-Chain/pkgs/accounts/component"
 	accountTypes "github.com/drep-project/DREP-Chain/pkgs/accounts/types"
 	chainIndexerTypes "github.com/drep-project/DREP-Chain/pkgs/chain_indexer"
-	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
 	filterTypes "github.com/drep-project/DREP-Chain/pkgs/filter"
 	"github.com/drep-project/DREP-Chain/types"
 	"github.com/drep-project/rpc"
@@ -56,7 +57,7 @@ func main() {
 func gen(ctx *cli.Context) error {
 	appPath := getCurPath()
 	cfgPath := path2.Join(appPath, "config.json")
-	nodeItems, err := parserConfig(cfgPath)
+	cfg, err := parserConfig(cfgPath)
 	if err != nil {
 		return err
 	}
@@ -66,12 +67,14 @@ func gen(ctx *cli.Context) error {
 	} else {
 		path = appPath
 	}
-	bootsNodes := []*enode.Node{}
+	nodeItems := cfg.Miners
+	trustNodes := []*enode.Node{}
 	standbyKey := []*secp256k1.PrivateKey{}
 	nodes := []*types.Node{}
-	produces := make([]consensusTypes.Producer, 0)
+	produces := make([]types.CandidateData, 0)
 	for i := 0; i < len(nodeItems); i++ {
 		aNode := getAccount(nodeItems[i].Name)
+
 		nodes = append(nodes, aNode)
 		ip := net.IP{}
 		err := ip.UnmarshalText([]byte(nodeItems[i].Ip))
@@ -82,11 +85,11 @@ func gen(ctx *cli.Context) error {
 		nodePrivateKey := GeneratePrivateKey(instanceDir)
 		fmt.Println(crypto.PubkeyToAddress(nodePrivateKey.PubKey()).String(), hex.EncodeToString(nodePrivateKey.Serialize()))
 		node := enode.NewV4(nodePrivateKey.PubKey(), ip, nodeItems[i].Port, nodeItems[i].Port)
-		bootsNodes = append(bootsNodes, node)
+		trustNodes = append(trustNodes, node)
 
 		standbyKey = append(standbyKey, aNode.PrivateKey)
-		produces = append(produces, consensusTypes.Producer{
-			IP:     nodeItems[i].Ip,
+		produces = append(produces, types.CandidateData{
+			Node:   node.String(),
 			Pubkey: aNode.PrivateKey.PubKey(),
 		})
 	}
@@ -102,18 +105,33 @@ func gen(ctx *cli.Context) error {
 	p2pConfig.NoDiscovery = false
 	p2pConfig.DiscoveryV5 = true
 	p2pConfig.Name = "drepnode"
-	p2pConfig.ProduceNodes = bootsNodes
-	p2pConfig.StaticNodes = bootsNodes
-	p2pConfig.ListenAddr = "0.0.0.0:55555"
+	//p2pConfig.ProduceNodes = trustNodes
+	p2pConfig.StaticNodes = trustNodes
+	//p2pConfig.BootstrapNodes = trustNodes
+	//p2pConfig.ListenAddr = "0.0.0.0:55555"
 
-	consensusConfig := consensusTypes.ConsensusConfig{}
-	consensusConfig.Enable = true
+	consensusConfig := &service.ConsensusConfig{}
+
+	//if len(nodeItems) == 1 {
+	//	consensusConfig.ConsensusMode = "solo"
+	//	consensusConfig.Solo = &solo.SoloConfig{
+	//		MyPk:          nil,
+	//		StartMiner:    true,
+	//		BlockInterval: 5,
+	//	}
+	//} else {
 	consensusConfig.ConsensusMode = "bft"
-	consensusConfig.Producers = produces
-	//consensusConfig.Producers = produces
+	consensusConfig.Bft = &bft.BftConfig{
+		MyPk:           nil,
+		StartMiner:     true,
+		BlockInterval:  5,
+		ProducerNum:    len(nodeItems),
+		ChangeInterval: 100,
+	}
+	//}
 
 	chainConfig := chain.ChainConfig{}
-	chainConfig.RemotePort = 55556
+	//chainConfig.RemotePort = 55556
 	chainConfig.ChainId = 0
 	chainConfig.GenesisAddr = params.HoleAddress
 
@@ -126,19 +144,22 @@ func gen(ctx *cli.Context) error {
 	filterConfig := filterTypes.FilterConfig{}
 	filterConfig.Enable = true
 
-	for i := 0; i < len(nodeItems); i++ {
-		consensusConfig.MyPk = (*secp256k1.PublicKey)(&standbyKey[i].PublicKey)
-		userDir := path2.Join(path, nodeItems[i].Name)
+	if len(nodeItems) == 1 {
+		consensusConfig.Bft.MyPk = (*secp256k1.PublicKey)(&standbyKey[0].PublicKey)
+		userDir := path2.Join(path, nodeItems[0].Name)
 		os.MkdirAll(userDir, os.ModeDir|os.ModePerm)
 		keyStorePath := path2.Join(userDir, "keystore")
 		password := "123"
-		if nodeItems[i].Password != "" {
-			password = nodeItems[i].Password
+		if nodeItems[0].Password != "" {
+			password = nodeItems[0].Password
 		}
 
+		p2pConfig.ListenAddr = "0.0.0.0:" + strconv.Itoa(nodeItems[0].Port)
+		chainConfig.RemotePort = nodeItems[0].Port + 1
+
 		store := accountComponent.NewFileStore(keyStorePath)
-		cryptoPassowrd := string(sha3.Keccak256([]byte(password)))
-		store.StoreKey(nodes[i], cryptoPassowrd)
+		//cryptoPassowrd := string(sha3.Keccak256([]byte(password)))
+		store.StoreKey(nodes[0], password)
 
 		walletConfig := accountTypes.Config{}
 		walletConfig.Enable = true
@@ -158,9 +179,64 @@ func gen(ctx *cli.Context) error {
 		offset = writePhase(fs, "accounts", walletConfig, offset)
 		offset = writePhase(fs, "chain_indexer", chainIndexerConfig, offset)
 		offset = writePhase(fs, "filter", filterConfig, offset)
-
+		offset = writePhase(fs, "genesis",
+			struct {
+				Preminer []*chain.Preminer
+				Miners   []types.CandidateData
+			}{
+				Preminer: cfg.Preminer,
+				Miners:   produces,
+			}, offset)
 		fs.Truncate(offset - 2)
 		fs.WriteAt([]byte("\n}"), offset-2)
+	} else {
+		for i := 0; i < len(nodeItems); i++ {
+			consensusConfig.Bft.MyPk = (*secp256k1.PublicKey)(&standbyKey[i].PublicKey)
+			userDir := path2.Join(path, nodeItems[i].Name)
+			p2pConfig.ListenAddr = "0.0.0.0:" + strconv.Itoa(nodeItems[i].Port)
+			chainConfig.RemotePort = nodeItems[i].Port + 1
+
+			os.MkdirAll(userDir, os.ModeDir|os.ModePerm)
+			keyStorePath := path2.Join(userDir, "keystore")
+			password := "123"
+			if nodeItems[i].Password != "" {
+				password = nodeItems[i].Password
+			}
+
+			store := accountComponent.NewFileStore(keyStorePath)
+			//cryptoPassowrd := string(sha3.Keccak256([]byte(password)))
+			store.StoreKey(nodes[i], password)
+
+			walletConfig := accountTypes.Config{}
+			walletConfig.Enable = true
+			walletConfig.Password = password
+
+			cfgPath := path2.Join(userDir, "config.json")
+			fs, _ := os.Create(cfgPath)
+			offset := int64(0)
+			fs.WriteAt([]byte("{\n"), offset)
+			offset = int64(2)
+
+			offset = writePhase(fs, "log", logConfig, offset)
+			offset = writePhase(fs, "rpc", rpcConfig, offset)
+			offset = writePhase(fs, "consensus", consensusConfig, offset)
+			offset = writePhase(fs, "p2p", p2pConfig, offset)
+			offset = writePhase(fs, "chain", chainConfig, offset)
+			offset = writePhase(fs, "accounts", walletConfig, offset)
+			offset = writePhase(fs, "chain_indexer", chainIndexerConfig, offset)
+			offset = writePhase(fs, "filter", filterConfig, offset)
+
+			offset = writePhase(fs, "genesis",
+				struct {
+					Preminer []*chain.Preminer
+					Miners   []types.CandidateData
+				}{
+					Preminer: cfg.Preminer,
+					Miners:   produces,
+				}, offset)
+			fs.Truncate(offset - 2)
+			fs.WriteAt([]byte("\n}"), offset-2)
+		}
 	}
 	return nil
 }
@@ -187,9 +263,10 @@ func RandomNode(seed []byte) *types.Node {
 		chainCode []byte
 	)
 
-	h := hmAC(seed, types.DrepMark)
-	prvKey, _ = crypto.ToPrivateKey(h[:types.KeyBitSize])
-	chainCode = h[types.KeyBitSize:]
+	prvKey, _ = crypto.GenerateKey(rand.Reader)
+	chainCode = append(seed, []byte(types.DrepMark)...)
+	chainCode = common.HmAC(chainCode, prvKey.PubKey().Serialize())
+
 	addr := crypto.PubkeyToAddress(prvKey.PubKey())
 	return &types.Node{
 		PrivateKey: prvKey,
@@ -210,17 +287,23 @@ func getCurPath() string {
 	return dir
 }
 
-func parserConfig(cfgPath string) ([]*NodeItem, error) {
+func parserConfig(cfgPath string) (*GenesisConfig, error) {
 	content, err := ioutil.ReadFile(cfgPath)
 	if err != nil {
 		return nil, err
 	}
-	cfg := []*NodeItem{}
+	cfg := &GenesisConfig{}
 	err = json.Unmarshal([]byte(content), &cfg)
+	//fmt.Println(cfg.Preminer[0].Value)
 	if err != nil {
 		return nil, err
 	}
 	return cfg, nil
+}
+
+type GenesisConfig struct {
+	Preminer []*chain.Preminer
+	Miners   []*NodeItem
 }
 
 type NodeItem struct {

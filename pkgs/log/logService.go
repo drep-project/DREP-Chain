@@ -70,7 +70,9 @@ func (logService *LogService) Init(executeContext *app.ExecuteContext) error {
 		ForceFormatting: true,
 	}
 	logrus.SetOutput(ansicolor.NewAnsiColorWriter(os.Stdout))
-	logrus.SetLevel(logrus.TraceLevel)
+	logrus.SetLevel(logrus.DebugLevel)
+
+	logrus.SetLevel(logrus.Level(logService.Config.LogLevel))
 	mHook := NewMyHook(wirter1, &logrus.JSONFormatter{}, textFormat)
 	lv, err := parserLevel(logService.Config.LogLevel)
 	if err != nil {
@@ -84,6 +86,9 @@ func (logService *LogService) Init(executeContext *app.ExecuteContext) error {
 		args := []interface{}{}
 		pairs := strings.Split(logService.Config.Vmodule, ";")
 		for _, pair := range pairs {
+			if len(pair) == 0 {
+				continue
+			}
 			k_v := strings.Split(pair, "=")
 			if len(k_v) != 2 {
 				return errors.New("not correct module format")

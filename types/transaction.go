@@ -1,12 +1,12 @@
 package types
 
 import (
-	"github.com/drep-project/binary"
 	"github.com/drep-project/DREP-Chain/common"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/crypto/sha3"
 	"github.com/drep-project/DREP-Chain/params"
+	"github.com/drep-project/binary"
 	"math"
 	"math/big"
 	"sync/atomic"
@@ -36,10 +36,13 @@ type TransactionData struct {
 	Data      []byte
 }
 
+func (tx *Transaction) Time() int64 {
+	return tx.Data.Timestamp
+}
+
 func (tx *Transaction) Nonce() uint64 {
 	return tx.Data.Nonce
 }
-
 func (tx *Transaction) Type() TxType {
 	return tx.Data.Type
 }
@@ -99,10 +102,6 @@ func (tx *Transaction) GasPrice() *big.Int {
 	bigint := (big.Int)(tx.Data.GasPrice)
 	return &bigint
 }
-
-//func (tx *Transaction) PubKey() *secp256k1.PublicKey {
-//	return tx.Data.PubKey
-//}
 
 func (tx *Transaction) TxHash() *crypto.Hash {
 	if val := tx.txHash.Load(); val != nil {
@@ -238,4 +237,67 @@ func NewAliasTransaction(alias string, gasPrice, gasLimit *big.Int, nonce uint64
 		Data:      []byte(alias),
 	}
 	return &Transaction{Data: data}
+}
+
+func NewVoteTransaction(to crypto.CommonAddress, amount, gasPrice, gasLimit *big.Int, nonce uint64) *Transaction {
+	data := TransactionData{
+		Version:   common.Version,
+		Nonce:     nonce,
+		Type:      VoteCreditType,
+		To:        to,
+		Amount:    *(*common.Big)(amount),
+		GasPrice:  *(*common.Big)(gasPrice),
+		GasLimit:  *(*common.Big)(gasLimit),
+		Timestamp: int64(time.Now().Unix()),
+	}
+	return &Transaction{Data: data}
+}
+
+func NewCancelVoteTransaction(to crypto.CommonAddress, amount, gasPrice, gasLimit *big.Int, nonce uint64) *Transaction {
+	data := TransactionData{
+		Version:   common.Version,
+		Nonce:     nonce,
+		Type:      CancelVoteCreditType,
+		To:        to,
+		Amount:    *(*common.Big)(amount),
+		GasPrice:  *(*common.Big)(gasPrice),
+		GasLimit:  *(*common.Big)(gasLimit),
+		Timestamp: int64(time.Now().Unix()),
+	}
+	return &Transaction{Data: data}
+}
+
+func NewCandidateTransaction(amount, gasPrice, gasLimit *big.Int, nonce uint64, data []byte) *Transaction {
+	txData := TransactionData{
+		Version:   common.Version,
+		Nonce:     nonce,
+		Type:      CandidateType,
+		Amount:    *(*common.Big)(amount),
+		GasPrice:  *(*common.Big)(gasPrice),
+		GasLimit:  *(*common.Big)(gasLimit),
+		Timestamp: int64(time.Now().Unix()),
+		Data:      data,
+	}
+	return &Transaction{Data: txData}
+}
+
+func NewCancleCandidateTransaction(amount, gasPrice, gasLimit *big.Int, nonce uint64) *Transaction {
+	txData := TransactionData{
+		Version:   common.Version,
+		Nonce:     nonce,
+		Type:      CancelCandidateType,
+		Amount:    *(*common.Big)(amount),
+		GasPrice:  *(*common.Big)(gasPrice),
+		GasLimit:  *(*common.Big)(gasLimit),
+		Timestamp: int64(time.Now().Unix()),
+	}
+	return &Transaction{Data: txData}
+}
+
+type ExecuteTransactionResult struct {
+	TxResult              []byte               //Transaction execution results
+	ContractTxExecuteFail bool                 //contract transaction execution results
+	ContractTxLog         []*Log               //contract transaction execution logs
+	Txerror               error                //transaction execution fail info
+	ContractAddr          crypto.CommonAddress //create new contract address
 }

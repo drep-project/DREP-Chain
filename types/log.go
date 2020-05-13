@@ -5,6 +5,7 @@ import (
 )
 
 type Log struct {
+	TxType TxType
 	// Consensus fields:
 	// address of the contract that generated the event
 	Address crypto.CommonAddress

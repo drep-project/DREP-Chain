@@ -24,7 +24,7 @@ import (
 
 // Various big integer limit values.
 var (
-	tt255     = BigPow(2, 255)
+	TT255     = BigPow(2, 255)
 	tt256     = BigPow(2, 256)
 	tt256m1   = new(big.Int).Sub(tt256, big.NewInt(1))
 	tt63      = BigPow(2, 63)
@@ -185,7 +185,7 @@ func U256(x *big.Int) *big.Int {
 //   S256(2**255)   = -2**255
 //   S256(2**256-1) = -1
 func S256(x *big.Int) *big.Int {
-	if x.Cmp(tt255) < 0 {
+	if x.Cmp(TT255) < 0 {
 		return x
 	}
 	return new(big.Int).Sub(x, tt256)

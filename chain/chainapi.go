@@ -1,10 +1,19 @@
 package chain
 
 import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/drep-project/DREP-Chain/chain/store"
+	"github.com/drep-project/DREP-Chain/common"
 	"github.com/drep-project/DREP-Chain/common/hexutil"
+	"github.com/drep-project/DREP-Chain/common/trie"
 	"github.com/drep-project/DREP-Chain/crypto"
-	"github.com/drep-project/DREP-Chain/database"
-	chainType "github.com/drep-project/DREP-Chain/types"
+	"github.com/drep-project/DREP-Chain/crypto/sha3"
+	"github.com/drep-project/DREP-Chain/database/dbinterface"
+	"github.com/drep-project/DREP-Chain/params"
+	"github.com/drep-project/DREP-Chain/types"
+	"github.com/drep-project/binary"
 	"math/big"
 )
 
@@ -15,8 +24,17 @@ prefix:chain
 
 */
 type ChainApi struct {
-	chainService *ChainService
-	dbService    *database.DatabaseService
+	store     dbinterface.KeyValueStore
+	chainView *ChainView
+	dbQuery   *ChainStore
+}
+
+func NewChainApi(store dbinterface.KeyValueStore, chainView *ChainView, dbQuery *ChainStore) *ChainApi {
+	return &ChainApi{
+		store:     store,
+		chainView: chainView,
+		dbQuery:   dbQuery,
+	}
 }
 
 /*
@@ -54,15 +72,16 @@ type ChainApi struct {
   }
 }
 */
-func (chain *ChainApi) GetBlock(height uint64) (*chainType.Block, error) {
-	blocks, err := chain.chainService.GetBlocksFrom(height, 1)
+func (chain *ChainApi) GetBlock(height uint64) (*types.Block, error) {
+	node := chain.chainView.NodeByHeight(height)
+	if node == nil {
+		return nil, ErrBlockNotFound
+	}
+	block, err := chain.dbQuery.GetBlock(node.Hash)
 	if err != nil {
 		return nil, err
 	}
-	if len(blocks) == 0 {
-		return nil, ErrBlockNotFound
-	}
-	return blocks[0], nil
+	return block, nil
 }
 
 /*
@@ -76,7 +95,44 @@ func (chain *ChainApi) GetBlock(height uint64) (*chainType.Block, error) {
    {"jsonrpc":"2.0","id":3,"result":193005}
 */
 func (chain *ChainApi) GetMaxHeight() uint64 {
-	return chain.chainService.BestChain().Height()
+	return chain.chainView.Tip().Height
+}
+
+/*
+ name: getBlockGasInfo
+ usage: 获取gas相关信息
+ params:
+	1. 无
+ return: 系统需要的gas最小值、最大值；和当前块被设置的最大gas值
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getBlockGasInfo","params":[], "id": 3}' -H "Content-Type:application/json"
+ response:
+   {"jsonrpc":"2.0","id":3,"result":193005}
+*/
+func (chain *ChainApi) GetBlockGasInfo() string {
+	height := chain.chainView.Tip().Height
+	node := chain.chainView.NodeByHeight(height)
+	if node == nil {
+		return ""
+	}
+	block, err := chain.dbQuery.GetBlock(node.Hash)
+	if err != nil {
+		return ""
+	}
+
+	type gasInfo struct {
+		MinGas          int
+		MaxGas          int
+		CurrentBlockGas int
+	}
+	gi := gasInfo{
+		MinGas:          int(params.MinGasLimit),
+		MaxGas:          int(params.MaxGasLimit),
+		CurrentBlockGas: int(block.GasLimit()),
+	}
+
+	ret, _ := json.Marshal(&gi)
+
+	return string(ret)
 }
 
 /*
@@ -89,8 +145,14 @@ func (chain *ChainApi) GetMaxHeight() uint64 {
  response:
    {"jsonrpc":"2.0","id":3,"result":9987999999999984000000}
 */
-func (chain *ChainApi) GetBalance(addr crypto.CommonAddress) *big.Int {
-	return chain.dbService.GetBalance(&addr)
+func (chain *ChainApi) GetBalance(addr crypto.CommonAddress) string {
+	store, err := store.TrieStoreFromStore(chain.store, chain.chainView.Tip().StateRoot)
+	if err != nil {
+		return ""
+	}
+	big := store.GetBalance(&addr, chain.chainView.tip().Height)
+
+	return big.String()
 }
 
 /*
@@ -104,11 +166,12 @@ func (chain *ChainApi) GetBalance(addr crypto.CommonAddress) *big.Int {
    {"jsonrpc":"2.0","id":3,"result":0}
 */
 func (chain *ChainApi) GetNonce(addr crypto.CommonAddress) uint64 {
-	return chain.dbService.GetNonce(&addr)
+	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
+	return trieQuery.GetNonce(&addr)
 }
 
 /*
- name: chain_getReputation
+ name: getNonce
  usage: 查询地址的名誉值
  params:
 	1. 待查询地址
@@ -118,7 +181,8 @@ func (chain *ChainApi) GetNonce(addr crypto.CommonAddress) uint64 {
    {"jsonrpc":"2.0","id":3,"result":1}
 */
 func (chain *ChainApi) GetReputation(addr crypto.CommonAddress) *big.Int {
-	return chain.dbService.GetReputation(&addr)
+	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
+	return trieQuery.GetReputation(&addr)
 }
 
 /*
@@ -150,7 +214,7 @@ func (chain *ChainApi) GetReputation(addr crypto.CommonAddress) *big.Int {
   }
 }
 */
-func (chain *ChainApi) GetTransactionByBlockHeightAndIndex(height uint64, index int) (*chainType.Transaction, error) {
+func (chain *ChainApi) GetTransactionByBlockHeightAndIndex(height uint64, index int) (*types.Transaction, error) {
 	block, err := chain.GetBlock(height)
 	if err != nil {
 		return nil, err
@@ -172,7 +236,8 @@ func (chain *ChainApi) GetTransactionByBlockHeightAndIndex(height uint64, index 
 	{"jsonrpc":"2.0","id":3,"result":"tom"}
 */
 func (chain *ChainApi) GetAliasByAddress(addr *crypto.CommonAddress) string {
-	return chain.chainService.DatabaseService.GetStorageAlias(addr)
+	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
+	return trieQuery.GetStorageAlias(addr)
 }
 
 /*
@@ -181,12 +246,88 @@ func (chain *ChainApi) GetAliasByAddress(addr *crypto.CommonAddress) string {
  params:
 	1. 待查询地别名
  return: 别名对应的地址
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getAliasByAddress","params":["tom"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getAddressByAlias","params":["tom"], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":"0x8a8e541ddd1272d53729164c70197221a3c27486"}
 */
-func (chain *ChainApi) GetAddressByAlias(alias string) *crypto.CommonAddress {
-	return chain.chainService.DatabaseService.AliasGet(alias)
+func (chain *ChainApi) GetAddressByAlias(alias string) (*crypto.CommonAddress, error) {
+	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
+	return trieQuery.AliasGet(alias)
+}
+
+/*
+ name: getReceipt
+ usage: 根据txhash获取receipt信息
+ params:
+	1. txhash
+ return: receipt
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getReceipt","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
+ response:
+   {"jsonrpc":"2.0","id":3,"result":""}
+*/
+func (chain *ChainApi) GetReceipt(txHash crypto.Hash) *types.Receipt {
+	return chain.dbQuery.GetReceipt(txHash)
+}
+
+/*
+ name: getLogs
+ usage: 根据txhash获取交易log信息
+ params:
+	1. txhash
+ return: []log
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getLogs","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
+ response:
+   {"jsonrpc":"2.0","id":3,"result":""}
+*/
+func (chain *ChainApi) GetLogs(txHash crypto.Hash) []*types.Log {
+	//return chain.chainService.chainStore.GetLogs(txHash)
+	rt := chain.dbQuery.GetReceipt(txHash)
+	if rt != nil {
+		//for _, log := range rt.Logs {
+		//	if log.TxType == types.CancelVoteCreditType || log.TxType == types.CancelCandidateType {
+		//		id := types.IntersetDetail{}
+		//		err := json.Unmarshal(log.Data, &id)
+		//		if err == nil {
+		//			ids = append(ids, &id)
+		//		}
+		//	}
+		//}
+
+		return rt.Logs
+	}
+
+	return nil
+}
+
+/*
+ name: getInterset
+ usage: 根据txhash获取退质押或者投票利息信息
+ params:
+	1. txhash
+ return: {}
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getInterset","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
+ response:
+   {"jsonrpc":"2.0","id":3,"result":""}
+*/
+func (chain *ChainApi) GetInterset(txHash crypto.Hash) []*types.IntersetDetail {
+	//return chain.chainService.chainStore.GetLogs(txHash)
+	ids := make([]*types.IntersetDetail, 0)
+	rt := chain.dbQuery.GetReceipt(txHash)
+	if rt != nil {
+		for _, log := range rt.Logs {
+			if log.TxType == types.CancelVoteCreditType || log.TxType == types.CancelCandidateType {
+				id := types.IntersetDetail{}
+				err := json.Unmarshal(log.Data, &id)
+				if err == nil {
+					ids = append(ids, &id)
+				}
+			}
+		}
+
+		return ids
+	}
+
+	return nil
 }
 
 /*
@@ -200,34 +341,313 @@ func (chain *ChainApi) GetAddressByAlias(alias string) *crypto.CommonAddress {
    {"jsonrpc":"2.0","id":3,"result":"0x00"}
 */
 func (chain *ChainApi) GetByteCode(addr *crypto.CommonAddress) hexutil.Bytes {
-	return chain.dbService.GetByteCode(addr)
+	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
+	return trieQuery.GetByteCode(addr)
 }
 
 /*
- name: getReceipt
- usage: 根据txhash获取receipt信息
+ name: getVoteCreditDetails
+ usage: 根据地址获取stake 所有细节信息
  params:
-	1. txhash
- return: receipt
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getReceipt","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
+	1. 地址
+ return: bytecode
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCreditDetails","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
-   {"jsonrpc":"2.0","id":3,"result":""}
+   {"jsonrpc":"2.0","id":3,"result":"[{\"Addr\":\"0xd05d5f324ada3c418e14cd6b497f2f36d60ba607\",\"HeghtValues\":[{\"CreditHeight\":1329,\"CreditValue\":\"0x11135\"}]}]"}
 */
-func (chain *ChainApi) GetReceipt(txHash crypto.Hash) *chainType.Receipt {
-	return chain.dbService.GetReceipt(txHash)
+func (chain *ChainApi) GetCreditDetails(addr *crypto.CommonAddress) string {
+	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
+	return trieQuery.GetVoteCreditDetails(addr)
 }
 
 /*
- name: getLogs
- usage: 根据txhash获取交易log信息
+ name: GetCancelCreditDetails
+ usage: 获取所有退票请求的细节
  params:
-	1. txhash
- return: []log
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getLogs","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
+	1. 地址
+ return: bytecode
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCancelCreditDetails","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
-   {"jsonrpc":"2.0","id":3,"result":""}
+   {"jsonrpc":"2.0","id":3,"result":"{\"0x300fc5a14e578be28c64627c0e7e321771c58cd4\":\"0x3641100\"}"}
 */
-func (chain *ChainApi) GetLogs(txHash crypto.Hash) []*chainType.Log {
-	//return chain.dbService.GetLogs(txHash)
-	return chain.dbService.GetReceipt(txHash).Logs
+func (chain *ChainApi) GetCancelCreditDetails(addr *crypto.CommonAddress) string {
+	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
+	return trieQuery.GetCancelCreditDetails(addr)
+}
+
+/*
+ name: GetCandidateAddrs
+ usage: 获取所有候选节点地址和对应的信任值
+ params:
+	1. 地址
+ return:  []
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCandidateAddrs","params":[""], "id": 3}' -H "Content-Type:application/json"
+ response:
+   {"jsonrpc":"2.0","id":3,"result":"{\"0x300fc5a14e578be28c64627c0e7e321771c58cd4\":\"0x3641100\"}"}
+*/
+func (chain *ChainApi) GetCandidateAddrs() string {
+	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
+	return trieQuery.GetCandidateAddrs()
+}
+
+/*
+ name: getInterestRate
+ usage: 获取3个月内、3-6个月、6-12个月、12个月以上的利率
+ params:
+	无
+ return:  年华后三个月利息, 年华后六个月利息, 一年期利息, 一年以上期利息
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getInterestRate","params":"", "id": 3}' -H "Content-Type:application/json"
+ response:
+   {"jsonrpc":"2.0","id":3,"result":"{\"ThreeMonthRate\":4,\"SixMonthRate\":12,\"OneYearRate\":25,\"MoreOneYearRate\":51}"}
+*/
+func (chain *ChainApi) GetInterestRate() (string, error) {
+
+	threeMonth, sixMonth, oneYear, moreOneYear := store.GetInterestRate()
+
+	type InterestRateInfo struct {
+		ThreeMonthRate  uint64
+		SixMonthRate    uint64
+		OneYearRate     uint64
+		MoreOneYearRate uint64
+	}
+
+	iri := InterestRateInfo{
+		ThreeMonthRate:  threeMonth,
+		SixMonthRate:    sixMonth,
+		OneYearRate:     oneYear,
+		MoreOneYearRate: moreOneYear,
+	}
+
+	fmt.Println(threeMonth, sixMonth, oneYear, moreOneYear)
+
+	ret, err := json.Marshal(&iri)
+
+	return string(ret), err
+}
+
+/*
+ name: getChangeCycle
+ usage: 获取出块节点换届周期
+ params:
+	无
+ return:  换届周期
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getChangeCycle","params":"", "id": 3}' -H "Content-Type:application/json"
+ response:
+   {"jsonrpc":"2.0","id":3,"result":"{100}"}
+*/
+func (chain *ChainApi) GetChangeCycle() (int, error) {
+	store, err := store.TrieStoreFromStore(chain.store, chain.chainView.Tip().StateRoot)
+	if err != nil {
+		return 0, err
+	}
+
+	changeInterval, err := store.GetChangeInterval()
+	return int(changeInterval), err
+}
+
+type TrieQuery struct {
+	dbinterface.KeyValueStore
+	trie *trie.SecureTrie
+	root []byte
+}
+
+func NewTrieQuery(store dbinterface.KeyValueStore, root []byte) (*TrieQuery, error) {
+	trieQuery := &TrieQuery{store, nil, root}
+	trieDb := trie.NewDatabaseWithCache(store, 0)
+	var err error
+	trieQuery.trie, err = trie.NewSecure(crypto.Bytes2Hash(root), trieDb)
+	if err != nil {
+		return nil, err
+	}
+	return trieQuery, nil
+}
+
+func (trieQuery *TrieQuery) Get(key []byte) ([]byte, error) {
+	return trieQuery.trie.TryGet(key)
+}
+
+func (trieQuery *TrieQuery) GetStorage(addr *crypto.CommonAddress) (types.Storage, error) {
+	key := sha3.Keccak256([]byte(store.AddressStorage + addr.Hex()))
+	value, err := trieQuery.trie.TryGet(key)
+	storage := types.Storage{}
+	if value == nil {
+		return storage, nil
+	} else {
+		err = binary.Unmarshal(value, &storage)
+		if err != nil {
+			return storage, err
+		}
+	}
+	return storage, nil
+}
+
+func (trieQuery *TrieQuery) GetStorageAlias(addr *crypto.CommonAddress) string {
+	storage, _ := trieQuery.GetStorage(addr)
+	return storage.Alias
+}
+
+func (trieQuery *TrieQuery) AliasGet(alias string) (*crypto.CommonAddress, error) {
+	buf, err := trieQuery.Get([]byte(store.AliasPrefix + alias))
+	if err != nil {
+		return nil, err
+	}
+	if buf == nil {
+		return nil, fmt.Errorf("alias :%s not set", alias)
+	}
+	addr := crypto.CommonAddress{}
+	addr.SetBytes(buf)
+	return &addr, nil
+}
+
+func (trieQuery *TrieQuery) AliasExist(alias string) bool {
+	_, err := trieQuery.Get([]byte(store.AliasPrefix + alias))
+	if err != nil {
+		return false
+	}
+	return true
+}
+
+func (trieQuery *TrieQuery) GetBalance(addr *crypto.CommonAddress) *big.Int {
+	storage, _ := trieQuery.GetStorage(addr)
+	return &storage.Balance
+}
+
+func (trieQuery *TrieQuery) GetNonce(addr *crypto.CommonAddress) uint64 {
+	storage, _ := trieQuery.GetStorage(addr)
+	return storage.Nonce
+}
+
+func (trieQuery *TrieQuery) GetByteCode(addr *crypto.CommonAddress) []byte {
+	storage, _ := trieQuery.GetStorage(addr)
+	return storage.ByteCode
+}
+
+func (trieQuery *TrieQuery) GetCodeHash(addr *crypto.CommonAddress) crypto.Hash {
+	storage, _ := trieQuery.GetStorage(addr)
+	return storage.CodeHash
+}
+
+func (trieQuery *TrieQuery) GetReputation(addr *crypto.CommonAddress) *big.Int {
+	storage, _ := trieQuery.GetStorage(addr)
+	return &storage.Reputation
+}
+
+func (trieQuery *TrieQuery) GetVoteCreditDetails(addr *crypto.CommonAddress) string {
+	key := sha3.Keccak256([]byte(store.StakeStorage + addr.Hex()))
+
+	storage := &types.StakeStorage{}
+
+	value, err := trieQuery.trie.TryGet(key)
+	if err != nil {
+		log.Errorf("get storage err:%v", err)
+		return ""
+	}
+	if value == nil {
+		return ""
+	} else {
+		err = binary.Unmarshal(value, storage)
+		if err != nil {
+			return ""
+		}
+	}
+
+	if len(storage.RC) == 0 {
+		return ""
+	}
+	b, _ := json.Marshal(storage.RC)
+	return string(b)
+}
+
+func (trieQuery *TrieQuery) GetCandidateAddrs() string {
+	var addrsBuf []byte
+	var err error
+
+	key := []byte(store.CandidateAddrs)
+
+	addrs := []crypto.CommonAddress{}
+	addrsBuf = trieQuery.trie.Get(key)
+	if err != nil {
+		log.Errorf("GetCandidateAddrs:%v", err)
+		return ""
+	}
+
+	if addrsBuf == nil {
+		return ""
+	}
+
+	err = binary.Unmarshal(addrsBuf, &addrs)
+	if err != nil {
+		log.Errorf("GetCandidateAddrs, Unmarshal:%v", err)
+		return ""
+	}
+
+	type AddrAndCrit struct {
+		Addr   *crypto.CommonAddress
+		Credit *common.Big
+	}
+
+	ac := make([]AddrAndCrit, 0)
+	for _, addr := range addrs {
+		addr := addr
+		storage := &types.StakeStorage{}
+		key := sha3.Keccak256([]byte(store.StakeStorage + addr.Hex()))
+
+		value, _ := trieQuery.trie.TryGet(key)
+		if value == nil {
+			return ""
+		} else {
+			err = binary.Unmarshal(value, storage)
+			if err != nil {
+				return ""
+			}
+		}
+
+		total := new(big.Int)
+		for _, rc := range storage.RC {
+			for _, hv := range rc.HeghtValues {
+				total.Add(total, hv.CreditValue.ToInt())
+			}
+		}
+
+		cb := new(common.Big)
+		cb.SetMathBig(*total)
+
+		ac = append(ac, AddrAndCrit{Addr: &addr, Credit: cb})
+	}
+
+	b, err := json.Marshal(ac)
+	return string(b)
+}
+
+func (trieQuery *TrieQuery) GetCancelCreditDetails(addr *crypto.CommonAddress) string {
+	key := sha3.Keccak256([]byte(store.StakeStorage + addr.Hex()))
+
+	storage := &types.StakeStorage{}
+	value, err := trieQuery.trie.TryGet(key)
+	if err != nil {
+		log.Errorf("get storage err:%v", err)
+		return ""
+	}
+	if value == nil {
+		return ""
+	} else {
+		err = binary.Unmarshal(value, storage)
+		if err != nil {
+			return ""
+		}
+	}
+
+	if len(storage.CC) == 0 {
+		return ""
+	}
+
+	//for _, rc := range storage.RC {
+	//	total := new(big.Int)
+	//	for _, value := range rc.HeghtValues {
+	//		total.Add(total, &value.CreditValue)
+	//	}
+	//	m[rc.Addr] = common.Big(*total)
+	//}
+	b, _ := json.Marshal(storage.CC)
+	return string(b)
 }

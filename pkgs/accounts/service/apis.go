@@ -1,18 +1,21 @@
 package service
 
 import (
+	"bytes"
 	"encoding/hex"
-	"errors"
 	"fmt"
-	"github.com/drep-project/DREP-Chain/pkgs/accounts/addrgenerator"
+	"github.com/drep-project/DREP-Chain/chain/store"
+	"github.com/drep-project/DREP-Chain/params"
+	"github.com/drep-project/DREP-Chain/pkgs/evm/vm"
 	"math/big"
 
 	"github.com/drep-project/DREP-Chain/blockmgr"
-
 	"github.com/drep-project/DREP-Chain/common"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/database"
+	"github.com/drep-project/DREP-Chain/pkgs/accounts/addrgenerator"
+	"github.com/drep-project/DREP-Chain/pkgs/evm"
 	"github.com/drep-project/DREP-Chain/types"
 )
 
@@ -22,6 +25,7 @@ usage: 地址管理及发起简单交易
 prefix:account
 */
 type AccountApi struct {
+	EvmService         *evm.EvmService
 	Wallet             *Wallet
 	accountService     *AccountService
 	poolQuery          blockmgr.IBlockMgrPool
@@ -37,7 +41,7 @@ type AccountApi struct {
  response:
   {"jsonrpc":"2.0","id":3,"result":["0x3296d3336895b5baaa0eca3df911741bd0681c3f","0x3ebcbe7cb440dd8c52940a2963472380afbb56c5"]}
 */
-func (accountapi *AccountApi) ListAddress() ([]*crypto.CommonAddress, error) {
+func (accountapi *AccountApi) ListAddress() ([]string, error) {
 	if !accountapi.Wallet.IsOpen() {
 		return nil, ErrClosedWallet
 	}
@@ -68,7 +72,7 @@ func (accountapi *AccountApi) CreateAccount() (*crypto.CommonAddress, error) {
  usage: 创建本地钱包
  params:
 	1. 钱包密码
- return: 无
+ return:  失败返回错误原因，成功不返回任何信息
  example:   curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_createWallet","params":["123"], "id": 3}' -H "Content-Type:application/json"
  response:
 	  {"jsonrpc":"2.0","id":3,"result":null}
@@ -82,42 +86,40 @@ func (accountapi *AccountApi) CreateWallet(password string) error {
 }
 
 /*
- name: lockWallet
- usage: 锁定钱包（无法发起需要私钥的相关工作）
+ name: lockAccount
+ usage: 锁定账号
  params:
- return: 无
- example:   curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_lockWallet","params":[], "id": 3}' -H "Content-Type:application/json"
+ return:  失败返回错误原因，成功不返回任何信息
+ example:   curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_lockAccount","params":["0x518b3fefa3fb9a72753c6ad10a2b68cc034ec391"], "id": 3}' -H "Content-Type:application/json"
  response:
 	 {"jsonrpc":"2.0","id":3,"result":null}
 */
-func (accountapi *AccountApi) LockWallet() error {
+func (accountapi *AccountApi) LockAccount(addr crypto.CommonAddress) error {
 	if !accountapi.Wallet.IsOpen() {
 		return ErrClosedWallet
 	}
-	if !accountapi.Wallet.IsLock() {
-		return accountapi.Wallet.Lock()
-	}
+
+	return accountapi.Wallet.Lock(&addr)
+
 	return ErrLockedWallet
 }
 
 /*
- name: lockWallet
- usage: 解锁钱包
+ name: account_unlockAccount
+ usage: 解锁账号
  params:
-	1. 钱包密码
- return: 无
- example:   curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_openWallet","params":["123"], "id": 3}' -H "Content-Type:application/json"
+	1. 账号地址
+ return: 失败返回错误原因，成功不返回任何信息
+ example:   curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_unlockAccount","params":["0x518b3fefa3fb9a72753c6ad10a2b68cc034ec391"], "id": 3}' -H "Content-Type:application/json"
  response:
 	 {"jsonrpc":"2.0","id":3,"result":null}
 */
-func (accountapi *AccountApi) UnLockWallet(password string) error {
+func (accountapi *AccountApi) UnlockAccount(addr crypto.CommonAddress) error {
 	if !accountapi.Wallet.IsOpen() {
 		return ErrClosedWallet
 	}
-	if accountapi.Wallet.IsLock() {
-		return accountapi.Wallet.UnLock(password)
-	}
-	return ErrAlreadyUnLocked
+
+	return accountapi.Wallet.UnLock(&addr)
 }
 
 /*
@@ -155,14 +157,18 @@ func (accountapi *AccountApi) CloseWallet() {
 	2. 接受者的地址
 	3. 金额
 	4. gas价格
-	5. gas上线
-	6. 备注
+	5. gas上限
+	6. 备注/data
  return: 交易地址
  example:   curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_transfer","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000",""],"id":1}' http://127.0.0.1:15645
  response:
 	 {"jsonrpc":"2.0","id":1,"result":"0x3a3b59f90a21c2fd1b690aa3a2bc06dc2d40eb5bdc26fdd7ecb7e1105af2638e"}
 */
 func (accountapi *AccountApi) Transfer(from crypto.CommonAddress, to crypto.CommonAddress, amount, gasprice, gaslimit *common.Big, data common.Bytes) (string, error) {
+	if gasprice.ToInt().Uint64() < blockmgr.DefaultGasPrice {
+		gasprice.SetMathBig(*new(big.Int).SetUint64(blockmgr.DefaultGasPrice))
+	}
+
 	nonce := accountapi.poolQuery.GetTransactionCount(&from)
 	tx := types.NewTransaction(to, (*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
 	sig, err := accountapi.Wallet.Sign(&from, tx.TxHash().Bytes())
@@ -178,27 +184,24 @@ func (accountapi *AccountApi) Transfer(from crypto.CommonAddress, to crypto.Comm
 }
 
 /*
- name: ReplaceTx
- usage: 替换老的交易
+ name: transferWithNonce
+ usage: 转账
  params:
 	1. 发起转账的地址
 	2. 接受者的地址
 	3. 金额
 	4. gas价格
-	5. gas上线
+	5. gas上限
 	6. 备注
-	7. 被代替交易的nonce
- return: 新交易地址
- example: curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_replaceTx","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000","",1000],"id":1}' http://127.0.0.1:15645
+    7. nonce
+ return: 交易地址
+ example:   curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_transferWithNonce","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000","",1],"id":1}' http://127.0.0.1:15645
  response:
 	 {"jsonrpc":"2.0","id":1,"result":"0x3a3b59f90a21c2fd1b690aa3a2bc06dc2d40eb5bdc26fdd7ecb7e1105af2638e"}
 */
-func (accountapi *AccountApi) ReplaceTx(from crypto.CommonAddress, to crypto.CommonAddress, amount, gasprice, gaslimit *common.Big, data common.Bytes, nonce *uint64) (string, error) {
-	if nonce == nil {
-		return "", errors.New("nonce is nil")
-	}
-
-	tx := types.NewTransaction(to, (*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), *nonce)
+func (accountapi *AccountApi) TransferWithNonce(from crypto.CommonAddress, to crypto.CommonAddress, amount, gasprice, gaslimit *common.Big, data common.Bytes, nonce uint64) (string, error) {
+	//nonce := accountapi.poolQuery.GetTransactionCount(&from)
+	tx := types.NewTransaction(to, (*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
 	sig, err := accountapi.Wallet.Sign(&from, tx.TxHash().Bytes())
 	if err != nil {
 		return "", err
@@ -209,43 +212,6 @@ func (accountapi *AccountApi) ReplaceTx(from crypto.CommonAddress, to crypto.Com
 		return "", err
 	}
 	return tx.TxHash().String(), nil
-}
-
-/*
- name: GetTxInPool
- usage: 查询交易是否在交易池，如果在，返回交易
- params:
-	1. 发起转账的地址
-
- return: 交易完整信息
- example: curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_getTxInPool","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5"],"id":1}' http://127.0.0.1:15645
- response:
-   {
-  "jsonrpc": "2.0",
-  "id": 3,
-  "result": {
-    "Hash": "0xfa5c34114ff459b4c97e7cd268c507c0ccfcfc89d3ccdcf71e96402f9899d040",
-    "From": "0x7923a30bbfbcb998a6534d56b313e68c8e0c594a",
-    "Version": 1,
-    "Nonce": 15632,
-    "Type": 0,
-    "To": "0x7923a30bbfbcb998a6534d56b313e68c8e0c594a",
-    "ChainId": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-    "Amount": "0x111",
-    "GasPrice": "0x110",
-    "GasLimit": "0x30000",
-    "Timestamp": 1559322808,
-    "Data": null,
-    "Sig": "0x20f25b86c4bf73aa4fa0bcb01e2f5731de3a3917c8861d1ce0574a8d8331aedcf001e678000f6afc95d35a53ef623a2055fce687f85c2fd752dc455ab6db802b1f"
-  }
-}
-*/
-func (accountapi *AccountApi) GetTxInPool(hash string) (*types.Transaction, error) {
-	tx, err := accountapi.poolQuery.GetTxInPool(hash)
-	if err != nil {
-		return nil, err
-	}
-	return tx, nil
 }
 
 /*
@@ -280,24 +246,247 @@ func (accountapi *AccountApi) SetAlias(srcAddr crypto.CommonAddress, alias strin
 }
 
 /*
- name: call
- usage: 调用合约
+ name: VoteCredit
+ usage: 投票
+ params:
+	1. 发起转账的地址
+	2. 接受者的地址
+	3. 金额
+	4. gas价格
+	5. gas上线
+	6. 备注
+ return: 交易地址
+ example:   curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_voteCredit","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
+ response:
+	 {"jsonrpc":"2.0","id":1,"result":"0x3a3b59f90a21c2fd1b690aa3a2bc06dc2d40eb5bdc26fdd7ecb7e1105af2638e"}
+*/
+func (accountapi *AccountApi) VoteCredit(from crypto.CommonAddress, to crypto.CommonAddress, amount, gasprice, gaslimit *common.Big) (string, error) {
+	nonce := accountapi.poolQuery.GetTransactionCount(&from)
+	tx := types.NewVoteTransaction(to, (*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
+	sig, err := accountapi.Wallet.Sign(&from, tx.TxHash().Bytes())
+	if err != nil {
+		return "", err
+	}
+	tx.Sig = sig
+	err = accountapi.messageBroadCastor.SendTransaction(tx, true)
+	if err != nil {
+		return "", err
+	}
+	return tx.TxHash().String(), nil
+}
+
+/*
+ name: CancelVoteCredit
+ usage:
+ params:
+	1. 发起转账的地址
+	2. 接受者的地址
+	3. 金额
+	4. gas价格
+	5. gas上线
+	6. 备注
+ return: 交易地址
+ example:   curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_cancelVoteCredit","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
+ response:
+	 {"jsonrpc":"2.0","id":1,"result":"0x3a3b59f90a21c2fd1b690aa3a2bc06dc2d40eb5bdc26fdd7ecb7e1105af2638e"}
+*/
+func (accountapi *AccountApi) CancelVoteCredit(from crypto.CommonAddress, to crypto.CommonAddress, amount, gasprice, gaslimit *common.Big) (string, error) {
+	nonce := accountapi.poolQuery.GetTransactionCount(&from)
+	tx := types.NewCancelVoteTransaction(to, (*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
+	sig, err := accountapi.Wallet.Sign(&from, tx.TxHash().Bytes())
+	if err != nil {
+		return "", err
+	}
+	tx.Sig = sig
+	err = accountapi.messageBroadCastor.SendTransaction(tx, true)
+	if err != nil {
+		return "", err
+	}
+	return tx.TxHash().String(), nil
+}
+
+/*
+ name: CandidateCredit
+ usage: 候选节点质押
+ params:
+	1. 质押者的地址
+	2. 质押金额
+	3. gas价格
+	4. gas上线
+	5. 质押者地址对应的pubkey，质押者的P2p信息
+ return: 交易地址
+ example:   curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_candidateCredit","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000","{\"Pubkey\":\"0x020e233ebaed5ade5e48d7ee7a999e173df054321f4ddaebecdb61756f8a43e91c\",\"Node\":\"enode://3f05da2475bf09ce20b790d76b42450996bc1d3c113a1848be1960171f9851c0@149.129.172.91:44444\"}"],"id":1}' http://127.0.0.1:15645
+ response:
+	 {"jsonrpc":"2.0","id":1,"result":"0x3a3b59f90a21c2fd1b690aa3a2bc06dc2d40eb5bdc26fdd7ecb7e1105af2638e"}
+*/
+func (accountapi *AccountApi) CandidateCredit(from crypto.CommonAddress, amount, gasprice, gaslimit *common.Big, data string) (string, error) {
+	cd := types.CandidateData{}
+	err := cd.Unmarshal([]byte(data))
+	if err != nil {
+		return "", err
+	}
+
+	if !bytes.Equal(crypto.PubkeyToAddress(cd.Pubkey).Bytes(), from.Bytes()) {
+		return "", nil
+	}
+
+	nonce := accountapi.poolQuery.GetTransactionCount(&from)
+	tx := types.NewCandidateTransaction((*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce, []byte(data))
+	sig, err := accountapi.Wallet.Sign(&from, tx.TxHash().Bytes())
+	if err != nil {
+		return "", err
+	}
+	tx.Sig = sig
+	err = accountapi.messageBroadCastor.SendTransaction(tx, true)
+	if err != nil {
+		return "", err
+	}
+	return tx.TxHash().String(), nil
+}
+
+/*
+ name: CancelCandidateCredit
+ usage: 取消候选
+ params:
+	1. 发起转账的地址
+	2. 接受者的地址
+	3. 金额
+	4. gas价格
+	5. gas上线
+	6. 备注
+ return: 交易地址
+ example:   curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_cancelCandidateCredit","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000",""],"id":1}' http://127.0.0.1:15645
+ response:
+	 {"jsonrpc":"2.0","id":1,"result":"0x3a3b59f90a21c2fd1b690aa3a2bc06dc2d40eb5bdc26fdd7ecb7e1105af2638e"}
+*/
+func (accountapi *AccountApi) CancelCandidateCredit(from crypto.CommonAddress, amount, gasprice, gaslimit *common.Big, data common.Bytes) (string, error) {
+	nonce := accountapi.poolQuery.GetTransactionCount(&from)
+	tx := types.NewCancleCandidateTransaction((*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
+	sig, err := accountapi.Wallet.Sign(&from, tx.TxHash().Bytes())
+	if err != nil {
+		return "", err
+	}
+	tx.Sig = sig
+	err = accountapi.messageBroadCastor.SendTransaction(tx, true)
+	if err != nil {
+		return "", err
+	}
+	return tx.TxHash().String(), nil
+}
+
+/*
+ name: readContract
+ usage: 读取智能合约（无数据被修改）
+ params:
+    1. 发交易的账户地址
+	2. 合约地址
+	3. 合约接口
+ return: 查询结果
+ example:
+	curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_readContract","params":["0xec61c03f719a5c214f60719c3f36bb362a202125","0xecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c"],"id":1}' http://127.0.0.1:15645
+ response:
+	 {"jsonrpc":"2.0","id":1,"result":""}
+*/
+func (accountapi *AccountApi) ReadContract(from, to crypto.CommonAddress, input common.Bytes) (common.Bytes, error) {
+	header := accountapi.EvmService.Chain.GetCurrentHeader()
+	tx := types.NewTransaction(to, new(big.Int).SetUint64(0), &big.Int{}, new(big.Int).SetUint64(params.MinGasLimit), 0)
+	tx.Data.Data = input
+
+	sig, err := accountapi.Wallet.Sign(&from, tx.TxHash().Bytes())
+	if err != nil {
+		return nil, err
+	}
+	tx.Sig = sig
+
+	trieStore, err := store.TrieStoreFromStore(accountapi.databaseService.LevelDb(), header.StateRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	ret, err := accountapi.EvmService.Call(trieStore, tx, header)
+	fmt.Println(string(common.Bytes(ret)))
+	fmt.Println(new(big.Int).SetBytes(ret))
+	fmt.Println(common.Bytes(ret))
+
+	return common.Bytes(ret), err
+}
+
+/*
+ name: estimateGas
+ usage: 估算交易需要多少gas
+ params:
+	1. 发起转账的地址
+	2. 金额
+	3. 备注/data
+	4. 接收者的地址
+ return: 评估结果，失败返回错误
+ example:
+	curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_estimateGas","params":["0xec61c03f719a5c214f60719c3f36bb362a202125","0xecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
+ response:
+	 {"jsonrpc":"2.0","id":1,"result":"0x5d74aba54ace5f01a5f0057f37bfddbbe646ea6de7265b368e2e7d17d9cdeb9c"}
+*/
+func (accountapi *AccountApi) EstimateGas(from crypto.CommonAddress, amount *common.Big, data common.Bytes, to *crypto.CommonAddress) (uint64, error) {
+	if amount.ToInt().Uint64() != 0 {
+		return params.MinGasLimit, nil
+	}
+
+	header := accountapi.EvmService.Chain.GetCurrentHeader()
+	tx := types.NewTransaction(*to, amount.ToInt(), new(big.Int).SetUint64(blockmgr.DefaultGasPrice), new(big.Int).SetUint64(params.MinGasLimit), 0)
+	tx.Data.Data = data
+
+	sig, err := accountapi.Wallet.Sign(&from, tx.TxHash().Bytes())
+	if err != nil {
+		return 0, err
+	}
+	tx.Sig = sig
+
+	trieStore, err := store.TrieStoreFromStore(accountapi.databaseService.LevelDb(), header.StateRoot)
+	if err != nil {
+		return 0, err
+	}
+
+	state := vm.NewState(trieStore, header.Height)
+
+	gl := new(big.Int).SetUint64(params.MinGasLimit)
+	var (
+		fail bool
+	)
+
+	for {
+		_, _, _, fail, err = accountapi.EvmService.Eval(state, tx, header, gl.Uint64(), amount.ToInt())
+		if err != nil || fail {
+			if err == vm.ErrCodeStoreOutOfGas || err == vm.ErrOutOfGas {
+				gl = gl.Add(gl, new(big.Int).SetUint64(1))
+			} else {
+				return 0, fmt.Errorf("err:%v or fail:%v", err, fail)
+			}
+		} else {
+			tx.Data.GasLimit = *(*common.Big)(gl)
+			return tx.Data.GasLimit.ToInt().Uint64(), err
+		}
+	}
+
+	return 0, err
+}
+
+/*
+ name: executeContract
+ usage: 执行智能合约（导致数据被修改）
  params:
 	1. 调用者的地址
 	2. 合约地址
 	3. 代码
-	4. 金额
-	4. gas价格
-	5. gas上限
- return: 合约地址
+	3. gas价格
+	4. gas上限
+ return: 交易hash
  example:
- 	curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_createCode","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x6d4ce63c","0x111","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
+	curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_executeContract","params":["0xec61c03f719a5c214f60719c3f36bb362a202125","0xecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
  response:
 	 {"jsonrpc":"2.0","id":1,"result":"0x5d74aba54ace5f01a5f0057f37bfddbbe646ea6de7265b368e2e7d17d9cdeb9c"}
 */
-func (accountapi *AccountApi) Call(from crypto.CommonAddress, to crypto.CommonAddress, input common.Bytes, amount, gasprice, gaslimit *common.Big) (string, error) {
+func (accountapi *AccountApi) ExecuteContract(from crypto.CommonAddress, to crypto.CommonAddress, input common.Bytes, gasprice, gaslimit *common.Big) (string, error) {
 	nonce := accountapi.poolQuery.GetTransactionCount(&from)
-	t := types.NewCallContractTransaction(to, input, (*big.Int)(amount), (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
+	t := types.NewCallContractTransaction(to, input, &big.Int{}, (*big.Int)(gasprice), (*big.Int)(gaslimit), nonce)
 	sig, err := accountapi.Wallet.Sign(&from, t.TxHash().Bytes())
 	if err != nil {
 		return "", err
@@ -315,7 +504,7 @@ func (accountapi *AccountApi) Call(from crypto.CommonAddress, to crypto.CommonAd
 	2. 合约内容
 	3. 金额
 	4. gas价格
-	5. gas上线
+	5. gas上限
  return: 合约地址
  example:
  	curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_createCode","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x608060405234801561001057600080fd5b5061018c806100206000396000f3fe608060405260043610610051576000357c0100000000000000000000000000000000000000000000000000000000900480634f2be91f146100565780636d4ce63c1461006d578063db7208e31461009e575b600080fd5b34801561006257600080fd5b5061006b6100dc565b005b34801561007957600080fd5b5061008261011c565b604051808260070b60070b815260200191505060405180910390f35b3480156100aa57600080fd5b506100da600480360360208110156100c157600080fd5b81019080803560070b9060200190929190505050610132565b005b60016000808282829054906101000a900460070b0192506101000a81548167ffffffffffffffff021916908360070b67ffffffffffffffff160217905550565b60008060009054906101000a900460070b905090565b806000806101000a81548167ffffffffffffffff021916908360070b67ffffffffffffffff1602179055505056fea165627a7a723058204b651e4313ab6bc4eda61084cac1f805699cefbb979ddfd3a2d7f970903307cd0029","0x111","0x110","0x30000"],"id":1}' http://127.0.0.1:15645
@@ -330,13 +519,16 @@ func (accountapi *AccountApi) CreateCode(from crypto.CommonAddress, byteCode com
 		return "", err
 	}
 	t.Sig = sig
-	accountapi.messageBroadCastor.SendTransaction(t, true)
+	err = accountapi.messageBroadCastor.SendTransaction(t, true)
+	if err != nil {
+		return "", err
+	}
 	return t.TxHash().String(), nil
 }
 
 /*
 	 name: dumpPrivkey
-	 usage: 关闭钱包
+	 usage: 导出地址对应的私钥
 	 params:
 		1.地址
 	 return: 私钥
@@ -357,6 +549,31 @@ func (accountapi *AccountApi) DumpPrivkey(address *crypto.CommonAddress) (*secp2
 		return nil, err
 	}
 	return node.PrivateKey, nil
+}
+
+/*
+	 name: DumpPubkey
+	 usage: 导出地址对应的公钥
+	 params:
+		1.地址
+	 return: 公钥
+	 example:   curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_dumpPubkey","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5"], "id": 3}' -H "Content-Type:application/json"
+	 response:
+		 {"jsonrpc":"2.0","id":3,"result":"0x270f4b122603999d1c07aec97e972a2ddf7bd8b5bfe3543c10814e6a19f13aaf"}
+*/
+func (accountapi *AccountApi) DumpPubkey(address *crypto.CommonAddress) (*secp256k1.PublicKey, error) {
+	if !accountapi.Wallet.IsOpen() {
+		return nil, ErrClosedWallet
+	}
+	if accountapi.Wallet.IsLock() {
+		return nil, ErrLockedWallet
+	}
+
+	node, err := accountapi.Wallet.GetAccountByAddress(address)
+	if err != nil {
+		return nil, err
+	}
+	return node.PrivateKey.PubKey(), nil
 }
 
 /*

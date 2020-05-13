@@ -27,14 +27,14 @@ func main() {
 	debug.SetGCPercent(20)
 
 	drepApp := app.NewApp()
-	err := drepApp.AddServices(
+	err := drepApp.IncludeServices(
 		database.DatabaseService{},
 		rpc.RpcService{},
 		logServer.LogService{},
 		p2pService.P2pService{},
-		evmService.EvmService{},
 		chainService.ChainService{},
 		blockService.BlockMgr{},
+		evmService.EvmService{},
 		chainIndexerService.ChainIndexerService{},
 		filterService.FilterService{},
 		accountService.AccountService{},
@@ -62,5 +62,7 @@ func main() {
 	if err := drepApp.Run(); err != nil {
 		fmt.Println(err)
 	}
+
+	log.Println("drep run over *****************")
 	return
 }

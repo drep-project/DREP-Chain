@@ -139,7 +139,7 @@ func TestBucket_bumpNoDuplicates(t *testing.T) {
 	}
 }
 
-// This checks that the table-wide IP limit is applied correctly.
+// This checks that the table-wide Node limit is applied correctly.
 func TestTable_IPLimit(t *testing.T) {
 	transport := newPingRecorder()
 	tab, db := newTestTable(transport)
@@ -156,7 +156,7 @@ func TestTable_IPLimit(t *testing.T) {
 	checkIPLimitInvariant(t, tab)
 }
 
-// This checks that the per-bucket IP limit is applied correctly.
+// This checks that the per-bucket Node limit is applied correctly.
 func TestTable_BucketIPLimit(t *testing.T) {
 	transport := newPingRecorder()
 	tab, db := newTestTable(transport)
@@ -186,7 +186,7 @@ func checkIPLimitInvariant(t *testing.T, tab *Table) {
 		}
 	}
 	if tabset.String() != tab.ips.String() {
-		t.Errorf("table IP set is incorrect:\nhave: %v\nwant: %v", tab.ips, tabset)
+		t.Errorf("table Node set is incorrect:\nhave: %v\nwant: %v", tab.ips, tabset)
 	}
 }
 

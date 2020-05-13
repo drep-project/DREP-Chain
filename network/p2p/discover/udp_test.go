@@ -437,7 +437,7 @@ func TestUDP_successfulPing(t *testing.T) {
 			t.Errorf("node has wrong ID: got %v, want %v", n.ID(), rid)
 		}
 		if !n.IP().Equal(test.remoteaddr.IP) {
-			t.Errorf("node has wrong IP: got %v, want: %v", n.IP(), test.remoteaddr.IP)
+			t.Errorf("node has wrong Node: got %v, want: %v", n.IP(), test.remoteaddr.IP)
 		}
 		if int(n.UDP()) != test.remoteaddr.Port {
 			t.Errorf("node has wrong UDP port: got %v, want: %v", n.UDP(), test.remoteaddr.Port)

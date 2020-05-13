@@ -1,7 +1,8 @@
 package blockmgr
 
 import (
-	"fmt"
+	"github.com/drep-project/DREP-Chain/chain/store"
+	"github.com/drep-project/DREP-Chain/common/trie"
 	"math/big"
 	"math/rand"
 	"path"
@@ -19,7 +20,6 @@ import (
 	"github.com/drep-project/DREP-Chain/database"
 	"github.com/drep-project/DREP-Chain/network/p2p"
 	p2pService "github.com/drep-project/DREP-Chain/network/service"
-	"github.com/drep-project/DREP-Chain/pkgs/evm"
 	"github.com/drep-project/DREP-Chain/types"
 
 	"time"
@@ -61,7 +61,7 @@ type IBlockMgrPool interface {
 
 type IBlockBlockGenerator interface {
 	//generate block template
-	GenerateTemplate(db *database.Database, leaderAddr crypto.CommonAddress) (*types.Block, *big.Int, error)
+	GenerateTemplate(trieStore store.StoreInterface, leaderAddr crypto.CommonAddress, blockInterval int) (*types.Block, *big.Int, error)
 }
 
 type IBlockNotify interface {
@@ -82,8 +82,8 @@ type BlockMgr struct {
 	RpcService      *rpc2.RpcService            `service:"rpc"`
 	P2pServer       p2pService.P2P              `service:"p2p"`
 	DatabaseService *database.DatabaseService   `service:"database"`
-	VmService       evm.Vm                      `service:"vm"`
 	transactionPool *txpool.TransactionPool
+	chainStore      *chain.ChainStore
 	apis            []app.API
 
 	lock   sync.RWMutex
@@ -109,11 +109,22 @@ type BlockMgr struct {
 	state            event.EventType
 
 	//与此模块通信的所有Peer
-	peersInfo map[string]types.PeerInfoInterface
+	//peersInfo map[string]types.PeerInfoInterface
+	peersInfo sync.Map //key: node.ID(),value PeerInfo
+
 	newPeerCh chan *types.PeerInfo
 
 	gpo  *Oracle
 	quit chan struct{}
+}
+
+func getPeersCount(peerInfos sync.Map) int {
+	count := 0
+	peerInfos.Range(func(key, value interface{}) bool {
+		count++
+		return true
+	})
+	return count
 }
 
 type syncHeaderHash struct {
@@ -145,26 +156,30 @@ func NewBlockMgr(config *BlockMgrConfig, homeDir string, cs chain.ChainServiceIn
 	//blockMgr.pendingSyncTasks = make(map[*time.Timer]map[crypto.Hash]uint64)
 	blockMgr.state = event.StopSyncBlock
 	blockMgr.syncTimerCh = make(chan *time.Timer, pendingTimerCount)
-	blockMgr.peersInfo = make(map[string]types.PeerInfoInterface)
+	//blockMgr.peersInfo = sync.Map{} //make(map[string]types.PeerInfoInterface)
 	blockMgr.newPeerCh = make(chan *types.PeerInfo, maxLivePeer)
 	blockMgr.taskTxsCh = make(chan tasksTxsSync, maxLivePeer)
 
 	blockMgr.gpo = NewOracle(blockMgr.ChainService, blockMgr.Config.GasPrice)
 
-	//TODO use disk db
-	blockMgr.transactionPool = txpool.NewTransactionPool(blockMgr.ChainService.GetDatabaseService().Db(), path.Join(homeDir, blockMgr.Config.JournalFile))
+	store, err := store.TrieStoreFromStore(blockMgr.DatabaseService.LevelDb(), trie.EmptyRoot[:])
+	if err != nil {
+		return nil
+	}
+	blockMgr.transactionPool = txpool.NewTransactionPool(store, path.Join(homeDir, blockMgr.Config.JournalFile))
 
 	blockMgr.P2pServer.AddProtocols([]p2p.Protocol{
 		p2p.Protocol{
 			Name:   "blockMgr",
 			Length: types.NumberOfMsg,
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
-				if len(blockMgr.peersInfo) >= maxLivePeer {
+				if getPeersCount(blockMgr.peersInfo) >= maxLivePeer {
 					return ErrEnoughPeer
 				}
 				pi := types.NewPeerInfo(peer, rw)
-				blockMgr.peersInfo[peer.IP()] = pi
-				defer delete(blockMgr.peersInfo, peer.IP())
+				blockMgr.peersInfo.Store(peer.ID().String(), pi)
+
+				defer blockMgr.peersInfo.Delete(peer.ID().String()) // (blockMgr.peersInfo, peer.IP())
 				return blockMgr.receiveMsg(pi, rw)
 			},
 		},
@@ -190,26 +205,30 @@ func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 	blockMgr.allTasks = newHeightSortedMap()
 	blockMgr.syncTimerCh = make(chan *time.Timer, 1)
 	blockMgr.state = event.StopSyncBlock
-	blockMgr.peersInfo = make(map[string]types.PeerInfoInterface)
+	//blockMgr.peersInfo = make(map[string]types.PeerInfoInterface)
 	blockMgr.newPeerCh = make(chan *types.PeerInfo, maxLivePeer)
 	blockMgr.taskTxsCh = make(chan tasksTxsSync, maxLivePeer)
 
 	blockMgr.gpo = NewOracle(blockMgr.ChainService, blockMgr.Config.GasPrice)
 
-	//TODO use disk db
-	blockMgr.transactionPool = txpool.NewTransactionPool(blockMgr.ChainService.GetDatabaseService().Db(), path.Join(executeContext.CommonConfig.HomeDir, blockMgr.Config.JournalFile))
-
+	store, err := store.TrieStoreFromStore(blockMgr.DatabaseService.LevelDb(), trie.EmptyRoot[:])
+	if err != nil {
+		return err
+	}
+	blockMgr.transactionPool = txpool.NewTransactionPool(store, path.Join(executeContext.CommonConfig.HomeDir, blockMgr.Config.JournalFile))
+	blockMgr.chainStore = &chain.ChainStore{blockMgr.DatabaseService.LevelDb()}
 	blockMgr.P2pServer.AddProtocols([]p2p.Protocol{
 		p2p.Protocol{
 			Name:   "blockMgr",
 			Length: types.NumberOfMsg,
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
-				if len(blockMgr.peersInfo) >= maxLivePeer {
+				if getPeersCount(blockMgr.peersInfo) >= maxLivePeer {
 					return ErrEnoughPeer
 				}
 				pi := types.NewPeerInfo(peer, rw)
-				blockMgr.peersInfo[peer.IP()] = pi
-				defer delete(blockMgr.peersInfo, peer.IP())
+				blockMgr.peersInfo.Store(peer.ID().String(), pi)
+
+				defer blockMgr.peersInfo.Delete(peer.ID().String())
 				return blockMgr.receiveMsg(pi, rw)
 			},
 		},
@@ -230,7 +249,7 @@ func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 }
 
 func (blockMgr *BlockMgr) Start(executeContext *app.ExecuteContext) error {
-	blockMgr.transactionPool.Start(blockMgr.ChainService.NewBlockFeed())
+	blockMgr.transactionPool.Start(blockMgr.ChainService.NewBlockFeed(), blockMgr.ChainService.BestChain().Tip().StateRoot)
 	go blockMgr.synchronise()
 	go blockMgr.syncTxs()
 	return nil
@@ -248,12 +267,12 @@ func (blockMgr *BlockMgr) GetTransactionCount(addr *crypto.CommonAddress) uint64
 }
 
 func (blockMgr *BlockMgr) SendTransaction(tx *types.Transaction, islocal bool) error {
-	from, err := tx.From()
-	nonce := blockMgr.transactionPool.GetTransactionCount(from)
-	if nonce > tx.Nonce() {
-		return fmt.Errorf("error nounce db nonce:%d != %d", nonce, tx.Nonce())
-	}
-	err = blockMgr.verifyTransaction(tx)
+	//from, err := tx.From()
+	//nonce := blockMgr.transactionPool.GetTransactionCount(from)
+	//if nonce > tx.Nonce() {
+	//	return fmt.Errorf("SendTransaction local nonce:%d != comming tx nonce:%d", nonce, tx.Nonce())
+	//}
+	err := blockMgr.verifyTransaction(tx)
 
 	if err != nil {
 		return err
@@ -269,39 +288,44 @@ func (blockMgr *BlockMgr) SendTransaction(tx *types.Transaction, islocal bool) e
 }
 
 func (blockMgr *BlockMgr) BroadcastBlock(msgType int32, block *types.Block, isLocal bool) {
-	for _, peer := range blockMgr.peersInfo {
+	blockMgr.peersInfo.Range(func(key, value interface{}) bool {
+		peer := value.(types.PeerInfoInterface)
 		b := peer.KnownBlock(block)
 		if !b {
 			if !isLocal {
-				//收到远端来的消息，仅仅广播给1/3的peer
+				//收到远端来的消息，仅仅广播给2/3的peer
 				rd := rand.Intn(broadcastRatio)
-				if rd > 1 {
-					continue
+				if rd > 2 {
+					return false
 				}
 			}
 			peer.MarkBlock(block)
 			blockMgr.P2pServer.Send(peer.GetMsgRW(), uint64(msgType), block)
 		}
-	}
+		return true
+	})
 }
 
 func (blockMgr *BlockMgr) BroadcastTx(msgType int32, tx *types.Transaction, isLocal bool) {
 	go func() {
-		for _, peer := range blockMgr.peersInfo {
+
+		blockMgr.peersInfo.Range(func(key, value interface{}) bool {
+			peer := value.(types.PeerInfoInterface)
 			b := peer.KnownTx(tx)
 			if !b {
 				if !isLocal {
-					//收到远端来的消息，仅仅广播给1/3的peer
+					//收到远端来的消息，仅仅广播给2/3的peer
 					rd := rand.Intn(broadcastRatio)
-					if rd > 1 {
-						continue
+					if rd > 2 {
+						return false
 					}
 				}
 
 				peer.MarkTx(tx)
 				blockMgr.P2pServer.Send(peer.GetMsgRW(), uint64(msgType), []*types.Transaction{tx})
 			}
-		}
+			return true
+		})
 	}()
 }
 

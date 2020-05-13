@@ -6,7 +6,7 @@ import (
 	"sort"
 
 	"github.com/drep-project/DREP-Chain/crypto"
-	types "github.com/drep-project/DREP-Chain/types"
+	"github.com/drep-project/DREP-Chain/types"
 )
 
 // nonceHeap is a heap.Interface implementation over 64bit unsigned integers for
@@ -161,7 +161,7 @@ func (m *txSortedMap) Ready(start uint64) []*types.Transaction {
 	// Short circuit if no transactions are available
 	if m.index.Len() == 0 || (*m.index)[0] > start {
 		if m.index.Len() != 0 {
-			log.WithField("index[0]", (*m.index)[0]).WithField("req start", start).Debug("txSortedMap Ready")
+			log.WithField("index[0]", (*m.index)[0]).WithField("req start", start).Trace("txSortedMap Ready")
 		}
 		return nil
 	}
@@ -230,6 +230,11 @@ func (l *txList) Overlaps(tx *types.Transaction) bool {
 
 func (l *txList) ReplaceOldTx(tx *types.Transaction) (bool, *types.Transaction) {
 	oldTx := l.txs.Get(tx.Nonce())
+
+	if oldTx.GasPrice().Cmp(tx.GasPrice()) >= 0 {
+		return false, nil
+	}
+
 	if removed := l.txs.Remove(tx.Nonce()); !removed {
 		return false, nil
 	}

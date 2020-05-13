@@ -267,7 +267,7 @@ var (
 
 func (s *dialstate) checkDial(n *enode.Node, peers map[enode.ID]*Peer) error {
 	_, dialing := s.dialing[n.ID()]
-	//fmt.Println("checkDial:",n.ID().String(),s.self.String(),n.IP().String())
+	//fmt.Println("checkDial:",n.ID().String(),s.self.String(),n.Node().String())
 	switch {
 	case dialing:
 		return errAlreadyDialing
@@ -360,7 +360,7 @@ func (t *dialTask) dial(srv *Server, dest *enode.Node) error {
 	if err != nil {
 		return &dialError{err}
 	}
-	//mfd := newMeteredConn(fd, false, dest.IP())
+	//mfd := newMeteredConn(fd, false, dest.Node())
 	return srv.SetupConn(fd, t.flags, dest)
 }
 

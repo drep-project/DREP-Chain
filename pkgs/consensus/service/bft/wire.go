@@ -2,24 +2,35 @@ package bft
 
 import (
 	"encoding/json"
-	"github.com/drep-project/binary"
+	"fmt"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/pkgs/consensus/types"
+	"github.com/drep-project/binary"
 )
 
 //本模块的消息只能在调用本模块（consensus及对应的子模块）的函数中使用，否则会出错
 //例如MsgTypeCommitment消息，在consensus中定义的，发送和接收此消息必须使用consensus中的函数
 const (
-	MsgTypeSetUp      = 0
-	MsgTypeCommitment = 1
-	MsgTypeResponse   = 2
-	MsgTypeChallenge  = 3
-	MsgTypeFail       = 4
+	MsgTypeSetUp       = 0
+	MsgTypeCommitment  = 1
+	MsgTypeResponse    = 2
+	MsgTypeChallenge   = 3
+	MsgTypeFail        = 4
+	MsgTypeValidateReq = 5
+	MsgTypeValidateRes = 6
 
 	MaxMsgSize = 20 << 20
+
+	SetupMagic    = 0xfefefbfe
+	CommitMagic   = 0xfefefbfd
+	ChallegeMagic = 0xfefefbfc
+	FailMagic     = 0xfefefbfb
+	ResponseMagic = 0xfefefbfa
+	//ValidateReqMagic = 0xfefefbf9
+	//validateResMagic = 0xfefefbf8
 )
 
-var NumberOfMsg = 5
+var NumberOfMsg = 7
 
 type MsgWrap struct {
 	Peer types.IPeerInfo
@@ -29,6 +40,8 @@ type MsgWrap struct {
 
 type Setup struct {
 	Height uint64
+	Magic  uint32
+	Round  int
 
 	Msg []byte
 }
@@ -40,6 +53,8 @@ func (setup *Setup) String() string {
 
 type Commitment struct {
 	Height uint64
+	Magic  uint32
+	Round  int
 	BpKey  *secp256k1.PublicKey
 	Q      *secp256k1.PublicKey
 }
@@ -50,8 +65,9 @@ func (commitment *Commitment) String() string {
 }
 
 type Challenge struct {
-	Height uint64
-
+	Height      uint64
+	Magic       uint32
+	Round       int
 	SigmaPubKey *secp256k1.PublicKey
 	SigmaQ      *secp256k1.PublicKey
 	R           []byte
@@ -64,6 +80,8 @@ func (Challenge *Challenge) String() string {
 
 type Response struct {
 	Height uint64
+	Magic  uint32
+	Round  int
 	BpKey  *secp256k1.PublicKey
 	S      []byte
 }
@@ -75,6 +93,8 @@ func (response *Response) String() string {
 
 type Fail struct {
 	Height uint64
+	Magic  uint32
+	Round  int
 
 	Reason string
 }
@@ -108,6 +128,9 @@ func CompletedBlockFromMessage(bytes []byte) (*CompletedBlockMessage, error) {
 	err := binary.Unmarshal(bytes, completedBlockMessage)
 	if err != nil {
 		return nil, err
+	}
+	if completedBlockMessage == nil {
+		return nil, fmt.Errorf("CompletedBlockFromMessage err")
 	}
 	return completedBlockMessage, nil
 }
