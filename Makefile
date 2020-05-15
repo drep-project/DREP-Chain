@@ -23,21 +23,21 @@ all:
 	#win64
 	$(GORUN-WIN) -o $(BIN)/win64/drep.exe ./cmds/drep/drep.go
 	$(GORUN-WIN) -o $(BIN)/win64/drepClient.exe ./cmds/drepClient/main.go
-	$(GORUN-WIN) -o $(BIN)/win64/genaccount.exe ./cmds/genaccount/main.go
+	$(GORUN-WIN) -o $(BIN)/win64/produceConfig/genaccount.exe ./cmds/genaccount/main.go
 	$(GORUN-WIN) -o $(BIN)/win64/genapicode.exe ./cmds/genapicode/main.go
 	$(GORUN-WIN) -o $(BIN)/win64/gendoc.exe ./cmds/gendoc/*.go
 
 	#linux 64
 	$(GORUN-LINXU64) -o $(BIN)/linux64/drep ./cmds/drep/drep.go
 	$(GORUN-LINXU64) -o $(BIN)/linux64/drepClient ./cmds/drepClient/main.go
-	$(GORUN-LINXU64) -o $(BIN)/linux64/genaccount ./cmds/genaccount/main.go
+	$(GORUN-LINXU64) -o $(BIN)/linux64/produceConfig/genaccount ./cmds/genaccount/main.go
 	$(GORUN-LINXU64) -o $(BIN)/linux64/genapicode ./cmds/genapicode/main.go
 	$(GORUN-LINXU64) -o $(BIN)/linux64/gendoc ./cmds/gendoc/*.go
 
 	# mac 64
 	$(GORUN-DARWIN64) -o $(BIN)/darwin64/drep ./cmds/drep/drep.go
 	$(GORUN-DARWIN64) -o $(BIN)/darwin64/drepClient ./cmds/drepClient/main.go
-	$(GORUN-DARWIN64) -o $(BIN)/darwin64/genaccount ./cmds/genaccount/main.go
+	$(GORUN-DARWIN64) -o $(BIN)/darwin64/produceConfig/genaccount ./cmds/genaccount/main.go
 	$(GORUN-DARWIN64) -o $(BIN)/darwin64/genapicode ./cmds/genapicode/main.go
 	$(GORUN-DARWIN64) -o $(BIN)/darwin64/gendoc ./cmds/gendoc/*.go
 
