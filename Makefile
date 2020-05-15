@@ -6,7 +6,7 @@
 .PHONY: drep-darwin drep-darwin-386 drep-darwin-amd64
 .PHONY: drep-windows drep-windows-386 drep-windows-amd64
 
-GOBIN = ./build/bin
+GOBIN = $(pwd)/build/bin
 GO ?= latest
 GORUN = env GO111MODULE=on go install
 
