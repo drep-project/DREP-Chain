@@ -6,7 +6,6 @@ import (
 	chainService "github.com/drep-project/DREP-Chain/chain"
 	p2pService "github.com/drep-project/DREP-Chain/network/service"
 	accountService "github.com/drep-project/DREP-Chain/pkgs/accounts/service"
-	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/solo"
 	logService "github.com/drep-project/DREP-Chain/pkgs/log"
 	traceService "github.com/drep-project/DREP-Chain/pkgs/trace"
 	"io"
@@ -96,8 +95,8 @@ func main() {
 	vType = reflect.TypeOf(&chainService.ChainApi{})
 	resolveType(output, "chain", "CHAIN", "chain", vType)
 
-	vType = reflect.TypeOf(&solo.ConsensusApi{})
-	resolveType(output, "consensus", "CONSENSUS", "consensus", vType)
+	//vType = reflect.TypeOf(&solo.ConsensusApi{})
+	//resolveType(output, "consensus", "CONSENSUS", "consensus", vType)
 
 	vType = reflect.TypeOf(&traceService.TraceApi{})
 	resolveType(output, "trace", "TRACE", "trace", vType)
