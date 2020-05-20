@@ -145,7 +145,6 @@ func (trieStore *trieAccountStore) AliasSet(addr *crypto.CommonAddress, alias st
 	if alias != "" {
 		//1 检查别名是否存在
 		b := trieStore.AliasExist(alias)
-		log.Info("alias is : ", alias, " check res is : " , b)
 		if b {
 			return ErrUsedAlias
 		}
