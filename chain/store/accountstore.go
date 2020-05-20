@@ -145,6 +145,7 @@ func (trieStore *trieAccountStore) AliasSet(addr *crypto.CommonAddress, alias st
 	if alias != "" {
 		//1 检查别名是否存在
 		b := trieStore.AliasExist(alias)
+		log.Info("alias is : ", alias, " check res is : " , b)
 		if b {
 			return ErrUsedAlias
 		}
@@ -182,8 +183,8 @@ func (trieStore *trieAccountStore) AliasGet(alias string) (*crypto.CommonAddress
 }
 
 func (trieStore *trieAccountStore) AliasExist(alias string) bool {
-	_, err := trieStore.storeDB.Get([]byte(AliasPrefix + alias))
-	if err != nil {
+	val, err:= trieStore.storeDB.Get([]byte(AliasPrefix + alias))
+	if(val == nil || err != nil){
 		return false
 	}
 	return true
