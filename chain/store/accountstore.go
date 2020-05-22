@@ -182,8 +182,8 @@ func (trieStore *trieAccountStore) AliasGet(alias string) (*crypto.CommonAddress
 }
 
 func (trieStore *trieAccountStore) AliasExist(alias string) bool {
-	_, err := trieStore.storeDB.Get([]byte(AliasPrefix + alias))
-	if err != nil {
+	val, err:= trieStore.storeDB.Get([]byte(AliasPrefix + alias))
+	if(val == nil || err != nil){
 		return false
 	}
 	return true
