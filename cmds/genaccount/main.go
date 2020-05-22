@@ -124,7 +124,7 @@ func gen(ctx *cli.Context) error {
 	consensusConfig.Bft = &bft.BftConfig{
 		MyPk:           nil,
 		StartMiner:     true,
-		BlockInterval:  5,
+		BlockInterval:  10,
 		ProducerNum:    len(nodeItems),
 		ChangeInterval: 100,
 	}
