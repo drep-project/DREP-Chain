@@ -3,7 +3,7 @@
 ## 区块
 用于处理区块链偏上层逻辑
 
-### 1. blockmgr_sendRawTransaction
+### 1. blockMgr_sendRawTransaction
 #### 作用：发送已签名的交易.
 > 参数：
  1. 已签名的交易
@@ -24,7 +24,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_
 ````
 
 
-### 2. blockmgr_gasPrice
+### 2. blockMgr_gasPrice
 #### 作用：获取系统的给出的gasprice建议值
 > 参数：
  1. 待查询地址
@@ -41,11 +41,11 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_
 ##### 响应：
 
 ```json
-{"jsonrpc": "2.0", "id": 3, "result": 30000}
+
 ````
 
 
-### 3. blockmgr_getPoolTransactions
+### 3. blockMgr_GetPoolTransactions
 #### 作用：获取交易池中的交易信息.
 > 参数：
  1. 待查询地址
@@ -62,11 +62,11 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_
 ##### 响应：
 
 ```json
-{"jsonrpc":"2.0","id":3,"result":[[],[]]}
+
 ````
 
 
-### 4. blockmgr_getTransactionCount
+### 4. blockMgr_GetTransactionCount
 #### 作用：获取地址发出的交易总数
 > 参数：
  1. 待查询地址
@@ -83,11 +83,11 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_
 ##### 响应：
 
 ```json
-{"jsonrpc":"2.0","id":3,"result":33}
+
 ````
 
 
-### 5. blockmgr_getTxInPool
+### 5. blockMgr_GetTxInPool
 #### 作用：查询交易是否在交易池，如果在，返回交易
 > 参数：
  1. 发起转账的地址
@@ -258,7 +258,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 6. chain_getReputation
+### 6. chain_getNonce
 #### 作用：查询地址的名誉值
 > 参数：
  1. 待查询地址
@@ -403,8 +403,8 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 12. chain_getInterset
-#### 作用：根据txhash获取退质押或者投票利息信息
+### 12. chain_getCancelCreditDetail
+#### 作用：根据txhash获取退质押或者退投票信息
 > 参数：
  1. txhash
 
@@ -414,7 +414,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ##### 请求：
 
 ```shell
-curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getInterset","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
+curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCancelCreditDetail","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
 ```
 
 ##### 响应：
@@ -445,7 +445,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 14. chain_getCreditDetails
+### 14. chain_getVoteCreditDetails
 #### 作用：根据地址获取stake 所有细节信息
 > 参数：
  1. 地址
@@ -466,7 +466,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 15. chain_getCancelCreditDetails
+### 15. chain_GetCancelCreditDetails
 #### 作用：获取所有退票请求的细节
 > 参数：
  1. 地址
@@ -487,7 +487,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ````
 
 
-### 16. chain_getCandidateAddrs
+### 16. chain_GetCandidateAddrs
 #### 作用：获取所有候选节点地址和对应的信任值
 > 参数：
  1. 地址
@@ -1089,7 +1089,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 11. account_voteCredit
+### 11. account_VoteCredit
 #### 作用：投票
 > 参数：
  1. 发起转账的地址
@@ -1115,7 +1115,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 12. account_cancelVoteCredit
+### 12. account_CancelVoteCredit
 #### 作用：
 > 参数：
  1. 发起转账的地址
@@ -1141,7 +1141,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 13. account_candidateCredit
+### 13. account_CandidateCredit
 #### 作用：候选节点质押
 > 参数：
  1. 质押者的地址
@@ -1166,7 +1166,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 ````
 
 
-### 14. account_cancelCandidateCredit
+### 14. account_CancelCandidateCredit
 #### 作用：取消候选
 > 参数：
  1. 发起转账的地址
@@ -1273,7 +1273,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
  4. gas价格
  5. gas上限
 
-#### 返回值：交易hash
+#### 返回值：合约地址
 
 #### 示例代码
 ##### 请求：
@@ -1310,7 +1310,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_d
 ````
 
 
-### 20. account_dumpPubkey
+### 20. account_DumpPubkey
 #### 作用：导出地址对应的公钥
 > 参数：
  1. 地址
@@ -1332,7 +1332,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_d
 
 
 ### 21. account_sign
-#### 作用：账号签名
+#### 作用：关闭钱包
 > 参数：
  1. 地址
  2. 消息hash
@@ -1440,7 +1440,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"consensus
 ````
 
 
-### 2. consensus_getMiners
+### 2. consensus_getMiners()
 #### 作用：获取当前出块节点
 > 参数：
 
@@ -1456,6 +1456,7 @@ curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"consensus
 ##### 响应：
 
 ```json
-{"jsonrpc":"2.0","id":3,"result":["0x031727d2f7de7700769862741777a25f2a167d781ebe4b8c91a66404b77034cbac","0x03f9a12dccc856ab43ff935c7273abd902a10cc7f38acaa6dcb5f7e81d9a740a5a"]}
+{"jsonrpc":"2.0","id":3,"result":['0x02c682c9f503465a27d1941d1a25547b5ea879a7145056283599a33869982513df', '0x036a09f9012cb3f73c11ceb2aae4242265c2aa35ebec20dbc28a78712802f457db']
+}
 ````
 
