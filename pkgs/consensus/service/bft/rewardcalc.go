@@ -38,27 +38,57 @@ func (calculator *RewardCalculator) AccumulateRewards(height uint64) error {
 	rate = int64(math.Exp2(float64(rate)))
 	reward.Div(reward, new(big.Int).SetInt64(rate))
 
-	r := new(big.Int)
-	r = r.Div(reward, new(big.Int).SetInt64(2))
-	r.Add(r, calculator.totalGasBalance)
+	//自己分8成，支持者分2成
+	var selfProportion int64 = 80
+	leaderReward := new(big.Int)
+	leaderReward = leaderReward.Mul(reward, new(big.Int).SetInt64(selfProportion))
+	leaderReward = leaderReward.Div(leaderReward, new(big.Int).SetInt64(100))
+	leaderReward.Add(leaderReward, calculator.totalGasBalance)
 	leaderAddr := calculator.producers[calculator.sig.Leader].Address()
-	err := calculator.trieStore.AddBalance(&leaderAddr, calculator.height, r)
+	err := calculator.trieStore.AddBalance(&leaderAddr, calculator.height, leaderReward)
 	if err != nil {
 		return err
 	}
 
-	num := calculator.sig.Num() - 1
-	for index, isCommit := range calculator.sig.Bitmap {
-		if isCommit == 1 {
-			addr := calculator.producers[index].Address()
-			if addr != leaderAddr {
-				r.Div(reward, new(big.Int).SetInt64(int64(num*2)))
-				err = calculator.trieStore.AddBalance(&addr, calculator.height, r)
-				if err != nil {
-					return err
-				}
-			}
+	//Reward supporters in proportion
+	//Distribute Bonus
+	otherReward := new(big.Int)
+	otherReward = otherReward.Mul(reward, new(big.Int).SetInt64(100-selfProportion))
+	otherReward = otherReward.Div(otherReward, new(big.Int).SetInt64(100))
+
+	//fmt.Println(leaderReward.String(), otherReward.String())
+	total := new(big.Int)
+	supporters := calculator.trieStore.GetCreditDetails(&leaderAddr)
+
+	for _, v := range supporters {
+		total = total.Add(total, &v)
+	}
+
+	for spporterAddr, supportCredit := range supporters {
+		bonus := new(big.Int).Set(otherReward)
+		bonus = bonus.Mul(bonus, &supportCredit)
+		bonus = bonus.Div(bonus, total)
+
+		//fmt.Println(bonus, supportCredit.String())
+
+		err := calculator.trieStore.AddBalance(&spporterAddr, calculator.height, bonus)
+		if err != nil {
+			return err
 		}
 	}
+
+	//num := calculator.sig.Num() - 1
+	//for index, isCommit := range calculator.sig.Bitmap {
+	//	if isCommit == 1 {
+	//		addr := calculator.producers[index].Address()
+	//		if addr != leaderAddr {
+	//			r.Div(reward, new(big.Int).SetInt64(int64(num*2)))
+	//			err = calculator.trieStore.AddBalance(&addr, calculator.height, r)
+	//			if err != nil {
+	//				return err
+	//			}
+	//		}
+	//	}
+	//}
 	return nil
 }

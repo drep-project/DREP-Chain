@@ -59,12 +59,13 @@ type StoreInterface interface {
 	//pos
 	GetCandidateAddrs() ([]crypto.CommonAddress, error)
 	GetVoteCreditCount(addr *crypto.CommonAddress) *big.Int
-	CancelVoteCredit(fromAddr, toAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) (*types.IntersetDetail, error)
+	CancelVoteCredit(fromAddr, toAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) (*types.CancelCreditDetail, error)
 	VoteCredit(addresses *crypto.CommonAddress, to *crypto.CommonAddress, addBalance *big.Int, height uint64) error
 	CandidateCredit(addresses *crypto.CommonAddress, addBalance *big.Int, data []byte, height uint64) error
-	CancelCandidateCredit(fromAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) (*types.IntersetDetail, error)
+	CancelCandidateCredit(fromAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) (*types.CancelCreditDetail, error)
 	GetCandidateData(addr *crypto.CommonAddress) ([]byte, error)
 	AddCandidateAddr(addr *crypto.CommonAddress) error
+	GetCreditDetails(addr *crypto.CommonAddress) map[crypto.CommonAddress]big.Int
 }
 
 type Store struct {
@@ -122,7 +123,7 @@ func (s Store) GetChangeInterval() (uint64, error) {
 	return changeInterval, nil
 
 }
-func (s Store) CancelCandidateCredit(fromAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) (*types.IntersetDetail, error) {
+func (s Store) CancelCandidateCredit(fromAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) (*types.CancelCreditDetail, error) {
 	ci, err := s.GetChangeInterval()
 	if err != nil {
 		return nil, err
@@ -249,7 +250,7 @@ func (s Store) AliasSet(addr *crypto.CommonAddress, alias string) (err error) {
 	return s.account.AliasSet(addr, alias)
 }
 
-func (s Store) CancelVoteCredit(fromAddr, toAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) (*types.IntersetDetail, error) {
+func (s Store) CancelVoteCredit(fromAddr, toAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) (*types.CancelCreditDetail, error) {
 	ci, err := s.GetChangeInterval()
 	if err != nil {
 		return nil, err

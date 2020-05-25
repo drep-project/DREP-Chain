@@ -91,7 +91,7 @@ func GetCandidates(store store.StoreInterface, topN int) []Producer {
 			n := &enode.Node{}
 			err = n.UnmarshalText([]byte(cd.Node))
 			if err != nil {
-				log.Errorf("get candidates err:", err.Error(), cd.Node)
+				log.Errorf("get candidates err:%s,%v", err.Error(), cd.Node)
 				continue
 			}
 			log.Trace("get candidates info:", cd.Node)

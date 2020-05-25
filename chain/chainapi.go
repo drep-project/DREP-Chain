@@ -285,7 +285,7 @@ func (chain *ChainApi) GetLogs(txHash crypto.Hash) []*types.Log {
 	if rt != nil {
 		//for _, log := range rt.Logs {
 		//	if log.TxType == types.CancelVoteCreditType || log.TxType == types.CancelCandidateType {
-		//		id := types.IntersetDetail{}
+		//		id := types.CancelCreditDetail{}
 		//		err := json.Unmarshal(log.Data, &id)
 		//		if err == nil {
 		//			ids = append(ids, &id)
@@ -309,14 +309,14 @@ func (chain *ChainApi) GetLogs(txHash crypto.Hash) []*types.Log {
  response:
    {"jsonrpc":"2.0","id":3,"result":""}
 */
-func (chain *ChainApi) GetInterset(txHash crypto.Hash) []*types.IntersetDetail {
+func (chain *ChainApi) GetInterset(txHash crypto.Hash) []*types.CancelCreditDetail {
 	//return chain.chainService.chainStore.GetLogs(txHash)
-	ids := make([]*types.IntersetDetail, 0)
+	ids := make([]*types.CancelCreditDetail, 0)
 	rt := chain.dbQuery.GetReceipt(txHash)
 	if rt != nil {
 		for _, log := range rt.Logs {
 			if log.TxType == types.CancelVoteCreditType || log.TxType == types.CancelCandidateType {
-				id := types.IntersetDetail{}
+				id := types.CancelCreditDetail{}
 				err := json.Unmarshal(log.Data, &id)
 				if err == nil {
 					ids = append(ids, &id)

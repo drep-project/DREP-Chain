@@ -19,6 +19,10 @@ type StoreFake struct {
 	m map[crypto.CommonAddress]struct{}
 }
 
+func (s StoreFake) GetCreditDetails(addr *crypto.CommonAddress) map[crypto.CommonAddress]big.Int {
+	panic("implement me")
+}
+
 func (s StoreFake) Commit() {
 	panic("implement me")
 }
@@ -35,7 +39,7 @@ func (s StoreFake) GetCandidateAddrs() ([]crypto.CommonAddress, error) {
 	return addrs, nil
 }
 
-func (s StoreFake) CancelVoteCredit(fromAddr, toAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) (*types.IntersetDetail, error) {
+func (s StoreFake) CancelVoteCredit(fromAddr, toAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) (*types.CancelCreditDetail, error) {
 	panic("implement me")
 }
 
@@ -47,7 +51,7 @@ func (s StoreFake) CandidateCredit(addresses *crypto.CommonAddress, addBalance *
 	panic("implement me")
 }
 
-func (s StoreFake) CancelCandidateCredit(fromAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) (*types.IntersetDetail, error) {
+func (s StoreFake) CancelCandidateCredit(fromAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) (*types.CancelCreditDetail, error) {
 	panic("implement me")
 }
 
