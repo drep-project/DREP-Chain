@@ -124,7 +124,7 @@ func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Blo
 	}
 	found := false
 
-	log.Info(" bftConsensus.config.ProducerNum:", bftConsensus.config.ProducerNum, bftConsensus.ChainService.BestChain().Height())
+	log.Trace(" bftConsensus.config.ProducerNum:", bftConsensus.config.ProducerNum, bftConsensus.ChainService.BestChain().Height())
 	for _, p := range producers {
 		log.WithField("node", p.Node.String()).Trace("get producers")
 	}

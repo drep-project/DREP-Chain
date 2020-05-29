@@ -281,8 +281,8 @@ func TrieStoreFromStore(diskDB dbinterface.KeyValueStore, stateRoot []byte) (Sto
 	db := NewStoreDB(diskDB, nil, nil, trie.NewDatabaseWithCache(diskDB, 0))
 
 	store := &Store{
-		stake:   NewStakeStorage(db),
-		account: NewTrieAccoutStore(db),
+		stake:   newStakeStorage(db),
+		account: newTrieAccoutStore(db),
 		db:      db,
 	}
 

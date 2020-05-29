@@ -20,7 +20,7 @@ var (
 	ErrInitStateFail             = errors.New("initChainState")
 	ErrNotMathcedStateRoot       = errors.New("state root not matched")
 	ErrGasUsed                   = errors.New("gasRemained used not matched")
-	ErrChainId                   = errors.New("chainId not matched")
+	ErrChainId                   = errors.New("chainID not matched")
 	ErrVersion                   = errors.New("version not matched")
 	ErrPreHash                   = errors.New("previous hash not matched")
 	ErrBlockExsist               = errors.New("already have block")

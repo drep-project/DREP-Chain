@@ -898,12 +898,12 @@ func opReturn(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memor
 	//memory.Print()
 	//fmt.Println()
 
-	fmt.Println("op return:", offset, size)
+	//fmt.Println("op return:", offset, size)
 	ret := memory.GetPtr(offset.Int64(), size.Int64())
 	interpreter.IntPool.put(offset, size)
-	fmt.Println("ret: ", new(big.Int).SetBytes(ret))
-	fmt.Println("ret: ", len(ret))
-	fmt.Println("ret: ", len(contract.ByteCode))
+	//fmt.Println("ret: ", new(big.Int).SetBytes(ret))
+	//fmt.Println("ret: ", len(ret))
+	//fmt.Println("ret: ", len(contract.ByteCode))
 	return ret, nil
 }
 

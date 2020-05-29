@@ -189,7 +189,7 @@ func NewBlockMgr(config *BlockMgrConfig, homeDir string, cs chain.ChainServiceIn
 		app.API{
 			Namespace: "blockmgr",
 			Version:   "1.0",
-			Service: &BlockMgrApi{
+			Service: &BlockMgrAPI{
 				blockMgr:  blockMgr,
 				dbService: blockMgr.DatabaseService,
 			},
@@ -238,7 +238,7 @@ func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 		app.API{
 			Namespace: "blockmgr",
 			Version:   "1.0",
-			Service: &BlockMgrApi{
+			Service: &BlockMgrAPI{
 				blockMgr:  blockMgr,
 				dbService: blockMgr.DatabaseService,
 			},

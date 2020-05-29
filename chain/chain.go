@@ -73,7 +73,7 @@ type ChainService struct {
 	DatabaseService *database.DatabaseService `service:"database"`
 	apis            []app.API
 
-	chainId types.ChainIdType
+	chainID types.ChainIdType
 
 	lock         sync.RWMutex
 	addBlockSync sync.Mutex
@@ -301,16 +301,16 @@ func (chainService *ChainService) getTxHashes(ts []*types.Transaction) ([][]byte
 	return txHashes, nil
 }
 
-func (cs *ChainService) DeriveMerkleRoot(txs []*types.Transaction) []byte {
+func (chainService *ChainService) DeriveMerkleRoot(txs []*types.Transaction) []byte {
 	if len(txs) == 0 {
 		return []byte{}
 	}
-	ts, _ := cs.getTxHashes(txs)
+	ts, _ := chainService.getTxHashes(txs)
 	merkle := common.NewMerkle(ts)
 	return merkle.Root.Hash
 }
 
-func (cs *ChainService) DeriveReceiptRoot(receipts []*types.Receipt) crypto.Hash {
+func (chainService *ChainService) DeriveReceiptRoot(receipts []*types.Receipt) crypto.Hash {
 	if len(receipts) == 0 {
 		return crypto.Hash{}
 	}
@@ -342,9 +342,9 @@ func (chainService *ChainService) createChainState() error {
 	err = chainService.chainStore.PutBlock(chainService.genesisBlock)
 	if err != nil {
 		return err
-	} else {
-		return nil
 	}
+
+	return nil
 }
 
 //GETTER
@@ -402,7 +402,7 @@ func (chainService *ChainService) BestChain() *ChainView {
 }
 
 func (chainService *ChainService) ChainID() types.ChainIdType {
-	return chainService.chainId
+	return chainService.chainID
 }
 
 func (chainService *ChainService) Name() string {
@@ -417,7 +417,7 @@ func (chainService *ChainService) CommandFlags() ([]cli.Command, []cli.Flag) {
 	return nil, []cli.Flag{}
 }
 
-// Config
+// DefaultConfig -> config
 func (chainService *ChainService) DefaultConfig() *ChainConfig {
 	return DefaultChainConfig
 }

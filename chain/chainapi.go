@@ -390,40 +390,40 @@ func (chain *ChainApi) GetCandidateAddrs() string {
 	return trieQuery.GetCandidateAddrs()
 }
 
-/*
- name: getInterestRate
- usage: 获取3个月内、3-6个月、6-12个月、12个月以上的利率
- params:
-	无
- return:  年华后三个月利息, 年华后六个月利息, 一年期利息, 一年以上期利息
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getInterestRate","params":"", "id": 3}' -H "Content-Type:application/json"
- response:
-   {"jsonrpc":"2.0","id":3,"result":"{\"ThreeMonthRate\":4,\"SixMonthRate\":12,\"OneYearRate\":25,\"MoreOneYearRate\":51}"}
-*/
-func (chain *ChainApi) GetInterestRate() (string, error) {
-
-	threeMonth, sixMonth, oneYear, moreOneYear := store.GetInterestRate()
-
-	type InterestRateInfo struct {
-		ThreeMonthRate  uint64
-		SixMonthRate    uint64
-		OneYearRate     uint64
-		MoreOneYearRate uint64
-	}
-
-	iri := InterestRateInfo{
-		ThreeMonthRate:  threeMonth,
-		SixMonthRate:    sixMonth,
-		OneYearRate:     oneYear,
-		MoreOneYearRate: moreOneYear,
-	}
-
-	fmt.Println(threeMonth, sixMonth, oneYear, moreOneYear)
-
-	ret, err := json.Marshal(&iri)
-
-	return string(ret), err
-}
+///*
+// name: getInterestRate
+// usage: 获取3个月内、3-6个月、6-12个月、12个月以上的利率
+// params:
+//	无
+// return:  年华后三个月利息, 年华后六个月利息, 一年期利息, 一年以上期利息
+// example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getInterestRate","params":"", "id": 3}' -H "Content-Type:application/json"
+// response:
+//   {"jsonrpc":"2.0","id":3,"result":"{\"ThreeMonthRate\":4,\"SixMonthRate\":12,\"OneYearRate\":25,\"MoreOneYearRate\":51}"}
+//*/
+//func (chain *ChainApi) GetInterestRate() (string, error) {
+//
+//	threeMonth, sixMonth, oneYear, moreOneYear := store.GetInterestRate()
+//
+//	type InterestRateInfo struct {
+//		ThreeMonthRate  uint64
+//		SixMonthRate    uint64
+//		OneYearRate     uint64
+//		MoreOneYearRate uint64
+//	}
+//
+//	iri := InterestRateInfo{
+//		ThreeMonthRate:  threeMonth,
+//		SixMonthRate:    sixMonth,
+//		OneYearRate:     oneYear,
+//		MoreOneYearRate: moreOneYear,
+//	}
+//
+//	fmt.Println(threeMonth, sixMonth, oneYear, moreOneYear)
+//
+//	ret, err := json.Marshal(&iri)
+//
+//	return string(ret), err
+//}
 
 /*
  name: getChangeCycle

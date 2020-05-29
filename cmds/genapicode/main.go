@@ -86,7 +86,7 @@ func main() {
 	vType = reflect.TypeOf(&accountService.AccountApi{})
 	resolveType(output, "account", "ACCOUNT", "account", vType)
 
-	vType = reflect.TypeOf(&blockmgr.BlockMgrApi{})
+	vType = reflect.TypeOf(&blockmgr.BlockMgrAPI{})
 	resolveType(output, "blockmgr", "BLOCKMGR", "blockmgr", vType)
 
 	vType = reflect.TypeOf(&logService.LogApi{})

@@ -41,8 +41,8 @@ func NewWallet(config *accountTypes.Config, chainId types.ChainIdType) (*Wallet,
 	return wallet, nil
 }
 
-// Open wallet to use wallet
-func (wallet *Wallet) Open(password string) error {
+// OpenWallet wallet to use wallet
+func (wallet *Wallet) OpenWallet(password string) error {
 	if wallet.cacheStore != nil {
 		return ErrClosedWallet
 	}
@@ -189,7 +189,7 @@ func (wallet *Wallet) Lock(addr *crypto.CommonAddress) error {
 // UnLock wallet to enable private key
 func (wallet *Wallet) UnLock(addr *crypto.CommonAddress) error {
 	if wallet.cacheStore == nil {
-		err := wallet.Open(wallet.password)
+		err := wallet.OpenWallet(wallet.password)
 		if err != nil {
 			return err
 		}
@@ -262,7 +262,7 @@ func (wallet *Wallet) ImportKeyStore(path, password string) ([]*crypto.CommonAdd
 	if err != nil {
 		return nil, err
 	}
-	err = newWallet.Open(password)
+	err = newWallet.OpenWallet(password)
 	if err != nil {
 		return nil, err
 	}

@@ -133,7 +133,7 @@ func (accountapi *AccountApi) UnlockAccount(addr crypto.CommonAddress) error {
 	 {"jsonrpc":"2.0","id":3,"result":null}
 */
 func (accountapi *AccountApi) OpenWallet(password string) error {
-	return accountapi.Wallet.Open(password)
+	return accountapi.Wallet.OpenWallet(password)
 }
 
 /*

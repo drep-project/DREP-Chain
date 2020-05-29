@@ -15,7 +15,7 @@ name: 区块
 usage: 用于处理区块链偏上层逻辑
 prefix:blockMgr
 */
-type BlockMgrApi struct {
+type BlockMgrAPI struct {
 	blockMgr  *BlockMgr
 	dbService *database.DatabaseService
 }
@@ -30,7 +30,7 @@ type BlockMgrApi struct {
  response:
 	{"jsonrpc":"2.0","id":1,"result":"0xf30e858667fa63bc57ae395c3f57ede9bb3ad4969d12f4bce51d900fb5931538"}
 */
-func (blockMgrApi *BlockMgrApi) SendRawTransaction(txbytes common.Bytes) (string, error) {
+func (blockMgrApi *BlockMgrAPI) SendRawTransaction(txbytes common.Bytes) (string, error) {
 
 	tx := &types.Transaction{}
 	err := binary.Unmarshal(txbytes, tx)
@@ -54,7 +54,7 @@ func (blockMgrApi *BlockMgrApi) SendRawTransaction(txbytes common.Bytes) (string
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_gasPrice","params":[], "id": 3}' -H "Content-Type:application/json"
  response:
 */
-func (blockMgrApi *BlockMgrApi) GasPrice() (*big.Int, error) {
+func (blockMgrApi *BlockMgrAPI) GasPrice() (*big.Int, error) {
 	return blockMgrApi.blockMgr.gpo.SuggestPrice()
 }
 
@@ -67,7 +67,7 @@ func (blockMgrApi *BlockMgrApi) GasPrice() (*big.Int, error) {
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_getPoolTransactions","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
 */
-func (blockMgrApi *BlockMgrApi) GetPoolTransactions(addr *crypto.CommonAddress) []types.Transactions {
+func (blockMgrApi *BlockMgrAPI) GetPoolTransactions(addr *crypto.CommonAddress) []types.Transactions {
 	return blockMgrApi.blockMgr.GetPoolTransactions(addr)
 }
 
@@ -80,7 +80,7 @@ func (blockMgrApi *BlockMgrApi) GetPoolTransactions(addr *crypto.CommonAddress) 
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_getTransactionCount","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
 */
-func (blockMgrApi *BlockMgrApi) GetTransactionCount(addr *crypto.CommonAddress) uint64 {
+func (blockMgrApi *BlockMgrAPI) GetTransactionCount(addr *crypto.CommonAddress) uint64 {
 	return blockMgrApi.blockMgr.GetTransactionCount(addr)
 }
 
@@ -93,8 +93,7 @@ func (blockMgrApi *BlockMgrApi) GetTransactionCount(addr *crypto.CommonAddress) 
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_getPoolMiniPendingNonce","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
 */
-
-func (blockMgrApi *BlockMgrApi) GetPoolMiniPendingNonce(addr *crypto.CommonAddress) uint64 {
+func (blockMgrApi *BlockMgrAPI) GetPoolMiniPendingNonce(addr *crypto.CommonAddress) uint64 {
 	return blockMgrApi.blockMgr.GetPoolMiniPendingNonce(addr)
 }
 
@@ -127,7 +126,7 @@ func (blockMgrApi *BlockMgrApi) GetPoolMiniPendingNonce(addr *crypto.CommonAddre
   }
 }
 */
-func (blockMgrApi *BlockMgrApi) GetTxInPool(hash string) (*types.Transaction, error) {
+func (blockMgrApi *BlockMgrAPI) GetTxInPool(hash string) (*types.Transaction, error) {
 	tx, err := blockMgrApi.blockMgr.transactionPool.GetTxInPool(hash)
 	if err != nil {
 		return nil, err

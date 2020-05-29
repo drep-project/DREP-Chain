@@ -76,7 +76,7 @@ func NewChainBlockValidator(chainService *ChainService) *ChainBlockValidator {
 }
 
 func (chainBlockValidator *ChainBlockValidator) VerifyHeader(header, parent *types.BlockHeader) error {
-	// Verify chainId  matched
+	// Verify chainID  matched
 	if header.ChainId != chainBlockValidator.chain.ChainID() {
 		return ErrChainId
 	}

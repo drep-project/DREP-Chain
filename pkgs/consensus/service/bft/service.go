@@ -103,10 +103,10 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 				defer func() {
 					select {
 					case <-bftConsensusService.quit:
-						fmt.Println("consensuse protocol ,remove peer, ip", peer.IP())
+						log.Info("consensuse protocol ,remove peer, ip", peer.IP())
 					default:
 						removePeerFeed.Send(pi)
-						fmt.Println("consensuse protocol,not send event ,remove peer, ip", peer.IP())
+						//fmt.Println("consensuse protocol,not send event ,remove peer, ip", peer.IP())
 					}
 				}()
 				for {
@@ -180,9 +180,15 @@ func (bftConsensusService *BftConsensusService) Start(executeContext *app.Execut
 			for {
 				//consult privkey in wallet
 				if bftConsensusService.Miner == nil {
+
+					//var password string
+					//
+					//fmt.Println("please unlock address ",crypto.PubkeyToAddress(bftConsensusService.Config.MyPk).String(),", input password:")
+					//fmt.Scanln(&password)
+
 					accountNode, err := bftConsensusService.WalletService.Wallet.GetAccountByPubkey(bftConsensusService.Config.MyPk)
 					if err != nil {
-						log.WithField("err", err).WithField("addr", crypto.PubkeyToAddress(bftConsensusService.Config.MyPk).String()).Warn("privkey of MyPk in Config is not in local wallet")
+						log.WithField("err", err).WithField("addr", crypto.PubkeyToAddress(bftConsensusService.Config.MyPk).String()).Warn("privkey of MyPk in Config is not in local wallet or unlock address")
 						time.Sleep(time.Second * time.Duration(bftConsensusService.Config.BlockInterval))
 						continue
 					}

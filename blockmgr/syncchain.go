@@ -250,7 +250,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 	quit := make(chan struct{})
 	//2 获取所有需要同步的块的hash;然后通知给获取BODY的协程
 	go func() {
-		commonAncestor += 1
+		commonAncestor++
 		timer := time.NewTimer(time.Second * maxNetworkTimeout)
 
 		for height >= commonAncestor {

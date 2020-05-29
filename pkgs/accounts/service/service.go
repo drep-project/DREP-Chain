@@ -108,9 +108,9 @@ func (accountService *AccountService) Init(executeContext *app.ExecuteContext) e
 		accountService.Config.KeyStoreDir = executeContext.Cli.GlobalString(KeyStoreDirFlag.Name)
 	}
 
-	if !accountService.Config.Enable {
-		return nil
-	}
+	//if !accountService.Config.Enable {
+	//	return nil
+	//}
 
 	accountService.quit = make(chan struct{})
 
@@ -119,12 +119,12 @@ func (accountService *AccountService) Init(executeContext *app.ExecuteContext) e
 	if err != nil {
 		return err
 	}
-	if accountService.Config.Password != "" {
-		err = accountService.Wallet.Open(accountService.Config.Password)
-		if err != nil {
-			return err
-		}
+	//if accountService.Config.Password != "" {
+	err = accountService.Wallet.OpenWallet(accountService.Config.Password)
+	if err != nil {
+		return err
 	}
+	//}
 
 	return nil
 }
