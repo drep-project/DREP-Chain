@@ -91,7 +91,7 @@ type ChainService struct {
 	Config       *ChainConfig
 	genesisBlock *types.Block
 
-	//提供新块订阅
+	//Provide a new block subscription
 	newBlockFeed    event.Feed
 	detachBlockFeed event.Feed
 	logsFeed        event.Feed

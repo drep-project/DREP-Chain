@@ -5,14 +5,14 @@ import (
 )
 
 const (
-	maxHeaderHashCountReq = 48  //最多一次请求的头部hash个数
-	maxBlockCountReq      = 8   //最多一次请求的头部hash个数
-	maxSyncSleepTime      = 200 //同步的过程中，每个周期休息200毫秒
-	maxNetworkTimeout     = 30  //最大网络超时时间
+	maxHeaderHashCountReq = 48  //The maximum number of header hash requests
+	maxBlockCountReq      = 8   //The maximum number of header hash requests
+	maxSyncSleepTime      = 200 //During the synchronization process, each cycle rests for 200 milliseconds
+	maxNetworkTimeout     = 30  //Maximum network timeout
 	maxLivePeer           = 20
-	broadcastRatio        = 3    //非本地产生的消息，广播的个数是broadcastRatio分之一
-	maxTxsCount           = 1024 //最多一次传输交易的个数
-	pendingTimerCount     = 2    //同步区块时，最多同时并发的获取块请求的协程数目
+	broadcastRatio        = 3    //BroadcastRatio broadcasts one third as many non-local messages
+	maxTxsCount           = 1024 //The maximum number of transmission transactions
+	pendingTimerCount     = 2    //When synchronizing blocks, the maximum number of concurrent coroutines of fetch block requests
 
 	MODULENAME = "blockmgr"
 )

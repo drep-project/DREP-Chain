@@ -9,9 +9,9 @@ import (
 
 type StoreDB struct {
 	store  dbinterface.KeyValueStore
-	cache  *database.TransactionStore //数据属于storage的缓存，调用flush才会把数据写入到diskDb中
-	trie   *trie.SecureTrie           //全局状态树  临时树（临时变量）
-	trieDb *trie.Database             //状态树存储到磁盘时，使用到的db
+	cache  *database.TransactionStore //The data belongs to storage's cache and is written to diskDb by a call flush
+	trie   *trie.SecureTrie           //Global state tree temporary tree (temporary variable)
+	trieDb *trie.Database             //The db used when the state tree is stored to disk
 }
 
 func NewStoreDB(store dbinterface.KeyValueStore, cache *database.TransactionStore, trie *trie.SecureTrie, trieDb *trie.Database) *StoreDB {
@@ -90,7 +90,7 @@ func (s *StoreDB) RecoverTrie(root []byte) bool {
 	var err error
 	s.trie, err = trie.NewSecure(crypto.Bytes2Hash(root), s.trieDb)
 	if err != nil {
-		log.WithField("err",err).Info("new secure")
+		log.WithField("err", err).Info("new secure")
 		return false
 	}
 	s.cache = database.NewTransactionStore(s.trie)

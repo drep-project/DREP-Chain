@@ -79,29 +79,30 @@ func GetInterestRate() (threeMonth, sixMonth, oneYear, moreOneYear uint64) {
 	var rate uint64 = 0
 	rate = interestRate * 8
 	bigDiff := new(big.Int).SetUint64(threeMonthHeight * 100)
-	//小于3个月
+	//Less than 3 months
 	threeMonth = bigDiff.Div(bigDiff, new(big.Int).SetUint64(rate)).Uint64()
 	threeMonth = threeMonth * (12 / 3) //Annualized interest rate
 
 	rate = interestRate * 4
 	bigDiff = new(big.Int).SetUint64(sixMonthHeight * 100)
-	//3-6个月
+	//3 to 6 months
 	sixMonth = bigDiff.Div(bigDiff, new(big.Int).SetUint64(rate)).Uint64()
 	sixMonth = sixMonth * (12 / 6) //Annualized interest rate
 
 	rate = interestRate * 2
 	bigDiff = new(big.Int).SetUint64(oneYearHeight * 100)
-	//6 - 12个月
+	//6 to 12 months
 	oneYear = bigDiff.Div(bigDiff, new(big.Int).SetUint64(rate)).Uint64()
 	oneYear = oneYear * (12 / 12) //Annualized interest rate
 
 	rate = interestRate
 	bigDiff = new(big.Int).SetUint64(oneYearHeight * 100)
-	//大于12个月
+	//More than 12 months
 	moreOneYear = bigDiff.Div(bigDiff, new(big.Int).SetUint64(rate)).Uint64()
 
 	return
 }
+
 func (s Store) AddCandidateAddr(addr *crypto.CommonAddress) error {
 	return s.stake.AddCandidateAddr(addr)
 }

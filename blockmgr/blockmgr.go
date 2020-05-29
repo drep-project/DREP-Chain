@@ -93,22 +93,22 @@ type BlockMgr struct {
 	syncBlockEvent event.Feed
 	syncMut        sync.Mutex
 
-	//从远端接收块头hash组
+	//Receive the bulk hash group from the remote
 	headerHashCh chan []*syncHeaderHash
 
-	//从远端接收到块
+	//The block is received from the far end
 	blocksCh chan []*types.Block
 
-	//所有需要同步的任务列表
+	//List of all tasks that need to be synchronized
 	allTasks *heightSortedMap
 
-	//正在同步中的任务列表，如果对应的块未到，会重新发布请求的
+	//The list of tasks being synchronized will be reissued if the corresponding block does not arrive
 	pendingSyncTasks sync.Map //map[*time.Timer]map[crypto.Hash]uint64
 	taskTxsCh        chan tasksTxsSync
 	syncTimerCh      chan *time.Timer
 	state            event.EventType
 
-	//与此模块通信的所有Peer
+	//All peers that communicate with this module
 	//peersInfo map[string]types.PeerInfoInterface
 	peersInfo sync.Map //key: node.ID(),value PeerInfo
 
@@ -293,7 +293,7 @@ func (blockMgr *BlockMgr) BroadcastBlock(msgType int32, block *types.Block, isLo
 		b := peer.KnownBlock(block)
 		if !b {
 			if !isLocal {
-				//收到远端来的消息，仅仅广播给2/3的peer
+				//Receive a message from the remote end and only broadcast it to 2/3 of peers
 				rd := rand.Intn(broadcastRatio)
 				if rd > 2 {
 					return false
@@ -314,7 +314,7 @@ func (blockMgr *BlockMgr) BroadcastTx(msgType int32, tx *types.Transaction, isLo
 			b := peer.KnownTx(tx)
 			if !b {
 				if !isLocal {
-					//收到远端来的消息，仅仅广播给2/3的peer
+					//Receive a message from the remote end and only broadcast it to 2/3 of peers
 					rd := rand.Intn(broadcastRatio)
 					if rd > 2 {
 						return false

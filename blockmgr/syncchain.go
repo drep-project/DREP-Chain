@@ -19,7 +19,7 @@ type tasksTxsSync struct {
 	peer *types.PeerInfo
 }
 
-//同步缓存池中的交易
+//Synchronize transactions in the cache pool
 func (blockMgr *BlockMgr) syncTxs() {
 	for {
 		select {
@@ -58,7 +58,7 @@ func (blockMgr *BlockMgr) synchronise() {
 	}
 
 	syncTx := func(peer *types.PeerInfo) {
-		//保证能把pending里面的所有tx全部取出来
+		//I'm going to be able to get all of the tx out of the pending
 		txs := blockMgr.transactionPool.GetPending(new(big.Int).SetUint64(0xffffffffffffffff))
 		txs2 := blockMgr.transactionPool.GetQueue()
 
@@ -71,9 +71,9 @@ func (blockMgr *BlockMgr) synchronise() {
 		case <-timer.C:
 			syncBlock()
 		case peer := <-blockMgr.newPeerCh:
-			// 同步本地的txpool给对端
+			// Synchronize the local txpool to the opposite end
 			go syncTx(peer)
-			//先与peer同步状态，然后做总体同步
+			//Synchronize the state with the peer first, then the overall synchronization
 			syncBlock()
 		case <-blockMgr.quit:
 			return
@@ -81,7 +81,7 @@ func (blockMgr *BlockMgr) synchronise() {
 	}
 }
 
-//块hash是否在本地主链上
+//Whether the block hash is on the local host chain
 func (blockMgr *BlockMgr) checkExistHeaderHash(headerHash *crypto.Hash) (bool, uint64) {
 	node := blockMgr.ChainService.Index().LookupNode(headerHash)
 	if node == nil {
@@ -104,13 +104,13 @@ func (blockMgr *BlockMgr) requestHeaders(peer types.PeerInfoInterface, from, cou
 	return blockMgr.P2pServer.Send(peer.GetMsgRW(), types.MsgTypeHeaderReq, &req)
 }
 
-//找到公共祖先
+//Finding the common ancestor
 func (blockMgr *BlockMgr) findAncestor(peer types.PeerInfoInterface) (uint64, error) {
 	timeout := time.After(time.Second * maxNetworkTimeout)
 	remoteHeight := peer.GetHeight()
 	fromHeight := blockMgr.ChainService.BestChain().Height()
 
-	//在发出请求的过程中，其他节点的新的块可能已经同步到本地了,因此可以多获取一些
+	//During the process of making the request, new blocks from other nodes may have been synchronized locally, so you can get more
 	err := blockMgr.requestHeaders(peer, fromHeight, maxHeaderHashCountReq)
 	if err != nil {
 		log.WithField("err", err).WithField("fromeheight", fromHeight).Info("req headers ")
@@ -132,7 +132,7 @@ func (blockMgr *BlockMgr) findAncestor(peer types.PeerInfoInterface) (uint64, er
 		return 0, ErrFindAncesstorTimeout
 	}
 
-	//通过二分查找找相同的HASH
+	//Find the same HASH using binary search
 	var ancestor uint64 = 0
 	var tmpFrom uint64 = 0
 	var tmpEnd uint64 = remoteHeight
@@ -238,7 +238,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 	blockMgr.clearSyncCh()
 	headerRoutineExit := false
 
-	//1 获取公共祖先
+	//1 Acquisition of common ancestor
 	commonAncestor, err := blockMgr.findAncestor(peer)
 	if err != nil {
 		return err
@@ -248,7 +248,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 
 	errCh := make(chan error)
 	quit := make(chan struct{})
-	//2 获取所有需要同步的块的hash;然后通知给获取BODY的协程
+	//2 Gets the hash of all blocks that need to be synchronized; It then notifies the coroutine to get the BODY
 	go func() {
 		commonAncestor++
 		timer := time.NewTimer(time.Second * maxNetworkTimeout)
@@ -279,7 +279,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 				}
 
 				select {
-				//每个headerhash作为一个任务
+				//Each headerhash is a task
 				case tasks := <-blockMgr.headerHashCh:
 					for _, task := range tasks {
 						blockMgr.syncMut.Lock()
@@ -299,11 +299,11 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 		headerRoutineExit = true
 	}()
 
-	//请求发出去到时候，设置一个超时定时器
-	//请求超时后，把对应到pendingSyncTasks中到任务放入到allTasks，再次被请求
-	//请求到块都到了，从pendingSyncTasks中删除对应到任务
+	//When the request is sent, set a timeout timer
+	//After the request has timed out, the pendingSyncTasks are placed into allTasks and requested again
+	//The request to the block has arrived, and the corresponding task is removed from pendingSyncTasks
 
-	//收到block
+	//Receive block
 	go func() {
 		delHash := func(b *types.Block) {
 			blockMgr.pendingSyncTasks.Range(func(key, value interface{}) bool {
@@ -315,9 +315,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 				if _, ok := hashs[*b.Header.Hash()]; ok {
 					delete(hashs, *b.Header.Hash())
 					if len(hashs) == 0 {
-						//所有到block都到了，停止超时定时器
-						//timer.Stop()
-
+						//all the blocks have arrived, stop the timeout timer
 						blockMgr.syncTimerCh <- timer
 					}
 
@@ -358,7 +356,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 					if err != nil {
 						switch err {
 						case chain.ErrBlockExsist, chain.ErrOrphanBlockExsist:
-							//删除块高度对应的任务
+							//Delete the task corresponding to the block height
 							delHash(b)
 							continue
 
@@ -368,7 +366,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 							return
 						}
 					} else {
-						//删除块高度对应的任务
+						//Delete the task corresponding to the block height
 						delHash(b)
 					}
 				}
@@ -380,14 +378,14 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 		}
 	}()
 
-	//3获取对应的body
+	//3Get the corresponding body
 	go func() {
 		for {
 			select {
 			case <-quit:
 				return
 			default:
-				//请求发的太快了，需要等待
+				//The request was sent too fast and had to wait
 				count := 0
 				blockMgr.pendingSyncTasks.Range(func(key, value interface{}) bool {
 					count++
@@ -408,7 +406,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 				blockMgr.syncMut.Unlock()
 				if len(hashs) == 0 {
 					if headerRoutineExit && count == 0 {
-						//任务完成，触发退出
+						//Task completed, trigger exit
 						log.WithField("tasks len", taskLen).Info("all block sync ok")
 						close(errCh)
 						return
@@ -425,7 +423,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 
 					select {
 					case <-reqTimer.C:
-						//得到hash加入到allTasks
+						//Get the hash and add it to allTasks
 						value, ok := blockMgr.pendingSyncTasks.Load(reqTimer)
 						if !ok {
 							errCh <- fmt.Errorf("timer not in pending task, exception")
@@ -445,7 +443,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 
 					case timer := <-blockMgr.syncTimerCh:
 						//timer.Stop()
-						//请求到block都到了，停止此定时器
+						//Stop the timer when all requests to the block have arrived
 						blockMgr.pendingSyncTasks.Delete(timer)
 					case <-quit:
 						log.Info("fetch block timer goroutine quit")
@@ -468,7 +466,7 @@ func (blockMgr *BlockMgr) handlePeerState(peer *types.PeerInfo, peerState *types
 	peer.SetHeight(uint64(peerState.Height))
 }
 
-//自己的高度通知出去，对端收到请求后，把自己本地的高度返回
+//Your height is notified, and when the request is received, your local height is returned
 func (blockMgr *BlockMgr) handleReqPeerState(peer *types.PeerInfo, peerState *types.PeerStateReq) {
 	peer.SetHeight(uint64(peerState.Height))
 
@@ -481,7 +479,7 @@ func (blockMgr *BlockMgr) GetBestPeerInfo() types.PeerInfoInterface {
 
 	var okPeers []types.PeerInfoInterface
 	var tmpPeer types.PeerInfoInterface
-	//高度探测
+	//High detection
 	blockMgr.peersInfo.Range(func(key, value interface{}) bool {
 		pi := value.(types.PeerInfoInterface)
 		tmpValue, _ := blockMgr.peersInfo.Load(key)
@@ -503,7 +501,7 @@ func (blockMgr *BlockMgr) GetBestPeerInfo() types.PeerInfoInterface {
 		return true
 	})
 
-	// 性能探测
+	// Performance detection
 	var bestPeer types.PeerInfoInterface
 	for i, pi := range okPeers {
 		if bestPeer == nil {

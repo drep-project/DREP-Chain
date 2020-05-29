@@ -98,7 +98,7 @@ func TestAddIntevalTX(t *testing.T) {
 //	feed.Send(struct{}{})
 //}
 
-//池子里面的都是未处理的交易
+//The pool is full of unprocessed transactions
 func TestGetPendingTxs(t *testing.T) {
 	TestNewTransactions(t)
 	ch := make(chan uint64)
@@ -150,7 +150,7 @@ func TestGetPendingTxs(t *testing.T) {
 	}()
 }
 
-//测试queue里面的tx被删除
+//The tx in the test queue is deleted
 func TestReplace(t *testing.T) {
 	TestNewTransactions(t)
 
@@ -173,7 +173,7 @@ func TestReplace(t *testing.T) {
 	}
 
 	nonce += maxTxsOfPending
-	//20个到queue
+	//20 txs  to queue
 	for i := 0; uint64(i) < maxTxsOfQueue; i++ {
 		tx := types.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(int64(100+i+maxTxsOfPending)), new(big.Int).SetInt64(100), nonce+uint64(i))
 		sig, err := secp256k1.SignCompact(privKey, tx.TxHash().Bytes(), true)
@@ -185,7 +185,7 @@ func TestReplace(t *testing.T) {
 	}
 
 	nonce1 := nonce - 1
-	//替换发生在pending
+	//replace in pending
 	for i := 0; uint64(i) < 1; i++ {
 		tx := types.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(int64(100*4)), new(big.Int).SetInt64(100), nonce1+uint64(i))
 		sig, err := secp256k1.SignCompact(privKey, tx.TxHash().Bytes(), true)
@@ -197,7 +197,7 @@ func TestReplace(t *testing.T) {
 	}
 
 	nonce1 = nonce + 1
-	//替换发生在queue
+	//replace in queue
 	for i := 0; uint64(i) < 1; i++ {
 		tx := types.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(int64(100*4)), new(big.Int).SetInt64(100), nonce1+uint64(i))
 		sig, err := secp256k1.SignCompact(privKey, tx.TxHash().Bytes(), true)
@@ -209,13 +209,13 @@ func TestReplace(t *testing.T) {
 	}
 }
 
-//测试pending里面tx被删除；同时删除导致nonce不连续，导致删除了多个tx
+//Test pending where tx is deleted; Simultaneous deletion causes the nonce to be discontinuous, resulting in the deletion of multiple tx's
 func TestDelTx(t *testing.T) {
 	TestNewTransactions(t)
 
 	privKey, _ := crypto.GenerateKey(rand.Reader)
-	addr := crypto.PubKey2Address(privKey.PubKey())
-	txPool.chainStore.BeginTransaction()
+	addr := crypto.PubkeyToAddress(privKey.PubKey())
+	//txPool.chainStore.BeginTransaction()
 
 	var amount uint64 = 0xefffffffffffffff
 	txPool.chainStore.PutBalance(&addr, new(big.Int).SetUint64(amount))
@@ -232,7 +232,7 @@ func TestDelTx(t *testing.T) {
 	}
 
 	nonce += maxTxsOfQueue + maxTxsOfPending
-	//删除发生在pending
+	//delete in pending
 	for i := 0; uint64(i) < 20; i++ {
 		tx := types.NewTransaction(addr, new(big.Int).SetInt64(100), new(big.Int).SetInt64(int64(100*5)), new(big.Int).SetInt64(100), nonce+uint64(i))
 		sig, err := secp256k1.SignCompact(privKey, tx.TxHash().Bytes(), true)

@@ -11,8 +11,8 @@ import (
 )
 
 /*
-name: 区块
-usage: 用于处理区块链偏上层逻辑
+name: Block management
+usage: For processing block chain partial upper logic
 prefix:blockMgr
 */
 type BlockMgrAPI struct {
@@ -22,10 +22,10 @@ type BlockMgrAPI struct {
 
 /*
  name: sendRawTransaction
- usage: 发送已签名的交易.
+ usage: Send signed transactions
  params:
-	1. 已签名的交易
- return: 交易hash
+	1. A signed transaction
+ return: transaction hash
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_sendRawTransaction","params":["0x40a287b6d30b05313131317a4120dd8c23c40910d038fa43b2f8932d3681cbe5ee3079b6e9de0bea6e8e6b2a867a561aa26e1cd6b62aa0422a043186b593b784bf80845c3fd5a7fbfe62e61d8564"], "id": 3}' -H "Content-Type:application/json"
  response:
 	{"jsonrpc":"2.0","id":1,"result":"0xf30e858667fa63bc57ae395c3f57ede9bb3ad4969d12f4bce51d900fb5931538"}
@@ -47,10 +47,10 @@ func (blockMgrApi *BlockMgrAPI) SendRawTransaction(txbytes common.Bytes) (string
 
 /*
  name: gasPrice
- usage: 获取系统的给出的gasprice建议值
+ usage: Get the recommended value of gasprice given by the system
  params:
-	1. 待查询地址
- return: 价格和是否错误信息
+	1. Query address
+ return: Price and error message
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_gasPrice","params":[], "id": 3}' -H "Content-Type:application/json"
  response:
 */
@@ -60,10 +60,10 @@ func (blockMgrApi *BlockMgrAPI) GasPrice() (*big.Int, error) {
 
 /*
  name: GetPoolTransactions
- usage: 获取交易池中的交易信息.
+ usage: Get trading information in the trading pool.
  params:
-	1. 待查询地址
- return: 交易池中所有交易
+	1. Query address
+ return: All transactions in the pool
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_getPoolTransactions","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
 */
@@ -73,10 +73,10 @@ func (blockMgrApi *BlockMgrAPI) GetPoolTransactions(addr *crypto.CommonAddress) 
 
 /*
  name: GetTransactionCount
- usage: 获取地址发出的交易总数
+ usage: Gets the total number of transactions issued by the address
  params:
-	1. 待查询地址
- return: 交易池中所有交易
+	1. Query address
+ return: All transactions in the pool
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_getTransactionCount","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
 */
@@ -86,10 +86,10 @@ func (blockMgrApi *BlockMgrAPI) GetTransactionCount(addr *crypto.CommonAddress) 
 
 /*
  name: GetPoolMiniPendingNonce
- usage: 获取pending队列中，最小的Nonce
+ usage: Get the smallest Nonce in the pending queue
  params:
-	1. 待查询地址
- return: pending 队列中最小的nonce
+	1. Query address
+ return: The smallest nonce in the pending queue
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_getPoolMiniPendingNonce","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
 */
@@ -99,11 +99,11 @@ func (blockMgrApi *BlockMgrAPI) GetPoolMiniPendingNonce(addr *crypto.CommonAddre
 
 /*
  name: GetTxInPool
- usage: 查询交易是否在交易池，如果在，返回交易
+ usage: Checks whether the transaction is in the trading pool and, if so, returns the transaction
  params:
-	1. 发起转账的地址
+	1. The address at which the transfer was initiated
 
- return: 交易完整信息
+ return: Complete transaction information
  example: curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"blockmgr_getTxInPool","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5"],"id":1}' http://127.0.0.1:15645
  response:
    {
