@@ -29,7 +29,7 @@ func NewCacheStore(keyStore KeyStore, password string) (*CacheStore, error) {
 
 // GetKey Get the private key by address and password
 // Notice if you wallet is locked ,private key cant be found
-func (cacheStore *CacheStore) GetKey(addr *crypto.CommonAddress, auth string) (*types.Node, error) {
+func (cacheStore *CacheStore) GetKey(addr *crypto.CommonAddress) (*types.Node, error) {
 	cacheStore.rlock.RLock()
 	defer cacheStore.rlock.RUnlock()
 
@@ -85,15 +85,19 @@ func (cacheStore *CacheStore) LoadKeys(addr *crypto.CommonAddress, auth string) 
 	return nil
 }
 
-func (cacheStore *CacheStore) ClearKey(addr *crypto.CommonAddress) {
+func (cacheStore *CacheStore) ClearKey(addr *crypto.CommonAddress) error {
 	cacheStore.rlock.Lock()
 	defer cacheStore.rlock.Unlock()
 
-	for _, node := range cacheStore.nodes {
+	for key, node := range cacheStore.nodes {
 		if node.Address.String() == addr.String() {
-			node.PrivateKey = nil
+			//快速删除结构体数组中某元素
+			cacheStore.nodes = append(cacheStore.nodes[:key], cacheStore.nodes[key+1:]...)
+			//node.PrivateKey = nil
+			return nil
 		}
 	}
+	return ErrLocked
 }
 
 // JoinPath refer to local file

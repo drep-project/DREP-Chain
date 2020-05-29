@@ -9,4 +9,5 @@ var (
 	ErrPassword            = errors.New("password not correct")
 	ErrSaveKey             = errors.New("save key failed")
 	ErrDecrypt             = errors.New("could not decrypt key with given passphrase")
+	ErrLocked			   = errors.New("account locked")
 )

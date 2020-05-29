@@ -51,16 +51,18 @@ func (accountapi *AccountApi) ListAddress() ([]string, error) {
 /*
  name: createAccount
  usage: 创建本地账号
+ params:
+	1. 密码
  return: 新账号地址信息
- example:   curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_createAccount","params":[], "id": 3}' -H "Content-Type:application/json"
+ example:   curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_createAccount","params":["123456"], "id": 3}' -H "Content-Type:application/json"
  response:
 	  {"jsonrpc":"2.0","id":3,"result":"0x2944c15c466fad03ec1282bab579dec5a0cf0fa3"}
 */
-func (accountapi *AccountApi) CreateAccount() (*crypto.CommonAddress, error) {
+func (accountapi *AccountApi) CreateAccount(password string) (*crypto.CommonAddress, error) {
 	if !accountapi.Wallet.IsOpen() {
 		return nil, ErrClosedWallet
 	}
-	newAaccount, err := accountapi.Wallet.NewAccount()
+	newAaccount, err := accountapi.Wallet.NewAccount(password)
 	if err != nil {
 		return nil, err
 	}
@@ -109,17 +111,18 @@ func (accountapi *AccountApi) LockAccount(addr crypto.CommonAddress) error {
  usage: 解锁账号
  params:
 	1. 账号地址
+	2. 密码
  return: 失败返回错误原因，成功不返回任何信息
- example:   curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_unlockAccount","params":["0x518b3fefa3fb9a72753c6ad10a2b68cc034ec391"], "id": 3}' -H "Content-Type:application/json"
+ example:   curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_unlockAccount","params":["0x518b3fefa3fb9a72753c6ad10a2b68cc034ec391", "123456"], "id": 3}' -H "Content-Type:application/json"
  response:
 	 {"jsonrpc":"2.0","id":3,"result":null}
 */
-func (accountapi *AccountApi) UnlockAccount(addr crypto.CommonAddress) error {
+func (accountapi *AccountApi) UnlockAccount(addr crypto.CommonAddress, password string) error {
 	if !accountapi.Wallet.IsOpen() {
 		return ErrClosedWallet
 	}
 
-	return accountapi.Wallet.UnLock(&addr)
+	return accountapi.Wallet.UnLock(&addr, password)
 }
 
 /*
@@ -651,19 +654,36 @@ func (accountapi *AccountApi) ImportKeyStore(path, password string) ([]*crypto.C
 	 usage: 导入私钥
 	 params:
 		1.privkey(compress hex)
+		2.密码
 	 return: address
 	 example:
 		curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_importPrivkey","params":["0xe5510b32854ca52e7d7d41bb3196fd426d551951e2fd5f6b559a62889d87926c"], "id": 3}' -H "Content-Type:application/json"
 	response:
 		 {"jsonrpc":"2.0","id":3,"result":"0x748eb65493a964e568800c3c2885c63a0de9f9ae"}
 */
-func (accountapi *AccountApi) ImportPrivkey(privBytes common.Bytes) (*crypto.CommonAddress, error) {
+func (accountapi *AccountApi) ImportPrivkey(privBytes common.Bytes, password string) (*crypto.CommonAddress, error) {
 	priv, _ := secp256k1.PrivKeyFromScalar(privBytes)
-	node, err := accountapi.Wallet.ImportPrivKey(priv)
+	node, err := accountapi.Wallet.ImportPrivKey(priv, password)
 	if err != nil {
 		return nil, err
 	}
 	return node.Address, nil
+}
+
+
+/*
+	 name: getKeyStores
+	 usage: 获取ketStores 存储路径
+	 params:
+
+	 return: path of keystore
+	 example:
+		curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_getKeyStores","params":[], "id": 3}' -H "Content-Type:application/json"
+	response:
+		 {"jsonrpc":"2.0","id":3,"result":"'path of keystores is: C:\\Users\\Kun\\AppData\\Local\\Drep\\keystore'"}
+*/
+func (accountapi *AccountApi) GetKeyStores() (string) {
+	return "path of keystores is: " + accountapi.Wallet.config.KeyStoreDir
 }
 
 type RpcAddresses struct {
