@@ -18,8 +18,8 @@ import (
 )
 
 /*
-name: 链接口
-usage: 用于获取区块信息
+name: Block chain API
+usage: Used to obtain block information
 prefix:chain
 
 */
@@ -39,10 +39,10 @@ func NewChainApi(store dbinterface.KeyValueStore, chainView *ChainView, dbQuery 
 
 /*
  name: getblock
- usage: 用于获取区块信息
+ usage: Used to obtain block information
  params:
-	1. height  usage: 当前区块高度
- return: 区块明细信息
+	1. height  usage: Current block height
+ return: Block detail information
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getBlock","params":[1], "id": 3}' -H "Content-Type:application/json"
  response:
 {
@@ -86,10 +86,10 @@ func (chain *ChainApi) GetBlock(height uint64) (*types.Block, error) {
 
 /*
  name: getMaxHeight
- usage: 用于获取当前最高区块
+ usage: To get the current highest block
  params:
 	1. 无
- return: 当前最高区块高度数值
+ return: Current maximum block height value
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getMaxHeight","params":[], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":193005}
@@ -100,10 +100,10 @@ func (chain *ChainApi) GetMaxHeight() uint64 {
 
 /*
  name: getBlockGasInfo
- usage: 获取gas相关信息
+ usage: Obtain gas related information
  params:
 	1. 无
- return: 系统需要的gas最小值、最大值；和当前块被设置的最大gas值
+ return: Gas minimum value and maximum value required by the system; And the maximum gas value that the current block is set to
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getBlockGasInfo","params":[], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":193005}
@@ -137,10 +137,10 @@ func (chain *ChainApi) GetBlockGasInfo() string {
 
 /*
  name: getBalance
- usage: 查询地址余额
+ usage: Query address balance
  params:
-	1. 待查询地址
- return: 地址中的账号余额
+	1. Query address
+ return: The account balance in the address
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getBalance","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":9987999999999984000000}
@@ -157,10 +157,10 @@ func (chain *ChainApi) GetBalance(addr crypto.CommonAddress) string {
 
 /*
  name: getNonce
- usage: 查询地址在链上的nonce
+ usage: Query the nonce whose address is on the chain
  params:
-	1. 待查询地址
- return: 链上nonce
+	1. Query address
+ return: nonce
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getNonce","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":0}
@@ -171,11 +171,11 @@ func (chain *ChainApi) GetNonce(addr crypto.CommonAddress) uint64 {
 }
 
 /*
- name: getNonce
- usage: 查询地址的名誉值
+ name: GetReputation
+ usage: Query the reputation value of the address
  params:
-	1. 待查询地址
- return: 地址对应的名誉值
+	1.  Query address
+ return: The reputation value corresponding to the address
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getReputation","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":1}
@@ -187,11 +187,11 @@ func (chain *ChainApi) GetReputation(addr crypto.CommonAddress) *big.Int {
 
 /*
  name: getTransactionByBlockHeightAndIndex
- usage: 获取区块中特定序列的交易
+ usage: Gets a particular sequence of transactions in a block
  params:
-	1. 区块高度
-    2. 交易序列
- return: 交易信息
+	1. block height
+    2. Transaction sequence
+ return: transaction
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getTransactionByBlockHeightAndIndex","params":[10000,1], "id": 3}' -H "Content-Type:application/json"
  response:
    {
@@ -227,10 +227,10 @@ func (chain *ChainApi) GetTransactionByBlockHeightAndIndex(height uint64, index 
 
 /*
  name: getAliasByAddress
- usage: 根据地址获取地址对应的别名
+ usage: Gets the alias corresponding to the address according to the address
  params:
-	1. 待查询地址
- return: 地址别名
+	1. address
+ return: Address the alias
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getAliasByAddress","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
 	{"jsonrpc":"2.0","id":3,"result":"tom"}
@@ -242,10 +242,10 @@ func (chain *ChainApi) GetAliasByAddress(addr *crypto.CommonAddress) string {
 
 /*
  name: getAddressByAlias
- usage: 根据别名获取别名对应的地址
+ usage: Gets the address corresponding to the alias based on the alias
  params:
-	1. 待查询地别名
- return: 别名对应的地址
+	1. Alias to be queried
+ return: The address corresponding to the alias
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getAddressByAlias","params":["tom"], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":"0x8a8e541ddd1272d53729164c70197221a3c27486"}
@@ -257,7 +257,7 @@ func (chain *ChainApi) GetAddressByAlias(alias string) (*crypto.CommonAddress, e
 
 /*
  name: getReceipt
- usage: 根据txhash获取receipt信息
+ usage: Get the receipt information based on txhash
  params:
 	1. txhash
  return: receipt
@@ -271,7 +271,7 @@ func (chain *ChainApi) GetReceipt(txHash crypto.Hash) *types.Receipt {
 
 /*
  name: getLogs
- usage: 根据txhash获取交易log信息
+ usage: Get the transaction log information based on txhash
  params:
 	1. txhash
  return: []log
@@ -301,7 +301,7 @@ func (chain *ChainApi) GetLogs(txHash crypto.Hash) []*types.Log {
 
 /*
  name: getCancelCreditDetail
- usage: 根据txhash获取退质押或者退投票信息
+ usage: Get the back pledge or back vote information according to txhash
  params:
 	1. txhash
  return: {}
@@ -332,9 +332,9 @@ func (chain *ChainApi) GetCancelCreditDetail(txHash crypto.Hash) []*types.Cancel
 
 /*
  name: getByteCode
- usage: 根据地址获取bytecode
+ usage: Get bytecode by address
  params:
-	1. 地址
+	1. address
  return: bytecode
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getByteCode","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
@@ -347,9 +347,9 @@ func (chain *ChainApi) GetByteCode(addr *crypto.CommonAddress) hexutil.Bytes {
 
 /*
  name: getVoteCreditDetails
- usage: 根据地址获取stake 所有细节信息
+ usage: Get all the details of the stake according to the address
  params:
-	1. 地址
+	1. address
  return: bytecode
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCreditDetails","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
@@ -362,9 +362,9 @@ func (chain *ChainApi) GetCreditDetails(addr *crypto.CommonAddress) string {
 
 /*
  name: GetCancelCreditDetails
- usage: 获取所有退票请求的细节
+ usage: Get the details of all refund requests
  params:
-	1. 地址
+	1. address
  return: bytecode
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCancelCreditDetails","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
@@ -377,9 +377,9 @@ func (chain *ChainApi) GetCancelCreditDetails(addr *crypto.CommonAddress) string
 
 /*
  name: GetCandidateAddrs
- usage: 获取所有候选节点地址和对应的信任值
+ usage: Gets the addresses of all candidate nodes and the corresponding trust values
  params:
-	1. 地址
+	1. address
  return:  []
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCandidateAddrs","params":[""], "id": 3}' -H "Content-Type:application/json"
  response:
@@ -427,10 +427,10 @@ func (chain *ChainApi) GetCandidateAddrs() string {
 
 /*
  name: getChangeCycle
- usage: 获取出块节点换届周期
+ usage: Gets the transition period of the out - of - block node
  params:
-	无
- return:  换届周期
+	none
+ return:  Transition period
  example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getChangeCycle","params":"", "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":"{100}"}

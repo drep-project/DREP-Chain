@@ -2,11 +2,11 @@ package chain
 
 import (
 	"fmt"
-	"github.com/drep-project/binary"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/sha3"
 	"github.com/drep-project/DREP-Chain/database/dbinterface"
 	"github.com/drep-project/DREP-Chain/types"
+	"github.com/drep-project/binary"
 )
 
 var (
@@ -188,7 +188,7 @@ func (chainStore *ChainStore) BlockNodeIterator(handle func(*types.BlockHeader, 
 func (chainStore *ChainStore) RollBack(height uint64, hash *crypto.Hash) (error, int64) {
 	var err error
 
-	//删除blocknode
+	//del blocknode
 	func() {
 		key := chainStore.blockIndexKey(hash, height)
 		err = chainStore.Delete(key)
@@ -198,7 +198,7 @@ func (chainStore *ChainStore) RollBack(height uint64, hash *crypto.Hash) (error,
 		return err, 0
 	}
 
-	//删除block
+	//del block
 	func() {
 		key := append(BlockPrefix, hash[:]...)
 		err = chainStore.Delete(key)

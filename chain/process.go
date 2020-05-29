@@ -404,14 +404,14 @@ func (chainService *ChainService) InitStates() error {
 
 			// commit fail and repaire here
 			//delete dirty data , and rollback state to journalHeight
-			//去除磁盘中的nodeblock、block信息；回退区块号及相关的操作日志序列号
+			//Remove nodeblock, block information from disk; Back block number and associated operation log sequence number
 			err, _ = chainService.chainStore.RollBack(tip.Height, tip.Hash)
 			if err != nil {
 				log.WithField("height", tip.Height).Error("rollback2block err")
 				return err
 			}
 
-			//去除内存中节点信息
+			//Removes node information from memory
 			chainService.blockIndex.ClearNode(tip)
 		} else {
 			_, err := store.TrieStoreFromStore(chainService.DatabaseService.LevelDb(), lastNode.StateRoot)

@@ -20,7 +20,7 @@ var (
 )
 
 func init() {
-	//key是完整的方法名称
+	//The key is the full method name
 	methods["chain_getBalance"] = callGetBalance
 	methods["chain_getPoolTransactions"] = callgetPoolTransactions
 	methods["chain_getPoolMiniPendingNonce"] = callGetPoolMiniPendingNonce
@@ -43,7 +43,7 @@ func action(ctx *cli.Context) error {
 	if len(args) <= 1 {
 		return fmt.Errorf("arg num too small")
 	}
-	//1 检查第一个字段是否是http://127.0.0.1:5555格式
+	//1 Check whether the first field like :http://127.0.0.1:5555
 	url, err := url.Parse(args[0])
 	if err != nil {
 		return err
@@ -93,7 +93,6 @@ func callCreateCode(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 
 func callContract(args cli.Args, client *rpc.Client, ctx context.Context) {
-	//todo 使用通用判断代替
 	if len(args) > 6 || len(args) < 4 {
 		fmt.Println("param num:", len(args), "too much")
 		return
@@ -110,7 +109,7 @@ func callContract(args cli.Args, client *rpc.Client, ctx context.Context) {
 
 			cb := new(common.Big)
 			cb.SetMathBig(*value)
-			//big.Int转换成json格式发出去
+
 			buf, err := cb.MarshalText()
 			if err != nil {
 				fmt.Println(err)
