@@ -121,7 +121,7 @@ type Config struct {
 	// Protocols should contain the protocols supported
 	// by the server. Matching protocols are launched for
 	// each peer.
-	//区块链层协议
+	//Blockchain layer protocol
 	ProtocolsBlockChan []Protocol `json:"-"`
 
 	// If ListenAddr is set to a non-nil address, the server

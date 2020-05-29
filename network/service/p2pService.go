@@ -19,9 +19,9 @@ type P2pService struct {
 	prvKey   *secp256k1.PrivateKey
 	apis     []app.API
 	Config   *p2pTypes.P2pConfig
-	outQuene chan *outMessage //消息发出去前，要进入此缓存中
+	outQuene chan *outMessage //Before the message is sent, it enters this cache
 	quit     chan struct{}
-	server   *p2p.Server //底层p2p管理器
+	server   *p2p.Server //The underlying p2p manager
 }
 
 type outMessage struct {
@@ -148,7 +148,7 @@ func (p2pService *P2pService) sendMessageRoutine() {
 	for {
 		select {
 		case outMsg := <-p2pService.outQuene:
-			//消息插入到输出队列的后，网络可能出现立即不通的情况。此时消息应该被丢弃。
+			//Immediately after the message is inserted into the output queue, the network may become disconnected. At this point the message should be discarded.
 			go func() {
 				err := p2pService.sendMessage(outMsg) //outMsg.execute()
 				if err != nil {

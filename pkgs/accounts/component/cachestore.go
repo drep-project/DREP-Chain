@@ -91,7 +91,7 @@ func (cacheStore *CacheStore) ClearKey(addr *crypto.CommonAddress) error {
 
 	for key, node := range cacheStore.nodes {
 		if node.Address.String() == addr.String() {
-			//快速删除结构体数组中某元素
+			//Quickly deletes an element from a struct array
 			cacheStore.nodes = append(cacheStore.nodes[:key], cacheStore.nodes[key+1:]...)
 			//node.PrivateKey = nil
 			return nil
