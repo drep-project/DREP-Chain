@@ -6,7 +6,7 @@ import (
 	"math/big"
 )
 
-//某个高度对应的某creadit value
+//A creadit value of some height
 type HeightValue struct {
 	CreditHeight uint64
 	CreditValue  common.Big
@@ -23,19 +23,13 @@ type CancelCredit struct {
 }
 
 type StakeStorage struct {
-	//ReceivedCreditAddr []crypto.CommonAddress //Trust given by oneself and others
-	////ReceivedCreditValue  []big.Int              //value of vote
-	////ReceivedCreditHeight []uint64               // height of vote tx
-	//ReceivedCreditHeightValue [][]HeightValue
-
 	RC []ReceivedCredit
 
-	//撤销给与别人的信任数据存放于此；
-	//CancelCreditHeight []uint64
-	//CancelCreditValue  []big.Int
+	//The data of revoking the trust given to others is stored here;
 	CC []CancelCredit
 
-	CandidateData []byte //注册候选节点时，需要携带的pubkey/ip等信息
+	// when registering candidate nodes, you need to carry pubkey/ IP and other information
+	CandidateData []byte
 }
 
 type CancelCreditDetail struct {

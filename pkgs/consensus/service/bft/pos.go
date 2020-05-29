@@ -12,8 +12,8 @@ import (
 )
 
 type addrsAndCredit struct {
-	addrs []string //值相同的地址放到一个切片中
-	value *big.Int //地址对应的信誉值
+	addrs []string //The addresses with the same value are put into a slice
+	value *big.Int //The credit value corresponding to the address
 }
 
 type creditsHeap []*addrsAndCredit

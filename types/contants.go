@@ -10,11 +10,11 @@ const (
 	CreateContractType
 	CallContractType
 
-	SetAliasType          //给地址设置昵称
-	VoteCreditType        //质押给别人
-	CancelVoteCreditType  //撤销质押币
-	CandidateType         //申请成为候选出块节点
-	CancelCandidateType   //申请成为候选出块节点
+	SetAliasType         //Give the address a nickname
+	VoteCreditType       //Pledge to someone else
+	CancelVoteCreditType //Revocation of pledge currency
+	CandidateType        //Apply to be a candidate block node
+	CancelCandidateType  //Apply to be a candidate block node
 	RegisterProducer
 )
 

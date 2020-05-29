@@ -12,7 +12,7 @@ type IPeerInfo interface {
 	ID() string
 }
 
-//业务层peer
+//The business layer peer
 type PeerInfo struct {
 	peer *p2p.Peer
 	rw   p2p.MsgReadWriter
@@ -25,7 +25,7 @@ func NewPeerInfo(peer *p2p.Peer, rw p2p.MsgReadWriter) *PeerInfo {
 	}
 }
 
-//获取读写句柄
+//Gets the read-write handle
 func (pi *PeerInfo) GetMsgRW() p2p.MsgReadWriter {
 	return pi.rw
 }

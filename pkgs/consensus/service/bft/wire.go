@@ -8,8 +8,8 @@ import (
 	"github.com/drep-project/binary"
 )
 
-//本模块的消息只能在调用本模块（consensus及对应的子模块）的函数中使用，否则会出错
-//例如MsgTypeCommitment消息，在consensus中定义的，发送和接收此消息必须使用consensus中的函数
+//The messages of this module can only be used in functions that call this module (consensus and its corresponding submodules)
+//For example, the MsgTypeCommitment message, defined in consensus, must be sent and received using a function in consensus
 const (
 	MsgTypeSetUp       = 0
 	MsgTypeCommitment  = 1

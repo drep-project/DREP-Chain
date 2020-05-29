@@ -25,7 +25,7 @@ type Transaction struct {
 
 type TransactionData struct {
 	Version   int32
-	Nonce     uint64 //交易序列号
+	Nonce     uint64 //seq of transaction
 	Type      TxType
 	To        crypto.CommonAddress
 	ChainId   ChainIdType
@@ -223,7 +223,7 @@ func NewCallContractTransaction(to crypto.CommonAddress, input []byte, amount, g
 	return &Transaction{Data: data}
 }
 
-//给地址srcAddr设置别名
+//Set an alias to the address srcAddr
 func NewAliasTransaction(alias string, gasPrice, gasLimit *big.Int, nonce uint64) *Transaction {
 	data := TransactionData{
 		Version:   common.Version,
