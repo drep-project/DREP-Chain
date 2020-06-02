@@ -296,7 +296,9 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 			}
 		}
 		log.Info("fetch all headers end ****************************")
+		blockMgr.syncMut.Lock()
 		headerRoutineExit = true
+		blockMgr.syncMut.Unlock()
 	}()
 
 	//When the request is sent, set a timeout timer
@@ -405,12 +407,15 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 				taskLen := blockMgr.allTasks.Len()
 				blockMgr.syncMut.Unlock()
 				if len(hashs) == 0 {
+					blockMgr.syncMut.Lock()
 					if headerRoutineExit && count == 0 {
 						//Task completed, trigger exit
 						log.WithField("tasks len", taskLen).Info("all block sync ok")
 						close(errCh)
+						blockMgr.syncMut.Unlock()
 						return
 					}
+					blockMgr.syncMut.Unlock()
 					time.Sleep(time.Millisecond * maxSyncSleepTime)
 					continue
 				}
@@ -476,6 +481,8 @@ func (blockMgr *BlockMgr) handleReqPeerState(peer *types.PeerInfo, peerState *ty
 }
 
 func (blockMgr *BlockMgr) GetBestPeerInfo() types.PeerInfoInterface {
+	blockMgr.lock.Lock()
+	defer blockMgr.lock.Unlock()
 
 	var okPeers []types.PeerInfoInterface
 	var tmpPeer types.PeerInfoInterface

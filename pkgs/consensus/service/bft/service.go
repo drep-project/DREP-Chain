@@ -154,10 +154,10 @@ func (bftConsensusService *BftConsensusService) handlerEvent() {
 		case e := <-bftConsensusService.syncBlockEventChan:
 			if e.EventType == event.StartSyncBlock {
 				bftConsensusService.pauseForSync = true
-				log.Info("Start Sync Blcok")
+				//log.Trace("Start Sync Blcok")
 			} else {
 				bftConsensusService.pauseForSync = false
-				log.Info("Stop Sync Blcok")
+				//log.Trace("Stop Sync Blcok")
 			}
 		case <-bftConsensusService.quit:
 			return
