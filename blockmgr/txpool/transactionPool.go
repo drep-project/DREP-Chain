@@ -490,6 +490,9 @@ func (pool *TransactionPool) checkUpdate() {
 
 //It's been processed and the NONCE has been cleaned out
 func (pool *TransactionPool) adjust(block *types.Block) {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
 	b := pool.chainStore.RecoverTrie(block.Header.StateRoot)
 	if !b {
 		log.WithField("recoverRet", b).WithField("h:", block.Header.Height).Error("RecoverTrie")
@@ -506,8 +509,6 @@ func (pool *TransactionPool) adjust(block *types.Block) {
 	}
 
 	if len(addrs) > 0 {
-		pool.mu.Lock()
-		defer pool.mu.Unlock()
 		for addr := range addrMap {
 			//Get the nonce in the database
 			//The corresponding transaction is deleted depending on whether the nonce is processed
@@ -541,6 +542,7 @@ func (pool *TransactionPool) GetTransactionCount(address *crypto.CommonAddress) 
 }
 
 func (pool *TransactionPool) getTransactionCount(address *crypto.CommonAddress) uint64 {
+
 	if nonce, ok := pool.pendingNonce[*address]; ok {
 		return nonce
 	}

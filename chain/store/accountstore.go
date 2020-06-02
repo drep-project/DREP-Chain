@@ -8,6 +8,7 @@ import (
 	"github.com/drep-project/DREP-Chain/types"
 	"github.com/drep-project/binary"
 	"math/big"
+	"sync"
 )
 
 const (
@@ -27,6 +28,7 @@ var (
 )
 
 type trieAccountStore struct {
+	lock    sync.Mutex
 	storeDB *StoreDB
 }
 
@@ -56,6 +58,9 @@ func (trieStore *trieAccountStore) initState() error {
 }
 
 func (trieStore *trieAccountStore) GetStorage(addr *crypto.CommonAddress) (*types.Storage, error) {
+	trieStore.lock.Lock()
+	defer trieStore.lock.Unlock()
+
 	storage := &types.Storage{}
 	key := sha3.Keccak256([]byte(AddressStorage + addr.Hex()))
 	value, err := trieStore.storeDB.Get(key)
@@ -75,12 +80,18 @@ func (trieStore *trieAccountStore) GetStorage(addr *crypto.CommonAddress) (*type
 }
 
 func (trieStore *trieAccountStore) DeleteStorage(addr *crypto.CommonAddress) error {
+	trieStore.lock.Lock()
+	defer trieStore.lock.Unlock()
+
 	key := sha3.Keccak256([]byte(AddressStorage + addr.Hex()))
 
 	return trieStore.storeDB.Delete(key)
 }
 
 func (trieStore *trieAccountStore) PutStorage(addr *crypto.CommonAddress, storage *types.Storage) error {
+	trieStore.lock.Lock()
+	defer trieStore.lock.Unlock()
+
 	key := sha3.Keccak256([]byte(AddressStorage + addr.Hex()))
 	value, err := binary.Marshal(storage)
 	if err != nil {
@@ -109,6 +120,7 @@ func (trieStore *trieAccountStore) PutBalance(addr *crypto.CommonAddress, balanc
 }
 
 func (trieStore *trieAccountStore) GetNonce(addr *crypto.CommonAddress) uint64 {
+
 	storage, _ := trieStore.GetStorage(addr)
 	if storage == nil {
 		return 0
@@ -117,6 +129,7 @@ func (trieStore *trieAccountStore) GetNonce(addr *crypto.CommonAddress) uint64 {
 }
 
 func (trieStore *trieAccountStore) PutNonce(addr *crypto.CommonAddress, nonce uint64) error {
+
 	storage, _ := trieStore.GetStorage(addr)
 	if storage == nil {
 		storage = &types.Storage{}

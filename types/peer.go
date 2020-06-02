@@ -62,10 +62,14 @@ func NewPeerInfo(p *p2p.Peer, rw p2p.MsgReadWriter) *PeerInfo {
 }
 
 func (peer *PeerInfo) SetReqTime(t time.Time) {
+	peer.lock.Lock()
+	defer peer.lock.Unlock()
 	peer.reqTime = &t
 }
 
 func (peer *PeerInfo) CalcAverageRtt() {
+	peer.lock.Lock()
+	defer peer.lock.Unlock()
 	duration := time.Since(*peer.reqTime)
 	if peer.averageRtt == 0 {
 		peer.averageRtt = duration
@@ -75,6 +79,9 @@ func (peer *PeerInfo) CalcAverageRtt() {
 }
 
 func (peer *PeerInfo) AverageRtt() time.Duration {
+	peer.lock.Lock()
+	defer peer.lock.Unlock()
+
 	if peer.reqTime != nil && time.Since(*peer.reqTime) > time.Duration(time.Minute*3) {
 		peer.averageRtt = 0
 	}
@@ -91,10 +98,14 @@ func (peer *PeerInfo) GetMsgRW() p2p.MsgReadWriter {
 }
 
 func (peer *PeerInfo) SetHeight(height uint64) {
+	peer.lock.Lock()
+	defer peer.lock.Unlock()
 	peer.height = height
 }
 
 func (peer *PeerInfo) GetHeight() uint64 {
+	peer.lock.Lock()
+	defer peer.lock.Unlock()
 	return peer.height
 }
 
@@ -149,6 +160,7 @@ func (peer *PeerInfo) KnownBlock(blk *Block) bool {
 
 //Record blocks so that blocks are not synchronized multiple times
 func (peer *PeerInfo) MarkBlock(blk *Block) {
+
 	h := blk.Header.Hash()
 	if h == nil {
 		return
@@ -160,6 +172,8 @@ func (peer *PeerInfo) MarkBlock(blk *Block) {
 
 	peer.knownBlocks.Put(h, blk.Header.Height)
 
+	peer.lock.Lock()
+	defer peer.lock.Unlock()
 	if peer.height < blk.Header.Height {
 		peer.height = blk.Header.Height
 	}

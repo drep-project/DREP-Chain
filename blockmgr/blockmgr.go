@@ -222,6 +222,9 @@ func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 			Name:   "blockMgr",
 			Length: types.NumberOfMsg,
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
+				//blockMgr.lock.Lock()
+				//defer blockMgr.lock.Unlock()
+
 				if getPeersCount(blockMgr.peersInfo) >= maxLivePeer {
 					return ErrEnoughPeer
 				}
