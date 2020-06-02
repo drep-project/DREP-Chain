@@ -114,9 +114,9 @@ func (wallet *Wallet) GetAccountByPubkey(pubkey *secp256k1.PublicKey) (*types.No
 		return nil, ErrClosedWallet
 	}
 	addr := crypto.PubkeyToAddress(pubkey)
-	if err := wallet.unLock(&addr, wallet.password); err != nil {
-		return nil, ErrAccountExist
-	}
+	//if err := wallet.unLock(&addr, wallet.password); err != nil {
+	//	return nil, ErrAccountExist
+	//}
 
 	return wallet.GetAccountByAddress(&addr)
 }
