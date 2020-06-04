@@ -1,12 +1,13 @@
 package blockmgr
 
 import (
-	"github.com/drep-project/DREP-Chain/chain/store"
-	"github.com/drep-project/DREP-Chain/common/trie"
 	"math/big"
 	"math/rand"
 	"path"
 	"sync"
+
+	"github.com/drep-project/DREP-Chain/chain/store"
+	"github.com/drep-project/DREP-Chain/common/trie"
 
 	"github.com/drep-project/DREP-Chain/params"
 
@@ -28,13 +29,15 @@ import (
 )
 
 var (
-	rootChain           types.ChainIdType
+	rootChain types.ChainIdType
+	// DefaultOracleConfig define default config of oracle
 	DefaultOracleConfig = OracleConfig{
 		Blocks:     20,
 		Default:    30000,
 		Percentile: 60,
 		MaxPrice:   big.NewInt(500 * params.GWei).Uint64(),
 	}
+	// DefaultChainConfig define default config of chain
 	DefaultChainConfig = &BlockMgrConfig{
 		GasPrice:    DefaultOracleConfig,
 		JournalFile: "txpool/txs",
@@ -43,6 +46,7 @@ var (
 	_    = IBlockMgr((*BlockMgr)(nil)) //compile check
 )
 
+// IBlockMgr interface
 type IBlockMgr interface {
 	app.Service
 	IBlockMgrPool
@@ -51,6 +55,7 @@ type IBlockMgr interface {
 	ISendMessage
 }
 
+// IBlockMgrPool interface
 type IBlockMgrPool interface {
 	//query tx pool message
 	GetTransactionCount(addr *crypto.CommonAddress) uint64
@@ -59,6 +64,7 @@ type IBlockMgrPool interface {
 	GetTxInPool(hash string) (*types.Transaction, error)
 }
 
+// IBlockBlockGenerator interface
 type IBlockBlockGenerator interface {
 	//generate block template
 	GenerateTemplate(trieStore store.StoreInterface, leaderAddr crypto.CommonAddress, blockInterval int) (*types.Block, *big.Int, error)

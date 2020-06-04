@@ -1,8 +1,9 @@
 package app
 
 import (
-	"gopkg.in/urfave/cli.v1"
 	"reflect"
+
+	"gopkg.in/urfave/cli.v1"
 )
 
 var (
@@ -10,7 +11,7 @@ var (
 	TOrService      = reflect.TypeOf((*OrService)(nil)).Elem()
 )
 
-// Services can customize their own configuration, command parameters, interfaces, services
+// Service can customize their own configuration, command parameters, interfaces, services
 type Service interface {
 	Name() string                              // service  name must be unique
 	Api() []API                                // Interfaces required for services
@@ -22,6 +23,7 @@ type Service interface {
 	Stop(executeContext *ExecuteContext) error
 }
 
+// OrService define interface of OrService
 type OrService interface {
 	Service
 	SelectService() Service

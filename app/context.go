@@ -3,13 +3,15 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
+
 	"github.com/asaskevich/EventBus"
 	"github.com/pkg/errors"
 	"gopkg.in/urfave/cli.v1"
-	"reflect"
 )
 
 var (
+	// CommandHelpTemplate general template of command
 	CommandHelpTemplate = `{{.cmd.Name}}{{if .cmd.Subcommands}} command{{end}}{{if .cmd.Flags}} [command options]{{end}} [arguments...]
 {{if .cmd.Description}}{{.cmd.Description}}
 {{end}}{{if .cmd.Subcommands}}
@@ -124,27 +126,28 @@ func (econtext *ExecuteContext) resolveService(service Service) {
 	}
 }
 
-//	GetConfig Configuration is divided into several segments,
-//	each service only needs to obtain its own configuration data,
-//	and the parsing process is also controlled by each service itself.
+// GetConfig Configuration is divided into several segments,
+// each service only needs to obtain its own configuration data,
+// and the parsing process is also controlled by each service itself.
 func (econtext *ExecuteContext) GetConfig(phaseName string) json.RawMessage {
 	phaseConfig, ok := econtext.PhaseConfig[phaseName]
 	if ok {
 		return phaseConfig
-	} else {
-		return nil
 	}
+	return nil
+
 }
 
+// FlatConfig marshal json config to map
 func (econtext *ExecuteContext) FlatConfig(phaseName string) error {
 	phaseConfig, ok := econtext.PhaseConfig[phaseName]
 	if ok {
 		subConfig := make(map[string]json.RawMessage)
-		subJson, err := phaseConfig.MarshalJSON()
+		subJSON, err := phaseConfig.MarshalJSON()
 		if err != nil {
 			return err
 		}
-		err = json.Unmarshal(subJson, &subConfig)
+		err = json.Unmarshal(subJSON, &subConfig)
 		if err != nil {
 			return err
 		}
@@ -156,12 +159,12 @@ func (econtext *ExecuteContext) FlatConfig(phaseName string) error {
 			}
 		}
 		return nil
-	} else {
-		return nil
 	}
+	return nil
+
 }
 
-// GetFlags aggregate command configuration items required for each service
+// AggerateFlags aggregate command configuration items required for each service
 func (econtext *ExecuteContext) AggerateFlags() ([]cli.Command, []cli.Flag) {
 	allFlags := []cli.Flag{}
 	allCommands := []cli.Command{}
@@ -177,7 +180,7 @@ func (econtext *ExecuteContext) AggerateFlags() ([]cli.Command, []cli.Flag) {
 	return allCommands, allFlags
 }
 
-//	GetApis aggregate interface functions for each service to provide for use by RPC services
+// GetApis aggregate interface functions for each service to provide for use by RPC services
 func (econtext *ExecuteContext) GetApis() []API {
 	apis := []API{}
 	for _, service := range econtext.Services {
@@ -200,7 +203,7 @@ func (econtext *ExecuteContext) GetApis() []API {
 //	return msg, nil
 //}
 
-//	RequireService When a service depends on another service, RequireService is used to obtain the dependent service.
+// RequireService When a service depends on another service, RequireService is used to obtain the dependent service.
 func (econtext *ExecuteContext) RequireService(name string) Service {
 	for _, service := range econtext.Services {
 		if service.Name() == name {
@@ -210,6 +213,7 @@ func (econtext *ExecuteContext) RequireService(name string) Service {
 	panic(errors.Wrap(ErrServiceNotFound, name))
 }
 
+// UnmashalConfig unmashal json config
 func (econtext *ExecuteContext) UnmashalConfig(serviceName string, config interface{}) error {
 	service := econtext.GetService(serviceName)
 	if service == nil {

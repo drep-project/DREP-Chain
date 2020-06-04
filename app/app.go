@@ -18,23 +18,24 @@ import (
 )
 
 var (
-	// General settings
+	// ConfigFileFlag general config file flag
 	ConfigFileFlag = cli.StringFlag{
 		Name:  "config",
 		Usage: "add config description",
 	}
-
+	// HomeDirFlag general home directory flag
 	HomeDirFlag = common.DirectoryFlag{
 		Name:  "homedir",
 		Usage: "Home directory for the datadir logdir and keystore",
 	}
-
+	// PprofFlag general pprof flag
 	PprofFlag = cli.StringFlag{
 		Name:  "pprof",
 		Usage: "ppfof for debug performance, --pprof 1",
 	}
 )
 
+// Option type definition
 type Option func()
 
 // DrepApp based on the cli.App, the module service operation is encapsulated.
@@ -56,7 +57,7 @@ func NewApp() *DrepApp {
 	}
 }
 
-// AddServiceType add many services
+// IncludeServices add many services
 func (mApp DrepApp) IncludeServices(serviceInstances ...interface{}) error {
 
 	for _, serviceInstance := range serviceInstances {
@@ -82,19 +83,19 @@ func GetServiceTag(field reflect.StructField) string {
 	serviceName := strings.Split(serviceTagStr, ",")
 	if len(serviceName) == 0 {
 		return ""
-	} else {
-		return serviceName[0]
 	}
+	return serviceName[0]
+
 }
 
-// Init do something before app run
+// Option init do something before app run
 func (mApp *DrepApp) Option(option func()) {
 	mApp.options = append(mApp.options, option)
 }
 
-//TODO need a more graceful  command supporter
 //Run read the global configuration, parse the global command parameters,
 // initialize the main process one by one, and execute the service before the main process starts.
+//TODO need a more graceful  command supporter
 func (mApp *DrepApp) Run() error {
 	for _, op := range mApp.options {
 		op()

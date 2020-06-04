@@ -4,10 +4,11 @@ import (
 	"container/heap"
 	"errors"
 	"fmt"
-	"github.com/drep-project/DREP-Chain/chain/store"
 	"math/big"
 	"sync"
 	"time"
+
+	"github.com/drep-project/DREP-Chain/chain/store"
 
 	"github.com/drep-project/DREP-Chain/common/event"
 	"github.com/drep-project/DREP-Chain/crypto"
@@ -604,6 +605,7 @@ func (pool *TransactionPool) GetTxInPool(hash string) (*types.Transaction, error
 	return nil, fmt.Errorf("hash:%s not in txpool", hash)
 }
 
+// NewTxFeed new transaction feed in the trading pool
 func (pool *TransactionPool) NewTxFeed() *event.Feed {
 	return &pool.txFeed
 }
