@@ -70,12 +70,14 @@ type IBlockBlockGenerator interface {
 	GenerateTemplate(trieStore store.StoreInterface, leaderAddr crypto.CommonAddress, blockInterval int) (*types.Block, *big.Int, error)
 }
 
+// IBlockNotify interface
 type IBlockNotify interface {
 	//notify
 	SubscribeSyncBlockEvent(subchan chan event.SyncBlockEvent) event.Subscription
 	NewTxFeed() *event.Feed
 }
 
+// ISendMessage interface
 type ISendMessage interface {
 	// send
 	SendTransaction(tx *types.Transaction, islocal bool) error
@@ -83,11 +85,17 @@ type ISendMessage interface {
 	BroadcastTx(msgType int32, tx *types.Transaction, isLocal bool)
 }
 
+// BlockMgr is an overarching block manager that can communicate with various
+// backends for preducing blocks.
 type BlockMgr struct {
-	ChainService    chain.ChainServiceInterface `service:"chain"`
-	RpcService      *rpc2.RpcService            `service:"rpc"`
-	P2pServer       p2pService.P2P              `service:"p2p"`
-	DatabaseService *database.DatabaseService   `service:"database"`
+	// ChainService define service interface of chain
+	ChainService chain.ChainServiceInterface `service:"chain"`
+	// RpcService define service interface of rpc
+	RpcService *rpc2.RpcService `service:"rpc"`
+	// P2pServer define interface of p2p
+	P2pServer p2pService.P2P `service:"p2p"`
+	// P2pServer define service interface of database
+	DatabaseService *database.DatabaseService `service:"database"`
 	transactionPool *txpool.TransactionPool
 	chainStore      *chain.ChainStore
 	apis            []app.API
@@ -138,18 +146,22 @@ type syncHeaderHash struct {
 	height     uint64
 }
 
+// Name return package name
 func (blockMgr *BlockMgr) Name() string {
 	return "blockmgr"
 }
 
+// Api return an array of block management api
 func (blockMgr *BlockMgr) Api() []app.API {
 	return blockMgr.apis
 }
 
+// CommandFlags return an array interface of flag
 func (blockMgr *BlockMgr) CommandFlags() ([]cli.Command, []cli.Flag) {
 	return nil, []cli.Flag{}
 }
 
+// NewBlockMgr init all need of block management
 func NewBlockMgr(config *BlockMgrConfig, homeDir string, cs chain.ChainServiceInterface, p2pservice p2pService.P2P) *BlockMgr {
 	blockMgr := &BlockMgr{}
 	blockMgr.Config = config
@@ -205,6 +217,7 @@ func NewBlockMgr(config *BlockMgrConfig, homeDir string, cs chain.ChainServiceIn
 	return blockMgr
 }
 
+// Init function init block from initial config.
 func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 	blockMgr.headerHashCh = make(chan []*syncHeaderHash)
 	blockMgr.blocksCh = make(chan []*types.Block)
@@ -227,6 +240,7 @@ func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 		p2p.Protocol{
 			Name:   "blockMgr",
 			Length: types.NumberOfMsg,
+
 			Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
 				//blockMgr.lock.Lock()
 				//defer blockMgr.lock.Unlock()
@@ -257,6 +271,7 @@ func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 	return nil
 }
 
+// Start syn block and transactions.
 func (blockMgr *BlockMgr) Start(executeContext *app.ExecuteContext) error {
 	blockMgr.transactionPool.Start(blockMgr.ChainService.NewBlockFeed(), blockMgr.ChainService.BestChain().Tip().StateRoot)
 	go blockMgr.synchronise()
@@ -264,6 +279,7 @@ func (blockMgr *BlockMgr) Start(executeContext *app.ExecuteContext) error {
 	return nil
 }
 
+// Stop blockchain.
 func (blockMgr *BlockMgr) Stop(executeContext *app.ExecuteContext) error {
 	if blockMgr.quit != nil {
 		close(blockMgr.quit)
@@ -271,10 +287,12 @@ func (blockMgr *BlockMgr) Stop(executeContext *app.ExecuteContext) error {
 	return nil
 }
 
+// GetTransactionCount gets the total number of transactions, that is, the nonce corresponding to the address.
 func (blockMgr *BlockMgr) GetTransactionCount(addr *crypto.CommonAddress) uint64 {
 	return blockMgr.transactionPool.GetTransactionCount(addr)
 }
 
+// SendTransaction adds local signed transaction and broadcast it.
 func (blockMgr *BlockMgr) SendTransaction(tx *types.Transaction, islocal bool) error {
 	//from, err := tx.From()
 	//nonce := blockMgr.transactionPool.GetTransactionCount(from)
@@ -296,6 +314,7 @@ func (blockMgr *BlockMgr) SendTransaction(tx *types.Transaction, islocal bool) e
 	return nil
 }
 
+// BroadcastBlock broadcasts block until receive more than 2/3 of peers.
 func (blockMgr *BlockMgr) BroadcastBlock(msgType int32, block *types.Block, isLocal bool) {
 	blockMgr.peersInfo.Range(func(key, value interface{}) bool {
 		peer := value.(types.PeerInfoInterface)
@@ -315,6 +334,7 @@ func (blockMgr *BlockMgr) BroadcastBlock(msgType int32, block *types.Block, isLo
 	})
 }
 
+// BroadcastTx broadcasts transaction until receive more than 2/3 of peers.
 func (blockMgr *BlockMgr) BroadcastTx(msgType int32, tx *types.Transaction, isLocal bool) {
 	go func() {
 
@@ -338,26 +358,32 @@ func (blockMgr *BlockMgr) BroadcastTx(msgType int32, tx *types.Transaction, isLo
 	}()
 }
 
+// GetPoolTransactions gets all the trades in the current pool.
 func (blockMgr *BlockMgr) GetPoolTransactions(addr *crypto.CommonAddress) []types.Transactions {
 	return blockMgr.transactionPool.GetTransactions(addr)
 }
 
+// GetPoolMiniPendingNonce gets the smallest nonce in the Pending queue
 func (blockMgr *BlockMgr) GetPoolMiniPendingNonce(addr *crypto.CommonAddress) uint64 {
 	return blockMgr.transactionPool.GetMiniPendingNonce(addr)
 }
 
+// GetTxInPool gets transactions in the trading pool.
 func (blockMgr *BlockMgr) GetTxInPool(hash string) (*types.Transaction, error) {
 	return blockMgr.transactionPool.GetTxInPool(hash)
 }
 
+// SubscribeSyncBlockEvent gets a channel from the feed.
 func (blockMgr *BlockMgr) SubscribeSyncBlockEvent(subchan chan event.SyncBlockEvent) event.Subscription {
 	return blockMgr.syncBlockEvent.Subscribe(subchan)
 }
 
+// NewTxFeed gets transaction feed in the trading pool.
 func (blockMgr *BlockMgr) NewTxFeed() *event.Feed {
 	return blockMgr.transactionPool.NewTxFeed()
 }
 
+// DefaultConfig gets default config of blockchain.
 func (blockMgr *BlockMgr) DefaultConfig() *BlockMgrConfig {
 	return DefaultChainConfig
 }

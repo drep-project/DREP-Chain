@@ -552,7 +552,7 @@ func (pool *TransactionPool) getTransactionCount(address *crypto.CommonAddress) 
 	return nonce
 }
 
-//GetTransactions Gets all the trades in the current pool
+//GetTransactions gets all the trades in the current pool
 func (pool *TransactionPool) GetTransactions(addr *crypto.CommonAddress) []types.Transactions {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
@@ -594,7 +594,7 @@ func (pool *TransactionPool) GetMiniPendingNonce(addr *crypto.CommonAddress) uin
 	return 0
 }
 
-//GetTxInPool Get transactions in the trading pool
+//GetTxInPool get transactions in the trading pool
 func (pool *TransactionPool) GetTxInPool(hash string) (*types.Transaction, error) {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
