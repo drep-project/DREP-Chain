@@ -45,7 +45,7 @@ func NewSoloConsensus(
 func (soloConsensus *SoloConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Block, error) {
 	soloConsensus.CoinBase = crypto.PubkeyToAddress(privKey.PubKey())
 	soloConsensus.PrivKey = privKey
-	//区块生成 共识 奖励 验证 完成
+	//Block generation consensus reward validation completed
 	log.Trace("node leader finishes process consensus")
 
 	trieStore, err := store.TrieStoreFromStore(soloConsensus.DbService.LevelDb(), soloConsensus.ChainService.BestChain().Tip().StateRoot)

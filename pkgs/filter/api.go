@@ -6,8 +6,8 @@ import (
 )
 
 /*
-name: 过滤器rpc接口
-usage: 侦听链上特定的交易，区块，日志信息
+name: Filter RPC API
+usage: Listens for specific transactions, blocks, and log information on the chain
 prefix: filter
 */
 

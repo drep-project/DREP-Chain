@@ -34,17 +34,17 @@ type PeerInfoInterface interface {
 
 var _ PeerInfoInterface = &PeerInfo{}
 
-//业务层peerknown blk height:
+//Business layer peerknown BLK height:
 type PeerInfo struct {
 	lock        sync.Mutex
-	height      uint64                                //Peer当前块高度
-	exchangeTxs map[crypto.Hash]struct{}              //与Peer交换的交易记录
-	knownTxs    map[crypto.CommonAddress]*sortedBiMap // 按照NONCE排序
-	knownBlocks *sortedBiMap                          // 按照高度排序
-	peer        *p2p.Peer                             //p2p层peer
-	rw          p2p.MsgReadWriter                     //与peer对应的协议
-	reqTime     *time.Time                            //向一个peer发送请求时的系统时间
-	averageRtt  time.Duration                         //本地和peer之间，请求的时间估计值
+	height      uint64                                //Peer current block height
+	exchangeTxs map[crypto.Hash]struct{}              //transaction records exchanged with Peer
+	knownTxs    map[crypto.CommonAddress]*sortedBiMap //sorted by NONCE
+	knownBlocks *sortedBiMap                          //sorted by height
+	peer        *p2p.Peer                             //p2p peer layer
+	rw          p2p.MsgReadWriter                     //the protocol corresponding to peer
+	reqTime     *time.Time                            //The system time when a request is sent to a peer
+	averageRtt  time.Duration                         //The estimated time of the request between local and peer
 }
 
 func NewPeerInfo(p *p2p.Peer, rw p2p.MsgReadWriter) *PeerInfo {
@@ -62,10 +62,14 @@ func NewPeerInfo(p *p2p.Peer, rw p2p.MsgReadWriter) *PeerInfo {
 }
 
 func (peer *PeerInfo) SetReqTime(t time.Time) {
+	peer.lock.Lock()
+	defer peer.lock.Unlock()
 	peer.reqTime = &t
 }
 
 func (peer *PeerInfo) CalcAverageRtt() {
+	peer.lock.Lock()
+	defer peer.lock.Unlock()
 	duration := time.Since(*peer.reqTime)
 	if peer.averageRtt == 0 {
 		peer.averageRtt = duration
@@ -75,6 +79,9 @@ func (peer *PeerInfo) CalcAverageRtt() {
 }
 
 func (peer *PeerInfo) AverageRtt() time.Duration {
+	peer.lock.Lock()
+	defer peer.lock.Unlock()
+
 	if peer.reqTime != nil && time.Since(*peer.reqTime) > time.Duration(time.Minute*3) {
 		peer.averageRtt = 0
 	}
@@ -85,20 +92,24 @@ func (peer *PeerInfo) GetAddr() string {
 	return peer.peer.IP()
 }
 
-//获取读写句柄
+//Gets the read-write handle
 func (peer *PeerInfo) GetMsgRW() p2p.MsgReadWriter {
 	return peer.rw
 }
 
 func (peer *PeerInfo) SetHeight(height uint64) {
+	peer.lock.Lock()
+	defer peer.lock.Unlock()
 	peer.height = height
 }
 
 func (peer *PeerInfo) GetHeight() uint64 {
+	peer.lock.Lock()
+	defer peer.lock.Unlock()
 	return peer.height
 }
 
-//peer端是否已经知道此tx
+//Whether the peer end already knows this tx
 func (peer *PeerInfo) KnownTx(tx *Transaction) bool {
 	hash := tx.TxHash()
 	addr, _ := tx.From()
@@ -114,7 +125,7 @@ func (peer *PeerInfo) KnownTx(tx *Transaction) bool {
 	return false
 }
 
-//记录对应的tx，避免多次相互发送
+//Record the corresponding tx to avoid sending each other multiple times
 func (peer *PeerInfo) MarkTx(tx *Transaction) {
 	hash := tx.TxHash()
 	addr, _ := tx.From()
@@ -147,8 +158,9 @@ func (peer *PeerInfo) KnownBlock(blk *Block) bool {
 	return false
 }
 
-//记录block,以免多次同步块
+//Record blocks so that blocks are not synchronized multiple times
 func (peer *PeerInfo) MarkBlock(blk *Block) {
+
 	h := blk.Header.Hash()
 	if h == nil {
 		return
@@ -160,6 +172,8 @@ func (peer *PeerInfo) MarkBlock(blk *Block) {
 
 	peer.knownBlocks.Put(h, blk.Header.Height)
 
+	peer.lock.Lock()
+	defer peer.lock.Unlock()
 	if peer.height < blk.Header.Height {
 		peer.height = blk.Header.Height
 	}
@@ -183,11 +197,11 @@ func (h *uint64SliceHeap) Pop() interface{} {
 	return x
 }
 
-//根据hash对应的块高度，对hash排队
+//Hash is queued according to the block height corresponding to the hash
 type sortedBiMap struct {
 	mut   sync.Mutex
-	items *bimap.BiMap     //双向map, key 为 crypto.Hash
-	index *uint64SliceHeap // Heap of nonces of all the stored uint64 value
+	items *bimap.BiMap     //Bidirectional map, key is crypto.hash
+	index *uint64SliceHeap //Heap of nonces of all the stored uint64 value
 }
 
 // newUint64SortedMap creates a new value-sorted binary map.
@@ -259,7 +273,7 @@ func (m *sortedBiMap) Len() int {
 	return m.items.Size()
 }
 
-//根据value大小，从小到大删除对应的k-v
+//According to the value, delete the corresponding k-v from small to large
 func (m *sortedBiMap) BatchRemove(count int) int {
 	var i int
 	for i = 0; i < count && m.items.Size() > 0; i++ {

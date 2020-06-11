@@ -23,7 +23,7 @@ func (h *heightHeap) Pop() interface{} {
 	return x
 }
 
-//根据hash对应的块高度，对hash排队
+//Hash is queued according to the block height corresponding to the hash
 type heightSortedMap struct {
 	items map[uint64]*syncHeaderHash // Hash map storing the syncHeaderHash data
 	index *heightHeap                // Heap of nonces of all the stored syncHeaderHash (non-strict mode)

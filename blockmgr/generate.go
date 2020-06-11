@@ -1,16 +1,18 @@
 package blockmgr
 
 import (
+	"math/big"
+	"time"
+
 	"github.com/drep-project/DREP-Chain/chain"
 	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/common"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/params"
 	"github.com/drep-project/DREP-Chain/types"
-	"math/big"
-	"time"
 )
 
+// GenerateTemplate blockchain t
 func (blockMgr *BlockMgr) GenerateTemplate(trieStore store.StoreInterface, leaderAddr crypto.CommonAddress, blockInterval int) (*types.Block, *big.Int, error) {
 	parent, err := blockMgr.ChainService.GetHighestBlock()
 	if err != nil {

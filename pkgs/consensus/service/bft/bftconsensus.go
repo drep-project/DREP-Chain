@@ -124,7 +124,7 @@ func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Blo
 	}
 	found := false
 
-	log.Info(" bftConsensus.config.ProducerNum:", bftConsensus.config.ProducerNum, bftConsensus.ChainService.BestChain().Height())
+	log.Trace(" bftConsensus.config.ProducerNum:", bftConsensus.config.ProducerNum, bftConsensus.ChainService.BestChain().Height())
 	for _, p := range producers {
 		log.WithField("node", p.Node.String()).Trace("get producers")
 	}
@@ -316,10 +316,10 @@ func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo, minMiners in
 	return block, nil
 }
 
-//1 leader出块，然后签名并且广播给其他producer,
-//2 其他producer收到后，签自己的构建数字签名;然后把签名后的块返回给leader
-//3 leader搜集到所有的签名或者返回的签名个数大于producer个数的三分之二后，开始验证签名
-//4 leader验证签名通过后，广播此块给所有的Peer
+//1 The leader makes blocks, signs them and broadcasts them to other producers,
+//2 Other producers will sign their own digital signatures after receiving them. The signed block is then returned to the leader
+//3 After the leader collects all the signatures or returns more than two-thirds of the number of producers, he or she shall verify the signatures
+//4 After the leader validates the signature, the block is broadcast to all peers
 func (bftConsensus *BftConsensus) runAsLeader(producers ProducerSet, miners []*MemberInfo, minMiners int) (block *types.Block, err error) {
 	leader := NewLeader(
 		bftConsensus.PrivKey,
@@ -504,7 +504,7 @@ func (bftConsensus *BftConsensus) prepareForMining(p2p p2pService.P2P) {
 
 			tempProduces := make([]Producer, len(producers))
 			copy(tempProduces, producers)
-			//自己在候选中
+			//I'm in the running
 			found := false
 			for index, p := range tempProduces {
 				if bytes.Equal(p.Pubkey.Serialize(), bftConsensus.config.MyPk.Serialize()) {

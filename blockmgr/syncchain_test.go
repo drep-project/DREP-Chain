@@ -212,7 +212,7 @@ func TestFindAncestor(t *testing.T) {
 		headerHashs = append(headerHashs, &syncHeaderHash{headerHash: b.Header.Hash(), height: b.Header.Height})
 	}
 
-	//超时错误
+	//time out
 	ancestor, err := bm.findAncestor(peerInfo)
 	if err == nil {
 		t.Fatal(err)

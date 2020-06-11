@@ -27,7 +27,7 @@ func Test_WalletOpend(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	wallet.Open(password)
+	wallet.OpenWallet(password)
 	if wallet.IsOpen() == false {
 		t.Error("expected wallet is open but got close")
 	}
@@ -39,7 +39,7 @@ func Test_WalletClosed(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	wallet.Open(password)
+	wallet.OpenWallet(password)
 	if wallet.IsOpen() == false {
 		t.Error("expected wallet is open but got close")
 	}
@@ -65,7 +65,7 @@ func Test_WalletLock(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	wallet.Open(password)
+	wallet.OpenWallet(password)
 	node, err := wallet.NewAccount()
 	if err != nil {
 		t.Error(err)
@@ -91,7 +91,7 @@ func Test_WalletUnLock(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	wallet.Open(password)
+	wallet.OpenWallet(password)
 
 	wallet.Lock()
 	if wallet.IsLock() == false {
@@ -110,7 +110,7 @@ func Test_NewAccountAndListAddress(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	wallet.Open(password)
+	wallet.OpenWallet(password)
 
 	count := 10
 	nodes := make([]*types.Node, count)
@@ -146,7 +146,7 @@ func Test_NewAccountAndDumpPrivateKey(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	wallet.Open(password)
+	wallet.OpenWallet(password)
 
 	count := 10
 	nodes := make([]*types.Node, count)
@@ -174,7 +174,7 @@ func Test_Sign(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	wallet.Open(password)
+	wallet.OpenWallet(password)
 	node, err := wallet.NewAccount()
 	if err != nil {
 		t.Error(err)
@@ -198,7 +198,7 @@ func TestWallet_ImportPrivKey(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	wallet.Open(password)
+	wallet.OpenWallet(password)
 
 	for _, pri := range testData {
 		privBytes, _ := hex.DecodeString(pri)
@@ -276,6 +276,6 @@ func getWallet(path, password string) (*Wallet, error) {
 	if err != nil {
 		return nil, err
 	}
-	wallet.Open(password)
+	wallet.OpenWallet(password)
 	return wallet, nil
 }

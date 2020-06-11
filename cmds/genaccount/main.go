@@ -15,6 +15,7 @@ import (
 	"github.com/drep-project/DREP-Chain/params"
 	"github.com/drep-project/DREP-Chain/pkgs/consensus/service"
 	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/bft"
+	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/solo"
 	"github.com/drep-project/DREP-Chain/pkgs/log"
 	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
@@ -112,23 +113,37 @@ func gen(ctx *cli.Context) error {
 
 	consensusConfig := &service.ConsensusConfig{}
 
-	//if len(nodeItems) == 1 {
-	//	consensusConfig.ConsensusMode = "solo"
-	//	consensusConfig.Solo = &solo.SoloConfig{
-	//		MyPk:          nil,
-	//		StartMiner:    true,
-	//		BlockInterval: 5,
-	//	}
-	//} else {
-	consensusConfig.ConsensusMode = "bft"
-	consensusConfig.Bft = &bft.BftConfig{
-		MyPk:           nil,
-		StartMiner:     true,
-		BlockInterval:  10,
-		ProducerNum:    len(nodeItems),
-		ChangeInterval: 100,
+	if len(nodeItems) == 0 {
+
+		fmt.Println(`need items like:
+		miners: [ 
+		{
+			"name": "local",
+			"ip": "192.168.31.221", 
+			"port": 55555,
+			"password": "123"
+		}
+		])`)
+		return nil
 	}
-	//}
+
+	if len(nodeItems) == 1 {
+		consensusConfig.ConsensusMode = "solo"
+		consensusConfig.Solo = &solo.SoloConfig{
+			MyPk:          nil,
+			StartMiner:    true,
+			BlockInterval: 5,
+		}
+	} else {
+		consensusConfig.ConsensusMode = "bft"
+		consensusConfig.Bft = &bft.BftConfig{
+			MyPk:           nil,
+			StartMiner:     true,
+			BlockInterval:  10,
+			ProducerNum:    len(nodeItems),
+			ChangeInterval: 100,
+		}
+	}
 
 	chainConfig := chain.ChainConfig{}
 	//chainConfig.RemotePort = 55556
@@ -163,7 +178,7 @@ func gen(ctx *cli.Context) error {
 
 		walletConfig := accountTypes.Config{}
 		walletConfig.Enable = true
-		walletConfig.Password = password
+		//walletConfig.Password = password
 
 		cfgPath := path2.Join(userDir, "config.json")
 		fs, _ := os.Create(cfgPath)
@@ -209,7 +224,7 @@ func gen(ctx *cli.Context) error {
 
 			walletConfig := accountTypes.Config{}
 			walletConfig.Enable = true
-			walletConfig.Password = password
+			//walletConfig.Password = password
 
 			cfgPath := path2.Join(userDir, "config.json")
 			fs, _ := os.Create(cfgPath)

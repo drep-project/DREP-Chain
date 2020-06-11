@@ -6,13 +6,12 @@ import (
 )
 
 type TransactionStore struct {
-	dirties *sync.Map //数据属于storage的缓存
+	dirties *sync.Map //The data belongs to storage's cache
 	trie    *trie.SecureTrie
 }
 type SnapShot dirtiesKV
 type dirtiesKV struct {
-	storageDirties *sync.Map //数据属于storage的缓存
-	//otherDirties   *sync.Map //数据与stroage没有关系的，其他kv对的缓存
+	storageDirties *sync.Map //The data belongs to storage's cache
 }
 
 func NewTransactionStore(trie *trie.SecureTrie) *TransactionStore {

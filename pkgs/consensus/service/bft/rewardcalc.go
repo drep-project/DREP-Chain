@@ -38,7 +38,7 @@ func (calculator *RewardCalculator) AccumulateRewards(height uint64) error {
 	rate = int64(math.Exp2(float64(rate)))
 	reward.Div(reward, new(big.Int).SetInt64(rate))
 
-	//自己分8成，支持者分2成
+	//Eighty percent for themselves and twenty percent for their supporters
 	var selfProportion int64 = 80
 	leaderReward := new(big.Int)
 	leaderReward = leaderReward.Mul(reward, new(big.Int).SetInt64(selfProportion))
@@ -68,8 +68,6 @@ func (calculator *RewardCalculator) AccumulateRewards(height uint64) error {
 		bonus := new(big.Int).Set(otherReward)
 		bonus = bonus.Mul(bonus, &supportCredit)
 		bonus = bonus.Div(bonus, total)
-
-		//fmt.Println(bonus, supportCredit.String())
 
 		err := calculator.trieStore.AddBalance(&spporterAddr, calculator.height, bonus)
 		if err != nil {

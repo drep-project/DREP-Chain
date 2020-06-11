@@ -4,10 +4,11 @@ import (
 	"container/heap"
 	"errors"
 	"fmt"
-	"github.com/drep-project/DREP-Chain/chain/store"
 	"math/big"
 	"sync"
 	"time"
+
+	"github.com/drep-project/DREP-Chain/chain/store"
 
 	"github.com/drep-project/DREP-Chain/common/event"
 	"github.com/drep-project/DREP-Chain/crypto"
@@ -15,42 +16,41 @@ import (
 )
 
 const (
-	maxAllTxsCount  = 100000           //交易池所弄容纳的总的交易数量
-	maxTxsOfQueue   = 5                //单个地址对应的乱序队列中，最多容纳交易数目
-	maxTxsOfPending = 20               //单个地址对应的有序队列中，最多容纳交易数目
-	expireTimeTx    = 60 * 60 * 24 * 3 //交易在3天内，还没有被打包，则被丢弃
+	maxAllTxsCount  = 100000           //The total number of trades held in a trading pool
+	maxTxsOfQueue   = 5                //The maximum number of transactions in an out-of-order queue corresponding to a single address
+	maxTxsOfPending = 20               //The maximum number of transactions in an ordered queue corresponding to a single address
+	expireTimeTx    = 60 * 60 * 24 * 3 //The transaction is discarded if it is not packaged within three days
 )
 
 //TransactionPool ...
-//1 池子里的交易按照nonce是否连续，分为乱序的和已经排序的在两个不同的队列中
-//2 已经排序好的可以被打包入块
-//3 池子里面的交易根据块中的各个地址的交易对应的Nonce进行删除
+//1 The transactions in the pool are sorted and sorted in two different queues according to whether or not the nonce is continuous
+//2 The sorted ones can be packed into blocks
+//3 The transactions in the pool are deleted according to the Nonce corresponding to the transactions of each address in the block
 type TransactionPool struct {
 	chainStore   store.StoreInterface
 	rlock        sync.RWMutex
 	queue        map[crypto.CommonAddress]*txList
 	pending      map[crypto.CommonAddress]*txList
-	allTxs       map[string]*types.Transaction //统计信息使用
-	allPricedTxs *txPricedList                 //按照价格排序的tx列表
+	allTxs       map[string]*types.Transaction
+	allPricedTxs *txPricedList //Tx list sorted by price
 	mu           sync.Mutex
 	nonceCp      func(a interface{}, b interface{}) int
 	tranCp       func(a interface{}, b interface{}) bool
 
-	//当前有序的最大的nonce大小,此值应该被存储到DB中（后续考虑txpool的DB存储，一起考虑）
+	//The currently ordered maximum nonce size, which should be stored in DB (consider the DB storage of txpool later, together)
 	pendingNonce     map[crypto.CommonAddress]uint64
 	eventNewBlockSub event.Subscription
 	newBlockChan     chan *types.ChainEvent
 	quit             chan struct{}
 
-	// 提供pending交易订阅
+	//Provide pending transaction subscriptions
 	txFeed event.Feed
 
-	//日志
 	journal *txJournal
-	locals  map[crypto.CommonAddress]struct{} //本地节点包含的地址
+	locals  map[crypto.CommonAddress]struct{} //The address that the local node contains
 }
 
-//NewTransactionPool 创建一个交易池
+//NewTransactionPool Create a trading pool
 func NewTransactionPool(chainStore store.StoreInterface, journalPath string) *TransactionPool {
 	pool := &TransactionPool{chainStore: chainStore}
 	pool.nonceCp = func(a interface{}, b interface{}) int {
@@ -165,7 +165,7 @@ func (pool *TransactionPool) addTxs(txs []types.Transaction) []error {
 //	return ok
 //}
 
-//AddTransaction 交易加入到txpool
+//AddTransaction ransaction put in txpool
 func (pool *TransactionPool) AddTransaction(tx *types.Transaction, isLocal bool) error {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
@@ -185,10 +185,10 @@ func (pool *TransactionPool) addTx(tx *types.Transaction, isLocal bool) error {
 		return err
 	}
 
-	// pending队列交易替换
+	// pending Queue transaction substitution
 	if list, ok := pool.pending[*addr]; ok {
 		if list.Overlaps(tx) {
-			//替换
+			//replace
 			ok, oldTx := list.ReplaceOldTx(tx)
 			if !ok {
 				return errors.New("can't replace old tx")
@@ -208,10 +208,10 @@ func (pool *TransactionPool) addTx(tx *types.Transaction, isLocal bool) error {
 		}
 	}
 
-	// queue队列交易替换
+	// Queue transaction substitution
 	if list, ok := pool.queue[*addr]; ok {
 		if list.Overlaps(tx) {
-			//替换
+			//replace
 			ok, oldTx := list.ReplaceOldTx(tx)
 			if !ok {
 				return errors.New("can't replace old tx, new tx price is too low")
@@ -235,10 +235,10 @@ func (pool *TransactionPool) addTx(tx *types.Transaction, isLocal bool) error {
 		return fmt.Errorf("SendTransaction local nonce:%d , comming tx nonce:%d too small", nonce, tx.Nonce())
 	}
 
-	//新的一个交易到来，先看看pool是否满；满的话，删除一些价格较低的tx
+	//A new transaction is coming, let's see if the pool is full; When full, delete some of the cheaper tx's
 	miniPrice := new(big.Int)
 	if len(pool.allTxs) >= maxAllTxsCount {
-		//todo 价格较低的交易将被丢弃
+		//Cheaper deals will be discarded
 		txs := pool.allPricedTxs.Discard(1, pool.locals)
 		for _, t := range txs {
 			if t.GasPrice().Cmp(miniPrice) < 0 || miniPrice.Cmp(new(big.Int)) == 0 {
@@ -248,7 +248,7 @@ func (pool *TransactionPool) addTx(tx *types.Transaction, isLocal bool) error {
 			delete(pool.allTxs, t.TxHash().String())
 
 			remove := func(list *txList, pending bool) bool {
-				//queue /pending中的tx都要删除掉
+				//going to delete all the tx's in the queue /pending
 				removeSuccess, deleteTxs := list.Remove(&t)
 				if removeSuccess {
 					for _, delTx := range deleteTxs {
@@ -274,7 +274,7 @@ func (pool *TransactionPool) addTx(tx *types.Transaction, isLocal bool) error {
 		}
 	}
 
-	//如果新到来的交易的价格很低，而且不是本地的。那么返回一个错误(需要优化)
+	//If the price of the new transaction is low and not local. So return an error (todo need to optimize)
 	if miniPrice.Cmp(new(big.Int)) != 0 && tx.GasPrice().Cmp(miniPrice) < 0 && !isLocal {
 		return fmt.Errorf("new tx gasprice is too low")
 	}
@@ -285,7 +285,7 @@ func (pool *TransactionPool) addTx(tx *types.Transaction, isLocal bool) error {
 		}
 	}
 
-	//添加到queue
+	//add to queue
 	if list, ok := pool.queue[*addr]; ok {
 		//Whether the queue space corresponding to the address is full,drop old tx
 		if list.Len() > maxTxsOfQueue {
@@ -320,7 +320,7 @@ func (pool *TransactionPool) syncToPending(address *crypto.CommonAddress) {
 		return
 	}
 
-	//从queue找nonce连续的交易放入到pending中
+	//and put it into pending
 	addrList := pool.queue[*address]
 	if addrList == nil {
 		return
@@ -354,7 +354,7 @@ func (pool *TransactionPool) syncToPending(address *crypto.CommonAddress) {
 //	return true, true
 //}
 
-//GetQueue 获取交易池中，非严格排序队列中的所有交易
+//GetQueue Gets all transactions in the non-strictly sorted queue in the transaction pool
 func (pool *TransactionPool) GetQueue() []*types.Transaction {
 	var retrunTxs []*types.Transaction
 	pool.mu.Lock()
@@ -370,12 +370,12 @@ func (pool *TransactionPool) GetQueue() []*types.Transaction {
 	return retrunTxs
 }
 
-//GetPending 打包过程获取交易，进行打包处理
+//GetPending The packaging process takes the transaction and packages it
 func (pool *TransactionPool) GetPending(GasLimit *big.Int) []*types.Transaction {
 	pool.mu.Lock()
 	gasCount := new(big.Int)
 
-	//转数据结构
+	//change Data structure
 	hbn := make(map[crypto.CommonAddress]*nonceTxsHeap)
 
 	for addr, list := range pool.pending {
@@ -415,7 +415,7 @@ END:
 	return retrunTxs
 }
 
-//Start 开启交易池
+//Start start transaction pool
 func (pool *TransactionPool) Start(feed *event.Feed, tipRoot []byte) {
 	b := pool.chainStore.RecoverTrie(tipRoot)
 	if !b {
@@ -429,7 +429,7 @@ func (pool *TransactionPool) Start(feed *event.Feed, tipRoot []byte) {
 	pool.eventNewBlockSub = feed.Subscribe(pool.newBlockChan)
 }
 
-//Stop 停止交易池
+//Stop transaction pool work
 func (pool *TransactionPool) Stop() {
 	close(pool.quit)
 	pool.eventNewBlockSub.Unsubscribe()
@@ -489,8 +489,11 @@ func (pool *TransactionPool) checkUpdate() {
 	}
 }
 
-//已经被处理过NONCE都被清理出去
+//It's been processed and the NONCE has been cleaned out
 func (pool *TransactionPool) adjust(block *types.Block) {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
 	b := pool.chainStore.RecoverTrie(block.Header.StateRoot)
 	if !b {
 		log.WithField("recoverRet", b).WithField("h:", block.Header.Height).Error("RecoverTrie")
@@ -507,15 +510,13 @@ func (pool *TransactionPool) adjust(block *types.Block) {
 	}
 
 	if len(addrs) > 0 {
-		pool.mu.Lock()
-		defer pool.mu.Unlock()
 		for addr := range addrMap {
-			// 获取数据库里面的nonce
-			//根据nonce是否被处理，删除对应的交易
+			//Get the nonce in the database
+			//The corresponding transaction is deleted depending on whether the nonce is processed
 			nonce := pool.chainStore.GetNonce(&addr)
 
-			//块同步的时候，db中的nonce持续增加，pool.pendingNonce[addr]中的值不能被更新
-			//此处做更新处理
+			//While the block is synchronized, the nonce in db continues to increase and the value in pool.pendingnonce [addr] cannot be updated
+			//Update processing is done here
 			if nonce > pool.getTransactionCount(&addr) {
 				pool.pendingNonce[addr] = nonce
 			}
@@ -534,7 +535,7 @@ func (pool *TransactionPool) adjust(block *types.Block) {
 	}
 }
 
-//GetTransactionCount 获取总的交易个数，即获取地址对应的nonce
+//GetTransactionCount Gets the total number of transactions, that is, the nonce corresponding to the address
 func (pool *TransactionPool) GetTransactionCount(address *crypto.CommonAddress) uint64 {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
@@ -542,6 +543,7 @@ func (pool *TransactionPool) GetTransactionCount(address *crypto.CommonAddress) 
 }
 
 func (pool *TransactionPool) getTransactionCount(address *crypto.CommonAddress) uint64 {
+
 	if nonce, ok := pool.pendingNonce[*address]; ok {
 		return nonce
 	}
@@ -550,7 +552,7 @@ func (pool *TransactionPool) getTransactionCount(address *crypto.CommonAddress) 
 	return nonce
 }
 
-//GetTransactions 获取当前池子中所有交易
+//GetTransactions gets all the trades in the current pool
 func (pool *TransactionPool) GetTransactions(addr *crypto.CommonAddress) []types.Transactions {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
@@ -577,7 +579,7 @@ func (pool *TransactionPool) GetTransactions(addr *crypto.CommonAddress) []types
 	return twoQueueTxs
 }
 
-//GetMiniPendingNonce 获取Pending队列中的最小nonce
+//GetMiniPendingNonce Gets the smallest nonce in the Pending queue
 func (pool *TransactionPool) GetMiniPendingNonce(addr *crypto.CommonAddress) uint64 {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
@@ -592,7 +594,7 @@ func (pool *TransactionPool) GetMiniPendingNonce(addr *crypto.CommonAddress) uin
 	return 0
 }
 
-//GetTxInPool 获取交易池中的交易
+//GetTxInPool get transactions in the trading pool
 func (pool *TransactionPool) GetTxInPool(hash string) (*types.Transaction, error) {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
@@ -603,6 +605,7 @@ func (pool *TransactionPool) GetTxInPool(hash string) (*types.Transaction, error
 	return nil, fmt.Errorf("hash:%s not in txpool", hash)
 }
 
+// NewTxFeed new transaction feed in the trading pool
 func (pool *TransactionPool) NewTxFeed() *event.Feed {
 	return &pool.txFeed
 }

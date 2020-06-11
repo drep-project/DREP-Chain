@@ -14,21 +14,24 @@ import (
 )
 
 const (
-	CandidateAddrs             = "CandidateAddrs" //参与竞选出块节点的地址集合
-	StakeStorage               = "StakeStorage"   //以地址作为KEY,存储stake相关内容
-	registerPledgeLimit uint64 = 1000000          //候选节点需要抵押币的总数,单位1drep
-	interestRate               = 1000000 * 12     //每个存储高度，奖励的利率
+	//CandidateAddrs Participates in the selection of the address set of block nodes
+	CandidateAddrs = "CandidateAddrs"
+	//StakeStorage With the address as the KEY, the relevant content is stored
+	StakeStorage = "StakeStorage"
 
-	threeMonthHeight = 1555200 //小于3个月出块高度
-	sixMonthHeight   = 3110400 //6个月出块高度
-	oneYearHeight    = 6220800 //12个月出块高度
+	registerPledgeLimit uint64 = 1000000      //The candidate node needs the total number of collateral COINS, unit 1drep
+	interestRate               = 1000000 * 12 //Each storage height rewards the interest rate
+
+	threeMonthHeight = 1555200 //Less than 3 months out of the block height
+	sixMonthHeight   = 3110400 //6 months out of the block height
+	oneYearHeight    = 6220800 //12 months out of the block height
 )
 
 type trieStakeStore struct {
 	store *StoreDB
 }
 
-func NewStakeStorage(store *StoreDB) *trieStakeStore {
+func newStakeStorage(store *StoreDB) *trieStakeStore {
 	return &trieStakeStore{
 		store: store,
 	}
@@ -44,12 +47,13 @@ func (trieStore *trieStakeStore) getStakeStorage(addr *crypto.CommonAddress) (*t
 	}
 	if value == nil {
 		return nil, nil
-	} else {
-		err = binary.Unmarshal(value, storage)
-		if err != nil {
-			return nil, err
-		}
 	}
+
+	err = binary.Unmarshal(value, storage)
+	if err != nil {
+		return nil, err
+	}
+
 	return storage, nil
 }
 
@@ -85,11 +89,11 @@ func (trieStore *trieStakeStore) UpdateCandidateAddr(addr *crypto.CommonAddress,
 	} else { //del
 		if len(addrs) == 0 {
 			return nil
-		} else {
-			for index, temAddr := range addrs {
-				if temAddr.String() == addr.String() {
-					addrs = append(addrs[0:index], addrs[index+1:]...)
-				}
+		}
+
+		for index, temAddr := range addrs {
+			if temAddr.String() == addr.String() {
+				addrs = append(addrs[0:index], addrs[index+1:]...)
 			}
 		}
 	}
@@ -191,32 +195,12 @@ func (trieStore *trieStakeStore) VoteCredit(fromAddr, toAddr *crypto.CommonAddre
 	return trieStore.putStakeStorage(toAddr, storage)
 }
 
-//每个档次利率减半
-//func getInterst(startHeight, endHeight uint64, value *big.Int) *big.Int {
-//	var rate uint64 = 0
-//	diff := endHeight - startHeight
-//	if diff < 1555200 { //小于3个月
-//		rate = interestRate * 8
-//	} else if diff < 3110400 { //3-6个月
-//		rate = interestRate * 4
-//	} else if diff < 6220800 { //6 - 12个月
-//		rate = interestRate * 2
-//	} else { //大于12个月
-//		rate = interestRate
-//	}
-//
-//	bigDiff := new(big.Int).SetUint64(diff)
-//	bigDiff.Mul(bigDiff, value)
-//
-//	return bigDiff.Div(bigDiff, new(big.Int).SetUint64(rate))
-//}
-
 func (trieStore *trieStakeStore) cancelCredit(fromAddr, toAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64, changeInterval uint64,
 	f func(leftCredit *big.Int, storage *types.StakeStorage) (*types.StakeStorage, error)) (*types.CancelCreditDetail, error) {
 
 	interestData := types.CancelCreditDetail{PrincipalData: make([]types.HeightValue, 0, 1)}
 
-	//找到币被抵押到的stakeStorage;减去取消的值
+	//Find the stakeStorage to which the coin is pledged; Minus the canceled value
 	storage, _ := trieStore.getStakeStorage(toAddr)
 	if storage == nil {
 		return nil, fmt.Errorf("not exist vote credit")
@@ -226,68 +210,68 @@ func (trieStore *trieStakeStore) cancelCredit(fromAddr, toAddr *crypto.CommonAdd
 
 	if len(storage.RC) == 0 {
 		return nil, fmt.Errorf("not exist vote credit")
-	} else {
-		found := false
-		for index, rc := range storage.RC {
-			if rc.Addr.String() == fromAddr.String() {
-				found = true
+	}
 
-				for _, vc := range rc.HeghtValues {
-					leftCredit.Add(leftCredit, vc.CreditValue.ToInt())
-				}
+	found := false
+	for index, rc := range storage.RC {
+		if rc.Addr.String() == fromAddr.String() {
+			found = true
 
-				cancelBalanceTmp := new(big.Int).Set(cancelBalance)
-				if leftCredit.Cmp(cancelBalance) >= 0 {
-					leftCredit.Sub(leftCredit, cancelBalance)
-					left := 0
-					leftHeightValues := make([]types.HeightValue, 0)
+			for _, vc := range rc.HeghtValues {
+				leftCredit.Add(leftCredit, vc.CreditValue.ToInt())
+			}
 
-					for hvIndex, heightValue := range rc.HeghtValues {
-						if cancelBalanceTmp.Cmp(heightValue.CreditValue.ToInt()) >= 0 {
+			cancelBalanceTmp := new(big.Int).Set(cancelBalance)
+			if leftCredit.Cmp(cancelBalance) >= 0 {
+				leftCredit.Sub(leftCredit, cancelBalance)
+				left := 0
+				leftHeightValues := make([]types.HeightValue, 0)
 
-							//interest := getInterst(heightValue.CreditHeight, height+changeInterval, heightValue.CreditValue.ToInt())
-							interestData.PrincipalData = append(interestData.PrincipalData, types.HeightValue{heightValue.CreditHeight, heightValue.CreditValue})
-							//interestData.IntersetData = append(interestData.IntersetData, types.HeightValue{height + changeInterval, common.Big(*interest)})
+				for hvIndex, heightValue := range rc.HeghtValues {
+					if cancelBalanceTmp.Cmp(heightValue.CreditValue.ToInt()) >= 0 {
 
-							//cancelBalance.Add(cancelBalance, interest)
-							cancelBalanceTmp.Sub(cancelBalanceTmp, heightValue.CreditValue.ToInt())
+						//interest := getInterst(heightValue.CreditHeight, height+changeInterval, heightValue.CreditValue.ToInt())
+						interestData.PrincipalData = append(interestData.PrincipalData, types.HeightValue{heightValue.CreditHeight, heightValue.CreditValue})
+						//interestData.IntersetData = append(interestData.IntersetData, types.HeightValue{height + changeInterval, common.Big(*interest)})
 
-							if cancelBalanceTmp.Cmp(new(big.Int).SetUint64(0)) == 0 {
-								leftHeightValues = append(leftHeightValues, rc.HeghtValues[hvIndex+1:]...)
-								rc.HeghtValues = leftHeightValues
-								break
-							}
+						//cancelBalance.Add(cancelBalance, interest)
+						cancelBalanceTmp.Sub(cancelBalanceTmp, heightValue.CreditValue.ToInt())
 
-						} else {
-
-							//interest := getInterst(heightValue.CreditHeight, height+changeInterval, cancelBalance)
-							interestData.PrincipalData = append(interestData.PrincipalData, types.HeightValue{heightValue.CreditHeight, common.Big(*cancelBalanceTmp)})
-							//interestData.IntersetData = append(interestData.IntersetData, types.HeightValue{height + changeInterval, common.Big(*interest)})
-							//cancelBalance.Add(cancelBalance, interest)
-
-							cv := heightValue.CreditValue.ToInt()
-							leftHeightValues = append(leftHeightValues, types.HeightValue{heightValue.CreditHeight, common.Big(*cv.Sub(cv, cancelBalanceTmp))})
+						if cancelBalanceTmp.Cmp(new(big.Int).SetUint64(0)) == 0 {
 							leftHeightValues = append(leftHeightValues, rc.HeghtValues[hvIndex+1:]...)
 							rc.HeghtValues = leftHeightValues
-							left++
 							break
 						}
-					}
-					if len(rc.HeghtValues) == 0 {
-						storage.RC = append(storage.RC[0:index], storage.RC[index+1:]...)
-					} else {
-						storage.RC[index] = rc
-					}
-				} else {
-					return nil, fmt.Errorf("vote credit not enough")
-				}
-				break
-			}
-		}
 
-		if !found {
-			return nil, fmt.Errorf("not exist vote credit")
+					} else {
+
+						//interest := getInterst(heightValue.CreditHeight, height+changeInterval, cancelBalance)
+						interestData.PrincipalData = append(interestData.PrincipalData, types.HeightValue{heightValue.CreditHeight, common.Big(*cancelBalanceTmp)})
+						//interestData.IntersetData = append(interestData.IntersetData, types.HeightValue{height + changeInterval, common.Big(*interest)})
+						//cancelBalance.Add(cancelBalance, interest)
+
+						cv := heightValue.CreditValue.ToInt()
+						leftHeightValues = append(leftHeightValues, types.HeightValue{heightValue.CreditHeight, common.Big(*cv.Sub(cv, cancelBalanceTmp))})
+						leftHeightValues = append(leftHeightValues, rc.HeghtValues[hvIndex+1:]...)
+						rc.HeghtValues = leftHeightValues
+						left++
+						break
+					}
+				}
+				if len(rc.HeghtValues) == 0 {
+					storage.RC = append(storage.RC[0:index], storage.RC[index+1:]...)
+				} else {
+					storage.RC[index] = rc
+				}
+			} else {
+				return nil, fmt.Errorf("vote credit not enough")
+			}
+			break
 		}
+	}
+
+	if !found {
+		return nil, fmt.Errorf("not exist vote credit")
 	}
 
 	if f != nil {
@@ -302,7 +286,7 @@ func (trieStore *trieStakeStore) cancelCredit(fromAddr, toAddr *crypto.CommonAdd
 		storage.CC = make([]types.CancelCredit, 0, 1)
 	}
 
-	found := false
+	found = false
 	for index, cc := range storage.CC {
 		if cc.CancelCreditHeight == height {
 			found = true
@@ -341,7 +325,7 @@ func (trieStore *trieStakeStore) CancelVoteCredit(fromAddr, toAddr *crypto.Commo
 			return nil, err
 		}
 
-		//目的stakeStorage；存储临时被退回的币,给币所属地址storage
+		//Objective stakeStorage; Store the temporarily returned currency and give it to the address storage where it belongs
 		storage, _ = trieStore.getStakeStorage(fromAddr)
 		if storage == nil {
 			storage = &types.StakeStorage{}
@@ -351,7 +335,7 @@ func (trieStore *trieStakeStore) CancelVoteCredit(fromAddr, toAddr *crypto.Commo
 	})
 }
 
-//取消抵押周期已经到，取消的币可以加入到account的balance中了
+//The mortgage cancellation cycle has come, and the cancelled currency can be added to the balance of the account
 func (trieStore *trieStakeStore) GetCancelCreditForBalance(addr *crypto.CommonAddress, height uint64, changeInterval uint64) *big.Int {
 	storage, _ := trieStore.getStakeStorage(addr)
 	if storage == nil {
@@ -371,7 +355,7 @@ func (trieStore *trieStakeStore) GetCancelCreditForBalance(addr *crypto.CommonAd
 	return total
 }
 
-//取消抵押周期已经到，取消的币可以加入到account的balance中了
+//The mortgage cancellation cycle has come, and the cancelled currency can be added to the balance of the account
 func (trieStore *trieStakeStore) CancelCreditToBalance(addr *crypto.CommonAddress, height uint64, changeInterval uint64) (*big.Int, error) {
 	storage, _ := trieStore.getStakeStorage(addr)
 	if storage == nil {
@@ -399,7 +383,7 @@ func (trieStore *trieStakeStore) CancelCreditToBalance(addr *crypto.CommonAddres
 	return total, nil
 }
 
-//获取到候选人所有的质押金
+//Obtain all the pledge money of the candidate
 func (trieStore *trieStakeStore) GetCreditCount(addr *crypto.CommonAddress) *big.Int {
 	if addr == nil {
 		return &big.Int{}
@@ -476,7 +460,7 @@ func (trieStore *trieStakeStore) CandidateCredit(addresses *crypto.CommonAddress
 			storage.RC = append(storage.RC, rc)
 		}
 
-		//投给自己，而且数量足够大
+		//Vote for yourself, and in large enough Numbers
 		if totalBalance.Cmp(new(big.Int).Mul(new(big.Int).SetUint64(registerPledgeLimit), new(big.Int).SetUint64(params.Coin))) >= 0 {
 			trieStore.AddCandidateAddr(addresses)
 		}
@@ -494,12 +478,13 @@ func (trieStore *trieStakeStore) CandidateCredit(addresses *crypto.CommonAddress
 
 	if update {
 		return trieStore.putStakeStorage(addresses, storage)
-	} else {
-		return errors.New("candidate credit param err")
 	}
+
+	return errors.New("candidate credit param err")
 }
 
-//可以全部取消质押的币；也可以只取消一部分质押的币，当质押的币不满足最低候选要求，则会被撤销候选人地址列表
+//All the pledged currencies may be cancelled; Also, only a part of the pledged COINS can be cancelled.
+// When the pledged COINS do not meet the minimum candidate requirements, the address list of the candidates will be cancelled
 func (trieStore *trieStakeStore) CancelCandidateCredit(fromAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64, changeInterval uint64) (*types.CancelCreditDetail, error) {
 	if fromAddr == nil || cancelBalance == nil {
 		return nil, errors.New("cancel candidate credit param err")

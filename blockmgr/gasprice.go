@@ -17,15 +17,17 @@
 package blockmgr
 
 import (
+	"math/big"
+	"sort"
+	"sync"
+
 	xxx "github.com/drep-project/DREP-Chain/chain"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/params"
 	"github.com/drep-project/DREP-Chain/types"
-	"math/big"
-	"sort"
-	"sync"
 )
 
+// DefaultGasPrice gets default gas price.
 const DefaultGasPrice = params.GWei
 
 // Oracle recommends gas prices based on the content of recent

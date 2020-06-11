@@ -41,8 +41,8 @@ func NewWallet(config *accountTypes.Config, chainId types.ChainIdType) (*Wallet,
 	return wallet, nil
 }
 
-// Open wallet to use wallet
-func (wallet *Wallet) Open(password string) error {
+// OpenWallet wallet to use wallet
+func (wallet *Wallet) OpenWallet(password string) error {
 	if wallet.cacheStore != nil {
 		return ErrClosedWallet
 	}
@@ -77,8 +77,8 @@ func (wallet *Wallet) Open(password string) error {
 	return nil
 }
 
-func (wallet *Wallet) UnlockAccount(addr *crypto.CommonAddress) error {
-	return wallet.cacheStore.LoadKeys(addr, wallet.password)
+func (wallet *Wallet) UnlockAccount(addr *crypto.CommonAddress, password string) error {
+	return wallet.cacheStore.LoadKeys(addr, password)
 }
 
 // Close wallet to disable wallet
@@ -89,13 +89,13 @@ func (wallet *Wallet) Close() {
 }
 
 // NewAccount create new address
-func (wallet *Wallet) NewAccount() (*types.Node, error) {
+func (wallet *Wallet) NewAccount(password string) (*types.Node, error) {
 	if err := wallet.checkWallet(WPERMISSION); err != nil {
 		return nil, err
 	}
 
 	newNode := types.NewNode(nil, wallet.chainId)
-	wallet.cacheStore.StoreKey(newNode, wallet.password)
+	wallet.cacheStore.StoreKey(newNode, password)
 	return newNode, nil
 }
 
@@ -105,7 +105,7 @@ func (wallet *Wallet) GetAccountByAddress(addr *crypto.CommonAddress) (*types.No
 		return nil, ErrClosedWallet
 	}
 
-	return wallet.cacheStore.GetKey(addr, wallet.password)
+	return wallet.cacheStore.GetKey(addr)
 }
 
 // GetAccountByAddress query account according to public key
@@ -114,9 +114,9 @@ func (wallet *Wallet) GetAccountByPubkey(pubkey *secp256k1.PublicKey) (*types.No
 		return nil, ErrClosedWallet
 	}
 	addr := crypto.PubkeyToAddress(pubkey)
-	if err := wallet.unLock(&addr); err != nil {
-		return nil, ErrAccountExist
-	}
+	//if err := wallet.unLock(&addr, wallet.password); err != nil {
+	//	return nil, ErrAccountExist
+	//}
 
 	return wallet.GetAccountByAddress(&addr)
 }
@@ -141,7 +141,7 @@ func (wallet *Wallet) DumpPrivateKey(addr *crypto.CommonAddress) (*secp256k1.Pri
 		return nil, err
 	}
 
-	node, err := wallet.cacheStore.GetKey(addr, wallet.password)
+	node, err := wallet.cacheStore.GetKey(addr)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +157,7 @@ func (wallet *Wallet) Sign(addr *crypto.CommonAddress, msg []byte) ([]byte, erro
 		return nil, err
 	}
 
-	node, err := wallet.cacheStore.GetKey(addr, wallet.password)
+	node, err := wallet.cacheStore.GetKey(addr)
 	if err != nil {
 		return nil, err
 	}
@@ -182,25 +182,25 @@ func (wallet *Wallet) IsOpen() bool {
 // Lock wallet to disable private key
 func (wallet *Wallet) Lock(addr *crypto.CommonAddress) error {
 	//atomic.StoreInt32(&wallet.isLock, LOCKED)
-	wallet.cacheStore.ClearKey(addr)
-	return nil
+	err := wallet.cacheStore.ClearKey(addr)
+	return err
 }
 
 // UnLock wallet to enable private key
-func (wallet *Wallet) UnLock(addr *crypto.CommonAddress) error {
+func (wallet *Wallet) UnLock(addr *crypto.CommonAddress, password string) error {
 	if wallet.cacheStore == nil {
-		err := wallet.Open(wallet.password)
+		err := wallet.OpenWallet(password)
 		if err != nil {
 			return err
 		}
 	}
 
-	return wallet.unLock(addr)
+	return wallet.unLock(addr, password)
 }
 
-func (wallet *Wallet) unLock(addr *crypto.CommonAddress) error {
+func (wallet *Wallet) unLock(addr *crypto.CommonAddress, password string) error {
 	//atomic.StoreInt32(&wallet.isLock, UNLOCKED)
-	return wallet.cacheStore.LoadKeys(addr, wallet.password)
+	return wallet.cacheStore.LoadKeys(addr, password)
 }
 
 func (wallet *Wallet) checkWallet(op int) error {
@@ -219,7 +219,7 @@ func (wallet *Wallet) checkWallet(op int) error {
 //	return string(sha3.Keccak256([]byte(password)))
 //}
 
-func (wallet *Wallet) ImportPrivKey(key *secp256k1.PrivateKey) (*types.Node, error) {
+func (wallet *Wallet) ImportPrivKey(key *secp256k1.PrivateKey, password string) (*types.Node, error) {
 	if err := wallet.checkWallet(WPERMISSION); err != nil {
 		return nil, err
 	}
@@ -229,17 +229,17 @@ func (wallet *Wallet) ImportPrivKey(key *secp256k1.PrivateKey) (*types.Node, err
 		PrivateKey: key,
 		ChainId:    wallet.chainId,
 	}
-	_, err := wallet.cacheStore.GetKey(&addr, wallet.password)
+	_, err := wallet.cacheStore.GetKey(&addr)
 	if err == nil {
 		return nil, errors.Wrap(ErrExistKey, addr.String())
 	}
 
-	err = wallet.cacheStore.LoadKeys(&addr, wallet.password)
+	err = wallet.cacheStore.LoadKeys(&addr, password)
 	if err == nil {
 		return nil, errors.Wrap(ErrExistKey, addr.String())
 	}
 
-	err = wallet.cacheStore.StoreKey(node, wallet.password)
+	err = wallet.cacheStore.StoreKey(node, password)
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +262,7 @@ func (wallet *Wallet) ImportKeyStore(path, password string) ([]*crypto.CommonAdd
 	if err != nil {
 		return nil, err
 	}
-	err = newWallet.Open(password)
+	err = newWallet.OpenWallet(password)
 	if err != nil {
 		return nil, err
 	}
@@ -272,12 +272,12 @@ func (wallet *Wallet) ImportKeyStore(path, password string) ([]*crypto.CommonAdd
 	}
 	addrs := []*crypto.CommonAddress{}
 	for _, node := range nodes {
-		_, err := wallet.cacheStore.GetKey(node.Address, wallet.password)
+		_, err := wallet.cacheStore.GetKey(node.Address)
 		if err == nil {
 			log.WithField("addr", node.Address.String()).Info("privkey exist")
 			continue
 		}
-		err = wallet.cacheStore.StoreKey(node, wallet.password)
+		err = wallet.cacheStore.StoreKey(node, password)
 		if err != nil {
 			return addrs, err
 		}

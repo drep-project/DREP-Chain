@@ -129,7 +129,7 @@ func (chainBlockValidator *TemplateBlockValidator) RouteTransaction(context *cha
 			// if the transaction created a contract, store the creation address in the receipt.
 			if tx.To() == nil || tx.To().IsEmpty() {
 				receipt.ContractAddress = crypto.CreateAddress(*from, tx.Nonce())
-				fmt.Println(receipt.ContractAddress)
+				fmt.Println("contractAddr:", receipt.ContractAddress)
 			}
 			// Set the receipt logs and create a bloom for filtering
 			receipt.Logs = ret.ContractTxLog

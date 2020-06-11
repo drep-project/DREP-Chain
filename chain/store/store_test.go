@@ -17,7 +17,6 @@ import (
 
 var ChangeCycle uint64 = 100
 
-//添加 撤销
 func TestGetVoteCredit(t *testing.T) {
 	defer os.RemoveAll("./test")
 	diskDB, _ := leveldb.New("./test", 16, 512, "")
@@ -121,7 +120,7 @@ func TestPutBalance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	//10天        172800
+	//10days        172800
 	heightLen := 172800 * 3 * 12
 	//todo + -
 	store.stake.VoteCredit(&addr, &backbone, new(big.Int).SetUint64(100), 0)
@@ -308,23 +307,23 @@ func TestCancelVoteCredit(t *testing.T) {
 func Test_getInterset(t *testing.T) {
 	balance := new(big.Int).SetUint64(params.Coin)
 	balance.Mul(balance, new(big.Int).SetUint64(100))
-	//2个月内的
+	//Within two months
 	interest2 := getInterst(0, 1036800, balance)
 
 	fmt.Println("0-3  month:", interest2)
 	fmt.Println(interest2.Mul(interest2, new(big.Int).SetUint64(6*100)).Div(interest2, balance), "%")
 
-	//3个月利息
+	//Three months interest
 	interest3 := getInterst(0, 1555200, balance)
 
 	fmt.Println("3-6  month:", interest3)
 	fmt.Println(interest3.Mul(interest3, new(big.Int).SetUint64(4*100)).Div(interest3, balance), "%")
 
-	//6个月利息
+	//six months interest
 	interest6 := getInterst(0, 3110400, balance)
 	fmt.Println("6-12  month:", getInterst(0, 3110400, balance))
 	fmt.Println(interest6.Mul(interest6, new(big.Int).SetUint64(2*100)).Div(interest6, balance), "%")
-	//12个月利息
+	//12 months interest
 
 	interest12 := getInterst(0, 6220800, balance)
 	fmt.Println("12- month:")

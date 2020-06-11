@@ -11,4 +11,6 @@ var (
 	ErrExistKey        = errors.New("privkey is exist")
 	ErrMissingKeystore = errors.New("not found keystore")
 	ErrAccountExist    = errors.New("addr is not exist")
+	ErrMissingPath = errors.New("not found path")
+
 )

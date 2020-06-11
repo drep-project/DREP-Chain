@@ -10,7 +10,7 @@ import (
 )
 
 func (blockMgr *BlockMgr) receiveMsg(peer *types.PeerInfo, rw p2p.MsgReadWriter) error {
-	//1 与peer同步一下状态
+	//1 Synchronize the state with the peer
 	timeout := time.After(time.Second * maxNetworkTimeout)
 	errCh := make(chan error)
 	msgCh := make(chan p2p.Msg)
@@ -42,10 +42,10 @@ func (blockMgr *BlockMgr) receiveMsg(peer *types.PeerInfo, rw p2p.MsgReadWriter)
 		}
 	}
 
-	//通知给同步协程
+	//Notify the synchronization coroutine
 	blockMgr.newPeerCh <- peer
 
-	//2 处理所有消息
+	//2 Process all messages
 	return blockMgr.dealMsg(peer, rw)
 }
 
@@ -107,7 +107,6 @@ func (blockMgr *BlockMgr) dealMsg(peer *types.PeerInfo, rw p2p.MsgReadWriter) er
 			blockMgr.BroadcastBlock(types.MsgTypeBlock, &newBlock, false)
 
 			if isOrPhan {
-				// todo 触发同步
 				//blockMgr.synchronise()
 			}
 		case types.MsgTypePeerState:
@@ -160,7 +159,7 @@ func (blockMgr *BlockMgr) handleHeaderRsp(peer types.PeerInfoInterface, rsp *typ
 		headerHashs = append(headerHashs, &syncHeaderHash{headerHash: h.Hash(), height: h.Height})
 	}
 
-	//请求的相关协程要关闭。
+	//The requested associated coroutine is closed
 	err := blockMgr.checkHeaderChain(rsp.Headers)
 	if err != nil {
 		log.WithField("Reason", err).Info("checkHeaderChain fail")

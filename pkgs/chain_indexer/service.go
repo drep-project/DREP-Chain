@@ -368,21 +368,21 @@ func (chainIndexer *ChainIndexerService) processSection(section uint64, lastHead
 	return lastHead, nil
 }
 
-// 启动新的bloombits索引部分。
+// Start the new bloombits index section.
 func (chainIndexer *ChainIndexerService) reset(ctx context.Context, section uint64, lastSectionHead crypto.Hash) error {
 	gen, err := bloombits.NewGenerator(uint(chainIndexer.Config.SectionSize))
 	chainIndexer.gen, chainIndexer.section, chainIndexer.head = gen, section, crypto.Hash{}
 	return err
 }
 
-// 将新区块头的bloom添加到索引。
+// Add the new district bulk bloom to the index.
 func (chainIndexer *ChainIndexerService) process(ctx context.Context, header *types.BlockHeader) error {
 	chainIndexer.gen.AddBloom(uint(header.Height-chainIndexer.section*chainIndexer.Config.SectionSize), header.Bloom)
 	chainIndexer.head = *header.Hash()
 	return nil
 }
 
-// 完成bloom部分和把它写进数据库。
+// Complete the bloom section and write it into the database.
 func (chainIndexer *ChainIndexerService) commit() error {
 	batch := chainIndexer.db.NewBatch()
 	for i := 0; i < types.BloomBitLength; i++ {

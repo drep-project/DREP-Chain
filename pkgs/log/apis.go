@@ -8,8 +8,8 @@ import (
 )
 
 /*
-name: 日志rpc接口
-usage: 设置日志级别
+name: Logging RPC Api
+usage: Set the log level
 prefix:log
 */
 type LogApi struct {
@@ -22,9 +22,9 @@ func NewLogApi(hook *ModuleHook) *LogApi {
 
 /*
  name: setLevel
- usage: 设置日志级别
+ usage: Set the log level
  params:
-	1. 日志级别（"debug","0"）
+	1. log level（"debug","0"）
  return: 无
  example:  curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"log_setLevel","params":["trace"], "id": 3}' -H "Content-Type:application/json"
  response:
@@ -46,9 +46,9 @@ func (logApi *LogApi) SetLevel(lvl string) error {
 
 /*
  name: setVmodule
- usage: 分模块设置级别
+ usage: Set the level by module
  params:
-	1. 模块日志级别(txpool=5)
+	1. module name (txpool=5)
  return: 无
  example:   curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"log_setVmodule","params":["txpool=5"], "id": 3}' -H "Content-Type:application/json"
  response:

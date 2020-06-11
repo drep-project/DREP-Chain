@@ -6,8 +6,8 @@ import (
 )
 
 /*
-name: 共识rpc接口
-usage: 查询共识节点功能
+name: consensus api
+usage: Query the consensus node function
 prefix:consensus
 */
 type ConsensusApi struct {
@@ -15,32 +15,32 @@ type ConsensusApi struct {
 }
 
 /*
-	 name: changeWaitTime
-	 usage: 修改leader等待时间 (ms)
-	 params:
-		1.等待时间(ms)
-	 return: 私钥
-	 example:
-		curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"consensus_changeWaitTime","params":[100000], "id": 3}' -H "Content-Type:application/json"
+ name: changeWaitTime
+ usage: Modify the waiting time of the leader (ms)
+ params:
+	1.wait time (ms)
+ return:
+ example:
+	curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"consensus_changeWaitTime","params":[100000], "id": 3}' -H "Content-Type:application/json"
 
-	response:
-		 {"jsonrpc":"2.0","id":3,"result":null}
+response:
+	 {"jsonrpc":"2.0","id":3,"result":null}
 */
 func (consensusApi *ConsensusApi) ChangeWaitTime(waitTime int) {
 	consensusApi.consensusService.BftConsensus.ChangeTime(time.Duration(waitTime))
 }
 
 /*
-	 name: getMiners()
-	 usage: 获取当前出块节点
-	 params:
-		无
-	 return: 出块节点信息
-	 example:
-		curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"consensus_getMiners","params":[""], "id": 3}' -H "Content-Type:application/json"
+ name: getMiners()
+ usage: Gets the current mining node
+ params:
+	无
+ return: mining nodes's pub key
+ example:
+	curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"consensus_getMiners","params":[""], "id": 3}' -H "Content-Type:application/json"
 
-	response:
-		 {"jsonrpc":"2.0","id":3,"result":['0x02c682c9f503465a27d1941d1a25547b5ea879a7145056283599a33869982513df', '0x036a09f9012cb3f73c11ceb2aae4242265c2aa35ebec20dbc28a78712802f457db']
+response:
+	 {"jsonrpc":"2.0","id":3,"result":['0x02c682c9f503465a27d1941d1a25547b5ea879a7145056283599a33869982513df', '0x036a09f9012cb3f73c11ceb2aae4242265c2aa35ebec20dbc28a78712802f457db']
 }
 */
 func (consensusApi *ConsensusApi) GetMiners() []*secp256k1.PublicKey {

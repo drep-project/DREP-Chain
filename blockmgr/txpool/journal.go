@@ -8,9 +8,9 @@ import (
 	"os"
 	"path"
 
-	"github.com/drep-project/binary"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/types"
+	"github.com/drep-project/binary"
 )
 
 // errNoActiveJournal is returned if a transaction is attempted to be inserted
@@ -38,7 +38,7 @@ func (journal *txJournal) load(add func([]types.Transaction) []error) error {
 	if _, err := os.Stat(journal.path); os.IsNotExist(err) {
 		return nil
 	}
-	// Open the journal for loading any past transactions
+	// OpenWallet the journal for loading any past transactions
 	input, err := os.Open(journal.path)
 	if err != nil {
 		return err

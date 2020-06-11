@@ -81,7 +81,7 @@ func New(file string, cache int, handles int, namespace string) (*Database, erro
 	logger := log.New("database", file)
 	logger.Info("Allocated cache and file handles", "cache", common.StorageSize(cache*1024*1024), "handles", handles)
 
-	// Open the db and recover any potential corruptions
+	// OpenWallet the db and recover any potential corruptions
 	db, err := leveldb.OpenFile(file, &opt.Options{
 		OpenFilesCacheCapacity: handles,
 		BlockCacheCapacity:     cache / 2 * opt.MiB,

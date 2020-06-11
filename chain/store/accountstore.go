@@ -2,34 +2,37 @@ package store
 
 import (
 	"errors"
-	"github.com/drep-project/binary"
 	"github.com/drep-project/DREP-Chain/common/trie"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/sha3"
 	"github.com/drep-project/DREP-Chain/types"
+	"github.com/drep-project/binary"
 	"math/big"
+	"sync"
 )
 
 const (
-	AliasPrefix    = "alias"
-	AddressStorage = "AddressStorage" //以地址作为KEY的对象存储
+	//AliasPrefix storage alias used prefix
+	AliasPrefix = "alias"
+	//AddressStorage Object stored with the address as the KEY
+	AddressStorage = "AddressStorage"
 )
 
 var (
-	ErrRecoverRoot     = errors.New("fail to recover root state")
-	ErrUsedAlias       = errors.New("the alias has been used")
+	//ErrRecoverRoot recover root err
+	ErrRecoverRoot = errors.New("fail to recover root state")
+	//ErrUsedAlias the alias has been used
+	ErrUsedAlias = errors.New("the alias has been used")
+	//ErrInvalidateAlias set null string as alias
 	ErrInvalidateAlias = errors.New("set null string as alias")
 )
 
 type trieAccountStore struct {
+	lock    sync.Mutex
 	storeDB *StoreDB
-	//store  dbinterface.KeyValueStore
-	//cache  *database.TransactionStore //数据属于storage的缓存，调用flush才会把数据写入到diskDb中
-	//trie   *trie.SecureTrie           //全局状态树  临时树（临时变量）
-	//trieDb *trie.Database             //状态树存储到磁盘时，使用到的db
 }
 
-func NewTrieAccoutStore(store *StoreDB) *trieAccountStore {
+func newTrieAccoutStore(store *StoreDB) *trieAccountStore {
 	return &trieAccountStore{
 		storeDB: store,
 	}
@@ -55,6 +58,9 @@ func (trieStore *trieAccountStore) initState() error {
 }
 
 func (trieStore *trieAccountStore) GetStorage(addr *crypto.CommonAddress) (*types.Storage, error) {
+	trieStore.lock.Lock()
+	defer trieStore.lock.Unlock()
+
 	storage := &types.Storage{}
 	key := sha3.Keccak256([]byte(AddressStorage + addr.Hex()))
 	value, err := trieStore.storeDB.Get(key)
@@ -63,22 +69,29 @@ func (trieStore *trieAccountStore) GetStorage(addr *crypto.CommonAddress) (*type
 	}
 	if value == nil {
 		return nil, nil
-	} else {
-		err = binary.Unmarshal(value, storage)
-		if err != nil {
-			return nil, err
-		}
 	}
+
+	err = binary.Unmarshal(value, storage)
+	if err != nil {
+		return nil, err
+	}
+
 	return storage, nil
 }
 
 func (trieStore *trieAccountStore) DeleteStorage(addr *crypto.CommonAddress) error {
+	trieStore.lock.Lock()
+	defer trieStore.lock.Unlock()
+
 	key := sha3.Keccak256([]byte(AddressStorage + addr.Hex()))
 
 	return trieStore.storeDB.Delete(key)
 }
 
 func (trieStore *trieAccountStore) PutStorage(addr *crypto.CommonAddress, storage *types.Storage) error {
+	trieStore.lock.Lock()
+	defer trieStore.lock.Unlock()
+
 	key := sha3.Keccak256([]byte(AddressStorage + addr.Hex()))
 	value, err := binary.Marshal(storage)
 	if err != nil {
@@ -93,8 +106,7 @@ func (trieStore *trieAccountStore) GetBalance(addr *crypto.CommonAddress) *big.I
 		return new(big.Int)
 	}
 
-	//获取在stakeStore中的币
-
+	//Gets the currency in stakeStore
 	return &storage.Balance
 }
 
@@ -108,6 +120,7 @@ func (trieStore *trieAccountStore) PutBalance(addr *crypto.CommonAddress, balanc
 }
 
 func (trieStore *trieAccountStore) GetNonce(addr *crypto.CommonAddress) uint64 {
+
 	storage, _ := trieStore.GetStorage(addr)
 	if storage == nil {
 		return 0
@@ -116,6 +129,7 @@ func (trieStore *trieAccountStore) GetNonce(addr *crypto.CommonAddress) uint64 {
 }
 
 func (trieStore *trieAccountStore) PutNonce(addr *crypto.CommonAddress, nonce uint64) error {
+
 	storage, _ := trieStore.GetStorage(addr)
 	if storage == nil {
 		storage = &types.Storage{}
@@ -143,13 +157,13 @@ func (trieStore *trieAccountStore) setStorageAlias(addr *crypto.CommonAddress, a
 
 func (trieStore *trieAccountStore) AliasSet(addr *crypto.CommonAddress, alias string) (err error) {
 	if alias != "" {
-		//1 检查别名是否存在
+		//1 Check if the alias exists
 		b := trieStore.AliasExist(alias)
 		if b {
 			return ErrUsedAlias
 		}
 
-		//2 存入以alias为key的k-v对
+		//2 Save the k-v pair with alias as the key
 		err = trieStore.AliasPut(alias, addr.Bytes())
 		if err != nil {
 			return err
@@ -170,7 +184,7 @@ func (trieStore *trieAccountStore) AliasPut(alias string, value []byte) error {
 	return trieStore.storeDB.Put([]byte(AliasPrefix+alias), value)
 }
 
-//alias为key的k-v
+//AliasGet K--v for alias for key
 func (trieStore *trieAccountStore) AliasGet(alias string) (*crypto.CommonAddress, error) {
 	buf, err := trieStore.storeDB.Get([]byte(AliasPrefix + alias))
 	if err != nil {
@@ -182,8 +196,8 @@ func (trieStore *trieAccountStore) AliasGet(alias string) (*crypto.CommonAddress
 }
 
 func (trieStore *trieAccountStore) AliasExist(alias string) bool {
-	val, err:= trieStore.storeDB.Get([]byte(AliasPrefix + alias))
-	if(val == nil || err != nil){
+	val, err := trieStore.storeDB.Get([]byte(AliasPrefix + alias))
+	if val == nil || err != nil {
 		return false
 	}
 	return true

@@ -7,10 +7,10 @@ import (
 	"github.com/drep-project/DREP-Chain/network/p2p/enode"
 )
 
-//候选节点数据部分信息
+//Candidate node data section information
 type CandidateData struct {
-	Pubkey *secp256k1.PublicKey //出块节点的pubkey
-	Node   string               //出块节点的地址
+	Pubkey *secp256k1.PublicKey //The pubkey of Candidate node
+	Node   string               //address of Candidate node
 }
 
 func (cd CandidateData) check() error {
