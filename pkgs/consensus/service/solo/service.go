@@ -89,13 +89,7 @@ func (soloConsensusService *SoloConsensusService) Init(executeContext *app.Execu
 		soloConsensusService.Config.MyPk,
 		soloConsensusService.DatabaseService,
 		soloConsensusService.Config)
-	//consult privkey in wallet
-	accountNode, err := soloConsensusService.WalletService.Wallet.GetAccountByPubkey(soloConsensusService.Config.MyPk)
-	if err != nil {
-		log.WithField("init err", err).WithField("addr", crypto.PubkeyToAddress(soloConsensusService.Config.MyPk).String()).Error("privkey of MyPk in Config is not in local wallet")
-		return err
-	}
-	soloConsensusService.Miner = accountNode.PrivateKey
+
 	soloConsensusService.ConsensusEngine = engine
 	soloConsensusService.syncBlockEventChan = make(chan event.SyncBlockEvent)
 	soloConsensusService.syncBlockEventSub = soloConsensusService.BlockMgrNotifier.SubscribeSyncBlockEvent(soloConsensusService.syncBlockEventChan)
@@ -133,6 +127,16 @@ func (soloConsensusService *SoloConsensusService) Start(executeContext *app.Exec
 			return
 		default:
 			for {
+				//consult privkey in wallet
+				accountNode, err := soloConsensusService.WalletService.Wallet.GetAccountByPubkey(soloConsensusService.Config.MyPk)
+				if err != nil {
+
+					log.WithField("init err", err).WithField("addr", crypto.PubkeyToAddress(soloConsensusService.Config.MyPk).String()).Error("privkey of MyPk in Config is not in local wallet")
+
+					time.Sleep(time.Second * 3)
+					continue
+				}
+				soloConsensusService.Miner = accountNode.PrivateKey
 				if soloConsensusService.pauseForSync {
 					time.Sleep(time.Millisecond * 500)
 					continue
