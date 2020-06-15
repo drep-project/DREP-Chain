@@ -421,8 +421,8 @@ func (evm *EVM) Create(caller crypto.CommonAddress, code []byte, gas uint64, val
 //
 // The different between Create2 with Create is Create2 uses sha3(0xff ++ msg.sender ++ salt ++ sha3(init_code))[12:]
 // instead of the usual sender-and-nonce-hash as the address where the contract is initialized at.
-func (evm *EVM) Create2(caller crypto.CommonAddress, code []byte, gas uint64, endowment *big.Int, salt *big.Int) (ret []byte, contractAddr crypto.CommonAddress, leftOverGas uint64, err error) {
-	codeAndHash := &codeAndHash{code: code}
-	contractAddr = crypto.CreateAddress2(caller, crypto.BigToHash(salt), codeAndHash.Hash().Bytes())
-	return evm.CreateContractCode(caller, codeAndHash, gas, endowment, contractAddr)
-}
+//func (evm *EVM) Create2(caller crypto.CommonAddress, code []byte, gas uint64, endowment *big.Int, salt *big.Int) (ret []byte, contractAddr crypto.CommonAddress, leftOverGas uint64, err error) {
+//	codeAndHash := &codeAndHash{code: code}
+//	contractAddr = crypto.CreateAddress2(caller, crypto.BigToHash(salt), codeAndHash.Hash().Bytes())
+//	return evm.CreateContractCode(caller, codeAndHash, gas, endowment, contractAddr)
+//}
