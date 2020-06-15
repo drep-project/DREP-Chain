@@ -583,7 +583,7 @@ func (accountapi *AccountApi) DumpPubkey(address *crypto.CommonAddress) (*secp25
  params:
 	1.account of sig
 	2.msg for sig
- return: 私钥
+ return: private key
  example:
 	curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"account_sign","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5", "0x00001c9b8c8fdb1f53faf02321f76253704123e2b56cce065852bab93e526ae2"], "id": 3}' -H "Content-Type:application/json"
 
