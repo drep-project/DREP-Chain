@@ -58,12 +58,6 @@ func CreateAddress(b CommonAddress, nonce uint64) CommonAddress {
 	return BytesToAddress(sha3.Keccak256(data)[12:])
 }
 
-// CreateAddress2 creates an ethereum address given the address bytes, initial
-// contract code and a salt.
-func CreateAddress2(b CommonAddress, salt [32]byte, code []byte) CommonAddress {
-	return BytesToAddress(sha3.Keccak256([]byte{0xff}, b.Bytes(), salt[:], sha3.Keccak256(code))[12:])
-}
-
 // LoadECDSA loads a secp256k1 private key from the given file.
 func LoadECDSA(file string) (*secp256k1.PrivateKey, error) {
 	buf := make([]byte, 64)
