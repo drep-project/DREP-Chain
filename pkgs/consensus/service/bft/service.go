@@ -82,13 +82,9 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 
 	bftConsensusService.ChainService.AddBlockValidator(&BlockMultiSigValidator{bftConsensusService.BftConsensus.GetProducers, bftConsensusService.ChainService.GetBlockByHash, bftConsensusService.Config.ProducerNum})
 	bftConsensusService.ChainService.AddGenesisProcess(NewMinerGenesisProcessor())
-	//if !bftConsensusService.Config.StartMiner {
-	//	return nil
-	//} else
-	{
-		if bftConsensusService.WalletService.Wallet == nil {
-			return ErrWalletNotOpen
-		}
+
+	if bftConsensusService.WalletService.Wallet == nil {
+		return ErrWalletNotOpen
 	}
 
 	bftConsensusService.P2pServer.AddProtocols([]p2p.Protocol{
