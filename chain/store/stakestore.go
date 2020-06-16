@@ -19,7 +19,7 @@ const (
 	//StakeStorage With the address as the KEY, the relevant content is stored
 	StakeStorage = "StakeStorage"
 
-	registerPledgeLimit uint64 = 1000000      //The candidate node needs the total number of collateral COINS, unit 1drep
+	RegisterPledgeLimit uint64 = 10000000     //The candidate node needs the total number of collateral COINS, unit 1drep
 	interestRate               = 1000000 * 12 //Each storage height rewards the interest rate
 
 	threeMonthHeight = 1555200 //Less than 3 months out of the block height
@@ -461,7 +461,7 @@ func (trieStore *trieStakeStore) CandidateCredit(addresses *crypto.CommonAddress
 		}
 
 		//Vote for yourself, and in large enough Numbers
-		if totalBalance.Cmp(new(big.Int).Mul(new(big.Int).SetUint64(registerPledgeLimit), new(big.Int).SetUint64(params.Coin))) >= 0 {
+		if totalBalance.Cmp(new(big.Int).Mul(new(big.Int).SetUint64(RegisterPledgeLimit), new(big.Int).SetUint64(params.Coin))) >= 0 {
 			trieStore.AddCandidateAddr(addresses)
 		}
 	}
@@ -490,7 +490,7 @@ func (trieStore *trieStakeStore) CancelCandidateCredit(fromAddr *crypto.CommonAd
 		return nil, errors.New("cancel candidate credit param err")
 	}
 	return trieStore.cancelCredit(fromAddr, fromAddr, cancelBalance, height, changeInterval, func(leftCredit *big.Int, storage *types.StakeStorage) (*types.StakeStorage, error) {
-		if leftCredit.Cmp(new(big.Int).Mul(new(big.Int).SetUint64(registerPledgeLimit), new(big.Int).SetUint64(params.Coin))) < 0 {
+		if leftCredit.Cmp(new(big.Int).Mul(new(big.Int).SetUint64(RegisterPledgeLimit), new(big.Int).SetUint64(params.Coin))) < 0 {
 			trieStore.DelCandidateAddr(fromAddr)
 		}
 		return storage, nil
