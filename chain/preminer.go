@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/params"
 	"github.com/drep-project/DREP-Chain/types"
 	"github.com/drep-project/binary"
 	"math/big"
@@ -56,7 +57,9 @@ func (NewPreminerGenesisProcessor *PreminerGenesisProcessor) Genesis(context *Ge
 			}
 			addr := crypto.PubkeyToAddress(miner.Pubkey)
 
-			context.Store().CandidateCredit(&addr, new(big.Int).SetUint64(10), minerBytes, 0)
+			pv := new(big.Int).SetUint64(store.RegisterPledgeLimit)
+			pv = pv.Mul(pv, new(big.Int).SetUint64(params.Coin))
+			context.Store().CandidateCredit(&addr, pv, minerBytes, 0)
 			context.store.AddCandidateAddr(&addr)
 
 			addrs = append(addrs, addr)
