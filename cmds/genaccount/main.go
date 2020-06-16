@@ -132,14 +132,14 @@ func gen(ctx *cli.Context) error {
 		consensusConfig.Solo = &solo.SoloConfig{
 			MyPk:          nil,
 			StartMiner:    true,
-			BlockInterval: 5,
+			BlockInterval: 15,
 		}
 	} else {
 		consensusConfig.ConsensusMode = "bft"
 		consensusConfig.Bft = &bft.BftConfig{
 			MyPk:           nil,
 			StartMiner:     true,
-			BlockInterval:  10,
+			BlockInterval:  15,
 			ProducerNum:    len(nodeItems),
 			ChangeInterval: 100,
 		}
