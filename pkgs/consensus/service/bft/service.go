@@ -263,7 +263,7 @@ func (bftConsensusService *BftConsensusService) GetProducers(height uint64, topN
 
 func (bftConsensusService *BftConsensusService) DefaultConfig() *BftConfig {
 	return &BftConfig{
-		BlockInterval:  10,
+		BlockInterval:  15,
 		ProducerNum:    7,
 		ChangeInterval: 100,
 	}
