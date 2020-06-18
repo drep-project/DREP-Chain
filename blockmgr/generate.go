@@ -33,6 +33,7 @@ func (blockMgr *BlockMgr) GenerateTemplate(trieStore store.StoreInterface, leade
 		Height:       height,
 		StateRoot:    []byte{},
 		TxRoot:       []byte{},
+		MinerAddr:    leaderAddr,
 	}
 
 	block := &types.Block{
