@@ -60,7 +60,8 @@ func BenchmarkSha3(b *testing.B) {
 func TestSign(t *testing.T) {
 
 	key, _ := FromPrivString(testPrivHex)
-	addr := String2Address(testAddrHex)
+
+	addr := HexToAddress(testAddrHex)
 
 	msg := sha3.Keccak256([]byte("foo"))
 	sig, err := Sign(msg, key)
@@ -73,7 +74,7 @@ func TestSign(t *testing.T) {
 	}
 
 	pubKey, _ := secp256k1.ParsePubKey(recoveredPub)
-	recoveredAddr := PubKey2Address(pubKey)
+	recoveredAddr := PubkeyToAddress(pubKey)
 	if addr != recoveredAddr {
 		t.Errorf("GetAddress mismatch: want: %x have: %x", addr, recoveredAddr)
 	}
@@ -83,7 +84,7 @@ func TestSign(t *testing.T) {
 	if err != nil {
 		t.Errorf("ECRecover error: %s", err)
 	}
-	recoveredAddr2 := PubKey2Address(recoveredPub2)
+	recoveredAddr2 := PubkeyToAddress(recoveredPub2)
 	if addr != recoveredAddr2 {
 		t.Errorf("GetAddress mismatch: want: %x have: %x", addr, recoveredAddr2)
 	}
@@ -100,8 +101,8 @@ func TestInvalidSign(t *testing.T) {
 
 func TestNewContractAddress(t *testing.T) {
 	key, _ := FromPrivString(testPrivHex)
-	addr := String2Address(testAddrHex)
-	genAddr := PubKey2Address(key.PubKey())
+	addr := HexToAddress(testAddrHex)
+	genAddr := PubkeyToAddress(key.PubKey())
 	// sanity check before using addr to create contract address
 	checkAddr(t, genAddr, addr)
 
@@ -109,9 +110,9 @@ func TestNewContractAddress(t *testing.T) {
 	caddr1 := CreateAddress(addr, 1)
 	caddr2 := CreateAddress(addr, 2)
 
-	checkAddr(t, Hex2Address("38bd4b79a96b5ddc536639cc0cc927c7ee5511bc"), caddr0)
-	checkAddr(t, Hex2Address("7e11723d6f9a0601f0343f96cdbd01e303b8ee9a"), caddr1)
-	checkAddr(t, Hex2Address("39b35935d5417dad741f45d9f39e20596bada9d3"), caddr2)
+	checkAddr(t, HexToAddress("38bd4b79a96b5ddc536639cc0cc927c7ee5511bc"), caddr0)
+	checkAddr(t, HexToAddress("7e11723d6f9a0601f0343f96cdbd01e303b8ee9a"), caddr1)
+	checkAddr(t, HexToAddress("39b35935d5417dad741f45d9f39e20596bada9d3"), caddr2)
 }
 
 func TestValidateSignatureValues(t *testing.T) {
@@ -187,7 +188,7 @@ func TestPubkey(t *testing.T) {
 	b, _ := hexutil.Decode("0x03ad000bc9a4a29c11227d6b5ee05076b594c1c22567cdd85fbb8222e6a715924e")
 	pk, err := DecompressPubkey(b)
 	//crypto.FromECDSAPub(&key)[1:]
-	c := PubKey2Address(pk)
+	c := PubkeyToAddress(pk)
 	bb, _ := c.MarshalText()
 	fmt.Println(string(bb))
 	c2 := &CommonAddress{}
@@ -228,4 +229,12 @@ func TestPAddrJson(t *testing.T) {
 	}
 
 	fmt.Println(ca.Hex())
+}
+
+func TestDrepToEth(t *testing.T) {
+	fmt.Println("eth:", DrepToEth("0x3726430e6E3448753F29E1d3ca24120850433Ff9").String())
+
+	addr := DrepToEth("drep3726430e6E3448753F29E1d3ca24120850433Ff9")
+
+	fmt.Println("drep:", EthToDrep(&addr))
 }
