@@ -84,6 +84,7 @@ type BlockNode struct {
 	ReceiptRoot  crypto.Hash
 	Bloom        Bloom
 	Status       BlockStatus
+	MinerAddr    crypto.CommonAddress
 }
 
 // initBlockNode initializes a block node from the given header and parent node,
@@ -104,6 +105,7 @@ func InitBlockNode(node *BlockNode, blockHeader *BlockHeader, parent *BlockNode)
 		MerkleRoot:   blockHeader.TxRoot,
 		ReceiptRoot:  blockHeader.ReceiptRoot,
 		Bloom:        blockHeader.Bloom,
+		MinerAddr:    blockHeader.MinerAddr,
 	}
 	if parent != nil {
 		node.Parent = parent
@@ -140,6 +142,7 @@ func (node *BlockNode) Header() BlockHeader {
 		TxRoot:       node.MerkleRoot,
 		ReceiptRoot:  node.ReceiptRoot,
 		Bloom:        node.Bloom,
+		MinerAddr:    node.MinerAddr,
 	}
 }
 
