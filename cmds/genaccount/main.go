@@ -4,7 +4,6 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha512"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/drep-project/DREP-Chain/chain"
@@ -19,6 +18,7 @@ import (
 	"github.com/drep-project/DREP-Chain/pkgs/log"
 	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
+	"math/big"
 	"net"
 	"os"
 	path2 "path"
@@ -84,7 +84,7 @@ func gen(ctx *cli.Context) error {
 		}
 		instanceDir := filepath.Join(path, nodeItems[i].Name, "drepnode")
 		nodePrivateKey := GeneratePrivateKey(instanceDir)
-		fmt.Println(crypto.PubkeyToAddress(nodePrivateKey.PubKey()).String(), hex.EncodeToString(nodePrivateKey.Serialize()))
+		//fmt.Println(crypto.PubkeyToAddress(nodePrivateKey.PubKey()).String(), hex.EncodeToString(nodePrivateKey.Serialize()))
 		node := enode.NewV4(nodePrivateKey.PubKey(), ip, nodeItems[i].Port, nodeItems[i].Port)
 		trustNodes = append(trustNodes, node)
 
@@ -106,10 +106,7 @@ func gen(ctx *cli.Context) error {
 	p2pConfig.NoDiscovery = false
 	p2pConfig.DiscoveryV5 = true
 	p2pConfig.Name = "drepnode"
-	//p2pConfig.ProduceNodes = trustNodes
 	p2pConfig.StaticNodes = trustNodes
-	//p2pConfig.BootstrapNodes = trustNodes
-	//p2pConfig.ListenAddr = "0.0.0.0:55555"
 
 	consensusConfig := &service.ConsensusConfig{}
 
@@ -159,6 +156,8 @@ func gen(ctx *cli.Context) error {
 	filterConfig := filterTypes.FilterConfig{}
 	filterConfig.Enable = true
 
+	Preminers := []*chain.Preminer{{Addr: getPreminer(), Value: cfg.Preminer[0].Value}}
+
 	if len(nodeItems) == 1 {
 		consensusConfig.Bft.MyPk = (*secp256k1.PublicKey)(&standbyKey[0].PublicKey)
 		userDir := path2.Join(path, nodeItems[0].Name)
@@ -194,12 +193,13 @@ func gen(ctx *cli.Context) error {
 		offset = writePhase(fs, "accounts", walletConfig, offset)
 		offset = writePhase(fs, "chain_indexer", chainIndexerConfig, offset)
 		offset = writePhase(fs, "filter", filterConfig, offset)
+
 		offset = writePhase(fs, "genesis",
 			struct {
 				Preminer []*chain.Preminer
 				Miners   []types.CandidateData
 			}{
-				Preminer: cfg.Preminer,
+				Preminer: Preminers,
 				Miners:   produces,
 			}, offset)
 		fs.Truncate(offset - 2)
@@ -219,12 +219,10 @@ func gen(ctx *cli.Context) error {
 			}
 
 			store := accountComponent.NewFileStore(keyStorePath)
-			//cryptoPassowrd := string(sha3.Keccak256([]byte(password)))
 			store.StoreKey(nodes[i], password)
 
 			walletConfig := accountTypes.Config{}
 			walletConfig.Enable = true
-			//walletConfig.Password = password
 
 			cfgPath := path2.Join(userDir, "config.json")
 			fs, _ := os.Create(cfgPath)
@@ -246,7 +244,7 @@ func gen(ctx *cli.Context) error {
 					Preminer []*chain.Preminer
 					Miners   []types.CandidateData
 				}{
-					Preminer: cfg.Preminer,
+					Preminer: Preminers,
 					Miners:   produces,
 				}, offset)
 			fs.Truncate(offset - 2)
@@ -254,6 +252,17 @@ func gen(ctx *cli.Context) error {
 		}
 	}
 	return nil
+}
+
+func getPreminer() crypto.CommonAddress {
+	key, err := crypto.GenerateKey(rand.Reader)
+	if err != nil {
+		fmt.Println("Failed to generate node key: %v", err)
+	}
+
+	fmt.Println("Please remember your system private key:", common.Bytes2Hex(key.Serialize()))
+
+	return crypto.PubkeyToAddress(key.PubKey())
 }
 
 func writePhase(fs *os.File, name string, config interface{}, offset int64) int64 {
@@ -309,15 +318,18 @@ func parserConfig(cfgPath string) (*GenesisConfig, error) {
 	}
 	cfg := &GenesisConfig{}
 	err = json.Unmarshal([]byte(content), &cfg)
-	//fmt.Println(cfg.Preminer[0].Value)
 	if err != nil {
 		return nil, err
 	}
 	return cfg, nil
 }
 
+type ConfigPreminer struct {
+	Value big.Int
+}
+
 type GenesisConfig struct {
-	Preminer []*chain.Preminer
+	Preminer []*ConfigPreminer
 	Miners   []*NodeItem
 }
 
