@@ -19,6 +19,7 @@ type BlockHeader struct {
 	StateRoot    []byte
 	TxRoot       []byte
 	ReceiptRoot  crypto.Hash
+	MinerAddr    crypto.CommonAddress
 	Bloom        Bloom
 	blockHash    *crypto.Hash `binary:"ignore"`
 }
@@ -73,6 +74,7 @@ func (block *Block) AsSignMessage() []byte {
 			TxRoot:       block.Header.TxRoot,
 			ReceiptRoot:  block.Header.ReceiptRoot,
 			Bloom:        block.Header.Bloom,
+			MinerAddr:    block.Header.MinerAddr,
 		},
 	}
 	bytes, _ := binary.Marshal(blockTemp)
