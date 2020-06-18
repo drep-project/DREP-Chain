@@ -43,6 +43,7 @@ func (chainService *ChainService) GetGenisiBlock(biosAddress crypto.CommonAddres
 			StateRoot:    root,
 			TxRoot:       merkleRoot,
 			Height:       0,
+			MinerAddr:    crypto.CommonAddress{},
 		},
 		Data: &types.BlockData{
 			TxCount: 0,
@@ -86,6 +87,7 @@ func (chainService *ChainService) ProcessGenesisBlock(biosAddr crypto.CommonAddr
 			StateRoot:    root,
 			TxRoot:       merkleRoot,
 			Height:       0,
+			MinerAddr:    crypto.CommonAddress{},
 		},
 		Data: &types.BlockData{
 			TxCount: 0,
