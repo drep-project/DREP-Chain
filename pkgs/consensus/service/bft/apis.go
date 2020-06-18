@@ -34,7 +34,6 @@ func (consensusApi *ConsensusApi) ChangeWaitTime(waitTime int) {
  name: getMiners()
  usage: Gets the current mining node
  params:
-	无
  return: mining nodes's pub key
  example:
 	curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"consensus_getMiners","params":[""], "id": 3}' -H "Content-Type:application/json"
