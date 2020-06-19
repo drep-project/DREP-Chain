@@ -44,13 +44,14 @@ var (
 
 func main() {
 	app := cli.NewApp()
-	app.Name = "USEAGE : genaccount program is used to generate configuration files by reading the most original config.json,\n " +
+	app.Name = "USAGE : genaccount program is used to generate configuration files by reading the most original config.json,\n " +
 		"according to config.json To generate the configuration files required by each mining node \n genaccount "
 	app.Author = "DREP"
 	app.Email = ""
 	app.Version = "1.0.0"
 
-	app.Flags = []cli.Flag{
+	app.
+		app.Flags = []cli.Flag{
 		pathFlag,
 	}
 
