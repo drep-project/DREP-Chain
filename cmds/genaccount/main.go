@@ -159,7 +159,7 @@ func gen(ctx *cli.Context) error {
 	Preminers := []*chain.Preminer{{Addr: getPreminer(), Value: cfg.Preminer[0].Value}}
 
 	if len(nodeItems) == 1 {
-		consensusConfig.Bft.MyPk = (*secp256k1.PublicKey)(&standbyKey[0].PublicKey)
+		consensusConfig.Solo.MyPk = (*secp256k1.PublicKey)(&standbyKey[0].PublicKey)
 		userDir := path2.Join(path, nodeItems[0].Name)
 		os.MkdirAll(userDir, os.ModeDir|os.ModePerm)
 		keyStorePath := path2.Join(userDir, "keystore")
