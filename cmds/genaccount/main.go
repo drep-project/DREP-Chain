@@ -50,8 +50,7 @@ func main() {
 	app.Email = ""
 	app.Version = "1.0.0"
 
-	app.
-		app.Flags = []cli.Flag{
+	app.Flags = []cli.Flag{
 		pathFlag,
 	}
 
