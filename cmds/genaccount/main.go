@@ -6,16 +6,6 @@ import (
 	"crypto/sha512"
 	"encoding/json"
 	"fmt"
-	"github.com/drep-project/DREP-Chain/chain"
-	"github.com/drep-project/DREP-Chain/common"
-	"github.com/drep-project/DREP-Chain/crypto"
-	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
-	"github.com/drep-project/DREP-Chain/network/p2p/enode"
-	"github.com/drep-project/DREP-Chain/params"
-	"github.com/drep-project/DREP-Chain/pkgs/consensus/service"
-	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/bft"
-	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/solo"
-	"github.com/drep-project/DREP-Chain/pkgs/log"
 	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
 	"math/big"
@@ -26,29 +16,46 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/drep-project/DREP-Chain/chain"
+	"github.com/drep-project/DREP-Chain/common"
+	"github.com/drep-project/DREP-Chain/crypto"
+	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
+	"github.com/drep-project/DREP-Chain/network/p2p/enode"
 	p2pTypes "github.com/drep-project/DREP-Chain/network/types"
+	"github.com/drep-project/DREP-Chain/params"
 	accountComponent "github.com/drep-project/DREP-Chain/pkgs/accounts/component"
 	accountTypes "github.com/drep-project/DREP-Chain/pkgs/accounts/types"
 	chainIndexerTypes "github.com/drep-project/DREP-Chain/pkgs/chain_indexer"
+	"github.com/drep-project/DREP-Chain/pkgs/consensus/service"
+	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/bft"
+	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/solo"
 	filterTypes "github.com/drep-project/DREP-Chain/pkgs/filter"
+	"github.com/drep-project/DREP-Chain/pkgs/log"
 	"github.com/drep-project/DREP-Chain/types"
 	"github.com/drep-project/rpc"
 )
 
 var (
-	parentNode = types.NewNode(nil, 0)
-	pathFlag   = common.DirectoryFlag{
+	pathFlag = common.DirectoryFlag{
 		Name:  "path",
-		Usage: "keystore save to",
+		Usage: "keystore save to && source config.json store in",
 	}
 )
 
 func main() {
 	app := cli.NewApp()
+	app.Name = "USEAGE : genaccount program is used to generate configuration files by reading the most original config.json,\n " +
+		"according to config.json To generate the configuration files required by each mining node \n genaccount "
+	app.Author = "DREP"
+	app.Email = ""
+	app.Version = "1.0.0"
+
 	app.Flags = []cli.Flag{
 		pathFlag,
 	}
+
 	app.Action = gen
+
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -84,7 +91,6 @@ func gen(ctx *cli.Context) error {
 		}
 		instanceDir := filepath.Join(path, nodeItems[i].Name, "drepnode")
 		nodePrivateKey := GeneratePrivateKey(instanceDir)
-		//fmt.Println(crypto.PubkeyToAddress(nodePrivateKey.PubKey()).String(), hex.EncodeToString(nodePrivateKey.Serialize()))
 		node := enode.NewV4(nodePrivateKey.PubKey(), ip, nodeItems[i].Port, nodeItems[i].Port)
 		trustNodes = append(trustNodes, node)
 
