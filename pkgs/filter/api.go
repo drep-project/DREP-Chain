@@ -22,7 +22,7 @@ type FilterApi struct {
 	None
  return:
 	QUANTITY - A filter id.
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"filter_newPendingTransactionFilter","params":[], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost10085 -X POST --data '{"jsonrpc":"2.0","method":"filter_newPendingTransactionFilter","params":[], "id": 3}' -H "Content-Type:application/json"
  response:
 {
   "jsonrpc": "2.0",
@@ -42,7 +42,7 @@ func (filter *FilterApi) NewPendingTransactionFilter() ID {
 	None
  return:
 	QUANTITY - A filter id.
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"filter_newBlockFilter","params":[], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost10085 -X POST --data '{"jsonrpc":"2.0","method":"filter_newBlockFilter","params":[], "id": 3}' -H "Content-Type:application/json"
  response:
 {
   "jsonrpc": "2.0",
@@ -66,7 +66,7 @@ func (filter *FilterApi) NewBlockFilter() ID {
 		topics: Array of DATA, - (optional) Array of 32 Bytes DATA topics. Topics are order-dependent. Each topic can also be an array of DATA with "or" options.
  return:
 	QUANTITY - A filter id.
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"filter_newFilter","params":[{"topics":["0x0000000000000000000000000000000000000000000000000000000012341234"]}], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost10085 -X POST --data '{"jsonrpc":"2.0","method":"filter_newFilter","params":[{"topics":["0x0000000000000000000000000000000000000000000000000000000012341234"]}], "id": 3}' -H "Content-Type:application/json"
  response:
 {
   "jsonrpc": "2.0",
@@ -86,7 +86,7 @@ func (filter *FilterApi) NewFilter(crit FilterQuery) (ID, error) {
 	1. QUANTITY - The filter id.
  return:
 	Boolean - true if the filter was successfully uninstalled, otherwise false.
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"filter_uninstallFilter","params":["0xb"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost10085 -X POST --data '{"jsonrpc":"2.0","method":"filter_uninstallFilter","params":["0xb"], "id": 3}' -H "Content-Type:application/json"
  response:
 {
   "jsonrpc": "2.0",
@@ -111,7 +111,7 @@ func (filter *FilterApi) UninstallFilter(id ID) bool {
 		blockhash: DATA, 32 Bytes - (optional) , blockHash is a new filter option which restricts the logs returned to the single block with the 32-byte hash blockHash. Using blockHash is equivalent to fromBlock = toBlock = the block number with hash blockHash. If blockHash is present in the filter criteria, then neither fromBlock nor toBlock are allowed.
  return:
 	Array - Array of log objects, or an empty array if nothing has changed since last poll.
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"filter_getLogs","params":[{"topics":["0x000000000000000000000000a94f5374fce5edbc8e2a8697c15331677e6ebf0b"]}], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost10085 -X POST --data '{"jsonrpc":"2.0","method":"filter_getLogs","params":[{"topics":["0x000000000000000000000000a94f5374fce5edbc8e2a8697c15331677e6ebf0b"]}], "id": 3}' -H "Content-Type:application/json"
  response:
 {
   "jsonrpc": "2.0",
@@ -142,7 +142,7 @@ func (filter *FilterApi) GetLogs(crit FilterQuery) ([]*types.Log, error) {
 	1. QUANTITY - The filter id.
  return:
 	Array - Array of log objects, or an empty array if nothing has changed since last poll.
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"filter_getFilterLogs","params":["0x16"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost10085 -X POST --data '{"jsonrpc":"2.0","method":"filter_getFilterLogs","params":["0x16"], "id": 3}' -H "Content-Type:application/json"
  response:
 {
   "jsonrpc": "2.0",
@@ -173,7 +173,7 @@ func (filter *FilterApi) GetFilterLogs(id ID) ([]*types.Log, error) {
 	1. QUANTITY - the filter id.
  return:
 	Array - Array of log objects, or an empty array if nothing has changed since last poll.
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"filter_getFilterChanges","params":["0x16"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost10085 -X POST --data '{"jsonrpc":"2.0","method":"filter_getFilterChanges","params":["0x16"], "id": 3}' -H "Content-Type:application/json"
  response:
 {
   "jsonrpc": "2.0",
