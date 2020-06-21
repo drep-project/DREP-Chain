@@ -291,8 +291,8 @@ github.com/drep-project/binary v0.0.0-20190919035907-78d88687b9c1 h1:xgxociAyT3p
 github.com/drep-project/binary v0.0.0-20190919035907-78d88687b9c1/go.mod h1:/2cnPPzZp4xqoq9vjJS2KAk3+enfcLhxx5jlhLYcoWQ=
 github.com/drep-project/dlog v0.0.0-20200514080736-e9b04787eae9 h1:RugStaa4CguPHTQcxwtNt5WENYHjZpIs8qHhrvDoQ/A=
 github.com/drep-project/dlog v0.0.0-20200514080736-e9b04787eae9/go.mod h1:tFhq257CAbZf+lV8WFv4wDXVDD8vrFWXlPb2JrJyrOE=
-github.com/drep-project/rpc v0.0.0-20200610102016-3413bb46f6b4 h1:G1BplvD3azohXCBj2UFwivqcZq8mhEl/3UOw8NmAhy0=
-github.com/drep-project/rpc v0.0.0-20200610102016-3413bb46f6b4/go.mod h1:ry2f2utywR6d5GplJxlWhcofDYSCgstkWTMGvfh99ek=
+github.com/drep-project/rpc v0.0.0-20200619075325-34a34786ab54 h1:8kuUW/j7HIzQ9bY3tKi3YhjC/kcsBVPPE87bg78PeMU=
+github.com/drep-project/rpc v0.0.0-20200619075325-34a34786ab54/go.mod h1:ry2f2utywR6d5GplJxlWhcofDYSCgstkWTMGvfh99ek=
 github.com/dustin/go-humanize v0.0.0-20171111073723-bb3d318650d4/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/dustin/go-humanize v0.0.0-20180713052910-9f541cc9db5d/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=

@@ -14,7 +14,7 @@ require (
 	github.com/docker/docker v1.13.1
 	github.com/drep-project/binary v0.0.0-20190919035907-78d88687b9c1
 	github.com/drep-project/dlog v0.0.0-20200514080736-e9b04787eae9
-	github.com/drep-project/rpc v0.0.0-20200610102016-3413bb46f6b4
+	github.com/drep-project/rpc v0.0.0-20200619075325-34a34786ab54
 	github.com/ethereum/go-ethereum v1.9.15
 	github.com/fatih/color v1.9.0
 	github.com/golang/snappy v0.0.1
