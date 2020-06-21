@@ -108,7 +108,7 @@ func gen(ctx *cli.Context) error {
 	rpcConfig.IPCEnabled = true
 	rpcConfig.HTTPEnabled = true
 	p2pConfig := p2pTypes.P2pConfig{}
-	p2pConfig.MaxPeers = 20
+	p2pConfig.MaxPeers = 25
 	p2pConfig.NoDiscovery = false
 	p2pConfig.DiscoveryV5 = true
 	p2pConfig.Name = "drepnode"
