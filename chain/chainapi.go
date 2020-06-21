@@ -43,7 +43,7 @@ func NewChainApi(store dbinterface.KeyValueStore, chainView *ChainView, dbQuery 
  params:
 	1. height  usage: Current block height
  return: Block detail information
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getBlock","params":[1], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getBlock","params":[1], "id": 3}' -H "Content-Type:application/json"
  response:
 {
     "jsonrpc":"2.0",
@@ -72,7 +72,6 @@ func NewChainApi(store dbinterface.KeyValueStore, chainView *ChainView, dbQuery 
         }
     }
 }
-
 */
 func (chain *ChainApi) GetBlock(height uint64) (*types.Block, error) {
 	node := chain.chainView.NodeByHeight(height)
@@ -92,7 +91,7 @@ func (chain *ChainApi) GetBlock(height uint64) (*types.Block, error) {
  params:
 	1. 无
  return: Current maximum block height value
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getMaxHeight","params":[], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getMaxHeight","params":[], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":193005}
 */
@@ -106,7 +105,7 @@ func (chain *ChainApi) GetMaxHeight() uint64 {
  params:
 	1. 无
  return: Gas minimum value and maximum value required by the system; And the maximum gas value that the current block is set to
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getBlockGasInfo","params":[], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getBlockGasInfo","params":[], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":193005}
 */
@@ -137,14 +136,13 @@ func (chain *ChainApi) GetBlockGasInfo() string {
 	return string(ret)
 }
 
-
 /*
  name: getBalance
  usage: Query address balance
  params:
 	1. Query address
  return: The account balance in the address
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getBalance","params":["DREP8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getBalance","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":9987999999999984000000}
 */
@@ -166,7 +164,7 @@ func (chain *ChainApi) GetBalance(addr string) string {
  params:
 	1. Query address
  return: nonce
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getNonce","params":["DREP8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getNonce","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":0}
 */
@@ -182,7 +180,7 @@ func (chain *ChainApi) GetNonce(addr string) uint64 {
  params:
 	1.  Query address
  return: The reputation value corresponding to the address
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getReputation","params":["DREP8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getReputation","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":1}
 */
@@ -199,7 +197,7 @@ func (chain *ChainApi) GetReputation(addr string) *big.Int {
 	1. block height
     2. Transaction sequence
  return: transaction
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getTransactionByBlockHeightAndIndex","params":[10000,1], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getTransactionByBlockHeightAndIndex","params":[10000,1], "id": 3}' -H "Content-Type:application/json"
  response:
    {
   "jsonrpc": "2.0",
@@ -238,7 +236,7 @@ func (chain *ChainApi) GetTransactionByBlockHeightAndIndex(height uint64, index 
  params:
 	1. address
  return: Address the alias
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getAliasByAddress","params":["DREP8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getAliasByAddress","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
 	{"jsonrpc":"2.0","id":3,"result":"tom"}
 */
@@ -254,9 +252,9 @@ func (chain *ChainApi) GetAliasByAddress(addr string) string {
  params:
 	1. Alias to be queried
  return: The address corresponding to the alias
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getAddressByAlias","params":["tom"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getAddressByAlias","params":["tom"], "id": 3}' -H "Content-Type:application/json"
  response:
-   {"jsonrpc":"2.0","id":3,"result":"DREP8a8e541ddd1272d53729164c70197221a3c27486"}
+   {"jsonrpc":"2.0","id":3,"result":"0x8a8e541ddd1272d53729164c70197221a3c27486"}
 */
 func (chain *ChainApi) GetAddressByAlias(alias string) (string, error) {
 
@@ -272,7 +270,7 @@ func (chain *ChainApi) GetAddressByAlias(alias string) (string, error) {
  params:
 	1. txhash
  return: receipt
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getReceipt","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getReceipt","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":""}
 */
@@ -286,7 +284,7 @@ func (chain *ChainApi) GetReceipt(txHash crypto.Hash) *types.Receipt {
  params:
 	1. txhash
  return: []log
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getLogs","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getLogs","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":""}
 */
@@ -316,7 +314,7 @@ func (chain *ChainApi) GetLogs(txHash crypto.Hash) []*types.Log {
  params:
 	1. txhash
  return: {}
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCancelCreditDetail","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCancelCreditDetail","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":""}
 */
@@ -347,7 +345,7 @@ func (chain *ChainApi) GetCancelCreditDetail(txHash crypto.Hash) []*types.Cancel
  params:
 	1. address
  return: bytecode
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getByteCode","params":["DREP8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getByteCode","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":"0x00"}
 */
@@ -363,7 +361,7 @@ func (chain *ChainApi) GetByteCode(addr string) hexutil.Bytes {
  params:
 	1. address
  return: bytecode
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCreditDetails","params":["DREP8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCreditDetails","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":"[{\"Addr\":\"DREPd05d5f324ada3c418e14cd6b497f2f36d60ba607\",\"HeghtValues\":[{\"CreditHeight\":1329,\"CreditValue\":\"0x11135\"}]}]"}
 */
@@ -379,7 +377,7 @@ func (chain *ChainApi) GetCreditDetails(addr string) string {
  params:
 	1. address
  return: bytecode
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCancelCreditDetails","params":["DREP8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCancelCreditDetails","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":"{\"DREP300fc5a14e578be28c64627c0e7e321771c58cd4\":\"0x3641100\"}"}
 */
@@ -395,7 +393,7 @@ func (chain *ChainApi) GetCancelCreditDetails(addr string) string {
  params:
 	1. address
  return:  []
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCandidateAddrs","params":[""], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCandidateAddrs","params":[""], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":"{\"DREP300fc5a14e578be28c64627c0e7e321771c58cd4\":\"0x3641100\"}"}
 */
@@ -410,7 +408,7 @@ func (chain *ChainApi) GetCandidateAddrs() string {
 // params:
 //	无
 // return:  年华后三个月利息, 年华后六个月利息, 一年期利息, 一年以上期利息
-// example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getInterestRate","params":"", "id": 3}' -H "Content-Type:application/json"
+// example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getInterestRate","params":"", "id": 3}' -H "Content-Type:application/json"
 // response:
 //   {"jsonrpc":"2.0","id":3,"result":"{\"ThreeMonthRate\":4,\"SixMonthRate\":12,\"OneYearRate\":25,\"MoreOneYearRate\":51}"}
 //*/
@@ -445,7 +443,7 @@ func (chain *ChainApi) GetCandidateAddrs() string {
  params:
 	none
  return:  Transition period
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getChangeCycle","params":"", "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getChangeCycle","params":"", "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":"{100}"}
 */
@@ -459,12 +457,12 @@ func (chain *ChainApi) GetChangeCycle() (int, error) {
 	return int(changeInterval), err
 }
 
-func (chain *ChainApi) GetReward() (int, error)  {
+func (chain *ChainApi) GetReward() (int, error) {
 	return params.Rewards, nil
 }
 
 func (chain *ChainApi) GetAvgPrice(height uint64) (*big.Int, error) {
-	block, err:= chain.GetBlock(height)
+	block, err := chain.GetBlock(height)
 	if err != nil {
 		return nil, err
 	}
@@ -672,6 +670,13 @@ func (trieQuery *TrieQuery) GetCancelCreditDetails(addr *crypto.CommonAddress) s
 		return ""
 	}
 
+	//for _, rc := range storage.RC {
+	//	total := new(big.Int)
+	//	for _, value := range rc.HeghtValues {
+	//		total.Add(total, &value.CreditValue)
+	//	}
+	//	m[rc.Addr] = common.Big(*total)
+	//}
 	b, _ := json.Marshal(storage.CC)
 	return string(b)
 }
