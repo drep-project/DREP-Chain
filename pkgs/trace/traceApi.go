@@ -23,7 +23,7 @@ type TraceApi struct {
  params:
 	1. transaction hash
  return: transaction byte code
- example:  curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_getRawTransaction","params":["0x00001c9b8c8fdb1f53faf02321f76253704123e2b56cce065852bab93e526ae2"], "id": 3}' -H "Content-Type:application/json"
+ example:  curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"trace_getRawTransaction","params":["0x00001c9b8c8fdb1f53faf02321f76253704123e2b56cce065852bab93e526ae2"], "id": 3}' -H "Content-Type:application/json"
  response:
    {
 	  "jsonrpc": "2.0",
@@ -45,7 +45,7 @@ func (traceApi *TraceApi) GetRawTransaction(txHash *crypto.Hash) (string, error)
  params:
 	1. transaction hash
  return: Transaction details
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_getTransaction","params":["0x00001c9b8c8fdb1f53faf02321f76253704123e2b56cce065852bab93e526ae2"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"trace_getTransaction","params":["0x00001c9b8c8fdb1f53faf02321f76253704123e2b56cce065852bab93e526ae2"], "id": 3}' -H "Content-Type:application/json"
  response:
    {
 	  "jsonrpc": "2.0",
@@ -81,7 +81,7 @@ func (traceApi *TraceApi) GetTransaction(txHash *crypto.Hash) (*RpcTransaction, 
  params:
 	1. Transaction byte information
  return: transaction details
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_decodeTrasnaction","params":["0x02a7ae20007923a30bbfbcb998a6534d56b313e68c8e0c594a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002011102011003030000bc9889d00b004120eba14c77eab7a154833ff14832d8769cfc0b30db288445d6a83ef2fe337aa09042f8174a593543c4acabe7fadf1ad5fceea9c835682cb9dbea3f1d8fec181fb9"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"trace_decodeTrasnaction","params":["0x02a7ae20007923a30bbfbcb998a6534d56b313e68c8e0c594a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002011102011003030000bc9889d00b004120eba14c77eab7a154833ff14832d8769cfc0b30db288445d6a83ef2fe337aa09042f8174a593543c4acabe7fadf1ad5fceea9c835682cb9dbea3f1d8fec181fb9"], "id": 3}' -H "Content-Type:application/json"
  response:
    {
 	  "jsonrpc": "2.0",
@@ -122,7 +122,7 @@ func (traceApi *TraceApi) DecodeTrasnaction(bytes common.Bytes) (*RpcTransaction
 	2. Page number (from 1)
     3. Page size
  return: Transaction list
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_getSendTransactionByAddr","params":["DREP7923a30bbfbcb998a6534d56b313e68c8e0c594a",1,10], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"trace_getSendTransactionByAddr","params":["DREP7923a30bbfbcb998a6534d56b313e68c8e0c594a",1,10], "id": 3}' -H "Content-Type:application/json"
  response:
    {
 	  "jsonrpc": "2.0",
@@ -159,7 +159,7 @@ func (traceApi *TraceApi) GetSendTransactionByAddr(addr string, pageIndex, pageS
 	2. Page number (from 1)
     3. page size
  return: transaction list
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_getReceiveTransactionByAddr","params":["DREP3ebcbe7cb440dd8c52940a2963472380afbb56c5",1,10], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"trace_getReceiveTransactionByAddr","params":["DREP3ebcbe7cb440dd8c52940a2963472380afbb56c5",1,10], "id": 3}' -H "Content-Type:application/json"
  response:
    {
 	  "jsonrpc": "2.0",
@@ -195,7 +195,7 @@ func (traceApi *TraceApi) GetReceiveTransactionByAddr(addr string, pageIndex, pa
 	1. Start block (included)
 	2. Termination block (not included)
  return:
- example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"trace_rebuild","params":[1,10], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"trace_rebuild","params":[1,10], "id": 3}' -H "Content-Type:application/json"
  response:
   	{"jsonrpc":"2.0","id":3,"result":null}
 */
