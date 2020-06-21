@@ -43,34 +43,36 @@ func NewChainApi(store dbinterface.KeyValueStore, chainView *ChainView, dbQuery 
  params:
 	1. height  usage: Current block height
  return: Block detail information
- example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getBlock","params":[1], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getBlock","params":[1], "id": 3}' -H "Content-Type:application/json"
  response:
 {
-  "jsonrpc": "2.0",
-  "id": 3,
-  "result": {
-    "Hash": "0xcfa283a5b591da5a15971bf62fffae87e649bcf749776f4c83ffe50e65920f8e",
-    "ChainId": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-    "Version": 1,
-    "PreviousHash": "0x1717b4b9f740cebeb2659886122a29c0876ed906dd05370319fee4ecf219b1e9",
-    "GasLimit": 180000000,
-    "GasUsed": 0,
-    "Height": 1,
-    "Timestamp": 1559272779,
-    "StateRoot": "0xd7bd5b3af4f2f1fb3d484743052c2e911f9fb7b04131660912244347508f16a9",
-    "TxRoot": "0x",
-    "LeaderAddress": "0x0374bf9c8ea268b5548686685dda4a74fc95903ca7c440e5b187a718b595c1f374",
-    "MinorAddresses": [
-      "0x0374bf9c8ea268b5548686685dda4a74fc95903ca7c440e5b187a718b595c1f374",
-      "0x02f11cfd138eaaaba5f8c0a7f1f2791bdabd0b0c404734dceac820aa9b683bfb1a",
-      "0x03949aad279a32536ce20f0957c9c6ba592532ea70e5f174332bed4c94382354e3",
-      "0x0263bc5628fa7033727d14b5d6714ac7d6a5d34bc5db994a896f54499f12db9b0b"
-    ],
-    "Txs": [
-
-    ]
-  }
+    "jsonrpc":"2.0",
+    "id":3,
+    "result":{
+        "Header":{
+            "ChainId":0,
+            "Version":1,
+            "PreviousHash":"0x1fbae528a8eed0f09201bfd2c7e52fef66f5f35619e9868cd6d02dabac60e4e6",
+            "GasLimit":18000000,
+            "GasUsed":0,
+            "Height":1,
+            "Timestamp":1592365562,
+            "StateRoot":"UpMnHA5WmmTxU4T4jFQvpt6bFwigN+fg1Jx0fSD91MA=",
+            "TxRoot":null,
+            "ReceiptRoot":"0x0000000000000000000000000000000000000000000000000000000000000000",
+            "Bloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "Data":{
+            "TxCount":0,
+            "TxList":null
+        },
+        "Proof":{
+            "Type":0,
+            "Evidence":"MEUCIQDIZnsow/WbAmQ7jJ21EcVxzQkKA33LJfw8anhzkNjBzAIgMexycsYJlYEv0rbPvleoAx1iahzUx6FrMNZhh8uq6Lg="
+        }
+    }
 }
+
 */
 func (chain *ChainApi) GetBlock(height uint64) (*types.Block, error) {
 	node := chain.chainView.NodeByHeight(height)
@@ -90,7 +92,7 @@ func (chain *ChainApi) GetBlock(height uint64) (*types.Block, error) {
  params:
 	1. 无
  return: Current maximum block height value
- example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getMaxHeight","params":[], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getMaxHeight","params":[], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":193005}
 */
@@ -104,7 +106,7 @@ func (chain *ChainApi) GetMaxHeight() uint64 {
  params:
 	1. 无
  return: Gas minimum value and maximum value required by the system; And the maximum gas value that the current block is set to
- example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getBlockGasInfo","params":[], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getBlockGasInfo","params":[], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":193005}
 */
@@ -135,22 +137,25 @@ func (chain *ChainApi) GetBlockGasInfo() string {
 	return string(ret)
 }
 
+
 /*
  name: getBalance
  usage: Query address balance
  params:
 	1. Query address
  return: The account balance in the address
- example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getBalance","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getBalance","params":["DREP8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":9987999999999984000000}
 */
-func (chain *ChainApi) GetBalance(addr crypto.CommonAddress) string {
+func (chain *ChainApi) GetBalance(addr string) string {
+	ethAddr := crypto.DrepToEth(addr)
+
 	store, err := store.TrieStoreFromStore(chain.store, chain.chainView.Tip().StateRoot)
 	if err != nil {
 		return ""
 	}
-	big := store.GetBalance(&addr, chain.chainView.tip().Height)
+	big := store.GetBalance(&ethAddr, chain.chainView.tip().Height)
 
 	return big.String()
 }
@@ -161,13 +166,14 @@ func (chain *ChainApi) GetBalance(addr crypto.CommonAddress) string {
  params:
 	1. Query address
  return: nonce
- example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getNonce","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getNonce","params":["DREP8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":0}
 */
-func (chain *ChainApi) GetNonce(addr crypto.CommonAddress) uint64 {
+func (chain *ChainApi) GetNonce(addr string) uint64 {
+	ethAddr := crypto.DrepToEth(addr)
 	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
-	return trieQuery.GetNonce(&addr)
+	return trieQuery.GetNonce(&ethAddr)
 }
 
 /*
@@ -176,13 +182,14 @@ func (chain *ChainApi) GetNonce(addr crypto.CommonAddress) uint64 {
  params:
 	1.  Query address
  return: The reputation value corresponding to the address
- example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getReputation","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getReputation","params":["DREP8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":1}
 */
-func (chain *ChainApi) GetReputation(addr crypto.CommonAddress) *big.Int {
+func (chain *ChainApi) GetReputation(addr string) *big.Int {
+	ethAddr := crypto.DrepToEth(addr)
 	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
-	return trieQuery.GetReputation(&addr)
+	return trieQuery.GetReputation(&ethAddr)
 }
 
 /*
@@ -192,7 +199,7 @@ func (chain *ChainApi) GetReputation(addr crypto.CommonAddress) *big.Int {
 	1. block height
     2. Transaction sequence
  return: transaction
- example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getTransactionByBlockHeightAndIndex","params":[10000,1], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getTransactionByBlockHeightAndIndex","params":[10000,1], "id": 3}' -H "Content-Type:application/json"
  response:
    {
   "jsonrpc": "2.0",
@@ -231,13 +238,14 @@ func (chain *ChainApi) GetTransactionByBlockHeightAndIndex(height uint64, index 
  params:
 	1. address
  return: Address the alias
- example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getAliasByAddress","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getAliasByAddress","params":["DREP8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
 	{"jsonrpc":"2.0","id":3,"result":"tom"}
 */
-func (chain *ChainApi) GetAliasByAddress(addr *crypto.CommonAddress) string {
+func (chain *ChainApi) GetAliasByAddress(addr string) string {
+	ethAddr := crypto.DrepToEth(addr)
 	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
-	return trieQuery.GetStorageAlias(addr)
+	return trieQuery.GetStorageAlias(&ethAddr)
 }
 
 /*
@@ -246,13 +254,16 @@ func (chain *ChainApi) GetAliasByAddress(addr *crypto.CommonAddress) string {
  params:
 	1. Alias to be queried
  return: The address corresponding to the alias
- example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getAddressByAlias","params":["tom"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getAddressByAlias","params":["tom"], "id": 3}' -H "Content-Type:application/json"
  response:
-   {"jsonrpc":"2.0","id":3,"result":"0x8a8e541ddd1272d53729164c70197221a3c27486"}
+   {"jsonrpc":"2.0","id":3,"result":"DREP8a8e541ddd1272d53729164c70197221a3c27486"}
 */
-func (chain *ChainApi) GetAddressByAlias(alias string) (*crypto.CommonAddress, error) {
+func (chain *ChainApi) GetAddressByAlias(alias string) (string, error) {
+
 	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
-	return trieQuery.AliasGet(alias)
+	ethAddr, err := trieQuery.AliasGet(alias)
+
+	return crypto.EthToDrep(ethAddr), err
 }
 
 /*
@@ -261,7 +272,7 @@ func (chain *ChainApi) GetAddressByAlias(alias string) (*crypto.CommonAddress, e
  params:
 	1. txhash
  return: receipt
- example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getReceipt","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getReceipt","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":""}
 */
@@ -275,7 +286,7 @@ func (chain *ChainApi) GetReceipt(txHash crypto.Hash) *types.Receipt {
  params:
 	1. txhash
  return: []log
- example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getLogs","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getLogs","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":""}
 */
@@ -305,7 +316,7 @@ func (chain *ChainApi) GetLogs(txHash crypto.Hash) []*types.Log {
  params:
 	1. txhash
  return: {}
- example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCancelCreditDetail","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCancelCreditDetail","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":""}
 */
@@ -336,13 +347,14 @@ func (chain *ChainApi) GetCancelCreditDetail(txHash crypto.Hash) []*types.Cancel
  params:
 	1. address
  return: bytecode
- example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getByteCode","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getByteCode","params":["DREP8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":"0x00"}
 */
-func (chain *ChainApi) GetByteCode(addr *crypto.CommonAddress) hexutil.Bytes {
+func (chain *ChainApi) GetByteCode(addr string) hexutil.Bytes {
+	ethAddr := crypto.DrepToEth(addr)
 	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
-	return trieQuery.GetByteCode(addr)
+	return trieQuery.GetByteCode(&ethAddr)
 }
 
 /*
@@ -351,13 +363,14 @@ func (chain *ChainApi) GetByteCode(addr *crypto.CommonAddress) hexutil.Bytes {
  params:
 	1. address
  return: bytecode
- example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCreditDetails","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCreditDetails","params":["DREP8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
-   {"jsonrpc":"2.0","id":3,"result":"[{\"Addr\":\"0xd05d5f324ada3c418e14cd6b497f2f36d60ba607\",\"HeghtValues\":[{\"CreditHeight\":1329,\"CreditValue\":\"0x11135\"}]}]"}
+   {"jsonrpc":"2.0","id":3,"result":"[{\"Addr\":\"DREPd05d5f324ada3c418e14cd6b497f2f36d60ba607\",\"HeghtValues\":[{\"CreditHeight\":1329,\"CreditValue\":\"0x11135\"}]}]"}
 */
-func (chain *ChainApi) GetCreditDetails(addr *crypto.CommonAddress) string {
+func (chain *ChainApi) GetCreditDetails(addr string) string {
+	ethAddr := crypto.DrepToEth(addr)
 	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
-	return trieQuery.GetVoteCreditDetails(addr)
+	return trieQuery.GetVoteCreditDetails(&ethAddr)
 }
 
 /*
@@ -366,13 +379,14 @@ func (chain *ChainApi) GetCreditDetails(addr *crypto.CommonAddress) string {
  params:
 	1. address
  return: bytecode
- example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCancelCreditDetails","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCancelCreditDetails","params":["DREP8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
-   {"jsonrpc":"2.0","id":3,"result":"{\"0x300fc5a14e578be28c64627c0e7e321771c58cd4\":\"0x3641100\"}"}
+   {"jsonrpc":"2.0","id":3,"result":"{\"DREP300fc5a14e578be28c64627c0e7e321771c58cd4\":\"0x3641100\"}"}
 */
-func (chain *ChainApi) GetCancelCreditDetails(addr *crypto.CommonAddress) string {
+func (chain *ChainApi) GetCancelCreditDetails(addr string) string {
+	ethAddr := crypto.DrepToEth(addr)
 	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
-	return trieQuery.GetCancelCreditDetails(addr)
+	return trieQuery.GetCancelCreditDetails(&ethAddr)
 }
 
 /*
@@ -381,9 +395,9 @@ func (chain *ChainApi) GetCancelCreditDetails(addr *crypto.CommonAddress) string
  params:
 	1. address
  return:  []
- example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCandidateAddrs","params":[""], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCandidateAddrs","params":[""], "id": 3}' -H "Content-Type:application/json"
  response:
-   {"jsonrpc":"2.0","id":3,"result":"{\"0x300fc5a14e578be28c64627c0e7e321771c58cd4\":\"0x3641100\"}"}
+   {"jsonrpc":"2.0","id":3,"result":"{\"DREP300fc5a14e578be28c64627c0e7e321771c58cd4\":\"0x3641100\"}"}
 */
 func (chain *ChainApi) GetCandidateAddrs() string {
 	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
@@ -396,7 +410,7 @@ func (chain *ChainApi) GetCandidateAddrs() string {
 // params:
 //	无
 // return:  年华后三个月利息, 年华后六个月利息, 一年期利息, 一年以上期利息
-// example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getInterestRate","params":"", "id": 3}' -H "Content-Type:application/json"
+// example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getInterestRate","params":"", "id": 3}' -H "Content-Type:application/json"
 // response:
 //   {"jsonrpc":"2.0","id":3,"result":"{\"ThreeMonthRate\":4,\"SixMonthRate\":12,\"OneYearRate\":25,\"MoreOneYearRate\":51}"}
 //*/
@@ -431,7 +445,7 @@ func (chain *ChainApi) GetCandidateAddrs() string {
  params:
 	none
  return:  Transition period
- example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getChangeCycle","params":"", "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:15645 -X POST --data '{"jsonrpc":"2.0","method":"chain_getChangeCycle","params":"", "id": 3}' -H "Content-Type:application/json"
  response:
    {"jsonrpc":"2.0","id":3,"result":"{100}"}
 */
@@ -443,6 +457,23 @@ func (chain *ChainApi) GetChangeCycle() (int, error) {
 
 	changeInterval, err := store.GetChangeInterval()
 	return int(changeInterval), err
+}
+
+func (chain *ChainApi) GetReward() (int, error)  {
+	return params.Rewards, nil
+}
+
+func (chain *ChainApi) GetAvgPrice(height uint64) (*big.Int, error) {
+	block, err:= chain.GetBlock(height)
+	if err != nil {
+		return nil, err
+	}
+	txCount := big.NewInt(int64(block.Data.TxCount))
+	gasUsed := &block.Header.GasUsed
+
+	avgPrice := block.Header.GasUsed.Div(gasUsed, txCount)
+	return avgPrice, nil
+
 }
 
 type TrieQuery struct {
@@ -582,7 +613,7 @@ func (trieQuery *TrieQuery) GetCandidateAddrs() string {
 	}
 
 	type AddrAndCrit struct {
-		Addr   *crypto.CommonAddress
+		Addr   string
 		Credit *common.Big
 	}
 
@@ -611,8 +642,8 @@ func (trieQuery *TrieQuery) GetCandidateAddrs() string {
 
 		cb := new(common.Big)
 		cb.SetMathBig(*total)
-
-		ac = append(ac, AddrAndCrit{Addr: &addr, Credit: cb})
+		drepAddr := crypto.EthToDrep(&addr)
+		ac = append(ac, AddrAndCrit{Addr: drepAddr, Credit: cb})
 	}
 
 	b, err := json.Marshal(ac)
@@ -641,13 +672,6 @@ func (trieQuery *TrieQuery) GetCancelCreditDetails(addr *crypto.CommonAddress) s
 		return ""
 	}
 
-	//for _, rc := range storage.RC {
-	//	total := new(big.Int)
-	//	for _, value := range rc.HeghtValues {
-	//		total.Add(total, &value.CreditValue)
-	//	}
-	//	m[rc.Addr] = common.Big(*total)
-	//}
 	b, _ := json.Marshal(storage.CC)
 	return string(b)
 }

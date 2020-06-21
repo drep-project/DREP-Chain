@@ -5,6 +5,7 @@ import (
 	"github.com/drep-project/DREP-Chain/chain"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/types"
+	//"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"time"
 )
@@ -128,7 +129,8 @@ func (chainBlockValidator *TemplateBlockValidator) RouteTransaction(context *cha
 			receipt.GasUsed = txContext.GasUsed()
 			// if the transaction created a contract, store the creation address in the receipt.
 			if tx.To() == nil || tx.To().IsEmpty() {
-				receipt.ContractAddress = crypto.CreateAddress(*from, tx.Nonce())
+				newAddr := crypto.CreateAddress(*from, tx.Nonce())
+				receipt.ContractAddress = crypto.HexToAddress(crypto.EthToDrep(&newAddr))
 				fmt.Println("contractAddr:", receipt.ContractAddress)
 			}
 			// Set the receipt logs and create a bloom for filtering
