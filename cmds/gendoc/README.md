@@ -9,7 +9,7 @@
  params:
 	1. height  usage: 当前区块高度
  return: 区块明细信息
- example: curl http://localhost10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getBlock","params":[1], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getBlock","params":[1], "id": 3}' -H "Content-Type:application/json"
  response:
    response here
 */

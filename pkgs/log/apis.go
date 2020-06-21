@@ -26,7 +26,7 @@ func NewLogApi(hook *ModuleHook) *LogApi {
  params:
 	1. log level（"debug","0"）
  return: 无
- example:  curl http://localhost10085 -X POST --data '{"jsonrpc":"2.0","method":"log_setLevel","params":["trace"], "id": 3}' -H "Content-Type:application/json"
+ example:  curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"log_setLevel","params":["trace"], "id": 3}' -H "Content-Type:application/json"
  response:
   {"jsonrpc":"2.0","id":3,"result":null}
 */
@@ -50,7 +50,7 @@ func (logApi *LogApi) SetLevel(lvl string) error {
  params:
 	1. module name (txpool=5)
  return: 无
- example:   curl http://localhost10085 -X POST --data '{"jsonrpc":"2.0","method":"log_setVmodule","params":["txpool=5"], "id": 3}' -H "Content-Type:application/json"
+ example:   curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"log_setVmodule","params":["txpool=5"], "id": 3}' -H "Content-Type:application/json"
  response:
   {"jsonrpc":"2.0","id":3,"result":null}
 */

@@ -13,7 +13,7 @@ func TestFuncParser(t *testing.T) {
  usage:  用于获取区块信息
  params: 1: addr string  2: addr string 3: addr string  4: addr string
 return: 所有账户hash地址的数组
- example: curl http://localhost10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getNonce","params":["0xc4ac59f52b3052e5c14566ed397453ea913c6fbc"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getNonce","params":["0xc4ac59f52b3052e5c14566ed397453ea913c6fbc"], "id": 3}' -H "Content-Type:application/json"
  response:
 {
 	"jsonrpc": "2.0",

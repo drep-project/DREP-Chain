@@ -26,7 +26,7 @@ type BlockMgrAPI struct {
  params:
 	1. A signed transaction
  return: transaction hash
- example: curl http://localhost10085 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_sendRawTransaction","params":["0x40a287b6d30b05313131317a4120dd8c23c40910d038fa43b2f8932d3681cbe5ee3079b6e9de0bea6e8e6b2a867a561aa26e1cd6b62aa0422a043186b593b784bf80845c3fd5a7fbfe62e61d8564"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_sendRawTransaction","params":["0x40a287b6d30b05313131317a4120dd8c23c40910d038fa43b2f8932d3681cbe5ee3079b6e9de0bea6e8e6b2a867a561aa26e1cd6b62aa0422a043186b593b784bf80845c3fd5a7fbfe62e61d8564"], "id": 3}' -H "Content-Type:application/json"
  response:
 	{"jsonrpc":"2.0","id":1,"result":"0xf30e858667fa63bc57ae395c3f57ede9bb3ad4969d12f4bce51d900fb5931538"}
 */
@@ -51,7 +51,7 @@ func (blockMgrApi *BlockMgrAPI) SendRawTransaction(txbytes common.Bytes) (string
  params:
 	1. Query address
  return: Price and error message
- example: curl http://localhost10085 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_gasPrice","params":[], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_gasPrice","params":[], "id": 3}' -H "Content-Type:application/json"
  response:
 */
 func (blockMgrApi *BlockMgrAPI) GasPrice() (*big.Int, error) {
@@ -64,7 +64,7 @@ func (blockMgrApi *BlockMgrAPI) GasPrice() (*big.Int, error) {
  params:
 	1. Query address
  return: All transactions in the pool
- example: curl http://localhost10085 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_getPoolTransactions","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_getPoolTransactions","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
 */
 func (blockMgrApi *BlockMgrAPI) GetPoolTransactions(addr *crypto.CommonAddress) []types.Transactions {
@@ -77,7 +77,7 @@ func (blockMgrApi *BlockMgrAPI) GetPoolTransactions(addr *crypto.CommonAddress) 
  params:
 	1. Query address
  return: All transactions in the pool
- example: curl http://localhost10085 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_getTransactionCount","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_getTransactionCount","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
 */
 func (blockMgrApi *BlockMgrAPI) GetTransactionCount(addr *crypto.CommonAddress) uint64 {
@@ -90,7 +90,7 @@ func (blockMgrApi *BlockMgrAPI) GetTransactionCount(addr *crypto.CommonAddress) 
  params:
 	1. Query address
  return: The smallest nonce in the pending queue
- example: curl http://localhost10085 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_getPoolMiniPendingNonce","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"blockmgr_getPoolMiniPendingNonce","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
 */
 func (blockMgrApi *BlockMgrAPI) GetPoolMiniPendingNonce(addr *crypto.CommonAddress) uint64 {
@@ -104,7 +104,7 @@ func (blockMgrApi *BlockMgrAPI) GetPoolMiniPendingNonce(addr *crypto.CommonAddre
 	1. The address at which the transfer was initiated
 
  return: Complete transaction information
- example: curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"blockmgr_getTxInPool","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5"],"id":1}' http://127.0.0.110085
+ example: curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"blockmgr_getTxInPool","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5"],"id":1}' http://127.0.0.1:10085
  response:
    {
   "jsonrpc": "2.0",

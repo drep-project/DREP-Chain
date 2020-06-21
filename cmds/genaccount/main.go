@@ -266,7 +266,7 @@ func getPreminer() crypto.CommonAddress {
 		fmt.Println("Failed to generate node key: %v", err)
 	}
 
-	fmt.Println("Please remember your system private key:", common.Bytes2Hex(key.Serialize()))
+	fmt.Println("Please remember your system private key:", "0x"+common.Bytes2Hex(key.Serialize()))
 
 	return crypto.PubkeyToAddress(key.PubKey())
 }
