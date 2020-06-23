@@ -39,8 +39,8 @@ func (p2pApis *P2PApi) GetPeers() []string {
  response:
 
 */
-func (p2pApis *P2PApi) AddPeer(addr string) {
-	p2pApis.p2pService.AddPeer(addr)
+func (p2pApis *P2PApi) AddPeer(addr string) error {
+	return p2pApis.p2pService.AddPeer(addr)
 }
 
 /*

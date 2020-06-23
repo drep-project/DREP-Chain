@@ -301,16 +301,16 @@ func (chain *ChainApi) GetLogs(txHash crypto.Hash) []*types.Log {
 }
 
 /*
- name: getCancelCreditDetail
+ name: getCancelCreditDetailByTXHash
  usage: Get the back pledge or back vote information according to txhash
  params:
 	1. txhash
  return: {}
- example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCancelCreditDetail","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCancelCreditDetailByTXHash","params":["0x7d9dd32ca192e765ff2abd7c5f8931cc3f77f8f47d2d52170c7804c2ca2c5dd9"], "id": 3}' -H "Content-Type:application/json"
  response:
-   {"jsonrpc":"2.0","id":3,"result":""}
+   {"jsonrpc":"2.0","id":3,"result":[]}
 */
-func (chain *ChainApi) GetCancelCreditDetail(txHash crypto.Hash) []*types.CancelCreditDetail {
+func (chain *ChainApi) GetCancelCreditDetailByTXHash(txHash crypto.Hash) []*types.CancelCreditDetail {
 	//return chain.chainService.chainStore.GetLogs(txHash)
 	ids := make([]*types.CancelCreditDetail, 0)
 	rt := chain.dbQuery.GetReceipt(txHash)
@@ -347,7 +347,7 @@ func (chain *ChainApi) GetByteCode(addr *crypto.CommonAddress) hexutil.Bytes {
 }
 
 /*
- name: getVoteCreditDetails
+ name: getCreditDetails
  usage: Get all the details of the stake according to the address
  params:
 	1. address
