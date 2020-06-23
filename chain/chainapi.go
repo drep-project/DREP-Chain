@@ -146,14 +146,12 @@ func (chain *ChainApi) GetBlockGasInfo() string {
  response:
    {"jsonrpc":"2.0","id":3,"result":9987999999999984000000}
 */
-func (chain *ChainApi) GetBalance(addr string) string {
-	ethAddr := crypto.DrepToEth(addr)
-
+func (chain *ChainApi) GetBalance(addr crypto.CommonAddress) string {
 	store, err := store.TrieStoreFromStore(chain.store, chain.chainView.Tip().StateRoot)
 	if err != nil {
 		return ""
 	}
-	big := store.GetBalance(&ethAddr, chain.chainView.tip().Height)
+	big := store.GetBalance(&addr, chain.chainView.tip().Height)
 
 	return big.String()
 }
@@ -168,10 +166,9 @@ func (chain *ChainApi) GetBalance(addr string) string {
  response:
    {"jsonrpc":"2.0","id":3,"result":0}
 */
-func (chain *ChainApi) GetNonce(addr string) uint64 {
-	ethAddr := crypto.DrepToEth(addr)
+func (chain *ChainApi) GetNonce(addr crypto.CommonAddress) uint64 {
 	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
-	return trieQuery.GetNonce(&ethAddr)
+	return trieQuery.GetNonce(&addr)
 }
 
 /*
@@ -184,10 +181,9 @@ func (chain *ChainApi) GetNonce(addr string) uint64 {
  response:
    {"jsonrpc":"2.0","id":3,"result":1}
 */
-func (chain *ChainApi) GetReputation(addr string) *big.Int {
-	ethAddr := crypto.DrepToEth(addr)
+func (chain *ChainApi) GetReputation(addr crypto.CommonAddress) *big.Int {
 	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
-	return trieQuery.GetReputation(&ethAddr)
+	return trieQuery.GetReputation(&addr)
 }
 
 /*
@@ -240,10 +236,9 @@ func (chain *ChainApi) GetTransactionByBlockHeightAndIndex(height uint64, index 
  response:
 	{"jsonrpc":"2.0","id":3,"result":"tom"}
 */
-func (chain *ChainApi) GetAliasByAddress(addr string) string {
-	ethAddr := crypto.DrepToEth(addr)
+func (chain *ChainApi) GetAliasByAddress(addr *crypto.CommonAddress) string {
 	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
-	return trieQuery.GetStorageAlias(&ethAddr)
+	return trieQuery.GetStorageAlias(addr)
 }
 
 /*
@@ -256,12 +251,9 @@ func (chain *ChainApi) GetAliasByAddress(addr string) string {
  response:
    {"jsonrpc":"2.0","id":3,"result":"0x8a8e541ddd1272d53729164c70197221a3c27486"}
 */
-func (chain *ChainApi) GetAddressByAlias(alias string) (string, error) {
-
+func (chain *ChainApi) GetAddressByAlias(alias string) (*crypto.CommonAddress, error) {
 	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
-	ethAddr, err := trieQuery.AliasGet(alias)
-
-	return crypto.EthToDrep(ethAddr), err
+	return trieQuery.AliasGet(alias)
 }
 
 /*
@@ -349,10 +341,9 @@ func (chain *ChainApi) GetCancelCreditDetail(txHash crypto.Hash) []*types.Cancel
  response:
    {"jsonrpc":"2.0","id":3,"result":"0x00"}
 */
-func (chain *ChainApi) GetByteCode(addr string) hexutil.Bytes {
-	ethAddr := crypto.DrepToEth(addr)
+func (chain *ChainApi) GetByteCode(addr *crypto.CommonAddress) hexutil.Bytes {
 	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
-	return trieQuery.GetByteCode(&ethAddr)
+	return trieQuery.GetByteCode(addr)
 }
 
 /*
@@ -365,10 +356,9 @@ func (chain *ChainApi) GetByteCode(addr string) hexutil.Bytes {
  response:
    {"jsonrpc":"2.0","id":3,"result":"[{\"Addr\":\"DREPd05d5f324ada3c418e14cd6b497f2f36d60ba607\",\"HeghtValues\":[{\"CreditHeight\":1329,\"CreditValue\":\"0x11135\"}]}]"}
 */
-func (chain *ChainApi) GetCreditDetails(addr string) string {
-	ethAddr := crypto.DrepToEth(addr)
+func (chain *ChainApi) GetCreditDetails(addr *crypto.CommonAddress) string {
 	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
-	return trieQuery.GetVoteCreditDetails(&ethAddr)
+	return trieQuery.GetVoteCreditDetails(addr)
 }
 
 /*
@@ -381,10 +371,9 @@ func (chain *ChainApi) GetCreditDetails(addr string) string {
  response:
    {"jsonrpc":"2.0","id":3,"result":"{\"DREP300fc5a14e578be28c64627c0e7e321771c58cd4\":\"0x3641100\"}"}
 */
-func (chain *ChainApi) GetCancelCreditDetails(addr string) string {
-	ethAddr := crypto.DrepToEth(addr)
+func (chain *ChainApi) GetCancelCreditDetails(addr *crypto.CommonAddress) string {
 	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
-	return trieQuery.GetCancelCreditDetails(&ethAddr)
+	return trieQuery.GetCancelCreditDetails(addr)
 }
 
 /*

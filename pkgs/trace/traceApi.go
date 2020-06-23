@@ -146,9 +146,8 @@ func (traceApi *TraceApi) DecodeTrasnaction(bytes common.Bytes) (*RpcTransaction
 	  ]
 	}
 */
-func (traceApi *TraceApi) GetSendTransactionByAddr(addr string, pageIndex, pageSize int) []*RpcTransaction {
-	ethAddr := crypto.DrepToEth(addr)
-	return traceApi.blockAnalysis.store.GetSendTransactionsByAddr(&ethAddr, pageIndex, pageSize)
+func (traceApi *TraceApi) GetSendTransactionByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*RpcTransaction {
+	return traceApi.blockAnalysis.store.GetSendTransactionsByAddr(addr, pageIndex, pageSize)
 }
 
 /*
@@ -183,9 +182,8 @@ func (traceApi *TraceApi) GetSendTransactionByAddr(addr string, pageIndex, pageS
 	  ]
 	}
 */
-func (traceApi *TraceApi) GetReceiveTransactionByAddr(addr string, pageIndex, pageSize int) []*RpcTransaction {
-	ethAddr := crypto.DrepToEth(addr)
-	return traceApi.blockAnalysis.store.GetReceiveTransactionsByAddr(&ethAddr, pageIndex, pageSize)
+func (traceApi *TraceApi) GetReceiveTransactionByAddr(addr *crypto.CommonAddress, pageIndex, pageSize int) []*RpcTransaction {
+	return traceApi.blockAnalysis.store.GetReceiveTransactionsByAddr(addr, pageIndex, pageSize)
 }
 
 /*
