@@ -128,7 +128,7 @@ func (chainBlockValidator *TemplateBlockValidator) RouteTransaction(context *cha
 			receipt.TxHash = *tx.TxHash()
 			receipt.GasUsed = txContext.GasUsed()
 			// if the transaction created a contract, store the creation address in the receipt.
-			if (tx.To() == nil || tx.To().IsEmpty()) && tx.Type() != types.SetAliasType {
+			if (tx.To() == nil || tx.To().IsEmpty()) && tx.Type() == types.CreateContractType {
 				receipt.ContractAddress = crypto.CreateAddress(*from, tx.Nonce())
 				fmt.Println("contractAddr:", receipt.ContractAddress)
 			}

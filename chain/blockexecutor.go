@@ -212,7 +212,7 @@ func (chainBlockValidator *ChainBlockValidator) RouteTransaction(context *BlockE
 			receipt.GasUsed = txContext.GasUsed()
 			receipt.ContractAddress = etr.ContractAddr
 			// if the transaction created a contract, store the creation address in the receipt.
-			if (tx.To() == nil || tx.To().IsEmpty()) && tx.Type() != types.SetAliasType {
+			if (tx.To() == nil || tx.To().IsEmpty()) && tx.Type() == types.CreateContractType {
 				receipt.ContractAddress = crypto.CreateAddress(*from, tx.Nonce())
 				fmt.Println(receipt.ContractAddress)
 			}

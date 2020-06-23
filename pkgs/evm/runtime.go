@@ -94,7 +94,7 @@ func (evmService *EvmService) Eval(state vm.VMState, tx *types.Transaction, head
 	if err != nil {
 		return nil, uint64(0), crypto.CommonAddress{}, false, err
 	}
-	contractCreation := (tx.To() == nil || tx.To().IsEmpty()) && tx.Type() != types.SetAliasType
+	contractCreation := (tx.To() == nil || tx.To().IsEmpty()) && tx.Type() == types.CreateContractType
 
 	// Create a new context to be used in the EVM environment
 	context := NewEVMContext(tx, header, sender)
