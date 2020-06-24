@@ -48,8 +48,8 @@ validation mode, such as [wallet](https://drep.top/appdrep1.2.0.apk).
 
 ## Minimum Recommended Specifications (drep only)
 
-* 100 GB disk space (as of September 2018, increases over time)
-* 1.5GB memory (RAM)
+* 128 GB disk space (as of September 2018, increases over time)
+* 4 GB memory (RAM)
 * ~150MB/day download, ~1.5GB/day upload
   * Plus one-time initial download of the entire block chain
 * Windows 7/8.x/10 (server preferred), macOS, Linux
@@ -63,7 +63,7 @@ connected to the internet and meets the minimum recommended specifications, and
 launch it.
 
 Also, make sure your firewall is configured to allow inbound connections to port
-55555.
+10086 and 10085.
 
 <a name="Installation" />
 
@@ -71,21 +71,21 @@ Also, make sure your firewall is configured to allow inbound connections to port
 
 ### Binaries (Windows/Linux/macOS)
 
-Binary releases and config files are provided for common operating systems and architectures:
+According to your needs, you can refer to the following links to complete the build process
 
-https://github.com/drep-project/DREP-Chain/releases
+[Main-net](http://docs.drep.org/advanced/using-mainnet.mdg) 
 
+[Test-net](http://docs.drep.org/advanced/using-testnet/) 
 
-### Build from source (all platforms)
-
-Building or updating from source requires the following build dependencies:
-
-http://docs.drep.org/advanced/solo-miner/
+[Private-net](http://docs.drep.org/advanced/using-privatenet/) 
 
 
-### Running Tests
+### Build from source code(all platforms)
 
-http://docs.drep.org/advanced/using-testnet/
+Building or updating from source requires the following build dependencies
+
+[Build from source code](http://docs.drep.org/advanced/build-sourcecode/) 
+
 
 ## Documentation
 
