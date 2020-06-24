@@ -20,9 +20,9 @@ type BlockMultiSigValidator struct {
 	producerNum  int
 }
 
-func NewBlockMultiSigValidator(getProducers GetProducers, getBlock GetBlock, producerNum int) *BlockMultiSigValidator {
-	return &BlockMultiSigValidator{getProducers, getBlock, producerNum}
-}
+//func NewBlockMultiSigValidator(getProducers GetProducers, getBlock GetBlock, producerNum int) *BlockMultiSigValidator {
+//	return &BlockMultiSigValidator{getProducers, getBlock, producerNum}
+//}
 
 func (blockMultiSigValidator *BlockMultiSigValidator) VerifyHeader(header, parent *types.BlockHeader) error {
 	// check multisig
@@ -46,7 +46,7 @@ func (blockMultiSigValidator *BlockMultiSigValidator) VerifyBody(block *types.Bl
 		return err
 	}
 
-	if blockMultiSigValidator.producerNum != len(multiSig.Bitmap) {
+	if len(producers) != len(multiSig.Bitmap) {
 		return fmt.Errorf("producer num:%d != multisig num:%d", blockMultiSigValidator.producerNum, len(multiSig.Bitmap))
 	}
 
@@ -79,6 +79,11 @@ func (blockMultiSigValidator *BlockMultiSigValidator) ExecuteBlock(context *chai
 	if err != nil {
 		return nil
 	}
+
+	if len(producers) != len(multiSig.Bitmap) {
+		return fmt.Errorf("executeBlock producer num:%d != multisig num:%d", blockMultiSigValidator.producerNum, len(multiSig.Bitmap))
+	}
+
 	calculator := NewRewardCalculator(context.TrieStore, multiSig, producers, context.GasFee, context.Block.Header.Height)
 	return calculator.AccumulateRewards(context.Block.Header.Height)
 }

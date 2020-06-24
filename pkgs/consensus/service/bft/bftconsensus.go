@@ -139,7 +139,7 @@ func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Blo
 		return nil, ErrNotMyTurn
 	}
 
-	minMiners := int(len(producers) * 2 / 3)
+	minMiners := int(bftConsensus.config.ProducerNum * 2 / 3)
 	if len(producers)*2%3 != 0 {
 		minMiners++
 	}
