@@ -6,31 +6,35 @@ const doctmpl = `
 {{ .FuncDocStr | html}}{{end}}`
 
 const methodtmpl = `{{range $index2, $method := .}}
-## {{inc $index2}}. {{$method.Prefix}}_{{$method.Name}}
-<font size=5> Usage：{{ with (index .Tokens "usage:") }}{{ .Str }}{{ end }} </font>  
+### {{inc $index2}}. {{$method.Prefix}}_{{$method.Name}}
+- **Usage：**  
 
-<font size=5> Params：</font>  
+&emsp;&emsp;{{ with (index .Tokens "usage:") }}{{ .Str }}{{ end }}
 
-{{ with (index $method.Tokens "params:") }}{{range $index, $params := .Params}} {{inc $index}}. {{$params}}
+- **Params：**  
+
+&emsp;&emsp;{{ with (index $method.Tokens "params:") }}{{range $index, $params := .Params}} {{inc $index}}. {{$params}}
 {{end}}{{ end }}
-<font size=5> Return：{{ with (index $method.Tokens "return:") }}{{.Str | html}}{{ end }} </font>
+- **Return：{{ with (index $method.Tokens "return:") }}{{.Str | html}}{{ end }}**
 
-<font size=5> Example: </font>   
+- **Example:**  
 
-<font size=4> shell: </font>
+**shell:**
 ` + "```" + `shell
 {{ with (index $method.Tokens "example:") }}{{.Str | html}}{{ end }}
 ` + "```" + `
-<font size=4> cli: </font>
+**cli:**
 ` + "```" + `cli
 drepClient 127.0.0.1:10085 {{$method.Prefix}}_{{$method.Name}} 3
 ` + "```" + `
 
-<font size=5> Response：</font>
+- **Response：**
 
 ` + "```" + `json
 {{ with (index $method.Tokens "response:") }}{{ .Str | html }}{{ end }}
 ` + "```" + `
+
+---
 
 {{end}}`
 
