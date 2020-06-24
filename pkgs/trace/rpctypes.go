@@ -76,7 +76,7 @@ func (rpcBlock *RpcBlock) From(block *types.Block, addresses []crypto.CommonAddr
 		drepbinary.Unmarshal(block.Proof.Evidence, multiSig)
 		proof.Evidence = hex.EncodeToString(block.Proof.Evidence)
 
-		proof.LeaderAddress = addresses[multiSig.Leader].String()
+		proof.LeaderAddress = block.Header.MinerAddr.String()
 		for index, val := range multiSig.Bitmap {
 			if val == 1 {
 				if len(addresses) < index {
