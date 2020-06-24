@@ -34,7 +34,7 @@ func (calculator *RewardCalculator) AccumulateRewards(height uint64) error {
 	reward := big.NewInt(params.Rewards)
 	reward.Mul(reward, new(big.Int).SetUint64(params.Coin))
 
-	rate := int64(height / (4 * params.BlockCountOfEveryYear))
+	rate := int64(height / (4 * params.BlockCountOfEveryYear)) //Number of new blocks in 4 years
 	rate = int64(math.Exp2(float64(rate)))
 	reward.Div(reward, new(big.Int).SetInt64(rate))
 

@@ -3,7 +3,6 @@ package component
 import (
 	"bytes"
 	"github.com/aristanetworks/goarista/test"
-	"github.com/drep-project/DREP-Chain/app"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/types"
 	"testing"
@@ -22,7 +21,7 @@ func Test_CacheStoreAndGetKey(t *testing.T) {
 	}
 	tests := make([]*TestData, count)
 	for i := 0; i < count; i++ {
-		node := types.NewNode(nil, app.ChainIdType{})
+		node := types.NewNode(nil, 1)
 		cacheStore.StoreKey(node, password)
 		tests[i] = &TestData{
 			Query:      node.Address,
@@ -30,7 +29,7 @@ func Test_CacheStoreAndGetKey(t *testing.T) {
 		}
 	}
 	for i := 0; i < count; i++ {
-		node := types.NewNode(nil, app.ChainIdType{})
+		node := types.NewNode(nil, 1)
 		tests = append(tests, &TestData{
 			Query:      node.Address,
 			WantResult: nil,
@@ -39,7 +38,7 @@ func Test_CacheStoreAndGetKey(t *testing.T) {
 	}
 
 	for _, tData := range tests {
-		node, err := cacheStore.GetKey(tData.Query, password)
+		node, err := cacheStore.GetKey(tData.Query)
 		if err != nil {
 			if err != tData.WantError {
 				t.Error("key missing in store：", tData.Query)
@@ -66,7 +65,7 @@ func Test_CacheExportKey(t *testing.T) {
 	}
 	tests := make([]*TestData, count)
 	for i := 0; i < count; i++ {
-		node := types.NewNode(nil, app.ChainIdType{})
+		node := types.NewNode(nil, 1)
 		cacheStore.StoreKey(node, password)
 		tests[i] = &TestData{
 			Query:      node.Address,
@@ -74,7 +73,7 @@ func Test_CacheExportKey(t *testing.T) {
 		}
 	}
 	for i := 0; i < count; i++ {
-		node := types.NewNode(nil, app.ChainIdType{})
+		node := types.NewNode(nil, 1)
 		tests = append(tests, &TestData{
 			Query:      node.Address,
 			WantResult: nil,
@@ -116,7 +115,7 @@ func Test_CacheClearAndReloadKeys(t *testing.T) {
 	}
 	tests := make([]*TestData, count)
 	for i := 0; i < count; i++ {
-		node := types.NewNode(nil, app.ChainIdType{})
+		node := types.NewNode(nil, 1)
 		cacheStore.StoreKey(node, password)
 		tests[i] = &TestData{
 			Addr:    node.Address,
@@ -124,7 +123,7 @@ func Test_CacheClearAndReloadKeys(t *testing.T) {
 		}
 	}
 
-	cacheStore.ClearKeys()
+	//cacheStore.ClearKey()
 	keys, _ := cacheStore.ExportKey(password)
 	for _, node := range keys {
 		if node.PrivateKey != nil {
@@ -132,7 +131,7 @@ func Test_CacheClearAndReloadKeys(t *testing.T) {
 		}
 	}
 
-	cacheStore.LoadKeys(password)
+	//cacheStore.LoadKeys(password)
 	keys, _ = cacheStore.ExportKey(password)
 	for _, tData := range tests {
 		isFind := false

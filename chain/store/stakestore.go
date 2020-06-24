@@ -19,7 +19,7 @@ const (
 	//StakeStorage With the address as the KEY, the relevant content is stored
 	StakeStorage = "StakeStorage"
 
-	RegisterPledgeLimit uint64 = 10000000     //The candidate node needs the total number of collateral COINS, unit 1drep
+	RegisterPledgeLimit uint64 = 50000000     //The candidate node needs the total number of collateral COINS, unit 1drep
 	interestRate               = 1000000 * 12 //Each storage height rewards the interest rate
 
 	threeMonthHeight = 1555200 //Less than 3 months out of the block height

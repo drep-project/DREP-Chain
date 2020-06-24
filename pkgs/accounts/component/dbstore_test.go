@@ -2,7 +2,6 @@ package component
 
 import (
 	"bytes"
-	"github.com/drep-project/DREP-Chain/app"
 	"github.com/drep-project/DREP-Chain/types"
 	"testing"
 )
@@ -18,7 +17,7 @@ func Test_DBGetKey(t *testing.T) {
 		clear("test_db1")
 	}()
 
-	node := types.NewNode(nil, app.ChainIdType{})
+	node := types.NewNode(nil, 1)
 	err := fileStore.StoreKey(node, pass)
 	if err != nil {
 		log.Fatal(err)
@@ -44,7 +43,7 @@ func Test_DBExportKey(t *testing.T) {
 	count := 10
 	nodes := make([]*types.Node, count)
 	for i := 0; i < count; i++ {
-		node := types.NewNode(nil, app.ChainIdType{})
+		node := types.NewNode(nil, 1)
 		err := fileStore.StoreKey(node, pass)
 		if err != nil {
 			log.Fatal(err)
