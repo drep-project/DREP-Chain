@@ -79,7 +79,9 @@ func (rpcBlock *RpcBlock) From(block *types.Block, addresses []crypto.CommonAddr
 		proof.LeaderAddress = addresses[multiSig.Leader].String()
 		for index, val := range multiSig.Bitmap {
 			if val == 1 {
-				proof.MinorAddresses = append(proof.MinorAddresses, addresses[index].String())
+				if len(addresses) < index {
+					proof.MinorAddresses = append(proof.MinorAddresses, addresses[index].String())
+				}
 			}
 		}
 		rpcBlock.Proof = proof
