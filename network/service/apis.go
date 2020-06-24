@@ -56,14 +56,14 @@ func (p2pApis *P2PApi) RemovePeer(addr string) {
 }
 
 /*
- name: LocalNode
+ name: localNode
  usage: Need to get local eNode for P2P link
- params:""
+ params:
  return: local enode
- example: curl http://127.0.0.1:10085 -X POST --data '{"jsonrpc":"2.0","method":"p2p_localNode","params":"", "id": 3}' -H "Content-Type:application/json"
+ example:  curl http://127.0.0.1:10085 -X POST --data '{"jsonrpc":"2.0","method":"p2p_localNode","params":[""], "id": 3}' -H "Content-Type:application/json"
  response:
+   {"enode://9064107749f41ffffd9177f27af7bb854d702d930462c4be2d91d1772b3f03f3@192.168.31.63:10086}
 */
-
 func (p2pApis *P2PApi) LocalNode() *enode.Node {
 	return p2pApis.p2pService.LocalNode()
 }
