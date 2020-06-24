@@ -181,14 +181,14 @@ func (trieStore *trieStakeStore) VoteCredit(fromAddr, toAddr *crypto.CommonAddre
 		if rc.Addr.String() == fromAddr.String() {
 			found = true
 
-			storage.RC[index].HeghtValues = append(storage.RC[index].HeghtValues, hv)
+			storage.RC[index].HeightValues = append(storage.RC[index].HeightValues, hv)
 			break
 		}
 	}
 
 	if !found {
-		rc := types.ReceivedCredit{Addr: *fromAddr, HeghtValues: make([]types.HeightValue, 0, 1)}
-		rc.HeghtValues = append(rc.HeghtValues, hv)
+		rc := types.ReceivedCredit{Addr: *fromAddr, HeightValues: make([]types.HeightValue, 0, 1)}
+		rc.HeightValues = append(rc.HeightValues, hv)
 		storage.RC = append(storage.RC, rc)
 	}
 
@@ -217,7 +217,7 @@ func (trieStore *trieStakeStore) cancelCredit(fromAddr, toAddr *crypto.CommonAdd
 		if rc.Addr.String() == fromAddr.String() {
 			found = true
 
-			for _, vc := range rc.HeghtValues {
+			for _, vc := range rc.HeightValues {
 				leftCredit.Add(leftCredit, vc.CreditValue.ToInt())
 			}
 
@@ -227,7 +227,7 @@ func (trieStore *trieStakeStore) cancelCredit(fromAddr, toAddr *crypto.CommonAdd
 				left := 0
 				leftHeightValues := make([]types.HeightValue, 0)
 
-				for hvIndex, heightValue := range rc.HeghtValues {
+				for hvIndex, heightValue := range rc.HeightValues {
 					if cancelBalanceTmp.Cmp(heightValue.CreditValue.ToInt()) >= 0 {
 
 						//interest := getInterst(heightValue.CreditHeight, height+changeInterval, heightValue.CreditValue.ToInt())
@@ -238,8 +238,8 @@ func (trieStore *trieStakeStore) cancelCredit(fromAddr, toAddr *crypto.CommonAdd
 						cancelBalanceTmp.Sub(cancelBalanceTmp, heightValue.CreditValue.ToInt())
 
 						if cancelBalanceTmp.Cmp(new(big.Int).SetUint64(0)) == 0 {
-							leftHeightValues = append(leftHeightValues, rc.HeghtValues[hvIndex+1:]...)
-							rc.HeghtValues = leftHeightValues
+							leftHeightValues = append(leftHeightValues, rc.HeightValues[hvIndex+1:]...)
+							rc.HeightValues = leftHeightValues
 							break
 						}
 
@@ -252,13 +252,13 @@ func (trieStore *trieStakeStore) cancelCredit(fromAddr, toAddr *crypto.CommonAdd
 
 						cv := heightValue.CreditValue.ToInt()
 						leftHeightValues = append(leftHeightValues, types.HeightValue{heightValue.CreditHeight, common.Big(*cv.Sub(cv, cancelBalanceTmp))})
-						leftHeightValues = append(leftHeightValues, rc.HeghtValues[hvIndex+1:]...)
-						rc.HeghtValues = leftHeightValues
+						leftHeightValues = append(leftHeightValues, rc.HeightValues[hvIndex+1:]...)
+						rc.HeightValues = leftHeightValues
 						left++
 						break
 					}
 				}
-				if len(rc.HeghtValues) == 0 {
+				if len(rc.HeightValues) == 0 {
 					storage.RC = append(storage.RC[0:index], storage.RC[index+1:]...)
 				} else {
 					storage.RC[index] = rc
@@ -395,7 +395,7 @@ func (trieStore *trieStakeStore) GetCreditCount(addr *crypto.CommonAddress) *big
 
 	total := new(big.Int)
 	for _, rc := range storage.RC {
-		for _, hv := range rc.HeghtValues {
+		for _, hv := range rc.HeightValues {
 			total.Add(total, hv.CreditValue.ToInt())
 		}
 	}
@@ -412,7 +412,7 @@ func (trieStore *trieStakeStore) GetCreditDetails(addr *crypto.CommonAddress) ma
 
 	for _, rc := range storage.RC {
 		total := new(big.Int)
-		for _, value := range rc.HeghtValues {
+		for _, value := range rc.HeightValues {
 			total.Add(total, value.CreditValue.ToInt())
 		}
 		m[rc.Addr] = *total //storage.ReceivedCreditValue[index]
@@ -444,19 +444,19 @@ func (trieStore *trieStakeStore) CandidateCredit(addresses *crypto.CommonAddress
 		found := false
 		for index, rc := range storage.RC {
 			if rc.Addr.String() == addresses.String() {
-				for _, hv := range rc.HeghtValues {
+				for _, hv := range rc.HeightValues {
 					totalBalance.Add(totalBalance, hv.CreditValue.ToInt())
 				}
 
-				storage.RC[index].HeghtValues = append(storage.RC[index].HeghtValues, hv)
+				storage.RC[index].HeightValues = append(storage.RC[index].HeightValues, hv)
 				found = true
 				break
 			}
 		}
 
 		if !found {
-			rc := types.ReceivedCredit{Addr: *addresses, HeghtValues: make([]types.HeightValue, 0, 1)}
-			rc.HeghtValues = append(rc.HeghtValues, hv)
+			rc := types.ReceivedCredit{Addr: *addresses, HeightValues: make([]types.HeightValue, 0, 1)}
+			rc.HeightValues = append(rc.HeightValues, hv)
 			storage.RC = append(storage.RC, rc)
 		}
 

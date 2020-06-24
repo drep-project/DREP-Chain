@@ -354,7 +354,7 @@ func (chain *ChainApi) GetByteCode(addr *crypto.CommonAddress) hexutil.Bytes {
  return: bytecode
  example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getCreditDetails","params":["0x8a8e541ddd1272d53729164c70197221a3c27486"], "id": 3}' -H "Content-Type:application/json"
  response:
-   {"jsonrpc":"2.0","id":3,"result":"[{\"Addr\":\"DREPd05d5f324ada3c418e14cd6b497f2f36d60ba607\",\"HeghtValues\":[{\"CreditHeight\":1329,\"CreditValue\":\"0x11135\"}]}]"}
+   {"jsonrpc":"2.0","id":3,"result":"[{\"Addr\":\"DREPd05d5f324ada3c418e14cd6b497f2f36d60ba607\",\"HeightValues\":[{\"CreditHeight\":1329,\"CreditValue\":\"0x11135\"}]}]"}
 */
 func (chain *ChainApi) GetCreditDetails(addr *crypto.CommonAddress) string {
 	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
@@ -622,7 +622,7 @@ func (trieQuery *TrieQuery) GetCandidateAddrs() string {
 
 		total := new(big.Int)
 		for _, rc := range storage.RC {
-			for _, hv := range rc.HeghtValues {
+			for _, hv := range rc.HeightValues {
 				total.Add(total, hv.CreditValue.ToInt())
 			}
 		}
@@ -661,7 +661,7 @@ func (trieQuery *TrieQuery) GetCancelCreditDetails(addr *crypto.CommonAddress) s
 
 	//for _, rc := range storage.RC {
 	//	total := new(big.Int)
-	//	for _, value := range rc.HeghtValues {
+	//	for _, value := range rc.HeightValues {
 	//		total.Add(total, &value.CreditValue)
 	//	}
 	//	m[rc.Addr] = common.Big(*total)
