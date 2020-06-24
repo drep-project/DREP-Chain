@@ -121,7 +121,7 @@ func (s Store) GetChangeInterval() (uint64, error) {
 		return 0, err
 	}
 
-	return changeInterval, nil
+	return changeInterval * 100, nil //after 10000 block,refund to account
 
 }
 func (s Store) CancelCandidateCredit(fromAddr *crypto.CommonAddress, cancelBalance *big.Int, height uint64) (*types.CancelCreditDetail, error) {
