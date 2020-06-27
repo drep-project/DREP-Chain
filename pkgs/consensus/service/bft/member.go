@@ -209,7 +209,7 @@ func (member *Member) OnSetUp(peer consensusTypes.IPeerInfo, setUp *Setup) {
 		default:
 		}
 	} else {
-		log.Errorf("leader peer id:%s != peer:%s", member.leader.Peer.ID(), peer.ID())
+		log.Errorf("leader peer id:%s,ip:%s != peer:%s,ip:%s", member.leader.Peer.ID(), member.leader.Peer.IP(), peer.ID(), peer.IP())
 		//check fail not response and start new round
 		member.pushErrorMsg(ErrLeaderMistake)
 	}
