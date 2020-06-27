@@ -95,13 +95,10 @@ func (blockAnalysis *BlockAnalysis) process() error {
 			blockAnalysis.store.InsertRecord(block.Block)
 		case block := <-blockAnalysis.detachBlockChan:
 			blockAnalysis.store.DelRecord(block)
-		default:
-			select {
-			case <-blockAnalysis.readyToQuit:
-				<-blockAnalysis.readyToQuit
-				goto STOP
-			default:
-			}
+		case <-blockAnalysis.readyToQuit:
+			//fmt.Println("quit block analysis")
+			//<-blockAnalysis.readyToQuit
+			goto STOP
 		}
 	}
 STOP:
@@ -116,8 +113,9 @@ func (blockAnalysis *BlockAnalysis) Close() error {
 		blockAnalysis.detachBlockSub.Unsubscribe()
 	}
 	if blockAnalysis.readyToQuit != nil {
-		blockAnalysis.readyToQuit <- struct{}{} // tell process to stop in deal all blocks in chanel
-		blockAnalysis.readyToQuit <- struct{}{} // wait for process is ok to stop
+		//blockAnalysis.readyToQuit <- struct{}{} // tell process to stop in deal all blocks in chanel
+		//blockAnalysis.readyToQuit <- struct{}{} // wait for process is ok to stop
+		close(blockAnalysis.readyToQuit)
 		blockAnalysis.store.Close()
 	}
 	return nil
