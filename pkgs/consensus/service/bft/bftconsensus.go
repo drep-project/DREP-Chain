@@ -176,10 +176,12 @@ func (bftConsensus *BftConsensus) processPeers() {
 			bftConsensus.peerLock.Lock()
 			bftConsensus.onLinePeer[addPeer.ID()] = addPeer
 			bftConsensus.peerLock.Unlock()
+			log.Info("bft new peer:%s", addPeer.IP())
 		case removePeer := <-bftConsensus.removePeerChan:
 			bftConsensus.peerLock.Lock()
 			delete(bftConsensus.onLinePeer, removePeer.ID())
 			bftConsensus.peerLock.Unlock()
+			log.Info("bft remove peer:%s", removePeer.IP())
 
 		case <-bftConsensus.quit:
 			return
@@ -517,7 +519,9 @@ func (bftConsensus *BftConsensus) prepareForMining(p2p p2pService.P2P) {
 			if found {
 				for _, p := range tempProduces {
 					if _, ok := bftConsensus.onLinePeer[p.Node.ID().String()]; !ok {
+						p2p.RemovePeer(p.Node.String())
 						p2p.AddPeer(p.Node.String())
+						log.Trace("prepare for mining,add peer:", p.Node.String())
 					}
 				}
 			}
