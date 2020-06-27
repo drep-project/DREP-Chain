@@ -126,7 +126,7 @@ var (
 		Config: p2p.Config{
 			DialRatio:       3,
 			ListenAddr:      "0.0.0.0:55555",
-			MaxPeers:        20,
+			MaxPeers:        25,
 			MaxPendingPeers: 10,
 			NoDiscovery:     false,
 			DiscoveryV5:     true,
