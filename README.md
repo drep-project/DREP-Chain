@@ -73,11 +73,11 @@ Also, make sure your firewall is configured to allow inbound connections to port
 
 According to your needs, you can refer to the following links to complete the build process
 
-[Main-net](http://docs.drep.org/advanced/using-mainnet/) 
+[Mainnet](http://docs.drep.org/advanced/using-mainnet/) 
 
-[Test-net](http://docs.drep.org/advanced/using-testnet/) 
+[Testnet](http://docs.drep.org/advanced/using-testnet/) 
 
-[Private-net](http://docs.drep.org/advanced/using-privatenet/) 
+[Privatenet](http://docs.drep.org/advanced/using-privatenet/) 
 
 
 ### Build from source code(all platforms)
