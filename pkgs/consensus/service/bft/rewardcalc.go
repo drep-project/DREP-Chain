@@ -59,6 +59,7 @@ func (calculator *RewardCalculator) AccumulateRewards(height uint64) error {
 	//fmt.Println(leaderReward.String(), otherReward.String())
 	total := new(big.Int)
 	supporters := calculator.trieStore.GetCreditDetails(&leaderAddr)
+	delete(supporters, leaderAddr)
 
 	for _, v := range supporters {
 		total = total.Add(total, &v)
@@ -75,18 +76,5 @@ func (calculator *RewardCalculator) AccumulateRewards(height uint64) error {
 		}
 	}
 
-	//num := calculator.sig.Num() - 1
-	//for index, isCommit := range calculator.sig.Bitmap {
-	//	if isCommit == 1 {
-	//		addr := calculator.producers[index].Address()
-	//		if addr != leaderAddr {
-	//			r.Div(reward, new(big.Int).SetInt64(int64(num*2)))
-	//			err = calculator.trieStore.AddBalance(&addr, calculator.height, r)
-	//			if err != nil {
-	//				return err
-	//			}
-	//		}
-	//	}
-	//}
 	return nil
 }
