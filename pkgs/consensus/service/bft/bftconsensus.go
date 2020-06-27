@@ -493,7 +493,7 @@ func (bftConsensus *BftConsensus) Close() {
 
 func (bftConsensus *BftConsensus) prepareForMining(p2p p2pService.P2P) {
 	for {
-		timer := time.NewTicker(time.Second * time.Duration(bftConsensus.config.BlockInterval))
+		timer := time.NewTicker(time.Second * 3)
 		defer timer.Stop()
 
 		select {
