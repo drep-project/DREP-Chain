@@ -101,7 +101,9 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 					case <-bftConsensusService.quit:
 						log.Info("consensuse protocol ,remove peer, ip", peer.IP())
 					default:
+						log.WithField("protocol out, remove peer ip", peer.IP()).Info("consensuse protocol")
 						removePeerFeed.Send(pi)
+						log.WithField("protocol out , remove peer ip", peer.IP()).Info("consensuse protocol,remove ok")
 					}
 				}()
 				for {
