@@ -77,7 +77,7 @@ According to your needs, you can refer to the following links to complete the bu
 
 [Testnet](http://docs.drep.org/advanced/using-testnet/) 
 
-[Privatenet](http://docs.drep.org/advanced/using-privatenet/) 
+[Privatenet](http://docs.drep.org/advanced/privatenet/) 
 
 
 ### Build from source code(all platforms)
