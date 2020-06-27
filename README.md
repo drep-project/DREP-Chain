@@ -73,7 +73,7 @@ Also, make sure your firewall is configured to allow inbound connections to port
 
 According to your needs, you can refer to the following links to complete the build process
 
-[Main-net](http://docs.drep.org/advanced/using-mainnet.mdg) 
+[Main-net](http://docs.drep.org/advanced/using-mainnet/) 
 
 [Test-net](http://docs.drep.org/advanced/using-testnet/) 
 
