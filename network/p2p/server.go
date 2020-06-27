@@ -820,7 +820,7 @@ func (srv *Server) encHandshakeChecks(peers map[enode.ID]*Peer, inboundCount int
 		return DiscTooManyPeers
 	case peers[c.peerNode.ID()] != nil:
 		p := peers[c.peerNode.ID()]
-		log.WithField("old peer ip", p.IP()).Info("encHandshakeChecks err")
+		log.WithField("old peer ip", p.IP()).WithField("node", c.peerNode.ID()).Info("encHandshakeChecks err")
 		return DiscAlreadyConnected
 	case c.peerNode.ID() == srv.localnode.ID():
 		return DiscSelf
