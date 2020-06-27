@@ -21,25 +21,31 @@ GORUN-LINXU64 = env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go buil
 GORUN-DARWIN64 = env CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 GO111MODULE=on go build
 all:
 	#win64
-	$(GORUN-WIN) -o $(BIN)/win64/drep.exe ./cmds/drep/drep.go
-	$(GORUN-WIN) -o $(BIN)/win64/drepClient.exe ./cmds/drepClient/main.go
-	$(GORUN-WIN) -o $(BIN)/win64/produceConfig/genaccount.exe ./cmds/genaccount/main.go
-	$(GORUN-WIN) -o $(BIN)/win64/genapicode.exe ./cmds/genapicode/main.go
-	$(GORUN-WIN) -o $(BIN)/win64/gendoc.exe ./cmds/gendoc/*.go
+	$(GORUN-WIN) -o $(BIN)/drep-win-amd64-v1.0.0/drep.exe ./cmds/drep/drep.go
+	$(GORUN-WIN) -o $(BIN)/drep-win-amd64-v1.0.0/drep-cli.exe ./cmds/drepClient/main.go
+	$(GORUN-WIN) -o $(BIN)/drep-win-amd64-v1.0.0/genconfig/genaccount.exe ./cmds/genaccount/main.go
+	#$(GORUN-WIN) -o $(BIN)/drep-win-amd64-v1.0.0/genapicode.exe ./cmds/genapicode/main.go
+	#$(GORUN-WIN) -o $(BIN)/drep-win-amd64-v1.0.0/gendoc.exe ./cmds/gendoc/*.go
+	mkdir $(BIN)/drep-win-amd64-v1.0.0/mainnet-config/
+	mkdir $(BIN)/drep-win-amd64-v1.0.0/testnet-config/
 
 	#linux 64
-	$(GORUN-LINXU64) -o $(BIN)/linux64/drep ./cmds/drep/drep.go
-	$(GORUN-LINXU64) -o $(BIN)/linux64/drepClient ./cmds/drepClient/main.go
-	$(GORUN-LINXU64) -o $(BIN)/linux64/produceConfig/genaccount ./cmds/genaccount/main.go
-	$(GORUN-LINXU64) -o $(BIN)/linux64/genapicode ./cmds/genapicode/main.go
-	$(GORUN-LINXU64) -o $(BIN)/linux64/gendoc ./cmds/gendoc/*.go
+	$(GORUN-LINXU64) -o $(BIN)/drep-linux-amd64-v1.0.0/drep ./cmds/drep/drep.go
+	$(GORUN-LINXU64) -o $(BIN)/drep-linux-amd64-v1.0.0/drep-cli ./cmds/drepClient/main.go
+	$(GORUN-LINXU64) -o $(BIN)/drep-linux-amd64-v1.0.0/genconfig/genaccount ./cmds/genaccount/main.go
+	#$(GORUN-LINXU64) -o $(BIN)/linux64/genapicode ./cmds/genapicode/main.go
+	#$(GORUN-LINXU64) -o $(BIN)/linux64/gendoc ./cmds/gendoc/*.go
+	mkdir $(BIN)/drep-linux-amd64-v1.0.0/mainnet-config/
+	mkdir $(BIN)/drep-linux-amd64-v1.0.0/testnet-config/
 
 	# mac 64
-	$(GORUN-DARWIN64) -o $(BIN)/darwin64/drep ./cmds/drep/drep.go
-	$(GORUN-DARWIN64) -o $(BIN)/darwin64/drepClient ./cmds/drepClient/main.go
-	$(GORUN-DARWIN64) -o $(BIN)/darwin64/produceConfig/genaccount ./cmds/genaccount/main.go
-	$(GORUN-DARWIN64) -o $(BIN)/darwin64/genapicode ./cmds/genapicode/main.go
-	$(GORUN-DARWIN64) -o $(BIN)/darwin64/gendoc ./cmds/gendoc/*.go
+	$(GORUN-DARWIN64) -o $(BIN)/drep-darwin-amd64-v1.0.0/drep ./cmds/drep/drep.go
+	$(GORUN-DARWIN64) -o $(BIN)/drep-darwin-amd64-v1.0.0/drepClient ./cmds/drepClient/main.go
+	$(GORUN-DARWIN64) -o $(BIN)/drep-darwin-amd64-v1.0.0/genconfig/genaccount ./cmds/genaccount/main.go
+	#$(GORUN-DARWIN64) -o $(BIN)/darwin64/genapicode ./cmds/genapicode/main.go
+	#$(GORUN-DARWIN64) -o $(BIN)/darwin64/gendoc ./cmds/gendoc/*.go
+	mkdir $(BIN)/drep-darwin-amd64-v1.0.0/mainnet-config/
+	mkdir $(BIN)/drep-darwin-amd64-v1.0.0/testnet-config/
 
 
 lint: ## Run linters.
