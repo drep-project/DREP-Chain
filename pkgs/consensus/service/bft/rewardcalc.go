@@ -40,15 +40,7 @@ func (calculator *RewardCalculator) AccumulateRewards(height uint64) error {
 
 	//Eighty percent for themselves and twenty percent for their supporters
 	var selfProportion int64 = 80
-	leaderReward := new(big.Int)
-	leaderReward = leaderReward.Mul(reward, new(big.Int).SetInt64(selfProportion))
-	leaderReward = leaderReward.Div(leaderReward, new(big.Int).SetInt64(100))
-	leaderReward.Add(leaderReward, calculator.totalGasBalance)
 	leaderAddr := calculator.producers[calculator.sig.Leader].Address()
-	err := calculator.trieStore.AddBalance(&leaderAddr, calculator.height, leaderReward)
-	if err != nil {
-		return err
-	}
 
 	//Reward supporters in proportion
 	//Distribute Bonus
@@ -56,7 +48,6 @@ func (calculator *RewardCalculator) AccumulateRewards(height uint64) error {
 	otherReward = otherReward.Mul(reward, new(big.Int).SetInt64(100-selfProportion))
 	otherReward = otherReward.Div(otherReward, new(big.Int).SetInt64(100))
 
-	//fmt.Println(leaderReward.String(), otherReward.String())
 	total := new(big.Int)
 	supporters := calculator.trieStore.GetCreditDetails(&leaderAddr)
 	delete(supporters, leaderAddr)
@@ -74,6 +65,20 @@ func (calculator *RewardCalculator) AccumulateRewards(height uint64) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	if len(supporters) == 0 {
+		selfProportion = 100 //没有支持者，自己获得100%的收入
+	}
+
+	leaderReward := new(big.Int)
+	leaderReward = leaderReward.Mul(reward, new(big.Int).SetInt64(selfProportion))
+	leaderReward = leaderReward.Div(leaderReward, new(big.Int).SetInt64(100))
+	leaderReward.Add(leaderReward, calculator.totalGasBalance)
+
+	err := calculator.trieStore.AddBalance(&leaderAddr, calculator.height, leaderReward)
+	if err != nil {
+		return err
 	}
 
 	return nil
