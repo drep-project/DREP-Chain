@@ -629,8 +629,8 @@ func (trieQuery *TrieQuery) GetCandidateAddrs() string {
 
 		cb := new(common.Big)
 		cb.SetMathBig(*total)
-		drepAddr := crypto.EthToDrep(&addr)
-		ac = append(ac, AddrAndCrit{Addr: drepAddr, Credit: cb})
+		//drepAddr := crypto.EthToDrep(&addr)
+		ac = append(ac, AddrAndCrit{Addr: addr.String(), Credit: cb})
 	}
 
 	b, err := json.Marshal(ac)
