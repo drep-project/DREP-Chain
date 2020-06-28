@@ -66,7 +66,7 @@ Also, make sure your firewall is configured to allow inbound connections to port
 
 <a name="Installation" />
 
-##New Release(Windows/Linux/macOS)
+## New Release(Windows/Linux/macOS)
 - [drep-chain-sourceCode-v1.0.0.zip](https://drep-resources.s3-ap-northeast-1.amazonaws.com/chain/drep-chain-sourceCode-v1.0.0.zip)
 - [drep-darwin-amd64-v1.0.0.zip](https://drep-resources.s3-ap-northeast-1.amazonaws.com/chain/drep-darwin-amd64-v1.0.0.zip)
 - [drep-win-amd64-v1.0.0.zip](https://drep-resources.s3-ap-northeast-1.amazonaws.com/chain/drep-win-amd64-v1.0.0.zip)
