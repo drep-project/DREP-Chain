@@ -4,7 +4,6 @@ DREP Chain
 
 [![ISC License](https://img.shields.io/badge/license-ISC-blue.svg)](http://copyfree.org)
 
-
 ## What is drep?
 
 drep is a full node implementation of Drep written in Go (golang).
@@ -67,9 +66,14 @@ Also, make sure your firewall is configured to allow inbound connections to port
 
 <a name="Installation" />
 
-## Installing and updating
+##New Release(Windows/Linux/macOS)
+- [drep-chain-sourceCode-v1.0.0.zip](https://drep-resources.s3-ap-northeast-1.amazonaws.com/chain/drep-chain-sourceCode-v1.0.0.zip)
+- [drep-darwin-amd64-v1.0.0.zip](https://drep-resources.s3-ap-northeast-1.amazonaws.com/chain/drep-darwin-amd64-v1.0.0.zip)
+- [drep-win-amd64-v1.0.0.zip](https://drep-resources.s3-ap-northeast-1.amazonaws.com/chain/drep-win-amd64-v1.0.0.zip)
+- [drep-linux-amd64-v1.0.0.zip](https://drep-resources.s3-ap-northeast-1.amazonaws.com/chain/drep-linux-amd64-v1.0.0.zip) 
 
-### Binaries (Windows/Linux/macOS)
+
+## Binary installing and updating
 
 According to your needs, you can refer to the following links to complete the build process
 
@@ -80,7 +84,7 @@ According to your needs, you can refer to the following links to complete the bu
 [Privatenet](http://docs.drep.org/advanced/privatenet/) 
 
 
-### Build from source code(all platforms)
+## Build from source code(all platforms)
 
 Building or updating from source requires the following build dependencies
 
