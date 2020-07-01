@@ -446,7 +446,29 @@ func (chain *ChainApi) GetChangeCycle() (int, error) {
 	return int(changeInterval), err
 }
 
-func (chain *ChainApi) GetReward() (int, error) {
+/*
+ name: getReward
+ usage: Gets the transition period of the out - of - block node
+ params:
+	none
+ return:  Transition period
+ example: curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_getChangeCycle","params":"", "id": 3}' -H "Content-Type:application/json"
+ response:
+   {"jsonrpc":"2.0","id":3,"result":"{100}"}
+*/
+func (chain *ChainApi) GetReward(addr *crypto.CommonAddress) (int, error) {
+	trieQuery, _ := NewTrieQuery(chain.store, chain.chainView.Tip().StateRoot)
+	supporters := trieQuery.GetVoteCreditDetails(addr)
+	var rec []types.ReceivedCredit
+	err := json.Unmarshal([]byte(supporters), &rec)
+	if err != nil {
+		return -1, err
+	}
+	for _, v := range rec {
+		if v.Addr != *addr {
+			return params.Rewards * 0.8, nil
+		}
+	}
 	return params.Rewards, nil
 }
 
