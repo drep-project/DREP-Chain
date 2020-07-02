@@ -62,7 +62,7 @@ func action(ctx *cli.Context) error {
 		if fn, ok := methods[args[1]]; ok {
 			fn(args[1:], client, ctxReq)
 		} else {
-			fmt.Println("cannot deal method:", args[0], "need register it")
+			fmt.Println("cannot deal method:", args[1], "need register it")
 		}
 		wg.Done()
 	}()
@@ -71,57 +71,8 @@ func action(ctx *cli.Context) error {
 	return nil
 }
 
-func getBalance(args cli.Args, client *rpc.Client, ctx context.Context) {
-	balance := ""
-	if err := client.CallContext(ctx, &balance, args[0], args[1]); err != nil {
-		fmt.Println("return err :", err)
-	}
-
-	fmt.Println(balance)
-}
-
-func createCode(args cli.Args, client *rpc.Client, ctx context.Context) {
-	r := ""
-	if err := client.CallContext(ctx, &r, args[0], args[1], args[2], args[3], args[4]); err != nil {
-		fmt.Println("return err :", err)
-		return
-	}
-	fmt.Println(r)
-}
-
-func executeContract(args cli.Args, client *rpc.Client, ctx context.Context) {
-	if len(args) != 6 {
-		fmt.Println("param num:", len(args), "must equal 6")
-		return
-	}
-
-	r := ""
-	if err := client.CallContext(ctx, &r, args[0], args[1], args[2], args[3], args[4], args[5]); err != nil {
-		fmt.Println("return err :", err)
-		return
-	}
-	fmt.Println(r)
-}
-
-func getPoolTransactions(args cli.Args, client *rpc.Client, ctx context.Context) {
-	resp := make([]types.Transactions, 0, 2)
-	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
-		fmt.Println("return err :", err)
-	}
-
-	for _, txs := range resp {
-		for _, tx := range txs {
-
-			from, _ := tx.From()
-			fmt.Println("from:", from.String(), "to:", tx.To().String(), "nonce:", tx.Nonce(), "amount:", tx.Amount())
-			fmt.Println("txHash:", tx.TxHash())
-			fmt.Println("no sign data:", hexutil.Encode(tx.AsSignMessage()))
-			fmt.Println()
-		}
-	}
-}
-
 func init() {
+	methods["genaccount"] = genaccount
 	methods["blockmgr_sendRawTransaction"] = sendRawTransaction
 	methods["blockmgr_gasPrice"] = gasPrice
 	methods["blockmgr_getPoolTransactions"] = getPoolTransactions
@@ -187,8 +138,20 @@ func init() {
 	methods["consensus_getMiners"] = getMiners
 }
 
+func argsJudge(args cli.Args, count int) error {
+	if len(args) != count {
+		errStr := "parameters number: " + strconv.Itoa(len(args)) + ", unequal to required number: " + strconv.Itoa(count)
+		return fmt.Errorf(errStr)
+	}
+	return nil
+}
+
 func candidateCredit(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp string
+	if err := argsJudge(args, 7); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1], args[2], args[3], args[4], args[5], args[6]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -198,6 +161,10 @@ func candidateCredit(args cli.Args, client *rpc.Client, ctx context.Context) {
 
 func sendRawTransaction(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp string
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -215,6 +182,10 @@ func gasPrice(args cli.Args, client *rpc.Client, ctx context.Context) {
 
 func getTransactionCount(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp uint64
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -223,6 +194,10 @@ func getTransactionCount(args cli.Args, client *rpc.Client, ctx context.Context)
 }
 func getPoolMiniPendingNonce(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp uint64
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -231,6 +206,10 @@ func getPoolMiniPendingNonce(args cli.Args, client *rpc.Client, ctx context.Cont
 }
 func getTxInPool(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp types.Transaction
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -240,6 +219,10 @@ func getTxInPool(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func getBlock(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp types.Block
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	blockNum, _ := strconv.Atoi(args[1])
 	if err := client.CallContext(ctx, &resp, args[0], blockNum); err != nil {
 		fmt.Println("return err :", err)
@@ -267,6 +250,10 @@ func getBlockGasInfo(args cli.Args, client *rpc.Client, ctx context.Context) {
 
 func getNonce(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp uint64
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -275,6 +262,10 @@ func getNonce(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func getReputation(args cli.Args, client *rpc.Client, ctx context.Context) {
 	resp := new(big.Int)
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -283,7 +274,10 @@ func getReputation(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func getTransactionByBlockHeightAndIndex(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp types.Transaction
-
+	if err := argsJudge(args, 3); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	blockNum, _ := strconv.Atoi(args[1])
 	index, _ := strconv.Atoi(args[2])
 	if err := client.CallContext(ctx, &resp, args[0], blockNum, index); err != nil {
@@ -297,6 +291,10 @@ func getTransactionByBlockHeightAndIndex(args cli.Args, client *rpc.Client, ctx 
 }
 func getAliasByAddress(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp string
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -305,6 +303,10 @@ func getAliasByAddress(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func getAddressByAlias(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp string
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -313,6 +315,10 @@ func getAddressByAlias(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func getReceipt(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp types.Receipt
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -324,6 +330,10 @@ func getReceipt(args cli.Args, client *rpc.Client, ctx context.Context) {
 
 func getLogs(args cli.Args, client *rpc.Client, ctx context.Context) {
 	resp := make([]*types.Log, 0)
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -333,6 +343,10 @@ func getLogs(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func getCancelCreditDetailByTXHash(args cli.Args, client *rpc.Client, ctx context.Context) {
 	resp := make([]*types.CancelCreditDetail, 0)
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -342,6 +356,10 @@ func getCancelCreditDetailByTXHash(args cli.Args, client *rpc.Client, ctx contex
 }
 func getByteCode(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp hexutil.Bytes
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -350,6 +368,10 @@ func getByteCode(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func getCreditDetails(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp string
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -359,6 +381,10 @@ func getCreditDetails(args cli.Args, client *rpc.Client, ctx context.Context) {
 
 func getCancelCreditDetails(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp string
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -390,6 +416,10 @@ func getPeers(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func addPeer(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp interface{}
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 	}
@@ -397,6 +427,10 @@ func addPeer(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func removePeer(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp interface{}
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -405,6 +439,10 @@ func removePeer(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func setLevel(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp interface{}
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -413,6 +451,10 @@ func setLevel(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func setVmodule(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp error
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -421,6 +463,10 @@ func setVmodule(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func getRawTransaction(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp string
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -429,6 +475,10 @@ func getRawTransaction(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func getTransaction(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp types.Transaction
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -439,6 +489,10 @@ func getTransaction(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func decodeTrasnaction(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp trace.RpcTransaction
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -449,6 +503,10 @@ func decodeTrasnaction(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func getSendTransactionByAddr(args cli.Args, client *rpc.Client, ctx context.Context) {
 	resp := make([]*trace.RpcTransaction, 0)
+		if err := argsJudge(args, 4); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1], args[2], args[3]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -459,6 +517,10 @@ func getSendTransactionByAddr(args cli.Args, client *rpc.Client, ctx context.Con
 }
 func getReceiveTransactionByAddr(args cli.Args, client *rpc.Client, ctx context.Context) {
 	resp := make([]*trace.RpcTransaction, 0)
+		if err := argsJudge(args, 4); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1], args[2], args[3]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -467,6 +529,10 @@ func getReceiveTransactionByAddr(args cli.Args, client *rpc.Client, ctx context.
 }
 func rebuild(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp error
+		if err := argsJudge(args, 3); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1], args[2]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -483,6 +549,10 @@ func listAddress(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func createAccount(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp string
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -491,6 +561,10 @@ func createAccount(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func createWallet(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp error
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -499,6 +573,10 @@ func createWallet(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func lockAccount(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp error
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -507,6 +585,10 @@ func lockAccount(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func unlockAccount(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp error
+		if err := argsJudge(args, 3); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1], args[2]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -515,6 +597,10 @@ func unlockAccount(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func openWallet(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp error
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -531,6 +617,10 @@ func closeWallet(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func transfer(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp string
+	if err := argsJudge(args, 7); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1], args[2], args[3], args[4], args[5], args[6]); err != nil {
 		fmt.Println("return err :", err)
 	}
@@ -538,6 +628,10 @@ func transfer(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func transferWithNonce(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp string
+	if err := argsJudge(args, 8); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	oldNonce, _ := strconv.Atoi(args[7])
 	if err := client.CallContext(ctx, &resp, args[0], args[1], args[2], args[3], args[4], args[5], args[6], oldNonce); err != nil {
 		fmt.Println("return err :", err)
@@ -547,6 +641,10 @@ func transferWithNonce(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func setAlias(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp string //error
+	if err := argsJudge(args, 5); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1], args[2], args[3], args[4]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -555,6 +653,10 @@ func setAlias(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func voteCredit(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp string //(string, error)
+		if err := argsJudge(args, 6); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1], args[2], args[3], args[4], args[5]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -563,6 +665,10 @@ func voteCredit(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func cancelVoteCredit(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp string //error
+		if err := argsJudge(args, 6); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1], args[2], args[3], args[4], args[5]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -572,6 +678,10 @@ func cancelVoteCredit(args cli.Args, client *rpc.Client, ctx context.Context) {
 
 func cancelCandidateCredit(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp string
+		if err := argsJudge(args, 6); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1], args[2], args[3], args[4], args[5]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -580,6 +690,10 @@ func cancelCandidateCredit(args cli.Args, client *rpc.Client, ctx context.Contex
 }
 func readContract(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp common.Bytes //common.Bytes, error
+		if err := argsJudge(args, 4); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1], args[2], args[3]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -588,6 +702,10 @@ func readContract(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func estimateGas(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp uint64 //(uint64, error) {
+	if err := argsJudge(args, 5); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1], args[2], common.Bytes(args[3]), args[4]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -597,6 +715,10 @@ func estimateGas(args cli.Args, client *rpc.Client, ctx context.Context) {
 
 func dumpPrivkey(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp secp256k1.PrivateKey //*secp256k1.PrivateKey, error
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -606,6 +728,10 @@ func dumpPrivkey(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func dumpPubkey(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp secp256k1.PublicKey //*secp256k1.PublicKey, error
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -615,6 +741,10 @@ func dumpPubkey(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func sign(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp common.Bytes //(common.Bytes, error)
+		if err := argsJudge(args, 3); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1], args[2]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -623,6 +753,10 @@ func sign(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func generateAddresses(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp service.RpcAddresses //(*RpcAddresses, error)
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -631,6 +765,10 @@ func generateAddresses(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func importKeyStore(args cli.Args, client *rpc.Client, ctx context.Context) {
 	resp := make([]string, 0) //([]string, error)
+		if err := argsJudge(args, 3); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1], args[2]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -639,6 +777,10 @@ func importKeyStore(args cli.Args, client *rpc.Client, ctx context.Context) {
 }
 func importPrivkey(args cli.Args, client *rpc.Client, ctx context.Context) {
 	var resp string // (string, error)
+		if err := argsJudge(args, 3); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if err := client.CallContext(ctx, &resp, args[0], args[1], args[2]); err != nil {
 		fmt.Println("return err :", err)
 		return
@@ -671,4 +813,65 @@ func getMiners(args cli.Args, client *rpc.Client, ctx context.Context) {
 
 	bytes,_:= json.Marshal(resp)
 	fmt.Println(string(bytes))
+}
+
+func getBalance(args cli.Args, client *rpc.Client, ctx context.Context) {
+	var resp string
+	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
+		fmt.Println("return err :", err)
+	}
+
+	fmt.Println(resp)
+}
+
+func createCode(args cli.Args, client *rpc.Client, ctx context.Context) {
+	var resp string
+	if err := argsJudge(args, 5); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	if err := client.CallContext(ctx, &resp, args[0], args[1], args[2], args[3], args[4]); err != nil {
+		fmt.Println("return err :", err)
+		return
+	}
+	fmt.Println(resp)
+}
+
+func executeContract(args cli.Args, client *rpc.Client, ctx context.Context) {
+	var resp string
+	if err := argsJudge(args, 6); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	if err := client.CallContext(ctx, &resp, args[0], args[1], args[2], args[3], args[4], args[5]); err != nil {
+		fmt.Println("return err :", err)
+		return
+	}
+	fmt.Println(resp)
+}
+
+func getPoolTransactions(args cli.Args, client *rpc.Client, ctx context.Context) {
+	resp := make([]types.Transactions, 0, 2)
+	if err := argsJudge(args, 2); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	if err := client.CallContext(ctx, &resp, args[0], args[1]); err != nil {
+		fmt.Println("return err :", err)
+	}
+
+	for _, txs := range resp {
+		for _, tx := range txs {
+
+			from, _ := tx.From()
+			fmt.Println("from:", from.String(), "to:", tx.To().String(), "nonce:", tx.Nonce(), "amount:", tx.Amount())
+			fmt.Println("txHash:", tx.TxHash())
+			fmt.Println("no sign data:", hexutil.Encode(tx.AsSignMessage()))
+			fmt.Println()
+		}
+	}
+}
+
+func genaccount(args cli.Args, client *rpc.Client, ctx context.Context)  {
+
 }
