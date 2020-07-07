@@ -50,8 +50,11 @@ func main() {
 
 func action(ctx *cli.Context) error {
 	args := ctx.Args()
-	if len(args) <= 1 {
-		return fmt.Errorf("arg num too small")
+	if len(args) < 1 {
+		return fmt.Errorf("please input request url")
+	}
+	if len(args) == 1 {
+		return fmt.Errorf("please input request method")
 	}
 	//1 Check whether the first field like :http://127.0.0.1:5555
 	url, err := url.Parse("http://" + args[0])
@@ -899,7 +902,7 @@ func getCurPath() string {
 func genaccount(args cli.Args, client *rpc.Client, ctx context.Context)  {
 
 	if err := argsJudge(args, 3); err != nil {
-		fmt.Println("genaccount cli need name and password params")
+		fmt.Println("genaccount need another name and password parameters")
 		fmt.Println(err.Error())
 		return
 	}
