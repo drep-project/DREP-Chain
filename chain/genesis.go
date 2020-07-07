@@ -1,6 +1,8 @@
 package chain
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/common/trie"
 	"math/big"
@@ -11,6 +13,21 @@ import (
 	"github.com/drep-project/DREP-Chain/params"
 	"github.com/drep-project/DREP-Chain/types"
 )
+
+type GenesisConfig struct {
+	Preminer []*Preminer
+	Miners   []*types.Producer
+}
+
+var DefaultGenesisConfig GenesisConfig
+
+func init() {
+	err := json.Unmarshal([]byte(params.DefaultGenesisParam), &DefaultGenesisConfig)
+	if err != nil {
+		log.Warn("default genesisParam err, drep process maybe run err")
+		fmt.Println("default genesisParam err")
+	}
+}
 
 func (chainService *ChainService) GetGenisiBlock(biosAddress crypto.CommonAddress) (*types.Block, error) {
 	var root []byte

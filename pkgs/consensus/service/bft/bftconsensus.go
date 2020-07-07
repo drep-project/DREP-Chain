@@ -51,7 +51,7 @@ type BftConsensus struct {
 	addPeerChan    chan *consensusTypes.PeerInfo
 	removePeerChan chan *consensusTypes.PeerInfo
 
-	producer []Producer
+	producer []types.Producer
 	quit     chan struct{}
 }
 
@@ -88,7 +88,7 @@ func NewBftConsensus(
 	}
 }
 
-func (bftConsensus *BftConsensus) GetProducers(height uint64, topN int) ([]Producer, error) {
+func (bftConsensus *BftConsensus) GetProducers(height uint64, topN int) ([]types.Producer, error) {
 	//newEpoch := height % uint64(bftConsensus.config.ChangeInterval)
 	//if bftConsensus.producer == nil || newEpoch == 0 {
 	//height = height - newEpoch
@@ -101,7 +101,7 @@ func (bftConsensus *BftConsensus) GetProducers(height uint64, topN int) ([]Produ
 	//}
 }
 
-func (bftConsensus *BftConsensus) loadProducers(height uint64, topN int) ([]Producer, error) {
+func (bftConsensus *BftConsensus) loadProducers(height uint64, topN int) ([]types.Producer, error) {
 	block, err := bftConsensus.ChainService.GetBlockByHeight(height)
 	if err != nil {
 		return nil, err
@@ -221,7 +221,7 @@ func (bftConsensus *BftConsensus) moveToNextMiner(produceInfos []*MemberInfo) (b
 	}
 }
 
-func (bftConsensus *BftConsensus) collectMemberStatus(producers []Producer) []*MemberInfo {
+func (bftConsensus *BftConsensus) collectMemberStatus(producers []types.Producer) []*MemberInfo {
 	produceInfos := make([]*MemberInfo, 0, len(producers))
 	for _, produce := range producers {
 		var (
@@ -241,7 +241,7 @@ func (bftConsensus *BftConsensus) collectMemberStatus(producers []Producer) []*M
 		}
 
 		produceInfos = append(produceInfos, &MemberInfo{
-			Producer: &Producer{Pubkey: produce.Pubkey, Node: produce.Node},
+			Producer: &types.Producer{Pubkey: produce.Pubkey, Node: produce.Node},
 			Peer:     pi,
 			IsMe:     isMe,
 			IsOnline: IsOnline,
@@ -322,7 +322,7 @@ func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo, minMiners in
 //2 Other producers will sign their own digital signatures after receiving them. The signed block is then returned to the leader
 //3 After the leader collects all the signatures or returns more than two-thirds of the number of producers, he or she shall verify the signatures
 //4 After the leader validates the signature, the block is broadcast to all peers
-func (bftConsensus *BftConsensus) runAsLeader(producers ProducerSet, miners []*MemberInfo, minMiners int) (block *types.Block, err error) {
+func (bftConsensus *BftConsensus) runAsLeader(producers types.ProducerSet, miners []*MemberInfo, minMiners int) (block *types.Block, err error) {
 	leader := NewLeader(
 		bftConsensus.PrivKey,
 		bftConsensus.sender,
@@ -504,7 +504,7 @@ func (bftConsensus *BftConsensus) prepareForMining(p2p p2pService.P2P) {
 				log.WithField("err", err).Info("PrepareForMiner get producer err")
 			}
 
-			tempProduces := make([]Producer, len(producers))
+			tempProduces := make([]types.Producer, len(producers))
 			copy(tempProduces, producers)
 			//I'm in the running
 			found := false

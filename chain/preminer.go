@@ -24,57 +24,62 @@ func NewPreminerGenesisProcessor() *PreminerGenesisProcessor {
 
 func (NewPreminerGenesisProcessor *PreminerGenesisProcessor) Genesis(context *GenesisContext) error {
 	val, ok := context.Config()["Preminer"]
+	preminers := []*Preminer{}
 	if ok {
-		preminers := []Preminer{}
 		bytes, _ := val.MarshalJSON()
 		err := json.Unmarshal(bytes, &preminers)
 		if err != nil {
 			return err
 		}
+	} else {
+		preminers = append(preminers, DefaultGenesisConfig.Preminer...)
+	}
 
-		for _, preminer := range preminers {
-			err = context.Store().PutBalance(&preminer.Addr, 0, &preminer.Value)
-			if err != nil {
-				return err
-			}
+	for _, preminer := range preminers {
+		err := context.Store().PutBalance(&preminer.Addr, 0, &preminer.Value)
+		if err != nil {
+			return err
 		}
 	}
 
 	val, ok = context.Config()["Miners"]
+	miners := []*types.Producer{}
 	if ok {
-		miners := []types.CandidateData{}
 		bytes, _ := val.MarshalJSON()
 		err := json.Unmarshal(bytes, &miners)
 		if err != nil {
 			return err
 		}
-
-		addrs := []crypto.CommonAddress{}
-		for _, miner := range miners {
-			minerBytes, err := json.Marshal(miner)
-			if err != nil {
-				return err
-			}
-			addr := crypto.PubkeyToAddress(miner.Pubkey)
-
-			//pv := new(big.Int).SetUint64(store.RegisterPledgeLimit)
-			pv := new(big.Int).SetUint64(0)
-			pv = pv.Mul(pv, new(big.Int).SetUint64(params.Coin))
-			context.Store().CandidateCredit(&addr, pv, minerBytes, 0)
-			context.store.AddCandidateAddr(&addr)
-
-			addrs = append(addrs, addr)
-		}
-
-		addrsBytes, err := binary.Marshal(addrs)
-		if err != nil {
-			return err
-		}
-
-		err = context.Store().Put([]byte(store.CandidateAddrs), addrsBytes)
-		if err != nil {
-			return err
-		}
+	} else {
+		miners = append(miners, DefaultGenesisConfig.Miners...)
 	}
+
+	addrs := []crypto.CommonAddress{}
+	for _, miner := range miners {
+		minerBytes, err := json.Marshal(miner)
+		if err != nil {
+			return err
+		}
+		addr := crypto.PubkeyToAddress(miner.Pubkey)
+
+		//pv := new(big.Int).SetUint64(store.RegisterPledgeLimit)
+		pv := new(big.Int).SetUint64(0)
+		pv = pv.Mul(pv, new(big.Int).SetUint64(params.Coin))
+		context.Store().CandidateCredit(&addr, pv, minerBytes, 0)
+		context.store.AddCandidateAddr(&addr)
+
+		addrs = append(addrs, addr)
+	}
+
+	addrsBytes, err := binary.Marshal(addrs)
+	if err != nil {
+		return err
+	}
+
+	err = context.Store().Put([]byte(store.CandidateAddrs), addrsBytes)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

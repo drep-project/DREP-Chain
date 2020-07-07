@@ -251,7 +251,7 @@ func (bftConsensusService *BftConsensusService) getWaitTime() (time.Time, time.D
 	}
 }
 
-func (bftConsensusService *BftConsensusService) GetProducers(height uint64, topN int) ([]Producer, error) {
+func (bftConsensusService *BftConsensusService) GetProducers(height uint64, topN int) ([]chainTypes.Producer, error) {
 	block, err := bftConsensusService.ChainService.GetBlockByHeight(height)
 	if err != nil {
 		return nil, err

@@ -29,7 +29,7 @@ func (registerAsProducerTransactionExecutor *RegisterAsProducerTransactionExecut
 	etr := &types.ExecuteTransactionResult{}
 	from := context.From()
 	data := context.Data()
-	newProducer := &Producer{}
+	newProducer := &types.Producer{}
 	err := binary.Unmarshal(data, newProducer)
 	if err == nil {
 		etr.Txerror = err
@@ -70,7 +70,7 @@ type ConsensusOp struct {
 	store.StoreInterface
 }
 
-func (consensusOp *ConsensusOp) SaveProducer(p []*Producer) error {
+func (consensusOp *ConsensusOp) SaveProducer(p []*types.Producer) error {
 	b, err := binary.Marshal(p)
 	if err != nil {
 		return err
@@ -83,8 +83,8 @@ func (consensusOp *ConsensusOp) SaveProducer(p []*Producer) error {
 	return nil
 }
 
-func (consensusOp *ConsensusOp) GetProducer() ([]*Producer, error) {
-	producers := []*Producer{}
+func (consensusOp *ConsensusOp) GetProducer() ([]*types.Producer, error) {
+	producers := []*types.Producer{}
 	bytes, err := consensusOp.Get(MinerPrefix)
 	if err != nil {
 		return nil, err

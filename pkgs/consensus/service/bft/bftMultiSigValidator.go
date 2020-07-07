@@ -11,7 +11,7 @@ import (
 	"github.com/drep-project/binary"
 )
 
-type GetProducers func(uint64, int) ([]Producer, error)
+type GetProducers func(uint64, int) ([]types.Producer, error)
 type GetBlock func(hash *crypto.Hash) (*types.Block, error)
 
 type BlockMultiSigValidator struct {
