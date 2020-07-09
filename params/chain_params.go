@@ -35,21 +35,21 @@ const (
 	SstoreClearGas  uint64 = 5000  // Once per SSTORE operation if the zeroness doesn't change.
 	SstoreRefundGas uint64 = 15000 // Once per SSTORE operation if the zeroness changes to zero.
 
-	NetSstoreNoopGas  uint64 = 200   // Once per SSTORE operation if the value doesn't change.
-	NetSstoreInitGas  uint64 = 20000 // Once per SSTORE operation from clean zero.
-	NetSstoreCleanGas uint64 = 5000  // Once per SSTORE operation from clean non-zero.
-	NetSstoreDirtyGas uint64 = 200   // Once per SSTORE operation from dirty.
+	//NetSstoreNoopGas  uint64 = 200   // Once per SSTORE operation if the value doesn't change.
+	//NetSstoreInitGas  uint64 = 20000 // Once per SSTORE operation from clean zero.
+	//NetSstoreCleanGas uint64 = 5000  // Once per SSTORE operation from clean non-zero.
+	//NetSstoreDirtyGas uint64 = 200   // Once per SSTORE operation from dirty.
+	//
+	//NetSstoreClearRefund      uint64 = 15000 // Once per SSTORE operation for clearing an originally existing storage slot
+	//NetSstoreResetRefund      uint64 = 4800  // Once per SSTORE operation for resetting to the original non-zero value
+	//NetSstoreResetClearRefund uint64 = 19800 // Once per SSTORE operation for resetting to the original zero value
 
-	NetSstoreClearRefund      uint64 = 15000 // Once per SSTORE operation for clearing an originally existing storage slot
-	NetSstoreResetRefund      uint64 = 4800  // Once per SSTORE operation for resetting to the original non-zero value
-	NetSstoreResetClearRefund uint64 = 19800 // Once per SSTORE operation for resetting to the original zero value
-
-	JumpdestGas      uint64 = 1     // Refunded gas, once per SSTORE operation if the zeroness changes to zero.
-	EpochDuration    uint64 = 30000 // Duration between proof-of-work epochs.
-	CallGas          uint64 = 40    // Once per CALL operation & message call transaction.
-	CreateDataGas    uint64 = 200   //
-	CallCreateDepth  uint64 = 1024  // Maximum depth of call/create stack.
-	ExpGas           uint64 = 10    // Once per EXP instruction
+	JumpdestGas uint64 = 1 // Refunded gas, once per SSTORE operation if the zeroness changes to zero.
+	//EpochDuration    uint64 = 30000 // Duration between proof-of-work epochs.
+	//CallGas          uint64 = 40    // Once per CALL operation & message call transaction.
+	CreateDataGas   uint64 = 200  //
+	CallCreateDepth uint64 = 1024 // Maximum depth of call/create stack.
+	//ExpGas           uint64 = 10    // Once per EXP instruction
 	LogGas           uint64 = 375   // Per LOG* operation.
 	CopyGas          uint64 = 3     //
 	StackLimit       uint64 = 1024  // Maximum size of VM stack allowed.
