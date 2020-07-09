@@ -77,4 +77,16 @@ const (
 	Bn256ScalarMulGas       uint64 = 40000  // Gas needed for an elliptic curve scalar multiplication
 	Bn256PairingBaseGas     uint64 = 100000 // Base price for an elliptic curve pairing check
 	Bn256PairingPerPointGas uint64 = 80000  // Per-point price for an elliptic curve pairing check
+
+	RootChain          uint32 = 0
+	RemotePort         uint16 = 10087
+	GenesisProducerNum        = 21
+)
+
+var (
+	BootStrapNode = []string{"enode://f57881c48aaccf97485c2b65b421bfeda22cc3b427c44be7607b122fc1688abb@172.104.123.143:10086",
+		"enode://9d25d161ae4b676e2df55accca93c3137df3166326d04420ffbdf66e887bd494@172.104.116.219:10086",
+		"enode://bc7ca1b57175f2d5c85da73d367408529468a034b97d083aaecf88196090e245@172.105.103.59:10086",
+		"enode://0ebd0422ca32d70292be128342f9e5ca32ab3cef28dc32cc332169e578e7b4f5@109.74.203.199:10086",
+	}
 )

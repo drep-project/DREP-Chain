@@ -3,6 +3,7 @@ package types
 import (
 	"crypto/rand"
 	"fmt"
+	"github.com/drep-project/DREP-Chain/params"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -133,10 +134,21 @@ var (
 			NAT:             nat.Any(),
 			BootstrapNodes:  nil,
 			Name:            "drepnode",
+			StaticNodes:     []*enode.Node{},
 		},
 		DataDir: "",
 	}
 )
+
+func init() {
+	for _, nodeStr := range params.BootStrapNode {
+		node := &enode.Node{}
+		err := node.UnmarshalText([]byte(nodeStr))
+		if err == nil {
+			DefaultP2pConfig.StaticNodes = append(DefaultP2pConfig.StaticNodes, node)
+		}
+	}
+}
 
 // NodeName returns the devp2p node identifier.
 func (c *P2pConfig) NodeName() string {

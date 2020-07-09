@@ -12,6 +12,7 @@ import (
 	"github.com/drep-project/DREP-Chain/database"
 	"github.com/drep-project/DREP-Chain/network/p2p"
 	p2pService "github.com/drep-project/DREP-Chain/network/service"
+	"github.com/drep-project/DREP-Chain/params"
 	accountService "github.com/drep-project/DREP-Chain/pkgs/accounts/service"
 	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
 	chainTypes "github.com/drep-project/DREP-Chain/types"
@@ -24,6 +25,14 @@ var (
 	MinerFlag = cli.BoolFlag{
 		Name:  "miner",
 		Usage: "is miner",
+	}
+
+	DefaultConfig = BftConfig{
+		MyPk:           nil,
+		StartMiner:     true,
+		ProducerNum:    params.GenesisProducerNum,
+		BlockInterval:  15,
+		ChangeInterval: 100,
 	}
 )
 
@@ -178,6 +187,12 @@ func (bftConsensusService *BftConsensusService) Start(executeContext *app.Execut
 				//consult privkey in wallet
 				if bftConsensusService.Miner == nil {
 
+					if bftConsensusService.Config.MyPk == nil {
+						time.Sleep(time.Second * time.Duration(bftConsensusService.Config.BlockInterval))
+						log.Trace("not set pubkey ,the node is listener")
+						continue
+					}
+
 					accountNode, err := bftConsensusService.WalletService.Wallet.GetAccountByPubkey(bftConsensusService.Config.MyPk)
 					if err != nil {
 						log.WithField("err", err).WithField("addr", crypto.PubkeyToAddress(bftConsensusService.Config.MyPk).String()).Warn("privkey of MyPk in Config is not in local wallet or unlock address")
@@ -264,9 +279,5 @@ func (bftConsensusService *BftConsensusService) GetProducers(height uint64, topN
 }
 
 func (bftConsensusService *BftConsensusService) DefaultConfig() *BftConfig {
-	return &BftConfig{
-		BlockInterval:  15,
-		ProducerNum:    7,
-		ChangeInterval: 100,
-	}
+	return &DefaultConfig
 }

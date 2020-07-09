@@ -139,6 +139,7 @@ func (mApp *DrepApp) action(ctx *cli.Context) error {
 	endIndex := len(mApp.Context.Services)
 	for i := 0; i < endIndex; i++ {
 		service := mApp.Context.Services[i]
+		fmt.Println("*****:", reflect.TypeOf(service))
 		err := mApp.parserConfig(service)
 		if err != nil {
 			return err
@@ -148,8 +149,6 @@ func (mApp *DrepApp) action(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-
-		fmt.Println("*****:", reflect.TypeOf(service))
 
 		if reflect.TypeOf(service).Implements(TOrService) {
 			//flate config
@@ -184,6 +183,7 @@ func (mApp *DrepApp) action(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
+		fmt.Println(service.Name(), "starting ok")
 	}
 	exit := make(chan struct{})
 	exitSignal(exit)

@@ -189,20 +189,6 @@ func (econtext *ExecuteContext) GetApis() []API {
 	return apis
 }
 
-////	GetApis aggregate interface functions for each service to provide for use by RPC services
-//func (econtext *ExecuteContext) GetMessages() (map[int]interface{}, error)  {
-//	msg := map[int]interface{}{}
-//	for _, service := range econtext.Services {
-//		for k, v := range service.P2pMessages() {
-//			if _, ok := msg[k]; ok {
-//				return nil, errors.New("exist p2p message")
-//			}
-//			msg[k] = v
-//		}
-//	}
-//	return msg, nil
-//}
-
 // RequireService When a service depends on another service, RequireService is used to obtain the dependent service.
 func (econtext *ExecuteContext) RequireService(name string) Service {
 	for _, service := range econtext.Services {
@@ -223,6 +209,7 @@ func (econtext *ExecuteContext) UnmashalConfig(serviceName string, config interf
 	if phase == nil {
 		return nil
 	}
+
 	err := json.Unmarshal(phase, config)
 	if err != nil {
 		return err

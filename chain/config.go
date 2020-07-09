@@ -6,7 +6,7 @@ import (
 )
 
 type ChainConfig struct {
-	RemotePort  int                  `json:"remoteport"`
+	RemotePort  uint16               `json:"remoteport"`
 	RootChain   types.ChainIdType    `json:"rootChain,omitempty"`
 	ChainId     types.ChainIdType    `json:"chainID,omitempty"`
 	GenesisAddr crypto.CommonAddress `json:"genesisaddr"`

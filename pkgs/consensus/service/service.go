@@ -15,9 +15,9 @@ var (
 )
 
 type ConsensusConfig struct {
-	ConsensusMode string          `json:"consensusMode"`
-	Solo          *solo.SoloConfig `json:"solo,omitempty"`
-	Bft           *bft.BftConfig   `json:"bft,omitempty"`
+	ConsensusMode string `json:"consensusMode"`
+	//Solo          *solo.SoloConfig `json:"solo,omitempty"`
+	//Bft           *bft.BftConfig   `json:"bft,omitempty"`
 }
 type ConsensusService struct {
 	SoloService *solo.SoloConsensusService
@@ -62,4 +62,11 @@ func (consensusService *ConsensusService) SelectService() app.Service {
 		return consensusService.BftService
 	}
 	return nil
+}
+
+func (consensusService *ConsensusService) DefaultConfig() *ConsensusConfig {
+	return &ConsensusConfig{
+		ConsensusMode: "bft",
+		//Bft: &bft.DefaultConfig,
+	}
 }
