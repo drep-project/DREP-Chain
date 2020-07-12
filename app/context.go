@@ -1,13 +1,14 @@
 package app
 
 import (
+	"github.com/asaskevich/EventBus"
+	"github.com/drep-project/DREP-Chain/params"
+	"github.com/pkg/errors"
+	"gopkg.in/urfave/cli.v1"
+
 	"encoding/json"
 	"fmt"
 	"reflect"
-
-	"github.com/asaskevich/EventBus"
-	"github.com/pkg/errors"
-	"gopkg.in/urfave/cli.v1"
 )
 
 var (
@@ -58,12 +59,13 @@ type API struct {
 // ExecuteContext centralizes all the data and global parameters of application execution,
 // and each service can read the part it needs.
 type ExecuteContext struct {
-	ConfigPath   string
-	CommonConfig *CommonConfig //
-	PhaseConfig  map[string]json.RawMessage
-	Cli          *cli.Context
-	LifeBus      EventBus.Bus
-	Services     []Service
+	NetConfigType params.NetType //mainnet testnet solonet
+	ConfigPath    string
+	CommonConfig  *CommonConfig
+	PhaseConfig   map[string]json.RawMessage
+	Cli           *cli.Context
+	LifeBus       EventBus.Bus
+	Services      []Service
 
 	GitCommit string
 	Usage     string

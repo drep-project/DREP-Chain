@@ -19,13 +19,20 @@ type GenesisConfig struct {
 	Miners   []*types.Producer
 }
 
-var DefaultGenesisConfig GenesisConfig
+var DefaultGenesisConfigMainnet GenesisConfig
+var DefaultGenesisConfigTestnet GenesisConfig
 
 func init() {
-	err := json.Unmarshal([]byte(params.DefaultGenesisParam), &DefaultGenesisConfig)
+	err := json.Unmarshal([]byte(params.DefaultGenesisParamMainnet), &DefaultGenesisConfigMainnet)
 	if err != nil {
-		log.Warn("default genesisParam err, drep process maybe run err")
-		fmt.Println("default genesisParam err")
+		log.Warn("default mainnet genesisParam err, drep process maybe run err")
+		fmt.Println("default mainnet genesisParam err")
+	}
+
+	err = json.Unmarshal([]byte(params.DefaultGenesisParamTestnet), &DefaultGenesisConfigTestnet)
+	if err != nil {
+		log.Warn("default testnet genesisParam err, drep process maybe run err")
+		fmt.Println("default testnet genesisParam err")
 	}
 }
 

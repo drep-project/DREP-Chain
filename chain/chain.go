@@ -23,8 +23,14 @@ import (
 )
 
 var (
-	DefaultChainConfig = &ChainConfig{
-		RemotePort:  params.RemotePort,
+	DefaultChainConfigMainnet = &ChainConfig{
+		RemotePort:  params.RemotePortMainnet,
+		ChainId:     types.ChainIdType(params.RootChain),
+		GenesisAddr: params.HoleAddress,
+	}
+
+	DefaultChainConfigTestnet = &ChainConfig{
+		RemotePort:  params.RemotePortTestnet,
 		ChainId:     types.ChainIdType(params.RootChain),
 		GenesisAddr: params.HoleAddress,
 	}
@@ -126,18 +132,17 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 		&CancelCandidateTxSelector{}: &CancelCandidateTransactionProcessor{},
 	}
 
-	var err error
-	//chainService.genesisConfig = path.Join(executeContext.CommonConfig.HomeDir, "genesis.json")
-
 	if _, ok := executeContext.PhaseConfig["genesis"]; ok {
 		chainService.genesisConfig = executeContext.PhaseConfig["genesis"]
+	} else if executeContext.NetConfigType == params.MainnetType {
+		chainService.genesisConfig = []byte(params.DefaultGenesisParamMainnet)
+	} else if executeContext.NetConfigType == params.TestnetType {
+		chainService.genesisConfig = []byte(params.DefaultGenesisParamTestnet)
 	} else {
-		chainService.genesisConfig = []byte(params.DefaultGenesisParam)
+		return fmt.Errorf("net type err,type:%s", executeContext.NetConfigType)
 	}
-	//if chainService.genesisConfig == nil {
-	//	return fmt.Errorf("no genesis config,please check config.json")
-	//}
 
+	var err error
 	chainService.genesisBlock, err = chainService.GetGenisiBlock(chainService.Config.GenesisAddr)
 	if err != nil {
 		return err
@@ -376,6 +381,11 @@ func (chainService *ChainService) CommandFlags() ([]cli.Command, []cli.Flag) {
 }
 
 // DefaultConfig -> config
-func (chainService *ChainService) DefaultConfig() *ChainConfig {
-	return DefaultChainConfig
+func (chainService *ChainService) DefaultConfig(netType params.NetType) *ChainConfig {
+	switch netType {
+	case params.MainnetType:
+		return DefaultChainConfigMainnet
+	default:
+		return DefaultChainConfigTestnet
+	}
 }

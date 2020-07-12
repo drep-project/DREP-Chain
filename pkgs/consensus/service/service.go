@@ -1,9 +1,12 @@
 package service
 
 import (
+	"fmt"
 	"github.com/drep-project/DREP-Chain/app"
+	"github.com/drep-project/DREP-Chain/params"
 	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/bft"
 	"github.com/drep-project/DREP-Chain/pkgs/consensus/service/solo"
+
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -15,7 +18,7 @@ var (
 )
 
 type ConsensusConfig struct {
-	ConsensusMode string `json:"consensusMode"`
+	ConsensusMode params.NetType `json:"consensusMode"`
 	//Solo          *solo.SoloConfig `json:"solo,omitempty"`
 	//Bft           *bft.BftConfig   `json:"bft,omitempty"`
 }
@@ -38,15 +41,22 @@ func (consensusService *ConsensusService) CommandFlags() ([]cli.Command, []cli.F
 }
 
 func (consensusService *ConsensusService) Init(executeContext *app.ExecuteContext) error {
-	consensusService.SoloService = &solo.SoloConsensusService{}
-	consensusService.BftService = &bft.BftConsensusService{}
+	if executeContext.NetConfigType == params.MainnetType || executeContext.NetConfigType == params.TestnetType {
+		consensusService.BftService = &bft.BftConsensusService{NetType: executeContext.NetConfigType}
+	} else if executeContext.NetConfigType == params.SolonetType {
+		consensusService.SoloService = &solo.SoloConsensusService{}
+	} else {
+		return fmt.Errorf("err param in func consensus service")
+	}
+
+	consensusService.Config.ConsensusMode = executeContext.NetConfigType
 	return nil
 }
 
 func (consensusService *ConsensusService) Start(executeContext *app.ExecuteContext) error {
-	if executeContext.Cli.GlobalIsSet(ConsensusModeFlag.Name) {
-		consensusService.Config.ConsensusMode = executeContext.Cli.GlobalString(ConsensusModeFlag.Name)
-	}
+	//if executeContext.Cli.GlobalIsSet(ConsensusModeFlag.Name) {
+	//	consensusService.Config.ConsensusMode = executeContext.Cli.GlobalString(ConsensusModeFlag.Name)
+	//}
 	return nil
 }
 
@@ -56,17 +66,17 @@ func (consensusService *ConsensusService) Stop(executeContext *app.ExecuteContex
 
 func (consensusService *ConsensusService) SelectService() app.Service {
 	switch consensusService.Config.ConsensusMode {
-	case "solo":
+	case params.SolonetType:
 		return consensusService.SoloService
-	case "bft":
+	case params.MainnetType, params.TestnetType:
 		return consensusService.BftService
 	}
 	return nil
 }
 
-func (consensusService *ConsensusService) DefaultConfig() *ConsensusConfig {
+func (consensusService *ConsensusService) DefaultConfig(netType params.NetType) *ConsensusConfig {
 	return &ConsensusConfig{
-		ConsensusMode: "bft",
+		ConsensusMode: netType,
 		//Bft: &bft.DefaultConfig,
 	}
 }

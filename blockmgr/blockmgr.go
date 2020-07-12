@@ -29,7 +29,6 @@ import (
 )
 
 var (
-	rootChain types.ChainIdType
 	// DefaultOracleConfig define default config of oracle
 	DefaultOracleConfig = OracleConfig{
 		Blocks:     20,
@@ -384,6 +383,6 @@ func (blockMgr *BlockMgr) NewTxFeed() *event.Feed {
 }
 
 // DefaultConfig gets default config of blockchain.
-func (blockMgr *BlockMgr) DefaultConfig() *BlockMgrConfig {
+func (blockMgr *BlockMgr) DefaultConfig(netType params.NetType) *BlockMgrConfig {
 	return DefaultChainConfig
 }

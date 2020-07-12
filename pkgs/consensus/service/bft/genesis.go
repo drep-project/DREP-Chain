@@ -31,7 +31,8 @@ func (minerGenesisProcessor *MinerGenesisProcessor) Genesis(context *chain.Genes
 		}
 	} else {
 		op := ConsensusOp{context.Store()}
-		err := op.SaveProducer(chain.DefaultGenesisConfig.Miners) // binary serilize and save to trie
+
+		err := op.SaveProducer(chain.DefaultGenesisConfigMainnet.Miners) // binary serilize and save to trie
 		if err != nil {
 			return err
 		}

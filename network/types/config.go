@@ -21,11 +21,11 @@ import (
 )
 
 const (
-	datadirPrivateKey      = "nodekey"            // Path within the datadir to the node's private key
-	datadirDefaultKeyStore = "keystore"           // Path within the datadir to the keystore
-	datadirStaticNodes     = "static-nodes.json"  // Path within the datadir to the static node list
-	datadirTrustedNodes    = "trusted-nodes.json" // Path within the datadir to the trusted node list
-	datadirNodeDatabase    = "nodes"              // Path within the datadir to store the node infos
+	datadirPrivateKey = "nodekey" // Path within the datadir to the node's private key
+	//datadirDefaultKeyStore = "keystore"           // Path within the datadir to the keystore
+	//datadirStaticNodes     = "static-nodes.json"  // Path within the datadir to the static node list
+	//datadirTrustedNodes    = "trusted-nodes.json" // Path within the datadir to the trusted node list
+	//datadirNodeDatabase    = "nodes"              // Path within the datadir to store the node infos
 )
 
 type Config struct {
@@ -123,10 +123,26 @@ type P2pConfig struct {
 }
 
 var (
-	DefaultP2pConfig = &P2pConfig{
+	DefaultP2pConfigMainnet = &P2pConfig{
 		Config: p2p.Config{
 			DialRatio:       3,
-			ListenAddr:      "0.0.0.0:55555",
+			ListenAddr:      "0.0.0.0:10086",
+			MaxPeers:        25,
+			MaxPendingPeers: 10,
+			NoDiscovery:     false,
+			DiscoveryV5:     true,
+			NAT:             nat.Any(),
+			BootstrapNodes:  nil,
+			Name:            "drepnode",
+			StaticNodes:     []*enode.Node{},
+		},
+		DataDir: "",
+	}
+
+	DefaultP2pConfigTestnet = &P2pConfig{
+		Config: p2p.Config{
+			DialRatio:       3,
+			ListenAddr:      "0.0.0.0:44444",
 			MaxPeers:        25,
 			MaxPendingPeers: 10,
 			NoDiscovery:     false,
@@ -141,13 +157,22 @@ var (
 )
 
 func init() {
-	for _, nodeStr := range params.BootStrapNode {
+	for _, nodeStr := range params.BootStrapNodeMainnet {
 		node := &enode.Node{}
 		err := node.UnmarshalText([]byte(nodeStr))
 		if err == nil {
-			DefaultP2pConfig.StaticNodes = append(DefaultP2pConfig.StaticNodes, node)
+			DefaultP2pConfigMainnet.StaticNodes = append(DefaultP2pConfigMainnet.StaticNodes, node)
 		}
 	}
+
+	for _, nodeStr := range params.BootStrapNodeTestnet {
+		node := &enode.Node{}
+		err := node.UnmarshalText([]byte(nodeStr))
+		if err == nil {
+			DefaultP2pConfigTestnet.StaticNodes = append(DefaultP2pConfigTestnet.StaticNodes, node)
+		}
+	}
+
 }
 
 // NodeName returns the devp2p node identifier.

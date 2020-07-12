@@ -65,12 +65,12 @@ func (blockAnalysis *BlockAnalysis) Start(newBlock, detachBlock *event.Feed) err
 		}
 	}
 	if blockAnalysis.Config.DbType == "leveldb" {
-		blockAnalysis.store, err = NewLevelDbStore(blockAnalysis.Config.HistoryDir, getProducer, blockAnalysis.consensusService.Config.ConsensusMode)
+		blockAnalysis.store, err = NewLevelDbStore(blockAnalysis.Config.HistoryDir, getProducer, string(blockAnalysis.consensusService.Config.ConsensusMode))
 		if err != nil {
 			log.WithField("err", err).WithField("path", blockAnalysis.Config.HistoryDir).Error("cannot open db file")
 		}
 	} else if blockAnalysis.Config.DbType == "mongo" {
-		blockAnalysis.store, err = NewMongoDbStore(blockAnalysis.Config.Url, getProducer, blockAnalysis.consensusService.Config.ConsensusMode, DefaultDbName)
+		blockAnalysis.store, err = NewMongoDbStore(blockAnalysis.Config.Url, getProducer, string(blockAnalysis.consensusService.Config.ConsensusMode), DefaultDbName)
 		if err != nil {
 			log.WithField("err", err).WithField("url", blockAnalysis.Config.Url).Error("try connect mongo fail")
 		}

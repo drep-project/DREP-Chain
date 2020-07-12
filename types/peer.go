@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	//"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/network/p2p"
 	"github.com/vishalkuo/bimap"
 )

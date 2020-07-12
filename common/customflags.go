@@ -60,6 +60,7 @@ func (self DirectoryFlag) String() string {
 	if len(self.Value.Value) > 0 {
 		fmtString = "%s \"%v\"\t%v"
 	}
+
 	return fmt.Sprintf(fmtString, prefixedNames(self.Name), self.Value.Value, self.Usage)
 }
 
@@ -237,4 +238,28 @@ func HomeDir() string {
 		return usr.HomeDir
 	}
 	return ""
+}
+
+type NoSetValueFlag struct {
+	Name  string
+	Usage string
+	Value string
+}
+
+func (self NoSetValueFlag) GetName() string {
+	return self.Name
+}
+
+func (self NoSetValueFlag) String() string {
+	fmtString := "%s %v\t%v"
+	if self.Value != "" {
+		fmtString = "%s \"%v\"\t%v"
+	}
+	return fmt.Sprintf(fmtString, prefixedNames(self.Name), self.Value, self.Usage)
+}
+
+func (self NoSetValueFlag) Apply(set *flag.FlagSet) {
+	//eachName(self.Name, func(name string) {
+	//	set.Var(&self.Value, self.Name, self.Usage)
+	//})
 }

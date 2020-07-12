@@ -32,7 +32,7 @@ func (NewPreminerGenesisProcessor *PreminerGenesisProcessor) Genesis(context *Ge
 			return err
 		}
 	} else {
-		preminers = append(preminers, DefaultGenesisConfig.Preminer...)
+		preminers = append(preminers, DefaultGenesisConfigMainnet.Preminer...)
 	}
 
 	for _, preminer := range preminers {
@@ -51,7 +51,7 @@ func (NewPreminerGenesisProcessor *PreminerGenesisProcessor) Genesis(context *Ge
 			return err
 		}
 	} else {
-		miners = append(miners, DefaultGenesisConfig.Miners...)
+		miners = append(miners, DefaultGenesisConfigMainnet.Miners...)
 	}
 
 	addrs := []crypto.CommonAddress{}

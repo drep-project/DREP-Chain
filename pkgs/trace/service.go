@@ -2,6 +2,7 @@ package trace
 
 import (
 	"github.com/drep-project/DREP-Chain/database"
+	"github.com/drep-project/DREP-Chain/params"
 	consensusService "github.com/drep-project/DREP-Chain/pkgs/consensus/service"
 	"path"
 
@@ -107,6 +108,6 @@ func (traceService *TraceService) Receive(context actor.Context) {
 
 }
 
-func (traceService *TraceService) DefaultConfig() *HistoryConfig {
+func (traceService *TraceService) DefaultConfig(netType params.NetType) *HistoryConfig {
 	return DefaultHistoryConfig
 }

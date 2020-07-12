@@ -1,6 +1,8 @@
 package service
 
 import (
+	"fmt"
+	"github.com/drep-project/DREP-Chain/params"
 	"path"
 
 	"github.com/drep-project/DREP-Chain/app"
@@ -46,7 +48,7 @@ func (p2pService *P2pService) CommandFlags() ([]cli.Command, []cli.Flag) {
 //func NewP2pService(config *p2pTypes.P2pConfig, homeDir string) *P2pService {
 //	p2pService := &P2pService{}
 //	// config
-//	p2pService.Config = p2pTypes.DefaultP2pConfig
+//	p2pService.Config = p2pTypes.DefaultP2pConfigMainnet
 //
 //	p2pService.Config.DataDir = homeDir
 //	p2pService.outQuene = make(chan *outMessage, MaxConnections*2)
@@ -75,23 +77,23 @@ func (p2pService *P2pService) CommandFlags() ([]cli.Command, []cli.Flag) {
 //}
 
 func (p2pService *P2pService) Init(executeContext *app.ExecuteContext) error {
+	switch executeContext.NetConfigType {
+	case params.MainnetType:
+	case params.TestnetType:
+	case params.SolonetType:
+	default:
+		return fmt.Errorf("unkonw net type:%s", executeContext.NetConfigType)
+
+	}
+
 	p2pService.Config.DataDir = executeContext.CommonConfig.HomeDir
 	p2pService.outQuene = make(chan *outMessage, MaxConnections*2)
 
 	if p2pService.Config.PrivateKey == nil {
 		p2pService.Config.PrivateKey = p2pService.Config.GeneratePrivateKey()
 	}
-	//n.serverConfig.Name = n.config.NodeName()
-	//n.serverConfig.Logger = n.log
-	//if n.serverConfig.StaticNodes == nil {
-	//	n.serverConfig.StaticNodes = n.config.StaticNodes()
-	//}
-	//if n.serverConfig.TrustedNodes == nil {
-	//	n.serverConfig.TrustedNodes = n.config.TrustedNodes()
-	//}
-	//if p2pService.Config.NodeDatabase == "" {
+
 	p2pService.Config.NodeDatabase = path.Join(executeContext.CommonConfig.HomeDir, "drepnode", "peersnode")
-	//}
 
 	p2pService.server = &p2p.Server{
 		Config: p2pService.Config.Config,
@@ -198,14 +200,18 @@ func (p2pService *P2pService) RemovePeer(nodeUrl string) {
 	}
 }
 
-//func (p2pService *P2pService) SubscribeEvents(ch chan *p2p.PeerEvent) event.Subscription {
-//	return p2pService.server.SubscribeEvents(ch)
-//}
-
 func (p2pService *P2pService) LocalNode() *enode.Node {
 	return p2pService.server.LocalNode()
 }
 
-func (p2pService *P2pService) DefaultConfig() *p2pTypes.P2pConfig {
-	return p2pTypes.DefaultP2pConfig
+func (p2pService *P2pService) DefaultConfig(netType params.NetType) *p2pTypes.P2pConfig {
+	switch netType {
+	case params.MainnetType:
+		return p2pTypes.DefaultP2pConfigMainnet
+	case params.TestnetType:
+		return p2pTypes.DefaultP2pConfigTestnet
+	default:
+		return nil
+	}
+
 }

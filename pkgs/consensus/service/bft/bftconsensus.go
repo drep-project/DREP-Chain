@@ -176,7 +176,7 @@ func (bftConsensus *BftConsensus) processPeers() {
 			bftConsensus.peerLock.Lock()
 			bftConsensus.onLinePeer[addPeer.ID()] = addPeer
 			bftConsensus.peerLock.Unlock()
-			log.Info("bft new peer:%s", addPeer.IP())
+			log.WithField("bft new peer:%s", addPeer.IP()).Info("process peer")
 		case removePeer := <-bftConsensus.removePeerChan:
 			bftConsensus.peerLock.Lock()
 			delete(bftConsensus.onLinePeer, removePeer.ID())

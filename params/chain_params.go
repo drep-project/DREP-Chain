@@ -50,10 +50,10 @@ const (
 	CreateDataGas   uint64 = 200  //
 	CallCreateDepth uint64 = 1024 // Maximum depth of call/create stack.
 	//ExpGas           uint64 = 10    // Once per EXP instruction
-	LogGas           uint64 = 375   // Per LOG* operation.
-	CopyGas          uint64 = 3     //
-	StackLimit       uint64 = 1024  // Maximum size of VM stack allowed.
-	TierStepGas      uint64 = 0     // Once per operation, for a selection of them.
+	LogGas     uint64 = 375  // Per LOG* operation.
+	CopyGas    uint64 = 3    //
+	StackLimit uint64 = 1024 // Maximum size of VM stack allowed.
+	//TierStepGas      uint64 = 0     // Once per operation, for a selection of them.
 	LogTopicGas      uint64 = 375   // Multiplied by the * of the LOG*, per LOG transaction. e.g. LOG0 incurs 0 * c_txLogTopicGas, LOG4 incurs 4 * c_txLogTopicGas.
 	CreateGas        uint64 = 32000 // Once per CREATE operation & contract-creation transaction.
 	Create2Gas       uint64 = 32000 // Once per CREATE2 operation
@@ -78,15 +78,34 @@ const (
 	Bn256PairingBaseGas     uint64 = 100000 // Base price for an elliptic curve pairing check
 	Bn256PairingPerPointGas uint64 = 80000  // Per-point price for an elliptic curve pairing check
 
-	RootChain          uint32 = 0
-	RemotePort         uint16 = 10087
-	GenesisProducerNum        = 21
+	RootChain                 uint32 = 0
+	RemotePortMainnet         uint16 = 10087
+	GenesisProducerNumMainnet        = 21
+
+	RemotePortTestnet         uint16 = 44445
+	GenesisProducerNumTestnet        = 3
+
+	BlockInterval  int16  = 15
+	ChangeInterval uint64 = 100
 )
 
 var (
-	BootStrapNode = []string{"enode://f57881c48aaccf97485c2b65b421bfeda22cc3b427c44be7607b122fc1688abb@172.104.123.143:10086",
+	BootStrapNodeMainnet = []string{"enode://f57881c48aaccf97485c2b65b421bfeda22cc3b427c44be7607b122fc1688abb@172.104.123.143:10086",
 		"enode://9d25d161ae4b676e2df55accca93c3137df3166326d04420ffbdf66e887bd494@172.104.116.219:10086",
 		"enode://bc7ca1b57175f2d5c85da73d367408529468a034b97d083aaecf88196090e245@172.105.103.59:10086",
 		"enode://0ebd0422ca32d70292be128342f9e5ca32ab3cef28dc32cc332169e578e7b4f5@109.74.203.199:10086",
 	}
+
+	BootStrapNodeTestnet = []string{"enode://548c58daf6dc65d463c155027fce3a909d555683543d1dca34cff1d68868c54f@39.100.111.74:44444",
+		"enode://385c49f05a235115515d5581485be6cd66bbcaf2dbace93d641b5e4c87c20255@39.98.39.224:44444",
+		"enode://9296c4f6e4ceaaea24d0416f49bf7624e920d1f71f7a51877a5d0ed156e35ac5@39.99.44.60:44444",
+	}
+)
+
+type NetType string
+
+const (
+	TestnetType NetType = "testnet"
+	MainnetType NetType = "mainnet"
+	SolonetType NetType = "solonet" //develop net
 )
