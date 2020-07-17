@@ -94,7 +94,7 @@ func GetCandidates(store store.StoreInterface, topN int) []types.Producer {
 				log.Errorf("get candidates err:%s,%v", err.Error(), cd.Node)
 				continue
 			}
-			log.Trace("get candidates info:", cd.Node)
+			//log.Trace("get candidates info:", cd.Node)
 			producer := types.Producer{
 				Pubkey: cd.Pubkey,
 				Node:   n,

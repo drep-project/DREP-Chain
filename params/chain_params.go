@@ -103,7 +103,6 @@ var (
 )
 
 type NetType string
-
 const (
 	TestnetType NetType = "testnet"
 	MainnetType NetType = "mainnet"

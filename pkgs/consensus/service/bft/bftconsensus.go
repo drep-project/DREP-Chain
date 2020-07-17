@@ -114,6 +114,19 @@ func (bftConsensus *BftConsensus) loadProducers(height uint64, topN int) ([]type
 	return GetCandidates(trie, topN), nil
 }
 
+func (bftConsensus *BftConsensus) clearMsgPool() {
+	//for {
+	//	select {
+	//	case <-bftConsensus.memberMsgPool:
+	//		fmt.Println("clean peer leader msg......")
+	//	case <-bftConsensus.leaderMsgPool:
+	//		fmt.Println("clean peer member msg .....")
+	//	default:
+	//		return
+	//	}
+	//}
+}
+
 func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Block, error) {
 	bftConsensus.CoinBase = crypto.PubkeyToAddress(privKey.PubKey())
 	bftConsensus.PrivKey = privKey
@@ -156,6 +169,9 @@ func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Blo
 		if err != nil {
 			return nil, err
 		}
+
+		bftConsensus.clearMsgPool()
+
 		if isL {
 			return bftConsensus.runAsLeader(producers, miners, minMiners)
 		} else if isM {
@@ -323,6 +339,7 @@ func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo, minMiners in
 //3 After the leader collects all the signatures or returns more than two-thirds of the number of producers, he or she shall verify the signatures
 //4 After the leader validates the signature, the block is broadcast to all peers
 func (bftConsensus *BftConsensus) runAsLeader(producers types.ProducerSet, miners []*MemberInfo, minMiners int) (block *types.Block, err error) {
+
 	leader := NewLeader(
 		bftConsensus.PrivKey,
 		bftConsensus.sender,
@@ -452,7 +469,14 @@ func (bftConsensus *BftConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, t ui
 	case MsgTypeChallenge:
 		log.WithField("addr", peer.IP()).WithField("code", t).WithField("size", len(buf)).Debug("Receive MsgTypeChallenge msg")
 	case MsgTypeFail:
-		log.WithField("addr", peer.IP()).WithField("code", t).Debug("Receive MsgTypeFail msg")
+		f := Fail{}
+
+		if err := drepbinary.Unmarshal(buf, &f); err != nil{
+
+		}
+		fmt.Println(f)
+		//&Fail{Reason: msg, Magic: FailMagic, Round: round}
+		log.WithField("addr", peer.IP()).WithField("code", t).WithField("buf",string(buf)).Debug("Receive MsgTypeFail msg")
 	case MsgTypeCommitment:
 		log.WithField("addr", peer.IP()).WithField("code", t).Debug("Receive MsgTypeCommitment msg")
 	case MsgTypeResponse:
