@@ -121,7 +121,7 @@ func (member *Member) processP2pMessage(round int) {
 					continue
 				}
 				if setup.Round != round {
-					log.WithField("come round", setup.Round).WithField("local round", round).Info("member process setup err")
+					log.WithField("come round", setup.Round).WithField("local round", round).Trace("member process setup err")
 					continue
 				}
 				go member.OnSetUp(msg.Peer, &setup)
@@ -132,7 +132,7 @@ func (member *Member) processP2pMessage(round int) {
 					continue
 				}
 				if challenge.Round != round {
-					log.WithField("come round", challenge.Round).WithField("local round", round).Info("member process challege err")
+					log.WithField("come round", challenge.Round).WithField("local round", round).Trace("member process challege err")
 					continue
 				}
 				go member.OnChallenge(msg.Peer, &challenge)
@@ -143,9 +143,16 @@ func (member *Member) processP2pMessage(round int) {
 					continue
 				}
 				if fail.Round != round {
-					log.WithField("come round", fail.Round).WithField("local round", round).Info("member process fail err")
+					log.WithField("come round", fail.Round).WithField("local round", round).Trace("member process fail")
 					continue
 				}
+
+				if fail.Height != member.currentHeight {
+					log.WithField("fai height", fail.Height).WithField("mem currentHeight", member.currentHeight).
+						Trace("member process fail")
+					continue
+				}
+
 				go member.OnFail(msg.Peer, &fail)
 			}
 		case <-member.cancelPool:
@@ -155,6 +162,7 @@ func (member *Member) processP2pMessage(round int) {
 }
 func (member *Member) WaitSetUp() {
 	tm := time.NewTimer(member.waitTime)
+	defer tm.Stop()
 	select {
 	case <-tm.C:
 		log.Debug("wait setup message timeout")
@@ -217,6 +225,7 @@ func (member *Member) OnSetUp(peer consensusTypes.IPeerInfo, setUp *Setup) {
 
 func (member *Member) WaitChallenge() {
 	tm := time.NewTimer(member.waitTime)
+	defer tm.Stop()
 	select {
 	case <-tm.C:
 		member.setState(WAIT_CHALLENGE_TIMEOUT)
