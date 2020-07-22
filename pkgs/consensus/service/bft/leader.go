@@ -117,7 +117,7 @@ func (leader *Leader) ProcessConsensus(msg IConsenMsg, round int) (error, *secp2
 	leader.setState(INIT)
 	go leader.processP2pMessage(round)
 	leader.setUp(msg, round)
-	if !leader.waitForCommit() {
+	if !leader.waitForCommit(round1) {
 		//send reason and reset
 		leader.fail(ErrWaitCommit.Error(), round)
 		return ErrWaitCommit, nil, nil
@@ -151,8 +151,12 @@ func (leader *Leader) processP2pMessage(round int) {
 					continue
 				}
 
+				log.WithField("height", req.Height).WithField("come round", req.Round).
+					WithField("local round", round).Info("leader process msg req")
+
 				if req.Round != round {
-					log.WithField("come round", req.Round).WithField("local round", round).Info("leader process msg req err")
+					log.WithField("come round", req.Round).WithField("local round", round).
+						Info("leader process msg req err")
 					continue
 				}
 
@@ -163,8 +167,12 @@ func (leader *Leader) processP2pMessage(round int) {
 					log.Debugf("response msg:%v err:%v", msg, err)
 					continue
 				}
+				log.WithField("height", res.Height).WithField("come round", res.Round).
+					WithField("local round", round).Info("leader process msg res err")
+
 				if res.Round != round {
-					log.WithField("come round", res.Round).WithField("local round", round).Info("leader process msg res err")
+					log.WithField("come round", res.Round).WithField("local round", round).
+						Info("leader process msg res err")
 					continue
 				}
 
@@ -235,22 +243,23 @@ func (leader *Leader) OnCommit(peer consensusTypes.IPeerInfo, commit *Commitment
 	}
 }
 
-func (leader *Leader) waitForCommit() bool {
+func (leader *Leader) waitForCommit(round int) bool {
 	leader.setState(WAIT_COMMIT)
-	//fmt.Println(leader.waitTime.String())
 	t := time.Now()
 	tm := time.NewTimer(leader.waitTime)
+	defer tm.Stop()
 	select {
 	case <-tm.C:
 		commitNum := leader.getCommitNum()
 		log.WithField("commitNum", commitNum).WithField("producers", len(leader.producers)).Debug("waitForCommit  finish")
-		log.WithField("start", t).WithField("now", time.Now()).Info("wait for commit timeout")
+		log.WithField("start", t).WithField("now", time.Now()).WithField("round", round).Info("wait for commit timeout")
 		if commitNum >= leader.minMember {
 			return true
 		}
 		leader.setState(WAIT_COMMIT_IMEOUT)
 		return false
 	case <-leader.cancelWaitCommit:
+		log.Info("cancelWaitCommit closed...., waitForCommit leader")
 		return true
 	}
 }
@@ -347,7 +356,7 @@ CANCEL:
 			break CANCEL
 		}
 	}
-	failMsg := &Fail{Reason: msg, Magic: FailMagic, Round: round}
+	failMsg := &Fail{Reason: msg, Magic: FailMagic, Round: round, Height: leader.currentHeight}
 	failMsg.Height = leader.currentHeight
 
 	for _, member := range leader.liveMembers {
@@ -360,6 +369,7 @@ CANCEL:
 func (leader *Leader) waitForResponse() bool {
 	leader.setState(WAIT_RESPONSE)
 	tm := time.NewTimer(leader.waitTime)
+	defer tm.Stop()
 	select {
 	case <-tm.C:
 		responseNum := leader.getResponseNum()
