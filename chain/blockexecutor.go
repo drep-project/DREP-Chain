@@ -94,6 +94,7 @@ func (chainBlockValidator *ChainBlockValidator) VerifyHeader(header, parent *typ
 	}
 	// pre block timestamp before this block time
 	if header.Timestamp <= parent.Timestamp {
+		log.WithField("header height", header.Height).WithField("parent height", parent.Height).WithField("header ts", header.Timestamp).WithField("parent ts", parent.Timestamp).Error("VerifyHeader")
 		return ErrInvalidateTimestamp
 	}
 
