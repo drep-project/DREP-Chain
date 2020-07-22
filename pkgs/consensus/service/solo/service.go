@@ -127,9 +127,9 @@ func (soloConsensusService *SoloConsensusService) Start(executeContext *app.Exec
 				//consult privkey in wallet
 				accountNode, err := soloConsensusService.WalletService.Wallet.GetAccountByPubkey(soloConsensusService.Config.MyPk)
 				if err != nil {
-
-					log.WithField("init err", err).WithField("addr", crypto.PubkeyToAddress(soloConsensusService.Config.MyPk).String()).Error("privkey of MyPk in Config is not in local wallet")
-
+					log.WithField("init err", err).
+						WithField("addr", crypto.PubkeyToAddress(soloConsensusService.Config.MyPk).String()).
+						Error("privkey of MyPk in Config is not in local wallet")
 					time.Sleep(time.Second * 3)
 					continue
 				}
