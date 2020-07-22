@@ -170,7 +170,7 @@ func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Blo
 		if err != nil {
 			return nil, err
 		}
-
+		log.WithField("isL", isL).Trace("BftConsensus run")
 		if isL {
 			return bftConsensus.runAsLeader(producers, miners, minMiners)
 		} else if isM {
@@ -547,7 +547,7 @@ func (bftConsensus *BftConsensus) prepareForMining(p2p p2pService.P2P) {
 			for index, p := range tempProduces {
 				if bytes.Equal(p.Pubkey.Serialize(), bftConsensus.config.MyPk.Serialize()) {
 					found = true
-					producers = append(tempProduces[:index], tempProduces[index+1:]...)
+					tempProduces = append(tempProduces[:index], tempProduces[index+1:]...)
 					break
 				}
 			}
