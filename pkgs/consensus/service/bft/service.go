@@ -188,14 +188,13 @@ func (bftConsensusService *BftConsensusService) Start(executeContext *app.Execut
 	go bftConsensusService.BftConsensus.prepareForMining(bftConsensusService.P2pServer)
 
 	go func() {
-		select {
-		case <-bftConsensusService.quit:
-			return
-		default:
-			for {
+		for {
+			select {
+			case <-bftConsensusService.quit:
+				return
+			default:
 				//consult privkey in wallet
 				if bftConsensusService.Miner == nil {
-
 					if bftConsensusService.Config.MyPk == nil {
 						time.Sleep(time.Second * time.Duration(bftConsensusService.Config.BlockInterval))
 						log.Trace("not set pubkey ,the node is listener")
