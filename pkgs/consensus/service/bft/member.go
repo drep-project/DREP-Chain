@@ -100,6 +100,7 @@ func (member *Member) ProcessConsensus(round int) (IConsenMsg, error) {
 		log.WithField("Reason", err).Error("member consensus fail")
 		return nil, err
 	case <-member.timeOutChanel:
+		log.WithField("timeout", "member timeout").Error("member consensus fail")
 		member.setState(ERROR)
 		return nil, ErrTimeout
 	case <-member.completed:
@@ -120,6 +121,9 @@ func (member *Member) processP2pMessage(round int) {
 					log.Debugf("setup msg:%v err:%v", msg, err)
 					continue
 				}
+
+				log.WithField("height", setup.Height).WithField("come round", setup.Round).WithField("local round", round).Trace("member process setup")
+
 				if setup.Round != round {
 					log.WithField("come round", setup.Round).WithField("local round", round).Trace("member process setup err")
 					continue
@@ -131,6 +135,8 @@ func (member *Member) processP2pMessage(round int) {
 					log.Debugf("challenge msg:%v err:%v", msg, err)
 					continue
 				}
+				log.WithField("height", challenge.Height).WithField("come round", challenge.Round).WithField("local round", round).Trace("member process challege")
+
 				if challenge.Round != round {
 					log.WithField("come round", challenge.Round).WithField("local round", round).Trace("member process challege err")
 					continue
@@ -142,6 +148,9 @@ func (member *Member) processP2pMessage(round int) {
 					log.Debugf("challenge msg:%v err:%v", msg, err)
 					continue
 				}
+
+				log.WithField("height", fail.Height).WithField("come round", fail.Round).WithField("local round", round).Trace("member process fail")
+
 				if fail.Round != round {
 					log.WithField("come round", fail.Round).WithField("local round", round).Trace("member process fail")
 					continue
