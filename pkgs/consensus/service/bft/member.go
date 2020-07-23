@@ -3,6 +3,7 @@ package bft
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1/schnorr"
 	"github.com/drep-project/DREP-Chain/crypto/sha3"
@@ -85,22 +86,25 @@ func (member *Member) Reset() {
 	member.setState(INIT)
 }
 
-func (member *Member) ProcessConsensus(round int) (IConsenMsg, error) {
+func (member *Member) ProcessConsensus(round int, chNewBlock <-chan uint64) (IConsenMsg, error) {
 	defer func() {
 		member.cancelPool <- struct{}{}
 	}()
 
-	log.WithField("Node", member.leader.Peer.IP()).Debug("wait for leader's setup message")
+	log.WithField("Node", member.leader.Peer.IP()).WithField("height", member.currentHeight).
+		WithField("round", round).Debug("wait for leader's setup message")
 	member.setState(WAIT_SETUP)
-	go member.WaitSetUp()
+	go member.WaitSetUp(round, chNewBlock)
 	go member.processP2pMessage(round)
 
 	select {
 	case err := <-member.errorChanel:
-		log.WithField("Reason", err).Error("member consensus fail")
+		log.WithField("Reason", err).WithField("height", member.currentHeight).
+			WithField("round", round).Error("member consensus fail")
 		return nil, err
 	case <-member.timeOutChanel:
-		log.WithField("timeout", "member timeout").Error("member consensus fail")
+		log.WithField("timeout", "member timeout").WithField("height", member.currentHeight).
+			WithField("round", round).Error("member consensus fail")
 		member.setState(ERROR)
 		return nil, ErrTimeout
 	case <-member.completed:
@@ -169,21 +173,30 @@ func (member *Member) processP2pMessage(round int) {
 		}
 	}
 }
-func (member *Member) WaitSetUp() {
+func (member *Member) WaitSetUp(round int, chNewBlock <-chan uint64) {
 	tm := time.NewTimer(member.waitTime)
 	defer tm.Stop()
-	select {
-	case <-tm.C:
-		log.Debug("wait setup message timeout")
-		member.setState(WAIT_SETUP_TIMEOUT)
+
+	for {
 		select {
-		case member.timeOutChanel <- struct{}{}:
-		default:
+		case <-tm.C:
+			log.Debug("wait setup message timeout")
+			member.setState(WAIT_SETUP_TIMEOUT)
+			select {
+			case member.timeOutChanel <- struct{}{}:
+			default:
+			}
+			return
+		case <-member.cancelWaitSetUp:
+			return
+		case bestHeight := <-chNewBlock:
+			if member.currentHeight < bestHeight {
+				member.errorChanel <- fmt.Errorf("may be local currentheight err")
+				return
+			}
 		}
-		return
-	case <-member.cancelWaitSetUp:
-		return
 	}
+
 }
 
 func (member *Member) OnSetUp(peer consensusTypes.IPeerInfo, setUp *Setup) {

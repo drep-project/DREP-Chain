@@ -186,6 +186,7 @@ func (bftConsensusService *BftConsensusService) Start(executeContext *app.Execut
 
 	go bftConsensusService.BftConsensus.processPeers()
 	go bftConsensusService.BftConsensus.prepareForMining(bftConsensusService.P2pServer)
+	go bftConsensusService.BftConsensus.bestHeight()
 
 	go func() {
 		for {

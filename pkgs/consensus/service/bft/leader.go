@@ -109,7 +109,7 @@ setup      ----->
 challenge  ----->
            <-----      response
 */
-func (leader *Leader) ProcessConsensus(msg IConsenMsg, round int) (error, *secp256k1.Signature, []byte) {
+func (leader *Leader) ProcessConsensus(msg IConsenMsg, round int, chBestHeight <-chan uint64) (error, *secp256k1.Signature, []byte) {
 	defer func() {
 		leader.cancelPool <- struct{}{}
 	}()
@@ -117,7 +117,7 @@ func (leader *Leader) ProcessConsensus(msg IConsenMsg, round int) (error, *secp2
 	leader.setState(INIT)
 	go leader.processP2pMessage(round)
 	leader.setUp(msg, round)
-	if !leader.waitForCommit(round1) {
+	if !leader.waitForCommit(round, chBestHeight) {
 		//send reason and reset
 		leader.fail(ErrWaitCommit.Error(), round)
 		return ErrWaitCommit, nil, nil
@@ -243,25 +243,38 @@ func (leader *Leader) OnCommit(peer consensusTypes.IPeerInfo, commit *Commitment
 	}
 }
 
-func (leader *Leader) waitForCommit(round int) bool {
+func (leader *Leader) waitForCommit(round int, chNewBlock <-chan uint64) bool {
 	leader.setState(WAIT_COMMIT)
 	t := time.Now()
 	tm := time.NewTimer(leader.waitTime)
 	defer tm.Stop()
-	select {
-	case <-tm.C:
-		commitNum := leader.getCommitNum()
-		log.WithField("commitNum", commitNum).WithField("producers", len(leader.producers)).Debug("waitForCommit  finish")
-		log.WithField("start", t).WithField("now", time.Now()).WithField("round", round).Info("wait for commit timeout")
-		if commitNum >= leader.minMember {
+
+	tmCheckNewBock := time.NewTicker(time.Millisecond * 500)
+	defer tmCheckNewBock.Stop()
+
+	for {
+		select {
+		case <-tm.C:
+			commitNum := leader.getCommitNum()
+			log.WithField("commitNum", commitNum).WithField("producers", len(leader.producers)).Debug("waitForCommit  finish")
+			log.WithField("start", t).WithField("now", time.Now()).WithField("round", round).Info("wait for commit timeout")
+			if commitNum >= leader.minMember {
+				return true
+			}
+			leader.setState(WAIT_COMMIT_IMEOUT)
+			return false
+		case <-leader.cancelWaitCommit:
+			log.Info("cancelWaitCommit closed...., waitForCommit leader")
 			return true
+
+		case height := <-chNewBlock:
+			//需要创建的块已经到来，说明本地的数据信息错误，结束本次出块等待
+			if leader.currentHeight < height {
+				return true
+			}
 		}
-		leader.setState(WAIT_COMMIT_IMEOUT)
-		return false
-	case <-leader.cancelWaitCommit:
-		log.Info("cancelWaitCommit closed...., waitForCommit leader")
-		return true
 	}
+
 }
 
 func (leader *Leader) OnResponse(peer consensusTypes.IPeerInfo, response *Response) {

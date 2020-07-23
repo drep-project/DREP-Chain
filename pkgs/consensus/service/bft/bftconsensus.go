@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	waitTime = 15 * time.Second
+	waitTime = 10 * time.Second
 	round1   = 1
 	round2   = 2
 )
@@ -53,6 +53,8 @@ type BftConsensus struct {
 
 	producer []types.Producer
 	quit     chan struct{}
+
+	chBestHeight chan uint64
 }
 
 func NewBftConsensus(
@@ -85,6 +87,7 @@ func NewBftConsensus(
 		memberMsgPool:  make(chan *MsgWrap, 1000),
 		leaderMsgPool:  make(chan *MsgWrap, 1000),
 		quit:           make(chan struct{}),
+		chBestHeight:   make(chan uint64, 0),
 	}
 }
 
@@ -229,17 +232,16 @@ func (bftConsensus *BftConsensus) moveToNextMiner(produceInfos []*MemberInfo) (b
 		}
 	}
 
+	//如果新来的块时间与系统的时间差距较小，可能是此轮出块已经结束，当前最新的块是由其它节点达成的共识；
+	// 此块同步到本地后，恰好本地新的出块循环被触发。出现此种现象的原因是：定时器或者每个节点的时间并不是完全同步的
+	if int64(bftConsensus.ChainService.BestChain().Tip().TimeStamp) >= time.Now().Unix() ||
+		time.Now().Unix()-int64(bftConsensus.ChainService.BestChain().Tip().TimeStamp) < int64(bftConsensus.config.BlockInterval/2) {
+		log.WithField("now", time.Now().Unix()).WithField("bestBlock ts",
+			bftConsensus.ChainService.BestChain().Tip().TimeStamp).Trace("moveToNextMiner ts err")
+		return false, false, fmt.Errorf("new block time err")
+	}
+
 	if curMiner.IsMe {
-		//如果新来的块时间与系统的时间差距较小，可能是此轮出块已经结束，当前最新的块是由其它节点达成的共识；
-		// 此块同步到本地后，恰好本地新的出块循环被触发。出现此种现象的原因是：定时器或者每个节点的时间并不是完全同步的
-
-		if int64(bftConsensus.ChainService.BestChain().Tip().TimeStamp) >= time.Now().Unix() ||
-			time.Now().Unix()-int64(bftConsensus.ChainService.BestChain().Tip().TimeStamp) < int64(bftConsensus.config.BlockInterval/2) {
-			log.WithField("now", time.Now().Unix()).WithField("bestBlock ts",
-				bftConsensus.ChainService.BestChain().Tip().TimeStamp).Trace("moveToNextMiner ts err")
-			return false, false, fmt.Errorf("new block time err")
-		}
-
 		return false, true, nil
 	} else {
 		return true, false, nil
@@ -273,6 +275,20 @@ func (bftConsensus *BftConsensus) collectMemberStatus(producers []types.Producer
 		})
 	}
 	return produceInfos
+}
+
+func (bftConsensus *BftConsensus) bestHeight() {
+	tm := time.NewTicker(time.Millisecond * 500)
+	defer tm.Stop()
+	for {
+		select {
+		case <-bftConsensus.quit:
+			return
+
+		case <-tm.C:
+			bftConsensus.chBestHeight <- bftConsensus.ChainService.BestChain().Height()
+		}
+	}
 }
 
 func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo, minMiners int) (block *types.Block, err error) {
@@ -309,7 +325,7 @@ func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo, minMiners in
 		block = msg.(*types.Block)
 		return bftConsensus.blockVerify(block)
 	}
-	_, err = member.ProcessConsensus(round1)
+	_, err = member.ProcessConsensus(round1, bftConsensus.chBestHeight)
 	if err != nil {
 		return nil, err
 	}
@@ -335,7 +351,7 @@ func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo, minMiners in
 		block.Proof = types.Proof{Type: consensusTypes.Pbft, Evidence: multiSigBytes}
 		return bftConsensus.verifyBlockContent(block)
 	}
-	_, err = member.ProcessConsensus(round2)
+	_, err = member.ProcessConsensus(round2, bftConsensus.chBestHeight)
 	if err != nil {
 		return nil, err
 	}
@@ -373,7 +389,7 @@ func (bftConsensus *BftConsensus) runAsLeader(producers types.ProducerSet, miner
 	}
 
 	log.WithField("Block", block).Trace("node leader is preparing process consensus for round 1")
-	err, sig, bitmap := leader.ProcessConsensus(block, round1)
+	err, sig, bitmap := leader.ProcessConsensus(block, round1, bftConsensus.chBestHeight)
 	if err != nil {
 		var str = err.Error()
 		log.WithField("msg", str).WithField("round", round1).Error("Error occurs")
@@ -401,7 +417,7 @@ func (bftConsensus *BftConsensus) runAsLeader(producers types.ProducerSet, miner
 	rwMsg := &CompletedBlockMessage{*multiSig, block.Header.StateRoot}
 
 	log.Trace("node leader is going to process consensus for round 2")
-	err, _, _ = leader.ProcessConsensus(rwMsg, round2)
+	err, _, _ = leader.ProcessConsensus(rwMsg, round2, bftConsensus.chBestHeight)
 	if err != nil {
 		return nil, err
 	}
