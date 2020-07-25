@@ -369,14 +369,14 @@ CANCEL:
 			break CANCEL
 		}
 	}
-	failMsg := &Fail{Reason: msg, Magic: FailMagic, Round: round, Height: leader.currentHeight}
-	failMsg.Height = leader.currentHeight
+	//failMsg := &Fail{Reason: msg, Magic: FailMagic, Round: round, Height: leader.currentHeight}
+	//failMsg.Height = leader.currentHeight
 
-	for _, member := range leader.liveMembers {
-		if member.Peer != nil && !member.IsMe {
-			leader.sender.SendAsync(member.Peer.GetMsgRW(), MsgTypeFail, failMsg)
-		}
-	}
+	//for _, member := range leader.liveMembers {
+	//	if member.Peer != nil && !member.IsMe {
+	//		leader.sender.SendAsync(member.Peer.GetMsgRW(), MsgTypeFail, failMsg)
+	//	}
+	//}
 }
 
 func (leader *Leader) waitForResponse() bool {

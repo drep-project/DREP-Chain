@@ -497,10 +497,10 @@ func (bftConsensus *BftConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, t ui
 		log.WithField("addr", peer.IP()).WithField("code", t).WithField("size", len(buf)).Debug("Receive MsgTypeSetUp msg")
 	case MsgTypeChallenge:
 		log.WithField("addr", peer.IP()).WithField("code", t).WithField("size", len(buf)).Debug("Receive MsgTypeChallenge msg")
-	case MsgTypeFail:
-		f := Fail{}
-		drepbinary.Unmarshal(buf, &f)
-		log.WithField("addr", peer.IP()).WithField("code", t).WithField("buf", f).Debug("Receive MsgTypeFail msg")
+	//case MsgTypeFail:
+	//	f := Fail{}
+	//	drepbinary.Unmarshal(buf, &f)
+	//	log.WithField("addr", peer.IP()).WithField("code", t).WithField("buf", f).Debug("Receive MsgTypeFail msg")
 	case MsgTypeCommitment:
 		log.WithField("addr", peer.IP()).WithField("code", t).Debug("Receive MsgTypeCommitment msg")
 	case MsgTypeResponse:
@@ -512,8 +512,6 @@ func (bftConsensus *BftConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, t ui
 	case MsgTypeSetUp:
 		fallthrough
 	case MsgTypeChallenge:
-		fallthrough
-	case MsgTypeFail:
 		select {
 		case bftConsensus.memberMsgPool <- &MsgWrap{peer, t, buf}:
 		default:
