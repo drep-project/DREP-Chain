@@ -94,6 +94,7 @@ var (
 		"enode://9d25d161ae4b676e2df55accca93c3137df3166326d04420ffbdf66e887bd494@172.104.116.219:10086",
 		"enode://bc7ca1b57175f2d5c85da73d367408529468a034b97d083aaecf88196090e245@172.105.103.59:10086",
 		"enode://0ebd0422ca32d70292be128342f9e5ca32ab3cef28dc32cc332169e578e7b4f5@109.74.203.199:10086",
+		"enode://32052662b8df744f865574ef1649c51a939217fad14a01dc29843d355e5875e3@139.162.101.252:10086",
 	}
 
 	BootStrapNodeTestnet = []string{"enode://548c58daf6dc65d463c155027fce3a909d555683543d1dca34cff1d68868c54f@39.100.111.74:44444",
@@ -103,6 +104,7 @@ var (
 )
 
 type NetType string
+
 const (
 	TestnetType NetType = "testnet"
 	MainnetType NetType = "mainnet"
