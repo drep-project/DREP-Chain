@@ -41,13 +41,13 @@ func (blockMultiSigValidator *BlockMultiSigValidator) VerifyBody(block *types.Bl
 	if err != nil {
 		return err
 	}
-	producers, err := blockMultiSigValidator.getProducers(parentBlock.Header.Height, blockMultiSigValidator.producerNum)
+	producers, err := blockMultiSigValidator.getProducers(parentBlock.Header.Height, MAX_PRODUCER)
 	if err != nil {
 		return err
 	}
 
 	if len(producers) != len(multiSig.Bitmap) {
-		return fmt.Errorf("producer num:%d != multisig num:%d", blockMultiSigValidator.producerNum, len(multiSig.Bitmap))
+		return fmt.Errorf("producer num:%d != multisig num:%d", len(producers), len(multiSig.Bitmap))
 	}
 
 	for index, val := range multiSig.Bitmap {
@@ -71,7 +71,7 @@ func (blockMultiSigValidator *BlockMultiSigValidator) ExecuteBlock(context *chai
 	if err != nil {
 		return err
 	}
-	producers, err := blockMultiSigValidator.getProducers(parentBlock.Header.Height, blockMultiSigValidator.producerNum)
+	producers, err := blockMultiSigValidator.getProducers(parentBlock.Header.Height, MAX_PRODUCER)
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (blockMultiSigValidator *BlockMultiSigValidator) ExecuteBlock(context *chai
 	}
 
 	if len(producers) != len(multiSig.Bitmap) {
-		return fmt.Errorf("executeBlock producer num:%d != multisig num:%d", blockMultiSigValidator.producerNum, len(multiSig.Bitmap))
+		return fmt.Errorf("executeBlock producer num:%d != multisig num:%d", len(producers), len(multiSig.Bitmap))
 	}
 
 	calculator := NewRewardCalculator(context.TrieStore, multiSig, producers, context.GasFee, context.Block.Header.Height)

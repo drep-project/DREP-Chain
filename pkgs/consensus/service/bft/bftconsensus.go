@@ -134,7 +134,7 @@ func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Blo
 	bftConsensus.CoinBase = crypto.PubkeyToAddress(privKey.PubKey())
 	bftConsensus.PrivKey = privKey
 
-	producers, err := bftConsensus.GetProducers(bftConsensus.ChainService.BestChain().Height(), bftConsensus.config.ProducerNum)
+	producers, err := bftConsensus.GetProducers(bftConsensus.ChainService.BestChain().Height(), MAX_PRODUCER)
 	if err != nil {
 		log.Trace("bft consensus run get producers err:", err)
 		return nil, err
@@ -142,6 +142,8 @@ func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Blo
 	found := false
 
 	log.Trace(" bftConsensus.config.ProducerNum:", bftConsensus.config.ProducerNum, bftConsensus.ChainService.BestChain().Height())
+	log.Trace(" Real ProducerNum:", len(producers), bftConsensus.ChainService.BestChain().Height())
+
 	for _, p := range producers {
 		log.WithField("node", p.Node.String()).Trace("get producers")
 	}
@@ -156,8 +158,8 @@ func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Blo
 		return nil, ErrNotMyTurn
 	}
 
-	minMiners := int(bftConsensus.config.ProducerNum * 2 / 3)
-	if bftConsensus.config.ProducerNum*2%3 != 0 {
+	minMiners := len(producers) * 2 / 3
+	if len(producers)*2%3 != 0 {
 		minMiners++
 	}
 	miners := bftConsensus.collectMemberStatus(producers)
@@ -454,7 +456,12 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
 	if err != nil {
 		return err
 	}
-	multiSigValidator := BlockMultiSigValidator{bftConsensus.GetProducers, bftConsensus.ChainService.GetBlockByHash, bftConsensus.config.ProducerNum}
+	producers, err := bftConsensus.GetProducers(bftConsensus.ChainService.BestChain().Height(), MAX_PRODUCER)
+	if err != nil {
+		log.Trace("bft consensus verifyBlockContent get producers err:", err)
+		return err
+	}
+	multiSigValidator := BlockMultiSigValidator{bftConsensus.GetProducers, bftConsensus.ChainService.GetBlockByHash, len(producers)}
 	if err := multiSigValidator.VerifyBody(block); err != nil {
 		return err
 	}
@@ -549,7 +556,7 @@ func (bftConsensus *BftConsensus) prepareForMining(p2p p2pService.P2P) {
 		select {
 		case <-timer.C:
 			//Get as many candidate nodes as possible, establish connection with other candidate nodes in advance, and prepare for the next block
-			producers, err := bftConsensus.loadProducers(bftConsensus.ChainService.BestChain().Tip().Height, bftConsensus.config.ProducerNum*3/2)
+			producers, err := bftConsensus.loadProducers(bftConsensus.ChainService.BestChain().Tip().Height, MAX_PRODUCER*3/2)
 			if err != nil {
 				log.WithField("err", err).Info("PrepareForMiner get producer err")
 			}

@@ -98,7 +98,13 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 		&removePeerFeed,
 	)
 
-	bftConsensusService.ChainService.AddBlockValidator(&BlockMultiSigValidator{bftConsensusService.BftConsensus.GetProducers, bftConsensusService.ChainService.GetBlockByHash, bftConsensusService.Config.ProducerNum})
+	producers, err := bftConsensusService.BftConsensus.GetProducers(bftConsensusService.BftConsensus.ChainService.BestChain().Height(), MAX_PRODUCER)
+	if err != nil {
+		log.Trace("bftConsensusService Init get producers err:", err)
+		return err
+	}
+
+	bftConsensusService.ChainService.AddBlockValidator(&BlockMultiSigValidator{bftConsensusService.BftConsensus.GetProducers, bftConsensusService.ChainService.GetBlockByHash, len(producers)})
 	bftConsensusService.ChainService.AddGenesisProcess(NewMinerGenesisProcessor())
 
 	if bftConsensusService.WalletService.Wallet == nil {
