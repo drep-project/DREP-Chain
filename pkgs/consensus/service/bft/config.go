@@ -12,4 +12,4 @@ type BftConfig struct {
 	ChangeInterval uint64               `json:"changeInterval"`
 }
 
-const MAX_PRODUCER = 50
+const MAX_PRODUCER = 21
