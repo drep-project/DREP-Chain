@@ -329,7 +329,7 @@ func (accountapi *AccountApi) CandidateCredit(from crypto.CommonAddress, amount,
 	}
 
 	if !bytes.Equal(crypto.PubkeyToAddress(cd.Pubkey).Bytes(), from.Bytes()) {
-		return "", nil
+		return "", fmt.Errorf("pubkey not match addr")
 	}
 
 	nonce := accountapi.poolQuery.GetTransactionCount(&from)

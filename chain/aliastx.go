@@ -1,6 +1,8 @@
 package chain
 
 import (
+	"fmt"
+	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/params"
 	"github.com/drep-project/DREP-Chain/types"
 	"math/big"
@@ -20,8 +22,7 @@ var (
 	_ = (ITransactionValidator)((*AliasTransactionProcessor)(nil))
 )
 
-type AliasTransactionProcessor struct {
-}
+type AliasTransactionProcessor struct{}
 
 //5 160000 640
 //6 80000 320
@@ -36,7 +37,7 @@ func (aliasTransactionProcessor *AliasTransactionProcessor) ExecuteTransaction(c
 	store := context.TrieStore()
 	tx := context.Tx()
 	alias := tx.GetData()
-	if err := CheckAlias(alias); err != nil {
+	if err := CheckAlias(tx, store, context.header.Height); err != nil {
 		etr.Txerror = err
 		return &etr
 	}
@@ -50,86 +51,8 @@ func (aliasTransactionProcessor *AliasTransactionProcessor) ExecuteTransaction(c
 		etr.Txerror = err
 		return &etr
 	}
-	// extra price
-	type LenPriceCacler struct {
-		LenMatch func() bool
-		Fee      func() *big.Int
-	}
 
-	calcers := []*LenPriceCacler{
-		{
-			LenMatch: func() bool {
-				return len(alias) == 5
-			},
-			Fee: func() *big.Int {
-				return params.CoinFromNumer(160000)
-			},
-		},
-		{
-			LenMatch: func() bool {
-				return len(alias) == 6
-			},
-			Fee: func() *big.Int {
-				return params.CoinFromNumer(80000)
-			},
-		},
-		{
-			LenMatch: func() bool {
-				return len(alias) == 7
-			},
-			Fee: func() *big.Int {
-				return params.CoinFromNumer(40000)
-			},
-		},
-		{
-			LenMatch: func() bool {
-				return len(alias) == 8
-			},
-			Fee: func() *big.Int {
-				return params.CoinFromNumer(20000)
-			},
-		},
-		{
-			LenMatch: func() bool {
-				return len(alias) == 9
-			},
-			Fee: func() *big.Int {
-				return params.CoinFromNumer(10000)
-			},
-		},
-		{
-			LenMatch: func() bool {
-				return len(alias) == 10
-			},
-			Fee: func() *big.Int {
-				return params.CoinFromNumer(5000)
-			},
-		},
-		{
-			LenMatch: func() bool {
-				return len(alias) == 11
-			},
-			Fee: func() *big.Int {
-				return params.CoinFromNumer(2500)
-
-			},
-		},
-		{
-			LenMatch: func() bool {
-				return len(alias) > 11
-			},
-			Fee: func() *big.Int {
-				return big.NewInt(0)
-			},
-		},
-	}
-	var drepFee *big.Int
-	for _, calcer := range calcers {
-		if calcer.LenMatch() {
-			drepFee = calcer.Fee()
-			break
-		}
-	}
+	drepFee := getFee(len(alias))
 
 	//minus alias fee from from account
 	originBalance := store.GetBalance(from, context.header.Height)
@@ -160,8 +83,92 @@ func (aliasTransactionProcessor *AliasTransactionProcessor) ExecuteTransaction(c
 	return &etr
 }
 
-func CheckAlias(alias []byte) error {
+func getFee(len int) *big.Int {
+	// extra price
+	type LenPriceCacler struct {
+		LenMatch func() bool
+		Fee      func() *big.Int
+	}
+	calcers := []*LenPriceCacler{
+		{
+			LenMatch: func() bool {
+				return len == 5
+			},
+			Fee: func() *big.Int {
+				return params.CoinFromNumer(160000)
+			},
+		},
+		{
+			LenMatch: func() bool {
+				return len == 6
+			},
+			Fee: func() *big.Int {
+				return params.CoinFromNumer(80000)
+			},
+		},
+		{
+			LenMatch: func() bool {
+				return len == 7
+			},
+			Fee: func() *big.Int {
+				return params.CoinFromNumer(40000)
+			},
+		},
+		{
+			LenMatch: func() bool {
+				return len == 8
+			},
+			Fee: func() *big.Int {
+				return params.CoinFromNumer(20000)
+			},
+		},
+		{
+			LenMatch: func() bool {
+				return len == 9
+			},
+			Fee: func() *big.Int {
+				return params.CoinFromNumer(10000)
+			},
+		},
+		{
+			LenMatch: func() bool {
+				return len == 10
+			},
+			Fee: func() *big.Int {
+				return params.CoinFromNumer(5000)
+			},
+		},
+		{
+			LenMatch: func() bool {
+				return len == 11
+			},
+			Fee: func() *big.Int {
+				return params.CoinFromNumer(2500)
 
+			},
+		},
+		{
+			LenMatch: func() bool {
+				return len > 11
+			},
+			Fee: func() *big.Int {
+				return big.NewInt(0)
+			},
+		},
+	}
+	var drepFee *big.Int
+	for _, calcer := range calcers {
+		if calcer.LenMatch() {
+			drepFee = calcer.Fee()
+			break
+		}
+	}
+
+	return drepFee
+}
+
+func CheckAlias(tx *types.Transaction, store store.StoreInterface, height uint64) error {
+	alias := tx.GetData()
 	if len(alias) < 5 {
 		return ErrTooShortAlias
 	}
@@ -185,5 +192,14 @@ func CheckAlias(alias []byte) error {
 		}
 		return ErrUnsupportAliasChar
 	}
+
+	fee := getFee(len(alias))
+	from, _ := tx.From()
+	originBalance := store.GetBalance(from, height)
+	leftBalance := originBalance.Sub(originBalance, fee)
+	if leftBalance.Sign() < 0 {
+		return fmt.Errorf("set alias ,not enough balance")
+	}
+
 	return nil
 }

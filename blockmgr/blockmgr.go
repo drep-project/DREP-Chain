@@ -299,7 +299,6 @@ func (blockMgr *BlockMgr) SendTransaction(tx *types.Transaction, islocal bool) e
 	//	return fmt.Errorf("SendTransaction local nonce:%d != comming tx nonce:%d", nonce, tx.Nonce())
 	//}
 	err := blockMgr.verifyTransaction(tx)
-
 	if err != nil {
 		return err
 	}

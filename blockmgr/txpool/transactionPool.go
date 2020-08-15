@@ -148,23 +148,6 @@ func (pool *TransactionPool) addTxs(txs []types.Transaction) []error {
 	return errs
 }
 
-//func (pool *TransactionPool) UpdateState(chainStore *chainStore.Database) {
-//	pool.rlock.Lock()
-//	defer pool.rlock.Unlock()
-//	pool.chainStore = chainStore
-//}
-
-//func (pool *TransactionPool) Contains(id string) bool {
-//	pool.mu.Lock()
-//	defer pool.mu.Unlock()
-//	_, ok := pool.allTxs[id]
-//	//value, exists := pool.allTxs[id]
-//	//if exists && !value {
-//	//	delete(pool.allTxs, id)
-//	//}
-//	return ok
-//}
-
 //AddTransaction ransaction put in txpool
 func (pool *TransactionPool) AddTransaction(tx *types.Transaction, isLocal bool) error {
 	pool.mu.Lock()
@@ -191,7 +174,7 @@ func (pool *TransactionPool) addTx(tx *types.Transaction, isLocal bool) error {
 			//replace
 			ok, oldTx := list.ReplaceOldTx(tx)
 			if !ok {
-				return errors.New("can't replace old tx")
+				return errors.New("can't replace old tx,new tx price is too low")
 			}
 
 			pool.txFeed.Send(types.NewTxsEvent{Txs: []*types.Transaction{tx}})
@@ -338,22 +321,6 @@ func (pool *TransactionPool) syncToPending(address *crypto.CommonAddress) {
 	}
 }
 
-//func (pool *TransactionPool) removeTransaction(tran *types.Transaction) (bool, bool) {
-//	//id, err := tran.TxId()
-//	//if err != nil {
-//	//	return false, false
-//	//}
-//	//pool.tranLock.Lock()
-//	//defer pool.tranLock.Unlock()
-//	//r1 := pool.trans.Remove(tran, pool.tranCp)
-//	//delete(pool.allTxs, id)
-//	//addr := crypto.PubKey2Address(tran.Data.PubKey)
-//	//ts := pool.accountTran[addr]
-//	//r2 := ts.Remove(tran, pool.tranCp)
-//	//return r1, r2
-//	return true, true
-//}
-
 //GetQueue Gets all transactions in the non-strictly sorted queue in the transaction pool
 func (pool *TransactionPool) GetQueue() []*types.Transaction {
 	var retrunTxs []*types.Transaction
@@ -462,6 +429,9 @@ func (pool *TransactionPool) eliminateExpiredTxs() {
 					delete(pool.allTxs, tx.TxHash().String())
 					pool.allPricedTxs.Remove(tx)
 					list.Remove(tx)
+					if pool.pendingNonce[*from] == tx.Nonce() {
+						pool.pendingNonce[*from]--
+					}
 				}
 			}
 		}

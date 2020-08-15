@@ -89,7 +89,7 @@ func (context *ExecuteTransactionContext) RefundCoin() error {
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(context.gasRemained), context.gasPrice)
 	err := context.trieStore.AddBalance(context.from, context.header.Height, remaining)
 	if err != nil {
-		return nil
+		return err
 	}
 	// Also return remaining gasRemained to the block gasRemained counter so it is
 	// available for the next transaction.

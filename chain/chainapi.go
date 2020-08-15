@@ -681,13 +681,49 @@ func (trieQuery *TrieQuery) GetCancelCreditDetails(addr *crypto.CommonAddress) s
 		return ""
 	}
 
-	//for _, rc := range storage.RC {
-	//	total := new(big.Int)
-	//	for _, value := range rc.HeightValues {
-	//		total.Add(total, &value.CreditValue)
-	//	}
-	//	m[rc.Addr] = common.Big(*total)
-	//}
 	b, _ := json.Marshal(storage.CC)
 	return string(b)
+}
+
+func (trieQuery *TrieQuery) CheckCancelCandidateType(tx *types.Transaction) error {
+	toAddr := tx.To()
+	fromAddr, _ := tx.From()
+	var key []byte
+	if tx.Type() == types.CancelVoteCreditType {
+		key = sha3.Keccak256([]byte(store.StakeStorage + toAddr.Hex()))
+	} else {
+		key = sha3.Keccak256([]byte(store.StakeStorage + fromAddr.Hex()))
+	}
+
+	storage := &types.StakeStorage{}
+	value, err := trieQuery.trie.TryGet(key)
+	if err != nil {
+		log.Errorf("get storage err:%v", err)
+		return fmt.Errorf("get storage err:%v", err)
+	}
+
+	if value == nil {
+		return fmt.Errorf("stake storage key not exist")
+	} else {
+		err = binary.Unmarshal(value, storage)
+		if err != nil {
+			return err
+		}
+	}
+
+	total := new(big.Int)
+	for _, c := range storage.RC {
+		if c.Addr.String() == fromAddr.String() {
+			for _, value := range c.HeightValues {
+				total.Add(total, value.CreditValue.ToInt())
+			}
+			break
+		}
+	}
+
+	amount := tx.Amount()
+	if amount.Cmp(total) <= 0 {
+		return nil
+	}
+	return fmt.Errorf("vote total:%v < req amount:%v", total, amount)
 }

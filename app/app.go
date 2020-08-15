@@ -35,8 +35,12 @@ var (
 		Usage: "ppfof for debug performance, --pprof = true",
 	}
 
-	NetTypeFlag = cli.BoolFlag{
+	TestNetFlag = cli.BoolFlag{
 		Name:  "testnet",
+		Usage: "start test net,default is mainnet, --testnet = true",
+	}
+	SoloNetFlag = cli.BoolFlag{
+		Name:  "solonet",
 		Usage: "start test net,default is mainnet, --testnet = true",
 	}
 )
@@ -111,7 +115,8 @@ func (mApp *DrepApp) Run() error {
 	mApp.Flags = append(mApp.Flags, ConfigFileFlag)
 	mApp.Flags = append(mApp.Flags, HomeDirFlag)
 	mApp.Flags = append(mApp.Flags, PprofFlag)
-	mApp.Flags = append(mApp.Flags, NetTypeFlag)
+	mApp.Flags = append(mApp.Flags, TestNetFlag)
+	mApp.Flags = append(mApp.Flags, SoloNetFlag)
 
 	allCommands, allFlags := mApp.Context.AggerateFlags()
 	for i := 0; i < len(allCommands); i++ {
@@ -248,7 +253,9 @@ func (mApp *DrepApp) before(ctx *cli.Context) error {
 	}
 	mApp.Context.PhaseConfig = phaseConfig
 
-	if ctx.GlobalIsSet(NetTypeFlag.Name) {
+	if ctx.GlobalIsSet(SoloNetFlag.Name) {
+		mApp.Context.NetConfigType = params.SolonetType
+	} else if ctx.GlobalIsSet(TestNetFlag.Name) {
 		mApp.Context.NetConfigType = params.TestnetType
 	} else {
 		mApp.Context.NetConfigType = params.MainnetType
