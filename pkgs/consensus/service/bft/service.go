@@ -12,6 +12,7 @@ import (
 	"github.com/drep-project/DREP-Chain/database"
 	"github.com/drep-project/DREP-Chain/network/p2p"
 	p2pService "github.com/drep-project/DREP-Chain/network/service"
+	"github.com/drep-project/DREP-Chain/params"
 	accountService "github.com/drep-project/DREP-Chain/pkgs/accounts/service"
 	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
 	chainTypes "github.com/drep-project/DREP-Chain/types"
@@ -25,6 +26,22 @@ var (
 		Name:  "miner",
 		Usage: "is miner",
 	}
+
+	DefaultConfigMainnet = BftConfig{
+		MyPk:           nil,
+		StartMiner:     true,
+		ProducerNum:    params.GenesisProducerNumMainnet,
+		BlockInterval:  params.BlockInterval,
+		ChangeInterval: params.ChangeInterval,
+	}
+
+	DefaultConfigTestnet = BftConfig{
+		MyPk:           nil,
+		StartMiner:     true,
+		ProducerNum:    params.GenesisProducerNumTestnet,
+		BlockInterval:  params.BlockInterval,
+		ChangeInterval: params.ChangeInterval,
+	}
 )
 
 type BftConsensusService struct {
@@ -37,6 +54,7 @@ type BftConsensusService struct {
 	WalletService    *accountService.AccountService       `service:"accounts"`
 
 	BftConsensus *BftConsensus
+	NetType      params.NetType
 
 	apis   []app.API
 	Config *BftConfig
@@ -168,15 +186,21 @@ func (bftConsensusService *BftConsensusService) Start(executeContext *app.Execut
 
 	go bftConsensusService.BftConsensus.processPeers()
 	go bftConsensusService.BftConsensus.prepareForMining(bftConsensusService.P2pServer)
+	go bftConsensusService.BftConsensus.bestHeight()
 
 	go func() {
-		select {
-		case <-bftConsensusService.quit:
-			return
-		default:
-			for {
+		for {
+			select {
+			case <-bftConsensusService.quit:
+				return
+			default:
 				//consult privkey in wallet
 				if bftConsensusService.Miner == nil {
+					if bftConsensusService.Config.MyPk == nil {
+						time.Sleep(time.Second * time.Duration(bftConsensusService.Config.BlockInterval))
+						log.Trace("not set pubkey ,the node is listener")
+						continue
+					}
 
 					accountNode, err := bftConsensusService.WalletService.Wallet.GetAccountByPubkey(bftConsensusService.Config.MyPk)
 					if err != nil {
@@ -234,12 +258,12 @@ func (bftConsensusService *BftConsensusService) Stop(executeContext *app.Execute
 
 func (bftConsensusService *BftConsensusService) getWaitTime() (time.Time, time.Duration) {
 	lastBlockTime := time.Unix(int64(bftConsensusService.ChainService.BestChain().Tip().TimeStamp), 0)
-	targetTime := lastBlockTime.Add(time.Duration(int64(time.Second) * bftConsensusService.Config.BlockInterval))
+	targetTime := lastBlockTime.Add(time.Duration(int64(time.Second) * int64(bftConsensusService.Config.BlockInterval)))
 	now := time.Now()
 	if targetTime.Before(now) {
 		interval := now.Sub(lastBlockTime)
 		nextBlockInterval := int64(interval/(time.Second*time.Duration(bftConsensusService.Config.BlockInterval))) + 1
-		nextBlockTime := lastBlockTime.Add(time.Second * time.Duration(nextBlockInterval*bftConsensusService.Config.BlockInterval))
+		nextBlockTime := lastBlockTime.Add(time.Second * time.Duration(nextBlockInterval*int64(bftConsensusService.Config.BlockInterval)))
 
 		if nextBlockTime.Before(now) {
 			return nextBlockTime, 0
@@ -251,7 +275,7 @@ func (bftConsensusService *BftConsensusService) getWaitTime() (time.Time, time.D
 	}
 }
 
-func (bftConsensusService *BftConsensusService) GetProducers(height uint64, topN int) ([]Producer, error) {
+func (bftConsensusService *BftConsensusService) GetProducers(height uint64, topN int) ([]chainTypes.Producer, error) {
 	block, err := bftConsensusService.ChainService.GetBlockByHeight(height)
 	if err != nil {
 		return nil, err
@@ -263,10 +287,14 @@ func (bftConsensusService *BftConsensusService) GetProducers(height uint64, topN
 	return GetCandidates(trie, topN), nil
 }
 
-func (bftConsensusService *BftConsensusService) DefaultConfig() *BftConfig {
-	return &BftConfig{
-		BlockInterval:  15,
-		ProducerNum:    7,
-		ChangeInterval: 100,
+func (bftConsensusService *BftConsensusService) DefaultConfig(netType params.NetType) *BftConfig {
+	switch bftConsensusService.NetType {
+	case params.MainnetType:
+		return &DefaultConfigMainnet
+	case params.TestnetType:
+		return &DefaultConfigTestnet
+	default:
+		return nil
 	}
+
 }

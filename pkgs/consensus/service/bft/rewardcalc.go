@@ -3,23 +3,24 @@ package bft
 import (
 	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/params"
+	"github.com/drep-project/DREP-Chain/types"
 	"math"
 	"math/big"
 )
 
 type IRewardCalculator interface {
-	AccumulateRewards(sig *MultiSignature, Producers ProducerSet, totalGasBalance *big.Int, height uint64)
+	AccumulateRewards(sig *MultiSignature, Producers types.ProducerSet, totalGasBalance *big.Int, height uint64)
 }
 
 type RewardCalculator struct {
 	trieStore       store.StoreInterface
 	height          uint64
 	sig             *MultiSignature
-	producers       ProducerSet
+	producers       types.ProducerSet
 	totalGasBalance *big.Int
 }
 
-func NewRewardCalculator(trieStore store.StoreInterface, sig *MultiSignature, producers ProducerSet, totalGasBalance *big.Int, height uint64) *RewardCalculator {
+func NewRewardCalculator(trieStore store.StoreInterface, sig *MultiSignature, producers types.ProducerSet, totalGasBalance *big.Int, height uint64) *RewardCalculator {
 	return &RewardCalculator{
 		trieStore:       trieStore,
 		sig:             sig,

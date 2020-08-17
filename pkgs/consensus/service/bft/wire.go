@@ -11,20 +11,20 @@ import (
 //The messages of this module can only be used in functions that call this module (consensus and its corresponding submodules)
 //For example, the MsgTypeCommitment message, defined in consensus, must be sent and received using a function in consensus
 const (
-	MsgTypeSetUp       = 0
-	MsgTypeCommitment  = 1
-	MsgTypeResponse    = 2
-	MsgTypeChallenge   = 3
-	MsgTypeFail        = 4
-	MsgTypeValidateReq = 5
-	MsgTypeValidateRes = 6
+	MsgTypeSetUp      = 0
+	MsgTypeCommitment = 1
+	MsgTypeResponse   = 2
+	MsgTypeChallenge  = 3
+	//MsgTypeFail        = 4
+	//MsgTypeValidateReq = 5
+	//MsgTypeValidateRes = 6
 
-	MaxMsgSize = 20 << 20
+	//MaxMsgSize = 20 << 20
 
 	SetupMagic    = 0xfefefbfe
 	CommitMagic   = 0xfefefbfd
 	ChallegeMagic = 0xfefefbfc
-	FailMagic     = 0xfefefbfb
+	//FailMagic     = 0xfefefbfb
 	ResponseMagic = 0xfefefbfa
 	//ValidateReqMagic = 0xfefefbf9
 	//validateResMagic = 0xfefefbf8

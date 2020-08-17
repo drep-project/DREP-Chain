@@ -3,6 +3,7 @@ package chain_indexer
 import (
 	"context"
 	"fmt"
+	"github.com/drep-project/DREP-Chain/params"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -433,6 +434,6 @@ func (chainIndexer *ChainIndexerService) GetConfig() *ChainIndexerConfig {
 func (chainIndexer *ChainIndexerService) GetIndexerStore() *ChainIndexerStore {
 	return chainIndexer.db
 }
-func (chainIndexer *ChainIndexerService) DefaultConfig() *ChainIndexerConfig {
+func (chainIndexer *ChainIndexerService) DefaultConfig(netType params.NetType) *ChainIndexerConfig {
 	return DefaultConfig
 }

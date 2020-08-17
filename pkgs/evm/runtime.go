@@ -7,6 +7,7 @@ import (
 	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/database"
+	"github.com/drep-project/DREP-Chain/params"
 	"github.com/drep-project/DREP-Chain/pkgs/evm/vm"
 	"github.com/drep-project/DREP-Chain/types"
 	"github.com/drep-project/dlog"
@@ -127,6 +128,6 @@ func (evmService *EvmService) Eval(state vm.VMState, tx *types.Transaction, head
 	return ret, gas, contractAddr, vmerr != nil, err
 }
 
-func (evmService *EvmService) DefaultConfig() *vm.VMConfig {
+func (evmService *EvmService) DefaultConfig(netType params.NetType) *vm.VMConfig {
 	return DefaultEvmConfig
 }

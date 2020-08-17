@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	waitTime = 15 * time.Second
+	waitTime = 10 * time.Second
 	round1   = 1
 	round2   = 2
 )
@@ -51,8 +51,10 @@ type BftConsensus struct {
 	addPeerChan    chan *consensusTypes.PeerInfo
 	removePeerChan chan *consensusTypes.PeerInfo
 
-	producer []Producer
+	producer []types.Producer
 	quit     chan struct{}
+
+	chBestHeight chan uint64
 }
 
 func NewBftConsensus(
@@ -85,10 +87,11 @@ func NewBftConsensus(
 		memberMsgPool:  make(chan *MsgWrap, 1000),
 		leaderMsgPool:  make(chan *MsgWrap, 1000),
 		quit:           make(chan struct{}),
+		chBestHeight:   make(chan uint64, 0),
 	}
 }
 
-func (bftConsensus *BftConsensus) GetProducers(height uint64, topN int) ([]Producer, error) {
+func (bftConsensus *BftConsensus) GetProducers(height uint64, topN int) ([]types.Producer, error) {
 	//newEpoch := height % uint64(bftConsensus.config.ChangeInterval)
 	//if bftConsensus.producer == nil || newEpoch == 0 {
 	//height = height - newEpoch
@@ -101,7 +104,7 @@ func (bftConsensus *BftConsensus) GetProducers(height uint64, topN int) ([]Produ
 	//}
 }
 
-func (bftConsensus *BftConsensus) loadProducers(height uint64, topN int) ([]Producer, error) {
+func (bftConsensus *BftConsensus) loadProducers(height uint64, topN int) ([]types.Producer, error) {
 	block, err := bftConsensus.ChainService.GetBlockByHeight(height)
 	if err != nil {
 		return nil, err
@@ -114,12 +117,26 @@ func (bftConsensus *BftConsensus) loadProducers(height uint64, topN int) ([]Prod
 	return GetCandidates(trie, topN), nil
 }
 
+func (bftConsensus *BftConsensus) clearMsgPool() {
+	//for {
+	//	select {
+	//	case <-bftConsensus.memberMsgPool:
+	//		fmt.Println("clean peer leader msg......")
+	//	case <-bftConsensus.leaderMsgPool:
+	//		fmt.Println("clean peer member msg .....")
+	//	default:
+	//		return
+	//	}
+	//}
+}
+
 func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Block, error) {
 	bftConsensus.CoinBase = crypto.PubkeyToAddress(privKey.PubKey())
 	bftConsensus.PrivKey = privKey
 
 	producers, err := bftConsensus.GetProducers(bftConsensus.ChainService.BestChain().Height(), bftConsensus.config.ProducerNum)
 	if err != nil {
+		log.Trace("bft consensus run get producers err:", err)
 		return nil, err
 	}
 	found := false
@@ -156,6 +173,7 @@ func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Blo
 		if err != nil {
 			return nil, err
 		}
+		log.WithField("isL", isL).Trace("BftConsensus run")
 		if isL {
 			return bftConsensus.runAsLeader(producers, miners, minMiners)
 		} else if isM {
@@ -176,12 +194,12 @@ func (bftConsensus *BftConsensus) processPeers() {
 			bftConsensus.peerLock.Lock()
 			bftConsensus.onLinePeer[addPeer.ID()] = addPeer
 			bftConsensus.peerLock.Unlock()
-			log.Info("bft new peer:%s", addPeer.IP())
+			log.WithField("bft new peer:", addPeer.IP()).Info("process peer")
 		case removePeer := <-bftConsensus.removePeerChan:
 			bftConsensus.peerLock.Lock()
 			delete(bftConsensus.onLinePeer, removePeer.ID())
 			bftConsensus.peerLock.Unlock()
-			log.Info("bft remove peer:%s", removePeer.IP())
+			log.Info("bft remove peer:", removePeer.IP())
 
 		case <-bftConsensus.quit:
 			return
@@ -214,6 +232,15 @@ func (bftConsensus *BftConsensus) moveToNextMiner(produceInfos []*MemberInfo) (b
 		}
 	}
 
+	//如果新来的块时间与系统的时间差距较小，可能是此轮出块已经结束，当前最新的块是由其它节点达成的共识；
+	// 此块同步到本地后，恰好本地新的出块循环被触发。出现此种现象的原因是：定时器或者每个节点的时间并不是完全同步的
+	if int64(bftConsensus.ChainService.BestChain().Tip().TimeStamp) >= time.Now().Unix() ||
+		time.Now().Unix()-int64(bftConsensus.ChainService.BestChain().Tip().TimeStamp) < int64(bftConsensus.config.BlockInterval/2) {
+		log.WithField("now", time.Now().Unix()).WithField("bestBlock ts",
+			bftConsensus.ChainService.BestChain().Tip().TimeStamp).Trace("moveToNextMiner ts err")
+		return false, false, fmt.Errorf("new block time err")
+	}
+
 	if curMiner.IsMe {
 		return false, true, nil
 	} else {
@@ -221,7 +248,7 @@ func (bftConsensus *BftConsensus) moveToNextMiner(produceInfos []*MemberInfo) (b
 	}
 }
 
-func (bftConsensus *BftConsensus) collectMemberStatus(producers []Producer) []*MemberInfo {
+func (bftConsensus *BftConsensus) collectMemberStatus(producers []types.Producer) []*MemberInfo {
 	produceInfos := make([]*MemberInfo, 0, len(producers))
 	for _, produce := range producers {
 		var (
@@ -241,7 +268,7 @@ func (bftConsensus *BftConsensus) collectMemberStatus(producers []Producer) []*M
 		}
 
 		produceInfos = append(produceInfos, &MemberInfo{
-			Producer: &Producer{Pubkey: produce.Pubkey, Node: produce.Node},
+			Producer: &types.Producer{Pubkey: produce.Pubkey, Node: produce.Node},
 			Peer:     pi,
 			IsMe:     isMe,
 			IsOnline: IsOnline,
@@ -250,8 +277,23 @@ func (bftConsensus *BftConsensus) collectMemberStatus(producers []Producer) []*M
 	return produceInfos
 }
 
+func (bftConsensus *BftConsensus) bestHeight() {
+	tm := time.NewTicker(time.Millisecond * 500)
+	defer tm.Stop()
+	for {
+		select {
+		case <-bftConsensus.quit:
+			return
+
+		case <-tm.C:
+			bftConsensus.chBestHeight <- bftConsensus.ChainService.BestChain().Height()
+		}
+	}
+}
+
 func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo, minMiners int) (block *types.Block, err error) {
-	member := NewMember(bftConsensus.PrivKey, bftConsensus.sender, bftConsensus.WaitTime, miners, minMiners, bftConsensus.ChainService.BestChain().Height(), bftConsensus.memberMsgPool)
+	member := NewMember(bftConsensus.PrivKey, bftConsensus.sender, bftConsensus.WaitTime, miners, minMiners,
+		bftConsensus.ChainService.BestChain().Height(), bftConsensus.memberMsgPool)
 	log.Trace("node member is going to process consensus for round 1")
 	member.convertor = func(msg []byte) (IConsenMsg, error) {
 		block, err = types.BlockFromMessage(msg)
@@ -283,7 +325,7 @@ func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo, minMiners in
 		block = msg.(*types.Block)
 		return bftConsensus.blockVerify(block)
 	}
-	_, err = member.ProcessConsensus(round1)
+	_, err = member.ProcessConsensus(round1, bftConsensus.chBestHeight)
 	if err != nil {
 		return nil, err
 	}
@@ -309,7 +351,7 @@ func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo, minMiners in
 		block.Proof = types.Proof{Type: consensusTypes.Pbft, Evidence: multiSigBytes}
 		return bftConsensus.verifyBlockContent(block)
 	}
-	_, err = member.ProcessConsensus(round2)
+	_, err = member.ProcessConsensus(round2, bftConsensus.chBestHeight)
 	if err != nil {
 		return nil, err
 	}
@@ -322,7 +364,8 @@ func (bftConsensus *BftConsensus) runAsMember(miners []*MemberInfo, minMiners in
 //2 Other producers will sign their own digital signatures after receiving them. The signed block is then returned to the leader
 //3 After the leader collects all the signatures or returns more than two-thirds of the number of producers, he or she shall verify the signatures
 //4 After the leader validates the signature, the block is broadcast to all peers
-func (bftConsensus *BftConsensus) runAsLeader(producers ProducerSet, miners []*MemberInfo, minMiners int) (block *types.Block, err error) {
+func (bftConsensus *BftConsensus) runAsLeader(producers types.ProducerSet, miners []*MemberInfo, minMiners int) (block *types.Block, err error) {
+
 	leader := NewLeader(
 		bftConsensus.PrivKey,
 		bftConsensus.sender,
@@ -334,20 +377,22 @@ func (bftConsensus *BftConsensus) runAsLeader(producers ProducerSet, miners []*M
 	defer leader.Close()
 	trieStore, err := store.TrieStoreFromStore(bftConsensus.DbService.LevelDb(), bftConsensus.ChainService.BestChain().Tip().StateRoot)
 	if err != nil {
+		log.WithField("err", err).Trace("reun As Leader")
 		return nil, err
 	}
 	var gasFee *big.Int
-	block, gasFee, err = bftConsensus.BlockGenerator.GenerateTemplate(trieStore, bftConsensus.CoinBase, int(bftConsensus.config.BlockInterval))
+	block, gasFee, err = bftConsensus.BlockGenerator.GenerateTemplate(trieStore, bftConsensus.CoinBase,
+		int(bftConsensus.config.BlockInterval))
 	if err != nil {
 		log.WithField("msg", err).Error("generate block fail")
 		return nil, err
 	}
 
 	log.WithField("Block", block).Trace("node leader is preparing process consensus for round 1")
-	err, sig, bitmap := leader.ProcessConsensus(block, round1)
+	err, sig, bitmap := leader.ProcessConsensus(block, round1, bftConsensus.chBestHeight)
 	if err != nil {
 		var str = err.Error()
-		log.WithField("msg", str).Error("Error occurs")
+		log.WithField("msg", str).WithField("round", round1).Error("Error occurs")
 		return nil, err
 	}
 
@@ -355,7 +400,7 @@ func (bftConsensus *BftConsensus) runAsLeader(producers ProducerSet, miners []*M
 	multiSig := newMultiSignature(*sig, bftConsensus.curMiner, bitmap)
 	multiSigBytes, err := drepbinary.Marshal(multiSig)
 	if err != nil {
-		log.Debugf("fial to marshal MultiSig")
+		log.Error("fial to marshal MultiSig")
 		return nil, err
 	}
 	log.WithField("bitmap", multiSig.Bitmap).Info("participant bitmap")
@@ -364,6 +409,7 @@ func (bftConsensus *BftConsensus) runAsLeader(producers ProducerSet, miners []*M
 	calculator := NewRewardCalculator(trieStore, multiSig, producers, gasFee, block.Header.Height)
 	err = calculator.AccumulateRewards(block.Header.Height)
 	if err != nil {
+		log.WithField("err", err).WithField("height", block.Header.Height).Info("accumulate rewards")
 		return nil, err
 	}
 
@@ -371,7 +417,7 @@ func (bftConsensus *BftConsensus) runAsLeader(producers ProducerSet, miners []*M
 	rwMsg := &CompletedBlockMessage{*multiSig, block.Header.StateRoot}
 
 	log.Trace("node leader is going to process consensus for round 2")
-	err, _, _ = leader.ProcessConsensus(rwMsg, round2)
+	err, _, _ = leader.ProcessConsensus(rwMsg, round2, bftConsensus.chBestHeight)
 	if err != nil {
 		return nil, err
 	}
@@ -451,8 +497,10 @@ func (bftConsensus *BftConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, t ui
 		log.WithField("addr", peer.IP()).WithField("code", t).WithField("size", len(buf)).Debug("Receive MsgTypeSetUp msg")
 	case MsgTypeChallenge:
 		log.WithField("addr", peer.IP()).WithField("code", t).WithField("size", len(buf)).Debug("Receive MsgTypeChallenge msg")
-	case MsgTypeFail:
-		log.WithField("addr", peer.IP()).WithField("code", t).Debug("Receive MsgTypeFail msg")
+	//case MsgTypeFail:
+	//	f := Fail{}
+	//	drepbinary.Unmarshal(buf, &f)
+	//	log.WithField("addr", peer.IP()).WithField("code", t).WithField("buf", f).Debug("Receive MsgTypeFail msg")
 	case MsgTypeCommitment:
 		log.WithField("addr", peer.IP()).WithField("code", t).Debug("Receive MsgTypeCommitment msg")
 	case MsgTypeResponse:
@@ -464,8 +512,6 @@ func (bftConsensus *BftConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, t ui
 	case MsgTypeSetUp:
 		fallthrough
 	case MsgTypeChallenge:
-		fallthrough
-	case MsgTypeFail:
 		select {
 		case bftConsensus.memberMsgPool <- &MsgWrap{peer, t, buf}:
 		default:
@@ -492,6 +538,10 @@ func (bftConsensus *BftConsensus) Close() {
 }
 
 func (bftConsensus *BftConsensus) prepareForMining(p2p p2pService.P2P) {
+	if bftConsensus.config.MyPk == nil {
+		log.Trace("not set pubkey ,No need to start threads")
+		return
+	}
 	for {
 		timer := time.NewTicker(time.Second * 3)
 		defer timer.Stop()
@@ -504,14 +554,14 @@ func (bftConsensus *BftConsensus) prepareForMining(p2p p2pService.P2P) {
 				log.WithField("err", err).Info("PrepareForMiner get producer err")
 			}
 
-			tempProduces := make([]Producer, len(producers))
+			tempProduces := make([]types.Producer, len(producers))
 			copy(tempProduces, producers)
 			//I'm in the running
 			found := false
 			for index, p := range tempProduces {
 				if bytes.Equal(p.Pubkey.Serialize(), bftConsensus.config.MyPk.Serialize()) {
 					found = true
-					producers = append(tempProduces[:index], tempProduces[index+1:]...)
+					tempProduces = append(tempProduces[:index], tempProduces[index+1:]...)
 					break
 				}
 			}

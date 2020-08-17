@@ -3,6 +3,7 @@ package bft
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1/schnorr"
 	"github.com/drep-project/DREP-Chain/crypto/sha3"
@@ -85,21 +86,25 @@ func (member *Member) Reset() {
 	member.setState(INIT)
 }
 
-func (member *Member) ProcessConsensus(round int) (IConsenMsg, error) {
+func (member *Member) ProcessConsensus(round int, chNewBlock <-chan uint64) (IConsenMsg, error) {
 	defer func() {
 		member.cancelPool <- struct{}{}
 	}()
 
-	log.WithField("Node", member.leader.Peer.IP()).Debug("wait for leader's setup message")
+	log.WithField("Node", member.leader.Peer.IP()).WithField("height", member.currentHeight).
+		WithField("round", round).Debug("wait for leader's setup message")
 	member.setState(WAIT_SETUP)
-	go member.WaitSetUp()
+	go member.WaitSetUp(round, chNewBlock)
 	go member.processP2pMessage(round)
 
 	select {
 	case err := <-member.errorChanel:
-		log.WithField("Reason", err).Error("member consensus fail")
+		log.WithField("Reason", err).WithField("height", member.currentHeight).
+			WithField("round", round).Error("member consensus fail")
 		return nil, err
 	case <-member.timeOutChanel:
+		log.WithField("timeout", "member timeout").WithField("height", member.currentHeight).
+			WithField("round", round).Error("member consensus fail")
 		member.setState(ERROR)
 		return nil, ErrTimeout
 	case <-member.completed:
@@ -120,8 +125,11 @@ func (member *Member) processP2pMessage(round int) {
 					log.Debugf("setup msg:%v err:%v", msg, err)
 					continue
 				}
+
+				log.WithField("height", setup.Height).WithField("come round", setup.Round).WithField("local round", round).Trace("member process setup")
+
 				if setup.Round != round {
-					log.WithField("come round", setup.Round).WithField("local round", round).Info("member process setup err")
+					log.WithField("come round", setup.Round).WithField("local round", round).Trace("member process setup err")
 					continue
 				}
 				go member.OnSetUp(msg.Peer, &setup)
@@ -131,42 +139,64 @@ func (member *Member) processP2pMessage(round int) {
 					log.Debugf("challenge msg:%v err:%v", msg, err)
 					continue
 				}
+				log.WithField("height", challenge.Height).WithField("come round", challenge.Round).WithField("local round", round).Trace("member process challege")
+
 				if challenge.Round != round {
-					log.WithField("come round", challenge.Round).WithField("local round", round).Info("member process challege err")
+					log.WithField("come round", challenge.Round).WithField("local round", round).Trace("member process challege err")
 					continue
 				}
 				go member.OnChallenge(msg.Peer, &challenge)
-			case MsgTypeFail:
-				var fail Fail
-				if err := binary.Unmarshal(msg.Msg, &fail); err != nil {
-					log.Debugf("challenge msg:%v err:%v", msg, err)
-					continue
-				}
-				if fail.Round != round {
-					log.WithField("come round", fail.Round).WithField("local round", round).Info("member process fail err")
-					continue
-				}
-				go member.OnFail(msg.Peer, &fail)
+				//case MsgTypeFail:
+				//	var fail Fail
+				//	if err := binary.Unmarshal(msg.Msg, &fail); err != nil {
+				//		log.Debugf("challenge msg:%v err:%v", msg, err)
+				//		continue
+				//	}
+				//
+				//	log.WithField("height", fail.Height).WithField("come round", fail.Round).WithField("local round", round).Trace("member process")
+				//
+				//	if fail.Round != round {
+				//		log.WithField("come round", fail.Round).WithField("local round", round).Trace("member process fail")
+				//		continue
+				//	}
+				//
+				//	if fail.Height != member.currentHeight {
+				//		log.WithField("fai height", fail.Height).WithField("mem currentHeight", member.currentHeight).
+				//			Trace("member process fail")
+				//		continue
+				//	}
+				//
+				//	go member.OnFail(msg.Peer, &fail)
 			}
 		case <-member.cancelPool:
 			return
 		}
 	}
 }
-func (member *Member) WaitSetUp() {
+func (member *Member) WaitSetUp(round int, chNewBlock <-chan uint64) {
 	tm := time.NewTimer(member.waitTime)
-	select {
-	case <-tm.C:
-		log.Debug("wait setup message timeout")
-		member.setState(WAIT_SETUP_TIMEOUT)
+	defer tm.Stop()
+
+	for {
 		select {
-		case member.timeOutChanel <- struct{}{}:
-		default:
+		case <-tm.C:
+			log.Debug("wait setup message timeout")
+			member.setState(WAIT_SETUP_TIMEOUT)
+			select {
+			case member.timeOutChanel <- struct{}{}:
+			default:
+			}
+			return
+		case <-member.cancelWaitSetUp:
+			return
+		case bestHeight := <-chNewBlock:
+			if member.currentHeight < bestHeight {
+				member.errorChanel <- fmt.Errorf("may be local currentheight err")
+				return
+			}
 		}
-		return
-	case <-member.cancelWaitSetUp:
-		return
 	}
+
 }
 
 func (member *Member) OnSetUp(peer consensusTypes.IPeerInfo, setUp *Setup) {
@@ -217,6 +247,7 @@ func (member *Member) OnSetUp(peer consensusTypes.IPeerInfo, setUp *Setup) {
 
 func (member *Member) WaitChallenge() {
 	tm := time.NewTimer(member.waitTime)
+	defer tm.Stop()
 	select {
 	case <-tm.C:
 		member.setState(WAIT_CHALLENGE_TIMEOUT)

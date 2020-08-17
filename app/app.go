@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/drep-project/DREP-Chain/params"
 	"io/ioutil"
 	"net/http"
 	_ "net/http/pprof"
@@ -29,9 +30,14 @@ var (
 		Usage: "Home directory for the datadir logdir and keystore",
 	}
 	// PprofFlag general pprof flag
-	PprofFlag = cli.StringFlag{
+	PprofFlag = cli.BoolFlag{
 		Name:  "pprof",
-		Usage: "ppfof for debug performance, --pprof 1",
+		Usage: "ppfof for debug performance, --pprof = true",
+	}
+
+	NetTypeFlag = cli.BoolFlag{
+		Name:  "testnet",
+		Usage: "start test net,default is mainnet, --testnet = true",
 	}
 )
 
@@ -105,6 +111,7 @@ func (mApp *DrepApp) Run() error {
 	mApp.Flags = append(mApp.Flags, ConfigFileFlag)
 	mApp.Flags = append(mApp.Flags, HomeDirFlag)
 	mApp.Flags = append(mApp.Flags, PprofFlag)
+	mApp.Flags = append(mApp.Flags, NetTypeFlag)
 
 	allCommands, allFlags := mApp.Context.AggerateFlags()
 	for i := 0; i < len(allCommands); i++ {
@@ -139,7 +146,8 @@ func (mApp *DrepApp) action(ctx *cli.Context) error {
 	endIndex := len(mApp.Context.Services)
 	for i := 0; i < endIndex; i++ {
 		service := mApp.Context.Services[i]
-		err := mApp.parserConfig(service)
+		fmt.Println("*****:", reflect.TypeOf(service))
+		err := mApp.parserConfig(service, mApp.Context.NetConfigType)
 		if err != nil {
 			return err
 		}
@@ -148,8 +156,6 @@ func (mApp *DrepApp) action(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-
-		fmt.Println("*****:", reflect.TypeOf(service))
 
 		if reflect.TypeOf(service).Implements(TOrService) {
 			//flate config
@@ -164,7 +170,7 @@ func (mApp *DrepApp) action(ctx *cli.Context) error {
 			}
 			mApp.Context.replaceService(service, embedService)
 			//parser subservice config
-			err = mApp.parserConfig(embedService)
+			err = mApp.parserConfig(embedService, mApp.Context.NetConfigType)
 			if err != nil {
 				return err
 			}
@@ -184,6 +190,7 @@ func (mApp *DrepApp) action(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
+		fmt.Println(service.Name(), "starting ok")
 	}
 	exit := make(chan struct{})
 	exitSignal(exit)
@@ -193,14 +200,14 @@ func (mApp *DrepApp) action(ctx *cli.Context) error {
 	}
 	return nil
 }
-func (mApp *DrepApp) parserConfig(service Service) error {
+func (mApp *DrepApp) parserConfig(service Service, netType params.NetType) error {
 	//config
 	serviceValue := reflect.ValueOf(service)
 	serviceType := serviceValue.Type()
 	var config reflect.Value
 	fieldValue := reflect.ValueOf(service).Elem().FieldByName("Config")
 	if hasMethod(serviceType, "DefaultConfig") {
-		defaultConfigVal := serviceValue.MethodByName("DefaultConfig").Call([]reflect.Value{})
+		defaultConfigVal := serviceValue.MethodByName("DefaultConfig").Call([]reflect.Value{reflect.ValueOf(netType)})
 		if len(defaultConfigVal) > 0 && !defaultConfigVal[0].IsNil() {
 			config = defaultConfigVal[0]
 		} else {
@@ -235,12 +242,17 @@ func (mApp *DrepApp) before(ctx *cli.Context) error {
 		HomeDir: homeDir,
 	}
 	phaseConfig, err := loadConfigFile(ctx, homeDir)
-
 	if err != nil {
 		fmt.Println("before(),loadConfigFile err:", err)
 		return err
 	}
 	mApp.Context.PhaseConfig = phaseConfig
+
+	if ctx.GlobalIsSet(NetTypeFlag.Name) {
+		mApp.Context.NetConfigType = params.TestnetType
+	} else {
+		mApp.Context.NetConfigType = params.MainnetType
+	}
 
 	if ctx.GlobalIsSet(PprofFlag.Name) {
 		go func() {

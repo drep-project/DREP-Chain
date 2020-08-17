@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/DREP-Chain/app"
+	"github.com/drep-project/DREP-Chain/params"
 	"github.com/shiena/ansicolor"
 	"github.com/sirupsen/logrus"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
@@ -155,6 +156,6 @@ func EnsureLogger(moduleName string) *logrus.Entry {
 	return log
 }
 
-func (logService *LogService) DefaultConfig() *LogConfig {
+func (logService *LogService) DefaultConfig(netType params.NetType) *LogConfig {
 	return DefaultLogConfig
 }

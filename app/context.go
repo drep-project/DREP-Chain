@@ -1,13 +1,14 @@
 package app
 
 import (
+	"github.com/asaskevich/EventBus"
+	"github.com/drep-project/DREP-Chain/params"
+	"github.com/pkg/errors"
+	"gopkg.in/urfave/cli.v1"
+
 	"encoding/json"
 	"fmt"
 	"reflect"
-
-	"github.com/asaskevich/EventBus"
-	"github.com/pkg/errors"
-	"gopkg.in/urfave/cli.v1"
 )
 
 var (
@@ -58,12 +59,13 @@ type API struct {
 // ExecuteContext centralizes all the data and global parameters of application execution,
 // and each service can read the part it needs.
 type ExecuteContext struct {
-	ConfigPath   string
-	CommonConfig *CommonConfig //
-	PhaseConfig  map[string]json.RawMessage
-	Cli          *cli.Context
-	LifeBus      EventBus.Bus
-	Services     []Service
+	NetConfigType params.NetType //mainnet testnet solonet
+	ConfigPath    string
+	CommonConfig  *CommonConfig
+	PhaseConfig   map[string]json.RawMessage
+	Cli           *cli.Context
+	LifeBus       EventBus.Bus
+	Services      []Service
 
 	GitCommit string
 	Usage     string
@@ -189,20 +191,6 @@ func (econtext *ExecuteContext) GetApis() []API {
 	return apis
 }
 
-////	GetApis aggregate interface functions for each service to provide for use by RPC services
-//func (econtext *ExecuteContext) GetMessages() (map[int]interface{}, error)  {
-//	msg := map[int]interface{}{}
-//	for _, service := range econtext.Services {
-//		for k, v := range service.P2pMessages() {
-//			if _, ok := msg[k]; ok {
-//				return nil, errors.New("exist p2p message")
-//			}
-//			msg[k] = v
-//		}
-//	}
-//	return msg, nil
-//}
-
 // RequireService When a service depends on another service, RequireService is used to obtain the dependent service.
 func (econtext *ExecuteContext) RequireService(name string) Service {
 	for _, service := range econtext.Services {
@@ -223,6 +211,7 @@ func (econtext *ExecuteContext) UnmashalConfig(serviceName string, config interf
 	if phase == nil {
 		return nil
 	}
+
 	err := json.Unmarshal(phase, config)
 	if err != nil {
 		return err

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/drep-project/DREP-Chain/params"
 	"github.com/drep-project/DREP-Chain/pkgs/evm"
 	"path/filepath"
 
@@ -160,6 +161,6 @@ func (accountService *AccountService) CreateWallet(password string) error {
 	return nil
 }
 
-func (accountService *AccountService) DefaultConfig() *accountTypes.Config {
+func (accountService *AccountService) DefaultConfig(netType params.NetType) *accountTypes.Config {
 	return DefaultConfig
 }

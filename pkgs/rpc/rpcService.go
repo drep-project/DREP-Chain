@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"fmt"
+	"github.com/drep-project/DREP-Chain/params"
 	"net"
 	"os"
 	"path"
@@ -461,7 +462,7 @@ func DefaultIPCEndpoint(clientIdentifier string) string {
 	return clientIdentifier + ".ipc"
 }
 
-func (rpcService *RpcService) DefaultConfig() *rpc.RpcConfig {
+func (rpcService *RpcService) DefaultConfig(netType params.NetType) *rpc.RpcConfig {
 	return &rpc.RpcConfig{
 		HTTPTimeouts: &rpc.DefaultHTTPTimeouts,
 	}

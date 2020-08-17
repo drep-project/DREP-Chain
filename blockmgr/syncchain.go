@@ -138,8 +138,10 @@ func (blockMgr *BlockMgr) findAncestor(peer types.PeerInfoInterface) (uint64, er
 	var tmpEnd uint64 = remoteHeight
 	for tmpFrom+1 < tmpEnd {
 		timer := time.NewTimer(time.Second * maxNetworkTimeout)
+
 		err = blockMgr.requestHeaders(peer, (tmpFrom+tmpEnd)/2, 1)
 		if err != nil {
+			timer.Stop()
 			return 0, err
 		}
 
@@ -252,6 +254,7 @@ func (blockMgr *BlockMgr) fetchBlocks(peer types.PeerInfoInterface) error {
 	go func() {
 		commonAncestor++
 		timer := time.NewTimer(time.Second * maxNetworkTimeout)
+		defer timer.Stop()
 
 		for height >= commonAncestor {
 			select {

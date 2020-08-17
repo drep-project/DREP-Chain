@@ -6,6 +6,7 @@ import (
 	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
+	"github.com/drep-project/DREP-Chain/params"
 	"time"
 
 	"github.com/drep-project/DREP-Chain/app"
@@ -25,10 +26,6 @@ var (
 		Name:  "enable",
 		Usage: "enable solo consensus",
 	}
-)
-
-const (
-	blockInterval = time.Second * 5
 )
 
 type SoloConsensusService struct {
@@ -130,9 +127,9 @@ func (soloConsensusService *SoloConsensusService) Start(executeContext *app.Exec
 				//consult privkey in wallet
 				accountNode, err := soloConsensusService.WalletService.Wallet.GetAccountByPubkey(soloConsensusService.Config.MyPk)
 				if err != nil {
-
-					log.WithField("init err", err).WithField("addr", crypto.PubkeyToAddress(soloConsensusService.Config.MyPk).String()).Error("privkey of MyPk in Config is not in local wallet")
-
+					log.WithField("init err", err).
+						WithField("addr", crypto.PubkeyToAddress(soloConsensusService.Config.MyPk).String()).
+						Error("privkey of MyPk in Config is not in local wallet")
 					time.Sleep(time.Second * 3)
 					continue
 				}
@@ -195,7 +192,7 @@ func (soloConsensusService *SoloConsensusService) getWaitTime() (time.Time, time
 		return targetTime, targetTime.Sub(now)
 	}
 }
-func (soloConsensusService *SoloConsensusService) DefaultConfig() *SoloConfig {
+func (soloConsensusService *SoloConsensusService) DefaultConfig(netType params.NetType) *SoloConfig {
 	return &SoloConfig{
 		BlockInterval: 7,
 	}

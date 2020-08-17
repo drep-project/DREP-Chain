@@ -149,7 +149,7 @@ func gen(ctx *cli.Context) error {
 	}
 
 	chainConfig := chain.ChainConfig{}
-	//chainConfig.RemotePort = 55556
+	//chainConfig.RemotePortMainnet = 55556
 	chainConfig.ChainId = 0
 	chainConfig.GenesisAddr = params.HoleAddress
 
@@ -175,7 +175,7 @@ func gen(ctx *cli.Context) error {
 		}
 
 		p2pConfig.ListenAddr = "0.0.0.0:" + strconv.Itoa(nodeItems[0].Port)
-		chainConfig.RemotePort = nodeItems[0].Port + 1
+		chainConfig.RemotePort = uint16(nodeItems[0].Port + 1)
 
 		store := accountComponent.NewFileStore(keyStorePath)
 		//cryptoPassowrd := string(sha3.Keccak256([]byte(password)))
@@ -215,7 +215,7 @@ func gen(ctx *cli.Context) error {
 			consensusConfig.Bft.MyPk = (*secp256k1.PublicKey)(&standbyKey[i].PublicKey)
 			userDir := path2.Join(path, nodeItems[i].Name)
 			p2pConfig.ListenAddr = "0.0.0.0:" + strconv.Itoa(nodeItems[i].Port)
-			chainConfig.RemotePort = nodeItems[i].Port + 1
+			chainConfig.RemotePort = uint16(nodeItems[i].Port + 1)
 
 			os.MkdirAll(userDir, os.ModeDir|os.ModePerm)
 			keyStorePath := path2.Join(userDir, "keystore")

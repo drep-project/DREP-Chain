@@ -3,6 +3,7 @@ package filter
 import (
 	"context"
 	"fmt"
+	"github.com/drep-project/DREP-Chain/params"
 	"sync"
 	"time"
 
@@ -517,6 +518,6 @@ func (service *FilterService) ServiceFilter(ctx context.Context, session *bloomb
 	}
 }
 
-func (service *FilterService) DefaultConfig() *FilterConfig {
+func (service *FilterService) DefaultConfig(netType params.NetType) *FilterConfig {
 	return DefaultConfig
 }

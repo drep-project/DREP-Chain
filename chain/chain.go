@@ -23,10 +23,15 @@ import (
 )
 
 var (
-	RootChain          types.ChainIdType
-	DefaultChainConfig = &ChainConfig{
-		RemotePort:  55556,
-		ChainId:     RootChain,
+	DefaultChainConfigMainnet = &ChainConfig{
+		RemotePort:  params.RemotePortMainnet,
+		ChainId:     types.ChainIdType(params.RootChain),
+		GenesisAddr: params.HoleAddress,
+	}
+
+	DefaultChainConfigTestnet = &ChainConfig{
+		RemotePort:  params.RemotePortTestnet,
+		ChainId:     types.ChainIdType(params.RootChain),
 		GenesisAddr: params.HoleAddress,
 	}
 	span = uint64(params.MaxGasLimit / 360)
@@ -109,52 +114,6 @@ type ChainState struct {
 	db *store.StoreInterface
 }
 
-//func NewChainService(config *ChainConfig, ds *database.DatabaseService) *ChainService {
-//	var err error
-//	chainService := &ChainService{}
-//	chainService.Config = config
-//	chainService.blockIndex = NewBlockIndex()
-//	chainService.bestChain = NewChainView(nil)
-//	chainService.orphans = make(map[crypto.Hash]*types.OrphanBlock)
-//	chainService.prevOrphans = make(map[crypto.Hash][]*types.OrphanBlock)
-//	chainService.chainStore = &ChainStore{ds.LevelDb()}
-//
-//	chainService.transactionValidator = map[ITransactionSelector]ITransactionValidator{
-//		&TransferTxSelector{}: &TransferTransactionProcessor{},
-//		&AliasTxSelector{}:    &AliasTransactionProcessor{},
-//	}
-//	chainService.blockValidator = []IBlockValidator{NewChainBlockValidator(chainService)}
-//	chainService.genesisProcess = []IGenesisProcess{NewPreminerGenesisProcessor()}
-//
-//	chainService.genesisBlock, err = chainService.GetGenisiBlock(chainService.Config.GenesisAddr)
-//	if err != nil {
-//		return nil
-//	}
-//	hash := chainService.genesisBlock.Header.Hash()
-//	if !chainService.chainStore.HasBlock(hash) {
-//		chainService.genesisBlock, err = chainService.ProcessGenesisBlock(chainService.Config.GenesisAddr)
-//		err = chainService.createChainState()
-//		if err != nil {
-//			return nil
-//		}
-//	}
-//
-//	err = chainService.InitStates()
-//	if err != nil {
-//		return nil
-//	}
-//
-//	chainService.apis = []app.API{
-//		{
-//			Namespace: MODULENAME,
-//			Version:   "1.0",
-//			Service:   NewChainApi(chainService.DatabaseService.LevelDb(), chainService.BestChain(), chainService.chainStore),
-//			Public:    true,
-//		},
-//	}
-//	return chainService
-//}
-
 func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error {
 	chainService.blockIndex = NewBlockIndex()
 	chainService.bestChain = NewChainView(nil)
@@ -173,13 +132,17 @@ func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error
 		&CancelCandidateTxSelector{}: &CancelCandidateTransactionProcessor{},
 	}
 
-	var err error
-	//chainService.genesisConfig = path.Join(executeContext.CommonConfig.HomeDir, "genesis.json")
-	chainService.genesisConfig = executeContext.PhaseConfig["genesis"]
-	if chainService.genesisConfig == nil {
-		return fmt.Errorf("no genesis config,please check config.json")
+	if _, ok := executeContext.PhaseConfig["genesis"]; ok {
+		chainService.genesisConfig = executeContext.PhaseConfig["genesis"]
+	} else if executeContext.NetConfigType == params.MainnetType {
+		chainService.genesisConfig = []byte(params.DefaultGenesisParamMainnet)
+	} else if executeContext.NetConfigType == params.TestnetType {
+		chainService.genesisConfig = []byte(params.DefaultGenesisParamTestnet)
+	} else {
+		return fmt.Errorf("net type err,type:%s", executeContext.NetConfigType)
 	}
 
+	var err error
 	chainService.genesisBlock, err = chainService.GetGenisiBlock(chainService.Config.GenesisAddr)
 	if err != nil {
 		return err
@@ -226,7 +189,7 @@ func (chainService *ChainService) BlockExists(blockHash *crypto.Hash) bool {
 }
 
 func (chainService *ChainService) RootChain() types.ChainIdType {
-	return RootChain
+	return types.ChainIdType(params.RootChain)
 }
 
 func (chainService *ChainService) GetCurrentHeader() *types.BlockHeader {
@@ -418,6 +381,11 @@ func (chainService *ChainService) CommandFlags() ([]cli.Command, []cli.Flag) {
 }
 
 // DefaultConfig -> config
-func (chainService *ChainService) DefaultConfig() *ChainConfig {
-	return DefaultChainConfig
+func (chainService *ChainService) DefaultConfig(netType params.NetType) *ChainConfig {
+	switch netType {
+	case params.MainnetType:
+		return DefaultChainConfigMainnet
+	default:
+		return DefaultChainConfigTestnet
+	}
 }
