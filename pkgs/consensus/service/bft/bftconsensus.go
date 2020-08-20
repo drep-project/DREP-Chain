@@ -92,16 +92,9 @@ func NewBftConsensus(
 }
 
 func (bftConsensus *BftConsensus) GetProducers(height uint64, topN int) ([]types.Producer, error) {
-	//newEpoch := height % uint64(bftConsensus.config.ChangeInterval)
-	//if bftConsensus.producer == nil || newEpoch == 0 {
-	//height = height - newEpoch
-
 	producers, err := bftConsensus.loadProducers(height, topN)
 	bftConsensus.producer = producers
 	return producers, err
-	//} else {
-	//	return bftConsensus.producer, nil
-	//}
 }
 
 func (bftConsensus *BftConsensus) loadProducers(height uint64, topN int) ([]types.Producer, error) {
@@ -115,19 +108,6 @@ func (bftConsensus *BftConsensus) loadProducers(height uint64, topN int) ([]type
 	}
 
 	return GetCandidates(trie, topN), nil
-}
-
-func (bftConsensus *BftConsensus) clearMsgPool() {
-	//for {
-	//	select {
-	//	case <-bftConsensus.memberMsgPool:
-	//		fmt.Println("clean peer leader msg......")
-	//	case <-bftConsensus.leaderMsgPool:
-	//		fmt.Println("clean peer member msg .....")
-	//	default:
-	//		return
-	//	}
-	//}
 }
 
 func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Block, error) {
@@ -504,17 +484,16 @@ func (bftConsensus *BftConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, t ui
 		log.WithField("addr", peer.IP()).WithField("code", t).WithField("size", len(buf)).Debug("Receive MsgTypeSetUp msg")
 	case MsgTypeChallenge:
 		log.WithField("addr", peer.IP()).WithField("code", t).WithField("size", len(buf)).Debug("Receive MsgTypeChallenge msg")
-	//case MsgTypeFail:
-	//	f := Fail{}
-	//	drepbinary.Unmarshal(buf, &f)
-	//	log.WithField("addr", peer.IP()).WithField("code", t).WithField("buf", f).Debug("Receive MsgTypeFail msg")
+
 	case MsgTypeCommitment:
 		log.WithField("addr", peer.IP()).WithField("code", t).Debug("Receive MsgTypeCommitment msg")
 	case MsgTypeResponse:
 		log.WithField("addr", peer.IP()).WithField("code", t).Debug("Receive MsgTypeResponse msg")
 	default:
-		//return fmt.Errorf("consensus unkonw msg type:%d", msg.Code)
+		log.WithField("consensus unkonw msg type:", t).Error("bft consensus receive msg")
+		return
 	}
+
 	switch t {
 	case MsgTypeSetUp:
 		fallthrough
@@ -530,9 +509,6 @@ func (bftConsensus *BftConsensus) ReceiveMsg(peer *consensusTypes.PeerInfo, t ui
 		case bftConsensus.leaderMsgPool <- &MsgWrap{peer, t, buf}:
 		default:
 		}
-
-	default:
-		//return fmt.Errorf("consensus unkonw msg type:%d", msg.Code)
 	}
 }
 

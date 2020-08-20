@@ -65,7 +65,7 @@ type ChainServiceInterface interface {
 	AddBlockValidator(validator IBlockValidator)
 	TransactionValidators() map[ITransactionSelector]ITransactionValidator
 	AddTransactionValidator(selector ITransactionSelector, validator ITransactionValidator)
-	AddGenesisProcess(validator IGenesisProcess)
+	//AddGenesisProcess(validator IGenesisProcess)
 	GetConfig() *ChainConfig
 	DetachBlockFeed() *event.Feed
 }

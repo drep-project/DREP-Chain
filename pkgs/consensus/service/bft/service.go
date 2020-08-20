@@ -105,7 +105,7 @@ func (bftConsensusService *BftConsensusService) Init(executeContext *app.Execute
 	}
 
 	bftConsensusService.ChainService.AddBlockValidator(&BlockMultiSigValidator{bftConsensusService.BftConsensus.GetProducers, bftConsensusService.ChainService.GetBlockByHash, len(producers)})
-	bftConsensusService.ChainService.AddGenesisProcess(NewMinerGenesisProcessor())
+	//bftConsensusService.ChainService.AddGenesisProcess(NewMinerGenesisProcessor())
 
 	if bftConsensusService.WalletService.Wallet == nil {
 		return ErrWalletNotOpen
@@ -176,10 +176,8 @@ func (bftConsensusService *BftConsensusService) handlerEvent() {
 		case e := <-bftConsensusService.syncBlockEventChan:
 			if e.EventType == event.StartSyncBlock {
 				bftConsensusService.pauseForSync = true
-				//log.Trace("Start Sync Blcok")
 			} else {
 				bftConsensusService.pauseForSync = false
-				//log.Trace("Stop Sync Blcok")
 			}
 		case <-bftConsensusService.quit:
 			return
@@ -302,5 +300,4 @@ func (bftConsensusService *BftConsensusService) DefaultConfig(netType params.Net
 	default:
 		return nil
 	}
-
 }

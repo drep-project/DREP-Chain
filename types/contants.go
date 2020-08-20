@@ -15,7 +15,7 @@ const (
 	CancelVoteCreditType //Revocation of pledge currency
 	CandidateType        //Apply to be a candidate block node
 	CancelCandidateType  //Apply to be a candidate block node
-	RegisterProducer
+	//RegisterProducer
 )
 
 var (

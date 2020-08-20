@@ -146,27 +146,6 @@ func (member *Member) processP2pMessage(round int) {
 					continue
 				}
 				go member.OnChallenge(msg.Peer, &challenge)
-				//case MsgTypeFail:
-				//	var fail Fail
-				//	if err := binary.Unmarshal(msg.Msg, &fail); err != nil {
-				//		log.Debugf("challenge msg:%v err:%v", msg, err)
-				//		continue
-				//	}
-				//
-				//	log.WithField("height", fail.Height).WithField("come round", fail.Round).WithField("local round", round).Trace("member process")
-				//
-				//	if fail.Round != round {
-				//		log.WithField("come round", fail.Round).WithField("local round", round).Trace("member process fail")
-				//		continue
-				//	}
-				//
-				//	if fail.Height != member.currentHeight {
-				//		log.WithField("fai height", fail.Height).WithField("mem currentHeight", member.currentHeight).
-				//			Trace("member process fail")
-				//		continue
-				//	}
-				//
-				//	go member.OnFail(msg.Peer, &fail)
 			}
 		case <-member.cancelPool:
 			return
@@ -347,12 +326,6 @@ func (member *Member) response(challengeMsg *Challenge) {
 		log.Error("commit messsage and chanllenge message not matched")
 	}
 }
-
-/*
-func (member *Member) getLiveMembers() []*consensusTypes.MemberInfo{
-    return member.liveMembers
-}
-*/
 
 func (member *Member) setState(state int) {
 	member.stateLock.Lock()

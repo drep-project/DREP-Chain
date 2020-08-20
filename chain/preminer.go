@@ -22,7 +22,7 @@ func NewPreminerGenesisProcessor() *PreminerGenesisProcessor {
 	return &PreminerGenesisProcessor{}
 }
 
-func (NewPreminerGenesisProcessor *PreminerGenesisProcessor) Genesis(context *GenesisContext) error {
+func (PreminerGenesisProcessor *PreminerGenesisProcessor) Genesis(context *GenesisContext) error {
 	val, ok := context.Config()["Preminer"]
 	preminers := []*Preminer{}
 	if ok {
