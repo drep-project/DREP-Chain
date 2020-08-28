@@ -3,9 +3,11 @@ package filter
 import (
 	"context"
 	"fmt"
-	"github.com/drep-project/DREP-Chain/params"
 	"sync"
 	"time"
+
+	"github.com/drep-project/DREP-Chain/chain/store"
+	"github.com/drep-project/DREP-Chain/params"
 
 	"gopkg.in/urfave/cli.v1"
 
@@ -78,7 +80,7 @@ type FilterService struct {
 	Config              *FilterConfig
 
 	apis          []app.API
-	chainStore    *chain.ChainStore
+	chainStore    *store.ChainStore
 	bloomRequests chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
 	mux           *event.TypeMux
 	events        *EventSystem
@@ -123,7 +125,7 @@ func (service *FilterService) Init(executeContext *app.ExecuteContext) error {
 	service.events = NewEventSystem(service.mux, service, false)
 	service.filters = make(map[ID]*filter)
 	service.bloomRequests = make(chan chan *bloombits.Retrieval)
-	service.chainStore = &chain.ChainStore{service.DatabaseService.LevelDb()}
+	service.chainStore = &store.ChainStore{service.DatabaseService.LevelDb()}
 	service.apis = []app.API{
 		app.API{
 			Namespace: MODULENAME,

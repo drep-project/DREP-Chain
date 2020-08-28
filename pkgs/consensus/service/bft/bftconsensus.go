@@ -10,6 +10,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/drep-project/DREP-Chain/chain/block"
+	"github.com/drep-project/DREP-Chain/chain/utils"
+
 	"github.com/drep-project/DREP-Chain/blockmgr"
 	"github.com/drep-project/DREP-Chain/chain"
 	"github.com/drep-project/DREP-Chain/chain/store"
@@ -446,12 +449,12 @@ func (bftConsensus *BftConsensus) blockVerify(block *types.Block) error {
 	return err
 }
 
-func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
-	parent, err := bftConsensus.ChainService.GetBlockHeaderByHeight(block.Header.Height - 1)
+func (bftConsensus *BftConsensus) verifyBlockContent(blockType *types.Block) error {
+	parent, err := bftConsensus.ChainService.GetBlockHeaderByHeight(blockType.Header.Height - 1)
 	if err != nil {
 		return err
 	}
-	dbstore := &chain.ChainStore{bftConsensus.DbService.LevelDb()}
+	dbstore := &store.ChainStore{bftConsensus.DbService.LevelDb()}
 	trieStore, err := store.TrieStoreFromStore(bftConsensus.DbService.LevelDb(), parent.StateRoot)
 	if err != nil {
 		return err
@@ -462,13 +465,13 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
 		return err
 	}
 	multiSigValidator := BlockMultiSigValidator{bftConsensus.GetProducers, bftConsensus.ChainService.GetBlockByHash, len(producers)}
-	if err := multiSigValidator.VerifyBody(block); err != nil {
+	if err := multiSigValidator.VerifyBody(blockType); err != nil {
 		return err
 	}
 
-	gp := new(chain.GasPool).AddGas(block.Header.GasLimit.Uint64())
+	gp := new(utils.GasPool).AddGas(blockType.Header.GasLimit.Uint64())
 	//process transaction
-	context := chain.NewBlockExecuteContext(trieStore, gp, dbstore, block)
+	context := block.NewBlockExecuteContext(trieStore, gp, dbstore, blockType)
 	validators := bftConsensus.ChainService.BlockValidator()
 	for _, validator := range validators {
 		err = validator.ExecuteBlock(context)
@@ -478,14 +481,14 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
 	}
 
 	multiSig := &MultiSignature{}
-	err = drepbinary.Unmarshal(block.Proof.Evidence, multiSig)
+	err = drepbinary.Unmarshal(blockType.Proof.Evidence, multiSig)
 	if err != nil {
 		return err
 	}
 
 	stateRoot := trieStore.GetStateRoot()
-	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
-		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
+	if blockType.Header.GasUsed.Cmp(context.GasUsed) == 0 {
+		if !bytes.Equal(blockType.Header.StateRoot, stateRoot) {
 			if !trieStore.RecoverTrie(bftConsensus.ChainService.GetCurrentHeader().StateRoot) {
 				log.Error("root not equal and recover trie err")
 			}

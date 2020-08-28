@@ -1,9 +1,10 @@
 package evm
 
 import (
+	"math/big"
+
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/drep-project/DREP-Chain/app"
-	"github.com/drep-project/DREP-Chain/chain"
 	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/database"
@@ -12,7 +13,6 @@ import (
 	"github.com/drep-project/DREP-Chain/types"
 	"github.com/drep-project/dlog"
 	"gopkg.in/urfave/cli.v1"
-	"math/big"
 )
 
 var (
@@ -28,9 +28,9 @@ var (
 )
 
 type EvmService struct {
-	Config          *vm.VMConfig
-	Chain           chain.ChainServiceInterface `service:"chain"`
-	DatabaseService *database.DatabaseService   `service:"database"`
+	Config *vm.VMConfig
+	//Chain           chain.ChainServiceInterface `service:"chain"`
+	DatabaseService *database.DatabaseService `service:"database"`
 }
 
 func (evmService *EvmService) Name() string {
@@ -55,7 +55,7 @@ func (evmService *EvmService) Init(executeContext *app.ExecuteContext) error {
 	if err != nil {
 		return err
 	}
-	evmService.Chain.AddTransactionValidator(&EvmDeployTransactionSelector{}, &EvmDeployTransactionExecutor{evmService})
+	//evmService.Chain.AddTransactionValidator(&EvmDeployTransactionSelector{}, &EvmDeployTransactionExecutor{evmService})
 	return nil
 }
 

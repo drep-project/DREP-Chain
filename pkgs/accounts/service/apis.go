@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"math/big"
+
 	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/params"
 	"github.com/drep-project/DREP-Chain/pkgs/evm/vm"
-	"math/big"
 
 	"github.com/drep-project/DREP-Chain/blockmgr"
 	"github.com/drep-project/DREP-Chain/common"
@@ -390,7 +391,7 @@ func (accountapi *AccountApi) CancelCandidateCredit(from crypto.CommonAddress, a
 	 {"jsonrpc":"2.0","id":1,"result":""}
 */
 func (accountapi *AccountApi) ReadContract(from, to crypto.CommonAddress, input common.Bytes) (common.Bytes, error) {
-	header := accountapi.EvmService.Chain.GetCurrentHeader()
+	header := accountapi.accountService.Chain.GetCurrentHeader()
 	tx := types.NewTransaction(to, new(big.Int).SetUint64(0), &big.Int{}, new(big.Int).SetUint64(params.MinGasLimit), 0)
 	tx.Data.Data = input
 
@@ -411,6 +412,7 @@ func (accountapi *AccountApi) ReadContract(from, to crypto.CommonAddress, input 
 	fmt.Println(common.Bytes(ret))
 
 	return common.Bytes(ret), err
+
 }
 
 /*
@@ -432,7 +434,7 @@ func (accountapi *AccountApi) EstimateGas(from crypto.CommonAddress, amount *com
 		return params.MinGasLimit, nil
 	}
 
-	header := accountapi.EvmService.Chain.GetCurrentHeader()
+	header := accountapi.accountService.Chain.GetCurrentHeader()
 	tx := types.NewTransaction(*to, amount.ToInt(), new(big.Int).SetUint64(blockmgr.DefaultGasPrice), new(big.Int).SetUint64(params.MinGasLimit), 0)
 	tx.Data.Data = data
 

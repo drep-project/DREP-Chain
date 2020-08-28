@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"math/big"
+
 	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/common"
 	"github.com/drep-project/DREP-Chain/common/hexutil"
@@ -14,7 +16,6 @@ import (
 	"github.com/drep-project/DREP-Chain/params"
 	"github.com/drep-project/DREP-Chain/types"
 	"github.com/drep-project/binary"
-	"math/big"
 )
 
 /*
@@ -26,10 +27,10 @@ prefix:chain
 type ChainApi struct {
 	store     dbinterface.KeyValueStore
 	chainView *ChainView
-	dbQuery   *ChainStore
+	dbQuery   *store.ChainStore
 }
 
-func NewChainApi(store dbinterface.KeyValueStore, chainView *ChainView, dbQuery *ChainStore) *ChainApi {
+func NewChainApi(store dbinterface.KeyValueStore, chainView *ChainView, dbQuery *store.ChainStore) *ChainApi {
 	return &ChainApi{
 		store:     store,
 		chainView: chainView,

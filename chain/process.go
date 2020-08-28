@@ -5,8 +5,11 @@ import (
 	"container/list"
 	"encoding/hex"
 	"fmt"
-	"github.com/drep-project/DREP-Chain/chain/store"
 	"math/big"
+
+	"github.com/drep-project/DREP-Chain/chain/block"
+	"github.com/drep-project/DREP-Chain/chain/store"
+	"github.com/drep-project/DREP-Chain/chain/utils"
 
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/params"
@@ -165,10 +168,10 @@ func (chainService *ChainService) acceptBlock(block *types.Block) (inMainChain b
 	return err == nil, err
 }
 
-func (chainService *ChainService) connectBlock(trieStore store.StoreInterface, block *types.Block, newNode *types.BlockNode) (context *BlockExecuteContext, err error) {
-	gp := new(GasPool).AddGas(block.Header.GasLimit.Uint64())
+func (chainService *ChainService) connectBlock(trieStore store.StoreInterface, blockType *types.Block, newNode *types.BlockNode) (context *block.BlockExecuteContext, err error) {
+	gp := new(utils.GasPool).AddGas(blockType.Header.GasLimit.Uint64())
 	//process transaction
-	context = NewBlockExecuteContext(trieStore, gp, chainService.chainStore, block)
+	context = block.NewBlockExecuteContext(trieStore, gp, chainService.chainStore, blockType)
 	for _, blockValidator := range chainService.BlockValidator() {
 		err := blockValidator.ExecuteBlock(context)
 		if err != nil {
@@ -185,16 +188,16 @@ func (chainService *ChainService) connectBlock(trieStore store.StoreInterface, b
 
 	trieStore.Commit()
 
-	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
+	if blockType.Header.GasUsed.Cmp(context.GasUsed) == 0 {
 		oldStateRoot := trieStore.GetStateRoot()
-		if !bytes.Equal(block.Header.StateRoot, oldStateRoot) {
+		if !bytes.Equal(blockType.Header.StateRoot, oldStateRoot) {
 			if !trieStore.RecoverTrie(chainService.bestChain.tip().StateRoot) {
 				log.Fatal("root not equal and recover trie err")
 			}
-			err = errors.Wrapf(ErrNotMathcedStateRoot, "%s not matched %s", hex.EncodeToString(block.Header.StateRoot), hex.EncodeToString(oldStateRoot))
+			err = errors.Wrapf(ErrNotMathcedStateRoot, "%s not matched %s", hex.EncodeToString(blockType.Header.StateRoot), hex.EncodeToString(oldStateRoot))
 		}
 	} else {
-		err = errors.Wrapf(ErrGasUsed, "%d not matched %d", block.Header.GasUsed.Uint64(), context.GasUsed.Uint64())
+		err = errors.Wrapf(ErrGasUsed, "%d not matched %d", blockType.Header.GasUsed.Uint64(), context.GasUsed.Uint64())
 	}
 
 	if err == nil {

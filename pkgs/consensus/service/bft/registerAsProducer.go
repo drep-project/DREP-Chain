@@ -2,8 +2,9 @@ package bft
 
 import (
 	"errors"
-	"github.com/drep-project/DREP-Chain/chain"
+
 	"github.com/drep-project/DREP-Chain/chain/store"
+	"github.com/drep-project/DREP-Chain/chain/transactions"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/types"
 	"github.com/drep-project/binary"
@@ -11,8 +12,8 @@ import (
 
 var (
 	MinerPrefix = []byte("miner")
-	_           = (chain.ITransactionSelector)((*RegisterAsProducerTransactionSelector)(nil))
-	_           = (chain.ITransactionValidator)((*RegisterAsProducerTransactionExecutor)(nil))
+	_           = (transactions.ITransactionSelector)((*RegisterAsProducerTransactionSelector)(nil))
+	_           = (transactions.ITransactionValidator)((*RegisterAsProducerTransactionExecutor)(nil))
 )
 
 // ***********DEPLOY**************//
@@ -25,7 +26,7 @@ func (registerAsProducerTransactionSelector *RegisterAsProducerTransactionSelect
 type RegisterAsProducerTransactionExecutor struct {
 }
 
-func (registerAsProducerTransactionExecutor *RegisterAsProducerTransactionExecutor) ExecuteTransaction(context *chain.ExecuteTransactionContext) *types.ExecuteTransactionResult {
+func (registerAsProducerTransactionExecutor *RegisterAsProducerTransactionExecutor) ExecuteTransaction(context *transactions.ExecuteTransactionContext) *types.ExecuteTransactionResult {
 	etr := &types.ExecuteTransactionResult{}
 	from := context.From()
 	data := context.Data()

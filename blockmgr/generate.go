@@ -4,8 +4,10 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/drep-project/DREP-Chain/chain"
-	"github.com/drep-project/DREP-Chain/chain/store"
+	"github.com/drep-project/DREP-Chain/chain/utils"
+
+	chainBlock "github.com/drep-project/DREP-Chain/chain/block"
+	chainStore "github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/common"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/params"
@@ -13,7 +15,7 @@ import (
 )
 
 // GenerateTemplate blockchain t
-func (blockMgr *BlockMgr) GenerateTemplate(trieStore store.StoreInterface, leaderAddr crypto.CommonAddress, blockInterval int) (*types.Block, *big.Int, error) {
+func (blockMgr *BlockMgr) GenerateTemplate(trieStore chainStore.StoreInterface, leaderAddr crypto.CommonAddress, blockInterval int) (*types.Block, *big.Int, error) {
 	parent, err := blockMgr.ChainService.GetHighestBlock()
 	if err != nil {
 		return nil, nil, err
@@ -44,10 +46,10 @@ func (blockMgr *BlockMgr) GenerateTemplate(trieStore store.StoreInterface, leade
 		},
 	}
 
-	gp := new(chain.GasPool).AddGas(newGasLimit.Uint64())
+	gp := new(utils.GasPool).AddGas(newGasLimit.Uint64())
 	//process transaction
-	chainStore := &chain.ChainStore{blockMgr.DatabaseService.LevelDb()}
-	context := chain.NewBlockExecuteContext(trieStore, gp, chainStore, block)
+	chainStore := &chainStore.ChainStore{blockMgr.DatabaseService.LevelDb()}
+	context := chainBlock.NewBlockExecuteContext(trieStore, gp, chainStore, block)
 
 	templateValidator := NewTemplateBlockValidator(blockMgr.ChainService)
 	err = templateValidator.ExecuteBlock(context, blockInterval)

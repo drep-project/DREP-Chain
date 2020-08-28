@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/AsynkronIT/protoactor-go v0.0.0-20200317173033-c483abfa40e2
 	github.com/allegro/bigcache v1.2.1
+	github.com/apex/log v1.1.0
 	github.com/aristanetworks/goarista v0.0.0-20200602234848-db8a79a18e4a
 	github.com/asaskevich/EventBus v0.0.0-20200428142821-4fc0642a29f3
 	github.com/btcsuite/btcd v0.20.1-beta

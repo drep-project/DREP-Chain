@@ -1,7 +1,8 @@
-package chain
+package store
 
 import (
 	"fmt"
+
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/sha3"
 	"github.com/drep-project/DREP-Chain/database/dbinterface"

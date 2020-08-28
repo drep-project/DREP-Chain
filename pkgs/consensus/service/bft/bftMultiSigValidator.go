@@ -2,7 +2,8 @@ package bft
 
 import (
 	"fmt"
-	"github.com/drep-project/DREP-Chain/chain"
+
+	"github.com/drep-project/DREP-Chain/chain/block"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1/schnorr"
@@ -65,7 +66,7 @@ func (blockMultiSigValidator *BlockMultiSigValidator) VerifyBody(block *types.Bl
 	return nil
 }
 
-func (blockMultiSigValidator *BlockMultiSigValidator) ExecuteBlock(context *chain.BlockExecuteContext) error {
+func (blockMultiSigValidator *BlockMultiSigValidator) ExecuteBlock(context *block.BlockExecuteContext) error {
 	multiSig := &MultiSignature{}
 	parentBlock, err := blockMultiSigValidator.getBlock(&context.Block.Header.PreviousHash)
 	if err != nil {

@@ -2,6 +2,7 @@ package blockmgr
 
 import (
 	"fmt"
+
 	"github.com/drep-project/DREP-Chain/chain"
 	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/types"
@@ -69,10 +70,15 @@ func (blockMgr *BlockMgr) checkByTxType(tx *types.Transaction) error {
 			log.WithField("err", err).Trace("check byt tx type")
 			return err
 		}
-		if err := chain.CheckAlias(tx, trieStore, blockMgr.ChainService.BestChain().Height()); err != nil {
+		drepFee, err := types.CheckAlias(newAlias)
+		if err != nil {
 			return err
 		}
-
+		balBefore := trieStore.GetBalance(from, blockMgr.ChainService.BestChain().Height())
+		balAfter := balBefore.Sub(balBefore, drepFee)
+		if balAfter.Sign() < 0 {
+			return chain.ErrBalance
+		}
 		alias := trieQuery.GetStorageAlias(from)
 		if alias != "" {
 			return ErrNotSupportRenameAlias

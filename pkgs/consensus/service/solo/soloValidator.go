@@ -1,7 +1,7 @@
 package solo
 
 import (
-	"github.com/drep-project/DREP-Chain/chain"
+	"github.com/drep-project/DREP-Chain/chain/block"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/crypto/sha3"
 	"github.com/drep-project/DREP-Chain/types"
@@ -34,6 +34,6 @@ func (soloValidator *SoloValidator) VerifyBody(block *types.Block) error {
 	}
 }
 
-func (soloValidator *SoloValidator) ExecuteBlock(context *chain.BlockExecuteContext) error {
+func (soloValidator *SoloValidator) ExecuteBlock(context *block.BlockExecuteContext) error {
 	return AccumulateRewards(soloValidator.pubkey, context.TrieStore, context.GasFee, context.Block.Header.Height)
 }

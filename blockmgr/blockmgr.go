@@ -6,7 +6,7 @@ import (
 	"path"
 	"sync"
 
-	"github.com/drep-project/DREP-Chain/chain/store"
+	chainStore "github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/common/trie"
 
 	"github.com/drep-project/DREP-Chain/params"
@@ -66,7 +66,7 @@ type IBlockMgrPool interface {
 // IBlockBlockGenerator interface
 type IBlockBlockGenerator interface {
 	//generate block template
-	GenerateTemplate(trieStore store.StoreInterface, leaderAddr crypto.CommonAddress, blockInterval int) (*types.Block, *big.Int, error)
+	GenerateTemplate(trieStore chainStore.StoreInterface, leaderAddr crypto.CommonAddress, blockInterval int) (*types.Block, *big.Int, error)
 }
 
 // IBlockNotify interface
@@ -96,7 +96,7 @@ type BlockMgr struct {
 	// P2pServer define service interface of database
 	DatabaseService *database.DatabaseService `service:"database"`
 	transactionPool *txpool.TransactionPool
-	chainStore      *chain.ChainStore
+	chainStore      *chainStore.ChainStore
 	apis            []app.API
 
 	lock   sync.RWMutex
@@ -179,7 +179,7 @@ func NewBlockMgr(config *BlockMgrConfig, homeDir string, cs chain.ChainServiceIn
 
 	blockMgr.gpo = NewOracle(blockMgr.ChainService, blockMgr.Config.GasPrice)
 
-	store, err := store.TrieStoreFromStore(blockMgr.DatabaseService.LevelDb(), trie.EmptyRoot[:])
+	store, err := chainStore.TrieStoreFromStore(blockMgr.DatabaseService.LevelDb(), trie.EmptyRoot[:])
 	if err != nil {
 		return nil
 	}
@@ -229,12 +229,12 @@ func (blockMgr *BlockMgr) Init(executeContext *app.ExecuteContext) error {
 
 	blockMgr.gpo = NewOracle(blockMgr.ChainService, blockMgr.Config.GasPrice)
 
-	store, err := store.TrieStoreFromStore(blockMgr.DatabaseService.LevelDb(), trie.EmptyRoot[:])
+	store, err := chainStore.TrieStoreFromStore(blockMgr.DatabaseService.LevelDb(), trie.EmptyRoot[:])
 	if err != nil {
 		return err
 	}
 	blockMgr.transactionPool = txpool.NewTransactionPool(store, path.Join(executeContext.CommonConfig.HomeDir, blockMgr.Config.JournalFile))
-	blockMgr.chainStore = &chain.ChainStore{blockMgr.DatabaseService.LevelDb()}
+	blockMgr.chainStore = &chainStore.ChainStore{blockMgr.DatabaseService.LevelDb()}
 	blockMgr.P2pServer.AddProtocols([]p2p.Protocol{
 		p2p.Protocol{
 			Name:   "blockMgr",

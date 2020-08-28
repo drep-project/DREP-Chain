@@ -4,9 +4,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math/big"
+
 	"github.com/drep-project/DREP-Chain/blockmgr"
 	"github.com/drep-project/DREP-Chain/chain"
+	"github.com/drep-project/DREP-Chain/chain/block"
 	"github.com/drep-project/DREP-Chain/chain/store"
+	"github.com/drep-project/DREP-Chain/chain/utils"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/crypto/sha3"
@@ -14,7 +18,6 @@ import (
 	"github.com/drep-project/DREP-Chain/params"
 	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
 	"github.com/drep-project/DREP-Chain/types"
-	"math/big"
 )
 
 type SoloConsensus struct {
@@ -79,21 +82,21 @@ func (soloConsensus *SoloConsensus) Run(privKey *secp256k1.PrivateKey) (*types.B
 	return block, nil
 }
 
-func (soloConsensus *SoloConsensus) verify(block *types.Block) error {
-	parent, err := soloConsensus.ChainService.GetBlockHeaderByHeight(block.Header.Height - 1)
+func (soloConsensus *SoloConsensus) verify(blockType *types.Block) error {
+	parent, err := soloConsensus.ChainService.GetBlockHeaderByHeight(blockType.Header.Height - 1)
 	if err != nil {
 		return err
 	}
 
-	dbstore := &chain.ChainStore{soloConsensus.DbService.LevelDb()}
+	dbstore := &store.ChainStore{soloConsensus.DbService.LevelDb()}
 	trieStore, err := store.TrieStoreFromStore(soloConsensus.DbService.LevelDb(), parent.StateRoot)
 	if err != nil {
 		return err
 	}
-	gp := new(chain.GasPool).AddGas(block.Header.GasLimit.Uint64())
+	gp := new(utils.GasPool).AddGas(blockType.Header.GasLimit.Uint64())
 	//process transaction
 
-	context := chain.NewBlockExecuteContext(trieStore, gp, dbstore, block)
+	context := block.NewBlockExecuteContext(trieStore, gp, dbstore, blockType)
 	validators := soloConsensus.ChainService.BlockValidator()
 	for _, validator := range validators {
 		err = validator.ExecuteBlock(context)
@@ -104,8 +107,8 @@ func (soloConsensus *SoloConsensus) verify(block *types.Block) error {
 	}
 	stateRoot := trieStore.GetStateRoot()
 
-	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
-		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
+	if blockType.Header.GasUsed.Cmp(context.GasUsed) == 0 {
+		if !bytes.Equal(blockType.Header.StateRoot, stateRoot) {
 			if !trieStore.RecoverTrie(soloConsensus.ChainService.GetCurrentHeader().StateRoot) {
 				log.Fatal("root not equal and recover trie err")
 			}

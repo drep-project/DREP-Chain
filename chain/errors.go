@@ -40,4 +40,5 @@ var (
 	ErrKeyNotFound = errors.New("key not found")
 	ErrKeyUnSpport = errors.New("unsupport")
 	ErrOutOfGas    = errors.New("out gas of block")
+	ErrTxUnSupport = errors.New("unsupported transaction type")
 )
