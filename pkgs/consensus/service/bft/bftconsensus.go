@@ -54,6 +54,7 @@ type BftConsensus struct {
 	producer []types.Producer
 	quit     chan struct{}
 
+	//系统最高高度同步通道
 	chBestHeight chan uint64
 }
 
@@ -196,11 +197,18 @@ func (bftConsensus *BftConsensus) moveToNextMiner(produceInfos []*MemberInfo) (b
 			liveMembers = append(liveMembers, produce)
 		}
 	}
-	curentHeight := bftConsensus.ChainService.BestChain().Height()
+	//curentHeight := bftConsensus.ChainService.BestChain().Height()
 	if uint64(len(liveMembers)) == 0 {
 		return false, false, ErrBFTNotReady
 	}
-	liveMinerIndex := int(curentHeight % uint64(len(liveMembers)))
+
+	bestBlockTime := bftConsensus.ChainService.BestChain().Tip().TimeStamp
+
+	//系统时间最大容忍误差3分之一块间隔
+	multiple := uint64(time.Now().Unix()) + uint64(bftConsensus.config.BlockInterval)/3 - bestBlockTime/uint64(bftConsensus.config.BlockInterval)
+	modifySystime := bestBlockTime + multiple*uint64(bftConsensus.config.BlockInterval)
+
+	liveMinerIndex := int(modifySystime % uint64(len(liveMembers)))
 	curMiner := liveMembers[liveMinerIndex]
 
 	for index, produce := range produceInfos {

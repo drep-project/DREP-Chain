@@ -76,10 +76,10 @@ var cs ChainServiceInterface = &ChainService{}
 type ChainService struct {
 	RpcService      *rpc2.RpcService          `service:"rpc"`
 	DatabaseService *database.DatabaseService `service:"database"`
+	Config          *ChainConfig
 	apis            []app.API
 
-	chainID types.ChainIdType
-
+	chainID      types.ChainIdType
 	lock         sync.RWMutex
 	addBlockSync sync.Mutex
 
@@ -90,10 +90,8 @@ type ChainService struct {
 	prevOrphans  map[crypto.Hash][]*types.OrphanBlock
 	oldestOrphan *types.OrphanBlock
 
-	blockIndex *BlockIndex
-	bestChain  *ChainView
-
-	Config       *ChainConfig
+	blockIndex   *BlockIndex
+	bestChain    *ChainView
 	genesisBlock *types.Block
 
 	//Provide a new block subscription
