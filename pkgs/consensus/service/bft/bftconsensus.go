@@ -158,6 +158,7 @@ func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Blo
 		}
 		log.WithField("isL", isL).Trace("BftConsensus run")
 		if isL {
+			return nil, fmt.Errorf("88888888888888888888888888")
 			return bftConsensus.runAsLeader(producers, miners, minMiners)
 		} else if isM {
 			return bftConsensus.runAsMember(miners, minMiners)
@@ -204,12 +205,12 @@ func (bftConsensus *BftConsensus) moveToNextMiner(produceInfos []*MemberInfo) (b
 
 	bestBlockTime := bftConsensus.ChainService.BestChain().Tip().TimeStamp
 	curSystime := time.Now().Unix()
-	log.WithField("systime:%d", curSystime).WithField("currblokTime:%d", bestBlockTime).Info("select producer")
+	log.WithField("systime", curSystime).WithField("currblokTime", bestBlockTime).Trace("select producer")
 	//系统时间最大容忍误差3分之一块间隔
 	multiple := (uint64(curSystime) + uint64(bftConsensus.config.BlockInterval)/3 - bestBlockTime) /
 		uint64(bftConsensus.config.BlockInterval)
 	if multiple > 1 {
-		log.WithField("skip %n miners", multiple-1).Info("select producer")
+		log.WithField("skip miners", multiple-1).Info("select producer")
 	}
 	modifySystime := bestBlockTime + multiple*uint64(bftConsensus.config.BlockInterval)
 
