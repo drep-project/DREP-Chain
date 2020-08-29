@@ -203,10 +203,10 @@ func (bftConsensus *BftConsensus) moveToNextMiner(produceInfos []*MemberInfo) (b
 	}
 
 	bestBlockTime := bftConsensus.ChainService.BestChain().Tip().TimeStamp
-
-	fmt.Println("systime:", time.Now().Unix())
+	curSystime := time.Now().Unix()
+	log.WithField("systime:%d", curSystime).WithField("currblokTime:%d", bestBlockTime).Info("select producer")
 	//系统时间最大容忍误差3分之一块间隔
-	multiple := uint64(time.Now().Unix()) + uint64(bftConsensus.config.BlockInterval)/3 - bestBlockTime/uint64(bftConsensus.config.BlockInterval)
+	multiple := (uint64(curSystime) + uint64(bftConsensus.config.BlockInterval)/3 - bestBlockTime) / uint64(bftConsensus.config.BlockInterval)
 	if multiple > 1 {
 		log.Info("skip %n miners", multiple-1)
 	}
