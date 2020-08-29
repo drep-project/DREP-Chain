@@ -158,7 +158,6 @@ func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Blo
 		}
 		log.WithField("isL", isL).Trace("BftConsensus run")
 		if isL {
-			return nil, fmt.Errorf("88888888888888888888888888")
 			return bftConsensus.runAsLeader(producers, miners, minMiners)
 		} else if isM {
 			return bftConsensus.runAsMember(miners, minMiners)
