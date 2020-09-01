@@ -114,11 +114,13 @@ func (processor *Processor) ExecuteTransaction(context *ExecuteTransactionContex
 		log := types.Log{TxType: tx.Type(), TxHash: *tx.TxHash(), Data: data, Height: height, TxIndex: 0}
 		logs = append(logs, &log)
 	}
-
-	err = store.PutNonce(from, tx.Nonce()+1)
-	if err != nil {
-		etr.Txerror = err
-		return etr
+	if txType != types.CreateContractType && txType != types.CallContractType {
+		err = store.PutNonce(from, tx.Nonce()+1)
+		if err != nil {
+			etr.Txerror = err
+			return etr
+		}
 	}
+
 	return etr
 }
