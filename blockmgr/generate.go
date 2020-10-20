@@ -4,6 +4,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/drep-project/DREP-Chain/chain/utils"
+
 	"github.com/drep-project/DREP-Chain/chain"
 	"github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/common"
@@ -44,7 +46,7 @@ func (blockMgr *BlockMgr) GenerateTemplate(trieStore store.StoreInterface, leade
 		},
 	}
 
-	gp := new(chain.GasPool).AddGas(newGasLimit.Uint64())
+	gp := new(utils.GasPool).AddGas(newGasLimit.Uint64())
 	//process transaction
 	chainStore := &chain.ChainStore{blockMgr.DatabaseService.LevelDb()}
 	context := chain.NewBlockExecuteContext(trieStore, gp, chainStore, block)

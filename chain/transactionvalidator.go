@@ -1,10 +1,12 @@
 package chain
 
 import (
+	"math/big"
+
 	"github.com/drep-project/DREP-Chain/chain/store"
+	"github.com/drep-project/DREP-Chain/chain/utils"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/types"
-	"math/big"
 )
 
 type ITransactionValidator interface {
@@ -19,7 +21,7 @@ type ExecuteTransactionContext struct {
 	blockContext *BlockExecuteContext
 	trieStore    store.StoreInterface
 
-	gp          *GasPool
+	gp          *utils.GasPool
 	tx          *types.Transaction
 	from        *crypto.CommonAddress
 	gasPrice    *big.Int
@@ -30,7 +32,7 @@ type ExecuteTransactionContext struct {
 	initialGas  uint64
 }
 
-func NewExecuteTransactionContext(blockContext *BlockExecuteContext, chainstore store.StoreInterface, gasPool *GasPool, from *crypto.CommonAddress, tx *types.Transaction) *ExecuteTransactionContext {
+func NewExecuteTransactionContext(blockContext *BlockExecuteContext, chainstore store.StoreInterface, gasPool *utils.GasPool, from *crypto.CommonAddress, tx *types.Transaction) *ExecuteTransactionContext {
 	context := &ExecuteTransactionContext{trieStore: chainstore, gp: gasPool, tx: tx, from: from}
 	context.blockContext = blockContext
 	context.from = from
@@ -76,7 +78,7 @@ func (context *ExecuteTransactionContext) Tx() *types.Transaction {
 	return context.tx
 }
 
-func (context *ExecuteTransactionContext) Gp() *GasPool {
+func (context *ExecuteTransactionContext) Gp() *utils.GasPool {
 	return context.gp
 }
 

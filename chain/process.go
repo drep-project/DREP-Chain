@@ -5,8 +5,10 @@ import (
 	"container/list"
 	"encoding/hex"
 	"fmt"
-	"github.com/drep-project/DREP-Chain/chain/store"
 	"math/big"
+
+	"github.com/drep-project/DREP-Chain/chain/store"
+	"github.com/drep-project/DREP-Chain/chain/utils"
 
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/params"
@@ -166,7 +168,7 @@ func (chainService *ChainService) acceptBlock(block *types.Block) (inMainChain b
 }
 
 func (chainService *ChainService) connectBlock(trieStore store.StoreInterface, block *types.Block, newNode *types.BlockNode) (context *BlockExecuteContext, err error) {
-	gp := new(GasPool).AddGas(block.Header.GasLimit.Uint64())
+	gp := new(utils.GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
 	context = NewBlockExecuteContext(trieStore, gp, chainService.chainStore, block)
 	for _, blockValidator := range chainService.BlockValidator() {

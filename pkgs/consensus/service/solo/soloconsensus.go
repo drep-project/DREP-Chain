@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math/big"
+
 	"github.com/drep-project/DREP-Chain/blockmgr"
 	"github.com/drep-project/DREP-Chain/chain"
 	"github.com/drep-project/DREP-Chain/chain/store"
+	"github.com/drep-project/DREP-Chain/chain/utils"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/crypto/secp256k1"
 	"github.com/drep-project/DREP-Chain/crypto/sha3"
@@ -14,7 +17,6 @@ import (
 	"github.com/drep-project/DREP-Chain/params"
 	consensusTypes "github.com/drep-project/DREP-Chain/pkgs/consensus/types"
 	"github.com/drep-project/DREP-Chain/types"
-	"math/big"
 )
 
 type SoloConsensus struct {
@@ -90,7 +92,7 @@ func (soloConsensus *SoloConsensus) verify(block *types.Block) error {
 	if err != nil {
 		return err
 	}
-	gp := new(chain.GasPool).AddGas(block.Header.GasLimit.Uint64())
+	gp := new(utils.GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
 
 	context := chain.NewBlockExecuteContext(trieStore, gp, dbstore, block)

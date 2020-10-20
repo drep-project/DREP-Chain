@@ -3,10 +3,12 @@ package chain
 import (
 	"bytes"
 	"fmt"
-	"github.com/drep-project/DREP-Chain/chain/store"
-	"github.com/drep-project/DREP-Chain/crypto"
 	"math/big"
 	"reflect"
+
+	"github.com/drep-project/DREP-Chain/chain/store"
+	"github.com/drep-project/DREP-Chain/chain/utils"
+	"github.com/drep-project/DREP-Chain/crypto"
 
 	"github.com/drep-project/DREP-Chain/common"
 
@@ -35,7 +37,7 @@ type IBlockValidator interface {
 
 type BlockExecuteContext struct {
 	TrieStore store.StoreInterface
-	Gp        *GasPool
+	Gp        *utils.GasPool
 	DbStore   *ChainStore
 	Block     *types.Block
 	GasUsed   *big.Int
@@ -44,7 +46,7 @@ type BlockExecuteContext struct {
 	Receipts  types.Receipts
 }
 
-func NewBlockExecuteContext(trieStore store.StoreInterface, gp *GasPool, dbStore *ChainStore, block *types.Block) *BlockExecuteContext {
+func NewBlockExecuteContext(trieStore store.StoreInterface, gp *utils.GasPool, dbStore *ChainStore, block *types.Block) *BlockExecuteContext {
 	return &BlockExecuteContext{
 		TrieStore: trieStore,
 		Gp:        gp,
@@ -170,7 +172,7 @@ func (chainBlockValidator *ChainBlockValidator) ExecuteBlock(context *BlockExecu
 	return nil
 }
 
-func (chainBlockValidator *ChainBlockValidator) RouteTransaction(context *BlockExecuteContext, gasPool *GasPool, tx *types.Transaction) (*types.Receipt, uint64, error) {
+func (chainBlockValidator *ChainBlockValidator) RouteTransaction(context *BlockExecuteContext, gasPool *utils.GasPool, tx *types.Transaction) (*types.Receipt, uint64, error) {
 	//init transaction tx
 	from, err := tx.From()
 	if err != nil {

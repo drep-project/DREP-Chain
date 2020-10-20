@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/drep-project/DREP-Chain/chain/utils"
+
 	"github.com/drep-project/DREP-Chain/blockmgr"
 	"github.com/drep-project/DREP-Chain/chain"
 	"github.com/drep-project/DREP-Chain/chain/store"
@@ -459,7 +461,7 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
 		return err
 	}
 
-	gp := new(chain.GasPool).AddGas(block.Header.GasLimit.Uint64())
+	gp := new(utils.GasPool).AddGas(block.Header.GasLimit.Uint64())
 	//process transaction
 	context := chain.NewBlockExecuteContext(trieStore, gp, dbstore, block)
 	validators := bftConsensus.ChainService.BlockValidator()

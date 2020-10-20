@@ -2,9 +2,12 @@ package blockmgr
 
 import (
 	"fmt"
+
 	"github.com/drep-project/DREP-Chain/chain"
+	"github.com/drep-project/DREP-Chain/chain/utils"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/types"
+
 	//"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"time"
@@ -89,7 +92,7 @@ SELECT_TX:
 	return nil
 }
 
-func (chainBlockValidator *TemplateBlockValidator) RouteTransaction(context *chain.BlockExecuteContext, gasPool *chain.GasPool, tx *types.Transaction) (*types.Receipt, uint64, error) {
+func (chainBlockValidator *TemplateBlockValidator) RouteTransaction(context *chain.BlockExecuteContext, gasPool *utils.GasPool, tx *types.Transaction) (*types.Receipt, uint64, error) {
 	//init transaction tx
 	from, err := tx.From()
 	if err != nil {
