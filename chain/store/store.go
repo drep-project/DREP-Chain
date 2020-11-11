@@ -3,13 +3,16 @@ package store
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
+	"math/big"
+
 	"github.com/drep-project/DREP-Chain/common/trie"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/database"
 	"github.com/drep-project/DREP-Chain/database/dbinterface"
+	"github.com/drep-project/DREP-Chain/params"
 	dlog "github.com/drep-project/DREP-Chain/pkgs/log"
 	"github.com/drep-project/DREP-Chain/types"
-	"math/big"
 )
 
 const (
@@ -27,7 +30,7 @@ type StoreInterface interface {
 	GetStorageAlias(addr *crypto.CommonAddress) string
 	AliasGet(alias string) (*crypto.CommonAddress, error)
 	AliasExist(alias string) bool
-	AliasSet(addr *crypto.CommonAddress, alias string) (err error)
+	AliasSet(addr *crypto.CommonAddress, alias string, height uint64) (err error)
 
 	GetBalance(addr *crypto.CommonAddress, height uint64) *big.Int
 	PutBalance(addr *crypto.CommonAddress, height uint64, balance *big.Int) error
@@ -247,7 +250,28 @@ func (s Store) GetReputation(addr *crypto.CommonAddress) *big.Int {
 	return s.account.GetReputation(addr)
 }
 
-func (s Store) AliasSet(addr *crypto.CommonAddress, alias string) (err error) {
+func (s Store) AliasSet(addr *crypto.CommonAddress, alias string, height uint64) (err error) {
+	drepFee, err := types.CheckAlias([]byte(alias))
+	if err != nil {
+		return
+	}
+	//minus alias fee from from account
+	originBalance := s.GetBalance(addr, height)
+	leftBalance := originBalance.Sub(originBalance, drepFee)
+	if leftBalance.Sign() < 0 {
+		return errors.New("set alias ,not enough balance")
+	}
+	err = s.PutBalance(addr, height, leftBalance)
+	if err != nil {
+		return
+	}
+	// put alias fee to hole address
+	zeroAddressBalance := s.GetBalance(&params.HoleAddress, height)
+	zeroAddressBalance = zeroAddressBalance.Add(zeroAddressBalance, drepFee)
+	err = s.PutBalance(&params.HoleAddress, height, zeroAddressBalance)
+	if err != nil {
+		return
+	}
 	return s.account.AliasSet(addr, alias)
 }
 
@@ -264,6 +288,10 @@ func (s Store) VoteCredit(fromAddr *crypto.CommonAddress, to *crypto.CommonAddre
 }
 
 func (s Store) CandidateCredit(fromAddr *crypto.CommonAddress, addBalance *big.Int, data []byte, height uint64) error {
+	cd := types.CandidateData{}
+	if err := cd.Unmarshal(data); nil != err {
+		return err
+	}
 	return s.stake.CandidateCredit(fromAddr, addBalance, data, height)
 }
 func (s Store) TrieDB() *trie.Database {

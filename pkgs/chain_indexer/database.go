@@ -2,11 +2,12 @@ package chain_indexer
 
 import (
 	bin "encoding/binary"
-	"github.com/drep-project/binary"
-	"github.com/drep-project/DREP-Chain/chain"
+
+	chainStore "github.com/drep-project/DREP-Chain/chain/store"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/database/dbinterface"
 	"github.com/drep-project/DREP-Chain/types"
+	"github.com/drep-project/binary"
 )
 
 var (
@@ -16,13 +17,13 @@ var (
 
 type ChainIndexerStore struct {
 	dbinterface.KeyValueStore
-	chainStore *chain.ChainStore
+	chainStore *chainStore.ChainStore
 }
 
 func NewChainIndexerStore(store dbinterface.KeyValueStore) *ChainIndexerStore {
 	return &ChainIndexerStore{
 		store,
-		&chain.ChainStore{store},
+		&chainStore.ChainStore{store},
 	}
 }
 

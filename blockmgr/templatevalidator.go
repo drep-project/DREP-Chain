@@ -3,8 +3,12 @@ package blockmgr
 import (
 	"fmt"
 
-	"github.com/drep-project/DREP-Chain/chain"
+	"github.com/drep-project/DREP-Chain/chain/block"
 	"github.com/drep-project/DREP-Chain/chain/utils"
+
+	"github.com/drep-project/DREP-Chain/chain/transactions"
+
+	"github.com/drep-project/DREP-Chain/chain"
 	"github.com/drep-project/DREP-Chain/crypto"
 	"github.com/drep-project/DREP-Chain/types"
 
@@ -29,7 +33,7 @@ func (chainBlockValidator *TemplateBlockValidator) VerifyBody(block *types.Block
 	return nil
 }
 
-func (chainBlockValidator *TemplateBlockValidator) ExecuteBlock(context *chain.BlockExecuteContext, blockInterval int) error {
+func (chainBlockValidator *TemplateBlockValidator) ExecuteBlock(context *block.BlockExecuteContext, blockInterval int) error {
 	context.Receipts = make([]*types.Receipt, context.Block.Data.TxCount)
 	context.Logs = make([]*types.Log, 0)
 	if len(context.Block.Data.TxList) < 0 {
@@ -92,14 +96,14 @@ SELECT_TX:
 	return nil
 }
 
-func (chainBlockValidator *TemplateBlockValidator) RouteTransaction(context *chain.BlockExecuteContext, gasPool *utils.GasPool, tx *types.Transaction) (*types.Receipt, uint64, error) {
+func (chainBlockValidator *TemplateBlockValidator) RouteTransaction(context *block.BlockExecuteContext, gasPool *utils.GasPool, tx *types.Transaction) (*types.Receipt, uint64, error) {
 	//init transaction tx
 	from, err := tx.From()
 	if err != nil {
 		return nil, 0, err
 	}
 
-	txContext := chain.NewExecuteTransactionContext(context, context.TrieStore, gasPool, from, tx)
+	txContext := transactions.NewExecuteTransactionContext(context, context.TrieStore, gasPool, from, tx)
 	if err := txContext.PreCheck(); err != nil {
 		return nil, 0, err
 	}
@@ -113,38 +117,65 @@ func (chainBlockValidator *TemplateBlockValidator) RouteTransaction(context *cha
 	if err = txContext.UseGas(gas); err != nil {
 		return nil, 0, err
 	}
-	exit := false
-	for selector, txValidator := range chainBlockValidator.chain.TransactionValidators() {
-		if selector.Select(tx) {
-			exit = true
-			ret := txValidator.ExecuteTransaction(txContext)
-			if ret.Txerror != nil {
-				return nil, 0, ret.Txerror
-			}
-			err = txContext.RefundCoin()
-			if err != nil {
-				return nil, 0, err
-			}
-			// Create a new receipt for the transaction, storing the intermediate root and gasRemained used by the tx
-			// based on the eip phase, we're passing whether the root touch-delete accounts.
-			receipt := types.NewReceipt(crypto.ZeroHash[:], ret.ContractTxExecuteFail, txContext.GasUsed())
-			receipt.TxHash = *tx.TxHash()
-			receipt.GasUsed = txContext.GasUsed()
-			// if the transaction created a contract, store the creation address in the receipt.
-			if (tx.To() == nil || tx.To().IsEmpty()) && tx.Type() == types.CreateContractType {
-				receipt.ContractAddress = crypto.CreateAddress(*from, tx.Nonce())
-				fmt.Println("contractAddr:", receipt.ContractAddress)
-			}
-			// Set the receipt logs and create a bloom for filtering
-			receipt.Logs = ret.ContractTxLog
-			receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
-			//receipt.BlockHash = *header.Hash()
-			receipt.BlockNumber = context.Block.Header.Height
-			return receipt, txContext.GasUsed(), nil
-		}
+
+	process := &transactions.Processor{}
+	ret := process.ExecuteTransaction(txContext)
+	if ret.Txerror != nil {
+		return nil, 0, ret.Txerror
 	}
-	if !exit {
-		return nil, 0, chain.ErrUnsupportTxType
+	err = txContext.RefundCoin()
+	if err != nil {
+		return nil, 0, err
 	}
+	// Create a new receipt for the transaction, storing the intermediate root and gasRemained used by the tx
+	// based on the eip phase, we're passing whether the root touch-delete accounts.
+	receipt := types.NewReceipt(crypto.ZeroHash[:], ret.ContractTxExecuteFail, txContext.GasUsed())
+	receipt.TxHash = *tx.TxHash()
+	receipt.GasUsed = txContext.GasUsed()
+	// if the transaction created a contract, store the creation address in the receipt.
+	if (tx.To() == nil || tx.To().IsEmpty()) && tx.Type() == types.CreateContractType {
+		receipt.ContractAddress = crypto.CreateAddress(*from, tx.Nonce())
+		log.WithField("contractAddr:", receipt.ContractAddress).Info("execute contract")
+	}
+	// Set the receipt logs and create a bloom for filtering
+	receipt.Logs = ret.ContractTxLog
+	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
+	//receipt.BlockHash = *header.Hash()
+	receipt.BlockNumber = context.Block.Header.Height
+	return receipt, txContext.GasUsed(), nil
+
+	//exit := false
+	//for selector, txValidator := range chainBlockValidator.chain.TransactionValidators() {
+	//	if selector.Select(tx) {
+	//		exit = true
+	//		ret := txValidator.ExecuteTransaction(txContext)
+	//		if ret.Txerror != nil {
+	//			return nil, 0, ret.Txerror
+	//		}
+	//		err = txContext.RefundCoin()
+	//		if err != nil {
+	//			return nil, 0, err
+	//		}
+	//		// Create a new receipt for the transaction, storing the intermediate root and gasRemained used by the tx
+	//		// based on the eip phase, we're passing whether the root touch-delete accounts.
+	//		receipt := types.NewReceipt(crypto.ZeroHash[:], ret.ContractTxExecuteFail, txContext.GasUsed())
+	//		receipt.TxHash = *tx.TxHash()
+	//		receipt.GasUsed = txContext.GasUsed()
+	//		// if the transaction created a contract, store the creation address in the receipt.
+	//		if (tx.To() == nil || tx.To().IsEmpty()) && tx.Type() == types.CreateContractType {
+	//			receipt.ContractAddress = crypto.CreateAddress(*from, tx.Nonce())
+	//			log.WithField("contractAddr:", receipt.ContractAddress).Info("execute contract")
+	//		}
+	//		// Set the receipt logs and create a bloom for filtering
+	//		receipt.Logs = ret.ContractTxLog
+	//		receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
+	//		//receipt.BlockHash = *header.Hash()
+	//		receipt.BlockNumber = context.Block.Header.Height
+	//		return receipt, txContext.GasUsed(), nil
+	//	}
+	//}
+	//if !exit {
+	//	return nil, 0, chain.ErrUnsupportTxType
+	//}
 	panic("never come here")
 }

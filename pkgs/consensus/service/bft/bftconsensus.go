@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/drep-project/DREP-Chain/chain/block"
 	"github.com/drep-project/DREP-Chain/chain/utils"
 
 	"github.com/drep-project/DREP-Chain/blockmgr"
@@ -136,7 +137,7 @@ func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Blo
 	bftConsensus.CoinBase = crypto.PubkeyToAddress(privKey.PubKey())
 	bftConsensus.PrivKey = privKey
 
-	producers, err := bftConsensus.GetProducers(bftConsensus.ChainService.BestChain().Height(), bftConsensus.config.ProducerNum)
+	producers, err := bftConsensus.GetProducers(bftConsensus.ChainService.BestChain().Height(), MAX_PRODUCER)
 	if err != nil {
 		log.Trace("bft consensus run get producers err:", err)
 		return nil, err
@@ -144,6 +145,8 @@ func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Blo
 	found := false
 
 	log.Trace(" bftConsensus.config.ProducerNum:", bftConsensus.config.ProducerNum, bftConsensus.ChainService.BestChain().Height())
+	log.Trace(" Real ProducerNum:", len(producers), bftConsensus.ChainService.BestChain().Height())
+
 	for _, p := range producers {
 		log.WithField("node", p.Node.String()).Trace("get producers")
 	}
@@ -158,8 +161,8 @@ func (bftConsensus *BftConsensus) Run(privKey *secp256k1.PrivateKey) (*types.Blo
 		return nil, ErrNotMyTurn
 	}
 
-	minMiners := int(bftConsensus.config.ProducerNum * 2 / 3)
-	if bftConsensus.config.ProducerNum*2%3 != 0 {
+	minMiners := len(producers) * 2 / 3
+	if len(producers)*2%3 != 0 {
 		minMiners++
 	}
 	miners := bftConsensus.collectMemberStatus(producers)
@@ -446,24 +449,29 @@ func (bftConsensus *BftConsensus) blockVerify(block *types.Block) error {
 	return err
 }
 
-func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
-	parent, err := bftConsensus.ChainService.GetBlockHeaderByHeight(block.Header.Height - 1)
+func (bftConsensus *BftConsensus) verifyBlockContent(blockType *types.Block) error {
+	parent, err := bftConsensus.ChainService.GetBlockHeaderByHeight(blockType.Header.Height - 1)
 	if err != nil {
 		return err
 	}
-	dbstore := &chain.ChainStore{bftConsensus.DbService.LevelDb()}
+	dbstore := &store.ChainStore{bftConsensus.DbService.LevelDb()}
 	trieStore, err := store.TrieStoreFromStore(bftConsensus.DbService.LevelDb(), parent.StateRoot)
 	if err != nil {
 		return err
 	}
-	multiSigValidator := BlockMultiSigValidator{bftConsensus.GetProducers, bftConsensus.ChainService.GetBlockByHash, bftConsensus.config.ProducerNum}
-	if err := multiSigValidator.VerifyBody(block); err != nil {
+	producers, err := bftConsensus.GetProducers(bftConsensus.ChainService.BestChain().Height(), MAX_PRODUCER)
+	if err != nil {
+		log.Trace("bft consensus verifyBlockContent get producers err:", err)
+		return err
+	}
+	multiSigValidator := BlockMultiSigValidator{bftConsensus.GetProducers, bftConsensus.ChainService.GetBlockByHash, len(producers)}
+	if err := multiSigValidator.VerifyBody(blockType); err != nil {
 		return err
 	}
 
-	gp := new(utils.GasPool).AddGas(block.Header.GasLimit.Uint64())
+	gp := new(utils.GasPool).AddGas(blockType.Header.GasLimit.Uint64())
 	//process transaction
-	context := chain.NewBlockExecuteContext(trieStore, gp, dbstore, block)
+	context := block.NewBlockExecuteContext(trieStore, gp, dbstore, blockType)
 	validators := bftConsensus.ChainService.BlockValidator()
 	for _, validator := range validators {
 		err = validator.ExecuteBlock(context)
@@ -473,14 +481,14 @@ func (bftConsensus *BftConsensus) verifyBlockContent(block *types.Block) error {
 	}
 
 	multiSig := &MultiSignature{}
-	err = drepbinary.Unmarshal(block.Proof.Evidence, multiSig)
+	err = drepbinary.Unmarshal(blockType.Proof.Evidence, multiSig)
 	if err != nil {
 		return err
 	}
 
 	stateRoot := trieStore.GetStateRoot()
-	if block.Header.GasUsed.Cmp(context.GasUsed) == 0 {
-		if !bytes.Equal(block.Header.StateRoot, stateRoot) {
+	if blockType.Header.GasUsed.Cmp(context.GasUsed) == 0 {
+		if !bytes.Equal(blockType.Header.StateRoot, stateRoot) {
 			if !trieStore.RecoverTrie(bftConsensus.ChainService.GetCurrentHeader().StateRoot) {
 				log.Error("root not equal and recover trie err")
 			}
@@ -551,7 +559,7 @@ func (bftConsensus *BftConsensus) prepareForMining(p2p p2pService.P2P) {
 		select {
 		case <-timer.C:
 			//Get as many candidate nodes as possible, establish connection with other candidate nodes in advance, and prepare for the next block
-			producers, err := bftConsensus.loadProducers(bftConsensus.ChainService.BestChain().Tip().Height, bftConsensus.config.ProducerNum*3/2)
+			producers, err := bftConsensus.loadProducers(bftConsensus.ChainService.BestChain().Tip().Height, MAX_PRODUCER*3/2)
 			if err != nil {
 				log.WithField("err", err).Info("PrepareForMiner get producer err")
 			}

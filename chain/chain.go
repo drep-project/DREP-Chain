@@ -3,9 +3,12 @@ package chain
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/drep-project/DREP-Chain/chain/store"
 	"math/big"
 	"sync"
+
+	"github.com/drep-project/DREP-Chain/chain/block"
+
+	"github.com/drep-project/DREP-Chain/chain/store"
 
 	"github.com/drep-project/DREP-Chain/app"
 	"github.com/drep-project/DREP-Chain/params"
@@ -60,11 +63,11 @@ type ChainServiceInterface interface {
 	GetLogsFeed() *event.Feed
 	GetRMLogsFeed() *event.Feed
 	BlockExists(blockHash *crypto.Hash) bool
-	Index() *BlockIndex
+	Index() *block.BlockIndex
 	BlockValidator() BlockValidators
 	AddBlockValidator(validator IBlockValidator)
-	TransactionValidators() map[ITransactionSelector]ITransactionValidator
-	AddTransactionValidator(selector ITransactionSelector, validator ITransactionValidator)
+	//TransactionValidators() map[ITransactionSelector]ITransactionValidator
+	//AddTransactionValidator(selector ITransactionSelector, validator ITransactionValidator)
 	AddGenesisProcess(validator IGenesisProcess)
 	GetConfig() *ChainConfig
 	DetachBlockFeed() *event.Feed
@@ -90,7 +93,7 @@ type ChainService struct {
 	prevOrphans  map[crypto.Hash][]*types.OrphanBlock
 	oldestOrphan *types.OrphanBlock
 
-	blockIndex *BlockIndex
+	blockIndex *block.BlockIndex
 	bestChain  *ChainView
 
 	Config       *ChainConfig
@@ -102,11 +105,11 @@ type ChainService struct {
 	logsFeed        event.Feed
 	rmLogsFeed      event.Feed
 
-	blockValidator       BlockValidators
-	transactionValidator map[ITransactionSelector]ITransactionValidator
-	genesisProcess       []IGenesisProcess
-	chainStore           *ChainStore
-	genesisConfig        json.RawMessage
+	blockValidator BlockValidators
+	//transactionValidator map[ITransactionSelector]ITransactionValidator
+	genesisProcess []IGenesisProcess
+	chainStore     *store.ChainStore
+	genesisConfig  json.RawMessage
 }
 
 type ChainState struct {
@@ -115,22 +118,22 @@ type ChainState struct {
 }
 
 func (chainService *ChainService) Init(executeContext *app.ExecuteContext) error {
-	chainService.blockIndex = NewBlockIndex()
+	chainService.blockIndex = block.NewBlockIndex()
 	chainService.bestChain = NewChainView(nil)
-	chainService.chainStore = &ChainStore{chainService.DatabaseService.LevelDb()}
+	chainService.chainStore = &store.ChainStore{chainService.DatabaseService.LevelDb()}
 	chainService.orphans = make(map[crypto.Hash]*types.OrphanBlock)
 	chainService.prevOrphans = make(map[crypto.Hash][]*types.OrphanBlock)
 
 	chainService.blockValidator = []IBlockValidator{NewChainBlockValidator(chainService)}
 	chainService.genesisProcess = []IGenesisProcess{NewPreminerGenesisProcessor()}
-	chainService.transactionValidator = map[ITransactionSelector]ITransactionValidator{
-		&TransferTxSelector{}:        &TransferTransactionProcessor{},
-		&AliasTxSelector{}:           &AliasTransactionProcessor{},
-		&StakeTxSelector{}:           &StakeTransactionProcessor{},
-		&CancelVoteTxSelector{}:      &CancelVoteTransactionProcessor{},
-		&CandidateTxSelector{}:       &CandidateTransactionProcessor{},
-		&CancelCandidateTxSelector{}: &CancelCandidateTransactionProcessor{},
-	}
+	//chainService.transactionValidator = map[ITransactionSelector]ITransactionValidator{
+	//&TransferTxSelector{}:        &TransferTransactionProcessor{},
+	//&AliasTxSelector{}:           &AliasTransactionProcessor{},
+	//&StakeTxSelector{}:           &StakeTransactionProcessor{},
+	//&CancelVoteTxSelector{}:      &CancelVoteTransactionProcessor{},
+	//&CandidateTxSelector{}:       &CandidateTransactionProcessor{},
+	//&CancelCandidateTxSelector{}: &CancelCandidateTransactionProcessor{},
+	//}
 
 	if _, ok := executeContext.PhaseConfig["genesis"]; ok {
 		chainService.genesisConfig = executeContext.PhaseConfig["genesis"]
@@ -328,23 +331,23 @@ func (chainService *ChainService) BlockValidator() BlockValidators {
 	return chainService.blockValidator
 }
 
-func (chainService *ChainService) TransactionValidators() map[ITransactionSelector]ITransactionValidator {
-	return chainService.transactionValidator
-}
+//func (chainService *ChainService) TransactionValidators() map[ITransactionSelector]ITransactionValidator {
+//	return chainService.transactionValidator
+//}
 
 func (chainService *ChainService) AddBlockValidator(validator IBlockValidator) {
 	chainService.blockValidator = append(chainService.blockValidator, validator)
 }
 
-func (chainService *ChainService) AddTransactionValidator(selector ITransactionSelector, validator ITransactionValidator) {
-	chainService.transactionValidator[selector] = validator
-}
+//func (chainService *ChainService) AddTransactionValidator(selector ITransactionSelector, validator ITransactionValidator) {
+//	chainService.transactionValidator[selector] = validator
+//}
 
 func (chainService *ChainService) AddGenesisProcess(validator IGenesisProcess) {
 	chainService.genesisProcess = append(chainService.genesisProcess, validator)
 }
 
-func (chainService *ChainService) Index() *BlockIndex {
+func (chainService *ChainService) Index() *block.BlockIndex {
 	return chainService.blockIndex
 }
 

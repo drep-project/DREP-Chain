@@ -901,7 +901,6 @@ func getCurPath() string {
 
 func genaccount(args cli.Args, client *rpc.Client, ctx context.Context)  {
 
-
 	if err := argsJudge(args, 4); err != nil {
 		fmt.Println("genaccount need another name and password parameters")
 		fmt.Println(err.Error())
@@ -923,6 +922,7 @@ func genaccount(args cli.Args, client *rpc.Client, ctx context.Context)  {
 		staticConfigs = []string{"enode://548c58daf6dc65d463c155027fce3a909d555683543d1dca34cff1d68868c54f@39.100.111.74:44444", "enode://385c49f05a235115515d5581485be6cd66bbcaf2dbace93d641b5e4c87c20255@39.98.39.224:44444", "enode://9296c4f6e4ceaaea24d0416f49bf7624e920d1f71f7a51877a5d0ed156e35ac5@39.99.44.60:44444"}
 		genesisConfig = "{\"Preminer\": [{ \"Addr\": \"0x7d17376a5a611c768970f7ce99fbe309450bff6f\", \"Value\": 10000000000000000000000000000 } ], \"Miners\": [ { \"Pubkey\": \"0x0328378210fd26ac195c4880b5cf8a68e5477d5f2f409e4526ed6b49681091a391\", \"Node\": \"enode://548c58daf6dc65d463c155027fce3a909d555683543d1dca34cff1d68868c54f@39.100.111.74:44444\" }, { \"Pubkey\": \"0x03efe1cad6eb9e161a9d4809eb0d40e9d9392d70e877cc2b41cd7a7526628ee007\", \"Node\": \"enode://385c49f05a235115515d5581485be6cd66bbcaf2dbace93d641b5e4c87c20255@39.98.39.224:44444\" }, { \"Pubkey\": \"0x031afda919527b8c55997e8a2c2cdf33fc025708a73085b4f7f5c500a6c68ddb08\", \"Node\": \"enode://9296c4f6e4ceaaea24d0416f49bf7624e920d1f71f7a51877a5d0ed156e35ac5@39.99.44.60:44444\"}]}"
 	}
+
 
 	err := json.Unmarshal([]byte(genesisConfig), &genesis)
 	if err != nil {

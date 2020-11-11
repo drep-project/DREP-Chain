@@ -11,3 +11,5 @@ type BftConfig struct {
 	BlockInterval  int16                `json:"blockInterval"` //unit second
 	ChangeInterval uint64               `json:"changeInterval"`
 }
+
+const MAX_PRODUCER = 21
