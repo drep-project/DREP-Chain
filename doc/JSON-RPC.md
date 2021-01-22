@@ -364,7 +364,7 @@ curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ##### response：
 
 ```json
-{"jsonrpc":"2.0","id":3,"result":"0x8a8e541ddd1272d53729164c70197221a3c27486"}
+{"jsonrpc":"2.0","id":3,"result":"0x...486"}
 ````
 
 
@@ -464,7 +464,7 @@ curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ##### response：
 
 ```json
-{"jsonrpc":"2.0","id":3,"result":"[{\"Addr\":\"DREPd05d5f324ada3c418e14cd6b497f2f36d60ba607\",\"HeghtValues\":[{\"CreditHeight\":1329,\"CreditValue\":\"0x11135\"}]}]"}
+{"jsonrpc":"2.0","id":3,"result":"[{\"Addr\":\"0xd05d5f324ada3c418e14cd6b497f2f36d60ba607\",\"HeghtValues\":[{\"CreditHeight\":1329,\"CreditValue\":\"0x11135\"}]}]"}
 ````
 
 
@@ -484,7 +484,7 @@ curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ##### response：
 
 ```json
-{"jsonrpc":"2.0","id":3,"result":"{\"DREP300fc5a14e578be28c64627c0e7e321771c58cd4\":\"0x3641100\"}"}
+{"jsonrpc":"2.0","id":3,"result":"{\"0x300fc5a14e578be28c64627c0e7e321771c58cd4\":\"0x3641100\"}"}
 ````
 
 
@@ -504,7 +504,7 @@ curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"chain_get
 ##### response：
 
 ```json
-{"jsonrpc":"2.0","id":3,"result":"{\"DREP300fc5a14e578be28c64627c0e7e321771c58cd4\":\"0x3641100\"}"}
+{"jsonrpc":"2.0","id":3,"result":"{\"0x...cd4\":\"0x3641100\"}"}
 ````
 
 
@@ -742,7 +742,7 @@ curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"trace_dec
 #### example
 
 ```shell
-curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"trace_getSendTransactionByAddr","params":["DREP7923a30bbfbcb998a6534d56b313e68c8e0c594a",1,10], "id": 3}' -H "Content-Type:application/json"
+curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"trace_getSendTransactionByAddr","params":["0x7923a30bbfbcb998a6534d56b313e68c8e0c594a",1,10], "id": 3}' -H "Content-Type:application/json"
 ```
 
 ##### response：
@@ -784,7 +784,7 @@ curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"trace_get
 #### example
 
 ```shell
-curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"trace_getReceiveTransactionByAddr","params":["DREP3ebcbe7cb440dd8c52940a2963472380afbb56c5",1,10], "id": 3}' -H "Content-Type:application/json"
+curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"trace_getReceiveTransactionByAddr","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5",1,10], "id": 3}' -H "Content-Type:application/json"
 ```
 
 ##### response：
@@ -905,7 +905,7 @@ curl http://localhost::10085 -X POST --data '{"jsonrpc":"2.0","method":"account_
 #### example
 
 ```shell
-curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"account_lockAccount","params":["DREP518b3fefa3fb9a72753c6ad10a2b68cc034ec391"], "id": 3}' -H "Content-Type:application/json"
+curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"account_lockAccount","params":["0x518b3fefa3fb9a72753c6ad10a2b68cc034ec391"], "id": 3}' -H "Content-Type:application/json"
 ```
 
 ##### response：
@@ -926,7 +926,7 @@ curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"account_l
 #### example
 
 ```shell
-curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"account_unlockAccount","params":["DREP518b3fefa3fb9a72753c6ad10a2b68cc034ec391", "123456"], "id": 3}' -H "Content-Type:application/json"
+curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"account_unlockAccount","params":["0x518b3fefa3fb9a72753c6ad10a2b68cc034ec391", "123456"], "id": 3}' -H "Content-Type:application/json"
 ```
 
 ##### response：
@@ -990,7 +990,7 @@ curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"account_c
 #### example
 
 ```shell
-curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_transfer","params":["DREP3ebcbe7cb440dd8c52940a2963472380afbb56c5","DREP3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000",""],"id":1}' http://127.0.0.1:10085
+curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_transfer","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000",""],"id":1}' http://127.0.0.1:10085
 ```
 
 ##### response：
@@ -1016,7 +1016,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 #### example
 
 ```shell
-curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_transferWithNonce","params":["DREP3ebcbe7cb440dd8c52940a2963472380afbb56c5","DREP3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000","",1],"id":1}' http://127.0.0.1:10085
+curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_transferWithNonce","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000","",1],"id":1}' http://127.0.0.1:10085
 ```
 
 ##### response：
@@ -1039,7 +1039,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 #### example
 
 ```shell
-curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_setAlias","params":["DREP3ebcbe7cb440dd8c52940a2963472380afbb56c5","AAAAA","0x110","0x30000"],"id":1}' http://127.0.0.1:10085
+curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_setAlias","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","AAAAA","0x110","0x30000"],"id":1}' http://127.0.0.1:10085
 ```
 
 ##### response：
@@ -1088,7 +1088,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 #### example
 
 ```shell
-curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_cancelVoteCredit","params":["DREP3ebcbe7cb440dd8c52940a2963472380afbb56c5","DREP3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000"],"id":1}' http://127.0.0.1:10085
+curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_cancelVoteCredit","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000"],"id":1}' http://127.0.0.1:10085
 ```
 
 ##### response：
@@ -1112,7 +1112,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 #### example
 
 ```shell
-curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_candidateCredit","params":["DREP3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000","{\"Pubkey\":\"0x020e233ebaed5ade5e48d7ee7a999e173df054321f4ddaebecdb61756f8a43e91c\",\"Node\":\"enode://3f05da2475bf09ce20b790d76b42450996bc1d3c113a1848be1960171f9851c0@149.129.172.91:44444\"}"],"id":1}' http://127.0.0.1:10085
+curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_candidateCredit","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x111","0x110","0x30000","{\"Pubkey\":\"0x020e233ebaed5ade5e48d7ee7a999e173df054321f4ddaebecdb61756f8a43e91c\",\"Node\":\"enode://3f05da2475bf09ce20b790d76b42450996bc1d3c113a1848be1960171f9851c0@149.129.172.91:44444\"}"],"id":1}' http://127.0.0.1:10085
 ```
 
 ##### response：
@@ -1158,7 +1158,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 #### example
 
 ```shell
-curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_readContract","params":["DREPec61c03f719a5c214f60719c3f36bb362a202125","DREPecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c"],"id":1}' http://127.0.0.1:10085
+curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_readContract","params":["0xec61c03f719a5c214f60719c3f36bb362a202125","0xecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c"],"id":1}' http://127.0.0.1:10085
 ```
 
 ##### response：
@@ -1181,7 +1181,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 #### example
 
 ```shell
-curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_estimateGas","params":["DREPec61c03f719a5c214f60719c3f36bb362a202125","DREPecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c","0x110","0x30000"],"id":1}' http://127.0.0.1:10085
+curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_estimateGas","params":["0xec61c03f719a5c214f60719c3f36bb362a202125","0xecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c","0x110","0x30000"],"id":1}' http://127.0.0.1:10085
 ```
 
 ##### response：
@@ -1205,7 +1205,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 #### example
 
 ```shell
-curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_executeContract","params":["DREPec61c03f719a5c214f60719c3f36bb362a202125","DREPecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c","0x110","0x30000"],"id":1}' http://127.0.0.1:10085
+curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_executeContract","params":["0xec61c03f719a5c214f60719c3f36bb362a202125","0xecfb51e10aa4c146bf6c12eee090339c99841efc","0x6d4ce63c","0x110","0x30000"],"id":1}' http://127.0.0.1:10085
 ```
 
 ##### response：
@@ -1228,7 +1228,7 @@ curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","metho
 #### example
 
 ```shell
-curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_createCode","params":["DREP3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x608060405234801561001057600080fd5b5061018c806100206000396000f3fe608060405260043610610051576000357c0100000000000000000000000000000000000000000000000000000000900480634f2be91f146100565780636d4ce63c1461006d578063db7208e31461009e575b600080fd5b34801561006257600080fd5b5061006b6100dc565b005b34801561007957600080fd5b5061008261011c565b604051808260070b60070b815260200191505060405180910390f35b3480156100aa57600080fd5b506100da600480360360208110156100c157600080fd5b81019080803560070b9060200190929190505050610132565b005b60016000808282829054906101000a900460070b0192506101000a81548167ffffffffffffffff021916908360070b67ffffffffffffffff160217905550565b60008060009054906101000a900460070b905090565b806000806101000a81548167ffffffffffffffff021916908360070b67ffffffffffffffff1602179055505056fea165627a7a723058204b651e4313ab6bc4eda61084cac1f805699cefbb979ddfd3a2d7f970903307cd0029","0x111","0x110","0x30000"],"id":1}' http://127.0.0.1:10085
+curl -H "Content-Type: application/json" -X post --data '{"jsonrpc":"2.0","method":"account_createCode","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5","0x608060405234801561001057600080fd5b5061018c806100206000396000f3fe608060405260043610610051576000357c0100000000000000000000000000000000000000000000000000000000900480634f2be91f146100565780636d4ce63c1461006d578063db7208e31461009e575b600080fd5b34801561006257600080fd5b5061006b6100dc565b005b34801561007957600080fd5b5061008261011c565b604051808260070b60070b815260200191505060405180910390f35b3480156100aa57600080fd5b506100da600480360360208110156100c157600080fd5b81019080803560070b9060200190929190505050610132565b005b60016000808282829054906101000a900460070b0192506101000a81548167ffffffffffffffff021916908360070b67ffffffffffffffff160217905550565b60008060009054906101000a900460070b905090565b806000806101000a81548167ffffffffffffffff021916908360070b67ffffffffffffffff1602179055505056fea165627a7a723058204b651e4313ab6bc4eda61084cac1f805699cefbb979ddfd3a2d7f970903307cd0029","0x111","0x110","0x30000"],"id":1}' http://127.0.0.1:10085
 ```
 
 ##### response：
@@ -1289,7 +1289,7 @@ curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"account_d
 #### example
 
 ```shell
-curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"account_sign","params":["DREP3ebcbe7cb440dd8c52940a2963472380afbb56c5", "0x00001c9b8c8fdb1f53faf02321f76253704123e2b56cce065852bab93e526ae2"], "id": 3}' -H "Content-Type:application/json"
+curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"account_sign","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5", "0x00001c9b8c8fdb1f53faf02321f76253704123e2b56cce065852bab93e526ae2"], "id": 3}' -H "Content-Type:application/json"
 ```
 
 ##### response：
@@ -1309,7 +1309,7 @@ curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"account_s
 #### example
 
 ```shell
-curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"account_generateAddresses","params":["DREP3ebcbe7cb440dd8c52940a2963472380afbb56c5"], "id": 3}' -H "Content-Type:application/json"
+curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"account_generateAddresses","params":["0x3ebcbe7cb440dd8c52940a2963472380afbb56c5"], "id": 3}' -H "Content-Type:application/json"
 ```
 
 ##### response：
@@ -1357,7 +1357,7 @@ curl http://localhost:10085 -X POST --data '{"jsonrpc":"2.0","method":"account_i
 ##### response：
 
 ```json
-{"jsonrpc":"2.0","id":3,"result":"DREP748eb65493a964e568800c3c2885c63a0de9f9ae"}
+{"jsonrpc":"2.0","id":3,"result":"0x748eb65493a964e568800c3c2885c63a0de9f9ae"}
 ````
 
 
