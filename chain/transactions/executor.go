@@ -11,10 +11,6 @@ import (
 	"github.com/drep-project/DREP-Chain/types"
 )
 
-//var (
-//	_ = (ITransactionValidator)((*Processor)(nil))
-//)
-
 type Processor struct {
 }
 

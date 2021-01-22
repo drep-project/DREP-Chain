@@ -62,7 +62,6 @@ func (NewPreminerGenesisProcessor *PreminerGenesisProcessor) Genesis(context *Ge
 		}
 		addr := crypto.PubkeyToAddress(miner.Pubkey)
 
-		//pv := new(big.Int).SetUint64(store.RegisterPledgeLimit)
 		pv := new(big.Int).SetUint64(0)
 		pv = pv.Mul(pv, new(big.Int).SetUint64(params.Coin))
 		context.Store().CandidateCredit(&addr, pv, minerBytes, 0)

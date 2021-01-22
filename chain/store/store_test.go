@@ -125,7 +125,6 @@ func TestPutBalance(t *testing.T) {
 	//todo + -
 	store.stake.VoteCredit(&addr, &backbone, new(big.Int).SetUint64(100), 0)
 	store.stake.CancelVoteCredit(&addr, &backbone, new(big.Int).SetUint64(10), uint64(ChangeCycle*uint64(heightLen)), ChangeCycle)
-	//fmt.Println(store.GetBalance(&addr, 0))
 	total := store.GetBalance(&addr, uint64(ChangeCycle*uint64(heightLen))+ChangeCycle)
 	interest := total.Sub(total, new(big.Int).SetUint64(10000+10)).Uint64()
 	interestRate := float64(interest) / float64(10)
@@ -334,5 +333,4 @@ func Test_getInterset(t *testing.T) {
 
 	fmt.Println(interest12.Div(interest12, balance).String(), "%")
 
-	//fmt.Println(getInterst(0, 1555200, balance))
 }

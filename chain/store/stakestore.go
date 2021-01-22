@@ -230,11 +230,8 @@ func (trieStore *trieStakeStore) cancelCredit(fromAddr, toAddr *crypto.CommonAdd
 				for hvIndex, heightValue := range rc.HeightValues {
 					if cancelBalanceTmp.Cmp(heightValue.CreditValue.ToInt()) >= 0 {
 
-						//interest := getInterst(heightValue.CreditHeight, height+changeInterval, heightValue.CreditValue.ToInt())
 						interestData.PrincipalData = append(interestData.PrincipalData, types.HeightValue{heightValue.CreditHeight, heightValue.CreditValue})
-						//interestData.IntersetData = append(interestData.IntersetData, types.HeightValue{height + changeInterval, common.Big(*interest)})
 
-						//cancelBalance.Add(cancelBalance, interest)
 						cancelBalanceTmp.Sub(cancelBalanceTmp, heightValue.CreditValue.ToInt())
 
 						if cancelBalanceTmp.Cmp(new(big.Int).SetUint64(0)) == 0 {
@@ -245,10 +242,7 @@ func (trieStore *trieStakeStore) cancelCredit(fromAddr, toAddr *crypto.CommonAdd
 
 					} else {
 
-						//interest := getInterst(heightValue.CreditHeight, height+changeInterval, cancelBalance)
 						interestData.PrincipalData = append(interestData.PrincipalData, types.HeightValue{heightValue.CreditHeight, common.Big(*cancelBalanceTmp)})
-						//interestData.IntersetData = append(interestData.IntersetData, types.HeightValue{height + changeInterval, common.Big(*interest)})
-						//cancelBalance.Add(cancelBalance, interest)
 
 						cv := heightValue.CreditValue.ToInt()
 						leftHeightValues = append(leftHeightValues, types.HeightValue{heightValue.CreditHeight, common.Big(*cv.Sub(cv, cancelBalanceTmp))})

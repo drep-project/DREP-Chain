@@ -24,7 +24,6 @@ type ChainStore struct {
 func (chainStore *ChainStore) PutReceipt(txHash crypto.Hash, receipt *types.Receipt) error {
 	key := sha3.Keccak256([]byte("receipt_" + txHash.String()))
 	value, err := binary.Marshal(receipt)
-	//fmt.Println("err11: ", err)
 	if err != nil {
 		return err
 	}
@@ -34,8 +33,6 @@ func (chainStore *ChainStore) PutReceipt(txHash crypto.Hash, receipt *types.Rece
 func (chainStore *ChainStore) GetReceipt(txHash crypto.Hash) *types.Receipt {
 	key := sha3.Keccak256([]byte("receipt_" + txHash.String()))
 	value, err := chainStore.Get(key)
-	//fmt.Println("err12: ", err)
-	//fmt.Println("val: ", value)
 	if err != nil {
 		return nil
 	}
