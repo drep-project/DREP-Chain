@@ -8,7 +8,7 @@ var (
 	// ErrBlockNotFound print error message.
 	ErrBlockNotFound = errors.New("block not exist")
 	// ErrTxIndexOutOfRange print error message.
-	ErrTxIndexOutOfRange = errors.New("tx index out of range")
+	ErrTxIndexOutOfRange = errors.New("transaction index out of range")
 	// ErrReachGasLimit print error message.
 	ErrReachGasLimit = errors.New("gas limit reached")
 	// ErrOverFlowMaxMsgSize print error message.
@@ -30,9 +30,9 @@ var (
 	// ErrMsgType print error message.
 	ErrMsgType = errors.New("not expected msg type")
 	// ErrNegativeAmount print error message.
-	ErrNegativeAmount = errors.New("negative amount in tx")
+	ErrNegativeAmount = errors.New("negative amount in transaction")
 	// ErrExceedGasLimit print error message.
-	ErrExceedGasLimit = errors.New("gas limit in tx has exceed block limit")
+	ErrExceedGasLimit = errors.New("gas limit in transaction has exceed block limit")
 	// ErrBalance print error message.
 	ErrBalance = errors.New("not enough balance")
 	// ErrNotSupportRenameAlias print error message.

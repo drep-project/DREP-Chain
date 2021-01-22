@@ -99,7 +99,7 @@ func (blockMgrApi *BlockMgrAPI) GetPoolMiniPendingNonce(addr *crypto.CommonAddre
 
 /*
  name: GetTxInPool
- usage: Checks whether the transaction is in the trading pool and, if so, returns the transaction
+ usage: Checks whether the transaction is in the trading pool and, if so, return the transaction
  params:
 	1. The address at which the transfer was initiated
 
