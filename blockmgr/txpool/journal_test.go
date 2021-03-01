@@ -24,9 +24,6 @@ func rotateTx(t *testing.T, txs map[crypto.CommonAddress][]*types.Transaction) {
 func loadTx(t *testing.T, maxNonce uint64) {
 	j = newTxJournal("./txpool/txs")
 	err := j.load(func(txs []types.Transaction) []error {
-		//for _, tx := range txs {
-		//	fmt.Println(tx.Nonce(), tx.Amount(), tx.Type())
-		//}
 		if txs[len(txs)-1].Nonce() != maxNonce {
 			return []error{fmt.Errorf("maybe nonce lost,%d != %d", txs[len(txs)-1].Nonce(), maxNonce)}
 		}

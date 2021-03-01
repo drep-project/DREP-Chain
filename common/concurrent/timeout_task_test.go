@@ -25,9 +25,6 @@ func TestExecuteTimeoutTask(t *testing.T) {
 func TestNewCountDownLatch(t *testing.T) {
 	l1 := NewCountDownLatch(3)
 	fmt.Println(time.Now())
-	//go func() {l.Done()}()
-	//go func() {l.Done()}()
-	//go func() {l.Done()}()
 	l1.Cancel()
 	l1.WaitTimeout(3 * time.Second)
 	fmt.Println(time.Now())

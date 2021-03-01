@@ -93,11 +93,6 @@ func TestAddIntevalTX(t *testing.T) {
 	}
 }
 
-//
-//func TestSyncTx(t *testing.T) {
-//	feed.Send(struct{}{})
-//}
-
 //The pool is full of unprocessed transactions
 func TestGetPendingTxs(t *testing.T) {
 	TestNewTransactions(t)
